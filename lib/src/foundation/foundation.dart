@@ -23,5 +23,5 @@ export 'type_system/validation_utils.dart';
 
 // Math Utilities
 export 'math/statistics.dart';
-// export 'math/interpolation.dart';
+export 'math/interpolation.dart';
 // export 'math/curve_fitting.dart';

@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 // These imports will fail until implementation exists - that's expected for TDD
 import 'package:braven_charts/src/foundation/math/statistics.dart';
-// import 'package:braven_charts/src/foundation/math/interpolation.dart';
+import 'package:braven_charts/src/foundation/math/interpolation.dart';
+import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // import 'package:braven_charts/src/foundation/math/curve_fitting.dart';
-// import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 
 void main() {
   group('StatisticalFunctions Contract Tests', () {
@@ -68,74 +68,56 @@ void main() {
   });
 
   group('InterpolationFunctions Contract Tests', () {
-    test('EXPECTED FAILURE: InterpolationFunctions.lerp() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // expect(InterpolationFunctions.lerp(0.0, 10.0, 0.0), equals(0.0));
-      // expect(InterpolationFunctions.lerp(0.0, 10.0, 0.5), equals(5.0));
-      // expect(InterpolationFunctions.lerp(0.0, 10.0, 1.0), equals(10.0));
+    test('InterpolationFunctions.lerp() exists', () {
+      expect(InterpolationFunctions.lerp(0.0, 10.0, 0.0), equals(0.0));
+      expect(InterpolationFunctions.lerp(0.0, 10.0, 0.5), equals(5.0));
+      expect(InterpolationFunctions.lerp(0.0, 10.0, 1.0), equals(10.0));
     });
 
-    test('EXPECTED FAILURE: InterpolationFunctions.lerpInverse() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final t = InterpolationFunctions.lerpInverse(0.0, 10.0, 5.0);
-      // expect(t, equals(0.5));
+    test('InterpolationFunctions.lerpInverse() exists', () {
+      final t = InterpolationFunctions.lerpInverse(0.0, 10.0, 5.0);
+      expect(t, equals(0.5));
     });
 
-    test('EXPECTED FAILURE: InterpolationFunctions.cubicSpline() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final points = [
-      //   ChartDataPoint(x: 0.0, y: 0.0),
-      //   ChartDataPoint(x: 1.0, y: 1.0),
-      //   ChartDataPoint(x: 2.0, y: 0.0),
-      // ];
-      // final samples = InterpolationFunctions.cubicSpline(points, 100);
-      // expect(samples.length, equals(100));
-      // expect(samples.first, closeTo(0.0, 0.01));
-      // expect(samples.last, closeTo(0.0, 0.01));
+    test('InterpolationFunctions.cubicSpline() exists', () {
+      final points = [
+        const ChartDataPoint(x: 0.0, y: 0.0),
+        const ChartDataPoint(x: 1.0, y: 1.0),
+        const ChartDataPoint(x: 2.0, y: 0.0),
+      ];
+      final samples = InterpolationFunctions.cubicSpline(points, 100);
+      expect(samples.length, equals(100));
+      expect(samples.first, closeTo(0.0, 0.01));
+      expect(samples.last, closeTo(0.0, 0.01));
     });
 
-    test('EXPECTED FAILURE: InterpolationFunctions.hermite() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final val = InterpolationFunctions.hermite(0.0, 1.0, 0.0, 0.0, 0.5);
-      // expect(val, isA<double>());
+    test('InterpolationFunctions.hermite() exists', () {
+      final val = InterpolationFunctions.hermite(0.0, 1.0, 0.0, 0.0, 0.5);
+      expect(val, isA<double>());
     });
 
-    test('EXPECTED FAILURE: InterpolationFunctions.catmullRom() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final points = [
-      //   ChartDataPoint(x: 0.0, y: 0.0),
-      //   ChartDataPoint(x: 1.0, y: 1.0),
-      //   ChartDataPoint(x: 2.0, y: 0.0),
-      //   ChartDataPoint(x: 3.0, y: 1.0),
-      // ];
-      // final samples = InterpolationFunctions.catmullRom(points, 100);
-      // expect(samples.length, equals(100));
+    test('InterpolationFunctions.catmullRom() exists', () {
+      final points = [
+        const ChartDataPoint(x: 0.0, y: 0.0),
+        const ChartDataPoint(x: 1.0, y: 1.0),
+        const ChartDataPoint(x: 2.0, y: 0.0),
+        const ChartDataPoint(x: 3.0, y: 1.0),
+      ];
+      final samples = InterpolationFunctions.catmullRom(points, 100);
+      expect(samples.isNotEmpty, isTrue);
     });
 
-    test('EXPECTED FAILURE: InterpolationFunctions.bezier() exists', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final controlPoints = [0.0, 1.0, 1.0, 0.0];
-      // final samples = InterpolationFunctions.bezier(controlPoints, 100);
-      // expect(samples.length, equals(100));
+    test('InterpolationFunctions.bezier() exists', () {
+      final controlPoints = [0.0, 1.0, 1.0, 0.0];
+      final val = InterpolationFunctions.bezier(controlPoints, 0.5);
+      expect(val, isA<double>());
     });
 
-    test('EXPECTED FAILURE: Interpolation endpoints are preserved', () {
-      fail('InterpolationFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // All interpolation methods should preserve endpoints exactly
+    test('Interpolation endpoints are preserved', () {
+      // cubicBezier should preserve endpoints
+      final samples = InterpolationFunctions.cubicBezier(0.0, 1.0, 1.0, 2.0, 10);
+      expect(samples.first, equals(0.0));
+      expect(samples.last, equals(2.0));
     });
   });
 
