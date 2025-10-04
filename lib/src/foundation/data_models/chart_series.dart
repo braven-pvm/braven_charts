@@ -84,9 +84,7 @@ class ChartSeries {
   ///
   /// Computed on first access and cached for performance.
   dr.DataRange get xRange {
-    if (_xRange == null) {
-      _xRange = dr.DataRange.fromPoints(points, dr.Axis.x);
-    }
+    _xRange ??= dr.DataRange.fromPoints(points, dr.Axis.x);
     return _xRange!;
   }
 
@@ -94,9 +92,7 @@ class ChartSeries {
   ///
   /// Computed on first access and cached for performance.
   dr.DataRange get yRange {
-    if (_yRange == null) {
-      _yRange = dr.DataRange.fromPoints(points, dr.Axis.y);
-    }
+    _yRange ??= dr.DataRange.fromPoints(points, dr.Axis.y);
     return _yRange!;
   }
 

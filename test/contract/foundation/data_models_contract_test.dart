@@ -1,18 +1,17 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
 import 'package:braven_charts/src/foundation/data_models/time_series_data.dart';
-import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartDataPoint Contract Tests', () {
     test('ChartDataPoint constructor exists with required parameters', () {
-      final point = ChartDataPoint(x: 1.0, y: 2.0);
+      final point = const ChartDataPoint(x: 1.0, y: 2.0);
       expect(point.x, equals(1.0));
       expect(point.y, equals(2.0));
     });
@@ -25,32 +24,32 @@ void main() {
     });
 
     test('ChartDataPoint supports optional label', () {
-      final point = ChartDataPoint(x: 1.0, y: 2.0, label: 'Test Point');
+      final point = const ChartDataPoint(x: 1.0, y: 2.0, label: 'Test Point');
       expect(point.label, equals('Test Point'));
       expect(point.hasLabel, isTrue);
     });
 
     test('ChartDataPoint supports copyWith for immutability', () {
-      final original = ChartDataPoint(x: 1.0, y: 2.0);
+      final original = const ChartDataPoint(x: 1.0, y: 2.0);
       final modified = original.copyWith(y: 3.0);
       expect(original.y, equals(2.0)); // Original unchanged
       expect(modified.y, equals(3.0)); // New instance modified
     });
 
     test('ChartDataPoint equality excludes metadata', () {
-      final p1 = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
-      final p2 = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'b': 2});
+      final p1 = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
+      final p2 = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'b': 2});
       expect(p1, equals(p2)); // Equal despite different metadata
     });
 
     test('ChartDataPoint validates finite numbers', () {
-      final valid = ChartDataPoint(x: 1.0, y: 2.0);
+      final valid = const ChartDataPoint(x: 1.0, y: 2.0);
       expect(valid.isValid, isTrue);
 
-      final invalidNaN = ChartDataPoint(x: double.nan, y: 2.0);
+      final invalidNaN = const ChartDataPoint(x: double.nan, y: 2.0);
       expect(invalidNaN.isValid, isFalse);
 
-      final invalidInf = ChartDataPoint(x: 1.0, y: double.infinity);
+      final invalidInf = const ChartDataPoint(x: 1.0, y: double.infinity);
       expect(invalidInf.isValid, isFalse);
     });
   });
@@ -78,9 +77,9 @@ void main() {
 
     test('ChartSeries provides computed xRange and yRange', () {
       final points = [
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 3.0, y: 4.0),
-        ChartDataPoint(x: 5.0, y: 1.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 3.0, y: 4.0),
+        const ChartDataPoint(x: 5.0, y: 1.0),
       ];
       final series = ChartSeries(id: 'test', points: points);
 
@@ -92,16 +91,16 @@ void main() {
 
     test('ChartSeries validates ordering when isXOrdered=true', () {
       final orderedPoints = [
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 2.0, y: 3.0),
-        ChartDataPoint(x: 3.0, y: 1.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 2.0, y: 3.0),
+        const ChartDataPoint(x: 3.0, y: 1.0),
       ];
       final series = ChartSeries(id: 'test', points: orderedPoints, isXOrdered: true);
       expect(series.validateOrdering(), isTrue);
 
       final unorderedPoints = [
-        ChartDataPoint(x: 3.0, y: 1.0),
-        ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 3.0, y: 1.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
       ];
       final badSeries = ChartSeries(id: 'test', points: unorderedPoints, isXOrdered: true);
       expect(badSeries.validateOrdering(), isFalse);
@@ -115,8 +114,8 @@ void main() {
 
     test('ChartSeries.validate() detects invalid points', () {
       final invalidPoints = [
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: double.nan, y: 3.0), // Invalid
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: double.nan, y: 3.0), // Invalid
       ];
       final series = ChartSeries(id: 'test', points: invalidPoints);
       final result = series.validate();
@@ -126,7 +125,7 @@ void main() {
 
   group('DataRange Contract Tests', () {
     test('DataRange constructor enforces min <= max', () {
-      final range = dr.DataRange(min: 0.0, max: 10.0);
+      final range = const dr.DataRange(min: 0.0, max: 10.0);
       expect(range.min, equals(0.0));
       expect(range.max, equals(10.0));
     });
@@ -139,8 +138,8 @@ void main() {
 
     test('DataRange.fromPoints factory works', () {
       final points = [
-        ChartDataPoint(x: 1.0, y: 10.0),
-        ChartDataPoint(x: 5.0, y: 20.0),
+        const ChartDataPoint(x: 1.0, y: 10.0),
+        const ChartDataPoint(x: 5.0, y: 20.0),
       ];
       final xRange = dr.DataRange.fromPoints(points, dr.Axis.x);
       expect(xRange.min, equals(1.0));
@@ -152,36 +151,36 @@ void main() {
     });
 
     test('DataRange computed properties work', () {
-      final range = dr.DataRange(min: 0.0, max: 10.0);
+      final range = const dr.DataRange(min: 0.0, max: 10.0);
       expect(range.span, equals(10.0));
       expect(range.center, equals(5.0));
     });
 
     test('DataRange supports padding', () {
-      final range = dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
+      final range = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
       expect(range.paddedMin, equals(-1.0)); // 0 - (10 * 0.1)
       expect(range.paddedMax, equals(11.0)); // 10 + (10 * 0.1)
     });
 
     test('DataRange contains() method works', () {
-      final range = dr.DataRange(min: 0.0, max: 10.0);
+      final range = const dr.DataRange(min: 0.0, max: 10.0);
       expect(range.contains(5.0), isTrue);
       expect(range.contains(-1.0), isFalse);
       expect(range.contains(11.0), isFalse);
     });
 
     test('DataRange overlaps() method works', () {
-      final r1 = dr.DataRange(min: 0.0, max: 10.0);
-      final r2 = dr.DataRange(min: 5.0, max: 15.0);
-      final r3 = dr.DataRange(min: 11.0, max: 20.0);
+      final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+      final r2 = const dr.DataRange(min: 5.0, max: 15.0);
+      final r3 = const dr.DataRange(min: 11.0, max: 20.0);
 
       expect(r1.overlaps(r2), isTrue);
       expect(r1.overlaps(r3), isFalse);
     });
 
     test('DataRange merge() method works', () {
-      final r1 = dr.DataRange(min: 0.0, max: 10.0);
-      final r2 = dr.DataRange(min: 5.0, max: 15.0);
+      final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+      final r2 = const dr.DataRange(min: 5.0, max: 15.0);
       final merged = r1.merge(r2);
 
       expect(merged.min, equals(0.0));
@@ -189,7 +188,7 @@ void main() {
     });
 
     test('DataRange.validate() returns ChartResult', () {
-      final validRange = dr.DataRange(min: 0.0, max: 10.0);
+      final validRange = const dr.DataRange(min: 0.0, max: 10.0);
       final result = validRange.validate();
       expect(result.isSuccess, isTrue);
 
@@ -262,11 +261,10 @@ void main() {
       final withoutTimestamp = TimeSeriesData(
         id: 'test',
         data: [
-          ChartDataPoint(x: 1.0, y: 2.0), // Missing timestamp
+          const ChartDataPoint(x: 1.0, y: 2.0), // Missing timestamp
         ],
       );
       expect(withoutTimestamp.validate().isSuccess, isFalse);
     });
   });
 }
-

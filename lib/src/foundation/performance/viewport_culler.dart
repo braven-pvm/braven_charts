@@ -34,8 +34,7 @@ class ViewportCuller {
   /// Creates a viewport culler with specified margin.
   ///
   /// [margin]: Fraction of viewport to add as padding (default: 0.1)
-  const ViewportCuller({this.margin = 0.1})
-      : assert(margin >= 0.0, 'margin must be non-negative');
+  const ViewportCuller({this.margin = 0.1}) : assert(margin >= 0.0, 'margin must be non-negative');
 
   /// Filters points to those visible within the viewport plus margin.
   ///
@@ -183,19 +182,12 @@ class ViewportBounds {
   ///
   /// Uses paddedMin/paddedMax to include margin.
   bool contains(ChartDataPoint point) {
-    return point.x >= xRange.paddedMin &&
-        point.x <= xRange.paddedMax &&
-        point.y >= yRange.paddedMin &&
-        point.y <= yRange.paddedMax;
+    return point.x >= xRange.paddedMin && point.x <= xRange.paddedMax && point.y >= yRange.paddedMin && point.y <= yRange.paddedMax;
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ViewportBounds &&
-          runtimeType == other.runtimeType &&
-          xRange == other.xRange &&
-          yRange == other.yRange;
+      identical(this, other) || other is ViewportBounds && runtimeType == other.runtimeType && xRange == other.xRange && yRange == other.yRange;
 
   @override
   int get hashCode => Object.hash(xRange, yRange);

@@ -367,7 +367,7 @@ void main() {
 
       test('works with custom class', () {
         final pool = ObjectPool<ChartDataPoint>(
-          factory: () => ChartDataPoint(x: 0.0, y: 0.0),
+          factory: () => const ChartDataPoint(x: 0.0, y: 0.0),
           reset: (p) {},
         );
 
@@ -430,21 +430,21 @@ void main() {
   group('ViewportCuller Unit Tests', () {
     group('Constructor', () {
       test('creates culler with default margin', () {
-        final culler = ViewportCuller();
+        final culler = const ViewportCuller();
         expect(culler.margin, equals(0.1));
       });
 
       test('accepts custom margin', () {
-        final culler = ViewportCuller(margin: 0.2);
+        final culler = const ViewportCuller(margin: 0.2);
         expect(culler.margin, equals(0.2));
       });
     });
 
     group('calculateBounds()', () {
       test('applies margin to viewport', () {
-        final culler = ViewportCuller(margin: 0.1);
-        final viewportX = dr.DataRange(min: 0.0, max: 10.0);
-        final viewportY = dr.DataRange(min: 0.0, max: 10.0);
+        final culler = const ViewportCuller(margin: 0.1);
+        final viewportX = const dr.DataRange(min: 0.0, max: 10.0);
+        final viewportY = const dr.DataRange(min: 0.0, max: 10.0);
 
         final bounds = culler.calculateBounds(
           viewportX: viewportX,
@@ -456,9 +456,9 @@ void main() {
       });
 
       test('handles different x and y margins', () {
-        final culler = ViewportCuller(margin: 0.1);
-        final viewportX = dr.DataRange(min: 0.0, max: 100.0);
-        final viewportY = dr.DataRange(min: 0.0, max: 10.0);
+        final culler = const ViewportCuller(margin: 0.1);
+        final viewportX = const dr.DataRange(min: 0.0, max: 100.0);
+        final viewportY = const dr.DataRange(min: 0.0, max: 10.0);
 
         final bounds = culler.calculateBounds(
           viewportX: viewportX,
@@ -470,8 +470,8 @@ void main() {
       });
 
       test('handles zero margin', () {
-        final culler = ViewportCuller(margin: 0.0);
-        final viewport = dr.DataRange(min: 5.0, max: 15.0);
+        final culler = const ViewportCuller(margin: 0.0);
+        final viewport = const dr.DataRange(min: 5.0, max: 15.0);
 
         final bounds = culler.calculateBounds(
           viewportX: viewport,
@@ -485,15 +485,15 @@ void main() {
 
     group('cull() - Unordered Data', () {
       test('filters points outside viewport', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0), // Outside
-          ChartDataPoint(x: 5.0, y: 5.0), // Inside
-          ChartDataPoint(x: 10.0, y: 10.0), // Inside
-          ChartDataPoint(x: 20.0, y: 20.0), // Outside
+          const ChartDataPoint(x: 0.0, y: 0.0), // Outside
+          const ChartDataPoint(x: 5.0, y: 5.0), // Inside
+          const ChartDataPoint(x: 10.0, y: 10.0), // Inside
+          const ChartDataPoint(x: 20.0, y: 20.0), // Outside
         ];
 
-        final viewport = dr.DataRange(min: 4.0, max: 11.0);
+        final viewport = const dr.DataRange(min: 4.0, max: 11.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -507,13 +507,13 @@ void main() {
       });
 
       test('returns empty list when no points visible', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
         ];
 
-        final viewport = dr.DataRange(min: 10.0, max: 20.0);
+        final viewport = const dr.DataRange(min: 10.0, max: 20.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -525,14 +525,14 @@ void main() {
       });
 
       test('returns all points when all visible', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = [
-          ChartDataPoint(x: 5.0, y: 5.0),
-          ChartDataPoint(x: 6.0, y: 6.0),
-          ChartDataPoint(x: 7.0, y: 7.0),
+          const ChartDataPoint(x: 5.0, y: 5.0),
+          const ChartDataPoint(x: 6.0, y: 6.0),
+          const ChartDataPoint(x: 7.0, y: 7.0),
         ];
 
-        final viewport = dr.DataRange(min: 0.0, max: 10.0);
+        final viewport = const dr.DataRange(min: 0.0, max: 10.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -544,8 +544,8 @@ void main() {
       });
 
       test('handles empty points list', () {
-        final culler = ViewportCuller();
-        final viewport = dr.DataRange(min: 0.0, max: 10.0);
+        final culler = const ViewportCuller();
+        final viewport = const dr.DataRange(min: 0.0, max: 10.0);
 
         final visible = culler.cull(
           points: [],
@@ -558,19 +558,19 @@ void main() {
       });
 
       test('applies margin correctly', () {
-        final culler = ViewportCuller(margin: 0.5); // 50% margin for clear math
+        final culler = const ViewportCuller(margin: 0.5); // 50% margin for clear math
         final points = [
-          ChartDataPoint(x: 4.0, y: 5.0), // Should be visible with margin
-          ChartDataPoint(x: 10.0, y: 5.0),
-          ChartDataPoint(x: 16.0, y: 5.0), // Should be visible with margin
+          const ChartDataPoint(x: 4.0, y: 5.0), // Should be visible with margin
+          const ChartDataPoint(x: 10.0, y: 5.0),
+          const ChartDataPoint(x: 16.0, y: 5.0), // Should be visible with margin
         ];
 
-        final viewport = dr.DataRange(min: 8.0, max: 12.0); // Range of 4, center at 10
+        final viewport = const dr.DataRange(min: 8.0, max: 12.0); // Range of 4, center at 10
         // With 50% padding: paddedMin = 8 - (4 * 0.5) = 6, paddedMax = 12 + (4 * 0.5) = 14
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
-          viewportY: dr.DataRange(min: 0.0, max: 10.0),
+          viewportY: const dr.DataRange(min: 0.0, max: 10.0),
           isXOrdered: false,
         );
 
@@ -581,13 +581,13 @@ void main() {
 
     group('cull() - Ordered Data', () {
       test('uses binary search optimization', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           1000,
           (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
         );
 
-        final viewport = dr.DataRange(min: 100.0, max: 200.0);
+        final viewport = const dr.DataRange(min: 100.0, max: 200.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -601,13 +601,13 @@ void main() {
       });
 
       test('handles viewport before all points', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           10,
           (i) => ChartDataPoint(x: (i + 10).toDouble(), y: 0.0),
         );
 
-        final viewport = dr.DataRange(min: 0.0, max: 5.0);
+        final viewport = const dr.DataRange(min: 0.0, max: 5.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -619,13 +619,13 @@ void main() {
       });
 
       test('handles viewport after all points', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           10,
           (i) => ChartDataPoint(x: i.toDouble(), y: 0.0),
         );
 
-        final viewport = dr.DataRange(min: 20.0, max: 30.0);
+        final viewport = const dr.DataRange(min: 20.0, max: 30.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -637,13 +637,13 @@ void main() {
       });
 
       test('handles single point visible', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           10,
           (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
         );
 
-        final viewport = dr.DataRange(min: 5.0, max: 5.0);
+        final viewport = const dr.DataRange(min: 5.0, max: 5.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -656,13 +656,13 @@ void main() {
       });
 
       test('handles viewport at boundaries', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           10,
           (i) => ChartDataPoint(x: i.toDouble(), y: 0.0),
         );
 
-        final viewport = dr.DataRange(min: 0.0, max: 9.0);
+        final viewport = const dr.DataRange(min: 0.0, max: 9.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -676,58 +676,58 @@ void main() {
 
     group('ViewportBounds', () {
       test('contains() returns true for point in bounds', () {
-        final culler = ViewportCuller(margin: 0.0);
-        final viewport = dr.DataRange(min: 0.0, max: 10.0);
+        final culler = const ViewportCuller(margin: 0.0);
+        final viewport = const dr.DataRange(min: 0.0, max: 10.0);
         final bounds = culler.calculateBounds(
           viewportX: viewport,
           viewportY: viewport,
         );
 
-        final point = ChartDataPoint(x: 5.0, y: 5.0);
+        final point = const ChartDataPoint(x: 5.0, y: 5.0);
         expect(bounds.contains(point), isTrue);
       });
 
       test('contains() returns false for point outside bounds', () {
-        final culler = ViewportCuller(margin: 0.0);
-        final viewport = dr.DataRange(min: 0.0, max: 10.0);
+        final culler = const ViewportCuller(margin: 0.0);
+        final viewport = const dr.DataRange(min: 0.0, max: 10.0);
         final bounds = culler.calculateBounds(
           viewportX: viewport,
           viewportY: viewport,
         );
 
-        final point = ChartDataPoint(x: 15.0, y: 5.0);
+        final point = const ChartDataPoint(x: 15.0, y: 5.0);
         expect(bounds.contains(point), isFalse);
       });
 
       test('contains() checks both x and y', () {
-        final culler = ViewportCuller(margin: 0.0);
-        final viewportX = dr.DataRange(min: 0.0, max: 10.0);
-        final viewportY = dr.DataRange(min: 0.0, max: 5.0);
+        final culler = const ViewportCuller(margin: 0.0);
+        final viewportX = const dr.DataRange(min: 0.0, max: 10.0);
+        final viewportY = const dr.DataRange(min: 0.0, max: 5.0);
         final bounds = culler.calculateBounds(
           viewportX: viewportX,
           viewportY: viewportY,
         );
 
-        expect(bounds.contains(ChartDataPoint(x: 5.0, y: 3.0)), isTrue);
-        expect(bounds.contains(ChartDataPoint(x: 15.0, y: 3.0)), isFalse);
-        expect(bounds.contains(ChartDataPoint(x: 5.0, y: 10.0)), isFalse);
+        expect(bounds.contains(const ChartDataPoint(x: 5.0, y: 3.0)), isTrue);
+        expect(bounds.contains(const ChartDataPoint(x: 15.0, y: 3.0)), isFalse);
+        expect(bounds.contains(const ChartDataPoint(x: 5.0, y: 10.0)), isFalse);
       });
     });
 
     group('Edge Cases', () {
       test('handles points with same x values', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = [
-          ChartDataPoint(x: 5.0, y: 1.0),
-          ChartDataPoint(x: 5.0, y: 2.0),
-          ChartDataPoint(x: 5.0, y: 3.0),
+          const ChartDataPoint(x: 5.0, y: 1.0),
+          const ChartDataPoint(x: 5.0, y: 2.0),
+          const ChartDataPoint(x: 5.0, y: 3.0),
         ];
 
-        final viewport = dr.DataRange(min: 5.0, max: 5.0);
+        final viewport = const dr.DataRange(min: 5.0, max: 5.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
-          viewportY: dr.DataRange(min: 0.0, max: 10.0),
+          viewportY: const dr.DataRange(min: 0.0, max: 10.0),
           isXOrdered: true,
         );
 
@@ -735,13 +735,13 @@ void main() {
       });
 
       test('handles large datasets efficiently', () {
-        final culler = ViewportCuller(margin: 0.0);
+        final culler = const ViewportCuller(margin: 0.0);
         final points = List.generate(
           10000,
           (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
         );
 
-        final viewport = dr.DataRange(min: 4000.0, max: 6000.0);
+        final viewport = const dr.DataRange(min: 4000.0, max: 6000.0);
         final visible = culler.cull(
           points: points,
           viewportX: viewport,
@@ -920,8 +920,8 @@ void main() {
         );
 
         final points = [
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 10.0, y: 10.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 10.0, y: 10.0),
         ];
         final batches = processor.batch(points);
 
@@ -953,9 +953,9 @@ void main() {
         );
 
         final points = [
-          ChartDataPoint(x: 1.0, y: 1.0, metadata: {'style': 'solid'}),
-          ChartDataPoint(x: 2.0, y: 2.0, metadata: {'style': 'dashed'}),
-          ChartDataPoint(x: 3.0, y: 3.0, metadata: {'style': 'solid'}),
+          const ChartDataPoint(x: 1.0, y: 1.0, metadata: {'style': 'solid'}),
+          const ChartDataPoint(x: 2.0, y: 2.0, metadata: {'style': 'dashed'}),
+          const ChartDataPoint(x: 3.0, y: 3.0, metadata: {'style': 'solid'}),
         ];
 
         final batches = processor.batch(points);

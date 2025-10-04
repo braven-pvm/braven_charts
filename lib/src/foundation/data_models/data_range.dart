@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:math' as math;
+
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/src/foundation/type_system/chart_error.dart';
+import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 
 /// Axis enumeration for extracting ranges from points.
 enum Axis { x, y }
@@ -184,11 +185,7 @@ class DataRange {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is DataRange &&
-          runtimeType == other.runtimeType &&
-          min == other.min &&
-          max == other.max &&
-          padding == other.padding;
+      other is DataRange && runtimeType == other.runtimeType && min == other.min && max == other.max && padding == other.padding;
 
   @override
   int get hashCode => Object.hash(min, max, padding);

@@ -12,7 +12,7 @@ void main() {
   group('ChartDataPoint Unit Tests', () {
     group('Constructor', () {
       test('creates point with required parameters', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0);
+        final point = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(point.x, equals(1.0));
         expect(point.y, equals(2.0));
         expect(point.timestamp, isNull);
@@ -48,54 +48,54 @@ void main() {
       });
 
       test('hasTimestamp returns false when timestamp is null', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0);
+        final point = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(point.hasTimestamp, isFalse);
       });
 
       test('hasLabel returns true when label exists', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
+        final point = const ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
         expect(point.hasLabel, isTrue);
       });
 
       test('hasLabel returns false when label is null', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0);
+        final point = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(point.hasLabel, isFalse);
       });
 
       test('isValid returns true for finite numbers', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0);
+        final point = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(point.isValid, isTrue);
       });
 
       test('isValid returns false for NaN x', () {
-        final point = ChartDataPoint(x: double.nan, y: 2.0);
+        final point = const ChartDataPoint(x: double.nan, y: 2.0);
         expect(point.isValid, isFalse);
       });
 
       test('isValid returns false for NaN y', () {
-        final point = ChartDataPoint(x: 1.0, y: double.nan);
+        final point = const ChartDataPoint(x: 1.0, y: double.nan);
         expect(point.isValid, isFalse);
       });
 
       test('isValid returns false for infinity x', () {
-        final point = ChartDataPoint(x: double.infinity, y: 2.0);
+        final point = const ChartDataPoint(x: double.infinity, y: 2.0);
         expect(point.isValid, isFalse);
       });
 
       test('isValid returns false for infinity y', () {
-        final point = ChartDataPoint(x: 1.0, y: double.infinity);
+        final point = const ChartDataPoint(x: 1.0, y: double.infinity);
         expect(point.isValid, isFalse);
       });
 
       test('isValid returns false for negative infinity', () {
-        final point = ChartDataPoint(x: 1.0, y: double.negativeInfinity);
+        final point = const ChartDataPoint(x: 1.0, y: double.negativeInfinity);
         expect(point.isValid, isFalse);
       });
     });
 
     group('copyWith', () {
       test('creates copy with modified x', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0);
+        final original = const ChartDataPoint(x: 1.0, y: 2.0);
         final copy = original.copyWith(x: 3.0);
         expect(copy.x, equals(3.0));
         expect(copy.y, equals(2.0));
@@ -103,14 +103,14 @@ void main() {
       });
 
       test('creates copy with modified y', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0);
+        final original = const ChartDataPoint(x: 1.0, y: 2.0);
         final copy = original.copyWith(y: 3.0);
         expect(copy.x, equals(1.0));
         expect(copy.y, equals(3.0));
       });
 
       test('creates copy with added timestamp', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0);
+        final original = const ChartDataPoint(x: 1.0, y: 2.0);
         final now = DateTime.now();
         final copy = original.copyWith(timestamp: now);
         expect(copy.timestamp, equals(now));
@@ -118,21 +118,21 @@ void main() {
       });
 
       test('creates copy with added label', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0);
+        final original = const ChartDataPoint(x: 1.0, y: 2.0);
         final copy = original.copyWith(label: 'New');
         expect(copy.label, equals('New'));
         expect(original.label, isNull);
       });
 
       test('creates copy with modified metadata', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
+        final original = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
         final copy = original.copyWith(metadata: {'b': 2});
         expect(copy.metadata, equals({'b': 2}));
         expect(original.metadata, equals({'a': 1}));
       });
 
       test('creates copy with no changes when no parameters provided', () {
-        final original = ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
+        final original = const ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
         final copy = original.copyWith();
         expect(copy.x, equals(original.x));
         expect(copy.y, equals(original.y));
@@ -142,21 +142,21 @@ void main() {
 
     group('Equality', () {
       test('equal points are equal', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0);
-        final p2 = ChartDataPoint(x: 1.0, y: 2.0);
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0);
+        final p2 = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(p1, equals(p2));
         expect(p1.hashCode, equals(p2.hashCode));
       });
 
       test('points with different x are not equal', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0);
-        final p2 = ChartDataPoint(x: 2.0, y: 2.0);
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0);
+        final p2 = const ChartDataPoint(x: 2.0, y: 2.0);
         expect(p1, isNot(equals(p2)));
       });
 
       test('points with different y are not equal', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0);
-        final p2 = ChartDataPoint(x: 1.0, y: 3.0);
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0);
+        final p2 = const ChartDataPoint(x: 1.0, y: 3.0);
         expect(p1, isNot(equals(p2)));
       });
 
@@ -169,27 +169,27 @@ void main() {
       });
 
       test('points with different label are not equal', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0, label: 'A');
-        final p2 = ChartDataPoint(x: 1.0, y: 2.0, label: 'B');
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0, label: 'A');
+        final p2 = const ChartDataPoint(x: 1.0, y: 2.0, label: 'B');
         expect(p1, isNot(equals(p2)));
       });
 
       test('metadata is excluded from equality', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
-        final p2 = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'b': 2});
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
+        final p2 = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'b': 2});
         expect(p1, equals(p2)); // Equal despite different metadata
       });
 
       test('point with metadata equals point without metadata', () {
-        final p1 = ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
-        final p2 = ChartDataPoint(x: 1.0, y: 2.0);
+        final p1 = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
+        final p2 = const ChartDataPoint(x: 1.0, y: 2.0);
         expect(p1, equals(p2));
       });
     });
 
     group('toString', () {
       test('includes x and y', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0);
+        final point = const ChartDataPoint(x: 1.0, y: 2.0);
         final str = point.toString();
         expect(str, contains('1.0'));
         expect(str, contains('2.0'));
@@ -203,7 +203,7 @@ void main() {
       });
 
       test('includes label when present', () {
-        final point = ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
+        final point = const ChartDataPoint(x: 1.0, y: 2.0, label: 'Test');
         final str = point.toString();
         expect(str, contains('Test'));
       });
@@ -222,8 +222,8 @@ void main() {
 
       test('creates series with points', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 2.0),
-          ChartDataPoint(x: 2.0, y: 3.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 2.0, y: 3.0),
         ];
         final series = ChartSeries(id: 'test', points: points);
         expect(series.points.length, equals(2));
@@ -259,9 +259,9 @@ void main() {
     group('Computed Properties', () {
       test('xRange computed from points', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 10.0),
-          ChartDataPoint(x: 5.0, y: 20.0),
-          ChartDataPoint(x: 3.0, y: 15.0),
+          const ChartDataPoint(x: 1.0, y: 10.0),
+          const ChartDataPoint(x: 5.0, y: 20.0),
+          const ChartDataPoint(x: 3.0, y: 15.0),
         ];
         final series = ChartSeries(id: 'test', points: points);
         expect(series.xRange.min, equals(1.0));
@@ -270,9 +270,9 @@ void main() {
 
       test('yRange computed from points', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 10.0),
-          ChartDataPoint(x: 2.0, y: 25.0),
-          ChartDataPoint(x: 3.0, y: 5.0),
+          const ChartDataPoint(x: 1.0, y: 10.0),
+          const ChartDataPoint(x: 2.0, y: 25.0),
+          const ChartDataPoint(x: 3.0, y: 5.0),
         ];
         final series = ChartSeries(id: 'test', points: points);
         expect(series.yRange.min, equals(5.0));
@@ -282,7 +282,7 @@ void main() {
       test('xRange is cached', () {
         final series = ChartSeries(
           id: 'test',
-          points: [ChartDataPoint(x: 1.0, y: 2.0)],
+          points: [const ChartDataPoint(x: 1.0, y: 2.0)],
         );
         final range1 = series.xRange;
         final range2 = series.xRange;
@@ -292,7 +292,7 @@ void main() {
       test('yRange is cached', () {
         final series = ChartSeries(
           id: 'test',
-          points: [ChartDataPoint(x: 1.0, y: 2.0)],
+          points: [const ChartDataPoint(x: 1.0, y: 2.0)],
         );
         final range1 = series.yRange;
         final range2 = series.yRange;
@@ -309,7 +309,7 @@ void main() {
       test('returns true for single point series', () {
         final series = ChartSeries(
           id: 'test',
-          points: [ChartDataPoint(x: 1.0, y: 2.0)],
+          points: [const ChartDataPoint(x: 1.0, y: 2.0)],
           isXOrdered: true,
         );
         expect(series.validateOrdering(), isTrue);
@@ -319,9 +319,9 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 1.0, y: 2.0),
-            ChartDataPoint(x: 2.0, y: 3.0),
-            ChartDataPoint(x: 3.0, y: 1.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: 2.0, y: 3.0),
+            const ChartDataPoint(x: 3.0, y: 1.0),
           ],
           isXOrdered: true,
         );
@@ -332,9 +332,9 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 3.0, y: 1.0),
-            ChartDataPoint(x: 1.0, y: 2.0),
-            ChartDataPoint(x: 2.0, y: 3.0),
+            const ChartDataPoint(x: 3.0, y: 1.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: 2.0, y: 3.0),
           ],
           isXOrdered: true,
         );
@@ -345,8 +345,8 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 3.0, y: 1.0),
-            ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: 3.0, y: 1.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
           ],
           isXOrdered: false,
         );
@@ -357,9 +357,9 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 1.0, y: 2.0),
-            ChartDataPoint(x: 1.0, y: 3.0),
-            ChartDataPoint(x: 2.0, y: 4.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: 1.0, y: 3.0),
+            const ChartDataPoint(x: 2.0, y: 4.0),
           ],
           isXOrdered: true,
         );
@@ -371,7 +371,7 @@ void main() {
       test('returns Success for valid series', () {
         final series = ChartSeries(
           id: 'test',
-          points: [ChartDataPoint(x: 1.0, y: 2.0)],
+          points: [const ChartDataPoint(x: 1.0, y: 2.0)],
         );
         final result = series.validate();
         expect(result.isSuccess, isTrue);
@@ -386,8 +386,8 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 2.0, y: 1.0),
-            ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: 2.0, y: 1.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
           ],
           isXOrdered: true,
         );
@@ -399,8 +399,8 @@ void main() {
         final series = ChartSeries(
           id: 'test',
           points: [
-            ChartDataPoint(x: 1.0, y: 2.0),
-            ChartDataPoint(x: double.nan, y: 3.0),
+            const ChartDataPoint(x: 1.0, y: 2.0),
+            const ChartDataPoint(x: double.nan, y: 3.0),
           ],
         );
         final result = series.validate();
@@ -418,7 +418,7 @@ void main() {
 
       test('creates copy with modified points', () {
         final original = ChartSeries(id: 'test', points: []);
-        final newPoints = [ChartDataPoint(x: 1.0, y: 2.0)];
+        final newPoints = [const ChartDataPoint(x: 1.0, y: 2.0)];
         final copy = original.copyWith(points: newPoints);
         expect(copy.points.length, equals(1));
         expect(original.points.length, equals(0));
@@ -456,7 +456,7 @@ void main() {
       test('includes id and point count', () {
         final series = ChartSeries(
           id: 'test',
-          points: [ChartDataPoint(x: 1.0, y: 2.0)],
+          points: [const ChartDataPoint(x: 1.0, y: 2.0)],
         );
         final str = series.toString();
         expect(str, contains('test'));
@@ -468,14 +468,14 @@ void main() {
   group('DataRange Unit Tests', () {
     group('Constructor', () {
       test('creates range with min and max', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         expect(range.min, equals(0.0));
         expect(range.max, equals(10.0));
         expect(range.padding, equals(0.0));
       });
 
       test('creates range with padding', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
+        final range = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
         expect(range.padding, equals(0.1));
       });
 
@@ -487,7 +487,7 @@ void main() {
       });
 
       test('allows min == max', () {
-        final range = dr.DataRange(min: 5.0, max: 5.0);
+        final range = const dr.DataRange(min: 5.0, max: 5.0);
         expect(range.span, equals(0.0));
       });
     });
@@ -525,8 +525,8 @@ void main() {
 
       test('fromPoints extracts x values', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 10.0),
-          ChartDataPoint(x: 5.0, y: 20.0),
+          const ChartDataPoint(x: 1.0, y: 10.0),
+          const ChartDataPoint(x: 5.0, y: 20.0),
         ];
         final range = dr.DataRange.fromPoints(points, dr.Axis.x);
         expect(range.min, equals(1.0));
@@ -535,8 +535,8 @@ void main() {
 
       test('fromPoints extracts y values', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 10.0),
-          ChartDataPoint(x: 5.0, y: 20.0),
+          const ChartDataPoint(x: 1.0, y: 10.0),
+          const ChartDataPoint(x: 5.0, y: 20.0),
         ];
         final range = dr.DataRange.fromPoints(points, dr.Axis.y);
         expect(range.min, equals(10.0));
@@ -559,27 +559,27 @@ void main() {
 
     group('Computed Properties', () {
       test('span calculates max - min', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         expect(range.span, equals(10.0));
       });
 
       test('center calculates midpoint', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         expect(range.center, equals(5.0));
       });
 
       test('paddedMin subtracts padding', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
+        final range = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
         expect(range.paddedMin, equals(-1.0)); // 0 - (10 * 0.1)
       });
 
       test('paddedMax adds padding', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
+        final range = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
         expect(range.paddedMax, equals(11.0)); // 10 + (10 * 0.1)
       });
 
       test('padding has no effect when span is zero', () {
-        final range = dr.DataRange(min: 5.0, max: 5.0, padding: 0.1);
+        final range = const dr.DataRange(min: 5.0, max: 5.0, padding: 0.1);
         expect(range.paddedMin, equals(5.0));
         expect(range.paddedMax, equals(5.0));
       });
@@ -587,55 +587,55 @@ void main() {
 
     group('Methods', () {
       test('contains returns true for value in range', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         expect(range.contains(5.0), isTrue);
         expect(range.contains(0.0), isTrue);
         expect(range.contains(10.0), isTrue);
       });
 
       test('contains returns false for value outside range', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         expect(range.contains(-1.0), isFalse);
         expect(range.contains(11.0), isFalse);
       });
 
       test('overlaps returns true for overlapping ranges', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 5.0, max: 15.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 5.0, max: 15.0);
         expect(r1.overlaps(r2), isTrue);
         expect(r2.overlaps(r1), isTrue);
       });
 
       test('overlaps returns false for non-overlapping ranges', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 11.0, max: 20.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 11.0, max: 20.0);
         expect(r1.overlaps(r2), isFalse);
       });
 
       test('overlaps returns true for touching ranges', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 10.0, max: 20.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 10.0, max: 20.0);
         expect(r1.overlaps(r2), isTrue);
       });
 
       test('merge combines two ranges', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 5.0, max: 15.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 5.0, max: 15.0);
         final merged = r1.merge(r2);
         expect(merged.min, equals(0.0));
         expect(merged.max, equals(15.0));
       });
 
       test('merge handles disjoint ranges', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 20.0, max: 30.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 20.0, max: 30.0);
         final merged = r1.merge(r2);
         expect(merged.min, equals(0.0));
         expect(merged.max, equals(30.0));
       });
 
       test('validate returns Success for valid range', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         final result = range.validate();
         expect(result.isSuccess, isTrue);
       });
@@ -643,27 +643,27 @@ void main() {
 
     group('Equality', () {
       test('equal ranges are equal', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 0.0, max: 10.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 0.0, max: 10.0);
         expect(r1, equals(r2));
       });
 
       test('ranges with different min are not equal', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0);
-        final r2 = dr.DataRange(min: 1.0, max: 10.0);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0);
+        final r2 = const dr.DataRange(min: 1.0, max: 10.0);
         expect(r1, isNot(equals(r2)));
       });
 
       test('ranges with different padding are not equal', () {
-        final r1 = dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
-        final r2 = dr.DataRange(min: 0.0, max: 10.0, padding: 0.2);
+        final r1 = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.1);
+        final r2 = const dr.DataRange(min: 0.0, max: 10.0, padding: 0.2);
         expect(r1, isNot(equals(r2)));
       });
     });
 
     group('toString', () {
       test('includes min and max', () {
-        final range = dr.DataRange(min: 0.0, max: 10.0);
+        final range = const dr.DataRange(min: 0.0, max: 10.0);
         final str = range.toString();
         expect(str, contains('0.0'));
         expect(str, contains('10.0'));
@@ -744,7 +744,7 @@ void main() {
             ChartDataPoint(x: 2.0, y: 3.0, timestamp: t2),
           ],
         );
-        expect(ts.timeSpan, equals(Duration(days: 2)));
+        expect(ts.timeSpan, equals(const Duration(days: 2)));
       });
 
       test('startTime returns null for empty series', () {
@@ -767,7 +767,7 @@ void main() {
         final ts = TimeSeriesData(
           id: 'test',
           data: [
-            ChartDataPoint(x: 1.0, y: 2.0), // No timestamp
+            const ChartDataPoint(x: 1.0, y: 2.0), // No timestamp
             ChartDataPoint(x: 2.0, y: 3.0, timestamp: t1),
           ],
         );
@@ -791,7 +791,7 @@ void main() {
         final ts = TimeSeriesData(
           id: 'test',
           data: [
-            ChartDataPoint(x: 1.0, y: 2.0), // Missing timestamp
+            const ChartDataPoint(x: 1.0, y: 2.0), // Missing timestamp
           ],
         );
         final result = ts.validate();

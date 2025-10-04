@@ -3,8 +3,8 @@
 
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
-import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/src/foundation/type_system/chart_error.dart';
+import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 
 /// Time-based dataset with DateTime x-axis values.
 ///
@@ -60,7 +60,7 @@ class TimeSeriesData {
   /// Returns the earliest timestamp in this series, or null if empty.
   DateTime? get startTime {
     if (data.isEmpty) return null;
-    
+
     DateTime? earliest;
     for (final point in data) {
       if (point.hasTimestamp) {
@@ -75,7 +75,7 @@ class TimeSeriesData {
   /// Returns the latest timestamp in this series, or null if empty.
   DateTime? get endTime {
     if (data.isEmpty) return null;
-    
+
     DateTime? latest;
     for (final point in data) {
       if (point.hasTimestamp) {
@@ -117,7 +117,7 @@ class TimeSeriesData {
     // Validate all points have timestamps and are valid
     for (var i = 0; i < data.length; i++) {
       final point = data[i];
-      
+
       // Check for missing timestamp
       if (!point.hasTimestamp) {
         return Failure(
@@ -172,10 +172,8 @@ class TimeSeriesData {
   }) {
     // Convert timestamp to milliseconds for x-axis
     final convertedPoints = data.map((point) {
-      final x = point.hasTimestamp 
-          ? point.timestamp!.millisecondsSinceEpoch.toDouble()
-          : point.x;
-      
+      final x = point.hasTimestamp ? point.timestamp!.millisecondsSinceEpoch.toDouble() : point.x;
+
       return ChartDataPoint(
         x: x,
         y: point.y,
@@ -222,11 +220,7 @@ class TimeSeriesData {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TimeSeriesData &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          name == other.name &&
-          _listEquals(data, other.data);
+      other is TimeSeriesData && runtimeType == other.runtimeType && id == other.id && name == other.name && _listEquals(data, other.data);
   // Note: metadata is intentionally excluded from equality
 
   @override

@@ -1,12 +1,12 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
-import 'package:braven_charts/src/foundation/performance/batch_processor.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
+import 'package:braven_charts/src/foundation/performance/batch_processor.dart';
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ObjectPool<T> Contract Tests', () {
@@ -107,19 +107,19 @@ void main() {
 
   group('ViewportCuller Contract Tests', () {
     test('ViewportCuller constructor works', () {
-      final culler = ViewportCuller(margin: 0.1);
+      final culler = const ViewportCuller(margin: 0.1);
       expect(culler.margin, equals(0.1));
     });
 
     test('ViewportCuller cull() filters points', () {
-      final culler = ViewportCuller(margin: 0.0);
+      final culler = const ViewportCuller(margin: 0.0);
       final points = [
-        ChartDataPoint(x: 1.0, y: 1.0), // Inside
-        ChartDataPoint(x: 5.0, y: 5.0), // Inside
-        ChartDataPoint(x: 10.0, y: 10.0), // Outside
+        const ChartDataPoint(x: 1.0, y: 1.0), // Inside
+        const ChartDataPoint(x: 5.0, y: 5.0), // Inside
+        const ChartDataPoint(x: 10.0, y: 10.0), // Outside
       ];
 
-      final viewport = dr.DataRange(min: 0.0, max: 6.0);
+      final viewport = const dr.DataRange(min: 0.0, max: 6.0);
       final visible = culler.cull(
         points: points,
         viewportX: viewport,
@@ -131,13 +131,13 @@ void main() {
     });
 
     test('ViewportCuller optimizes ordered data with binary search', () {
-      final culler = ViewportCuller(margin: 0.0);
+      final culler = const ViewportCuller(margin: 0.0);
       final points = List.generate(
         1000,
         (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
       );
 
-      final viewport = dr.DataRange(min: 100.0, max: 200.0);
+      final viewport = const dr.DataRange(min: 100.0, max: 200.0);
       final visible = culler.cull(
         points: points,
         viewportX: viewport,
@@ -149,8 +149,8 @@ void main() {
     });
 
     test('ViewportCuller calculateBounds() applies margin', () {
-      final culler = ViewportCuller(margin: 0.1);
-      final viewport = dr.DataRange(min: 0.0, max: 10.0);
+      final culler = const ViewportCuller(margin: 0.1);
+      final viewport = const dr.DataRange(min: 0.0, max: 10.0);
       final bounds = culler.calculateBounds(
         viewportX: viewport,
         viewportY: viewport,
@@ -164,12 +164,12 @@ void main() {
     test('ViewportCuller performance <1ms for 10k points', () {
       // This will be verified in performance benchmarks (T027)
       // For now, just verify the API exists
-      final culler = ViewportCuller();
+      final culler = const ViewportCuller();
       final points = List.generate(
         100,
         (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
       );
-      final viewport = dr.DataRange(min: 0.0, max: 50.0);
+      final viewport = const dr.DataRange(min: 0.0, max: 50.0);
       final visible = culler.cull(
         points: points,
         viewportX: viewport,
