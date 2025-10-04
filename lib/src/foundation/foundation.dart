@@ -12,6 +12,11 @@ export 'data_models/chart_data_point.dart';
 export 'data_models/chart_series.dart';
 export 'data_models/data_range.dart';
 export 'data_models/time_series_data.dart';
+// Math Utilities
+export 'math/curve_fitting.dart';
+export 'math/interpolation.dart';
+export 'math/statistics.dart';
+// Performance Primitives
 export 'performance/batch_processor.dart';
 // Performance Primitives
 export 'performance/object_pool.dart';
@@ -20,8 +25,3 @@ export 'type_system/chart_error.dart';
 // Type System
 export 'type_system/chart_result.dart';
 export 'type_system/validation_utils.dart';
-
-// Math Utilities
-export 'math/statistics.dart';
-export 'math/interpolation.dart';
-// export 'math/curve_fitting.dart';

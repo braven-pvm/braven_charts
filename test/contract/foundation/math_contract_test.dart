@@ -1,13 +1,12 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
-
+import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/src/foundation/math/curve_fitting.dart';
+import 'package:braven_charts/src/foundation/math/interpolation.dart';
 // These imports will fail until implementation exists - that's expected for TDD
 import 'package:braven_charts/src/foundation/math/statistics.dart';
-import 'package:braven_charts/src/foundation/math/interpolation.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-// import 'package:braven_charts/src/foundation/math/curve_fitting.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('StatisticalFunctions Contract Tests', () {
@@ -122,66 +121,71 @@ void main() {
   });
 
   group('CurveFittingFunctions Contract Tests', () {
-    test('EXPECTED FAILURE: CurveFittingFunctions.linearFit() exists', () {
-      fail('CurveFittingFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final points = [
-      //   ChartDataPoint(x: 0.0, y: 0.0),
-      //   ChartDataPoint(x: 1.0, y: 2.0),
-      //   ChartDataPoint(x: 2.0, y: 4.0),
-      //   ChartDataPoint(x: 3.0, y: 6.0),
-      // ];
-      // final fit = CurveFittingFunctions.linearFit(points);
-      // expect(fit.coefficients.length, equals(2)); // y = mx + b
-      // expect(fit.coefficients[0], closeTo(0.0, 0.01)); // b (intercept)
-      // expect(fit.coefficients[1], closeTo(2.0, 0.01)); // m (slope)
-      // expect(fit.rSquared, closeTo(1.0, 0.01)); // Perfect fit
+    test('CurveFittingFunctions.linearFit() exists', () {
+      final points = [
+        ChartDataPoint(x: 0.0, y: 0.0),
+        ChartDataPoint(x: 1.0, y: 2.0),
+        ChartDataPoint(x: 2.0, y: 4.0),
+        ChartDataPoint(x: 3.0, y: 6.0),
+      ];
+      final fit = CurveFittingFunctions.linearFit(points);
+      expect(fit.coefficients.length, equals(2)); // y = mx + b
+      expect(fit.coefficients[0], closeTo(0.0, 0.01)); // b (intercept)
+      expect(fit.coefficients[1], closeTo(2.0, 0.01)); // m (slope)
+      expect(fit.rSquared, closeTo(1.0, 0.01)); // Perfect fit
     });
 
-    test('EXPECTED FAILURE: CurveFittingFunctions.polynomialFit() exists', () {
-      fail('CurveFittingFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final points = [
-      //   ChartDataPoint(x: 0.0, y: 1.0),
-      //   ChartDataPoint(x: 1.0, y: 2.0),
-      //   ChartDataPoint(x: 2.0, y: 5.0),
-      // ];
-      // final fit = CurveFittingFunctions.polynomialFit(points, degree: 2);
-      // expect(fit.coefficients.length, equals(3)); // Quadratic
+    test('CurveFittingFunctions.polynomialFit() exists', () {
+      final points = [
+        ChartDataPoint(x: 0.0, y: 1.0),
+        ChartDataPoint(x: 1.0, y: 2.0),
+        ChartDataPoint(x: 2.0, y: 5.0),
+      ];
+      final fit = CurveFittingFunctions.polynomialFit(points, degree: 2);
+      expect(fit.coefficients.length, equals(3)); // Quadratic
     });
 
-    test('EXPECTED FAILURE: CurveFittingFunctions.exponentialFit() exists', () {
-      fail('CurveFittingFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final fit = CurveFittingFunctions.exponentialFit([...]);
-      // expect(fit, isA<FitResult>());
+    test('CurveFittingFunctions.exponentialFit() exists', () {
+      final points = [
+        ChartDataPoint(x: 0.0, y: 1.0),
+        ChartDataPoint(x: 1.0, y: 2.7),
+        ChartDataPoint(x: 2.0, y: 7.4),
+      ];
+      final fit = CurveFittingFunctions.exponentialFit(points);
+      expect(fit, isA<FitResult>());
     });
 
-    test('EXPECTED FAILURE: CurveFittingFunctions.logarithmicFit() exists', () {
-      fail('CurveFittingFunctions class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final fit = CurveFittingFunctions.logarithmicFit([...]);
-      // expect(fit, isA<FitResult>());
+    test('CurveFittingFunctions.logarithmicFit() exists', () {
+      final points = [
+        ChartDataPoint(x: 1.0, y: 2.0),
+        ChartDataPoint(x: 2.7, y: 3.0),
+        ChartDataPoint(x: 7.4, y: 4.0),
+      ];
+      final fit = CurveFittingFunctions.logarithmicFit(points);
+      expect(fit, isA<FitResult>());
     });
 
-    test('EXPECTED FAILURE: FitResult includes R² and residuals', () {
-      fail('FitResult class not implemented yet');
-
-      // Uncomment when implementation exists:
-      // final fit = CurveFittingFunctions.linearFit([...]);
-      // expect(fit.rSquared, isA<double>());
-      // expect(fit.residuals, isA<List<double>>());
-      // expect(fit.equation, isA<String>());
+    test('FitResult includes R² and residuals', () {
+      final points = [
+        ChartDataPoint(x: 0.0, y: 0.0),
+        ChartDataPoint(x: 1.0, y: 2.0),
+        ChartDataPoint(x: 2.0, y: 4.0),
+      ];
+      final fit = CurveFittingFunctions.linearFit(points);
+      expect(fit.rSquared, isA<double>());
+      expect(fit.residuals, isA<List<double>>());
+      expect(fit.equation, isA<String>());
     });
 
-    test('EXPECTED FAILURE: Curve fitting performance <50ms for polynomial', () {
-      fail('CurveFittingFunctions class not implemented yet - performance test pending');
-
+    test('Curve fitting performance <50ms for polynomial', () {
       // This will be verified in performance benchmarks (T028)
+      // Basic smoke test: ensure polynomial fit completes
+      final points = List.generate(
+        100,
+        (i) => ChartDataPoint(x: i.toDouble(), y: i * i.toDouble()),
+      );
+      final fit = CurveFittingFunctions.polynomialFit(points, degree: 2);
+      expect(fit.coefficients.length, equals(3));
     });
   });
 }
