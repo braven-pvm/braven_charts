@@ -15,9 +15,9 @@ export 'data_models/data_range.dart';
 export 'data_models/time_series_data.dart';
 
 // Performance Primitives
-// export 'performance/object_pool.dart';
-// export 'performance/viewport_culler.dart';
-// export 'performance/batch_processor.dart';
+export 'performance/object_pool.dart';
+export 'performance/viewport_culler.dart';
+export 'performance/batch_processor.dart';
 
 // Type System
 export 'type_system/chart_result.dart';
