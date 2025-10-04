@@ -10,7 +10,7 @@ targets:
         options:
           # Generate mocks in the same directory as the source
           build_to: test/mocks/
-          
+
   test:
     dependencies:
       - $default

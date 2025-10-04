@@ -37,11 +37,13 @@ class TestUtils {
 
   /// Large dataset for performance testing
   static List<Map<String, dynamic>> getLargeTestDataset(int size) {
-    return List.generate(size, (index) => {
-      'x': index,
-      'y': (index * 0.5) + (index % 10),
-      'label': 'Point $index',
-    });
+    return List.generate(
+        size,
+        (index) => {
+              'x': index,
+              'y': (index * 0.5) + (index % 10),
+              'label': 'Point $index',
+            });
   }
 
   /// Custom matcher for comparing doubles with tolerance
@@ -50,7 +52,8 @@ class TestUtils {
   }
 
   /// Waits for animations to complete
-  static Future<void> pumpAndSettle(WidgetTester tester, {
+  static Future<void> pumpAndSettle(
+    WidgetTester tester, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     await tester.pumpAndSettle(timeout);

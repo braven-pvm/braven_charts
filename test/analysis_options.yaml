@@ -10,7 +10,7 @@ analyzer:
     - "**/*.mocks.dart"
     - "test/**"
     - "integration_test/**"
-  
+
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false

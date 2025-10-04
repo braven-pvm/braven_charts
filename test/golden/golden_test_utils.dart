@@ -8,7 +8,7 @@ class GoldenTestUtils {
   static const Size chartSmall = Size(300, 200);
   static const Size chartMedium = Size(600, 400);
   static const Size chartLarge = Size(1200, 800);
-  
+
   static const List<Size> chartSizes = [
     chartSmall,
     chartMedium,
@@ -24,7 +24,7 @@ class GoldenTestUtils {
     for (int i = 0; i < sizes.length; i++) {
       final size = sizes[i];
       final sizeName = ['small', 'medium', 'large'][i];
-      
+
       testGoldens(
         '${name}_$sizeName',
         (tester) async {
@@ -88,9 +88,9 @@ class GoldenTestUtils {
   /// Helper to create material app wrapper
   static Widget Function(Widget) materialAppWrapper({ThemeData? theme}) {
     return (Widget child) => MaterialApp(
-      theme: theme ?? ThemeData.light(),
-      home: Scaffold(body: child),
-      debugShowCheckedModeBanner: false,
-    );
+          theme: theme ?? ThemeData.light(),
+          home: Scaffold(body: child),
+          debugShowCheckedModeBanner: false,
+        );
   }
 }

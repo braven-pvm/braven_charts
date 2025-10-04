@@ -8,12 +8,12 @@ import 'package:flutter/painting.dart';
 @GenerateMocks([
   // System services
   SystemChrome,
-  
+
   // Painting and rendering
   Canvas,
   Paint,
   Path,
-  
+
   // Custom interfaces for chart components
   ChartRenderer,
   DataProvider,

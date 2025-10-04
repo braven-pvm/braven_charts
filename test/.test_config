@@ -1,0 +1,4 @@
+﻿# Test files
+test/**
+!test/integration_test/**
+!test/test_driver/**

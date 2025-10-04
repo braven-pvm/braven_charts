@@ -10,13 +10,13 @@ class PerformanceTestUtils {
     int iterations = 100,
   }) async {
     final stopwatch = Stopwatch();
-    
+
     stopwatch.start();
     for (int i = 0; i < iterations; i++) {
       renderFunction();
     }
     stopwatch.stop();
-    
+
     return Duration(microseconds: stopwatch.elapsedMicroseconds ~/ iterations);
   }
 
@@ -26,11 +26,11 @@ class PerformanceTestUtils {
   }) async {
     // Force garbage collection before measurement
     await _forceGarbageCollection();
-    
+
     final beforeMemory = _getCurrentMemoryUsage();
     await operation();
     final afterMemory = _getCurrentMemoryUsage();
-    
+
     return MemoryUsage(
       before: beforeMemory,
       after: afterMemory,
@@ -44,7 +44,7 @@ class PerformanceTestUtils {
     List<int> dataSizes = const [100, 1000, 10000, 100000],
   }) async {
     final results = <int, Duration>{};
-    
+
     for (final size in dataSizes) {
       final data = _generateTestData(size);
       final duration = await measureRenderTime(
@@ -53,7 +53,7 @@ class PerformanceTestUtils {
       );
       results[size] = duration;
     }
-    
+
     return BenchmarkResult(results);
   }
 
@@ -65,17 +65,17 @@ class PerformanceTestUtils {
   }) async {
     await _forceGarbageCollection();
     final initialMemory = _getCurrentMemoryUsage();
-    
+
     for (int i = 0; i < iterations; i++) {
       await operation();
       if (i % 10 == 0) {
         await _forceGarbageCollection();
       }
     }
-    
+
     await _forceGarbageCollection();
     final finalMemory = _getCurrentMemoryUsage();
-    
+
     final memoryIncrease = finalMemory / initialMemory;
     return memoryIncrease <= acceptableLeakThreshold;
   }
@@ -87,7 +87,7 @@ class PerformanceTestUtils {
   }) async {
     final binding = tester.binding;
     final frameTimings = <Duration>[];
-    
+
     // Start monitoring frames
     void onReportTimings(List<FrameTiming> timings) {
       for (final timing in timings) {
@@ -96,16 +96,16 @@ class PerformanceTestUtils {
         }
       }
     }
-    
+
     binding.addTimingsCallback(onReportTimings);
-    
+
     try {
       await interaction();
       await tester.pumpAndSettle();
-      
+
       // Wait a bit for all frame timings to be reported
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       return FramePerformance(frameTimings);
     } finally {
       binding.removeTimingsCallback(onReportTimings);
@@ -129,11 +129,13 @@ class PerformanceTestUtils {
 
   static List<Map<String, dynamic>> _generateTestData(int size) {
     final random = Random(42); // Fixed seed for reproducible tests
-    return List.generate(size, (index) => {
-      'x': index.toDouble(),
-      'y': random.nextDouble() * 100,
-      'label': 'Point $index',
-    });
+    return List.generate(
+        size,
+        (index) => {
+              'x': index.toDouble(),
+              'y': random.nextDouble() * 100,
+              'label': 'Point $index',
+            });
   }
 }
 
@@ -142,13 +144,13 @@ class MemoryUsage {
   final int before;
   final int after;
   final int difference;
-  
+
   const MemoryUsage({
     required this.before,
     required this.after,
     required this.difference,
   });
-  
+
   @override
   String toString() => 'MemoryUsage(before: $before, after: $after, diff: $difference)';
 }
@@ -156,13 +158,13 @@ class MemoryUsage {
 /// Result of benchmark testing
 class BenchmarkResult {
   final Map<int, Duration> results;
-  
+
   const BenchmarkResult(this.results);
-  
+
   Duration? getDurationForSize(int size) => results[size];
-  
+
   List<int> get dataSizes => results.keys.toList()..sort();
-  
+
   @override
   String toString() {
     final buffer = StringBuffer('BenchmarkResult:\n');
@@ -176,29 +178,28 @@ class BenchmarkResult {
 /// Frame performance metrics
 class FramePerformance {
   final List<Duration> frameTimings;
-  
+
   const FramePerformance(this.frameTimings);
-  
+
   Duration get averageFrameTime {
     if (frameTimings.isEmpty) return Duration.zero;
-    final totalMicroseconds = frameTimings
-        .map((d) => d.inMicroseconds)
-        .reduce((a, b) => a + b);
+    final totalMicroseconds = frameTimings.map((d) => d.inMicroseconds).reduce((a, b) => a + b);
     return Duration(microseconds: totalMicroseconds ~/ frameTimings.length);
   }
-  
+
   Duration get maxFrameTime {
     if (frameTimings.isEmpty) return Duration.zero;
     return frameTimings.reduce((a, b) => a > b ? a : b);
   }
-  
+
   double get fps {
     if (frameTimings.isEmpty) return 0.0;
     return 1000000.0 / averageFrameTime.inMicroseconds;
   }
-  
+
   bool get isPerformant => fps >= 55.0; // Allow some margin below 60fps
-  
+
   @override
-  String toString() => 'FramePerformance(avg: ${averageFrameTime.inMicroseconds}μs, max: ${maxFrameTime.inMicroseconds}μs, fps: ${fps.toStringAsFixed(1)})';
+  String toString() =>
+      'FramePerformance(avg: ${averageFrameTime.inMicroseconds}μs, max: ${maxFrameTime.inMicroseconds}μs, fps: ${fps.toStringAsFixed(1)})';
 }
