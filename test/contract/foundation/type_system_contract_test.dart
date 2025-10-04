@@ -1,13 +1,13 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartResult<T> Sealed Class Contract Tests', () {
     test('ChartResult has Success and Failure variants', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       expect(success.isSuccess, isTrue);
       expect(success.isFailure, isFalse);
 
@@ -17,7 +17,7 @@ void main() {
     });
 
     test('ChartResult.when() provides pattern matching', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       final result = success.when(
         success: (value) => 'Got: $value',
         failure: (error) => 'Error: ${error.message}',
@@ -26,7 +26,7 @@ void main() {
     });
 
     test('ChartResult.getOrNull() returns value or null', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       expect(success.getOrNull(), equals(42));
 
       final failure = Failure<int>(ChartError.validation('Test'));
@@ -39,7 +39,7 @@ void main() {
     });
 
     test('ChartResult.map() transforms success values', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       final mapped = success.map((v) => v * 2);
       expect(mapped.getOrNull(), equals(84));
 
@@ -49,13 +49,13 @@ void main() {
     });
 
     test('ChartResult.flatMap() chains operations', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       final chained = success.flatMap((v) => Success(v * 2));
       expect(chained.getOrNull(), equals(84));
     });
 
     test('ChartResult.fold() handles both cases', () {
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       final result = success.fold(
         onSuccess: (v) => v * 2,
         onFailure: (e) => 0,
@@ -66,7 +66,7 @@ void main() {
     test('Pattern matching is exhaustive (compile-time check)', () {
       // This test verifies that Dart analyzer enforces exhaustiveness
       // If you remove one case from when(), it should be a compile error
-      final result = Success<int>(42);
+      final result = const Success<int>(42);
       final value = result.when(
         success: (v) => v,
         failure: (e) => 0,
@@ -77,7 +77,7 @@ void main() {
 
   group('ChartError Contract Tests', () {
     test('ChartError has required properties', () {
-      final error = ChartError(
+      final error = const ChartError(
         type: ErrorType.validation,
         severity: ErrorSeverity.error,
         message: 'Test error',

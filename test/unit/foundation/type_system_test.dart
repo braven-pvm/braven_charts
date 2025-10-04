@@ -1,8 +1,8 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartResult<T> Unit Tests', () {
@@ -179,9 +179,7 @@ void main() {
     group('Type safety and pattern matching', () {
       test('exhaustive pattern matching with when', () {
         ChartResult<int> getResult(bool succeed) {
-          return succeed
-              ? const Success(42)
-              : Failure(ChartError.validation('Error'));
+          return succeed ? const Success(42) : Failure(ChartError.validation('Error'));
         }
 
         // Both branches must be handled
@@ -251,7 +249,7 @@ void main() {
   group('ChartError Unit Tests', () {
     group('Constructor', () {
       test('creates error with all properties', () {
-        final error = ChartError(
+        final error = const ChartError(
           type: ErrorType.validation,
           severity: ErrorSeverity.error,
           message: 'Test message',
@@ -267,7 +265,7 @@ void main() {
       });
 
       test('creates error with minimal properties', () {
-        final error = ChartError(
+        final error = const ChartError(
           type: ErrorType.internal,
           severity: ErrorSeverity.critical,
           message: 'Error',
@@ -374,7 +372,7 @@ void main() {
       });
 
       test('handles minimal error', () {
-        final error = ChartError(
+        final error = const ChartError(
           type: ErrorType.internal,
           severity: ErrorSeverity.critical,
           message: 'Error',

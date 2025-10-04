@@ -173,8 +173,7 @@ class ChartError {
           code == other.code;
 
   @override
-  int get hashCode =>
-      Object.hash(type, severity, message, code);
+  int get hashCode => Object.hash(type, severity, message, code);
 
   @override
   String toString() {

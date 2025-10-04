@@ -22,8 +22,7 @@ class ValidationUtils {
   ValidationUtils._();
 
   /// Check if a number is finite (not NaN or Infinity).
-  static bool isFiniteNumber(double value) =>
-      !value.isNaN && !value.isInfinite;
+  static bool isFiniteNumber(double value) => !value.isNaN && !value.isInfinite;
 
   /// Validate that a number is finite.
   ///
@@ -44,8 +43,7 @@ class ValidationUtils {
   /// Sanitize a number by replacing NaN/Infinity with a default value.
   ///
   /// Returns the original value if finite, otherwise returns defaultValue.
-  static double sanitizeNumber(double value, double defaultValue) =>
-      isFiniteNumber(value) ? value : defaultValue;
+  static double sanitizeNumber(double value, double defaultValue) => isFiniteNumber(value) ? value : defaultValue;
 
   /// Validate that a value is non-null.
   ///
