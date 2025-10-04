@@ -8,7 +8,7 @@
 ## Task Overview
 
 **Total Tasks**: 58  
-**Completed**: 24 / 58 (41%)**  
+**Completed**: 28 / 58 (48%)**  
 **Estimated Duration**: 8-12 days with parallel execution  
 **TDD Enforced**: All test tasks MUST complete before implementation tasks  
 **Constitutional Compliance**: 100% coverage, all performance targets validated
@@ -401,44 +401,48 @@ test/
 
 **Dependencies**: All implementation tasks (T017-T023)
 
-### T025: [P] Benchmark - ChartDataPoint Creation
+### T025: [X] [P] Benchmark - ChartDataPoint Creation
 **Description**: Benchmark data point creation performance  
 **File**: `test/performance/foundation/data_point_benchmark.dart`  
 **Target**: <1μs per point (FR-005.1)  
 **Test**: Create 100k points, measure average time  
 **Benchmark Framework**: `package:benchmark_harness`  
-**Acceptance**: Average <1μs per point, report generated
+**Acceptance**: Average <1μs per point, report generated  
+**Status**: ✅ COMPLETE - Creation and copyWith benchmarks implemented
 
 ---
 
-### T026: [P] Benchmark - ObjectPool Operations
+### T026: [X] [P] Benchmark - ObjectPool Operations
 **Description**: Benchmark pool acquire/release performance  
 **File**: `test/performance/foundation/object_pool_benchmark.dart`  
 **Target**: <100ns per operation (FR-005.3)  
 **Test**: 10k acquire/release cycles  
 **Metrics**: Average time, hit rate, memory overhead  
-**Acceptance**: Operations <100ns, hit rate >90% after warmup
+**Acceptance**: Operations <100ns, hit rate >90% after warmup  
+**Status**: ✅ COMPLETE - Acquire/release and reuse pattern benchmarks
 
 ---
 
-### T027: [P] Benchmark - ViewportCuller
+### T027: [X] [P] Benchmark - ViewportCuller
 **Description**: Benchmark viewport culling performance  
 **File**: `test/performance/foundation/viewport_culler_benchmark.dart`  
 **Target**: <1ms for 10k points (FR-005.4)  
 **Test**: Cull 10k ordered and unordered datasets  
 **Metrics**: Time for binary search vs linear scan  
-**Acceptance**: <1ms for 10k points, both algorithms measured
+**Acceptance**: <1ms for 10k points, both algorithms measured  
+**Status**: ✅ COMPLETE - Ordered, unordered, and small viewport benchmarks
 
 ---
 
-### T028: [P] Benchmark - Math Functions
+### T028: [X] [P] Benchmark - Math Functions
 **Description**: Benchmark statistical and math functions  
 **File**: `test/performance/foundation/math_benchmark.dart`  
 **Targets**:
 - Statistics: <10ms for 10k values (FR-005.5)
 - Curve fitting: <50ms for polynomial (FR-005.6)  
 **Test**: Run all math functions on large datasets  
-**Acceptance**: All performance targets met, report generated
+**Acceptance**: All performance targets met, report generated  
+**Status**: ✅ COMPLETE - Statistics, interpolation, linear fit, and polynomial fit benchmarks
 
 ---
 
