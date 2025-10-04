@@ -296,9 +296,9 @@ void main() {
     group('cubicSpline()', () {
       test('preserves endpoints', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 0.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 0.0),
         ];
         final samples = InterpolationFunctions.cubicSpline(points, 100);
         expect(samples.first, closeTo(0.0, 0.01));
@@ -307,10 +307,10 @@ void main() {
 
       test('produces smooth curve', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 2.0),
-          ChartDataPoint(x: 2.0, y: 1.0),
-          ChartDataPoint(x: 3.0, y: 3.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 2.0, y: 1.0),
+          const ChartDataPoint(x: 3.0, y: 3.0),
         ];
         final samples = InterpolationFunctions.cubicSpline(points, 50);
         expect(samples.length, equals(50));
@@ -323,9 +323,9 @@ void main() {
 
       test('passes through control points', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 0.5),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 0.5),
         ];
         final samples = InterpolationFunctions.cubicSpline(points, 100);
         // First sample should be y=0
@@ -360,10 +360,10 @@ void main() {
     group('catmullRom()', () {
       test('produces smooth curve through control points', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 0.5),
-          ChartDataPoint(x: 3.0, y: 2.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 0.5),
+          const ChartDataPoint(x: 3.0, y: 2.0),
         ];
         final samples = InterpolationFunctions.catmullRom(points, 50);
         expect(samples, isNotEmpty);
@@ -376,9 +376,9 @@ void main() {
 
       test('requires at least 4 points', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 0.5),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 0.5),
         ];
         // catmullRom returns empty list for <4 points
         final result = InterpolationFunctions.catmullRom(points, 50);
@@ -387,10 +387,10 @@ void main() {
 
       test('tension parameter affects curve shape', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 0.5),
-          ChartDataPoint(x: 3.0, y: 2.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 0.5),
+          const ChartDataPoint(x: 3.0, y: 2.0),
         ];
         final loose = InterpolationFunctions.catmullRom(points, 50, tension: 0.0);
         final tight = InterpolationFunctions.catmullRom(points, 50, tension: 1.0);
@@ -455,10 +455,10 @@ void main() {
     group('linearFit()', () {
       test('fits perfect line y = 2x + 1', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 1.0),
-          ChartDataPoint(x: 1.0, y: 3.0),
-          ChartDataPoint(x: 2.0, y: 5.0),
-          ChartDataPoint(x: 3.0, y: 7.0),
+          const ChartDataPoint(x: 0.0, y: 1.0),
+          const ChartDataPoint(x: 1.0, y: 3.0),
+          const ChartDataPoint(x: 2.0, y: 5.0),
+          const ChartDataPoint(x: 3.0, y: 7.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         expect(fit.coefficients[0], closeTo(1.0, 0.01)); // intercept
@@ -470,9 +470,9 @@ void main() {
 
       test('fits horizontal line', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 5.0),
-          ChartDataPoint(x: 1.0, y: 5.0),
-          ChartDataPoint(x: 2.0, y: 5.0),
+          const ChartDataPoint(x: 0.0, y: 5.0),
+          const ChartDataPoint(x: 1.0, y: 5.0),
+          const ChartDataPoint(x: 2.0, y: 5.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         expect(fit.coefficients[1], closeTo(0.0, 0.01)); // zero slope
@@ -481,9 +481,9 @@ void main() {
 
       test('computes residuals correctly', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 1.0),
-          ChartDataPoint(x: 1.0, y: 2.9), // Slightly off
-          ChartDataPoint(x: 2.0, y: 5.0),
+          const ChartDataPoint(x: 0.0, y: 1.0),
+          const ChartDataPoint(x: 1.0, y: 2.9), // Slightly off
+          const ChartDataPoint(x: 2.0, y: 5.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         expect(fit.residuals.length, equals(3));
@@ -492,7 +492,7 @@ void main() {
 
       test('requires at least 2 points', () {
         expect(
-          () => CurveFittingFunctions.linearFit([ChartDataPoint(x: 0, y: 0)]),
+          () => CurveFittingFunctions.linearFit([const ChartDataPoint(x: 0, y: 0)]),
           throwsArgumentError,
         );
       });
@@ -515,9 +515,9 @@ void main() {
     group('polynomialFit()', () {
       test('degree 1 equivalent to linear fit', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 1.0),
-          ChartDataPoint(x: 1.0, y: 3.0),
-          ChartDataPoint(x: 2.0, y: 5.0),
+          const ChartDataPoint(x: 0.0, y: 1.0),
+          const ChartDataPoint(x: 1.0, y: 3.0),
+          const ChartDataPoint(x: 2.0, y: 5.0),
         ];
         final polyFit = CurveFittingFunctions.polynomialFit(points, degree: 1);
         final linFit = CurveFittingFunctions.linearFit(points);
@@ -527,10 +527,10 @@ void main() {
 
       test('fits perfect quadratic y = x²', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 4.0),
-          ChartDataPoint(x: 3.0, y: 9.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 4.0),
+          const ChartDataPoint(x: 3.0, y: 9.0),
         ];
         final fit = CurveFittingFunctions.polynomialFit(points, degree: 2);
         expect(fit.coefficients[0], closeTo(0.0, 0.01)); // constant term
@@ -541,10 +541,10 @@ void main() {
 
       test('fits cubic polynomial', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 1.0),
-          ChartDataPoint(x: 1.0, y: 2.0),
-          ChartDataPoint(x: 2.0, y: 5.0),
-          ChartDataPoint(x: 3.0, y: 14.0),
+          const ChartDataPoint(x: 0.0, y: 1.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 2.0, y: 5.0),
+          const ChartDataPoint(x: 3.0, y: 14.0),
         ];
         final fit = CurveFittingFunctions.polynomialFit(points, degree: 3);
         expect(fit.coefficients.length, equals(4));
@@ -552,7 +552,7 @@ void main() {
       });
 
       test('validates degree constraints', () {
-        final points = [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 1, y: 1)];
+        final points = [const ChartDataPoint(x: 0, y: 0), const ChartDataPoint(x: 1, y: 1)];
         expect(
           () => CurveFittingFunctions.polynomialFit(points, degree: 0),
           throwsArgumentError,
@@ -564,7 +564,7 @@ void main() {
       });
 
       test('validates sufficient points for degree', () {
-        final points = [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 1, y: 1)];
+        final points = [const ChartDataPoint(x: 0, y: 0), const ChartDataPoint(x: 1, y: 1)];
         expect(
           () => CurveFittingFunctions.polynomialFit(points, degree: 2),
           throwsArgumentError,
@@ -589,8 +589,8 @@ void main() {
 
       test('requires positive y values', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: -1.0),
-          ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 0.0, y: -1.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
         ];
         expect(
           () => CurveFittingFunctions.exponentialFit(points),
@@ -600,8 +600,8 @@ void main() {
 
       test('equation format is correct', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 1.0),
-          ChartDataPoint(x: 1.0, y: 2.7),
+          const ChartDataPoint(x: 0.0, y: 1.0),
+          const ChartDataPoint(x: 1.0, y: 2.7),
         ];
         final fit = CurveFittingFunctions.exponentialFit(points);
         expect(fit.equation, contains('×exp('));
@@ -625,8 +625,8 @@ void main() {
 
       test('requires positive x values', () {
         final points = [
-          ChartDataPoint(x: -1.0, y: 1.0),
-          ChartDataPoint(x: 2.0, y: 2.0),
+          const ChartDataPoint(x: -1.0, y: 1.0),
+          const ChartDataPoint(x: 2.0, y: 2.0),
         ];
         expect(
           () => CurveFittingFunctions.logarithmicFit(points),
@@ -636,8 +636,8 @@ void main() {
 
       test('equation format is correct', () {
         final points = [
-          ChartDataPoint(x: 1.0, y: 2.0),
-          ChartDataPoint(x: 2.7, y: 3.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 2.7, y: 3.0),
         ];
         final fit = CurveFittingFunctions.logarithmicFit(points);
         expect(fit.equation, contains('×ln(x)'));
@@ -647,8 +647,8 @@ void main() {
     group('FitResult', () {
       test('toString provides useful output', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         final str = fit.toString();
@@ -659,9 +659,9 @@ void main() {
 
       test('residuals sum to near-zero for well-fit line', () {
         final points = [
-          ChartDataPoint(x: 0.0, y: 0.0),
-          ChartDataPoint(x: 1.0, y: 2.0),
-          ChartDataPoint(x: 2.0, y: 4.0),
+          const ChartDataPoint(x: 0.0, y: 0.0),
+          const ChartDataPoint(x: 1.0, y: 2.0),
+          const ChartDataPoint(x: 2.0, y: 4.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         final sumResiduals = fit.residuals.reduce((a, b) => a + b);
@@ -672,9 +672,9 @@ void main() {
     group('Numerical Stability', () {
       test('handles large values without overflow', () {
         final points = [
-          ChartDataPoint(x: 1000.0, y: 2000.0),
-          ChartDataPoint(x: 2000.0, y: 4000.0),
-          ChartDataPoint(x: 3000.0, y: 6000.0),
+          const ChartDataPoint(x: 1000.0, y: 2000.0),
+          const ChartDataPoint(x: 2000.0, y: 4000.0),
+          const ChartDataPoint(x: 3000.0, y: 6000.0),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         expect(fit.coefficients[1], closeTo(2.0, 0.01));
@@ -683,9 +683,9 @@ void main() {
 
       test('handles small values without underflow', () {
         final points = [
-          ChartDataPoint(x: 0.001, y: 0.002),
-          ChartDataPoint(x: 0.002, y: 0.004),
-          ChartDataPoint(x: 0.003, y: 0.006),
+          const ChartDataPoint(x: 0.001, y: 0.002),
+          const ChartDataPoint(x: 0.002, y: 0.004),
+          const ChartDataPoint(x: 0.003, y: 0.006),
         ];
         final fit = CurveFittingFunctions.linearFit(points);
         expect(fit.coefficients[1], closeTo(2.0, 0.1));

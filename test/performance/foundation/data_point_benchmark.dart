@@ -37,7 +37,7 @@ class ChartDataPointCopyWithBenchmark extends BenchmarkBase {
 
   @override
   void setup() {
-    _point = ChartDataPoint(x: 1.0, y: 2.0);
+    _point = const ChartDataPoint(x: 1.0, y: 2.0);
   }
 
   @override
@@ -53,36 +53,36 @@ class ChartDataPointCopyWithBenchmark extends BenchmarkBase {
 
 void main() {
   print('=== ChartDataPoint Performance Benchmarks ===\n');
-  
+
   // Run creation benchmark
   final creationBench = ChartDataPointCreationBenchmark();
   creationBench.report();
-  
+
   // Calculate microseconds per point
   final creationTimeMs = creationBench.measure();
   final usPerPoint = (creationTimeMs * 1000) / ChartDataPointCreationBenchmark.iterations;
-  
+
   print('');
   print('Results:');
   print('  Creation: ${usPerPoint.toStringAsFixed(3)} μs/point');
   print('  Target:   <1.000 μs/point');
   print('  Status:   ${usPerPoint < 1.0 ? "✅ PASS" : "❌ FAIL"}');
   print('');
-  
+
   // Run copyWith benchmark
   final copyWithBench = ChartDataPointCopyWithBenchmark();
   copyWithBench.report();
-  
+
   final copyWithTimeMs = copyWithBench.measure();
   final usCopyWith = (copyWithTimeMs * 1000) / ChartDataPointCopyWithBenchmark.iterations;
-  
+
   print('');
   print('Results:');
   print('  copyWith: ${usCopyWith.toStringAsFixed(3)} μs/operation');
   print('  Target:   <1.000 μs/operation');
   print('  Status:   ${usCopyWith < 1.0 ? "✅ PASS" : "❌ FAIL"}');
   print('');
-  
+
   // Summary
   print('=== Summary ===');
   final allPass = usPerPoint < 1.0 && usCopyWith < 1.0;

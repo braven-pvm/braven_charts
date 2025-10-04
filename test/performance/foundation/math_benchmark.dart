@@ -146,9 +146,6 @@ void main() {
 
   // Summary
   print('=== Summary ===');
-  final allPass = statsTimeMs < 10.0 &&
-      interpTimeMs < 10.0 &&
-      linearTimeMs < 5.0 &&
-      polyTimeMs < 50.0;
+  final allPass = statsTimeMs < 10.0 && interpTimeMs < 10.0 && linearTimeMs < 5.0 && polyTimeMs < 50.0;
   print('Overall: ${allPass ? "✅ ALL TARGETS MET" : "❌ SOME TARGETS FAILED"}');
 }

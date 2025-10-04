@@ -27,10 +27,10 @@ class ViewportCullerOrderedBenchmark extends BenchmarkBase {
       pointCount,
       (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0),
     );
-    _culler = ViewportCuller();
+    _culler = const ViewportCuller();
     // Viewport: middle 20% (4000-6000)
-    _viewportX = DataRange(min: 4000, max: 6000);
-    _viewportY = DataRange(min: 0, max: 20000);
+    _viewportX = const DataRange(min: 4000, max: 6000);
+    _viewportY = const DataRange(min: 0, max: 20000);
   }
 
   @override
@@ -67,9 +67,9 @@ class ViewportCullerUnorderedBenchmark extends BenchmarkBase {
       (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0),
     );
     _points = List.from(ordered)..shuffle();
-    _culler = ViewportCuller();
-    _viewportX = DataRange(min: 4000, max: 6000);
-    _viewportY = DataRange(min: 0, max: 20000);
+    _culler = const ViewportCuller();
+    _viewportX = const DataRange(min: 4000, max: 6000);
+    _viewportY = const DataRange(min: 0, max: 20000);
   }
 
   @override
@@ -103,10 +103,10 @@ class ViewportCullerSmallViewportBenchmark extends BenchmarkBase {
       pointCount,
       (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0),
     );
-    _culler = ViewportCuller();
+    _culler = const ViewportCuller();
     // Very small viewport: only 1% of data (4950-5050)
-    _viewportX = DataRange(min: 4950, max: 5050);
-    _viewportY = DataRange(min: 0, max: 20000);
+    _viewportX = const DataRange(min: 4950, max: 5050);
+    _viewportY = const DataRange(min: 0, max: 20000);
   }
 
   @override

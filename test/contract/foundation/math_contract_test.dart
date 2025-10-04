@@ -123,10 +123,10 @@ void main() {
   group('CurveFittingFunctions Contract Tests', () {
     test('CurveFittingFunctions.linearFit() exists', () {
       final points = [
-        ChartDataPoint(x: 0.0, y: 0.0),
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 2.0, y: 4.0),
-        ChartDataPoint(x: 3.0, y: 6.0),
+        const ChartDataPoint(x: 0.0, y: 0.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 2.0, y: 4.0),
+        const ChartDataPoint(x: 3.0, y: 6.0),
       ];
       final fit = CurveFittingFunctions.linearFit(points);
       expect(fit.coefficients.length, equals(2)); // y = mx + b
@@ -137,9 +137,9 @@ void main() {
 
     test('CurveFittingFunctions.polynomialFit() exists', () {
       final points = [
-        ChartDataPoint(x: 0.0, y: 1.0),
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 2.0, y: 5.0),
+        const ChartDataPoint(x: 0.0, y: 1.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 2.0, y: 5.0),
       ];
       final fit = CurveFittingFunctions.polynomialFit(points, degree: 2);
       expect(fit.coefficients.length, equals(3)); // Quadratic
@@ -147,9 +147,9 @@ void main() {
 
     test('CurveFittingFunctions.exponentialFit() exists', () {
       final points = [
-        ChartDataPoint(x: 0.0, y: 1.0),
-        ChartDataPoint(x: 1.0, y: 2.7),
-        ChartDataPoint(x: 2.0, y: 7.4),
+        const ChartDataPoint(x: 0.0, y: 1.0),
+        const ChartDataPoint(x: 1.0, y: 2.7),
+        const ChartDataPoint(x: 2.0, y: 7.4),
       ];
       final fit = CurveFittingFunctions.exponentialFit(points);
       expect(fit, isA<FitResult>());
@@ -157,9 +157,9 @@ void main() {
 
     test('CurveFittingFunctions.logarithmicFit() exists', () {
       final points = [
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 2.7, y: 3.0),
-        ChartDataPoint(x: 7.4, y: 4.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 2.7, y: 3.0),
+        const ChartDataPoint(x: 7.4, y: 4.0),
       ];
       final fit = CurveFittingFunctions.logarithmicFit(points);
       expect(fit, isA<FitResult>());
@@ -167,9 +167,9 @@ void main() {
 
     test('FitResult includes R² and residuals', () {
       final points = [
-        ChartDataPoint(x: 0.0, y: 0.0),
-        ChartDataPoint(x: 1.0, y: 2.0),
-        ChartDataPoint(x: 2.0, y: 4.0),
+        const ChartDataPoint(x: 0.0, y: 0.0),
+        const ChartDataPoint(x: 1.0, y: 2.0),
+        const ChartDataPoint(x: 2.0, y: 4.0),
       ];
       final fit = CurveFittingFunctions.linearFit(points);
       expect(fit.rSquared, isA<double>());

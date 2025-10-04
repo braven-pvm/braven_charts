@@ -305,9 +305,7 @@ class CurveFittingFunctions {
     }
 
     // Transform to linear: ln(y) = ln(a) + b×x
-    final transformedPoints = points
-        .map((p) => ChartDataPoint(x: p.x, y: math.log(p.y)))
-        .toList();
+    final transformedPoints = points.map((p) => ChartDataPoint(x: p.x, y: math.log(p.y))).toList();
 
     final linFit = linearFit(transformedPoints);
     final lnA = linFit.coefficients[0];
@@ -374,9 +372,7 @@ class CurveFittingFunctions {
     }
 
     // Transform: y = a + b×ln(x)
-    final transformedPoints = points
-        .map((p) => ChartDataPoint(x: math.log(p.x), y: p.y))
-        .toList();
+    final transformedPoints = points.map((p) => ChartDataPoint(x: math.log(p.x), y: p.y)).toList();
 
     final linFit = linearFit(transformedPoints);
     final a = linFit.coefficients[0];
