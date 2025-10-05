@@ -335,7 +335,7 @@
   - Measure culling latency with 95% visible
   - Verify Foundation ViewportCuller reuse
 
-- [ ] **T033** [P] Benchmark text layout caching in test/benchmarks/rendering/text_cache_benchmark.dart
+- [x] **T033** [P] Benchmark text layout caching in test/benchmarks/rendering/text_cache_benchmark.dart
   - Create 500 unique text/style combinations
   - Measure cache hit latency (target: <1μs)
   - Measure cache miss + layout latency (baseline)
