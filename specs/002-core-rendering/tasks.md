@@ -94,7 +94,7 @@
   - Toggle trend line visibility to false
   - Assert layer skipped in next frame (<8ms update)
 
-- [ ] **T008** [P] Integration test for Scenario 3 (Performance monitoring dashboard) in test/integration/rendering/performance_dashboard_test.dart
+- [x] **T008** [P] Integration test for Scenario 3 (Performance monitoring dashboard) in test/integration/rendering/performance_dashboard_test.dart
   - Enable PerformanceMonitor
   - Render 100 frames
   - Assert metrics update every frame (60Hz)
@@ -103,7 +103,7 @@
   - Assert frame time measurement accuracy ±0.5ms
   - Verify pool statistics track hit/miss/allocation
 
-- [ ] **T009** [P] Integration test for Scenario 4 (Text-heavy chart) in test/integration/rendering/text_heavy_chart_test.dart
+- [x] **T009** [P] Integration test for Scenario 4 (Text-heavy chart) in test/integration/rendering/text_heavy_chart_test.dart
   - Create bar chart with 50 value labels
   - Add legend with 10 category names
   - Assert initial text layout <50ms
