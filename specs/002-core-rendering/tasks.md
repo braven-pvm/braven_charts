@@ -56,7 +56,7 @@
   - Test RenderContext dependency injection
   - Use MockRenderContext from contracts/render_layer.dart
 
-- [ ] **T004** [P] Contract test for PerformanceMonitor interface in test/contract/rendering/performance_monitor_contract_test.dart
+- [x] **T004** [P] Contract test for PerformanceMonitor interface in test/contract/rendering/performance_monitor_contract_test.dart
   - Test beginFrame()/endFrame() pairing
   - Test currentMetrics getter returns valid data
   - Test jank detection (>16ms threshold)
@@ -64,7 +64,7 @@
   - Test maxHistorySize boundary
   - Use MockPerformanceMonitor from contracts/performance_monitor.dart
 
-- [ ] **T005** [P] Contract test for TextLayoutCache interface in test/contract/rendering/text_layout_cache_contract_test.dart
+- [x] **T005** [P] Contract test for TextLayoutCache interface in test/contract/rendering/text_layout_cache_contract_test.dart
   - Test get() returns null on miss
   - Test put() stores layout
   - Test LRU eviction when maxSize exceeded
