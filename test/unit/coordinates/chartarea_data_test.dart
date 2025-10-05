@@ -18,7 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ChartArea ↔ Data transformation', () {
     late TransformContext context;
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
 
     setUp(() {
       // Chart area: 700x540 pixels

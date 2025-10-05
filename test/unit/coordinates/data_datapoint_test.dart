@@ -16,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Data ↔ DataPoint transformation', () {
     late TransformContext context;
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
     late List<ChartSeries> testSeries;
 
     setUp(() {

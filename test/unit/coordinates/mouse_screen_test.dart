@@ -16,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Mouse ↔ Screen transformation', () {
     late TransformContext context;
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
 
     setUp(() {
       // Create test context with standard widget size

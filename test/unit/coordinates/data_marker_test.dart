@@ -15,7 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Data ↔ Marker transformation', () {
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
 
     setUp(() {
       transformer = UniversalCoordinateTransformer();
