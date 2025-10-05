@@ -185,7 +185,7 @@
   - Run contract tests (T003) → should pass
 
 ### T015: RenderPipeline (Orchestrator)
-- [ ] **T015** Implement RenderPipeline in lib/src/rendering/render_pipeline.dart
+- [x] **T015** Implement RenderPipeline in lib/src/rendering/render_pipeline.dart
   - Create class with mutable layers list (List<RenderLayer>)
   - Constructor: Accept paintPool, pathPool, textPainterPool, textCache, performanceMonitor, culler, initial viewport
   - Implement addLayer(RenderLayer layer) → insert layer, maintain z-order sort
