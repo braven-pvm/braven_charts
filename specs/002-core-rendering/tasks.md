@@ -382,7 +382,7 @@
   - Verify z-order preserved (visual validation via pixel comparison)
   - Test alpha blending correctness
 
-- [ ] **T040** [P] Edge case test for text overflow in test/unit/rendering/edge_cases/text_overflow_test.dart
+- [x] **T040** [P] Edge case test for text overflow in test/unit/rendering/edge_cases/text_overflow_test.dart
   - Create label exceeding viewport bounds
   - Verify clipping applied (no off-screen rendering)
   - Verify no crashes
