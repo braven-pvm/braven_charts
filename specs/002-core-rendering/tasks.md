@@ -86,7 +86,7 @@
   - Assert pool hit rate >90%
   - Assert average frame time <8ms over 60 frames
 
-- [ ] **T007** [P] Integration test for Scenario 2 (Multi-layer chart with annotations) in test/integration/rendering/multi_layer_chart_test.dart
+- [x] **T007** [P] Integration test for Scenario 2 (Multi-layer chart with annotations) in test/integration/rendering/multi_layer_chart_test.dart
   - Create 3 layers: scatter plot (zIndex=0), trend line (zIndex=1), annotations (zIndex=2)
   - Assert layers render in correct z-order
   - Add tooltip annotation dynamically
