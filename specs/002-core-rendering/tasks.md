@@ -236,7 +236,7 @@
   - Test immutability (all fields final)
   - Test provides access to all dependency objects
 
-- [ ] **T020** [P] Unit test for RenderLayer isEmpty optimization in test/unit/rendering/render_layer_test.dart
+- [x] **T020** [P] Unit test for RenderLayer isEmpty optimization in test/unit/rendering/render_layer_test.dart
   - Create test layer with isEmpty=true
   - Verify render() not called when isEmpty (via mock verification)
   - Create test layer with isEmpty=false
