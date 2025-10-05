@@ -222,7 +222,7 @@
   - Test hitRate calculation with various hit/miss ratios
   - Test clear() resets counters to zero
 
-- [ ] **T018** [P] Unit test for PerformanceMonitor frame timing in test/unit/rendering/performance_monitor_test.dart
+- [x] **T018** [P] Unit test for PerformanceMonitor frame timing in test/unit/rendering/performance_monitor_test.dart
   - Test beginFrame/endFrame pair records frame time
   - Test jank detection increments counter when frame >16ms
   - Test maxHistorySize boundary (evicts oldest frame times)
