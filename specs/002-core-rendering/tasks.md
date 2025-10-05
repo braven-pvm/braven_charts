@@ -342,7 +342,7 @@
   - Measure hit rate after 1000 renders (target: >70%)
   - Measure LRU eviction performance
 
-- [ ] **T034** [P] Benchmark RenderPipeline frame time in test/benchmarks/rendering/render_pipeline_benchmark.dart
+- [x] **T034** [P] Benchmark RenderPipeline frame time in test/benchmarks/rendering/render_pipeline_benchmark.dart
   - Create pipeline with 3 layers (grid + series + annotations)
   - Measure frame time with 500 visible points (target: <8ms)
   - Measure frame time with 5000 visible points
