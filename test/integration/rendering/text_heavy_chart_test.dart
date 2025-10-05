@@ -7,9 +7,7 @@
 // - Performance: <50ms initial layout, >70% cache hit rate (NFR-003, FR-003)
 // - Memory: Bounded cache eviction, no unbounded growth
 
-import 'package:braven_charts/src/foundation/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/object_pool.dart';
-import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/foundation/foundation.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';

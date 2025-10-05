@@ -9,7 +9,7 @@
 /// This simulates axis labels or annotations that are too large for viewport.
 library;
 
-import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Offset;
+import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 
 import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextStyle, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
@@ -348,4 +348,14 @@ class _TextOverflowLayer implements RenderLayer {
 }
 
 // Mock canvas for testing
-class _MockCanvas extends Fake implements Canvas {}
+class _MockCanvas extends Fake implements Canvas {
+  @override
+  void drawPath(Path path, Paint paint) {
+    // Stub: no-op for tests
+  }
+
+  @override
+  void drawParagraph(Paragraph paragraph, Offset offset) {
+    // Stub: no-op for tests
+  }
+}

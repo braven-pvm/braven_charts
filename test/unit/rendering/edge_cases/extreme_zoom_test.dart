@@ -9,7 +9,7 @@
 /// This simulates extreme zoom-out scenarios where user wants overview of entire dataset.
 library;
 
-import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
+import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
@@ -285,4 +285,14 @@ void main() {
 }
 
 // Mock canvas for testing
-class _MockCanvas extends Fake implements Canvas {}
+class _MockCanvas extends Fake implements Canvas {
+  @override
+  void drawPath(Path path, Paint paint) {
+    // Stub: no-op for tests
+  }
+
+  @override
+  void drawParagraph(Paragraph paragraph, Offset offset) {
+    // Stub: no-op for tests
+  }
+}

@@ -38,6 +38,7 @@ void main() {
           factory: () => TextPainter(),
           reset: (tp) {},
         ),
+        culler: const ViewportCuller(),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         initialViewport: Rect.fromLTWH(0, 0, 800, 600),

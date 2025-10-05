@@ -7,9 +7,7 @@
 // - Performance: <16ms initial render, <8ms average over 60 frames (NFR-001)
 // - Accuracy: Pool hit rate >90%, culling reduces visible points (FR-002, FR-003)
 
-import 'package:braven_charts/src/foundation/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/object_pool.dart';
-import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/foundation/foundation.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
@@ -226,7 +224,7 @@ class _StockDataLayer extends RenderLayer {
   @override
   void render(RenderContext context) {
     // Cull points outside viewport
-    final visiblePoints = context.culler.cullPoints(
+    final visiblePoints = context.culler.cull(
       points: data,
       viewport: context.viewport,
     );

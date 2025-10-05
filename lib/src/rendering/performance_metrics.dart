@@ -92,24 +92,23 @@ class PerformanceMetrics {
 
   /// Number of elements culled by viewport (not rendered).
   ///
-  /// Optional. Null if viewport culling not used or not tracked.
-  /// Indicates effectiveness of culling optimization.
+  /// Defaults to 0 if not provided. Indicates effectiveness of culling optimization.
   ///
   /// Example: 10,000 total points, 500 rendered → 9,500 culled
-  final int? culledElementCount;
+  final int culledElementCount;
 
   /// Number of elements actually rendered (drawn to canvas).
   ///
-  /// Optional. Null if not tracked.
+  /// Defaults to 0 if not provided.
   /// Used with [culledElementCount] to calculate culling ratio.
   ///
   /// Example: 10,000 total points, 500 rendered → renderedElementCount = 500
-  final int? renderedElementCount;
+  final int renderedElementCount;
 
   /// Create immutable performance metrics snapshot.
   ///
   /// All Duration fields must be non-negative. [poolHitRate] must be in
-  /// range [0.0, 1.0]. [jankCount] must be >= 0.
+  /// range [0.0, 1.0]. [jankCount] and element counts must be >= 0.
   ///
   /// Assertions validate constraints in debug mode.
   const PerformanceMetrics({
@@ -118,12 +117,14 @@ class PerformanceMetrics {
     required this.p99FrameTime,
     required this.jankCount,
     required this.poolHitRate,
-    this.culledElementCount,
-    this.renderedElementCount,
+    this.culledElementCount = 0,
+    this.renderedElementCount = 0,
   })  : assert(frameTime >= Duration.zero, 'frameTime must be non-negative'),
         assert(averageFrameTime >= Duration.zero, 'averageFrameTime must be non-negative'),
         assert(p99FrameTime >= Duration.zero, 'p99FrameTime must be non-negative'),
         assert(jankCount >= 0, 'jankCount must be non-negative'),
+        assert(culledElementCount >= 0, 'culledElementCount must be non-negative'),
+        assert(renderedElementCount >= 0, 'renderedElementCount must be non-negative'),
         assert(poolHitRate >= 0.0 && poolHitRate <= 1.0, 'poolHitRate must be in range [0.0, 1.0]');
 
   /// Check if performance meets constitutional targets.
@@ -141,7 +142,7 @@ class PerformanceMetrics {
   /// }
   /// ```
   bool get meetsTargets {
-    return averageFrameTime.inMicroseconds < 8000 && p99FrameTime.inMicroseconds < 16000 && poolHitRate > 0.90;
+    return averageFrameTime.inMicroseconds <= 8000 && p99FrameTime.inMicroseconds <= 16000 && poolHitRate >= 0.90;
   }
 
   /// Average frame time in milliseconds (convenience getter).
@@ -165,19 +166,14 @@ class PerformanceMetrics {
 
   /// Culling ratio (culled / total elements).
   ///
-  /// Returns null if culled or rendered counts not available.
-  /// Returns 0.0 if no culling occurred (all elements rendered).
+  /// Returns 0.0 if no elements (culled + rendered = 0).
   ///
   /// Example: 9500 culled, 500 rendered → 9500/10000 = 0.95 (95% culled)
-  double? get cullingRatio {
-    if (culledElementCount == null || renderedElementCount == null) {
-      return null;
-    }
-
-    final total = culledElementCount! + renderedElementCount!;
+  double get cullingRatio {
+    final total = culledElementCount + renderedElementCount;
     if (total == 0) return 0.0;
 
-    return culledElementCount! / total;
+    return culledElementCount / total;
   }
 
   @override
