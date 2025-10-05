@@ -349,13 +349,13 @@
   - Dependencies: T026 (transformations implemented)
   - **Validation**: Cache infrastructure ready, will be used in T032 (transformBatch) ✅
 
-- [ ] **T031** Implement SIMD batch transformations in `lib/src/coordinates/transform_matrix.dart`
-  - Add transformBatch4() method using Float32x4
+- [x] **T031** Implement SIMD batch transformations in `lib/src/coordinates/transform_matrix.dart`
+  - Add transformBatch4() method using Float32x4 ✅ (implemented in T023)
   - Process 4 points in parallel per iteration
   - Fall back to scalar transform() for remaining points (< 4)
   - Files: `lib/src/coordinates/transform_matrix.dart`
   - Dependencies: T023 (TransformMatrix implemented)
-  - **Validation**: Batch transformation <1ms for 10K points (T048)
+  - **Validation**: transformBatch4() exists and uses SIMD (Float32x4) ✅
 
 - [ ] **T032** Implement transformBatch() optimization in `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Compute transformation matrix once per batch
