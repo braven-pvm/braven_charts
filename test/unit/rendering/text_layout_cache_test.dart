@@ -3,10 +3,9 @@
 // Task: T017
 // Purpose: Validate LRU eviction, cache key handling, hit/miss tracking
 
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import '../../../lib/src/rendering/text_layout_cache.dart';
 
 void main() {
   group('LinkedHashMapTextLayoutCache - LRU Eviction', () {

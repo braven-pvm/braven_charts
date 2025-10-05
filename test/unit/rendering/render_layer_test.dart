@@ -3,15 +3,14 @@
 // Task: T020
 // Purpose: Validate isEmpty short-circuit, visibility toggle, render() contract
 
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/src/rendering/render_context.dart';
+import 'package:braven_charts/src/rendering/render_layer.dart';
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import '../../../lib/src/foundation/performance/object_pool.dart';
-import '../../../lib/src/foundation/performance/viewport_culler.dart';
-import '../../../lib/src/rendering/performance_monitor.dart';
-import '../../../lib/src/rendering/render_context.dart';
-import '../../../lib/src/rendering/render_layer.dart';
-import '../../../lib/src/rendering/text_layout_cache.dart';
 
 void main() {
   // Helper to create test render context
@@ -19,7 +18,7 @@ void main() {
     return RenderContext(
       canvas: _RecordingCanvas(),
       size: const Size(800, 600),
-      viewport: Rect.fromLTWH(0, 0, 800, 600),
+      viewport: const Rect.fromLTWH(0, 0, 800, 600),
       culler: const ViewportCuller(),
       paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
       pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
@@ -36,8 +35,7 @@ void main() {
 
       layer.render(context);
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'render() should short-circuit when isEmpty=true');
+      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'render() should short-circuit when isEmpty=true');
     });
 
     test('isEmpty=false executes render() normally', () {
@@ -46,22 +44,19 @@ void main() {
 
       layer.render(context);
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0),
-          reason: 'render() should execute when isEmpty=false');
+      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0), reason: 'render() should execute when isEmpty=false');
     });
 
     test('default isEmpty implementation returns false', () {
       final layer = _DefaultTestLayer(zIndex: 0);
 
-      expect(layer.isEmpty, isFalse,
-          reason: 'Default isEmpty should return false');
+      expect(layer.isEmpty, isFalse, reason: 'Default isEmpty should return false');
     });
 
     test('isEmpty can be overridden to return true', () {
       final layer = _EmptyTestLayer(zIndex: 0);
 
-      expect(layer.isEmpty, isTrue,
-          reason: 'Overridden isEmpty should return true when layer is empty');
+      expect(layer.isEmpty, isTrue, reason: 'Overridden isEmpty should return true when layer is empty');
     });
 
     test('isEmpty check is fast (O(1) performance)', () {
@@ -76,8 +71,7 @@ void main() {
       stopwatch.stop();
 
       // Should complete in <1ms total (1 microsecond per check)
-      expect(stopwatch.elapsedMicroseconds, lessThan(1000),
-          reason: 'isEmpty checks should be O(1) and very fast');
+      expect(stopwatch.elapsedMicroseconds, lessThan(1000), reason: 'isEmpty checks should be O(1) and very fast');
     });
   });
 
@@ -93,8 +87,7 @@ void main() {
         layer.render(context);
       }
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'Should not render when isVisible=false');
+      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'Should not render when isVisible=false');
     });
 
     test('isVisible=true allows render() to execute', () {
@@ -106,8 +99,7 @@ void main() {
         layer.render(context);
       }
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0),
-          reason: 'Should render when isVisible=true');
+      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0), reason: 'Should render when isVisible=true');
     });
 
     test('toggling isVisible changes render behavior', () {
@@ -119,8 +111,7 @@ void main() {
       if (layer.isVisible) {
         layer.render(context1);
       }
-      expect((context1.canvas as _RecordingCanvas).drawCalls, greaterThan(0),
-          reason: 'Should render when visible');
+      expect((context1.canvas as _RecordingCanvas).drawCalls, greaterThan(0), reason: 'Should render when visible');
 
       // Toggle to invisible
       layer.isVisible = false;
@@ -128,8 +119,7 @@ void main() {
       if (layer.isVisible) {
         layer.render(context2);
       }
-      expect((context2.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'Should not render when invisible');
+      expect((context2.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'Should not render when invisible');
 
       // Toggle back to visible
       layer.isVisible = true;
@@ -137,22 +127,19 @@ void main() {
       if (layer.isVisible) {
         layer.render(context3);
       }
-      expect((context3.canvas as _RecordingCanvas).drawCalls, greaterThan(0),
-          reason: 'Should render again when visible');
+      expect((context3.canvas as _RecordingCanvas).drawCalls, greaterThan(0), reason: 'Should render again when visible');
     });
 
     test('isVisible defaults to true', () {
       final layer = _DefaultTestLayer(zIndex: 0);
 
-      expect(layer.isVisible, isTrue,
-          reason: 'isVisible should default to true in constructor');
+      expect(layer.isVisible, isTrue, reason: 'isVisible should default to true in constructor');
     });
 
     test('isVisible can be set to false in constructor', () {
       final layer = _DefaultTestLayer(zIndex: 0, isVisible: false);
 
-      expect(layer.isVisible, isFalse,
-          reason: 'isVisible should accept false in constructor');
+      expect(layer.isVisible, isFalse, reason: 'isVisible should accept false in constructor');
     });
   });
 
@@ -166,8 +153,7 @@ void main() {
         layer.render(context);
       }
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'Should not render when both conditions are false');
+      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'Should not render when both conditions are false');
     });
 
     test('isEmpty=false AND isVisible=true allows rendering', () {
@@ -179,8 +165,7 @@ void main() {
         layer.render(context);
       }
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0),
-          reason: 'Should render when both conditions are true');
+      expect((context.canvas as _RecordingCanvas).drawCalls, greaterThan(0), reason: 'Should render when both conditions are true');
     });
 
     test('isEmpty=true overrides isVisible=true', () {
@@ -191,8 +176,7 @@ void main() {
       // Layer render implementation checks isEmpty first
       layer.render(context);
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'isEmpty should short-circuit even when visible');
+      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'isEmpty should short-circuit even when visible');
     });
 
     test('isVisible=false overrides isEmpty=false (at pipeline level)', () {
@@ -205,8 +189,7 @@ void main() {
         layer.render(context);
       }
 
-      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0),
-          reason: 'isVisible=false should prevent render call at pipeline level');
+      expect((context.canvas as _RecordingCanvas).drawCalls, equals(0), reason: 'isVisible=false should prevent render call at pipeline level');
     });
   });
 
@@ -221,22 +204,19 @@ void main() {
     test('zIndex accepts negative values', () {
       final layer = _DefaultTestLayer(zIndex: -10);
 
-      expect(layer.zIndex, equals(-10),
-          reason: 'Negative zIndex should be accepted for background layers');
+      expect(layer.zIndex, equals(-10), reason: 'Negative zIndex should be accepted for background layers');
     });
 
     test('zIndex accepts zero', () {
       final layer = _DefaultTestLayer(zIndex: 0);
 
-      expect(layer.zIndex, equals(0),
-          reason: 'Zero zIndex should be accepted');
+      expect(layer.zIndex, equals(0), reason: 'Zero zIndex should be accepted');
     });
 
     test('zIndex accepts positive values', () {
       final layer = _DefaultTestLayer(zIndex: 100);
 
-      expect(layer.zIndex, equals(100),
-          reason: 'Positive zIndex should be accepted for foreground layers');
+      expect(layer.zIndex, equals(100), reason: 'Positive zIndex should be accepted for foreground layers');
     });
   });
 

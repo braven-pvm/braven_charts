@@ -243,7 +243,7 @@
   - Verify render() called
   - Test isVisible=false skips render regardless of isEmpty
 
-- [ ] **T021** [P] Unit test for RenderPipeline layer management in test/unit/rendering/render_pipeline_test.dart
+- [x] **T021** [P] Unit test for RenderPipeline layer management in test/unit/rendering/render_pipeline_test.dart
   - Test addLayer maintains z-order sort
   - Test removeLayer removes correct layer
   - Test addLayer with duplicate zIndex (both render)
