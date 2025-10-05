@@ -284,7 +284,7 @@
 
 ## Phase 3.6: Example Layer Implementations (3 tasks)
 
-- [ ] **T028** [P] Implement GridLayer example in lib/src/rendering/layers/grid_layer.dart
+- [x] **T028** [P] Implement GridLayer example in lib/src/rendering/layers/grid_layer.dart
   - Extend RenderLayer
   - Constructor: gridLineCount, lineColor, zIndex
   - Implement render(context): Draw horizontal/vertical grid lines using pathPool and paintPool
