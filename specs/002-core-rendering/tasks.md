@@ -48,7 +48,7 @@
 ## Phase 3.2: Contract Tests (TDD - MUST COMPLETE BEFORE 3.3) (3 tasks)
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
-- [ ] **T003** [P] Contract test for RenderLayer interface in test/contract/rendering/render_layer_contract_test.dart
+- [x] **T003** [P] Contract test for RenderLayer interface in test/contract/rendering/render_layer_contract_test.dart
   - Test render() method signature
   - Test zIndex ordering behavior
   - Test isVisible toggle effects
