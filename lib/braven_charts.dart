@@ -11,6 +11,13 @@ library;
 // Foundation Layer - Core data structures and utilities
 export 'src/foundation/foundation.dart';
 
+// Coordinate System Layer - Universal transformation system
+export 'src/coordinates/coordinate_system.dart';
+export 'src/coordinates/coordinate_transformer.dart';
+export 'src/coordinates/transform_context.dart';
+export 'src/coordinates/viewport_state.dart';
+export 'src/coordinates/validation_result.dart';
+
 // TODO: Uncomment as layers are implemented
 // Annotation system exports
 // export 'src/annotations/annotation_system.dart';

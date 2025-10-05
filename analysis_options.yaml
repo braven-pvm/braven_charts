@@ -2,3 +2,28 @@ include: package:flutter_lints/flutter.yaml
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+analyzer:
+  errors:
+    # Coordinate system specific rules
+    missing_enum_constant_in_switch: error  # Exhaustive switch for CoordinateSystem enum
+    prefer_const_constructors: error        # Enforce const constructors for immutability
+    prefer_final_fields: error              # Enforce immutability patterns
+    
+linter:
+  rules:
+    # Immutability and const patterns (coordinate system requirement)
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    
+    # Enum exhaustiveness (CoordinateSystem enum requirement)
+    exhaustive_cases: true
+    
+    # Code quality
+    avoid_print: true
+    avoid_unnecessary_containers: true
+    prefer_single_quotes: true
+    sort_constructors_first: true

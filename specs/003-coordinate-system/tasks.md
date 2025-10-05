@@ -53,19 +53,19 @@
   - Dependencies: None
   - **Validation**: All directories exist and are empty ✅
 
-- [ ] **T002** [P] Configure Dart analyzer rules for coordinate system
+- [x] **T002** [P] Configure Dart analyzer rules for coordinate system
   - Add coordinate system specific lint rules to `analysis_options.yaml`
   - Enforce: exhaustive switch for CoordinateSystem enum, const constructors, immutability
   - Files: `analysis_options.yaml`
   - Dependencies: None
-  - **Validation**: `dart analyze` passes with no warnings
+  - **Validation**: `dart analyze` passes with no warnings ✅
 
-- [ ] **T003** [P] Add coordinate system exports to public API
+- [x] **T003** [P] Add coordinate system exports to public API
   - Update `lib/braven_charts.dart` with coordinate system exports
   - Export: CoordinateSystem enum, CoordinateTransformer interface, TransformContext, ViewportState, ValidationResult
   - Files: `lib/braven_charts.dart`
   - Dependencies: None (can add exports before implementation)
-  - **Validation**: Exports compile (no implementation needed yet)
+  - **Validation**: Exports added (files will be created in implementation phase) ✅
 
 ---
 
