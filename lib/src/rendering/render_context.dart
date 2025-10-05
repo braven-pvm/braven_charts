@@ -7,6 +7,8 @@
 // - Immutability: Recreated per frame, never mutated
 // - Dependencies: Foundation (ObjectPool, ViewportCuller), Rendering (TextLayoutCache, PerformanceMonitor)
 
+import 'package:braven_charts/src/coordinates/transform_context.dart';
+import 'package:braven_charts/src/coordinates/universal_coordinate_transformer.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
@@ -129,9 +131,28 @@ class RenderContext {
   /// frame time, p99 frame time, jank count (>16ms frames).
   final PerformanceMonitor performanceMonitor;
 
+  /// Optional coordinate transformation context.
+  ///
+  /// Contains viewport state, data ranges, and chart layout needed
+  /// for transforming points between coordinate systems. Null if
+  /// coordinate transformations are not needed for this frame.
+  ///
+  /// See: Layer 2 (003-coordinate-system) for details.
+  final TransformContext? transformContext;
+
+  /// Optional universal coordinate transformer.
+  ///
+  /// Provides transformations between all 8 coordinate systems
+  /// (mouse, screen, chartArea, data, dataPoint, marker, viewport, normalized).
+  /// Null if coordinate transformations are not needed for this frame.
+  ///
+  /// See: Layer 2 (003-coordinate-system) for details.
+  final UniversalCoordinateTransformer? transformer;
+
   /// Create immutable rendering context.
   ///
-  /// All parameters are required (no nulls). Validates:
+  /// All parameters except [transformContext] and [transformer] are required.
+  /// Validates:
   /// - Canvas size must be positive (width > 0, height > 0)
   /// - Viewport must intersect canvas bounds
   ///
@@ -147,6 +168,8 @@ class RenderContext {
     required this.textPainterPool,
     required this.textCache,
     required this.performanceMonitor,
+    this.transformContext,
+    this.transformer,
   })  : assert(size.width > 0, 'Canvas width must be positive'),
         assert(size.height > 0, 'Canvas height must be positive');
   // Note: Viewport intersection validation removed for performance.
