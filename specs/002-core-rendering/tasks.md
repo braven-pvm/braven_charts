@@ -255,7 +255,7 @@
   - Test viewport passed to RenderContext during renderFrame
   - Test culling uses updated viewport
 
-- [ ] **T023** [P] Unit test for RenderPipeline performance monitoring in test/unit/rendering/render_pipeline_test.dart
+- [x] **T023** [P] Unit test for RenderPipeline performance monitoring in test/unit/rendering/render_pipeline_test.dart
   - Test beginFrame called before rendering
   - Test endFrame called after all layers rendered
   - Test frame time recorded even if layer throws exception (finally block)

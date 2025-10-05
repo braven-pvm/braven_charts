@@ -468,6 +468,107 @@ void main() {
       expect(pipeline.viewport, equals(Rect.fromLTWH(10, 20, 30, 40)));
     });
   });
+
+  group('RenderPipeline - Performance Monitoring (T023)', () {
+    test('beginFrame called before rendering', () {
+      final monitor = StopwatchPerformanceMonitor();
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: monitor,
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      // If beginFrame wasn't called, currentMetrics would show zero frame time
+      final metrics = monitor.currentMetrics;
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'beginFrame should have been called to start timing');
+    });
+
+    test('endFrame called after all layers rendered', () {
+      final monitor = StopwatchPerformanceMonitor();
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: monitor,
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      pipeline.addLayer(_TestLayer(zIndex: 0));
+      pipeline.addLayer(_TestLayer(zIndex: 1));
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      // If endFrame wasn't called, metrics wouldn't be recorded
+      final metrics = monitor.currentMetrics;
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'endFrame should have been called to record timing');
+    });
+
+    test('frame time recorded even if layer throws exception', () {
+      final monitor = StopwatchPerformanceMonitor();
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: monitor,
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      pipeline.addLayer(_ThrowingLayer(zIndex: 0));
+
+      final canvas = _RecordingCanvas();
+
+      // Render frame (layer will throw)
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+
+      // endFrame should still have been called (finally block)
+      final metrics = monitor.currentMetrics;
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'endFrame should be called in finally block even after exception');
+    });
+
+    test('currentMetrics accessible via pipeline', () {
+      final pipeline = createPipeline();
+      pipeline.addLayer(_TestLayer(zIndex: 0));
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      final metrics = pipeline.currentMetrics;
+      expect(metrics, isNotNull);
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0));
+    });
+
+    test('performance metrics update with each frame', () {
+      final pipeline = createPipeline();
+      pipeline.addLayer(_TestLayer(zIndex: 0));
+
+      final canvas1 = _RecordingCanvas();
+      pipeline.renderFrame(canvas1, const Size(800, 600));
+      final metrics1 = pipeline.currentMetrics;
+
+      final canvas2 = _RecordingCanvas();
+      pipeline.renderFrame(canvas2, const Size(800, 600));
+      final metrics2 = pipeline.currentMetrics;
+
+      // Both frames should have timing data
+      expect(metrics1.frameTime.inMicroseconds, greaterThan(0));
+      expect(metrics2.frameTime.inMicroseconds, greaterThan(0));
+    });
+  });
 }
 
 // Test layer implementations
@@ -511,6 +612,15 @@ class _ViewportCaptureLayer extends RenderLayer {
   @override
   void render(RenderContext context) {
     capturedViewport = context.viewport;
+  }
+}
+
+class _ThrowingLayer extends RenderLayer {
+  _ThrowingLayer({required super.zIndex});
+
+  @override
+  void render(RenderContext context) {
+    throw Exception('Layer rendering failed');
   }
 }
 
