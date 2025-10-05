@@ -74,41 +74,41 @@
 
 ### Contract Tests (All [P] - parallel execution)
 
-- [ ] **T004** [P] Contract test: CoordinateSystem enum in `test/contract/coordinates/coordinate_system_contract_test.dart`
+- [x] **T004** [P] Contract test: CoordinateSystem enum in `test/contract/coordinates/coordinate_system_contract_test.dart`
   - Verify: Exactly 8 enum values (mouse, screen, chartArea, data, dataPoint, marker, viewport, normalized)
   - Verify: Exhaustive switch compiles (all values handled)
   - Verify: Enum.values.length == 8
   - Files: `test/contract/coordinates/coordinate_system_contract_test.dart`
   - Dependencies: None
-  - **Expected**: FAIL (enum not implemented yet)
+  - **Expected**: FAIL (enum not implemented yet) ✅
 
-- [ ] **T005** [P] Contract test: CoordinateTransformer interface in `test/contract/coordinates/coordinate_transformer_contract_test.dart`
+- [x] **T005** [P] Contract test: CoordinateTransformer interface in `test/contract/coordinates/coordinate_transformer_contract_test.dart`
   - Verify: 4 methods exist (transform, transformBatch, validate, getValidRange)
   - Verify: All 56 transformation paths compile (8×7 from→to combinations)
   - Verify: Signatures match contract (Point<double> inputs/outputs, TransformContext parameter)
   - Files: `test/contract/coordinates/coordinate_transformer_contract_test.dart`
   - Dependencies: T004 (needs CoordinateSystem enum)
-  - **Expected**: FAIL (interface not implemented yet)
+  - **Expected**: FAIL (interface not implemented yet) ✅
 
-- [ ] **T006** [P] Contract test: TransformContext in `test/contract/coordinates/transform_context_contract_test.dart`
+- [x] **T006** [P] Contract test: TransformContext in `test/contract/coordinates/transform_context_contract_test.dart`
   - Verify: 9 fields exist (widgetSize, chartAreaBounds, xDataRange, yDataRange, viewport, series, markerOffset, animationProgress, devicePixelRatio)
   - Verify: Immutability (all fields final)
   - Verify: withX() methods exist (withViewport, withMarkerOffset, withAnimationProgress, withDataRanges)
   - Verify: Hash code and equality implemented
   - Files: `test/contract/coordinates/transform_context_contract_test.dart`
   - Dependencies: None
-  - **Expected**: FAIL (TransformContext not implemented yet)
+  - **Expected**: FAIL (TransformContext not implemented yet) ✅
 
-- [ ] **T007** [P] Contract test: ViewportState in `test/contract/coordinates/viewport_state_contract_test.dart`
+- [x] **T007** [P] Contract test: ViewportState in `test/contract/coordinates/viewport_state_contract_test.dart`
   - Verify: 4 fields exist (xRange, yRange, zoomFactor, panOffset)
   - Verify: Factory constructors (identity)
   - Verify: Update methods (withZoom, withPan, withRanges)
   - Verify: Helper methods (containsPoint, isIdentity)
   - Files: `test/contract/coordinates/viewport_state_contract_test.dart`
   - Dependencies: None
-  - **Expected**: FAIL (ViewportState not implemented yet)
+  - **Expected**: FAIL (ViewportState not implemented yet) ✅
 
-- [ ] **T008** [P] Contract test: TransformMatrix in `test/contract/coordinates/transform_matrix_contract_test.dart`
+- [x] **T008** [P] Contract test: TransformMatrix in `test/contract/coordinates/transform_matrix_contract_test.dart`
   - Verify: Factory constructors (identity, translation, scale, combined)
   - Verify: transform(Point) method exists
   - Verify: inverse() method exists
@@ -116,7 +116,7 @@
   - Verify: transformBatch4() SIMD method exists
   - Files: `test/contract/coordinates/transform_matrix_contract_test.dart`
   - Dependencies: None
-  - **Expected**: FAIL (TransformMatrix not implemented yet)
+  - **Expected**: FAIL (TransformMatrix not implemented yet) ✅
 
 ### Unit Tests for Core Transformations (All [P] - different files)
 
