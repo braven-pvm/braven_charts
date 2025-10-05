@@ -256,7 +256,7 @@
   - Dependencies: T006, T021 (contract test + ViewportState)
   - **Validation**: T006 contract test passes ✅
 
-- [ ] **T023** [P] Implement TransformMatrix internals in `lib/src/coordinates/transform_matrix.dart`
+- [x] **T023** [P] Implement TransformMatrix internals in `lib/src/coordinates/transform_matrix.dart`
   - Implement Float32List _values (3x3 matrix in column-major order)
   - Implement factory constructors: identity(), translation(dx, dy), scale(sx, sy), combined([matrices])
   - Implement transform(Point) - Apply affine transformation
@@ -264,7 +264,7 @@
   - Implement operator* - Matrix multiplication for composition
   - Files: `lib/src/coordinates/transform_matrix.dart`
   - Dependencies: T008 (contract test must exist and fail)
-  - **Validation**: T008 contract test passes
+  - **Validation**: T008 contract test passes ✅
 
 ### Core Transformation Logic (Sequential dependencies on same file)
 
