@@ -29,19 +29,19 @@ void main() {
         chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
         xDataRange: const DataRange(min: 0, max: 100),
         yDataRange: const DataRange(min: -50, max: 50),
-        viewport: ViewportState(
-          xRange: const DataRange(min: 20, max: 80),
-          yRange: const DataRange(min: -30, max: 30),
+        viewport: const ViewportState(
+          xRange: DataRange(min: 20, max: 80),
+          yRange: DataRange(min: -30, max: 30),
           zoomFactor: 1.5,
-          panOffset: const Point(5.0, 2.0),
+          panOffset: Point(5.0, 2.0),
         ),
         series: [
           ChartSeries(
             id: 'test',
             points: [
-              ChartDataPoint(x: 0.0, y: 0.0),
-              ChartDataPoint(x: 50.0, y: 25.0),
-              ChartDataPoint(x: 100.0, y: -25.0),
+              const ChartDataPoint(x: 0.0, y: 0.0),
+              const ChartDataPoint(x: 50.0, y: 25.0),
+              const ChartDataPoint(x: 100.0, y: -25.0),
             ],
           ),
         ],

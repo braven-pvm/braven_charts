@@ -25,19 +25,19 @@ void main() {
         ChartSeries(
           id: 'series1',
           points: [
-            ChartDataPoint(x: 0.0, y: 10.0),
-            ChartDataPoint(x: 25.0, y: 30.0),
-            ChartDataPoint(x: 50.0, y: 20.0),
-            ChartDataPoint(x: 75.0, y: 40.0),
-            ChartDataPoint(x: 100.0, y: 15.0),
+            const ChartDataPoint(x: 0.0, y: 10.0),
+            const ChartDataPoint(x: 25.0, y: 30.0),
+            const ChartDataPoint(x: 50.0, y: 20.0),
+            const ChartDataPoint(x: 75.0, y: 40.0),
+            const ChartDataPoint(x: 100.0, y: 15.0),
           ],
         ),
         ChartSeries(
           id: 'series2',
           points: [
-            ChartDataPoint(x: 0.0, y: -10.0),
-            ChartDataPoint(x: 50.0, y: 0.0),
-            ChartDataPoint(x: 100.0, y: -20.0),
+            const ChartDataPoint(x: 0.0, y: -10.0),
+            const ChartDataPoint(x: 50.0, y: 0.0),
+            const ChartDataPoint(x: 100.0, y: -20.0),
           ],
         ),
       ];

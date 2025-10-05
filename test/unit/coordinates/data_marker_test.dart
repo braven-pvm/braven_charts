@@ -142,19 +142,19 @@ void main() {
 
     test('should work with zoomed viewport', () {
       // Marker offset with 2x zoom
-      final context = TransformContext(
-        widgetSize: const Size(800, 600),
-        chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-        xDataRange: const DataRange(min: 0, max: 100),
-        yDataRange: const DataRange(min: -50, max: 50),
+      final context = const TransformContext(
+        widgetSize: Size(800, 600),
+        chartAreaBounds: Rect.fromLTWH(50, 30, 700, 540),
+        xDataRange: DataRange(min: 0, max: 100),
+        yDataRange: DataRange(min: -50, max: 50),
         viewport: ViewportState(
-          xRange: const DataRange(min: 25, max: 75),
-          yRange: const DataRange(min: -25, max: 25),
+          xRange: DataRange(min: 25, max: 75),
+          yRange: DataRange(min: -25, max: 25),
           zoomFactor: 2.0,
-          panOffset: const Point(0.0, 0.0),
+          panOffset: Point(0.0, 0.0),
         ),
-        series: const [],
-        markerOffset: const Point(10.0, -5.0),
+        series: [],
+        markerOffset: Point(10.0, -5.0),
         devicePixelRatio: 1.0,
       );
 

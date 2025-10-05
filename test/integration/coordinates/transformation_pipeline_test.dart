@@ -59,9 +59,7 @@ void main() {
         const Point<double>(100.0, 50.0), // Data max
       ];
 
-      final screenPoints = dataPoints
-          .map((p) => renderContext.dataToScreen(p))
-          .toList();
+      final screenPoints = dataPoints.map((p) => renderContext.dataToScreen(p)).toList();
 
       // All points should be within chart area bounds
       for (final point in screenPoints) {
@@ -195,11 +193,11 @@ void main() {
     test('should handle viewport changes during rendering', () {
       // Zoom in 2x
       final zoomedContext = transformContext.withViewport(
-        ViewportState(
-          xRange: const DataRange(min: 25, max: 75),
-          yRange: const DataRange(min: -25, max: 25),
+        const ViewportState(
+          xRange: DataRange(min: 25, max: 75),
+          yRange: DataRange(min: -25, max: 25),
           zoomFactor: 2.0,
-          panOffset: const Point(0.0, 0.0),
+          panOffset: Point(0.0, 0.0),
         ),
       );
 
@@ -217,11 +215,11 @@ void main() {
     test('should integrate with viewport culling', () {
       // Create zoomed viewport showing only [25, 75] X range
       final zoomedContext = transformContext.withViewport(
-        ViewportState(
-          xRange: const DataRange(min: 25, max: 75),
-          yRange: const DataRange(min: -25, max: 25),
+        const ViewportState(
+          xRange: DataRange(min: 25, max: 75),
+          yRange: DataRange(min: -25, max: 25),
           zoomFactor: 2.0,
-          panOffset: const Point(0.0, 0.0),
+          panOffset: Point(0.0, 0.0),
         ),
       );
 

@@ -24,11 +24,11 @@ void main() {
 
     test('should apply zoom factor correctly (2x zoom)', () {
       // 2x zoom: viewport range is half of data range
-      final viewport = ViewportState(
-        xRange: const DataRange(min: 25, max: 75), // 50 units (half of 100)
-        yRange: const DataRange(min: -25, max: 25), // 50 units (half of 100)
+      final viewport = const ViewportState(
+        xRange: DataRange(min: 25, max: 75), // 50 units (half of 100)
+        yRange: DataRange(min: -25, max: 25), // 50 units (half of 100)
         zoomFactor: 2.0,
-        panOffset: const Point(0.0, 0.0),
+        panOffset: Point(0.0, 0.0),
       );
 
       context = TransformContext(
@@ -58,11 +58,11 @@ void main() {
 
     test('should apply pan offset correctly', () {
       // Pan 10 units right, 5 units up in data space
-      final viewport = ViewportState(
-        xRange: const DataRange(min: 10, max: 110), // Shifted right by 10
-        yRange: const DataRange(min: -45, max: 55), // Shifted up by 5
+      final viewport = const ViewportState(
+        xRange: DataRange(min: 10, max: 110), // Shifted right by 10
+        yRange: DataRange(min: -45, max: 55), // Shifted up by 5
         zoomFactor: 1.0,
-        panOffset: const Point(10.0, 5.0),
+        panOffset: Point(10.0, 5.0),
       );
 
       context = TransformContext(
@@ -115,11 +115,11 @@ void main() {
     });
 
     test('should have round-trip accuracy', () {
-      final viewport = ViewportState(
-        xRange: const DataRange(min: 20, max: 80),
-        yRange: const DataRange(min: -30, max: 30),
+      final viewport = const ViewportState(
+        xRange: DataRange(min: 20, max: 80),
+        yRange: DataRange(min: -30, max: 30),
         zoomFactor: 1.5,
-        panOffset: const Point(5.0, -3.0),
+        panOffset: Point(5.0, -3.0),
       );
 
       context = TransformContext(
@@ -155,11 +155,11 @@ void main() {
 
     test('should handle zoom factor edge cases', () {
       // 0.5x zoom (zoomed out)
-      final zoomOutViewport = ViewportState(
-        xRange: const DataRange(min: -50, max: 150), // 200 units (2x data range)
-        yRange: const DataRange(min: -100, max: 100), // 200 units
+      final zoomOutViewport = const ViewportState(
+        xRange: DataRange(min: -50, max: 150), // 200 units (2x data range)
+        yRange: DataRange(min: -100, max: 100), // 200 units
         zoomFactor: 0.5,
-        panOffset: const Point(0.0, 0.0),
+        panOffset: Point(0.0, 0.0),
       );
 
       context = TransformContext(

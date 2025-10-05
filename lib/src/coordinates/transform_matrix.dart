@@ -54,19 +54,6 @@ import 'dart:typed_data' show Float32List, Float32x4;
 /// - [UniversalCoordinateTransformer] - Uses matrices for transformations
 /// - [TransformContext] - Provides context for matrix caching
 class TransformMatrix {
-  /// Column-major 3x3 matrix storage.
-  ///
-  /// Indices:
-  /// ```
-  /// [0 3 6]   [m00 m10 m20]
-  /// [1 4 7] = [m01 m11 m21]
-  /// [2 5 8]   [m02 m12 m22]
-  /// ```
-  ///
-  /// Column-major order matches GLSL/WebGL conventions and allows
-  /// efficient SIMD operations.
-  final Float32List _values;
-
   /// Create matrix from raw values (column-major order).
   ///
   /// **Validation**:
@@ -78,8 +65,7 @@ class TransformMatrix {
   /// - [TransformMatrix.translation]
   /// - [TransformMatrix.scale]
   /// - [TransformMatrix.combined]
-  const TransformMatrix._(this._values)
-      : assert(_values.length == 9, 'Matrix must have exactly 9 values');
+  const TransformMatrix._(this._values) : assert(_values.length == 9, 'Matrix must have exactly 9 values');
 
   /// Create identity matrix (no transformation).
   ///
@@ -196,6 +182,19 @@ class TransformMatrix {
     return result;
   }
 
+  /// Column-major 3x3 matrix storage.
+  ///
+  /// Indices:
+  /// ```
+  /// [0 3 6]   [m00 m10 m20]
+  /// [1 4 7] = [m01 m11 m21]
+  /// [2 5 8]   [m02 m12 m22]
+  /// ```
+  ///
+  /// Column-major order matches GLSL/WebGL conventions and allows
+  /// efficient SIMD operations.
+  final Float32List _values;
+
   /// Apply affine transformation to a point.
   ///
   /// Transformation: `[x', y', 1] = M × [x, y, 1]`
@@ -268,14 +267,10 @@ class TransformMatrix {
     );
 
     // Apply matrix in parallel: x' = x * m00 + y * m10 + m20
-    final xPrime = xVec.scale(_values[0]) +
-        yVec.scale(_values[3]) +
-        Float32x4.splat(_values[6]);
+    final xPrime = xVec.scale(_values[0]) + yVec.scale(_values[3]) + Float32x4.splat(_values[6]);
 
     // y' = x * m01 + y * m11 + m21
-    final yPrime = xVec.scale(_values[1]) +
-        yVec.scale(_values[4]) +
-        Float32x4.splat(_values[7]);
+    final yPrime = xVec.scale(_values[1]) + yVec.scale(_values[4]) + Float32x4.splat(_values[7]);
 
     // Extract results
     return [

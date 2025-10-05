@@ -268,7 +268,7 @@
 
 ### Core Transformation Logic (Sequential dependencies on same file)
 
-- [ ] **T024** Create UniversalCoordinateTransformer skeleton in `lib/src/coordinates/universal_coordinate_transformer.dart`
+- [x] **T024** Create UniversalCoordinateTransformer skeleton in `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Implement CoordinateTransformer interface
   - Stub all 4 methods (transform, transformBatch, validate, getValidRange)
   - Add internal matrix cache Map<int, TransformMatrix> (context hash → matrix)
