@@ -321,7 +321,7 @@
 
 ## Phase 3.7: Performance Benchmarks (6 tasks)
 
-- [ ] **T031** [P] Benchmark object pool performance in test/benchmarks/rendering/object_pool_benchmark.dart
+- [x] **T031** [P] Benchmark object pool performance in test/benchmarks/rendering/object_pool_benchmark.dart
   - Measure Paint pool acquire/release latency (target: O(1), <10μs)
   - Measure Path pool acquire/release latency
   - Measure TextPainter pool acquire/release latency
