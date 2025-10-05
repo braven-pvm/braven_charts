@@ -403,8 +403,9 @@ class UniversalCoordinateTransformer {
   ///
   /// **Optimization steps**:
   /// 1. Get/build transformation matrix (cached by context)
-  /// 2. Process points in groups of 4 using SIMD (transformBatch4)
-  /// 3. Process remaining points (< 4) with scalar transform
+  /// 2. Pre-allocate result list (zero allocations in steady-state)
+  /// 3. Process points in groups of 4 using SIMD (transformBatch4)
+  /// 4. Process remaining points (< 4) with scalar transform
   ///
   /// **Performance**: <1ms for 10,000 points (target: 100ns/point)
   ///
@@ -418,7 +419,12 @@ class UniversalCoordinateTransformer {
     // Get cached transformation matrix
     final matrix = _getTransformationMatrix(from, to, context);
 
-    final result = <Point<double>>[];
+    // Pre-allocate result list with exact size (zero allocations in growth)
+    final result = List<Point<double>>.filled(
+      points.length,
+      const Point(0.0, 0.0),
+    );
+    int resultIndex = 0;
     int i = 0;
 
     // Process in groups of 4 using SIMD
@@ -429,13 +435,16 @@ class UniversalCoordinateTransformer {
         points[i + 2],
         points[i + 3],
       ]);
-      result.addAll(batch);
+      result[resultIndex++] = batch[0];
+      result[resultIndex++] = batch[1];
+      result[resultIndex++] = batch[2];
+      result[resultIndex++] = batch[3];
       i += 4;
     }
 
     // Process remaining points (< 4)
     while (i < points.length) {
-      result.add(matrix.transform(points[i]));
+      result[resultIndex++] = matrix.transform(points[i]);
       i++;
     }
 
