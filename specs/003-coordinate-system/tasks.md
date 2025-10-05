@@ -236,7 +236,7 @@
   - Dependencies: T004 (contract test must exist and fail)
   - **Validation**: T004 contract test passes ✅
 
-- [ ] **T021** [P] Implement ViewportState in `lib/src/coordinates/viewport_state.dart`
+- [x] **T021** [P] Implement ViewportState in `lib/src/coordinates/viewport_state.dart`
   - Implement 4 final fields: xRange, yRange, zoomFactor, panOffset
   - Implement factory: identity() for initial state
   - Implement update methods: withZoom(), withPan(), withRanges()
@@ -244,7 +244,7 @@
   - Implement hash code and equality for caching
   - Files: `lib/src/coordinates/viewport_state.dart`
   - Dependencies: T007 (contract test must exist and fail)
-  - **Validation**: T007 contract test passes
+  - **Validation**: T007 contract test passes ✅
 
 - [ ] **T022** [P] Implement TransformContext in `lib/src/coordinates/transform_context.dart`
   - Implement 9 final fields (widgetSize, chartAreaBounds, xDataRange, yDataRange, viewport, series, markerOffset, animationProgress, devicePixelRatio)
