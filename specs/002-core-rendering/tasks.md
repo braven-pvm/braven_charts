@@ -422,7 +422,7 @@
   - Show usage example
   - List performance targets
 
-- [ ] **T046** [P] Create manual testing guide in specs/002-core-rendering/manual-testing.md
+- [x] **T046** [P] Create manual testing guide in specs/002-core-rendering/manual-testing.md
   - Visual validation checklist (z-order, clipping, text rendering)
   - Performance validation steps (run benchmarks, check metrics)
   - Edge case testing scenarios (rapid pan, extreme zoom)
