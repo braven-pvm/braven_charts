@@ -76,7 +76,7 @@
 
 ## Phase 3.3: Integration Tests (User Scenarios - TDD) (4 tasks)
 
-- [ ] **T006** [P] Integration test for Scenario 1 (Real-time Stock Chart with 10K+ points) in test/integration/rendering/stock_chart_10k_test.dart
+- [x] **T006** [P] Integration test for Scenario 1 (Real-time Stock Chart with 10K+ points) in test/integration/rendering/stock_chart_10k_test.dart
   - Create chart with 10,000 ChartDataPoint instances
   - Render initial viewport (500 visible points)
   - Assert frame time <16ms (no jank)
