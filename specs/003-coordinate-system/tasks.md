@@ -120,20 +120,20 @@
 
 ### Unit Tests for Core Transformations (All [P] - different files)
 
-- [ ] **T009** [P] Unit test: Mouse ↔ Screen transformation in `test/unit/coordinates/mouse_screen_test.dart`
+- [x] **T009** [P] Unit test: Mouse ↔ Screen transformation in `test/unit/coordinates/mouse_screen_test.dart`
   - Test: Identity transformation (mouse == screen for this widget)
   - Test: Round-trip accuracy (mouse → screen → mouse)
   - Files: `test/unit/coordinates/mouse_screen_test.dart`
   - Dependencies: T005 (needs CoordinateTransformer interface)
-  - **Expected**: FAIL (transformation not implemented yet)
+  - **Expected**: FAIL (transformation not implemented yet) ✅
 
-- [ ] **T010** [P] Unit test: Screen ↔ ChartArea transformation in `test/unit/coordinates/screen_chartarea_test.dart`
+- [x] **T010** [P] Unit test: Screen ↔ ChartArea transformation in `test/unit/coordinates/screen_chartarea_test.dart`
   - Test: Translation by chartAreaBounds offset
   - Test: Clipping to chart area bounds
   - Test: Round-trip accuracy (screen → chartArea → screen)
   - Files: `test/unit/coordinates/screen_chartarea_test.dart`
   - Dependencies: T005
-  - **Expected**: FAIL (transformation not implemented yet)
+  - **Expected**: FAIL (transformation not implemented yet) ✅
 
 - [ ] **T011** [P] Unit test: ChartArea ↔ Data transformation in `test/unit/coordinates/chartarea_data_test.dart`
   - Test: Scale from pixels to data units
