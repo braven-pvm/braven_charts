@@ -301,28 +301,29 @@
 
 ### Validation Implementation
 
-- [ ] **T027** Implement coordinate validation in `lib/src/coordinates/universal_coordinate_transformer.dart`
+- [x] **T027** Implement coordinate validation in `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Implement validate() method with ValidationResult return
   - Check: NaN detection (Point.x.isNaN || Point.y.isNaN)
   - Check: Infinity detection (Point.x.isInfinite || Point.y.isInfinite)
   - Check: Range validation using getValidRange()
   - Generate actionable error messages (include actual value, expected range, suggestion)
+  - Helper method: _getRangeSuggestion() for context-specific advice
   - Files: `lib/src/coordinates/universal_coordinate_transformer.dart`
-  - Dependencies: T026 (transformations implemented)
-  - **Validation**: T017 validation test passes
+  - Dependencies: T026 (transformations implemented), T028 (getValidRange)
+  - **Validation**: T017 validation test passes (10/10 tests) ✅
 
-- [ ] **T028** Implement getValidRange() for all 8 coordinate systems in `lib/src/coordinates/universal_coordinate_transformer.dart`
+- [x] **T028** Implement getValidRange() for all 8 coordinate systems in `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Implement: mouse → Rectangle from (0,0) to widgetSize
   - Implement: screen → Rectangle from (0,0) to widgetSize
-  - Implement: chartArea → Rectangle from chartAreaBounds
+  - Implement: chartArea → Rectangle from (0,0) to chartAreaBounds size
   - Implement: data → Rectangle from (xDataRange.min, yDataRange.min) to (xDataRange.max, yDataRange.max)
   - Implement: dataPoint → Rectangle from (0, 0) to (series.length-1, maxPoints-1)
   - Implement: marker → Same as chartArea
   - Implement: viewport → Rectangle from viewport.xRange/yRange
   - Implement: normalized → Rectangle from (0.0, 0.0) to (1.0, 1.0)
   - Files: `lib/src/coordinates/universal_coordinate_transformer.dart`
-  - Dependencies: T027
-  - **Validation**: T017 validation test passes (all ranges correct)
+  - Dependencies: None (required by T027)
+  - **Validation**: T017 validation test passes (all ranges correct) ✅
 
 - [ ] **T029** Implement ValidationResult and ValidationErrorType in `lib/src/coordinates/validation_result.dart`
   - Implement ValidationResult class (isValid, errorMessage, errorType)

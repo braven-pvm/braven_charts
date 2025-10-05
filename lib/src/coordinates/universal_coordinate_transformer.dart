@@ -398,10 +398,100 @@ class UniversalCoordinateTransformer {
     CoordinateSystem system,
     TransformContext context,
   ) {
-    // TODO: Implement validation in T027-T029
-    throw UnimplementedError(
-      'validate() will be implemented in T027 (validation logic)',
-    );
+    // Check 1: NaN detection
+    if (point.x.isNaN || point.y.isNaN) {
+      return ValidationResult.invalid(
+        'Point (${point.x}, ${point.y}) contains NaN values. '
+        'Coordinate system: $system. '
+        'Suggestion: Check data source for missing or invalid numeric values.',
+        ValidationErrorType.invalidValue,
+      );
+    }
+
+    // Check 2: Infinity detection
+    if (point.x.isInfinite || point.y.isInfinite) {
+      return ValidationResult.invalid(
+        'Point (${point.x}, ${point.y}) contains infinite values. '
+        'Coordinate system: $system. '
+        'Suggestion: Check for division by zero or overflow in calculations.',
+        ValidationErrorType.invalidValue,
+      );
+    }
+
+    // Check 3: Range validation
+    final validRange = getValidRange(system, context);
+    final isXInRange = point.x >= validRange.left && point.x <= validRange.right;
+    final isYInRange = point.y >= validRange.top && point.y <= validRange.bottom;
+
+    if (!isXInRange || !isYInRange) {
+      final outOfRangeAxis = !isXInRange && !isYInRange
+          ? 'X and Y'
+          : !isXInRange
+              ? 'X'
+              : 'Y';
+
+      return ValidationResult.invalid(
+        'Point (${point.x}, ${point.y}) outside valid range for $system. '
+        'Out of range: $outOfRangeAxis axis. '
+        'Valid range: [${validRange.left}, ${validRange.top}] to '
+        '[${validRange.right}, ${validRange.bottom}]. '
+        'Suggestion: ${_getRangeSuggestion(system, point, validRange)}',
+        ValidationErrorType.outOfRange,
+      );
+    }
+
+    // All checks passed
+    return ValidationResult.valid();
+  }
+
+  /// Generate helpful suggestion for range validation failures.
+  String _getRangeSuggestion(
+    CoordinateSystem system,
+    Point<double> point,
+    Rect validRange,
+  ) {
+    switch (system) {
+      case CoordinateSystem.mouse:
+      case CoordinateSystem.screen:
+        return 'Ensure point is within widget bounds (0, 0) to '
+            '(${validRange.right}, ${validRange.bottom}). '
+            'This may indicate a mouse event outside the chart widget.';
+
+      case CoordinateSystem.chartArea:
+        return 'Ensure point is within chart drawing area (0, 0) to '
+            '(${validRange.right}, ${validRange.bottom}). '
+            'Chart area excludes axes and legends.';
+
+      case CoordinateSystem.data:
+        return 'Ensure data value is within configured data ranges: '
+            'X=[${validRange.left}, ${validRange.right}], '
+            'Y=[${validRange.top}, ${validRange.bottom}]. '
+            'Consider expanding data range or filtering outliers.';
+
+      case CoordinateSystem.dataPoint:
+        return 'DataPoint indices must be valid: '
+            'series index [0, ${validRange.right.round()}], '
+            'point index [0, ${validRange.bottom.round()}]. '
+            'Attempted to access series ${point.x.round()}, '
+            'point ${point.y.round()}.';
+
+      case CoordinateSystem.marker:
+        return 'Marker positions are relative to chart area. '
+            'Ensure base data point is within chart bounds, '
+            'then apply marker offset.';
+
+      case CoordinateSystem.viewport:
+        return 'Viewport coordinates represent visible data after zoom/pan. '
+            'Valid range: X=[${validRange.left}, ${validRange.right}], '
+            'Y=[${validRange.top}, ${validRange.bottom}]. '
+            'This may indicate panning outside available data.';
+
+      case CoordinateSystem.normalized:
+        return 'Normalized coordinates must be in [0.0, 1.0] range. '
+            'Point (${point.x}, ${point.y}) exceeds this range. '
+            'Normalized coordinates represent fractional positions '
+            'within the chart area.';
+    }
   }
 
   /// Get the valid range for a coordinate system given current context.
@@ -439,10 +529,89 @@ class UniversalCoordinateTransformer {
     CoordinateSystem system,
     TransformContext context,
   ) {
-    // TODO: Implement in T028
-    throw UnimplementedError(
-      'getValidRange() will be implemented in T028 (validation ranges)',
-    );
+    switch (system) {
+      case CoordinateSystem.mouse:
+        // Mouse coordinates: entire widget area
+        // Origin: top-left (0, 0)
+        // Extent: widgetSize
+        return Rect.fromLTWH(0, 0, context.widgetSize.width, context.widgetSize.height);
+
+      case CoordinateSystem.screen:
+        // Screen coordinates: entire widget area (same as mouse when devicePixelRatio=1)
+        // Origin: top-left (0, 0)
+        // Extent: widgetSize
+        return Rect.fromLTWH(0, 0, context.widgetSize.width, context.widgetSize.height);
+
+      case CoordinateSystem.chartArea:
+        // ChartArea coordinates: chart drawing area (excluding axes, legends)
+        // Defined by chartAreaBounds
+        return Rect.fromLTWH(
+          0,
+          0,
+          context.chartAreaBounds.width,
+          context.chartAreaBounds.height,
+        );
+
+      case CoordinateSystem.data:
+        // Data coordinates: logical data space
+        // Range: xDataRange.min/max, yDataRange.min/max
+        return Rect.fromLTRB(
+          context.xDataRange.min,
+          context.yDataRange.min,
+          context.xDataRange.max,
+          context.yDataRange.max,
+        );
+
+      case CoordinateSystem.dataPoint:
+        // DataPoint coordinates: series/point indices
+        // x = series index (0 to series.length-1)
+        // y = point index (0 to maxPoints-1)
+        if (context.series.isEmpty) {
+          // No series = no valid dataPoint coordinates
+          return const Rect.fromLTWH(0, 0, 0, 0);
+        }
+
+        // Find maximum point count across all series
+        int maxPoints = 0;
+        for (final series in context.series) {
+          if (series.points.length > maxPoints) {
+            maxPoints = series.points.length;
+          }
+        }
+
+        return Rect.fromLTRB(
+          0,
+          0,
+          (context.series.length - 1).toDouble(),
+          (maxPoints - 1).toDouble(),
+        );
+
+      case CoordinateSystem.marker:
+        // Marker coordinates: same as chartArea (markers positioned relative to chart area)
+        // Marker offset is applied in chartArea space
+        return Rect.fromLTWH(
+          0,
+          0,
+          context.chartAreaBounds.width,
+          context.chartAreaBounds.height,
+        );
+
+      case CoordinateSystem.viewport:
+        // Viewport coordinates: visible data range after zoom/pan
+        // Defined by viewport.xRange/yRange
+        return Rect.fromLTRB(
+          context.viewport.xRange.min,
+          context.viewport.yRange.min,
+          context.viewport.xRange.max,
+          context.viewport.yRange.max,
+        );
+
+      case CoordinateSystem.normalized:
+        // Normalized coordinates: always [0.0, 1.0] range
+        // Origin: top-left (0, 0)
+        // Extent: (1, 1)
+        return const Rect.fromLTWH(0, 0, 1, 1);
+    }
   }
 
   // ========================================================================
@@ -757,7 +926,10 @@ class ValidationResult {
   /// return ValidationResult.valid();
   /// ```
   factory ValidationResult.valid() {
-    return const ValidationResult._(isValid: true);
+    return const ValidationResult._(
+      isValid: true,
+      errorMessage: '',
+    );
   }
 
   /// Factory for failed validation with error details.
