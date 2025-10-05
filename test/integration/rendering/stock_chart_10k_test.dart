@@ -63,7 +63,7 @@ void main() {
       );
 
       textCache = LinkedHashMapTextLayoutCache(maxSize: 500);
-      culler = ViewportCuller();
+      culler = const ViewportCuller();
       monitor = StopwatchPerformanceMonitor(maxHistorySize: 120);
 
       // Create pipeline with initial viewport showing first 500 points
@@ -218,15 +218,21 @@ class _StockDataLayer extends RenderLayer {
 
   _StockDataLayer({
     required this.data,
-    required int zIndex,
-  }) : super(zIndex: zIndex);
+    required super.zIndex,
+  });
 
   @override
   void render(RenderContext context) {
     // Cull points outside viewport
+    // Convert Rect viewport to DataRange for X and Y
+    final viewportX = DataRange(min: context.viewport.left, max: context.viewport.right);
+    final viewportY = DataRange(min: context.viewport.top, max: context.viewport.bottom);
+
     final visiblePoints = context.culler.cull(
       points: data,
-      viewport: context.viewport,
+      viewportX: viewportX,
+      viewportY: viewportY,
+      isXOrdered: true, // Stock chart data is time-ordered
     );
 
     if (visiblePoints.isEmpty) return;

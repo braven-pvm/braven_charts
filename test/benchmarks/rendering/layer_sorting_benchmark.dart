@@ -62,8 +62,7 @@ void main() {
       final avg = latencies.fold<double>(0, (a, b) => a + b) / latencies.length;
 
       // Validate target: <0.1ms per frame
-      expect(avg, lessThan(0.1),
-          reason: 'Sorting 10 layers should be <0.1ms');
+      expect(avg, lessThan(0.1), reason: 'Sorting 10 layers should be <0.1ms');
 
       print('10 layers: avg ${avg.toStringAsFixed(3)}ms per sort');
     });
@@ -91,8 +90,7 @@ void main() {
       final avg = latencies.fold<double>(0, (a, b) => a + b) / latencies.length;
 
       // Still should be very fast (<0.2ms for 10x more layers)
-      expect(avg, lessThan(0.2),
-          reason: 'Sorting 100 layers should be <0.2ms');
+      expect(avg, lessThan(0.2), reason: 'Sorting 100 layers should be <0.2ms');
 
       print('100 layers: avg ${avg.toStringAsFixed(3)}ms per sort');
     });
@@ -133,8 +131,7 @@ void main() {
       // - 50 -> 100: 2x data should be ~2.1x time (2 * log(100)/log(50))
 
       // Verify not worse than O(n²): 10x data should not be 100x slower
-      expect(factor10to50, lessThan(50),
-          reason: 'Should not scale worse than O(n²)');
+      expect(factor10to50, lessThan(50), reason: 'Should not scale worse than O(n²)');
 
       print('Scaling analysis:');
       print('  10 layers: ${avgLatencies[10]!.toStringAsFixed(4)}ms');
@@ -170,8 +167,7 @@ void main() {
       final frameBudget = 5.0; // ms
       final sortingPercent = (avgSort / frameBudget) * 100;
 
-      expect(sortingPercent, lessThan(2),
-          reason: 'Sorting should be <2% of frame time');
+      expect(sortingPercent, lessThan(2), reason: 'Sorting should be <2% of frame time');
 
       print('Sorting overhead: ${avgSort.toStringAsFixed(4)}ms '
           '(${sortingPercent.toStringAsFixed(2)}% of ${frameBudget}ms frame)');
@@ -199,8 +195,7 @@ void main() {
       final avg = latencies.fold<double>(0, (a, b) => a + b) / latencies.length;
 
       // Already sorted should be very fast (best case O(n))
-      expect(avg, lessThan(0.1),
-          reason: 'Already-sorted case should be very fast');
+      expect(avg, lessThan(0.1), reason: 'Already-sorted case should be very fast');
 
       print('Best case (already sorted, 50 layers): ${avg.toStringAsFixed(4)}ms');
     });

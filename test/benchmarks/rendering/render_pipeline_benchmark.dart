@@ -61,7 +61,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(maxSize: 100),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       canvas = _MockCanvas();
@@ -75,12 +75,11 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints =
-          List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
-        dataBounds: Rect.fromLTRB(0, 0, 500, 100),
+        dataBounds: const Rect.fromLTRB(0, 0, 500, 100),
         lineColor: const Color(0xFF2196F3),
         lineWidth: 2.0,
         zIndex: 0,
@@ -130,12 +129,11 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints =
-          List.generate(5000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(5000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
-        dataBounds: Rect.fromLTRB(0, 0, 5000, 100),
+        dataBounds: const Rect.fromLTRB(0, 0, 5000, 100),
         lineColor: const Color(0xFF2196F3),
         lineWidth: 2.0,
         zIndex: 0,
@@ -170,12 +168,11 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints =
-          List.generate(1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
-        dataBounds: Rect.fromLTRB(0, 0, 1000, 100),
+        dataBounds: const Rect.fromLTRB(0, 0, 1000, 100),
         lineColor: const Color(0xFF2196F3),
         lineWidth: 2.0,
         zIndex: 0,
@@ -215,12 +212,11 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints =
-          List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
-        dataBounds: Rect.fromLTRB(0, 0, 500, 100),
+        dataBounds: const Rect.fromLTRB(0, 0, 500, 100),
         lineColor: const Color(0xFF2196F3),
         lineWidth: 2.0,
         zIndex: 0,

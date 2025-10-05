@@ -68,10 +68,9 @@ void main() {
       final p99Hit = hitLatencies[(hitLatencies.length * 0.99).floor()];
 
       // Validate NFR-003 target: cache hit should be very fast (<1μs ideally)
-      expect(avgHit, lessThan(10),
-          reason: 'Cache hit should be <10μs (NFR-003)');
+      expect(avgHit, lessThan(10), reason: 'Cache hit should be <10μs (NFR-003)');
 
-      print('Cache hit: avg ${avgHit.toStringAsFixed(1)}μs, p99 ${p99Hit}μs');
+      print('Cache hit: avg ${avgHit.toStringAsFixed(1)}μs, p99 $p99Hitμs');
     });
 
     test('Cache miss + layout latency baseline (NFR-003)', () {
@@ -103,7 +102,7 @@ void main() {
 
       // Cache miss is expected to be much slower due to TextPainter creation
       // No hard assertion, just baseline measurement
-      print('Cache miss: avg ${avgMiss.toStringAsFixed(1)}μs, p99 ${p99Miss}μs');
+      print('Cache miss: avg ${avgMiss.toStringAsFixed(1)}μs, p99 $p99Missμs');
       print('Speedup factor: ${(avgMiss / 1).toStringAsFixed(0)}x (miss vs hit)');
     });
 
@@ -141,8 +140,7 @@ void main() {
       final hitRate = (cacheHits / totalGets) * 100;
 
       // Validate NFR-003 target: >70% hit rate
-      expect(hitRate, greaterThan(70),
-          reason: 'Cache hit rate should be >70% (NFR-003)');
+      expect(hitRate, greaterThan(70), reason: 'Cache hit rate should be >70% (NFR-003)');
 
       print('Hit rate: ${hitRate.toStringAsFixed(1)}% '
           '($cacheHits hits / $totalGets gets after 1000 renders)');
@@ -176,11 +174,9 @@ void main() {
       }
 
       // Validate LRU eviction happened
-      expect(evictionCount, greaterThan(0),
-          reason: 'LRU eviction should occur when exceeding maxSize');
+      expect(evictionCount, greaterThan(0), reason: 'LRU eviction should occur when exceeding maxSize');
 
-      expect(cache.length, lessThanOrEqualTo(10),
-          reason: 'Cache size should not exceed maxSize');
+      expect(cache.length, lessThanOrEqualTo(10), reason: 'Cache size should not exceed maxSize');
 
       print('LRU evictions: $evictionCount evictions for $uniqueEntries unique entries '
           '(maxSize=10, final size=${cache.length})');
@@ -207,11 +203,9 @@ void main() {
       // Total: 22 gets, 20 hits (after initial 2 misses)
       final hitRate = cache.hitRate;
 
-      expect(hitRate, greaterThan(0.8),
-          reason: 'Hit rate should be ~90% (20/22)');
+      expect(hitRate, greaterThan(0.8), reason: 'Hit rate should be ~90% (20/22)');
 
-      expect(cache.length, equals(2),
-          reason: 'Cache should have 2 entries');
+      expect(cache.length, equals(2), reason: 'Cache should have 2 entries');
 
       print('Cache stats: ${(hitRate * 100).toStringAsFixed(1)}% hit rate, '
           '${cache.length} entries');

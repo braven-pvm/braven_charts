@@ -41,7 +41,7 @@ void main() {
         culler: const ViewportCuller(),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Track render order
@@ -80,8 +80,7 @@ void main() {
       pipeline.renderFrame(canvas, const Size(800, 600));
 
       // Verify render order matches z-index (lowest to highest)
-      expect(renderOrder, equals(['background', 'mid', 'foreground']),
-          reason: 'Layers should render in z-order (background first, foreground last)');
+      expect(renderOrder, equals(['background', 'mid', 'foreground']), reason: 'Layers should render in z-order (background first, foreground last)');
 
       print('Z-order validation: $renderOrder (background → mid → foreground)');
     });
@@ -105,28 +104,28 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Create layers with semi-transparent colors (50% opacity)
       final layer1 = _TrackedLayer(
         name: 'layer1',
         zIndex: 0,
-        color: const Color(0x80FF0000),  // Red, 50% alpha
+        color: const Color(0x80FF0000), // Red, 50% alpha
         onRender: (_) {},
       );
 
       final layer2 = _TrackedLayer(
         name: 'layer2',
         zIndex: 1,
-        color: const Color(0x8000FF00),  // Green, 50% alpha
+        color: const Color(0x8000FF00), // Green, 50% alpha
         onRender: (_) {},
       );
 
       final layer3 = _TrackedLayer(
         name: 'layer3',
         zIndex: 2,
-        color: const Color(0x800000FF),  // Blue, 50% alpha
+        color: const Color(0x800000FF), // Blue, 50% alpha
         onRender: (_) {},
       );
 
@@ -137,8 +136,7 @@ void main() {
       final canvas = _MockCanvas();
 
       // Rendering with alpha blending should not crash
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally,
-          reason: 'Alpha blending should work correctly');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Alpha blending should work correctly');
 
       print('Alpha blending test: 3 semi-transparent layers rendered successfully');
     });
@@ -160,7 +158,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Create 10 overlapping layers
@@ -183,8 +181,7 @@ void main() {
       final frameTime = stopwatch.elapsedMicroseconds / 1000;
 
       // With minimal rendering work, 10 layers should be very fast
-      expect(frameTime, lessThan(5),
-          reason: '10 overlapping layers should render quickly (<5ms)');
+      expect(frameTime, lessThan(5), reason: '10 overlapping layers should render quickly (<5ms)');
 
       print('10 overlapping layers: ${frameTime.toStringAsFixed(2)}ms');
     });
@@ -206,7 +203,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Create layers that completely overlap (same bounds, different colors)
@@ -231,13 +228,11 @@ void main() {
 
       // Verify each layer rendered exactly once
       for (final entry in renderCount.entries) {
-        expect(entry.value, equals(1),
-            reason: 'Layer ${entry.key} should render exactly once');
+        expect(entry.value, equals(1), reason: 'Layer ${entry.key} should render exactly once');
       }
 
       // Verify no crashes
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally,
-          reason: 'Multiple renders should not cause artifacts');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Multiple renders should not cause artifacts');
 
       print('Rendering artifacts check: All 5 layers rendered correctly without artifacts');
     });
@@ -259,7 +254,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final renderOrder = <String>[];
@@ -295,8 +290,7 @@ void main() {
       // Render with initial z-order
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(renderOrder, equals(['A', 'B', 'C']),
-          reason: 'Initial z-order should be A → B → C');
+      expect(renderOrder, equals(['A', 'B', 'C']), reason: 'Initial z-order should be A → B → C');
 
       renderOrder.clear();
 
@@ -312,8 +306,7 @@ void main() {
       // Render with updated z-order
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(renderOrder, equals(['C', 'A', 'B']),
-          reason: 'Updated z-order should be C → A → B');
+      expect(renderOrder, equals(['C', 'A', 'B']), reason: 'Updated z-order should be C → A → B');
 
       print('Z-order update test: Initial [A, B, C] → Updated [C, A, B]');
     });

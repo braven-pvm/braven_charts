@@ -49,7 +49,7 @@ void main() {
 
       final textCache = LinkedHashMapTextLayoutCache(maxSize: 100);
       monitor = StopwatchPerformanceMonitor(maxHistorySize: 120);
-      final culler = ViewportCuller();
+      final culler = const ViewportCuller();
 
       pipeline = RenderPipeline(
         paintPool: paintPool,
@@ -262,7 +262,7 @@ void main() {
 
 /// Test helper: Simple rectangle layer for baseline rendering.
 class _SimpleRectLayer extends RenderLayer {
-  _SimpleRectLayer({required int zIndex}) : super(zIndex: zIndex);
+  _SimpleRectLayer({required super.zIndex});
 
   @override
   void render(RenderContext context) {
@@ -285,9 +285,9 @@ class _HeavyComputeLayer extends RenderLayer {
   final int delayMicroseconds;
 
   _HeavyComputeLayer({
-    required int zIndex,
+    required super.zIndex,
     required this.delayMicroseconds,
-  }) : super(zIndex: zIndex);
+  });
 
   @override
   void render(RenderContext context) {

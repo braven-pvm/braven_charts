@@ -55,7 +55,7 @@ void main() {
       const culler = ViewportCuller();
 
       // Narrow viewport showing only 5% of data (0-500 out of 0-10000)
-      final viewport = Rect.fromLTRB(0, 0, 500, 100);
+      final viewport = const Rect.fromLTRB(0, 0, 500, 100);
 
       final stopwatch = Stopwatch()..start();
 
@@ -75,11 +75,9 @@ void main() {
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
       // Validate NFR-002 target: <3ms for 10,000 points
-      expect(latencyMs, lessThan(3),
-          reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, lessThanOrEqualTo(10),
-          reason: 'Should have ~5% visible points');
+      expect(visibilityPercent, lessThanOrEqualTo(10), reason: 'Should have ~5% visible points');
 
       print('5% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -90,7 +88,7 @@ void main() {
       const culler = ViewportCuller();
 
       // Mid-range viewport showing 50% of data (2500-7500 out of 0-10000)
-      final viewport = Rect.fromLTRB(2500, 0, 7500, 100);
+      final viewport = const Rect.fromLTRB(2500, 0, 7500, 100);
 
       final stopwatch = Stopwatch()..start();
 
@@ -108,13 +106,10 @@ void main() {
 
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
-      expect(latencyMs, lessThan(3),
-          reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, greaterThan(40),
-          reason: 'Should have ~50% visible points');
-      expect(visibilityPercent, lessThan(60),
-          reason: 'Should have ~50% visible points');
+      expect(visibilityPercent, greaterThan(40), reason: 'Should have ~50% visible points');
+      expect(visibilityPercent, lessThan(60), reason: 'Should have ~50% visible points');
 
       print('50% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -125,7 +120,7 @@ void main() {
       const culler = ViewportCuller();
 
       // Wide viewport showing 95% of data (0-9500 out of 0-10000)
-      final viewport = Rect.fromLTRB(0, 0, 9500, 100);
+      final viewport = const Rect.fromLTRB(0, 0, 9500, 100);
 
       final stopwatch = Stopwatch()..start();
 
@@ -143,11 +138,9 @@ void main() {
 
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
-      expect(latencyMs, lessThan(3),
-          reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, greaterThan(90),
-          reason: 'Should have ~95% visible points');
+      expect(visibilityPercent, greaterThan(90), reason: 'Should have ~95% visible points');
 
       print('95% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -160,17 +153,15 @@ void main() {
       const culler2 = ViewportCuller(margin: 0.1);
 
       // ViewportCuller is const, so instances should be identical or follow const semantics
-      expect(culler1.margin, equals(0.0),
-          reason: 'Default margin should be 0.0');
-      expect(culler2.margin, equals(0.1),
-          reason: 'Custom margin should be 0.1');
+      expect(culler1.margin, equals(0.0), reason: 'Default margin should be 0.0');
+      expect(culler2.margin, equals(0.1), reason: 'Custom margin should be 0.1');
 
       print('ViewportCuller reuse validated (Foundation layer integration)');
     });
 
     test('Culling performance scales linearly O(n)', () {
       const culler = ViewportCuller();
-      final viewport = Rect.fromLTRB(2000, 0, 8000, 100);
+      final viewport = const Rect.fromLTRB(2000, 0, 8000, 100);
 
       // Benchmark with different data set sizes
       final sizes = [1000, 5000, 10000];
@@ -197,8 +188,7 @@ void main() {
       // Verify approximate linear scaling: 10x data should be ~10x time
       final ratio = latencies[10000]! / latencies[1000]!;
 
-      expect(ratio, lessThan(20),
-          reason: 'Culling should scale linearly O(n), not worse');
+      expect(ratio, lessThan(20), reason: 'Culling should scale linearly O(n), not worse');
 
       print('Linear scaling: ${latencies[1000]!.toStringAsFixed(2)}ms (1K), '
           '${latencies[5000]!.toStringAsFixed(2)}ms (5K), '

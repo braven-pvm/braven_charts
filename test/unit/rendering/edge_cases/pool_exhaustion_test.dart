@@ -42,7 +42,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Create layer that acquires many Paint objects (200)
@@ -64,8 +64,7 @@ void main() {
       final finalStats = paintPool.statistics;
 
       // Verify pool created new objects beyond capacity
-      expect(finalStats.acquireCount, greaterThan(initialStats.acquireCount),
-          reason: 'Pool should have allocated new objects');
+      expect(finalStats.acquireCount, greaterThan(initialStats.acquireCount), reason: 'Pool should have allocated new objects');
 
       print('Pool exhaustion test: '
           '${finalStats.acquireCount} Paint objects acquired, '
@@ -91,7 +90,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Baseline: Normal layer with 10 Paint objects
@@ -155,7 +154,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final canvas = _MockCanvas();
@@ -217,7 +216,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Create layer that exhausts both Paint and Path pools
@@ -233,17 +232,14 @@ void main() {
       final initialPathStats = pathPool.statistics;
 
       // Both pools exhausted simultaneously
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally,
-          reason: 'Multiple pool exhaustion should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Multiple pool exhaustion should not crash');
 
       final finalPaintStats = paintPool.statistics;
       final finalPathStats = pathPool.statistics;
 
       // Verify both pools handled exhaustion
-      expect(finalPaintStats.acquireCount, greaterThan(initialPaintStats.acquireCount),
-          reason: 'Paint pool should have allocated');
-      expect(finalPathStats.acquireCount, greaterThan(initialPathStats.acquireCount),
-          reason: 'Path pool should have allocated');
+      expect(finalPaintStats.acquireCount, greaterThan(initialPaintStats.acquireCount), reason: 'Paint pool should have allocated');
+      expect(finalPathStats.acquireCount, greaterThan(initialPathStats.acquireCount), reason: 'Path pool should have allocated');
 
       print('Multiple pool exhaustion: '
           'Paint ${finalPaintStats.acquireCount} acquires, '
@@ -270,7 +266,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       pipeline.addLayer(_PoolExhaustionLayer(
@@ -296,13 +292,11 @@ void main() {
       final actualAcquires = afterAcquires - beforeAcquires;
       final actualReleases = afterReleases - beforeReleases;
 
-      expect(actualAcquires, equals(200),
-          reason: '200 Paint objects should be acquired');
-      expect(actualReleases, equals(200),
-          reason: '200 Paint objects should be released');
+      expect(actualAcquires, equals(200), reason: '200 Paint objects should be acquired');
+      expect(actualReleases, equals(200), reason: '200 Paint objects should be released');
 
       print('Pool statistics accuracy: '
-          '${actualAcquires} acquires, ${actualReleases} releases, '
+          '$actualAcquires acquires, $actualReleases releases, '
           'statistics accurate under exhaustion');
     });
 
@@ -325,7 +319,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Extreme case: 1000 Paint objects
@@ -344,8 +338,7 @@ void main() {
       final stats = paintPool.statistics;
 
       // Verify all 1000 objects were acquired
-      expect(stats.acquireCount, greaterThanOrEqualTo(1000),
-          reason: 'All 1000 Paint objects should be acquired');
+      expect(stats.acquireCount, greaterThanOrEqualTo(1000), reason: 'All 1000 Paint objects should be acquired');
 
       print('Extreme exhaustion test: 1000 Paint objects, no crash');
     });

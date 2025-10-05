@@ -62,7 +62,7 @@ void main() {
 
       textCache = LinkedHashMapTextLayoutCache(maxSize: 200);
       monitor = StopwatchPerformanceMonitor(maxHistorySize: 120);
-      final culler = ViewportCuller();
+      final culler = const ViewportCuller();
 
       pipeline = RenderPipeline(
         paintPool: paintPool,
@@ -237,7 +237,7 @@ void main() {
 class _BarChartLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _BarChartLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
+  _BarChartLayer({required this.data, required super.zIndex});
 
   @override
   void render(RenderContext context) {
@@ -284,7 +284,7 @@ class _BarChartLayer extends RenderLayer {
 class _LegendLayer extends RenderLayer {
   final List<String> categories;
 
-  _LegendLayer({required this.categories, required int zIndex}) : super(zIndex: zIndex);
+  _LegendLayer({required this.categories, required super.zIndex});
 
   @override
   void render(RenderContext context) {

@@ -59,7 +59,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       canvas = _MockCanvas();
@@ -88,10 +88,8 @@ void main() {
       final perLayer = avg / 50;
 
       // Validate targets
-      expect(avg, lessThan(5),
-          reason: '50 empty layers should add <5ms overhead');
-      expect(perLayer, lessThan(0.1),
-          reason: 'Per-layer overhead should be <0.1ms');
+      expect(avg, lessThan(5), reason: '50 empty layers should add <5ms overhead');
+      expect(perLayer, lessThan(0.1), reason: 'Per-layer overhead should be <0.1ms');
 
       print('50 empty layers: ${avg.toStringAsFixed(1)}ms total, '
           '${perLayer.toStringAsFixed(3)}ms per layer');
@@ -140,7 +138,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final nonEmptyPipeline = RenderPipeline(
@@ -159,7 +157,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Add 50 empty layers
@@ -191,8 +189,7 @@ void main() {
       final speedup = nonEmptyTime / emptyTime;
 
       // isEmpty should provide measurable speedup
-      expect(speedup, greaterThan(1.5),
-          reason: 'isEmpty optimization should provide >1.5x speedup');
+      expect(speedup, greaterThan(1.5), reason: 'isEmpty optimization should provide >1.5x speedup');
 
       print('Speedup: ${speedup.toStringAsFixed(1)}x '
           '(empty: ${emptyTime.toStringAsFixed(2)}ms, '
@@ -242,7 +239,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Add one empty layer
@@ -263,8 +260,7 @@ void main() {
       final avg = latencies.fold<double>(0, (a, b) => a + b) / latencies.length;
 
       // Single empty layer overhead should be negligible
-      expect(avg, lessThan(0.1),
-          reason: 'Single empty layer check should be <0.1ms');
+      expect(avg, lessThan(0.1), reason: 'Single empty layer check should be <0.1ms');
 
       print('Single empty layer overhead: ${avg.toStringAsFixed(4)}ms');
     });
