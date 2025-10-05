@@ -145,7 +145,8 @@
   - Run contract tests (T005) → should pass
 
 ### T012: PerformanceMonitor (Frame Timing)
-- [ ] **T012** Implement PerformanceMonitor in lib/src/rendering/performance_monitor.dart
+### T012: PerformanceMonitor (Stopwatch-based Implementation)
+- [x] **T012** Implement PerformanceMonitor in lib/src/rendering/performance_monitor.dart
   - Create abstract base class matching contract
   - Implement StopwatchPerformanceMonitor using dart:core Stopwatch
   - Private field: `_stopwatch` (Stopwatch instance)
