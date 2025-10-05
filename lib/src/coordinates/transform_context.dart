@@ -9,8 +9,7 @@ library;
 import 'dart:math' show Point;
 import 'dart:ui' show Size, Rect;
 
-import 'package:braven_charts/braven_charts.dart'
-    show DataRange, ChartSeries;
+import 'package:braven_charts/braven_charts.dart' show DataRange, ChartSeries;
 
 import '../rendering/render_context.dart';
 import 'viewport_state.dart';
@@ -77,6 +76,68 @@ import 'viewport_state.dart';
 /// - [CoordinateSystem] - Available coordinate systems
 /// - [UniversalCoordinateTransformer] - Transformation engine
 class TransformContext {
+  /// Create immutable transformation context.
+  ///
+  /// **Validation**:
+  /// - widgetSize dimensions > 0
+  /// - chartAreaBounds within widget bounds
+  /// - data ranges non-empty (min < max)
+  /// - animationProgress in [0.0, 1.0]
+  /// - devicePixelRatio > 0
+  ///
+  /// Throws [AssertionError] in debug mode if validation fails.
+  const TransformContext({
+    required this.widgetSize,
+    required this.chartAreaBounds,
+    required this.xDataRange,
+    required this.yDataRange,
+    required this.viewport,
+    required this.series,
+    this.markerOffset,
+    this.animationProgress = 1.0,
+    this.devicePixelRatio = 1.0,
+  })  : assert(animationProgress >= 0.0 && animationProgress <= 1.0, 'animationProgress must be in [0.0, 1.0]'),
+        assert(devicePixelRatio > 0.0, 'devicePixelRatio must be > 0');
+
+  /// Create context from RenderContext (convenience factory).
+  ///
+  /// Extracts transformation state from Core Rendering Engine's RenderContext.
+  /// Useful for integrating coordinate system with existing rendering pipeline.
+  ///
+  /// **Parameters**:
+  /// - `renderContext`: Source rendering context (provides size, viewport)
+  /// - `xDataRange`: X-axis data range (required)
+  /// - `yDataRange`: Y-axis data range (required)
+  /// - `series`: Series data for point lookups (required)
+  /// - `viewport`: Optional zoom/pan state (defaults to identity)
+  ///
+  /// **Example**:
+  /// ```dart
+  /// final context = TransformContext.fromRenderContext(
+  ///   renderContext,
+  ///   xDataRange: DataRange(min: 0, max: 100),
+  ///   yDataRange: DataRange(min: 0, max: 50),
+  ///   series: chartSeries,
+  /// );
+  /// ```
+  factory TransformContext.fromRenderContext(
+    RenderContext renderContext, {
+    required DataRange xDataRange,
+    required DataRange yDataRange,
+    required List<ChartSeries> series,
+    ViewportState? viewport,
+  }) {
+    return TransformContext(
+      widgetSize: renderContext.size,
+      chartAreaBounds: renderContext.viewport,
+      xDataRange: xDataRange,
+      yDataRange: yDataRange,
+      viewport: viewport ?? ViewportState.identity(),
+      series: series,
+      devicePixelRatio: 1.0,
+    );
+  }
+
   /// Flutter widget dimensions (width, height in logical pixels).
   ///
   /// Represents the total size of the chart widget. Used for:
@@ -207,69 +268,6 @@ class TransformContext {
   ///
   /// **Default**: 1.0
   final double devicePixelRatio;
-
-  /// Create immutable transformation context.
-  ///
-  /// **Validation**:
-  /// - widgetSize dimensions > 0
-  /// - chartAreaBounds within widget bounds
-  /// - data ranges non-empty (min < max)
-  /// - animationProgress in [0.0, 1.0]
-  /// - devicePixelRatio > 0
-  ///
-  /// Throws [AssertionError] in debug mode if validation fails.
-  const TransformContext({
-    required this.widgetSize,
-    required this.chartAreaBounds,
-    required this.xDataRange,
-    required this.yDataRange,
-    required this.viewport,
-    required this.series,
-    this.markerOffset,
-    this.animationProgress = 1.0,
-    this.devicePixelRatio = 1.0,
-  }) : assert(animationProgress >= 0.0 && animationProgress <= 1.0,
-            'animationProgress must be in [0.0, 1.0]'),
-       assert(devicePixelRatio > 0.0, 'devicePixelRatio must be > 0');
-
-  /// Create context from RenderContext (convenience factory).
-  ///
-  /// Extracts transformation state from Core Rendering Engine's RenderContext.
-  /// Useful for integrating coordinate system with existing rendering pipeline.
-  ///
-  /// **Parameters**:
-  /// - `renderContext`: Source rendering context (provides size, viewport)
-  /// - `xDataRange`: X-axis data range (required)
-  /// - `yDataRange`: Y-axis data range (required)
-  /// - `series`: Series data for point lookups (required)
-  /// - `viewport`: Optional zoom/pan state (defaults to identity)
-  ///
-  /// **Example**:
-  /// ```dart
-  /// final context = TransformContext.fromRenderContext(
-  ///   renderContext,
-  ///   xDataRange: DataRange(min: 0, max: 100),
-  ///   yDataRange: DataRange(min: 0, max: 50),
-  ///   series: chartSeries,
-  /// );
-  /// ```
-  factory TransformContext.fromRenderContext(
-    RenderContext renderContext, {
-    required DataRange xDataRange,
-    required DataRange yDataRange,
-    required List<ChartSeries> series,
-    ViewportState? viewport,
-  }) {
-    return TransformContext(
-      widgetSize: renderContext.size,
-      chartAreaBounds: renderContext.viewport,
-      xDataRange: xDataRange,
-      yDataRange: yDataRange,
-      viewport: viewport ?? ViewportState.identity(),
-      series: series,
-      devicePixelRatio: 1.0,
-    );
-  }
 
   /// Create copy with updated viewport (zoom/pan).
   ///

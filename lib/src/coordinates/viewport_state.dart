@@ -10,6 +10,7 @@
 library;
 
 import 'dart:math' show Point;
+
 import 'package:braven_charts/braven_charts.dart';
 
 /// Immutable viewport state for zoom and pan transformations.
@@ -55,36 +56,6 @@ import 'package:braven_charts/braven_charts.dart';
 /// - [TransformContext] uses ViewportState for transformations
 /// - [CoordinateSystem.viewport] for viewport coordinate space
 class ViewportState {
-  /// Visible data range for X axis.
-  ///
-  /// Represents the subset of full data range currently visible.
-  /// Updated by zoom and pan operations.
-  final DataRange xRange;
-
-  /// Visible data range for Y axis.
-  ///
-  /// Represents the subset of full data range currently visible.
-  /// Updated by zoom and pan operations.
-  final DataRange yRange;
-
-  /// Zoom level multiplier.
-  ///
-  /// - `1.0` = No zoom (identity)
-  /// - `> 1.0` = Zoomed in (magnified)
-  /// - `< 1.0` = Zoomed out (minified)
-  ///
-  /// Typical range: `0.1` to `100.0`
-  /// Must be `> 0.0` (enforced by validation)
-  final double zoomFactor;
-
-  /// Pan offset in data units.
-  ///
-  /// Applied after zoom transformation:
-  /// - `Point(0.0, 0.0)` = No pan (identity)
-  /// - `Point(10.0, 0.0)` = Panned right 10 data units
-  /// - `Point(0.0, -5.0)` = Panned down 5 data units
-  final Point<double> panOffset;
-
   /// Create immutable viewport state.
   ///
   /// **Validation:**
@@ -124,6 +95,36 @@ class ViewportState {
       panOffset: Point(0.0, 0.0),
     );
   }
+
+  /// Visible data range for X axis.
+  ///
+  /// Represents the subset of full data range currently visible.
+  /// Updated by zoom and pan operations.
+  final DataRange xRange;
+
+  /// Visible data range for Y axis.
+  ///
+  /// Represents the subset of full data range currently visible.
+  /// Updated by zoom and pan operations.
+  final DataRange yRange;
+
+  /// Zoom level multiplier.
+  ///
+  /// - `1.0` = No zoom (identity)
+  /// - `> 1.0` = Zoomed in (magnified)
+  /// - `< 1.0` = Zoomed out (minified)
+  ///
+  /// Typical range: `0.1` to `100.0`
+  /// Must be `> 0.0` (enforced by validation)
+  final double zoomFactor;
+
+  /// Pan offset in data units.
+  ///
+  /// Applied after zoom transformation:
+  /// - `Point(0.0, 0.0)` = No pan (identity)
+  /// - `Point(10.0, 0.0)` = Panned right 10 data units
+  /// - `Point(0.0, -5.0)` = Panned down 5 data units
+  final Point<double> panOffset;
 
   /// Create copy with updated zoom factor.
   ///
@@ -222,10 +223,7 @@ class ViewportState {
   /// }
   /// ```
   bool containsPoint(Point<double> dataPoint) {
-    return dataPoint.x >= xRange.min &&
-        dataPoint.x <= xRange.max &&
-        dataPoint.y >= yRange.min &&
-        dataPoint.y <= yRange.max;
+    return dataPoint.x >= xRange.min && dataPoint.x <= xRange.max && dataPoint.y >= yRange.min && dataPoint.y <= yRange.max;
   }
 
   /// Check if viewport is identity (no zoom/pan).

@@ -86,65 +86,65 @@ library;
 enum CoordinateSystem {
   /// Raw Flutter event coordinates (mouse, touch).
   ///
-  /// **Origin:** Top-left of Flutter widget  
-  /// **Range:** (0,0) to (widget.width, widget.height)  
-  /// **Units:** Physical pixels  
+  /// **Origin:** Top-left of Flutter widget
+  /// **Range:** (0,0) to (widget.width, widget.height)
+  /// **Units:** Physical pixels
   /// **Primary Use:** Raw event coordinate capture
   mouse,
 
   /// Screen pixel coordinates within Flutter widget.
   ///
-  /// **Origin:** Top-left of widget  
-  /// **Range:** (0,0) to (widget.width, widget.height)  
-  /// **Units:** Logical pixels  
+  /// **Origin:** Top-left of widget
+  /// **Range:** (0,0) to (widget.width, widget.height)
+  /// **Units:** Logical pixels
   /// **Primary Use:** Canvas drawing and UI layout
   screen,
 
   /// Coordinates within chart drawing area (excluding axes/legend).
   ///
-  /// **Origin:** Top-left of plot area  
-  /// **Range:** (0,0) to (chartArea.width, chartArea.height)  
-  /// **Units:** Logical pixels  
+  /// **Origin:** Top-left of plot area
+  /// **Range:** (0,0) to (chartArea.width, chartArea.height)
+  /// **Units:** Logical pixels
   /// **Primary Use:** Rendering within chart bounds
   chartArea,
 
   /// Logical data space coordinates.
   ///
-  /// **Origin:** Data-dependent (may be negative)  
-  /// **Range:** (xAxis.min, yAxis.min) to (xAxis.max, yAxis.max)  
-  /// **Units:** Data units (dollars, dates, temperatures, etc.)  
+  /// **Origin:** Data-dependent (may be negative)
+  /// **Range:** (xAxis.min, yAxis.min) to (xAxis.max, yAxis.max)
+  /// **Units:** Data units (dollars, dates, temperatures, etc.)
   /// **Primary Use:** Business logic and data queries
   data,
 
   /// Index-based references to series data points.
   ///
-  /// **Origin:** (0, 0) = first series, first point  
-  /// **Range:** (0, 0) to (series.length-1, maxPoints-1)  
-  /// **Units:** Integer indices  
+  /// **Origin:** (0, 0) = first series, first point
+  /// **Range:** (0, 0) to (series.length-1, maxPoints-1)
+  /// **Units:** Integer indices
   /// **Primary Use:** Direct array access to series data
   dataPoint,
 
   /// Annotation positioning with offsets.
   ///
-  /// **Origin:** Data position + marker-specific offset  
-  /// **Range:** Same as chartArea  
-  /// **Units:** Logical pixels  
+  /// **Origin:** Data position + marker-specific offset
+  /// **Range:** Same as chartArea
+  /// **Units:** Logical pixels
   /// **Primary Use:** Annotation and marker anchoring
   marker,
 
   /// Zoom/pan adjusted coordinates.
   ///
-  /// **Origin:** Viewport-dependent (moves with pan)  
-  /// **Range:** Subset of data range  
-  /// **Units:** Data units scaled by zoom  
+  /// **Origin:** Viewport-dependent (moves with pan)
+  /// **Range:** Subset of data range
+  /// **Units:** Data units scaled by zoom
   /// **Primary Use:** Zoomed and panned visualization
   viewport,
 
   /// Normalized coordinates (0.0-1.0 relative to chart area).
   ///
-  /// **Origin:** (0, 0) = top-left of chart area  
-  /// **Range:** (0.0, 0.0) to (1.0, 1.0)  
-  /// **Units:** Percentage of chart area dimensions  
+  /// **Origin:** (0, 0) = top-left of chart area
+  /// **Range:** (0.0, 0.0) to (1.0, 1.0)
+  /// **Units:** Percentage of chart area dimensions
   /// **Primary Use:** Percentage-based layout calculations
   normalized,
 }

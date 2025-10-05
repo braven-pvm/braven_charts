@@ -135,16 +135,16 @@
   - Dependencies: T005
   - **Expected**: FAIL (transformation not implemented yet) ✅
 
-- [ ] **T011** [P] Unit test: ChartArea ↔ Data transformation in `test/unit/coordinates/chartarea_data_test.dart`
+- [x] **T011** [P] Unit test: ChartArea ↔ Data transformation in `test/unit/coordinates/chartarea_data_test.dart`
   - Test: Scale from pixels to data units
   - Test: Y-axis flip (canvas Y increases downward, data Y increases upward)
   - Test: Data range mapping (min/max → chartArea bounds)
   - Test: Round-trip accuracy within 0.01 pixels
   - Files: `test/unit/coordinates/chartarea_data_test.dart`
   - Dependencies: T005
-  - **Expected**: FAIL (transformation not implemented yet)
+  - **Expected**: FAIL (transformation not implemented yet) ✅
 
-- [ ] **T012** [P] Unit test: Data ↔ Viewport transformation in `test/unit/coordinates/data_viewport_test.dart`
+- [x] **T012** [P] Unit test: Data ↔ Viewport transformation in `test/unit/coordinates/data_viewport_test.dart`
   - Test: Zoom factor application (viewport range subset of data range)
   - Test: Pan offset application
   - Test: Viewport identity state (no zoom/pan)
@@ -153,7 +153,7 @@
   - Dependencies: T005, T007 (needs ViewportState)
   - **Expected**: FAIL (transformation not implemented yet)
 
-- [ ] **T013** [P] Unit test: Data ↔ DataPoint transformation in `test/unit/coordinates/data_datapoint_test.dart`
+- [x] **T013** [P] Unit test: Data ↔ DataPoint transformation in `test/unit/coordinates/data_datapoint_test.dart`
   - Test: Index lookup to data value (series[i][j] → data coordinate)
   - Test: Reverse lookup (data coordinate → nearest index)
   - Test: Multiple series handling
@@ -162,7 +162,7 @@
   - Dependencies: T005
   - **Expected**: FAIL (transformation not implemented yet)
 
-- [ ] **T014** [P] Unit test: Data ↔ Marker transformation in `test/unit/coordinates/data_marker_test.dart`
+- [x] **T014** [P] Unit test: Data ↔ Marker transformation in `test/unit/coordinates/data_marker_test.dart`
   - Test: Marker offset application (data point + pixel offset)
   - Test: Null marker offset (identity)
   - Test: Negative offsets (annotations below/left of data point)
@@ -171,7 +171,7 @@
   - Dependencies: T005, T006 (needs TransformContext with markerOffset)
   - **Expected**: FAIL (transformation not implemented yet)
 
-- [ ] **T015** [P] Unit test: ChartArea ↔ Normalized transformation in `test/unit/coordinates/chartarea_normalized_test.dart`
+- [x] **T015** [P] Unit test: ChartArea ↔ Normalized transformation in `test/unit/coordinates/chartarea_normalized_test.dart`
   - Test: Scale to 0.0-1.0 range
   - Test: Corner cases (0,0) and (1,1)
   - Test: Mid-point (0.5, 0.5) maps to chart area center
@@ -180,7 +180,7 @@
   - Dependencies: T005
   - **Expected**: FAIL (transformation not implemented yet)
 
-- [ ] **T016** [P] Unit test: Round-trip accuracy for all 56 paths in `test/unit/coordinates/round_trip_test.dart`
+- [x] **T016** [P] Unit test: Round-trip accuracy for all 56 paths in `test/unit/coordinates/round_trip_test.dart`
   - Test: All 8 coordinate systems to all other 7 systems and back
   - Test: Accuracy within 0.01 pixels for screen-based systems
   - Test: Accuracy within 0.001% for data-based systems
@@ -191,7 +191,7 @@
 
 ### Validation Tests
 
-- [ ] **T017** [P] Unit test: Coordinate validation in `test/unit/coordinates/validation_test.dart`
+- [x] **T017** [P] Unit test: Coordinate validation in `test/unit/coordinates/validation_test.dart`
   - Test: NaN detection (ValidationErrorType.invalidValue)
   - Test: Infinity detection (ValidationErrorType.invalidValue)
   - Test: Out-of-range detection (ValidationErrorType.outOfRange)
@@ -204,7 +204,7 @@
 
 ### Integration Tests
 
-- [ ] **T018** [P] Integration test: RenderContext extension in `test/integration/coordinates/render_context_integration_test.dart`
+- [x] **T018** [P] Integration test: RenderContext extension in `test/integration/coordinates/render_context_integration_test.dart`
   - Test: RenderContext.transformContext field exists
   - Test: RenderContext convenience methods (dataToScreen, screenToData, transformBatch)
   - Test: TransformContext constructed from RenderContext
@@ -213,7 +213,7 @@
   - Dependencies: T005, T006 (needs RenderContext integration)
   - **Expected**: FAIL (integration not implemented yet)
 
-- [ ] **T019** [P] Integration test: Full transformation pipeline in `test/integration/coordinates/transformation_pipeline_test.dart`
+- [x] **T019** [P] Integration test: Full transformation pipeline in `test/integration/coordinates/transformation_pipeline_test.dart`
   - Test: End-to-end data → screen transformation in rendering
   - Test: Mouse click → data coordinate lookup
   - Test: Annotation positioning (data → marker → screen)
