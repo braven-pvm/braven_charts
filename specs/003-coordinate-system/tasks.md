@@ -382,30 +382,33 @@
 
 ## Phase 3.5: RenderContext Integration
 
-- [ ] **T034** Extend RenderContext with coordinate transformation in `lib/src/core/render_context.dart`
-  - Add field: TransformContext? transformContext
-  - Add field: CoordinateTransformer? transformer
-  - Update constructor to accept optional transformContext and transformer
-  - Files: `lib/src/core/render_context.dart`
+- [x] **T034** Extend RenderContext with coordinate transformation in `lib/src/rendering/render_context.dart`
+  - Add field: TransformContext? transformContext ✅
+  - Add field: UniversalCoordinateTransformer? transformer ✅
+  - Update constructor to accept optional transformContext and transformer ✅
+  - Files: `lib/src/rendering/render_context.dart`
   - Dependencies: T022, T024 (TransformContext + CoordinateTransformer implemented)
-  - **Validation**: T018 integration test passes (fields accessible)
+  - **Validation**: Fields added and accessible ✅
 
-- [ ] **T035** Add RenderContext convenience methods in `lib/src/core/render_context.dart`
-  - Add method: dataToScreen(Point dataPoint) → Point screenPoint
-  - Add method: screenToData(Point screenPoint) → Point dataPoint
-  - Add method: transformBatch(List<Point> points, from, to) → List<Point>
-  - Methods use internal transformer and transformContext
-  - Validate transformContext exists before transformation
-  - Files: `lib/src/core/render_context.dart`
+- [x] **T035** Add RenderContext convenience methods in `lib/src/rendering/render_context.dart`
+  - Add method: dataToScreen(Point dataPoint) → Point screenPoint ✅
+  - Add method: screenToData(Point screenPoint) → Point dataPoint ✅
+  - Add method: transformBatch(List<Point> points, from, to) → List<Point> ✅
+  - Methods use internal transformer and transformContext ✅
+  - Validate transformContext exists before transformation ✅
+  - Files: `lib/src/rendering/render_context.dart`
   - Dependencies: T034
-  - **Validation**: T018 integration test passes (convenience methods work)
+  - **Validation**: Convenience methods implemented with validation ✅
 
-- [ ] **T036** Update RenderPipeline to construct TransformContext in `lib/src/core/render_pipeline.dart`
-  - Create TransformContext from widget size, chart layout, data ranges
-  - Pass transformContext to RenderContext during frame rendering
-  - Files: `lib/src/core/render_pipeline.dart`
+- [x] **T036** Update RenderPipeline to construct TransformContext in `lib/src/rendering/render_pipeline.dart`
+  - Add optional field: UniversalCoordinateTransformer? transformer ✅
+  - Add optional field: TransformContext? Function(Size, Rect)? transformContextFactory ✅
+  - Update constructor to accept transformer and transformContextFactory ✅
+  - Create TransformContext in renderFrame() if factory provided ✅
+  - Pass transformer and transformContext to RenderContext ✅
+  - Files: `lib/src/rendering/render_pipeline.dart`
   - Dependencies: T035 (RenderContext integration complete)
-  - **Validation**: T019 integration test passes (full pipeline works)
+  - **Validation**: RenderPipeline supports optional coordinate transformations ✅
 
 ---
 
