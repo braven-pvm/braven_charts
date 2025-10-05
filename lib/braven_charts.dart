@@ -8,17 +8,21 @@
 /// - Universal coordinate transformation
 library;
 
+// Foundation Layer - Core data structures and utilities
+export 'src/foundation/foundation.dart';
+
+// TODO: Uncomment as layers are implemented
 // Annotation system exports
-export 'src/annotations/annotation_system.dart';
-export 'src/annotations/marker_system.dart';
-export 'src/charts/bar_chart.dart';
+// export 'src/annotations/annotation_system.dart';
+// export 'src/annotations/marker_system.dart';
+// export 'src/charts/bar_chart.dart';
 // Core exports
-export 'src/charts/chart_base.dart';
-export 'src/charts/line_chart.dart';
-export 'src/charts/pie_chart.dart';
+// export 'src/charts/chart_base.dart';
+// export 'src/charts/line_chart.dart';
+// export 'src/charts/pie_chart.dart';
 // Theming exports
-export 'src/theming/chart_theme.dart';
-export 'src/theming/theme_data.dart';
+// export 'src/theming/chart_theme.dart';
+// export 'src/theming/theme_data.dart';
 // Utilities exports
-export 'src/utils/coordinate_transformer.dart';
-export 'src/utils/performance_utils.dart';
+// export 'src/utils/coordinate_transformer.dart';
+// export 'src/utils/performance_utils.dart';

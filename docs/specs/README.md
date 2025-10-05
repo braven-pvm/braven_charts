@@ -44,22 +44,27 @@ The absolute foundation that everything else depends on. These components have z
 - Zero memory leaks
 
 ### Layer 1: Core Rendering Engine (001-core-rendering)
-**Status**: ⏳ Awaiting Foundation  
-**Dependencies**: 000-foundation
+**Status**: ✅ Specification Complete  
+**Dependencies**: 001-foundation (Foundation Layer) ✅
 
 The rendering engine that draws charts efficiently on Canvas. This is the performance-critical heart of the library.
 
 **Components:**
-- **Canvas Renderer**: Low-level drawing primitives with object pooling
-- **Rendering Pipeline**: Paint, Path, TextPainter management
-- **Viewport Management**: Culling, clipping, visible area calculation
-- **Performance Monitoring**: Frame time tracking, jank detection
+- **Rendering Primitives**: Paint/Path/TextPainter object pooling
+- **Rendering Pipeline**: Composable layer system with Z-order
+- **Viewport Management**: Efficient culling and clipping
+- **Performance Monitoring**: Frame time tracking, jank detection, adaptive quality
+- **Text Rendering**: Layout caching and style-based pooling
 
 **Critical Success Factors:**
-- 60 FPS with 10,000+ data points
-- <16ms frame budget adherence
-- Efficient object pooling (90%+ reuse rate)
+- 60 FPS with 10,000+ data points (<8ms target for 120 FPS devices)
+- <16ms frame budget adherence (constitutional requirement)
+- Object pooling >90% hit rate
 - Zero allocations in hot rendering path
+- Viewport culling <1ms for 10k points
+
+**Specification Documents:**
+- ✅ spec.md - Complete functional requirements (FR-001 to FR-005)
 
 ### Layer 2: Coordinate System (002-coordinate-system)
 **Status**: ⏳ Awaiting Core Rendering  
@@ -293,15 +298,15 @@ XXX-feature-name/
 
 ### Active Specification Work
 
-**Now**: Creating comprehensive specifications for Layer 0-3 (Foundation, Rendering, Coordinates, Theming)
+**Now**: Core Rendering Engine (Layer 1) specification complete ✅
 
 **Next Steps:**
-1. Complete 000-foundation spec with all data models and utilities
-2. Complete 001-core-rendering spec with performance requirements
-3. Complete 002-coordinate-system spec with all transformations
-4. Complete 003-theming-system spec with 7 predefined themes
-5. Review and validate all foundation specs
-6. Begin implementation of foundation layer
+1. Create plan.md for Core Rendering Engine implementation strategy
+2. Create tasks.md for Core Rendering Engine SDLC breakdown
+3. Create data-model.md for rendering data structures
+4. Create contracts/ for rendering interfaces
+5. Begin Coordinate System (Layer 2) specification
+6. Continue building layer-by-layer specifications
 
 ---
 
