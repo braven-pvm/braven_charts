@@ -7,6 +7,8 @@
 // - Performance: <8ms frame time budget, pool usage mandatory
 // - Dependencies: Foundation (ObjectPool, ViewportCuller), Rendering (all entities)
 
+import 'package:braven_charts/src/coordinates/transform_context.dart';
+import 'package:braven_charts/src/coordinates/universal_coordinate_transformer.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_metrics.dart';
@@ -91,6 +93,30 @@ class RenderPipeline {
   /// Viewport culler from Foundation layer.
   final ViewportCuller culler;
 
+  /// Optional universal coordinate transformer for Layer 2 integration.
+  ///
+  /// If provided, will be passed to RenderContext for layers to use.
+  /// Null if coordinate transformations are not needed.
+  final UniversalCoordinateTransformer? transformer;
+
+  /// Optional transformation context factory function.
+  ///
+  /// Called each frame to create TransformContext if coordinate
+  /// transformations are enabled. Receives widget size and viewport.
+  ///
+  /// Example:
+  /// ```dart
+  /// transformContextFactory: (size, viewport) => TransformContext(
+  ///   widgetSize: size,
+  ///   chartAreaBounds: Rect.fromLTWH(50, 30, size.width - 100, size.height - 80),
+  ///   xDataRange: DataRange(min: 0, max: 100),
+  ///   yDataRange: DataRange(min: 0, max: 50),
+  ///   viewport: ViewportState.identity(),
+  ///   series: chartSeries,
+  /// ),
+  /// ```
+  final TransformContext? Function(Size size, Rect viewport)? transformContextFactory;
+
   /// Current viewport bounds (mutable via [updateViewport]).
   Rect _viewport;
 
@@ -102,11 +128,19 @@ class RenderPipeline {
 
   /// Create rendering pipeline with shared infrastructure.
   ///
-  /// All parameters required (no nulls). Infrastructure (pools, cache,
-  /// monitor) typically created once and shared across charts/widgets.
+  /// All parameters except [transformer] and [transformContextFactory] are required.
+  /// Infrastructure (pools, cache, monitor) typically created once and shared
+  /// across charts/widgets.
   ///
   /// [initialViewport] sets starting visible bounds. Call [updateViewport]
   /// to change viewport at runtime (pan/zoom operations).
+  ///
+  /// **Coordinate Transformation (Optional)**:
+  /// - [transformer]: UniversalCoordinateTransformer instance (from Layer 2)
+  /// - [transformContextFactory]: Function to create TransformContext each frame
+  ///
+  /// If both are provided, RenderContext will include coordinate transformation
+  /// support, enabling layers to use `dataToScreen()`, `screenToData()`, etc.
   RenderPipeline({
     required this.paintPool,
     required this.pathPool,
@@ -115,6 +149,8 @@ class RenderPipeline {
     required this.performanceMonitor,
     required this.culler,
     required Rect initialViewport,
+    this.transformer,
+    this.transformContextFactory,
   }) : _viewport = initialViewport;
 
   /// Get current viewport bounds.
@@ -196,6 +232,14 @@ class RenderPipeline {
       }
 
       // Step 3: Create immutable context for this frame
+      //
+      // If coordinate transformation is enabled (transformer and factory provided),
+      // create TransformContext and include in RenderContext.
+      TransformContext? transformContext;
+      if (transformer != null && transformContextFactory != null) {
+        transformContext = transformContextFactory!(size, _viewport);
+      }
+
       final context = RenderContext(
         canvas: canvas,
         size: size,
@@ -206,6 +250,8 @@ class RenderPipeline {
         textPainterPool: textPainterPool,
         textCache: textCache,
         performanceMonitor: performanceMonitor,
+        transformer: transformer,
+        transformContext: transformContext,
       );
 
       // Step 4-5: Render visible, non-empty layers in z-order
