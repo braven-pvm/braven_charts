@@ -230,7 +230,7 @@
   - Test currentMetrics calculates correct p99
   - Test reset() clears all state
 
-- [ ] **T019** [P] Unit test for RenderContext validation in test/unit/rendering/render_context_test.dart
+- [x] **T019** [P] Unit test for RenderContext validation in test/unit/rendering/render_context_test.dart
   - Test constructor asserts on invalid size (width<=0 or height<=0)
   - Test constructor asserts when viewport doesn't intersect canvas
   - Test immutability (all fields final)
