@@ -358,10 +358,88 @@ class UniversalCoordinateTransformer {
     required CoordinateSystem to,
     required TransformContext context,
   }) {
-    // TODO: Implement batch transformation in T025-T026 with SIMD optimization
-    throw UnimplementedError(
-      'transformBatch() will be implemented in T025 (direct paths) and T026 (transitive paths) with SIMD',
-    );
+    if (points.isEmpty) {
+      return [];
+    }
+
+    // Identity transformation - return copy
+    if (from == to) {
+      return List.from(points);
+    }
+
+    // Try matrix-based transformation first (most efficient)
+    if (_canUseMatrixTransformation(from, to)) {
+      return _transformBatchWithMatrix(points, from, to, context);
+    }
+
+    // Fall back to point-by-point transformation for non-matrix paths
+    // (e.g., dataPoint lookups, complex transitive paths)
+    return points.map((point) => transform(point, from: from, to: to, context: context)).toList();
+  }
+
+  /// Check if transformation can use matrix operations.
+  ///
+  /// Matrix transformations are supported for paths that involve only:
+  /// - Scaling, translation, rotation (affine transformations)
+  /// - No data lookups (dataPoint, marker with offset lookup)
+  ///
+  /// **Internal method** - used by transformBatch().
+  bool _canUseMatrixTransformation(CoordinateSystem from, CoordinateSystem to) {
+    // DataPoint transformations require series lookups (non-matrix)
+    if (from == CoordinateSystem.dataPoint || to == CoordinateSystem.dataPoint) {
+      return false;
+    }
+
+    // Marker transformations involving data lookups (non-matrix)
+    if (from == CoordinateSystem.marker || to == CoordinateSystem.marker) {
+      return false;
+    }
+
+    // All other paths can use matrices
+    return true;
+  }
+
+  /// Transform batch of points using cached transformation matrix and SIMD.
+  ///
+  /// **Optimization steps**:
+  /// 1. Get/build transformation matrix (cached by context)
+  /// 2. Process points in groups of 4 using SIMD (transformBatch4)
+  /// 3. Process remaining points (< 4) with scalar transform
+  ///
+  /// **Performance**: <1ms for 10,000 points (target: 100ns/point)
+  ///
+  /// **Internal method** - used by transformBatch().
+  List<Point<double>> _transformBatchWithMatrix(
+    List<Point<double>> points,
+    CoordinateSystem from,
+    CoordinateSystem to,
+    TransformContext context,
+  ) {
+    // Get cached transformation matrix
+    final matrix = _getTransformationMatrix(from, to, context);
+
+    final result = <Point<double>>[];
+    int i = 0;
+
+    // Process in groups of 4 using SIMD
+    while (i + 3 < points.length) {
+      final batch = matrix.transformBatch4([
+        points[i],
+        points[i + 1],
+        points[i + 2],
+        points[i + 3],
+      ]);
+      result.addAll(batch);
+      i += 4;
+    }
+
+    // Process remaining points (< 4)
+    while (i < points.length) {
+      result.add(matrix.transform(points[i]));
+      i++;
+    }
+
+    return result;
   }
 
   /// Validate a point in a specific coordinate system.
