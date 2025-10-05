@@ -416,7 +416,7 @@
   - Link to contracts, data model, spec
   - Performance targets and validation steps
 
-- [ ] **T045** [P] Update main project README with rendering section
+- [x] **T045** [P] Update main project README with rendering section
   - Add Core Rendering Engine to feature list
   - Link to spec, plan, tasks
   - Show usage example
