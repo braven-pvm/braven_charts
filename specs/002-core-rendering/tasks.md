@@ -215,7 +215,7 @@
   - Test Duration fields validation throws on negative values
   - Test millisecond getters convert correctly
 
-- [ ] **T017** [P] Unit test for TextLayoutCache LRU eviction in test/unit/rendering/text_layout_cache_test.dart
+- [x] **T017** [P] Unit test for TextLayoutCache LRU eviction in test/unit/rendering/text_layout_cache_test.dart
   - Test cache evicts oldest entry when maxSize exceeded
   - Test get() after eviction returns null for evicted key
   - Test put() updates existing key (no duplicate entries)

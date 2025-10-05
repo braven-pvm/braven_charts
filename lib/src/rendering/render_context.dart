@@ -7,12 +7,11 @@
 // - Immutability: Recreated per frame, never mutated
 // - Dependencies: Foundation (ObjectPool, ViewportCuller), Rendering (TextLayoutCache, PerformanceMonitor)
 
-import 'dart:ui';
-import 'package:flutter/painting.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/painting.dart';
 
 /// Immutable dependency injection container for rendering infrastructure.
 ///

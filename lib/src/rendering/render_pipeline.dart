@@ -7,15 +7,14 @@
 // - Performance: <8ms frame time budget, pool usage mandatory
 // - Dependencies: Foundation (ObjectPool, ViewportCuller), Rendering (all entities)
 
-import 'dart:ui';
-import 'package:flutter/painting.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_metrics.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/performance_metrics.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/painting.dart';
 
 /// Orchestrates rendering of multiple layers with z-ordering and performance monitoring.
 ///
@@ -234,18 +233,12 @@ class RenderPipeline {
         final paintStats = paintPool.statistics;
         final pathStats = pathPool.statistics;
         final textStats = textPainterPool.statistics;
-        
-        final totalPoolOperations = paintStats.acquireCount +
-            pathStats.acquireCount +
-            textStats.acquireCount;
-        final totalPoolReleases = paintStats.releaseCount +
-            pathStats.releaseCount +
-            textStats.releaseCount;
+
+        final totalPoolOperations = paintStats.acquireCount + pathStats.acquireCount + textStats.acquireCount;
+        final totalPoolReleases = paintStats.releaseCount + pathStats.releaseCount + textStats.releaseCount;
 
         monitor.updatePoolMetrics(
-          poolHitRate: totalPoolOperations > 0
-              ? totalPoolReleases / totalPoolOperations
-              : 1.0,
+          poolHitRate: totalPoolOperations > 0 ? totalPoolReleases / totalPoolOperations : 1.0,
           culledElementCount: culledCount,
           renderedElementCount: renderedCount,
         );

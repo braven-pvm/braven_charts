@@ -6,17 +6,17 @@
 // - TDD: Tests written after implementation (unit tests validate correctness)
 // - Coverage: All validation rules and computed getters tested
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/rendering/performance_metrics.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('PerformanceMetrics', () {
     group('meetsTargets', () {
       test('returns true when all targets met (avg<8ms, p99<16ms, hitRate>0.90)', () {
         final metrics = PerformanceMetrics(
-          frameTime: Duration(microseconds: 7000),
-          averageFrameTime: Duration(microseconds: 7500), // <8ms ✓
-          p99FrameTime: Duration(microseconds: 15000), // <16ms ✓
+          frameTime: const Duration(microseconds: 7000),
+          averageFrameTime: const Duration(microseconds: 7500), // <8ms ✓
+          p99FrameTime: const Duration(microseconds: 15000), // <16ms ✓
           jankCount: 0,
           poolHitRate: 0.95, // >0.90 ✓
         );
@@ -26,9 +26,9 @@ void main() {
 
       test('returns false when average frame time exceeds 8ms', () {
         final metrics = PerformanceMetrics(
-          frameTime: Duration(microseconds: 9000),
-          averageFrameTime: Duration(microseconds: 9000), // Exceeds 8ms
-          p99FrameTime: Duration(microseconds: 15000),
+          frameTime: const Duration(microseconds: 9000),
+          averageFrameTime: const Duration(microseconds: 9000), // Exceeds 8ms
+          p99FrameTime: const Duration(microseconds: 15000),
           jankCount: 0,
           poolHitRate: 0.95,
         );
@@ -38,9 +38,9 @@ void main() {
 
       test('returns false when p99 frame time exceeds 16ms', () {
         final metrics = PerformanceMetrics(
-          frameTime: Duration(microseconds: 7000),
-          averageFrameTime: Duration(microseconds: 7500),
-          p99FrameTime: Duration(microseconds: 17000), // Exceeds 16ms
+          frameTime: const Duration(microseconds: 7000),
+          averageFrameTime: const Duration(microseconds: 7500),
+          p99FrameTime: const Duration(microseconds: 17000), // Exceeds 16ms
           jankCount: 0,
           poolHitRate: 0.95,
         );
@@ -50,9 +50,9 @@ void main() {
 
       test('returns false when pool hit rate below 0.90', () {
         final metrics = PerformanceMetrics(
-          frameTime: Duration(microseconds: 7000),
-          averageFrameTime: Duration(microseconds: 7500),
-          p99FrameTime: Duration(microseconds: 15000),
+          frameTime: const Duration(microseconds: 7000),
+          averageFrameTime: const Duration(microseconds: 7500),
+          p99FrameTime: const Duration(microseconds: 15000),
           jankCount: 0,
           poolHitRate: 0.89, // Below 0.90
         );
@@ -62,9 +62,9 @@ void main() {
 
       test('boundary: returns true at exact limits (8ms, 16ms, 0.90)', () {
         final metrics = PerformanceMetrics(
-          frameTime: Duration(microseconds: 8000),
-          averageFrameTime: Duration(microseconds: 8000), // Exactly 8ms
-          p99FrameTime: Duration(microseconds: 16000), // Exactly 16ms
+          frameTime: const Duration(microseconds: 8000),
+          averageFrameTime: const Duration(microseconds: 8000), // Exactly 8ms
+          p99FrameTime: const Duration(microseconds: 16000), // Exactly 16ms
           jankCount: 0,
           poolHitRate: 0.90, // Exactly 0.90
         );
@@ -151,9 +151,9 @@ void main() {
 
         expect(
           () => PerformanceMetrics(
-            frameTime: Duration(microseconds: 7000),
-            averageFrameTime: Duration(microseconds: 8000),
-            p99FrameTime: Duration(microseconds: 15000),
+            frameTime: const Duration(microseconds: 7000),
+            averageFrameTime: const Duration(microseconds: 8000),
+            p99FrameTime: const Duration(microseconds: 15000),
             jankCount: 0,
             poolHitRate: 1.0,
           ),
@@ -164,7 +164,7 @@ void main() {
       test('throws assertion error when frameTime is negative', () {
         expect(
           () => PerformanceMetrics(
-            frameTime: Duration(microseconds: -1),
+            frameTime: const Duration(microseconds: -1),
             averageFrameTime: Duration.zero,
             p99FrameTime: Duration.zero,
             jankCount: 0,
@@ -178,7 +178,7 @@ void main() {
         expect(
           () => PerformanceMetrics(
             frameTime: Duration.zero,
-            averageFrameTime: Duration(microseconds: -1),
+            averageFrameTime: const Duration(microseconds: -1),
             p99FrameTime: Duration.zero,
             jankCount: 0,
             poolHitRate: 1.0,
@@ -192,7 +192,7 @@ void main() {
           () => PerformanceMetrics(
             frameTime: Duration.zero,
             averageFrameTime: Duration.zero,
-            p99FrameTime: Duration(microseconds: -1),
+            p99FrameTime: const Duration(microseconds: -1),
             jankCount: 0,
             poolHitRate: 1.0,
           ),
@@ -205,7 +205,7 @@ void main() {
       test('averageFrameTimeMs converts microseconds to milliseconds', () {
         final metrics = PerformanceMetrics(
           frameTime: Duration.zero,
-          averageFrameTime: Duration(microseconds: 7500), // 7.5ms
+          averageFrameTime: const Duration(microseconds: 7500), // 7.5ms
           p99FrameTime: Duration.zero,
           jankCount: 0,
           poolHitRate: 1.0,
@@ -218,7 +218,7 @@ void main() {
         final metrics = PerformanceMetrics(
           frameTime: Duration.zero,
           averageFrameTime: Duration.zero,
-          p99FrameTime: Duration(microseconds: 15500), // 15.5ms
+          p99FrameTime: const Duration(microseconds: 15500), // 15.5ms
           jankCount: 0,
           poolHitRate: 1.0,
         );
@@ -242,8 +242,8 @@ void main() {
       test('millisecond getters handle fractional milliseconds', () {
         final metrics = PerformanceMetrics(
           frameTime: Duration.zero,
-          averageFrameTime: Duration(microseconds: 12345), // 12.345ms
-          p99FrameTime: Duration(microseconds: 9876), // 9.876ms
+          averageFrameTime: const Duration(microseconds: 12345), // 12.345ms
+          p99FrameTime: const Duration(microseconds: 9876), // 9.876ms
           jankCount: 0,
           poolHitRate: 1.0,
         );
@@ -297,17 +297,17 @@ void main() {
     group('immutability', () {
       test('all fields are final (const constructor works)', () {
         final metrics1 = PerformanceMetrics(
-          frameTime: Duration(microseconds: 7000),
-          averageFrameTime: Duration(microseconds: 7500),
-          p99FrameTime: Duration(microseconds: 15000),
+          frameTime: const Duration(microseconds: 7000),
+          averageFrameTime: const Duration(microseconds: 7500),
+          p99FrameTime: const Duration(microseconds: 15000),
           jankCount: 0,
           poolHitRate: 0.95,
         );
 
         final metrics2 = PerformanceMetrics(
-          frameTime: Duration(microseconds: 7000),
-          averageFrameTime: Duration(microseconds: 7500),
-          p99FrameTime: Duration(microseconds: 15000),
+          frameTime: const Duration(microseconds: 7000),
+          averageFrameTime: const Duration(microseconds: 7500),
+          p99FrameTime: const Duration(microseconds: 15000),
           jankCount: 0,
           poolHitRate: 0.95,
         );
