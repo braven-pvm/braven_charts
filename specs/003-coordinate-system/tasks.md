@@ -229,12 +229,12 @@
 
 ### Entity Implementations (All [P] - different files)
 
-- [ ] **T020** [P] Implement CoordinateSystem enum in `lib/src/coordinates/coordinate_system.dart`
+- [x] **T020** [P] Implement CoordinateSystem enum in `lib/src/coordinates/coordinate_system.dart`
   - Define 8 enum values: mouse, screen, chartArea, data, dataPoint, marker, viewport, normalized
   - Add dartdoc comments for each value (origin, range, units, use case)
   - Files: `lib/src/coordinates/coordinate_system.dart`
   - Dependencies: T004 (contract test must exist and fail)
-  - **Validation**: T004 contract test passes
+  - **Validation**: T004 contract test passes ✅
 
 - [ ] **T021** [P] Implement ViewportState in `lib/src/coordinates/viewport_state.dart`
   - Implement 4 final fields: xRange, yRange, zoomFactor, panOffset

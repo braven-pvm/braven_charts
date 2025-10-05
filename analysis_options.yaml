@@ -6,10 +6,10 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   errors:
     # Coordinate system specific rules
-    missing_enum_constant_in_switch: error  # Exhaustive switch for CoordinateSystem enum
-    prefer_const_constructors: error        # Enforce const constructors for immutability
-    prefer_final_fields: error              # Enforce immutability patterns
-    
+    missing_enum_constant_in_switch: error # Exhaustive switch for CoordinateSystem enum
+    prefer_const_constructors: error # Enforce const constructors for immutability
+    prefer_final_fields: error # Enforce immutability patterns
+
 linter:
   rules:
     # Immutability and const patterns (coordinate system requirement)
@@ -18,10 +18,10 @@ linter:
     prefer_const_declarations: true
     prefer_final_fields: true
     prefer_final_locals: true
-    
+
     # Enum exhaustiveness (CoordinateSystem enum requirement)
     exhaustive_cases: true
-    
+
     # Code quality
     avoid_print: true
     avoid_unnecessary_containers: true

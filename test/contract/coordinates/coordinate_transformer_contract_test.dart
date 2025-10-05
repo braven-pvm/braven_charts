@@ -9,15 +9,16 @@
 library;
 
 import 'dart:math' show Point, Rectangle;
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CoordinateTransformer interface contract', () {
     test('should have transform method with correct signature', () {
       // This test will fail until interface is implemented
       // Contract: Point<double> transform(Point<double>, from, to, context)
-      
+
       // We can't instantiate abstract class, but we can verify compilation
       // The fact this test compiles means the interface exists
       expect(true, isTrue, reason: 'Interface compilation test');
@@ -42,18 +43,17 @@ void main() {
       // Contract: All 8 coordinate systems to all other 7 systems = 56 paths
       final systems = CoordinateSystem.values;
       expect(systems.length, equals(8));
-      
+
       // Number of transformation paths = n × (n-1) = 8 × 7 = 56
       final pathCount = systems.length * (systems.length - 1);
-      expect(pathCount, equals(56),
-          reason: 'Must support 56 bidirectional transformation paths');
+      expect(pathCount, equals(56), reason: 'Must support 56 bidirectional transformation paths');
     });
 
     test('should compile exhaustive from→to transformation matrix', () {
       // This test verifies that all transformation combinations compile
       // We don't execute transformations (no implementation yet), just verify
       // the enum supports exhaustive switching
-      
+
       int countPaths() {
         int count = 0;
         for (final from in CoordinateSystem.values) {
@@ -66,8 +66,7 @@ void main() {
         return count;
       }
 
-      expect(countPaths(), equals(56),
-          reason: 'All 56 transformation paths must be enumerable');
+      expect(countPaths(), equals(56), reason: 'All 56 transformation paths must be enumerable');
     });
   });
 
@@ -101,22 +100,17 @@ void main() {
   group('ValidationErrorType enum contract', () {
     test('should have exactly 4 error types', () {
       // Contract: 4 error types defined
-      expect(ValidationErrorType.values.length, equals(4),
-          reason: 'Must have exactly 4 validation error types');
+      expect(ValidationErrorType.values.length, equals(4), reason: 'Must have exactly 4 validation error types');
     });
 
     test('should contain all required error types', () {
       // Contract: Specific named error types
       final types = ValidationErrorType.values;
-      
-      expect(types, contains(ValidationErrorType.outOfRange),
-          reason: 'outOfRange type required for bounds checking');
-      expect(types, contains(ValidationErrorType.invalidValue),
-          reason: 'invalidValue type required for NaN/infinity detection');
-      expect(types, contains(ValidationErrorType.missingContext),
-          reason: 'missingContext type required for null field detection');
-      expect(types, contains(ValidationErrorType.unsupportedPath),
-          reason: 'unsupportedPath type required for unimplemented transforms');
+
+      expect(types, contains(ValidationErrorType.outOfRange), reason: 'outOfRange type required for bounds checking');
+      expect(types, contains(ValidationErrorType.invalidValue), reason: 'invalidValue type required for NaN/infinity detection');
+      expect(types, contains(ValidationErrorType.missingContext), reason: 'missingContext type required for null field detection');
+      expect(types, contains(ValidationErrorType.unsupportedPath), reason: 'unsupportedPath type required for unimplemented transforms');
     });
   });
 }
