@@ -372,7 +372,7 @@
   - Assert viewport state updates correctly
   - Verify no memory leaks (pool sizes stable)
 
-- [ ] **T038** [P] Edge case test for extreme zoom out in test/unit/rendering/edge_cases/extreme_zoom_test.dart
+- [x] **T038** [P] Edge case test for extreme zoom out in test/unit/rendering/edge_cases/extreme_zoom_test.dart
   - Set viewport to show all 10,000 points
   - Assert frame time degrades gracefully (may exceed 16ms)
   - Verify no crashes or rendering artifacts
