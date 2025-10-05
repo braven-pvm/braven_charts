@@ -7,6 +7,9 @@
 // - Immutability: Recreated per frame, never mutated
 // - Dependencies: Foundation (ObjectPool, ViewportCuller), Rendering (TextLayoutCache, PerformanceMonitor)
 
+import 'dart:math' show Point;
+
+import 'package:braven_charts/src/coordinates/coordinate_system.dart';
 import 'package:braven_charts/src/coordinates/transform_context.dart';
 import 'package:braven_charts/src/coordinates/universal_coordinate_transformer.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
@@ -194,5 +197,111 @@ class RenderContext {
   /// ```
   bool isPointVisible(double x, double y) {
     return viewport.contains(Offset(x, y));
+  }
+
+  // ============================================================================
+  // COORDINATE TRANSFORMATION CONVENIENCE METHODS (Layer 2)
+  // ============================================================================
+
+  /// Transform a point from data space to screen space.
+  ///
+  /// Convenience method for the common data → screen transformation.
+  /// Requires [transformContext] and [transformer] to be non-null.
+  ///
+  /// Example:
+  /// ```dart
+  /// final dataPoint = Point(25.0, 10.0);
+  /// final screenPoint = context.dataToScreen(dataPoint);
+  /// context.canvas.drawCircle(
+  ///   Offset(screenPoint.x, screenPoint.y),
+  ///   3,
+  ///   paint,
+  /// );
+  /// ```
+  ///
+  /// Throws [StateError] if transformContext or transformer is null.
+  Point<double> dataToScreen(Point<double> dataPoint) {
+    if (transformContext == null || transformer == null) {
+      throw StateError(
+        'Cannot transform data to screen: transformContext and transformer must be provided',
+      );
+    }
+
+    return transformer!.transform(
+      dataPoint,
+      from: CoordinateSystem.data,
+      to: CoordinateSystem.screen,
+      context: transformContext!,
+    );
+  }
+
+  /// Transform a point from screen space to data space.
+  ///
+  /// Convenience method for the common screen → data transformation.
+  /// Requires [transformContext] and [transformer] to be non-null.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Convert touch position to data coordinates
+  /// final touchPoint = Point(event.localPosition.dx, event.localPosition.dy);
+  /// final dataPoint = context.screenToData(touchPoint);
+  /// print('User touched: x=${dataPoint.x}, y=${dataPoint.y}');
+  /// ```
+  ///
+  /// Throws [StateError] if transformContext or transformer is null.
+  Point<double> screenToData(Point<double> screenPoint) {
+    if (transformContext == null || transformer == null) {
+      throw StateError(
+        'Cannot transform screen to data: transformContext and transformer must be provided',
+      );
+    }
+
+    return transformer!.transform(
+      screenPoint,
+      from: CoordinateSystem.screen,
+      to: CoordinateSystem.data,
+      context: transformContext!,
+    );
+  }
+
+  /// Transform a batch of points from one coordinate system to another.
+  ///
+  /// Convenience method for batch transformations with SIMD optimization.
+  /// Requires [transformContext] and [transformer] to be non-null.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Transform 10K data points to screen for rendering
+  /// final dataPoints = <Point<double>>[...]; // 10,000 points
+  /// final screenPoints = context.transformBatch(
+  ///   dataPoints,
+  ///   from: CoordinateSystem.data,
+  ///   to: CoordinateSystem.screen,
+  /// );
+  ///
+  /// // Draw all points
+  /// for (final point in screenPoints) {
+  ///   context.canvas.drawCircle(Offset(point.x, point.y), 2, paint);
+  /// }
+  /// ```
+  ///
+  /// Throws [StateError] if transformContext or transformer is null.
+  List<Point<double>> transformBatch(
+    List<Point<double>> points, {
+    required CoordinateSystem from,
+    required CoordinateSystem to,
+  }) {
+    if (transformContext == null || transformer == null) {
+      throw StateError(
+        'Cannot transform batch: transformContext and transformer must be provided',
+      );
+    }
+
+    return transformer!.transformBatch(
+      points,
+      from: from,
+      to: to,
+      context: transformContext!,
+    );
   }
 }
