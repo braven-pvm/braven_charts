@@ -20,7 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Round-trip accuracy for all 56 transformation paths', () {
     late TransformContext context;
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
 
     setUp(() {
       // Standard test context with all coordinate systems active

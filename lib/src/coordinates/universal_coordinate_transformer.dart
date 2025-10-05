@@ -131,7 +131,7 @@ class UniversalCoordinateTransformer {
 
     // Direct transformation paths (7 core paths)
     // These are the fundamental transformations that all others build upon
-    
+
     // Path 1: mouse ↔ screen (identity when devicePixelRatio = 1.0)
     if (from == CoordinateSystem.mouse && to == CoordinateSystem.screen) {
       return _mouseToScreen(point, context);
@@ -188,11 +188,131 @@ class UniversalCoordinateTransformer {
       return _normalizedToChartArea(point, context);
     }
 
-    // Transitive paths: compose from direct paths
-    // This will be implemented in T026
-    throw UnimplementedError(
-      'Transitive path from $from to $to not yet implemented. '
-      'Will be added in T026 via path composition.',
+    // Transitive paths: compose via intermediate coordinate systems
+    // We use the shortest path through the coordinate system graph:
+    //
+    //   mouse ← screen ← chartArea ← data ← viewport
+    //                         ↓        ↓
+    //                    normalized  dataPoint
+    //                                  ↓
+    //                                marker
+    //
+    // For any transformation not handled above, we route through
+    // intermediate systems following this graph structure.
+
+    return _transformViaIntermediateSystems(point, from, to, context);
+  }
+
+  /// Transform point via intermediate coordinate systems.
+  ///
+  /// This method implements transitive transformations by routing through
+  /// the coordinate system graph. It finds the shortest path from source
+  /// to destination and applies transformations sequentially.
+  ///
+  /// **Graph structure**:
+  /// ```
+  /// mouse ↔ screen ↔ chartArea ↔ data ↔ viewport
+  ///                      ↕          ↕
+  ///                 normalized  dataPoint
+  ///                                ↕
+  ///                              marker
+  /// ```
+  Point<double> _transformViaIntermediateSystems(
+    Point<double> point,
+    CoordinateSystem from,
+    CoordinateSystem to,
+    TransformContext context,
+  ) {
+    // Define transformation paths through intermediate systems
+    // The key insight: we can reach any system from any other system
+    // by routing through the "central hub" systems (screen, chartArea, data)
+
+    // Categorize systems by their position in the graph
+    final centralHub = CoordinateSystem.data;
+    final screenHub = CoordinateSystem.screen;
+    final chartAreaHub = CoordinateSystem.chartArea;
+
+    // Route through hubs based on source and destination systems
+    // Strategy: Convert to nearest hub, then to destination
+
+    // Case 1: mouse ↔ {chartArea, data, viewport, dataPoint, marker, normalized}
+    if (from == CoordinateSystem.mouse) {
+      // mouse → screen → ...
+      final screenPoint = _mouseToScreen(point, context);
+      return transform(screenPoint, from: screenHub, to: to, context: context);
+    }
+    if (to == CoordinateSystem.mouse) {
+      // ... → screen → mouse
+      final screenPoint = transform(point, from: from, to: screenHub, context: context);
+      return _screenToMouse(screenPoint, context);
+    }
+
+    // Case 2: screen ↔ {data, viewport, dataPoint, marker, normalized}
+    if (from == CoordinateSystem.screen) {
+      // screen → chartArea → ...
+      final chartAreaPoint = _screenToChartArea(point, context);
+      return transform(chartAreaPoint, from: chartAreaHub, to: to, context: context);
+    }
+    if (to == CoordinateSystem.screen) {
+      // ... → chartArea → screen
+      final chartAreaPoint = transform(point, from: from, to: chartAreaHub, context: context);
+      return _chartAreaToScreen(chartAreaPoint, context);
+    }
+
+    // Case 3: chartArea ↔ {viewport, dataPoint, marker}
+    if (from == CoordinateSystem.chartArea) {
+      // chartArea → data → ...
+      final dataPoint = _chartAreaToData(point, context);
+      return transform(dataPoint, from: centralHub, to: to, context: context);
+    }
+    if (to == CoordinateSystem.chartArea) {
+      // ... → data → chartArea
+      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      return _dataToChartArea(dataPoint, context);
+    }
+
+    // Case 4: normalized ↔ {data, viewport, dataPoint, marker}
+    if (from == CoordinateSystem.normalized) {
+      // normalized → chartArea → data → ...
+      final chartAreaPoint = _normalizedToChartArea(point, context);
+      final dataPoint = _chartAreaToData(chartAreaPoint, context);
+      return transform(dataPoint, from: centralHub, to: to, context: context);
+    }
+    if (to == CoordinateSystem.normalized) {
+      // ... → data → chartArea → normalized
+      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      final chartAreaPoint = _dataToChartArea(dataPoint, context);
+      return _chartAreaToNormalized(chartAreaPoint, context);
+    }
+
+    // Case 5: viewport ↔ {dataPoint, marker}
+    if (from == CoordinateSystem.viewport) {
+      // viewport → data → ...
+      final dataPoint = _viewportToData(point, context);
+      return transform(dataPoint, from: centralHub, to: to, context: context);
+    }
+    if (to == CoordinateSystem.viewport) {
+      // ... → data → viewport
+      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      return _dataToViewport(dataPoint, context);
+    }
+
+    // Case 6: dataPoint ↔ marker
+    if (from == CoordinateSystem.dataPoint && to == CoordinateSystem.marker) {
+      // dataPoint → data → marker
+      final dataPoint = _dataPointToData(point, context);
+      return _dataToMarker(dataPoint, context);
+    }
+    if (from == CoordinateSystem.marker && to == CoordinateSystem.dataPoint) {
+      // marker → data → dataPoint
+      final dataPoint = _markerToData(point, context);
+      return _dataToDataPoint(dataPoint, context);
+    }
+
+    // This should never be reached if all paths are covered
+    throw StateError(
+      'Unreachable: No transformation path from $from to $to. '
+      'This indicates a bug in the transformation routing logic.',
     );
   }
 
@@ -332,7 +452,7 @@ class UniversalCoordinateTransformer {
   // coordinate transformations. All other paths are composed from these.
 
   /// Transform from mouse to screen coordinates.
-  /// 
+  ///
   /// **Transformation**: Multiply by devicePixelRatio (usually identity)
   Point<double> _mouseToScreen(Point<double> point, TransformContext context) {
     final ratio = context.devicePixelRatio;
@@ -340,7 +460,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from screen to mouse coordinates.
-  /// 
+  ///
   /// **Transformation**: Divide by devicePixelRatio (usually identity)
   Point<double> _screenToMouse(Point<double> point, TransformContext context) {
     final ratio = context.devicePixelRatio;
@@ -348,7 +468,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from screen to chartArea coordinates.
-  /// 
+  ///
   /// **Transformation**: Translate by chartAreaBounds offset
   /// ```
   /// chartArea.x = screen.x - chartAreaBounds.left
@@ -363,7 +483,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from chartArea to screen coordinates.
-  /// 
+  ///
   /// **Transformation**: Translate by chartAreaBounds offset
   /// ```
   /// screen.x = chartArea.x + chartAreaBounds.left
@@ -378,13 +498,13 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from chartArea to data coordinates.
-  /// 
+  ///
   /// **Transformation**: Scale + Y-flip
   /// ```
   /// data.x = xMin + (chartArea.x / chartArea.width) * (xMax - xMin)
   /// data.y = yMax - (chartArea.y / chartArea.height) * (yMax - yMin)
   /// ```
-  /// 
+  ///
   /// Note: Y-axis is flipped because screen Y increases downward,
   /// but data Y typically increases upward.
   Point<double> _chartAreaToData(Point<double> point, TransformContext context) {
@@ -402,7 +522,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from data to chartArea coordinates.
-  /// 
+  ///
   /// **Transformation**: Scale + Y-flip
   /// ```
   /// chartArea.x = (data.x - xMin) / (xMax - xMin) * chartArea.width
@@ -423,13 +543,13 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from data to viewport coordinates.
-  /// 
+  ///
   /// **Transformation**: Apply viewport pan offset
   /// ```
   /// viewport.x = data.x - panOffset.x
   /// viewport.y = data.y - panOffset.y
   /// ```
-  /// 
+  ///
   /// Note: Viewport represents the visible data range after zoom/pan.
   /// The pan offset shifts the data coordinate system.
   Point<double> _dataToViewport(Point<double> point, TransformContext context) {
@@ -441,7 +561,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from viewport to data coordinates.
-  /// 
+  ///
   /// **Transformation**: Apply inverse of pan offset
   /// ```
   /// data.x = viewport.x + panOffset.x
@@ -456,13 +576,13 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from data to dataPoint (index) coordinates.
-  /// 
+  ///
   /// **Transformation**: Find nearest point in series
   /// ```
   /// dataPoint.x = series index (0 to series.length-1)
   /// dataPoint.y = point index (0 to series[x].points.length-1)
   /// ```
-  /// 
+  ///
   /// This is a reverse lookup - find which series/point is closest to
   /// the given data coordinate.
   Point<double> _dataToDataPoint(Point<double> point, TransformContext context) {
@@ -495,7 +615,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from dataPoint (index) to data coordinates.
-  /// 
+  ///
   /// **Transformation**: Lookup point value in series
   /// ```
   /// data.x = series[dataPoint.x].points[dataPoint.y].x
@@ -531,12 +651,12 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from data to marker coordinates.
-  /// 
+  ///
   /// **Transformation**: data → chartArea → apply marker offset
   /// ```
   /// marker = chartArea + markerOffset
   /// ```
-  /// 
+  ///
   /// Marker offset is applied in screen pixels (chartArea space).
   Point<double> _dataToMarker(Point<double> point, TransformContext context) {
     // First transform to chartArea
@@ -555,21 +675,19 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from marker to data coordinates.
-  /// 
+  ///
   /// **Transformation**: Remove marker offset → chartArea → data
   Point<double> _markerToData(Point<double> point, TransformContext context) {
     // Remove marker offset
     final offset = context.markerOffset;
-    final chartAreaPoint = offset == null
-        ? point
-        : Point(point.x - offset.x, point.y - offset.y);
+    final chartAreaPoint = offset == null ? point : Point(point.x - offset.x, point.y - offset.y);
 
     // Transform to data coordinates
     return _chartAreaToData(chartAreaPoint, context);
   }
 
   /// Transform from chartArea to normalized coordinates.
-  /// 
+  ///
   /// **Transformation**: Scale to [0.0, 1.0] range
   /// ```
   /// normalized.x = chartArea.x / chartArea.width
@@ -584,7 +702,7 @@ class UniversalCoordinateTransformer {
   }
 
   /// Transform from normalized to chartArea coordinates.
-  /// 
+  ///
   /// **Transformation**: Scale from [0.0, 1.0] range
   /// ```
   /// chartArea.x = normalized.x * chartArea.width

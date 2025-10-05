@@ -20,7 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Coordinate validation', () {
     late TransformContext context;
-    late CoordinateTransformer transformer;
+    late UniversalCoordinateTransformer transformer;
 
     setUp(() {
       context = TransformContext(
