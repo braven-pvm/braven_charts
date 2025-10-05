@@ -292,7 +292,7 @@
   - Add dartdoc comments with usage example
   - **Purpose**: Demonstrate layer pattern, used in quickstart.md
 
-- [ ] **T029** [P] Implement DataSeriesLayer example in lib/src/rendering/layers/data_series_layer.dart
+- [x] **T029** [P] Implement DataSeriesLayer example in lib/src/rendering/layers/data_series_layer.dart
   - Extend RenderLayer
   - Constructor: List<ChartDataPoint> dataPoints, zIndex
   - Implement render(context):
