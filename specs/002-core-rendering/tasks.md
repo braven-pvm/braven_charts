@@ -402,7 +402,7 @@
 
 ## Phase 3.9: Documentation & Polish (6 tasks)
 
-- [ ] **T043** [P] Add dartdoc comments to all public APIs in lib/src/rendering/*.dart
+- [x] **T043** [P] Add dartdoc comments to all public APIs in lib/src/rendering/*.dart
   - Document RenderContext fields with usage examples
   - Document RenderLayer contract requirements
   - Document RenderPipeline lifecycle
