@@ -392,7 +392,7 @@
   - Verify pool allocates beyond capacity (statistics show allocation count)
   - Verify performance degrades but no crash
 
-- [ ] **T042** [P] Edge case test for cache overflow in test/unit/rendering/edge_cases/cache_overflow_test.dart
+- [x] **T042** [P] Edge case test for cache overflow in test/unit/rendering/edge_cases/cache_overflow_test.dart
   - Create 1000 unique text/style combinations (cache maxSize = 500)
   - Verify LRU eviction works
   - Verify cache hit rate stabilizes
