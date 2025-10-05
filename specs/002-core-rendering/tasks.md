@@ -208,7 +208,7 @@
 
 ## Phase 3.5: Unit Tests for Core Logic (12 tasks)
 
-- [ ] **T016** [P] Unit test for PerformanceMetrics validation in test/unit/rendering/performance_metrics_test.dart
+- [x] **T016** [P] Unit test for PerformanceMetrics validation in test/unit/rendering/performance_metrics_test.dart
   - Test meetsTargets returns true when avg<8ms, p99<16ms, hitRate>0.90
   - Test meetsTargets returns false when any target missed
   - Test poolHitRate validation throws on invalid range (<0 or >1)
