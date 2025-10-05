@@ -38,11 +38,11 @@
 /// - Culling margin reduces thrashing during viewport pan/zoom
 library;
 
-import 'dart:ui' show Paint, Path, Color, PaintingStyle, StrokeCap, StrokeJoin, Offset, Rect;
+import 'dart:ui' show Color, PaintingStyle, StrokeCap, StrokeJoin, Offset, Rect;
 
 import '../../foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import '../render_layer.dart' show RenderLayer;
 import '../render_context.dart' show RenderContext;
+import '../render_layer.dart' show RenderLayer;
 
 /// A simple chart data point with x and y coordinates.
 ///
@@ -74,10 +74,7 @@ final class ChartDataPoint {
 
   /// Check if point is within data bounds for culling.
   bool isInBounds(Rect bounds) {
-    return x >= bounds.left &&
-        x <= bounds.right &&
-        y >= bounds.top &&
-        y <= bounds.bottom;
+    return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
   }
 
   @override
@@ -118,9 +115,8 @@ final class DataSeriesLayer extends RenderLayer {
     required this.dataBounds,
     required this.lineColor,
     this.lineWidth = 2.0,
-    required int zIndex,
-  })  : assert(dataPoints.isNotEmpty, 'dataPoints must not be empty'),
-        super(zIndex: zIndex);
+    required super.zIndex,
+  }) : assert(dataPoints.isNotEmpty, 'dataPoints must not be empty');
 
   /// Returns true when no data points exist or all points culled from viewport.
   ///

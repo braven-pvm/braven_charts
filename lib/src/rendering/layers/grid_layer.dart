@@ -39,8 +39,8 @@ library;
 import 'dart:ui' show Paint, Path, Color, PaintingStyle, StrokeCap;
 
 import '../../foundation/foundation.dart' show ObjectPool;
-import '../render_layer.dart' show RenderLayer;
 import '../render_context.dart' show RenderContext;
+import '../render_layer.dart' show RenderLayer;
 
 /// A background layer that draws a grid pattern.
 ///
@@ -66,9 +66,8 @@ final class GridLayer extends RenderLayer {
   GridLayer({
     required this.gridLineCount,
     required this.lineColor,
-    required int zIndex,
-  })  : assert(gridLineCount > 0, 'gridLineCount must be positive'),
-        super(zIndex: zIndex);
+    required super.zIndex,
+  }) : assert(gridLineCount > 0, 'gridLineCount must be positive');
 
   /// Always returns false - grid is always rendered.
   ///

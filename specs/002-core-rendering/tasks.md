@@ -328,7 +328,7 @@
   - Measure pool hit rate over 1000 acquire/release cycles (target: >90%)
   - Use benchmark_harness package (Dart stdlib)
 
-- [ ] **T032** [P] Benchmark viewport culling performance in test/benchmarks/rendering/viewport_culling_benchmark.dart
+- [x] **T032** [P] Benchmark viewport culling performance in test/benchmarks/rendering/viewport_culling_benchmark.dart
   - Create 10,000 ChartDataPoint instances
   - Measure culling latency with 5% visible (target: <3ms)
   - Measure culling latency with 50% visible

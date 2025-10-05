@@ -3,16 +3,15 @@
 // Task: T021
 // Purpose: Validate layer management (add/remove), z-ordering, visibility
 
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/src/rendering/render_context.dart';
+import 'package:braven_charts/src/rendering/render_layer.dart';
+import 'package:braven_charts/src/rendering/render_pipeline.dart';
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import '../../../lib/src/foundation/performance/object_pool.dart';
-import '../../../lib/src/foundation/performance/viewport_culler.dart';
-import '../../../lib/src/rendering/performance_monitor.dart';
-import '../../../lib/src/rendering/render_context.dart';
-import '../../../lib/src/rendering/render_layer.dart';
-import '../../../lib/src/rendering/render_pipeline.dart';
-import '../../../lib/src/rendering/text_layout_cache.dart';
 
 void main() {
   // Helper to create test pipeline
@@ -24,7 +23,7 @@ void main() {
       textCache: LinkedHashMapTextLayoutCache(),
       performanceMonitor: StopwatchPerformanceMonitor(),
       culler: const ViewportCuller(),
-      initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
     );
   }
 
@@ -216,8 +215,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty,
-          reason: 'Invisible layer should not render');
+      expect(canvas.renderOrder, isEmpty, reason: 'Invisible layer should not render');
     });
 
     test('isVisible=true includes layer in rendering', () {
@@ -229,8 +227,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['Visible']),
-          reason: 'Visible layer should render');
+      expect(canvas.renderOrder, equals(['Visible']), reason: 'Visible layer should render');
     });
 
     test('toggling visibility affects subsequent renders', () {
@@ -275,8 +272,7 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['Visible1', 'Visible2']),
-          reason: 'Only visible layers should render');
+      expect(canvas.renderOrder, equals(['Visible1', 'Visible2']), reason: 'Only visible layers should render');
     });
 
     test('all invisible layers renders nothing', () {
@@ -294,8 +290,7 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty,
-          reason: 'No layers should render when all invisible');
+      expect(canvas.renderOrder, isEmpty, reason: 'No layers should render when all invisible');
     });
   });
 
@@ -308,8 +303,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty,
-          reason: 'Empty layer should be skipped');
+      expect(canvas.renderOrder, isEmpty, reason: 'Empty layer should be skipped');
     });
 
     test('isEmpty=false renders layer normally', () {
@@ -320,8 +314,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['NotEmpty']),
-          reason: 'Non-empty layer should render');
+      expect(canvas.renderOrder, equals(['NotEmpty']), reason: 'Non-empty layer should render');
     });
 
     test('mixed empty and non-empty layers only renders non-empty', () {
@@ -334,8 +327,7 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['HasContent', 'AlsoHasContent']),
-          reason: 'Only non-empty layers should render');
+      expect(canvas.renderOrder, equals(['HasContent', 'AlsoHasContent']), reason: 'Only non-empty layers should render');
     });
   });
 
@@ -361,8 +353,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty,
-          reason: 'Invisible layer should not render regardless of isEmpty');
+      expect(canvas.renderOrder, isEmpty, reason: 'Invisible layer should not render regardless of isEmpty');
     });
 
     test('visible but empty layer does not render', () {
@@ -374,8 +365,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty,
-          reason: 'Empty layer should not render regardless of visibility');
+      expect(canvas.renderOrder, isEmpty, reason: 'Empty layer should not render regardless of visibility');
     });
 
     test('visible AND non-empty layer renders', () {
@@ -387,8 +377,7 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['VisibleAndNotEmpty']),
-          reason: 'Visible and non-empty layer should render');
+      expect(canvas.renderOrder, equals(['VisibleAndNotEmpty']), reason: 'Visible and non-empty layer should render');
     });
   });
 
@@ -397,13 +386,12 @@ void main() {
       final pipeline = createPipeline();
       final initialViewport = pipeline.viewport;
 
-      expect(initialViewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+      expect(initialViewport, equals(const Rect.fromLTWH(0, 0, 800, 600)));
 
-      final newViewport = Rect.fromLTWH(100, 50, 400, 300);
+      final newViewport = const Rect.fromLTWH(100, 50, 400, 300);
       pipeline.updateViewport(newViewport);
 
-      expect(pipeline.viewport, equals(newViewport),
-          reason: 'Viewport should be updated to new value');
+      expect(pipeline.viewport, equals(newViewport), reason: 'Viewport should be updated to new value');
     });
 
     test('viewport passed to RenderContext during renderFrame', () {
@@ -412,13 +400,12 @@ void main() {
       pipeline.addLayer(layer);
 
       final canvas = _RecordingCanvas();
-      final newViewport = Rect.fromLTWH(200, 100, 600, 400);
+      final newViewport = const Rect.fromLTWH(200, 100, 600, 400);
       pipeline.updateViewport(newViewport);
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(newViewport),
-          reason: 'RenderContext should receive updated viewport');
+      expect(layer.capturedViewport, equals(newViewport), reason: 'RenderContext should receive updated viewport');
     });
 
     test('viewport changes take effect immediately on next render', () {
@@ -430,16 +417,15 @@ void main() {
       pipeline.renderFrame(canvas1, const Size(800, 600));
       final firstViewport = layer.capturedViewport;
 
-      expect(firstViewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+      expect(firstViewport, equals(const Rect.fromLTWH(0, 0, 800, 600)));
 
-      final newViewport = Rect.fromLTWH(50, 50, 700, 500);
+      final newViewport = const Rect.fromLTWH(50, 50, 700, 500);
       pipeline.updateViewport(newViewport);
 
       final canvas2 = _RecordingCanvas();
       pipeline.renderFrame(canvas2, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(newViewport),
-          reason: 'Updated viewport should be used in next frame');
+      expect(layer.capturedViewport, equals(newViewport), reason: 'Updated viewport should be used in next frame');
     });
 
     test('multiple viewport updates only use last value', () {
@@ -447,25 +433,24 @@ void main() {
       final layer = _ViewportCaptureLayer(zIndex: 0);
       pipeline.addLayer(layer);
 
-      pipeline.updateViewport(Rect.fromLTWH(100, 100, 200, 200));
-      pipeline.updateViewport(Rect.fromLTWH(200, 200, 300, 300));
-      final finalViewport = Rect.fromLTWH(300, 300, 400, 400);
+      pipeline.updateViewport(const Rect.fromLTWH(100, 100, 200, 200));
+      pipeline.updateViewport(const Rect.fromLTWH(200, 200, 300, 300));
+      final finalViewport = const Rect.fromLTWH(300, 300, 400, 400);
       pipeline.updateViewport(finalViewport);
 
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(finalViewport),
-          reason: 'Only last viewport update should be used');
+      expect(layer.capturedViewport, equals(finalViewport), reason: 'Only last viewport update should be used');
     });
 
     test('viewport getter returns current viewport value', () {
       final pipeline = createPipeline();
 
-      expect(pipeline.viewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+      expect(pipeline.viewport, equals(const Rect.fromLTWH(0, 0, 800, 600)));
 
-      pipeline.updateViewport(Rect.fromLTWH(10, 20, 30, 40));
-      expect(pipeline.viewport, equals(Rect.fromLTWH(10, 20, 30, 40)));
+      pipeline.updateViewport(const Rect.fromLTWH(10, 20, 30, 40));
+      expect(pipeline.viewport, equals(const Rect.fromLTWH(10, 20, 30, 40)));
     });
   });
 
@@ -479,7 +464,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final canvas = _RecordingCanvas();
@@ -487,8 +472,7 @@ void main() {
 
       // If beginFrame wasn't called, currentMetrics would show zero frame time
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
-          reason: 'beginFrame should have been called to start timing');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'beginFrame should have been called to start timing');
     });
 
     test('endFrame called after all layers rendered', () {
@@ -500,7 +484,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       pipeline.addLayer(_TestLayer(zIndex: 0));
@@ -511,8 +495,7 @@ void main() {
 
       // If endFrame wasn't called, metrics wouldn't be recorded
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
-          reason: 'endFrame should have been called to record timing');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should have been called to record timing');
     });
 
     test('frame time recorded even if layer throws exception', () {
@@ -524,7 +507,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       pipeline.addLayer(_ThrowingLayer(zIndex: 0));
@@ -536,8 +519,7 @@ void main() {
 
       // endFrame should still have been called (finally block)
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
-          reason: 'endFrame should be called in finally block even after exception');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should be called in finally block even after exception');
     });
 
     test('currentMetrics accessible via pipeline', () {
@@ -583,7 +565,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _PoolAccessLayer(zIndex: 0);
@@ -609,7 +591,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _PoolIdentityLayer(zIndex: 0);
@@ -647,7 +629,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _CacheAccessLayer(zIndex: 0);
@@ -668,7 +650,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _CacheIdentityLayer(zIndex: 0);
@@ -689,7 +671,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final canvas = _RecordingCanvas();
@@ -711,7 +693,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: culler,
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _CullerAccessLayer(zIndex: 0);
@@ -732,7 +714,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: culler,
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       final layer = _CullerIdentityLayer(zIndex: 0);
@@ -749,14 +731,13 @@ void main() {
       final layer = _ViewportCaptureLayer(zIndex: 0);
       pipeline.addLayer(layer);
 
-      final viewport = Rect.fromLTWH(100, 100, 400, 300);
+      final viewport = const Rect.fromLTWH(100, 100, 400, 300);
       pipeline.updateViewport(viewport);
 
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(viewport),
-          reason: 'Viewport should be passed to context for culling');
+      expect(layer.capturedViewport, equals(viewport), reason: 'Viewport should be passed to context for culling');
     });
   });
 
@@ -772,8 +753,7 @@ void main() {
       expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
 
       // First layer should have rendered before exception
-      expect(canvas.renderOrder.contains('Before'), isTrue,
-          reason: 'Layer before exception should render');
+      expect(canvas.renderOrder.contains('Before'), isTrue, reason: 'Layer before exception should render');
     });
 
     test('endFrame called even if render throws', () {
@@ -785,7 +765,7 @@ void main() {
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       pipeline.addLayer(_ThrowingLayer(zIndex: 0));
@@ -796,8 +776,7 @@ void main() {
 
       // endFrame should have been called in finally block
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
-          reason: 'endFrame should be called even after exception');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should be called even after exception');
     });
 
     test('subsequent frames continue after error', () {
@@ -814,8 +793,7 @@ void main() {
       // Next frame should work normally
       final canvas2 = _RecordingCanvas();
       expect(() => pipeline.renderFrame(canvas2, const Size(800, 600)), returnsNormally);
-      expect(canvas2.renderOrder, equals(['Recovery']),
-          reason: 'Pipeline should recover and render normally after error');
+      expect(canvas2.renderOrder, equals(['Recovery']), reason: 'Pipeline should recover and render normally after error');
     });
   });
 }

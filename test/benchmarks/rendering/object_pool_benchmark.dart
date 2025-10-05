@@ -26,13 +26,12 @@
 /// ```
 library;
 
-import 'dart:ui' show Paint, Path, Color, PaintingStyle;
 import 'dart:collection' show Queue;
-
-import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextDirection;
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:ui' show Paint, Path, Color, PaintingStyle;
 
 import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool;
+import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextDirection;
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ObjectPool Performance Benchmarks', () {
@@ -81,7 +80,7 @@ void main() {
       expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
       expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
 
-      print('Paint Pool: avg ${avg.toStringAsFixed(1)}μs, p99 ${p99}μs');
+      print('Paint Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
 
     test('Path pool acquire/release latency (NFR-001)', () {
@@ -123,7 +122,7 @@ void main() {
       expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
       expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
 
-      print('Path Pool: avg ${avg.toStringAsFixed(1)}μs, p99 ${p99}μs');
+      print('Path Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
 
     test('TextPainter pool acquire/release latency (NFR-001)', () {
@@ -170,7 +169,7 @@ void main() {
       expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
       expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
 
-      print('TextPainter Pool: avg ${avg.toStringAsFixed(1)}μs, p99 ${p99}μs');
+      print('TextPainter Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
 
     test('Pool hit rate over 1000 cycles (NFR-001)', () {
@@ -180,7 +179,7 @@ void main() {
         reset: (p) {
           p.color = const Color(0xFF000000);
         },
-        maxSize: 10,  // Small pool for realistic hit rate testing
+        maxSize: 10, // Small pool for realistic hit rate testing
       );
 
       // Simulate realistic usage: acquire up to 15 objects simultaneously
@@ -212,12 +211,11 @@ void main() {
 
       // Access pool statistics through toString() or internal state
       // Pool should show high hit rate (>90%)
-      
+
       print('Pool cycles: $totalAcquires acquires, $totalReleases releases');
-      
+
       // Basic validation: acquires/releases balanced
-      expect(totalAcquires, equals(totalReleases),
-          reason: 'All acquired objects should be released');
+      expect(totalAcquires, equals(totalReleases), reason: 'All acquired objects should be released');
     });
   });
 }
