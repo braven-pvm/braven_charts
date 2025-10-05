@@ -410,7 +410,7 @@
   - Document TextLayoutCache LRU behavior
   - Include @example annotations
 
-- [ ] **T044** [P] Create rendering README in lib/src/rendering/README.md
+- [x] **T044** [P] Create rendering README in lib/src/rendering/README.md
   - Overview of rendering architecture
   - Quick start example (copy from quickstart.md)
   - Link to contracts, data model, spec
