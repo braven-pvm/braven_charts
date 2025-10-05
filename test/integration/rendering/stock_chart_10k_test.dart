@@ -7,16 +7,16 @@
 // - Performance: <16ms initial render, <8ms average over 60 frames (NFR-001)
 // - Accuracy: Pool hit rate >90%, culling reduces visible points (FR-002, FR-003)
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/object_pool.dart';
 import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Integration: Real-time Stock Chart with 10K+ points (Scenario 1)', () {
@@ -69,7 +69,7 @@ void main() {
       monitor = StopwatchPerformanceMonitor(maxHistorySize: 120);
 
       // Create pipeline with initial viewport showing first 500 points
-      final initialViewport = Rect.fromLTWH(0, 0, 500, 200);
+      final initialViewport = const Rect.fromLTWH(0, 0, 500, 200);
       pipeline = RenderPipeline(
         paintPool: paintPool,
         pathPool: pathPool,
@@ -88,8 +88,7 @@ void main() {
       pipeline.addLayer(stockLayer);
     });
 
-    testWidgets('Initial render with 500 visible points completes in <16ms (no jank)',
-        (WidgetTester tester) async {
+    testWidgets('Initial render with 500 visible points completes in <16ms (no jank)', (WidgetTester tester) async {
       await tester.pumpWidget(
         CustomPaint(
           size: const Size(800, 600),
@@ -110,8 +109,7 @@ void main() {
       );
     });
 
-    testWidgets('Viewport culling reduces render to ~500 points after pan',
-        (WidgetTester tester) async {
+    testWidgets('Viewport culling reduces render to ~500 points after pan', (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -121,7 +119,7 @@ void main() {
       );
 
       // Pan left by 1000 units (shift viewport to x=1000-1500)
-      pipeline.updateViewport(Rect.fromLTWH(1000, 0, 500, 200));
+      pipeline.updateViewport(const Rect.fromLTWH(1000, 0, 500, 200));
 
       await tester.pumpWidget(
         CustomPaint(
@@ -143,8 +141,7 @@ void main() {
       );
     });
 
-    testWidgets('Zoom in to 50 visible points maintains <8ms frame time',
-        (WidgetTester tester) async {
+    testWidgets('Zoom in to 50 visible points maintains <8ms frame time', (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -154,7 +151,7 @@ void main() {
       );
 
       // Zoom in: reduce viewport width to show only 50 points
-      pipeline.updateViewport(Rect.fromLTWH(0, 0, 50, 200));
+      pipeline.updateViewport(const Rect.fromLTWH(0, 0, 50, 200));
 
       await tester.pumpWidget(
         CustomPaint(

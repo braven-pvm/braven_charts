@@ -7,16 +7,16 @@
 // - Performance: <8ms toggle visibility, >80% text cache hit (NFR-001, NFR-003)
 // - Accuracy: Correct z-order rendering, dynamic layer management (FR-001, FR-005)
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/object_pool.dart';
 import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Integration: Multi-layer chart with annotations (Scenario 2)', () {
@@ -76,7 +76,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: monitor,
         culler: culler,
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Add layers in z-order
@@ -94,10 +94,9 @@ void main() {
       ));
     });
 
-    testWidgets('Layers render in correct z-order (scatter → trend → annotations)',
-        (WidgetTester tester) async {
+    testWidgets('Layers render in correct z-order (scatter → trend → annotations)', (WidgetTester tester) async {
       final renderOrder = <String>[];
-      
+
       // Instrument layers to track render order
       final instrumentedPipeline = _InstrumentedPipeline(
         pipeline: pipeline,
@@ -118,8 +117,7 @@ void main() {
       expect(renderOrder[2], equals('Annotation')); // zIndex=2 (top)
     });
 
-    testWidgets('Text cache hit rate >80% after second render',
-        (WidgetTester tester) async {
+    testWidgets('Text cache hit rate >80% after second render', (WidgetTester tester) async {
       // First render: cold cache (misses)
       await tester.pumpWidget(
         CustomPaint(
@@ -151,8 +149,7 @@ void main() {
       );
     });
 
-    testWidgets('Toggle trend line visibility skips layer in <8ms',
-        (WidgetTester tester) async {
+    testWidgets('Toggle trend line visibility skips layer in <8ms', (WidgetTester tester) async {
       // Initial render with all layers visible
       await tester.pumpWidget(
         CustomPaint(
@@ -165,8 +162,7 @@ void main() {
       final initialRenderedCount = initialMetrics.renderedElementCount;
 
       // Toggle trend line visibility to false
-      final trendLayer = pipeline.layers
-          .firstWhere((layer) => layer is _TrendLineLayer) as _TrendLineLayer;
+      final trendLayer = pipeline.layers.firstWhere((layer) => layer is _TrendLineLayer) as _TrendLineLayer;
       trendLayer.isVisible = false;
 
       // Render with trend line hidden
@@ -190,8 +186,7 @@ void main() {
       );
     });
 
-    testWidgets('Dynamic annotation addition uses text cache',
-        (WidgetTester tester) async {
+    testWidgets('Dynamic annotation addition uses text cache', (WidgetTester tester) async {
       // Warm up cache
       await tester.pumpWidget(
         CustomPaint(
@@ -202,7 +197,7 @@ void main() {
 
       // Add tooltip annotation layer dynamically
       pipeline.addLayer(_AnnotationLayer(
-        annotations: ['Tooltip: ${ scatterData[25].y}'],
+        annotations: ['Tooltip: ${scatterData[25].y}'],
         zIndex: 3,
       ));
 
@@ -227,8 +222,7 @@ void main() {
       );
     });
 
-    testWidgets('Remove annotation layer maintains performance',
-        (WidgetTester tester) async {
+    testWidgets('Remove annotation layer maintains performance', (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -238,8 +232,7 @@ void main() {
       );
 
       // Remove annotation layer
-      final annotationLayer = pipeline.layers
-          .firstWhere((layer) => layer is _AnnotationLayer);
+      final annotationLayer = pipeline.layers.firstWhere((layer) => layer is _AnnotationLayer);
       pipeline.removeLayer(annotationLayer);
 
       // Render without annotations
@@ -264,8 +257,7 @@ void main() {
 class _ScatterLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _ScatterLayer({required this.data, required int zIndex})
-      : super(zIndex: zIndex);
+  _ScatterLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -290,8 +282,7 @@ class _ScatterLayer extends RenderLayer {
 class _TrendLineLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _TrendLineLayer({required this.data, required int zIndex})
-      : super(zIndex: zIndex);
+  _TrendLineLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -320,8 +311,7 @@ class _TrendLineLayer extends RenderLayer {
 class _AnnotationLayer extends RenderLayer {
   final List<String> annotations;
 
-  _AnnotationLayer({required this.annotations, required int zIndex})
-      : super(zIndex: zIndex);
+  _AnnotationLayer({required this.annotations, required int zIndex}) : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -329,10 +319,10 @@ class _AnnotationLayer extends RenderLayer {
 
     for (int i = 0; i < annotations.length; i++) {
       final text = annotations[i];
-      
+
       // Try to get from cache
       var painter = context.textCache.get(text, textStyle);
-      
+
       if (painter == null) {
         // Cache miss: layout new text
         painter = context.textPainterPool.acquire();
@@ -342,7 +332,7 @@ class _AnnotationLayer extends RenderLayer {
       }
 
       painter.paint(context.canvas, Offset(10, 10 + i * 20.0));
-      
+
       // Note: Don't release painter to pool (owned by cache)
     }
   }

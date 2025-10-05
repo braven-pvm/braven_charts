@@ -8,6 +8,7 @@
 // - Dependencies: dart:core only (Stopwatch, Duration)
 
 import 'dart:core';
+
 import 'package:braven_charts/src/rendering/performance_metrics.dart';
 
 /// Production implementation of PerformanceMonitor using dart:core Stopwatch.
@@ -29,14 +30,13 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
   final int _maxHistorySize;
   int _jankCount = 0;
   bool _frameInProgress = false;
-  
+
   // Pool metrics (optional, for PerformanceMetrics construction)
   double _lastPoolHitRate = 1.0;
   int _lastCulledCount = 0;
   int _lastRenderedCount = 0;
 
-  StopwatchPerformanceMonitor({int maxHistorySize = 120})
-      : _maxHistorySize = maxHistorySize {
+  StopwatchPerformanceMonitor({int maxHistorySize = 120}) : _maxHistorySize = maxHistorySize {
     assert(maxHistorySize > 0, 'maxHistorySize must be greater than 0');
   }
 
@@ -45,8 +45,7 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
 
   @override
   void beginFrame() {
-    assert(!_frameInProgress, 
-        'beginFrame() called twice without endFrame(). Frames must be paired.');
+    assert(!_frameInProgress, 'beginFrame() called twice without endFrame(). Frames must be paired.');
     _frameInProgress = true;
     _stopwatch.reset();
     _stopwatch.start();
@@ -54,20 +53,19 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
 
   @override
   void endFrame() {
-    assert(_frameInProgress, 
-        'endFrame() called without beginFrame(). Frames must be paired.');
-    
+    assert(_frameInProgress, 'endFrame() called without beginFrame(). Frames must be paired.');
+
     _stopwatch.stop();
     _frameInProgress = false;
-    
+
     final frameTime = _stopwatch.elapsed;
-    
+
     // Append to history with LRU eviction
     if (_frameTimes.length >= _maxHistorySize) {
       _frameTimes.removeAt(0); // Remove oldest (LRU)
     }
     _frameTimes.add(frameTime);
-    
+
     // Jank detection: 16ms threshold for 60fps
     if (frameTime.inMicroseconds > 16000) {
       _jankCount++;
@@ -87,7 +85,7 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
     }
 
     final lastFrameTime = _frameTimes.last;
-    
+
     // Calculate average frame time
     final totalMicros = _frameTimes.fold<int>(
       0,
@@ -95,10 +93,9 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
     );
     final avgMicros = totalMicros ~/ _frameTimes.length;
     final averageFrameTime = Duration(microseconds: avgMicros);
-    
+
     // Calculate p99 (99th percentile)
-    final sortedTimes = List<Duration>.from(_frameTimes)
-      ..sort((a, b) => a.inMicroseconds.compareTo(b.inMicroseconds));
+    final sortedTimes = List<Duration>.from(_frameTimes)..sort((a, b) => a.inMicroseconds.compareTo(b.inMicroseconds));
     final p99Index = (sortedTimes.length * 0.99).floor();
     final p99FrameTime = sortedTimes[p99Index.clamp(0, sortedTimes.length - 1)];
 

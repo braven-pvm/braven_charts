@@ -7,16 +7,16 @@
 // - Performance: <50ms initial layout, >70% cache hit rate (NFR-003, FR-003)
 // - Memory: Bounded cache eviction, no unbounded growth
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/object_pool.dart';
 import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Integration: Text-heavy chart (Scenario 4)', () {
@@ -73,7 +73,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: monitor,
         culler: culler,
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Add bar chart layer with value labels (50 text labels)
@@ -107,8 +107,7 @@ void main() {
       );
     });
 
-    testWidgets('Text cache hit rate >70% on second frame',
-        (WidgetTester tester) async {
+    testWidgets('Text cache hit rate >70% on second frame', (WidgetTester tester) async {
       // First render: cold cache (all misses)
       await tester.pumpWidget(
         CustomPaint(
@@ -140,8 +139,7 @@ void main() {
       );
     });
 
-    testWidgets('Cached layouts reused for repeated text after pan',
-        (WidgetTester tester) async {
+    testWidgets('Cached layouts reused for repeated text after pan', (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -151,7 +149,7 @@ void main() {
       );
 
       // Simulate pan (labels change positions but text same)
-      pipeline.updateViewport(Rect.fromLTWH(100, 0, 800, 600));
+      pipeline.updateViewport(const Rect.fromLTWH(100, 0, 800, 600));
 
       await tester.pumpWidget(
         CustomPaint(
@@ -168,8 +166,7 @@ void main() {
       );
     });
 
-    testWidgets('Cache eviction maintains bounded memory',
-        (WidgetTester tester) async {
+    testWidgets('Cache eviction maintains bounded memory', (WidgetTester tester) async {
       // Render initial frame (populate cache)
       await tester.pumpWidget(
         CustomPaint(
@@ -212,8 +209,7 @@ void main() {
       );
     });
 
-    testWidgets('Performance remains stable with text-heavy rendering',
-        (WidgetTester tester) async {
+    testWidgets('Performance remains stable with text-heavy rendering', (WidgetTester tester) async {
       // Render 30 frames with text-heavy content
       for (int i = 0; i < 30; i++) {
         await tester.pumpWidget(
@@ -243,8 +239,7 @@ void main() {
 class _BarChartLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _BarChartLayer({required this.data, required int zIndex})
-      : super(zIndex: zIndex);
+  _BarChartLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -253,7 +248,7 @@ class _BarChartLayer extends RenderLayer {
 
     for (int i = 0; i < data.length; i++) {
       final point = data[i];
-      
+
       // Draw bar
       final paint = context.paintPool.acquire();
       try {
@@ -268,7 +263,7 @@ class _BarChartLayer extends RenderLayer {
       // Draw value label (with caching)
       final labelText = point.y.toStringAsFixed(1);
       var painter = context.textCache.get(labelText, textStyle);
-      
+
       if (painter == null) {
         painter = context.textPainterPool.acquire();
         painter.text = TextSpan(text: labelText, style: textStyle);
@@ -291,8 +286,7 @@ class _BarChartLayer extends RenderLayer {
 class _LegendLayer extends RenderLayer {
   final List<String> categories;
 
-  _LegendLayer({required this.categories, required int zIndex})
-      : super(zIndex: zIndex);
+  _LegendLayer({required this.categories, required int zIndex}) : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -301,7 +295,7 @@ class _LegendLayer extends RenderLayer {
     for (int i = 0; i < categories.length; i++) {
       final text = categories[i];
       var painter = context.textCache.get(text, textStyle);
-      
+
       if (painter == null) {
         painter = context.textPainterPool.acquire();
         painter.text = TextSpan(text: text, style: textStyle);

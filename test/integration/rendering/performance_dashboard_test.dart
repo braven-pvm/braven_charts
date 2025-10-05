@@ -7,16 +7,16 @@
 // - Performance: <1ms monitoring overhead, ±0.5ms timing accuracy (NFR-001, FR-004)
 // - Accuracy: 100% jank detection (>16ms threshold), pool statistics tracking
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/object_pool.dart';
 import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Integration: Performance monitoring dashboard (Scenario 3)', () {
@@ -59,7 +59,7 @@ void main() {
         textCache: textCache,
         performanceMonitor: monitor,
         culler: culler,
-        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+        initialViewport: const Rect.fromLTWH(0, 0, 800, 600),
       );
 
       // Add simple test layer
@@ -97,8 +97,7 @@ void main() {
       }
     });
 
-    testWidgets('Jank counter increments on frame spike >16ms',
-        (WidgetTester tester) async {
+    testWidgets('Jank counter increments on frame spike >16ms', (WidgetTester tester) async {
       // Render initial frames (no jank)
       for (int i = 0; i < 10; i++) {
         await tester.pumpWidget(
@@ -162,8 +161,7 @@ void main() {
       );
     });
 
-    testWidgets('Pool statistics track hit/miss/allocation',
-        (WidgetTester tester) async {
+    testWidgets('Pool statistics track hit/miss/allocation', (WidgetTester tester) async {
       // Render 10 frames to accumulate pool statistics
       for (int i = 0; i < 10; i++) {
         await tester.pumpWidget(
@@ -202,7 +200,7 @@ void main() {
     testWidgets('Monitoring overhead <1ms per frame', (WidgetTester tester) async {
       // Measure overhead by comparing with/without monitoring
       final baselineStopwatch = Stopwatch()..start();
-      
+
       // Render without heavy monitoring
       for (int i = 0; i < 100; i++) {
         await tester.pumpWidget(
@@ -212,7 +210,7 @@ void main() {
           ),
         );
       }
-      
+
       baselineStopwatch.stop();
       final totalFrameTime = baselineStopwatch.elapsedMicroseconds;
       final avgFrameTime = totalFrameTime / 100;
