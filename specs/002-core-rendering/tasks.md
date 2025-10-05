@@ -130,7 +130,7 @@
   - Run contract tests to verify compilation (expected: still failing, implementation incomplete)
 
 ### T011: TextLayoutCache (LRU Cache Implementation)
-- [ ] **T011** [P] Implement TextLayoutCache in lib/src/rendering/text_layout_cache.dart
+- [x] **T011** [P] Implement TextLayoutCache in lib/src/rendering/text_layout_cache.dart
   - Create abstract base class matching contract
   - Implement LinkedHashMapTextLayoutCache using dart:collection
   - Private field: `_cache` (LinkedHashMap<String, TextPainter>)

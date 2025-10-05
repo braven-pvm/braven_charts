@@ -8,11 +8,11 @@
 // - RenderContext not defined yet (will be created in T013)
 // - This is intentional per TDD workflow
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
-import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/foundation/object_pool.dart';
+import 'package:braven_charts/src/rendering/render_context.dart';
+import 'package:braven_charts/src/rendering/render_layer.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('RenderLayer Contract Tests', () {
@@ -27,24 +27,23 @@ void main() {
       test('render() method must accept RenderContext', () {
         // Verify render() signature
         final layer = TestRenderLayer(zIndex: 0);
-        
+
         expect(() => layer.render(mockContext), returnsNormally);
       });
 
       test('render() must be callable multiple times (idempotence)', () {
         final layer = TestRenderLayer(zIndex: 0);
-        
+
         // First call
         layer.render(mockContext);
         final firstCallEffect = 'TODO: capture canvas state';
-        
+
         // Second call with same context
         layer.render(mockContext);
         final secondCallEffect = 'TODO: capture canvas state';
-        
+
         // Should produce identical output
-        expect(firstCallEffect, equals(secondCallEffect),
-            reason: 'render() must be idempotent');
+        expect(firstCallEffect, equals(secondCallEffect), reason: 'render() must be idempotent');
       });
     });
 
@@ -56,41 +55,38 @@ void main() {
 
         expect(layer1.zIndex, lessThan(layer2.zIndex));
         expect(layer2.zIndex, lessThan(layer3.zIndex));
-        expect(layer1.zIndex, isNegative, 
-            reason: 'Negative zIndex allowed for backgrounds');
+        expect(layer1.zIndex, isNegative, reason: 'Negative zIndex allowed for backgrounds');
       });
 
       test('layers with same zIndex are allowed', () {
         final layer1 = TestRenderLayer(zIndex: 0);
         final layer2 = TestRenderLayer(zIndex: 0);
 
-        expect(layer1.zIndex, equals(layer2.zIndex),
-            reason: 'Multiple layers can have same zIndex');
+        expect(layer1.zIndex, equals(layer2.zIndex), reason: 'Multiple layers can have same zIndex');
       });
     });
 
     group('Contract Requirement 3: Visibility', () {
       test('isVisible defaults to true', () {
         final layer = TestRenderLayer(zIndex: 0);
-        
-        expect(layer.isVisible, isTrue,
-            reason: 'Default visibility should be true');
+
+        expect(layer.isVisible, isTrue, reason: 'Default visibility should be true');
       });
 
       test('isVisible can be set to false', () {
         final layer = TestRenderLayer(zIndex: 0, isVisible: false);
-        
+
         expect(layer.isVisible, isFalse);
       });
 
       test('isVisible is mutable', () {
         final layer = TestRenderLayer(zIndex: 0);
-        
+
         expect(layer.isVisible, isTrue);
-        
+
         layer.isVisible = false;
         expect(layer.isVisible, isFalse);
-        
+
         layer.isVisible = true;
         expect(layer.isVisible, isTrue);
       });
@@ -111,28 +107,26 @@ void main() {
           layer.render(mockContext);
         }
 
-        expect(renderCalled, isFalse,
-            reason: 'Invisible layers should not have render() called');
+        expect(renderCalled, isFalse, reason: 'Invisible layers should not have render() called');
       });
     });
 
     group('Contract Requirement 4: Emptiness', () {
       test('isEmpty defaults to false', () {
         final layer = TestRenderLayer(zIndex: 0);
-        
-        expect(layer.isEmpty, isFalse,
-            reason: 'Default isEmpty should be false (assume content exists)');
+
+        expect(layer.isEmpty, isFalse, reason: 'Default isEmpty should be false (assume content exists)');
       });
 
       test('isEmpty can be overridden to true', () {
         final layer = TestRenderLayer(zIndex: 0, isEmpty: true);
-        
+
         expect(layer.isEmpty, isTrue);
       });
 
       test('empty layers should short-circuit quickly', () {
         final layer = TestRenderLayer(zIndex: 0, isEmpty: true);
-        
+
         final stopwatch = Stopwatch()..start();
         if (!layer.isEmpty) {
           layer.render(mockContext);
@@ -140,8 +134,7 @@ void main() {
         stopwatch.stop();
 
         // Empty check should be near-instant (<0.1ms per spec)
-        expect(stopwatch.elapsedMicroseconds, lessThan(100),
-            reason: 'isEmpty check must be very fast');
+        expect(stopwatch.elapsedMicroseconds, lessThan(100), reason: 'isEmpty check must be very fast');
       });
     });
 
@@ -160,8 +153,7 @@ void main() {
         layer.render(mockContext);
         layer.render(mockContext);
 
-        expect(callSequence, equals(['render', 'render', 'render']),
-            reason: 'render() should be callable multiple times');
+        expect(callSequence, equals(['render', 'render', 'render']), reason: 'render() should be callable multiple times');
       });
     });
 
@@ -170,19 +162,19 @@ void main() {
         // This test validates that implementations use pools
         // Actual implementation testing deferred to integration tests (T006-T009)
         // Contract just ensures context provides pools
-        
+
         // When RenderContext is implemented, verify:
         // - context.paintPool exists
         // - context.pathPool exists
         // - context.textPainterPool exists
-        
+
         skip('Deferred until RenderContext implemented (T013)');
       });
 
       test('acquired objects must be released (no leaks)', () {
         // This test validates acquire/release pairing
         // Requires RenderContext and ObjectPool integration
-        
+
         skip('Deferred until RenderContext implemented (T013)');
       });
     });
@@ -219,7 +211,7 @@ void main() {
 /// This is a concrete test layer to verify the contract requirements.
 class TestRenderLayer extends RenderLayer {
   final void Function(RenderContext)? onRender;
-  
+
   @override
   final bool isEmpty;
 

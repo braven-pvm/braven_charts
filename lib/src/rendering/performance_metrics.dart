@@ -141,9 +141,7 @@ class PerformanceMetrics {
   /// }
   /// ```
   bool get meetsTargets {
-    return averageFrameTime.inMicroseconds < 8000 &&
-        p99FrameTime.inMicroseconds < 16000 &&
-        poolHitRate > 0.90;
+    return averageFrameTime.inMicroseconds < 8000 && p99FrameTime.inMicroseconds < 16000 && poolHitRate > 0.90;
   }
 
   /// Average frame time in milliseconds (convenience getter).
@@ -175,10 +173,10 @@ class PerformanceMetrics {
     if (culledElementCount == null || renderedElementCount == null) {
       return null;
     }
-    
+
     final total = culledElementCount! + renderedElementCount!;
     if (total == 0) return 0.0;
-    
+
     return culledElementCount! / total;
   }
 
