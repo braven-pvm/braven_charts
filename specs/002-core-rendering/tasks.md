@@ -349,7 +349,7 @@
   - Measure p99 frame time over 100 frames (target: <16ms)
   - Verify jank count = 0
 
-- [ ] **T035** [P] Benchmark layer z-ordering overhead in test/benchmarks/rendering/layer_sorting_benchmark.dart
+- [x] **T035** [P] Benchmark layer z-ordering overhead in test/benchmarks/rendering/layer_sorting_benchmark.dart
   - Create 10 layers with random zIndex values
   - Measure sort latency per frame (target: <0.1ms)
   - Create 100 layers with random zIndex values
