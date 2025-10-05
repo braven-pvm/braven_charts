@@ -377,7 +377,7 @@
   - Assert frame time degrades gracefully (may exceed 16ms)
   - Verify no crashes or rendering artifacts
 
-- [ ] **T039** [P] Edge case test for overlapping layers in test/unit/rendering/edge_cases/overlapping_layers_test.dart
+- [x] **T039** [P] Edge case test for overlapping layers in test/unit/rendering/edge_cases/overlapping_layers_test.dart
   - Create 3 layers with same screen space
   - Verify z-order preserved (visual validation via pixel comparison)
   - Test alpha blending correctness
