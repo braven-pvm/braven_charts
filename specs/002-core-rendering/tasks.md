@@ -250,7 +250,7 @@
   - Test layer visibility toggle affects render
   - Test isEmpty layers skipped
 
-- [ ] **T022** [P] Unit test for RenderPipeline viewport update in test/unit/rendering/render_pipeline_test.dart
+- [x] **T022** [P] Unit test for RenderPipeline viewport update in test/unit/rendering/render_pipeline_test.dart
   - Test updateViewport updates internal state
   - Test viewport passed to RenderContext during renderFrame
   - Test culling uses updated viewport

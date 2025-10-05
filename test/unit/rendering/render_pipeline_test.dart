@@ -391,6 +391,83 @@ void main() {
           reason: 'Visible and non-empty layer should render');
     });
   });
+
+  group('RenderPipeline - Viewport Update (T022)', () {
+    test('updateViewport updates internal viewport state', () {
+      final pipeline = createPipeline();
+      final initialViewport = pipeline.viewport;
+
+      expect(initialViewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+
+      final newViewport = Rect.fromLTWH(100, 50, 400, 300);
+      pipeline.updateViewport(newViewport);
+
+      expect(pipeline.viewport, equals(newViewport),
+          reason: 'Viewport should be updated to new value');
+    });
+
+    test('viewport passed to RenderContext during renderFrame', () {
+      final pipeline = createPipeline();
+      final layer = _ViewportCaptureLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      final newViewport = Rect.fromLTWH(200, 100, 600, 400);
+      pipeline.updateViewport(newViewport);
+
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedViewport, equals(newViewport),
+          reason: 'RenderContext should receive updated viewport');
+    });
+
+    test('viewport changes take effect immediately on next render', () {
+      final pipeline = createPipeline();
+      final layer = _ViewportCaptureLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas1 = _RecordingCanvas();
+      pipeline.renderFrame(canvas1, const Size(800, 600));
+      final firstViewport = layer.capturedViewport;
+
+      expect(firstViewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+
+      final newViewport = Rect.fromLTWH(50, 50, 700, 500);
+      pipeline.updateViewport(newViewport);
+
+      final canvas2 = _RecordingCanvas();
+      pipeline.renderFrame(canvas2, const Size(800, 600));
+
+      expect(layer.capturedViewport, equals(newViewport),
+          reason: 'Updated viewport should be used in next frame');
+    });
+
+    test('multiple viewport updates only use last value', () {
+      final pipeline = createPipeline();
+      final layer = _ViewportCaptureLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      pipeline.updateViewport(Rect.fromLTWH(100, 100, 200, 200));
+      pipeline.updateViewport(Rect.fromLTWH(200, 200, 300, 300));
+      final finalViewport = Rect.fromLTWH(300, 300, 400, 400);
+      pipeline.updateViewport(finalViewport);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedViewport, equals(finalViewport),
+          reason: 'Only last viewport update should be used');
+    });
+
+    test('viewport getter returns current viewport value', () {
+      final pipeline = createPipeline();
+
+      expect(pipeline.viewport, equals(Rect.fromLTWH(0, 0, 800, 600)));
+
+      pipeline.updateViewport(Rect.fromLTWH(10, 20, 30, 40));
+      expect(pipeline.viewport, equals(Rect.fromLTWH(10, 20, 30, 40)));
+    });
+  });
 }
 
 // Test layer implementations
@@ -423,6 +500,17 @@ class _EmptyTestLayer extends RenderLayer {
     if (context.canvas is _RecordingCanvas) {
       (context.canvas as _RecordingCanvas).recordRender(name);
     }
+  }
+}
+
+class _ViewportCaptureLayer extends RenderLayer {
+  Rect? capturedViewport;
+
+  _ViewportCaptureLayer({required super.zIndex});
+
+  @override
+  void render(RenderContext context) {
+    capturedViewport = context.viewport;
   }
 }
 
