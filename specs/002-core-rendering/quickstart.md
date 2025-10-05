@@ -24,14 +24,15 @@ This guide demonstrates how to use the Core Rendering Engine to create high-perf
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:braven_charts/src/foundation/object_pool.dart';
-import 'package:braven_charts/src/foundation/viewport_culler.dart';
-import 'package:braven_charts/src/foundation/data_models.dart';
+import 'package:braven_charts/src/foundation/foundation.dart';
 import 'package:braven_charts/src/rendering/render_pipeline.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/src/rendering/layers/grid_layer.dart';
+import 'package:braven_charts/src/rendering/layers/data_series_layer.dart';
+import 'package:braven_charts/src/rendering/layers/annotation_layer.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -58,27 +59,24 @@ class ChartPainter extends CustomPainter {
         paint.strokeWidth = 1.0;
         paint.style = PaintingStyle.fill;
       },
-      maxSize: 100,
     );
 
     final pathPool = ObjectPool<Path>(
       factory: () => Path(),
       reset: (path) => path.reset(),
-      maxSize: 50,
     );
 
     final textPainterPool = ObjectPool<TextPainter>(
       factory: () => TextPainter(textDirection: TextDirection.ltr),
-      reset: (painter) => painter.text = null,
-      maxSize: 20,
+      reset: (painter) {},
     );
 
     // Step 2: Create viewport culler (from Foundation)
-    final culler = ViewportCuller();
+    final culler = const ViewportCuller();
 
     // Step 3: Create performance monitor and text cache
-    final monitor = StopwatchPerformanceMonitor(maxHistorySize: 120);
-    final textCache = LinkedHashMapTextLayoutCache(maxSize: 500);
+    final monitor = StopwatchPerformanceMonitor();
+    final textCache = LinkedHashMapTextLayoutCache();
 
     // Step 4: Create render pipeline
     final pipeline = RenderPipeline(
@@ -88,15 +86,24 @@ class ChartPainter extends CustomPainter {
       textCache: textCache,
       performanceMonitor: monitor,
       culler: culler,
-      viewport: Rect.fromLTWH(0, 0, 800, 600),
+      initialViewport: Rect.fromLTWH(0, 0, 800, 600),
     );
 
     // Step 5: Add layers (background to foreground)
-    pipeline.addLayer(GridLayer(zIndex: -1)); // Background
+    pipeline.addLayer(GridLayer(
+      gridLineCount: 10,
+      lineColor: const Color(0xFFE0E0E0),
+      zIndex: -1,
+    )); // Background
+    
     pipeline.addLayer(DataSeriesLayer(
       dataPoints: _generateData(),
+      dataBounds: Rect.fromLTRB(0, 0, 1000, 100),
+      lineColor: Colors.blue,
+      lineWidth: 2.0,
       zIndex: 0,
     )); // Primary
+    
     pipeline.addLayer(AnnotationLayer(zIndex: 1)); // Foreground
 
     return pipeline;
@@ -105,7 +112,7 @@ class ChartPainter extends CustomPainter {
   static List<ChartDataPoint> _generateData() {
     return List.generate(
       1000,
-      (i) => ChartDataPoint(x: i.toDouble(), y: (i * 2.5) % 100),
+      (i) => ChartDataPoint(i.toDouble(), (i * 2.5) % 100),
     );
   }
 
@@ -115,9 +122,9 @@ class ChartPainter extends CustomPainter {
     pipeline.renderFrame(canvas, size);
 
     // Check performance (optional)
-    final metrics = pipeline.performanceMonitor.currentMetrics;
-    if (!metrics.meetsTargets) {
-      debugPrint('Performance issue: ${metrics.averageFrameTime}');
+    final metrics = pipeline.getMetrics();
+    if (metrics.frameTimeMs > 8.0) {
+      debugPrint('Performance issue: ${metrics.frameTimeMs.toStringAsFixed(1)}ms');
     }
   }
 
@@ -498,13 +505,100 @@ if (stats.allocationCount > 0) {
 
 Before merging rendering code:
 
-- [ ] Average frame time <8ms (run 100 frames, check metrics)
-- [ ] P99 frame time <16ms (verify no outliers)
-- [ ] Pool hit rate >90% (check paintPool, pathPool, textPainterPool)
-- [ ] Text cache hit rate >70% (if text-heavy chart)
-- [ ] Zero jank in typical interaction (pan/zoom 100px)
-- [ ] All acquired objects released (no pool leaks)
-- [ ] Viewport culling reduces render by >80% (10K→500 points)
+- [ ] **All tests pass**: `flutter test` (expect 100% pass - 62 tests)
+- [ ] **Average frame time <8ms**: Run benchmarks, check metrics (500-5000 points)
+- [ ] **P99 frame time <16ms**: Verify no outliers or jank
+- [ ] **Pool hit rate >90%**: Check paintPool, pathPool, textPainterPool statistics
+- [ ] **Text cache hit rate >70%**: If text-heavy chart, verify cache effectiveness
+- [ ] **Zero jank in interaction**: Pan/zoom 100px, monitor for frame drops
+- [ ] **All acquired objects released**: No pool leaks (acquire count = release count)
+- [ ] **Viewport culling effective**: >80% reduction (10K→<2K points rendered)
+- [ ] **Imports verified**: All paths correct (`lib/src/rendering/*`, `lib/src/foundation/*`)
+- [ ] **Examples compile**: No syntax errors in quickstart code
+
+**Validation Commands**:
+```bash
+# Run all tests
+flutter test
+
+# Run benchmarks
+flutter test test/benchmarks/rendering/
+
+# Check specific performance
+flutter test test/benchmarks/rendering/render_pipeline_benchmark.dart
+flutter test test/benchmarks/rendering/object_pool_benchmark.dart
+flutter test test/benchmarks/rendering/text_cache_benchmark.dart
+```
+
+---
+
+## Troubleshooting
+
+### Common Issue #1: Import Errors
+
+**Symptom**: `'RenderPipeline' isn't defined` or similar
+
+**Solution**: Verify import paths match implementation:
+```dart
+// Correct imports (as of 002-core-rendering completion)
+import 'package:braven_charts/src/foundation/foundation.dart';  // Foundation exports
+import 'package:braven_charts/src/rendering/render_pipeline.dart';
+import 'package:braven_charts/src/rendering/render_layer.dart';
+import 'package:braven_charts/src/rendering/render_context.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/src/rendering/layers/grid_layer.dart';
+import 'package:braven_charts/src/rendering/layers/data_series_layer.dart';
+import 'package:braven_charts/src/rendering/layers/annotation_layer.dart';
+```
+
+### Common Issue #2: Performance Below Target
+
+**Symptom**: Frame time >8ms consistently
+
+**Diagnosis**:
+```dart
+final metrics = pipeline.getMetrics();
+print('Frame time: ${metrics.frameTimeMs}ms');
+print('Layers rendered: ${metrics.layersRendered}');
+print('Points culled: ${metrics.pointsCulled}');
+
+final paintStats = paintPool.statistics;
+print('Paint pool hit rate: ${(paintStats.hitRate * 100).toStringAsFixed(1)}%');
+```
+
+**Solutions**:
+1. **Low pool hit rate (<90%)**: Increase pool size or reduce concurrent layer count
+2. **Low cull rate (<80%)**: Verify viewport culler enabled and viewport set correctly
+3. **Too many layers**: Combine layers or use isEmpty optimization
+4. **Large text count**: Increase text cache size or reduce unique text/style combinations
+
+### Common Issue #3: Visual Artifacts
+
+**Symptom**: Flickering, z-fighting, or incorrect layer order
+
+**Solution**:
+- Ensure unique z-indices for each visual priority
+- Verify layer sort is stable (don't mutate zIndex after adding)
+- Check viewport intersects canvas bounds
+- Verify Paint objects properly reset between uses
+
+### Common Issue #4: Memory Leaks
+
+**Symptom**: Heap grows unbounded, eventual OOM
+
+**Diagnosis**:
+```dart
+final paintStats = paintPool.statistics;
+if (paintStats.acquireCount != paintStats.releaseCount) {
+  print('LEAK: ${paintStats.acquireCount - paintStats.releaseCount} Paint objects not released');
+}
+```
+
+**Solution**:
+- Wrap all acquire/release in try-finally blocks
+- Verify cache bounded by maxSize (check textCache.length)
+- Don't store RenderContext beyond frame scope
 
 ---
 
