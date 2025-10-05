@@ -355,7 +355,7 @@
   - Create 100 layers with random zIndex values
   - Measure sort latency (verify O(n log n))
 
-- [ ] **T036** [P] Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_layer_benchmark.dart
+- [x] **T036** [P] Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_layer_benchmark.dart
   - Create 50 layers with isEmpty=true
   - Measure frame time (target: <5ms overhead = <0.1ms per layer)
   - Create 50 layers with isEmpty=false
