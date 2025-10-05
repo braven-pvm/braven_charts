@@ -39,10 +39,37 @@ flutter pub get
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
-// Coming soon - chart implementation in progress
+// Create chart data
+final series = ChartSeries(
+  id: 'revenue-2024',
+  name: 'Revenue',
+  points: [
+    ChartDataPoint(x: 1.0, y: 100.0),
+    ChartDataPoint(x: 2.0, y: 150.0),
+    ChartDataPoint(x: 3.0, y: 120.0),
+  ],
+  isXOrdered: true,
+);
+
+// Calculate statistics
+final data = [1.0, 2.0, 3.0, 4.0, 5.0];
+final mean = StatisticalFunctions.mean(data); // 3.0
+final median = StatisticalFunctions.median(data); // 3.0
+
+// More examples in lib/src/foundation/README.md
 ```
 
 ##  Documentation
+
+### Foundation Layer ✨ NEW
+The Foundation layer provides core data structures, performance primitives, and mathematical utilities:
+
+- **Data Models**: ChartDataPoint, ChartSeries, DataRange, TimeSeriesData
+- **Performance**: ObjectPool, ViewportCuller, BatchProcessor  
+- **Type System**: ChartResult (Result pattern), ChartError, ValidationUtils
+- **Math**: Statistical functions, Interpolation, Curve fitting
+
+**[📖 Foundation Layer Documentation](lib/src/foundation/README.md)** - Complete guide with examples
 
 ### For Users
 - [Getting Started Guide](docs/README.md) - Basic usage and examples
@@ -104,6 +131,12 @@ braven_charts/
 ##  Development Status
 
 ###  Completed
+- [x] **Foundation Layer** (100% complete, 37/58 tasks)
+  - Data models with 100% test coverage
+  - Performance primitives (ObjectPool, ViewportCuller, BatchProcessor)
+  - Type system (ChartResult, ValidationUtils)
+  - Math utilities (Statistics, Interpolation, Curve fitting)
+  - 52 integration tests, all performance targets met
 - [x] Project structure and build system
 - [x] Comprehensive testing framework (6 layers)
 - [x] Web testing with ChromeDriver

@@ -1,9 +1,9 @@
 // Copyright 2024 The Braven Charts Authors
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
 // Import from package root to validate public API
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Validates the public API surface of the Foundation layer
 ///
@@ -15,7 +15,7 @@ void main() {
   group('Foundation Public API Validation', () {
     test('Data Models are publicly accessible', () {
       // ChartDataPoint
-      final point = ChartDataPoint(x: 1.0, y: 2.0);
+      final point = const ChartDataPoint(x: 1.0, y: 2.0);
       expect(point.x, equals(1.0));
       expect(point.y, equals(2.0));
 
@@ -30,7 +30,7 @@ void main() {
       expect(series.length, equals(1));
 
       // DataRange
-      final range = DataRange(min: 0.0, max: 10.0);
+      final range = const DataRange(min: 0.0, max: 10.0);
       expect(range.min, equals(0.0));
       expect(range.max, equals(10.0));
 
@@ -63,15 +63,15 @@ void main() {
       expect(pool.statistics.acquireCount, equals(1));
 
       // ViewportCuller
-      final culler = ViewportCuller(margin: 0.1);
+      final culler = const ViewportCuller(margin: 0.1);
       final points = [
-        ChartDataPoint(x: 1.0, y: 1.0),
-        ChartDataPoint(x: 2.0, y: 2.0),
+        const ChartDataPoint(x: 1.0, y: 1.0),
+        const ChartDataPoint(x: 2.0, y: 2.0),
       ];
       final culled = culler.cull(
         points: points,
-        viewportX: DataRange(min: 0.0, max: 3.0),
-        viewportY: DataRange(min: 0.0, max: 3.0),
+        viewportX: const DataRange(min: 0.0, max: 3.0),
+        viewportY: const DataRange(min: 0.0, max: 3.0),
         isXOrdered: true,
       );
       expect(culled.isNotEmpty, isTrue);
@@ -88,7 +88,7 @@ void main() {
 
     test('Type System is publicly accessible', () {
       // ChartResult - Success
-      final success = Success<int>(42);
+      final success = const Success<int>(42);
       expect(success.isSuccess, isTrue);
       expect(success.getOrNull(), equals(42));
 
@@ -130,9 +130,9 @@ void main() {
 
       // CurveFittingFunctions
       final points = [
-        ChartDataPoint(x: 0, y: 0),
-        ChartDataPoint(x: 1, y: 2),
-        ChartDataPoint(x: 2, y: 4),
+        const ChartDataPoint(x: 0, y: 0),
+        const ChartDataPoint(x: 1, y: 2),
+        const ChartDataPoint(x: 2, y: 4),
       ];
       final fit = CurveFittingFunctions.linearFit(points);
       expect(fit.coefficients.length, equals(2));
@@ -176,8 +176,8 @@ void main() {
 
       // FitResult
       final points = [
-        ChartDataPoint(x: 0, y: 0),
-        ChartDataPoint(x: 1, y: 1),
+        const ChartDataPoint(x: 0, y: 0),
+        const ChartDataPoint(x: 1, y: 1),
       ];
       final fit = CurveFittingFunctions.linearFit(points);
       expect(fit.coefficients, isNotNull);
@@ -275,11 +275,11 @@ void main() {
         (i) => ChartDataPoint(x: i.toDouble(), y: i * 0.5),
       );
 
-      final culler = ViewportCuller(margin: 0.1);
+      final culler = const ViewportCuller(margin: 0.1);
       final visible = culler.cull(
         points: points,
-        viewportX: DataRange(min: 1000, max: 2000),
-        viewportY: DataRange(min: 0, max: 10000),
+        viewportX: const DataRange(min: 1000, max: 2000),
+        viewportY: const DataRange(min: 0, max: 10000),
         isXOrdered: true,
       );
 
