@@ -174,7 +174,7 @@
   - Run tests (expected: compilation success, contract tests use this)
 
 ### T014: RenderLayer (Abstract Interface)
-- [ ] **T014** [P] Implement RenderLayer in lib/src/rendering/render_layer.dart
+- [x] **T014** [P] Implement RenderLayer in lib/src/rendering/render_layer.dart
   - Move contract from specs/002-core-rendering/contracts/render_layer.dart to lib/src/rendering/render_layer.dart
   - Keep abstract class with zIndex, isVisible fields
   - Keep abstract render(RenderContext context) method
