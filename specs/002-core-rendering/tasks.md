@@ -306,7 +306,7 @@
   - Add dartdoc comments
   - **Purpose**: Demonstrate Foundation integration (ViewportCuller, ObjectPool)
 
-- [ ] **T030** [P] Implement AnnotationLayer example in lib/src/rendering/layers/annotation_layer.dart
+- [x] **T030** [P] Implement AnnotationLayer example in lib/src/rendering/layers/annotation_layer.dart
   - Extend RenderLayer
   - Constructor: List<String> labels, List<Offset> positions, TextStyle, zIndex
   - Implement render(context):
