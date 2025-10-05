@@ -8,7 +8,7 @@
 ## Task Overview
 
 **Total Tasks**: 58  
-**Completed**: 34 / 58 (59%)**  
+**Completed**: 37 / 58 (64%)**  
 **Estimated Duration**: 8-12 days with parallel execution  
 **TDD Enforced**: All test tasks MUST complete before implementation tasks  
 **Constitutional Compliance**: 100% coverage, all performance targets validated
@@ -540,7 +540,7 @@ test/
 
 **Dependencies**: All implementation (T008-T023)
 
-### T035: Create Foundation Barrel Export
+### T035: [X] Create Foundation Barrel Export
 **Description**: Create barrel file exporting all public APIs  
 **File**: `lib/src/foundation/foundation.dart`  
 **Exports**:
@@ -568,17 +568,21 @@ export 'math/curve_fitting.dart';
 ```
 **Acceptance**: All public APIs accessible via single import
 
+**Status**: ✅ COMPLETE - Barrel export organized into 4 logical sections (Data Models, Performance Primitives, Type System, Math Utilities), all 13 public entities properly exported
+
 ---
 
-### T036: Update Main Library Export
+### T036: [X] Update Main Library Export
 **Description**: Update main braven_charts.dart to export foundation  
 **File**: `lib/braven_charts.dart`  
 **Add**: `export 'src/foundation/foundation.dart';`  
 **Acceptance**: Foundation APIs accessible from package root
 
+**Status**: ✅ COMPLETE - Foundation layer export added to main library, future layer exports commented out with TODO markers (will be uncommented as layers are implemented)
+
 ---
 
-### T037: Validate Public API Surface
+### T037: [X] Validate Public API Surface
 **Description**: Verify only intended APIs are public  
 **Test**: Create test that imports `package:braven_charts/braven_charts.dart`  
 **Verify**:
@@ -586,6 +590,8 @@ export 'math/curve_fitting.dart';
 - No internal implementation exposed
 - DartDoc comments on all public members  
 **Acceptance**: API surface validated, no leaks
+
+**Status**: ✅ COMPLETE - Comprehensive API validation test with 13 tests (8 test groups: Data Models, Performance Primitives, Type System, Math Utilities, Enum Types, Supporting Classes, Internal Encapsulation, API Organization + 5 usage examples), all tests passing
 
 ---
 

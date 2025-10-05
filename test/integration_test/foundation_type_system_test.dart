@@ -6,9 +6,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Type System (FR-003)
-/// 
+///
 /// Validates complete type system workflows:
-/// - ChartResult pattern matching and operations  
+/// - ChartResult pattern matching and operations
 /// - ChartError creation and handling
 /// - ValidationUtils validation chains
 /// - Type-safe error handling throughout
@@ -336,12 +336,8 @@ void main() {
 
       // Step 4: Chain operations with ChartResult
       print('4. Chaining operations...');
-      final finalResult = seriesResult
-          .map((series) => series.length)
-          .flatMap((length) {
-        return length > 0
-            ? Success<String>('Created series with $length points')
-            : Failure<String>(ChartError.validation('Empty series'));
+      final finalResult = seriesResult.map((series) => series.length).flatMap((length) {
+        return length > 0 ? Success<String>('Created series with $length points') : Failure<String>(ChartError.validation('Empty series'));
       });
 
       expect(finalResult.isSuccess, isTrue);
@@ -403,10 +399,7 @@ void main() {
       expect(failures, equals(10));
 
       // Extract valid points
-      final validPoints = validationResults
-          .where((r) => r.isSuccess)
-          .map((r) => r.getOrNull()!)
-          .toList();
+      final validPoints = validationResults.where((r) => r.isSuccess).map((r) => r.getOrNull()!).toList();
 
       expect(validPoints.length, equals(90));
 

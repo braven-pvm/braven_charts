@@ -8,7 +8,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Complete Workflow
-/// 
+///
 /// Validates all components working together in realistic scenario:
 /// - 50k points → series → statistics → culling → curve fitting → pooling
 /// - Performance requirements met across entire pipeline

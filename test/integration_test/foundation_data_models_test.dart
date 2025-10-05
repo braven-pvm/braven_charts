@@ -6,7 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Data Models (FR-001)
-/// 
+///
 /// Validates complete data model workflows from quickstart scenario 1:
 /// - ChartDataPoint creation and manipulation
 /// - ChartSeries with 100k points performance

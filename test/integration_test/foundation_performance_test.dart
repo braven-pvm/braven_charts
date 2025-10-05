@@ -7,7 +7,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Performance Primitives (FR-002)
-/// 
+///
 /// Validates complete performance primitive workflows from quickstart scenario 2:
 /// - ObjectPool acquire/release performance and hit rate
 /// - ViewportCuller performance with ordered and unordered data

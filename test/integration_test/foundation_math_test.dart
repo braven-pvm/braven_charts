@@ -6,7 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:braven_charts/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Math Utilities (FR-004)
-/// 
+///
 /// Validates complete math utilities workflows:
 /// - Statistical calculations (mean, median, std dev, quartiles)
 /// - Interpolation functions (linear, cubic spline, bezier)
@@ -247,7 +247,7 @@ void main() {
 
       expect(polyFit.coefficients.length, equals(3)); // a₀, a₁, a₂
       expect(polyFit.rSquared, greaterThan(0.99)); // y = x²
-      
+
       // Check coefficients approximately: y = 0 + 0x + 1x²
       expect(polyFit.coefficients[0].abs(), lessThan(0.01)); // Constant ≈ 0
       expect(polyFit.coefficients[1].abs(), lessThan(0.01)); // Linear ≈ 0
