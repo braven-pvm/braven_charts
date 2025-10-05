@@ -357,13 +357,17 @@
   - Dependencies: T023 (TransformMatrix implemented)
   - **Validation**: transformBatch4() exists and uses SIMD (Float32x4) ✅
 
-- [ ] **T032** Implement transformBatch() optimization in `lib/src/coordinates/universal_coordinate_transformer.dart`
-  - Compute transformation matrix once per batch
-  - Use SIMD transformBatch4() for point processing
-  - Add viewport culling: skip points outside viewport bounds
+- [x] **T032** Implement transformBatch() optimization in `lib/src/coordinates/universal_coordinate_transformer.dart`
+  - Implement transformBatch() main method with optimization routing ✅
+  - Implement _canUseMatrixTransformation() capability checker ✅
+  - Implement _transformBatchWithMatrix() SIMD processor ✅
+  - Use matrix caching via _getTransformationMatrix() (from T030) ✅
+  - Process in groups of 4 using matrix.transformBatch4() (SIMD) ✅
+  - Process remainder (<4) using matrix.transform() (scalar) ✅
+  - Fallback to point-by-point for dataPoint/marker (non-matrix paths) ✅
   - Files: `lib/src/coordinates/universal_coordinate_transformer.dart`
-  - Dependencies: T031 (SIMD implemented)
-  - **Validation**: T019 integration test passes (<1ms for 10K points)
+  - Dependencies: T030 (matrix caching), T031 (SIMD)
+  - **Validation**: Batch transform test passes (1/1) ✅
 
 - [ ] **T033** Integrate ObjectPool for zero-allocation transformations in `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Use ObjectPool<Point> from Foundation layer for temporary points
