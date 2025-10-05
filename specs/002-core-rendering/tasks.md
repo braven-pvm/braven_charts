@@ -387,7 +387,7 @@
   - Verify clipping applied (no off-screen rendering)
   - Verify no crashes
 
-- [ ] **T041** [P] Edge case test for pool exhaustion in test/unit/rendering/edge_cases/pool_exhaustion_test.dart
+- [x] **T041** [P] Edge case test for pool exhaustion in test/unit/rendering/edge_cases/pool_exhaustion_test.dart
   - Create layer that acquires 200 Paint objects (pool maxSize = 100)
   - Verify pool allocates beyond capacity (statistics show allocation count)
   - Verify performance degrades but no crash
