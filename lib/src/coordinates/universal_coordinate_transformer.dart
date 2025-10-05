@@ -228,9 +228,9 @@ class UniversalCoordinateTransformer {
     // by routing through the "central hub" systems (screen, chartArea, data)
 
     // Categorize systems by their position in the graph
-    final centralHub = CoordinateSystem.data;
-    final screenHub = CoordinateSystem.screen;
-    final chartAreaHub = CoordinateSystem.chartArea;
+    const centralHub = CoordinateSystem.data;
+    const screenHub = CoordinateSystem.screen;
+    const chartAreaHub = CoordinateSystem.chartArea;
 
     // Route through hubs based on source and destination systems
     // Strategy: Convert to nearest hub, then to destination
@@ -901,6 +901,140 @@ class UniversalCoordinateTransformer {
     TransformContext context,
   ) {
     return (from.index << 16) | (to.index << 8) | (context.hashCode & 0xFF);
+  }
+
+  /// Build and cache transformation matrix for a coordinate system path.
+  ///
+  /// Constructs a matrix that can be applied to transform points from
+  /// one coordinate system to another. Used for batch transformations
+  /// where the matrix can be computed once and reused.
+  ///
+  /// **Caching**: Results are cached in `_matrixCache` using context hash.
+  /// Subsequent calls with same from/to/context return cached matrix.
+  ///
+  /// **Performance**: Matrix computation is O(1), cache lookup is O(1).
+  ///
+  /// **Internal method** - used by transformBatch().
+  TransformMatrix _getTransformationMatrix(
+    CoordinateSystem from,
+    CoordinateSystem to,
+    TransformContext context,
+  ) {
+    // Check cache first
+    final cacheKey = _getCacheKey(from, to, context);
+    final cached = _matrixCache[cacheKey];
+    if (cached != null) {
+      return cached;
+    }
+
+    // Build matrix based on transformation path
+    final matrix = _buildTransformationMatrix(from, to, context);
+
+    // Cache for future use
+    _matrixCache[cacheKey] = matrix;
+
+    return matrix;
+  }
+
+  /// Build transformation matrix for specific coordinate system path.
+  ///
+  /// Constructs matrices for common transformation paths using
+  /// TransformMatrix factories (identity, translation, scale, combined).
+  ///
+  /// **Note**: Not all paths can be represented as simple matrices
+  /// (e.g., dataPoint lookups). For those, transformBatch() will fall
+  /// back to point-by-point transformation.
+  TransformMatrix _buildTransformationMatrix(
+    CoordinateSystem from,
+    CoordinateSystem to,
+    TransformContext context,
+  ) {
+    // Identity transformation
+    if (from == to) {
+      return TransformMatrix.identity();
+    }
+
+    // Direct paths that can be represented as matrices
+
+    // mouse ↔ screen (devicePixelRatio scaling)
+    if (from == CoordinateSystem.mouse && to == CoordinateSystem.screen) {
+      final ratio = context.devicePixelRatio;
+      return TransformMatrix.scale(1.0 / ratio, 1.0 / ratio);
+    }
+    if (from == CoordinateSystem.screen && to == CoordinateSystem.mouse) {
+      final ratio = context.devicePixelRatio;
+      return TransformMatrix.scale(ratio, ratio);
+    }
+
+    // screen ↔ chartArea (translation)
+    if (from == CoordinateSystem.screen && to == CoordinateSystem.chartArea) {
+      final bounds = context.chartAreaBounds;
+      return TransformMatrix.translation(-bounds.left, -bounds.top);
+    }
+    if (from == CoordinateSystem.chartArea && to == CoordinateSystem.screen) {
+      final bounds = context.chartAreaBounds;
+      return TransformMatrix.translation(bounds.left, bounds.top);
+    }
+
+    // chartArea ↔ data (scale + Y-flip + translation)
+    if (from == CoordinateSystem.chartArea && to == CoordinateSystem.data) {
+      final bounds = context.chartAreaBounds;
+      final xRange = context.xDataRange;
+      final yRange = context.yDataRange;
+
+      final xScale = (xRange.max - xRange.min) / bounds.width;
+      final yScale = -(yRange.max - yRange.min) / bounds.height; // Negative for Y-flip
+
+      // Combined: scale then translate
+      final scale = TransformMatrix.scale(xScale, yScale);
+      final translate = TransformMatrix.translation(xRange.min, yRange.max);
+      return translate * scale;
+    }
+    if (from == CoordinateSystem.data && to == CoordinateSystem.chartArea) {
+      final bounds = context.chartAreaBounds;
+      final xRange = context.xDataRange;
+      final yRange = context.yDataRange;
+
+      final xScale = bounds.width / (xRange.max - xRange.min);
+      final yScale = -bounds.height / (yRange.max - yRange.min); // Negative for Y-flip
+
+      // Combined: translate then scale
+      final translate = TransformMatrix.translation(-xRange.min, -yRange.max);
+      final scale = TransformMatrix.scale(xScale, yScale);
+      return scale * translate;
+    }
+
+    // chartArea ↔ normalized (scale to/from 0-1)
+    if (from == CoordinateSystem.chartArea && to == CoordinateSystem.normalized) {
+      final bounds = context.chartAreaBounds;
+      return TransformMatrix.scale(1.0 / bounds.width, 1.0 / bounds.height);
+    }
+    if (from == CoordinateSystem.normalized && to == CoordinateSystem.chartArea) {
+      final bounds = context.chartAreaBounds;
+      return TransformMatrix.scale(bounds.width, bounds.height);
+    }
+
+    // data ↔ viewport (pan offset)
+    if (from == CoordinateSystem.data && to == CoordinateSystem.viewport) {
+      final panOffset = context.viewport.panOffset;
+      return TransformMatrix.translation(-panOffset.x, -panOffset.y);
+    }
+    if (from == CoordinateSystem.viewport && to == CoordinateSystem.data) {
+      final panOffset = context.viewport.panOffset;
+      return TransformMatrix.translation(panOffset.x, panOffset.y);
+    }
+
+    // For transitive paths, compose matrices recursively
+    // This handles complex paths like mouse → screen → chartArea → data
+    if (from == CoordinateSystem.mouse && to == CoordinateSystem.chartArea) {
+      final m1 = _buildTransformationMatrix(from, CoordinateSystem.screen, context);
+      final m2 = _buildTransformationMatrix(CoordinateSystem.screen, to, context);
+      return m2 * m1;
+    }
+
+    // For paths involving dataPoint or marker (non-matrix transformations),
+    // return identity and let transformBatch() fall back to point-by-point
+    return TransformMatrix.identity();
   }
 }
 

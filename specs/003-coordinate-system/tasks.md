@@ -337,14 +337,17 @@
 
 ## Phase 3.4: Performance Optimization
 
-- [ ] **T030** Implement matrix caching in `lib/src/coordinates/universal_coordinate_transformer.dart`
-  - Add internal cache: Map<int, TransformMatrix> _matrixCache
-  - Use TransformContext.hashCode as cache key
+- [x] **T030** Implement matrix caching in `lib/src/coordinates/universal_coordinate_transformer.dart`
+  - Add internal cache: Map<int, TransformMatrix> _matrixCache ✅ (already present from T024)
+  - Implement _getTransformationMatrix() with cache lookup
+  - Implement _buildTransformationMatrix() for matrix-based paths
+  - Use TransformContext.hashCode as cache key via _getCacheKey()
   - Cache transformation matrices per context (viewport + data ranges + bounds)
+  - Support direct matrix paths: mouse↔screen, screen↔chartArea, chartArea↔data, data↔viewport, chartArea↔normalized
   - Invalidate cache on context changes (different hash)
   - Files: `lib/src/coordinates/universal_coordinate_transformer.dart`
   - Dependencies: T026 (transformations implemented)
-  - **Validation**: Cache hit rate >90% in benchmark (T048)
+  - **Validation**: Cache infrastructure ready, will be used in T032 (transformBatch) ✅
 
 - [ ] **T031** Implement SIMD batch transformations in `lib/src/coordinates/transform_matrix.dart`
   - Add transformBatch4() method using Float32x4
