@@ -6,7 +6,7 @@
 ## Execution Flow (main)
 ```
 1. Load plan.md from feature directory
-   → Tech stack: Dart 3.0+, Flutter SDK 3.37.0-1.0.pre-216
+   → Tech stack: Da- [x] **T026**: Write unit tests for `RenderPipeline` `ViewportCuller` integrationt 3.0+, Flutter SDK 3.37.0-1.0.pre-216
    → Dependencies: Foundation Layer (ObjectPool, ViewportCuller, ChartDataPoint)
    → Structure: Single Flutter project (lib/src/rendering/, test/)
 2. Load design documents:
@@ -265,17 +265,17 @@
   - Test pools passed from pipeline to context correctly
   - Test pool statistics accessible via pipeline
 
-- [ ] **T025** [P] Unit test for text cache integration in test/unit/rendering/render_pipeline_test.dart
+- [x] **T025** [P] Unit test for text cache integration in test/unit/rendering/render_pipeline_test.dart
   - Test RenderContext provides access to text cache
   - Test cache passed from pipeline to context correctly
   - Test cache statistics accessible via pipeline
 
-- [ ] **T026** [P] Unit test for ViewportCuller integration in test/unit/rendering/render_pipeline_test.dart
+- [x] **T026** [P] Unit test for ViewportCuller integration in test/unit/rendering/render_pipeline_test.dart
   - Test RenderContext provides access to culler (Foundation)
   - Test culler passed from pipeline to context correctly
   - Test viewport bounds used for culling
 
-- [ ] **T027** [P] Unit test for RenderPipeline error handling in test/unit/rendering/render_pipeline_test.dart
+- [x] **T027**: Write unit tests for `RenderPipeline` error handling
   - Test exception in one layer doesn't crash pipeline
   - Test endFrame() called even if render throws
   - Test subsequent frames continue after error

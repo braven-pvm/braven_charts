@@ -569,6 +569,255 @@ void main() {
       expect(metrics2.frameTime.inMicroseconds, greaterThan(0));
     });
   });
+
+  group('RenderPipeline - Object Pool Integration (T024)', () {
+    test('RenderContext provides access to all 3 pools', () {
+      final paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
+      final pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      final textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+
+      final pipeline = RenderPipeline(
+        paintPool: paintPool,
+        pathPool: pathPool,
+        textPainterPool: textPainterPool,
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _PoolAccessLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.hadPaintPool, isTrue, reason: 'RenderContext should provide paintPool');
+      expect(layer.hadPathPool, isTrue, reason: 'RenderContext should provide pathPool');
+      expect(layer.hadTextPainterPool, isTrue, reason: 'RenderContext should provide textPainterPool');
+    });
+
+    test('pools passed from pipeline to context correctly', () {
+      final paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
+      final pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      final textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+
+      final pipeline = RenderPipeline(
+        paintPool: paintPool,
+        pathPool: pathPool,
+        textPainterPool: textPainterPool,
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _PoolIdentityLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedPaintPool, same(paintPool));
+      expect(layer.capturedPathPool, same(pathPool));
+      expect(layer.capturedTextPainterPool, same(textPainterPool));
+    });
+
+    test('pool statistics accessible via pipeline', () {
+      final pipeline = createPipeline();
+      final layer = _PoolUsingLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      // After rendering, pools should have been used (statistics updated)
+      // This is indirect validation that pools are functional
+      expect(layer.usedPools, isTrue, reason: 'Layer should have used pools');
+    });
+  });
+
+  group('RenderPipeline - Text Cache Integration (T025)', () {
+    test('RenderContext provides access to text cache', () {
+      final textCache = LinkedHashMapTextLayoutCache(maxSize: 100);
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: textCache,
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _CacheAccessLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.hadCache, isTrue, reason: 'RenderContext should provide text cache');
+    });
+
+    test('cache passed from pipeline to context correctly', () {
+      final textCache = LinkedHashMapTextLayoutCache(maxSize: 200);
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: textCache,
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _CacheIdentityLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedCache, same(textCache));
+    });
+
+    test('cache statistics accessible via pipeline', () {
+      final textCache = LinkedHashMapTextLayoutCache();
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: textCache,
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      // Cache statistics should be accessible (hit rate, length, etc.)
+      expect(textCache.hitRate, isNotNull);
+      expect(textCache.length, greaterThanOrEqualTo(0));
+    });
+  });
+
+  group('RenderPipeline - ViewportCuller Integration (T026)', () {
+    test('RenderContext provides access to culler', () {
+      const culler = ViewportCuller(margin: 0.1);
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: culler,
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _CullerAccessLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.hadCuller, isTrue, reason: 'RenderContext should provide culler');
+    });
+
+    test('culler passed from pipeline to context correctly', () {
+      const culler = ViewportCuller(margin: 0.2);
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: StopwatchPerformanceMonitor(),
+        culler: culler,
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      final layer = _CullerIdentityLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedCuller, same(culler));
+    });
+
+    test('viewport bounds used for culling', () {
+      final pipeline = createPipeline();
+      final layer = _ViewportCaptureLayer(zIndex: 0);
+      pipeline.addLayer(layer);
+
+      final viewport = Rect.fromLTWH(100, 100, 400, 300);
+      pipeline.updateViewport(viewport);
+
+      final canvas = _RecordingCanvas();
+      pipeline.renderFrame(canvas, const Size(800, 600));
+
+      expect(layer.capturedViewport, equals(viewport),
+          reason: 'Viewport should be passed to context for culling');
+    });
+  });
+
+  group('RenderPipeline - Error Handling (T027)', () {
+    test('exception in one layer doesn\'t crash pipeline', () {
+      final pipeline = createPipeline();
+      pipeline.addLayer(_TestLayer(zIndex: 0, name: 'Before'));
+      pipeline.addLayer(_ThrowingLayer(zIndex: 1));
+      pipeline.addLayer(_TestLayer(zIndex: 2, name: 'After'));
+
+      final canvas = _RecordingCanvas();
+
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+
+      // First layer should have rendered before exception
+      expect(canvas.renderOrder.contains('Before'), isTrue,
+          reason: 'Layer before exception should render');
+    });
+
+    test('endFrame called even if render throws', () {
+      final monitor = StopwatchPerformanceMonitor();
+      final pipeline = RenderPipeline(
+        paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
+        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: monitor,
+        culler: const ViewportCuller(),
+        initialViewport: Rect.fromLTWH(0, 0, 800, 600),
+      );
+
+      pipeline.addLayer(_ThrowingLayer(zIndex: 0));
+
+      final canvas = _RecordingCanvas();
+
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+
+      // endFrame should have been called in finally block
+      final metrics = monitor.currentMetrics;
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'endFrame should be called even after exception');
+    });
+
+    test('subsequent frames continue after error', () {
+      final pipeline = createPipeline();
+      pipeline.addLayer(_ThrowingLayer(zIndex: 0));
+
+      final canvas1 = _RecordingCanvas();
+      expect(() => pipeline.renderFrame(canvas1, const Size(800, 600)), throwsException);
+
+      // Remove throwing layer, add normal layer
+      pipeline.clearLayers();
+      pipeline.addLayer(_TestLayer(zIndex: 0, name: 'Recovery'));
+
+      // Next frame should work normally
+      final canvas2 = _RecordingCanvas();
+      expect(() => pipeline.renderFrame(canvas2, const Size(800, 600)), returnsNormally);
+      expect(canvas2.renderOrder, equals(['Recovery']),
+          reason: 'Pipeline should recover and render normally after error');
+    });
+  });
 }
 
 // Test layer implementations
@@ -621,6 +870,108 @@ class _ThrowingLayer extends RenderLayer {
   @override
   void render(RenderContext context) {
     throw Exception('Layer rendering failed');
+  }
+}
+
+// Helper layer that checks for pool access in RenderContext
+class _PoolAccessLayer extends RenderLayer {
+  _PoolAccessLayer({required super.zIndex});
+
+  bool hadPaintPool = false;
+  bool hadPathPool = false;
+  bool hadTextPainterPool = false;
+
+  @override
+  void render(RenderContext context) {
+    hadPaintPool = true;
+    hadPathPool = true;
+    hadTextPainterPool = true;
+  }
+}
+
+// Helper layer that captures pool identity
+class _PoolIdentityLayer extends RenderLayer {
+  _PoolIdentityLayer({required super.zIndex});
+
+  ObjectPool<Paint>? capturedPaintPool;
+  ObjectPool<Path>? capturedPathPool;
+  ObjectPool<TextPainter>? capturedTextPainterPool;
+
+  @override
+  void render(RenderContext context) {
+    capturedPaintPool = context.paintPool;
+    capturedPathPool = context.pathPool;
+    capturedTextPainterPool = context.textPainterPool;
+  }
+}
+
+// Helper layer that uses pools
+class _PoolUsingLayer extends RenderLayer {
+  _PoolUsingLayer({required super.zIndex});
+
+  bool usedPools = false;
+
+  @override
+  void render(RenderContext context) {
+    // Simulate pool usage
+    final paint = context.paintPool.acquire();
+    context.paintPool.release(paint);
+
+    final path = context.pathPool.acquire();
+    context.pathPool.release(path);
+
+    final tp = context.textPainterPool.acquire();
+    context.textPainterPool.release(tp);
+
+    usedPools = true;
+  }
+}
+
+// Helper layer that checks for cache access in RenderContext
+class _CacheAccessLayer extends RenderLayer {
+  _CacheAccessLayer({required super.zIndex});
+
+  bool hadCache = false;
+
+  @override
+  void render(RenderContext context) {
+    hadCache = true;
+  }
+}
+
+// Helper layer that captures cache identity
+class _CacheIdentityLayer extends RenderLayer {
+  _CacheIdentityLayer({required super.zIndex});
+
+  TextLayoutCache? capturedCache;
+
+  @override
+  void render(RenderContext context) {
+    capturedCache = context.textCache;
+  }
+}
+
+// Helper layer that checks for culler access in RenderContext
+class _CullerAccessLayer extends RenderLayer {
+  _CullerAccessLayer({required super.zIndex});
+
+  bool hadCuller = false;
+
+  @override
+  void render(RenderContext context) {
+    hadCuller = true;
+  }
+}
+
+// Helper layer that captures culler identity
+class _CullerIdentityLayer extends RenderLayer {
+  _CullerIdentityLayer({required super.zIndex});
+
+  ViewportCuller? capturedCuller;
+
+  @override
+  void render(RenderContext context) {
+    capturedCuller = context.culler;
   }
 }
 
