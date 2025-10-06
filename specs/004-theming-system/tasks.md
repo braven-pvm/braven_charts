@@ -160,7 +160,7 @@ This is a **single Flutter library** project:
   - Validation: all lists length >= 1
   - **VERIFY**: T004 contract test now passes
 
-- [ ] **T012** [P] Implement InteractionTheme in `lib/src/theming/components/interaction_theme.dart`
+- [x] **T012** [P] Implement InteractionTheme in `lib/src/theming/components/interaction_theme.dart`
   - Immutable class with const constructor
   - 7 predefined themes
   - copyWith() method
