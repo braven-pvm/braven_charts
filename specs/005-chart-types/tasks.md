@@ -161,7 +161,7 @@
   - Fields: Offset position, Offset? controlPoint1, Offset? controlPoint2, bool isControlPoint
   - Used internally by line interpolator for bezier curves
 
-- [ ] **T025** [P] Implement BarLayoutInfo class in lib/src/charts/bar/bar_positioner.dart
+- [x] **T025** [P] Implement BarLayoutInfo class in lib/src/charts/bar/bar_positioner.dart ✅ 2025-01-06
   - Fields: String seriesId, int categoryIndex, Rect bounds, double value, bool isNegative
   - Used internally by bar positioner
 
