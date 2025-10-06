@@ -226,11 +226,11 @@
   - Cluster info calculation
   - **Must pass T030 tests** ✅ 16/16 PASSED
 
-- [ ] **T036** [P] Implement ChartRenderer (shared utilities) in lib/src/charts/base/chart_renderer.dart
+- [x] **T036** [P] Implement ChartRenderer (shared utilities) in lib/src/charts/base/chart_renderer.dart ✅ 2025-01-06
   - MarkerRenderer: 6 shapes with object pooling (from research.md)
   - GradientRenderer: Shader caching
   - Path pooling integration
-  - **Must pass T031 tests**
+  - **Must pass T031 tests** ✅ 23/23 PASSED
 
 ---
 
@@ -613,6 +613,7 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 ---
 
+
 ## Changelog
 
 ### 2025-10-06
@@ -621,3 +622,5 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
+- **Tasks completed: 36/72** (Phase 3.4 COMPLETE!)
+
