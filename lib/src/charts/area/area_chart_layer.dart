@@ -43,18 +43,6 @@ import 'package:braven_charts/src/rendering/render_context.dart';
 /// );
 /// ```
 class AreaChartLayer extends ChartLayer {
-  /// Configuration for area rendering (stacking, fill opacity, etc.)
-  final AreaChartConfig config;
-
-  /// Area stacking algorithm for multi-series.
-  final AreaStacking _stacker;
-
-  /// Line interpolator for area boundaries and optional line overlay.
-  final LineInterpolator _interpolator;
-
-  /// Shared renderer for gradients.
-  final ChartRenderer _renderer;
-
   /// Constructs an area chart layer.
   ///
   /// [series] is the data to render.
@@ -73,13 +61,25 @@ class AreaChartLayer extends ChartLayer {
         _interpolator = LineInterpolator(config.lineConfig?.lineStyle ?? LineStyle.straight),
         _renderer = ChartRenderer();
 
+  /// Configuration for area rendering (stacking, fill opacity, etc.)
+  final AreaChartConfig config;
+
+  /// Area stacking algorithm for multi-series.
+  final AreaStacking _stacker;
+
+  /// Line interpolator for area boundaries and optional line overlay.
+  final LineInterpolator _interpolator;
+
+  /// Shared renderer for gradients.
+  final ChartRenderer _renderer;
+
   @override
   void render(RenderContext context) {
     if (isEmpty) return;
 
     // Acquire pooled paint object
     final paint = context.paintPool.acquire();
-    
+
     try {
       // TODO: When theming layer is integrated, use theme.seriesTheme.colors
       // For now, use default colors
@@ -87,14 +87,14 @@ class AreaChartLayer extends ChartLayer {
 
       // Convert series to stacked areas if needed
       final List<List<Offset>> stackedAreas;
-      
+
       if (series.length > 1 && config.stacked) {
         // Multi-series stacking enabled
         // Convert ChartSeries to List<List<Offset>> for stacker
         final seriesPoints = series.map((s) {
           return s.points.map((p) => Offset(p.x, p.y)).toList();
         }).toList();
-        
+
         // Stack the series
         stackedAreas = _stacker.stack(
           seriesPoints,
@@ -115,10 +115,10 @@ class AreaChartLayer extends ChartLayer {
 
         // Set color (cycle through available colors)
         final color = colors[i % colors.length];
-        
+
         // Create area path
         final areaPath = _createAreaPath(areaPoints, context);
-        
+
         // Apply gradient if configured
         if (config.fillStyle == AreaFillStyle.gradient) {
           final bounds = areaPath.getBounds();
@@ -133,9 +133,9 @@ class AreaChartLayer extends ChartLayer {
           paint.color = color.withOpacity(config.fillOpacity);
           paint.shader = null;
         }
-        
+
         paint.style = PaintingStyle.fill;
-        
+
         // Draw the filled area
         context.canvas.drawPath(areaPath, paint);
 
@@ -160,34 +160,34 @@ class AreaChartLayer extends ChartLayer {
 
     // Get interpolated path through points
     final topPath = _interpolator.interpolate(points);
-    
+
     // Create full area path
     final areaPath = Path.from(topPath);
-    
+
     // Close the path to baseline
     // For now, close to bottom (y = max of viewport)
     // TODO: Use proper baseline from config when coordinate system integrated
     final lastPoint = points.last;
     final firstPoint = points.first;
-    
+
     areaPath.lineTo(lastPoint.dx, 0); // Go down from last point
     areaPath.lineTo(firstPoint.dx, 0); // Go to bottom of first point
     areaPath.close(); // Close back to start
-    
+
     return areaPath;
   }
 
   /// Draws a line overlay on top of the area.
   void _drawLineOverlay(RenderContext context, List<Offset> points, Color color, Paint paint) {
     final lineConfig = config.lineConfig!;
-    
+
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = lineConfig.lineWidth;
     paint.color = color;
     paint.shader = null;
     paint.strokeCap = StrokeCap.round;
     paint.strokeJoin = StrokeJoin.round;
-    
+
     final linePath = _interpolator.interpolate(points);
     context.canvas.drawPath(linePath, paint);
   }
@@ -203,17 +203,16 @@ class AreaChartLayer extends ChartLayer {
   void dispose() {
     // Clear interpolator cache
     _interpolator.clearCache();
-    
+
     // Clear renderer caches
     _renderer.clearCache();
     _renderer.clearPathPool();
-    
+
     super.dispose();
   }
 
   @override
-  String toString() =>
-      'AreaChartLayer(series: ${series.length}, stacked: ${config.stacked}, zIndex: $zIndex)';
+  String toString() => 'AreaChartLayer(series: ${series.length}, stacked: ${config.stacked}, zIndex: $zIndex)';
 
   // Default color palette (will be replaced by theme colors)
   static final List<Color> _defaultColors = [

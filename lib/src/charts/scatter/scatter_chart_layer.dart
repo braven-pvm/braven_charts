@@ -42,15 +42,6 @@ import 'package:braven_charts/src/rendering/render_context.dart';
 /// );
 /// ```
 class ScatterChartLayer extends ChartLayer {
-  /// Configuration for scatter rendering (sizing, styling, clustering, etc.)
-  final ScatterChartConfig config;
-
-  /// Shared renderer for markers.
-  final ChartRenderer _renderer;
-
-  /// Optional clusterer for dense data.
-  final ScatterClusterer? _clusterer;
-
   /// Constructs a scatter chart layer.
   ///
   /// [series] is the data to render.
@@ -73,6 +64,15 @@ class ScatterChartLayer extends ChartLayer {
                 clusterRadius: 20.0, // TODO: Make configurable
               )
             : null;
+
+  /// Configuration for scatter rendering (sizing, styling, clustering, etc.)
+  final ScatterChartConfig config;
+
+  /// Shared renderer for markers.
+  final ChartRenderer _renderer;
+
+  /// Optional clusterer for dense data.
+  final ScatterClusterer? _clusterer;
 
   @override
   void render(RenderContext context) {
@@ -166,8 +166,7 @@ class ScatterChartLayer extends ChartLayer {
     Color seriesColor,
   ) {
     // Configure paint based on marker style
-    if (config.markerStyle == MarkerStyle.filled ||
-        config.markerStyle == MarkerStyle.both) {
+    if (config.markerStyle == MarkerStyle.filled || config.markerStyle == MarkerStyle.both) {
       paint.style = PaintingStyle.fill;
       paint.color = seriesColor;
       _renderer.drawMarker(
@@ -180,8 +179,7 @@ class ScatterChartLayer extends ChartLayer {
     }
 
     // Draw outline if needed
-    if (config.markerStyle == MarkerStyle.outlined ||
-        config.markerStyle == MarkerStyle.both) {
+    if (config.markerStyle == MarkerStyle.outlined || config.markerStyle == MarkerStyle.both) {
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = config.borderWidth;
       // For outlined mode, use the series color
@@ -240,8 +238,7 @@ class ScatterChartLayer extends ChartLayer {
     // In a real implementation, would use: dataPoint.size or dataPoint.z
     // For now, scale linearly between min and max
     final normalizedValue = (index % 10) / 10.0; // Placeholder
-    return config.minSize! +
-        (normalizedValue * (config.maxSize! - config.minSize!));
+    return config.minSize! + (normalizedValue * (config.maxSize! - config.minSize!));
   }
 
   @override
