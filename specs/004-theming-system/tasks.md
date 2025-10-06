@@ -280,7 +280,7 @@ This is a **single Flutter library** project:
   - Add documentation for each palette
   - **DEPENDS ON**: T016
 
-- [ ] **T026** [P] Create predefined themes showcase in `lib/src/theming/themes/predefined_themes.dart`
+- [x] **T026** [P] Create predefined themes showcase in `lib/src/theming/themes/predefined_themes.dart`
   - Re-export all 7 themes from ChartTheme
   - Add usage examples in documentation
   - Create comparison table in docs
