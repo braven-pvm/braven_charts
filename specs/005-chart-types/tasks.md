@@ -142,12 +142,12 @@
   - validate() method
   - **Must pass T005 tests** ✅ 12/12 PASSED
 
-- [ ] **T022** Implement BarChartConfig class in lib/src/charts/bar/bar_chart_config.dart
+- [x] **T022** Implement BarChartConfig class in lib/src/charts/bar/bar_chart_config.dart ✅ 2025-01-06
   - All fields from data-model.md
   - Validation in constructor (barWidthRatio (0,1], spacing >= 0, useGradient implies colors)
   - Immutable with copyWith()
   - validate() method
-  - **Must pass T006 tests**
+  - **Must pass T006 tests** ✅ 12/12 PASSED
 
 - [ ] **T023** Implement ScatterChartConfig class in lib/src/charts/scatter/scatter_chart_config.dart
   - All fields from data-model.md
