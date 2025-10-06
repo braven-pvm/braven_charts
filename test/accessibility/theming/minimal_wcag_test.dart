@@ -26,8 +26,7 @@ void main() {
           backgroundColor,
         );
 
-        expect(contrastRatio, greaterThanOrEqualTo(4.5),
-            reason: 'Axis labels must meet WCAG AA');
+        expect(contrastRatio, greaterThanOrEqualTo(4.5), reason: 'Axis labels must meet WCAG AA');
       });
     });
 
@@ -36,8 +35,7 @@ void main() {
         final colors = theme.seriesTheme.colors;
 
         // Minimal theme may have fewer colors
-        expect(colors.length, greaterThanOrEqualTo(3),
-            reason: 'Minimal palette should have at least 3 colors');
+        expect(colors.length, greaterThanOrEqualTo(3), reason: 'Minimal palette should have at least 3 colors');
       });
 
       test('series colors are still visible despite minimal styling', () {
@@ -50,8 +48,7 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(1.5),
-              reason: 'Even minimal colors should be visible');
+          expect(contrastRatio, greaterThanOrEqualTo(1.5), reason: 'Even minimal colors should be visible');
         }
       });
     });
@@ -59,14 +56,12 @@ void main() {
     group('Minimal Styling', () {
       test('uses no border or minimal border', () {
         final borderWidth = theme.borderWidth;
-        expect(borderWidth, lessThanOrEqualTo(1.0),
-            reason: 'Minimal theme should have subtle or no border');
+        expect(borderWidth, lessThanOrEqualTo(1.0), reason: 'Minimal theme should have subtle or no border');
       });
 
       test('uses less padding than default themes', () {
         final padding = theme.padding;
-        expect(padding.left + padding.right, lessThanOrEqualTo(30.0),
-            reason: 'Minimal theme should have compact padding');
+        expect(padding.left + padding.right, lessThanOrEqualTo(30.0), reason: 'Minimal theme should have compact padding');
       });
     });
   });

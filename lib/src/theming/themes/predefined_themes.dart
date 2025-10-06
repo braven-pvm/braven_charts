@@ -209,7 +209,7 @@ import '../chart_theme.dart';
 ///   // Override specific properties
 ///   backgroundColor: Colors.grey[50]!,
 ///   padding: EdgeInsets.all(32.0),
-///   
+///
 ///   // Customize component themes
 ///   seriesTheme: SeriesTheme.defaultLight.copyWith(
 ///     lineWidths: [3.0],

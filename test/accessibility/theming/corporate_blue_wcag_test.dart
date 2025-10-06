@@ -26,8 +26,7 @@ void main() {
           backgroundColor,
         );
 
-        expect(contrastRatio, greaterThanOrEqualTo(4.5),
-            reason: 'Axis labels must meet WCAG AA for normal text (4.5:1)');
+        expect(contrastRatio, greaterThanOrEqualTo(4.5), reason: 'Axis labels must meet WCAG AA for normal text (4.5:1)');
       });
     });
 
@@ -36,8 +35,7 @@ void main() {
         final colors = theme.seriesTheme.colors;
 
         // At least 5 colors in the palette
-        expect(colors.length, greaterThanOrEqualTo(5),
-            reason: 'Corporate blue palette should have at least 5 colors');
+        expect(colors.length, greaterThanOrEqualTo(5), reason: 'Corporate blue palette should have at least 5 colors');
       });
 
       test('series colors are visible against background', () {
@@ -50,8 +48,7 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(2.0),
-              reason: 'Series color ${i + 1} should be visible');
+          expect(contrastRatio, greaterThanOrEqualTo(2.0), reason: 'Series color ${i + 1} should be visible');
         }
       });
     });
@@ -59,14 +56,12 @@ void main() {
     group('Professional Appearance', () {
       test('border is more prominent than minimal theme', () {
         final borderWidth = theme.borderWidth;
-        expect(borderWidth, greaterThanOrEqualTo(1.0),
-            reason: 'Corporate theme should have visible border');
+        expect(borderWidth, greaterThanOrEqualTo(1.0), reason: 'Corporate theme should have visible border');
       });
 
       test('uses more padding than default themes', () {
         final padding = theme.padding;
-        expect(padding.left + padding.right, greaterThanOrEqualTo(30.0),
-            reason: 'Corporate theme should have generous padding');
+        expect(padding.left + padding.right, greaterThanOrEqualTo(30.0), reason: 'Corporate theme should have generous padding');
       });
     });
   });

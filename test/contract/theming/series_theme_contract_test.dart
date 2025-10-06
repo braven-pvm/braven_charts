@@ -5,12 +5,11 @@
 // This test MUST FAIL initially because SeriesTheme is not yet implemented.
 // After Phase 1 (T011), this test should PASS.
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 // Import will fail initially - this is expected for TDD
 // ignore: unused_import
 import 'package:braven_charts/src/theming/components/series_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SeriesTheme Contract Tests', () {
@@ -65,8 +64,7 @@ void main() {
         final colorsLength = theme.colors.length;
 
         expect(theme.colorAt(0), equals(theme.colors[0]));
-        expect(theme.colorAt(colorsLength - 1),
-            equals(theme.colors[colorsLength - 1]));
+        expect(theme.colorAt(colorsLength - 1), equals(theme.colors[colorsLength - 1]));
         expect(theme.colorAt(colorsLength), equals(theme.colors[0])); // Cycles
         expect(theme.colorAt(colorsLength + 1), equals(theme.colors[1]));
       });
@@ -84,10 +82,8 @@ void main() {
         final widthsLength = theme.lineWidths.length;
 
         expect(theme.lineWidthAt(0), equals(theme.lineWidths[0]));
-        expect(theme.lineWidthAt(widthsLength - 1),
-            equals(theme.lineWidths[widthsLength - 1]));
-        expect(theme.lineWidthAt(widthsLength),
-            equals(theme.lineWidths[0])); // Cycles
+        expect(theme.lineWidthAt(widthsLength - 1), equals(theme.lineWidths[widthsLength - 1]));
+        expect(theme.lineWidthAt(widthsLength), equals(theme.lineWidths[0])); // Cycles
       });
     });
 
@@ -97,10 +93,8 @@ void main() {
         final sizesLength = theme.markerSizes.length;
 
         expect(theme.markerSizeAt(0), equals(theme.markerSizes[0]));
-        expect(theme.markerSizeAt(sizesLength - 1),
-            equals(theme.markerSizes[sizesLength - 1]));
-        expect(theme.markerSizeAt(sizesLength),
-            equals(theme.markerSizes[0])); // Cycles
+        expect(theme.markerSizeAt(sizesLength - 1), equals(theme.markerSizes[sizesLength - 1]));
+        expect(theme.markerSizeAt(sizesLength), equals(theme.markerSizes[0])); // Cycles
       });
     });
 
@@ -110,15 +104,12 @@ void main() {
         final shapesLength = theme.markerShapes.length;
 
         expect(theme.markerShapeAt(0), equals(theme.markerShapes[0]));
-        expect(theme.markerShapeAt(shapesLength - 1),
-            equals(theme.markerShapes[shapesLength - 1]));
-        expect(theme.markerShapeAt(shapesLength),
-            equals(theme.markerShapes[0])); // Cycles
+        expect(theme.markerShapeAt(shapesLength - 1), equals(theme.markerShapes[shapesLength - 1]));
+        expect(theme.markerShapeAt(shapesLength), equals(theme.markerShapes[0])); // Cycles
       });
 
       test('MarkerShape enum has all expected values', () {
-        expect(MarkerShape.values,
-            containsAll([MarkerShape.circle, MarkerShape.square]));
+        expect(MarkerShape.values, containsAll([MarkerShape.circle, MarkerShape.square]));
       });
     });
 

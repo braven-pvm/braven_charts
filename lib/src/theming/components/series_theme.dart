@@ -195,24 +195,11 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)
-              ?.map((c) => _parseColor(c))
-              .whereType<Color>()
-              .toList() ??
-          defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)
-              ?.map((w) => (w as num).toDouble())
-              .toList() ??
-          defaultLight.lineWidths,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)
-              ?.map((s) => (s as num).toDouble())
-              .toList() ??
-          defaultLight.markerSizes,
-      markerShapes: (json['markerShapes'] as List<dynamic>?)
-              ?.map((s) => _parseMarkerShape(s))
-              .whereType<MarkerShape>()
-              .toList() ??
-          defaultLight.markerShapes,
+      colors: (json['colors'] as List<dynamic>?)?.map((c) => _parseColor(c)).whereType<Color>().toList() ?? defaultLight.colors,
+      lineWidths: (json['lineWidths'] as List<dynamic>?)?.map((w) => (w as num).toDouble()).toList() ?? defaultLight.lineWidths,
+      markerSizes: (json['markerSizes'] as List<dynamic>?)?.map((s) => (s as num).toDouble()).toList() ?? defaultLight.markerSizes,
+      markerShapes:
+          (json['markerShapes'] as List<dynamic>?)?.map((s) => _parseMarkerShape(s)).whereType<MarkerShape>().toList() ?? defaultLight.markerShapes,
     );
   }
 

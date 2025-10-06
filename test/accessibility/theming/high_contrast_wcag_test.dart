@@ -65,8 +65,7 @@ void main() {
     group('Maximum Visibility', () {
       test('uses bold border for maximum definition', () {
         final borderWidth = theme.borderWidth;
-        expect(borderWidth, greaterThanOrEqualTo(2.0),
-            reason: 'High contrast theme should have prominent border');
+        expect(borderWidth, greaterThanOrEqualTo(2.0), reason: 'High contrast theme should have prominent border');
       });
 
       test('series colors have high contrast with background', () {
@@ -80,8 +79,7 @@ void main() {
           );
 
           // High contrast themes use varied colors including white for maximum distinction
-          expect(contrastRatio, greaterThanOrEqualTo(1.0),
-              reason: 'High contrast series color ${i + 1} exists');
+          expect(contrastRatio, greaterThanOrEqualTo(1.0), reason: 'High contrast series color ${i + 1} exists');
         }
       });
     });
@@ -89,7 +87,7 @@ void main() {
     group('Text Meets AAA Standard', () {
       test('all text elements meet WCAG AAA contrast requirements', () {
         final backgroundColor = theme.backgroundColor;
-        
+
         // Test all text elements
         final textColors = [
           theme.axisStyle.labelStyle.color!,
@@ -102,8 +100,7 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(7.0),
-              reason: 'All text must meet WCAG AAA (7.0:1)');
+          expect(contrastRatio, greaterThanOrEqualTo(7.0), reason: 'All text must meet WCAG AAA (7.0:1)');
         }
       });
     });

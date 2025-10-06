@@ -2,9 +2,9 @@
 // Feature: 004-theming-system
 // Phase 2: Predefined Themes & Validation (T025)
 
+import 'package:braven_charts/src/theming/constants/theme_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/theming/constants/theme_constants.dart';
 
 void main() {
   group('ThemeConstants - Color Palettes', () {
@@ -24,7 +24,7 @@ void main() {
       expect(ThemeConstants.colorblindSafePalette.length, equals(6));
       expect(ThemeConstants.colorblindSafePalette, isNotEmpty);
       expect(ThemeConstants.colorblindSafePalette, everyElement(isA<Color>()));
-      
+
       // Verify it matches the Okabe-Ito standard colors
       expect(ThemeConstants.colorblindSafePalette[0].value, equals(0xFF0173B2)); // Blue
       expect(ThemeConstants.colorblindSafePalette[1].value, equals(0xFFDE8F05)); // Orange
@@ -44,7 +44,7 @@ void main() {
       expect(ThemeConstants.highContrastPalette.length, equals(4));
       expect(ThemeConstants.highContrastPalette, isNotEmpty);
       expect(ThemeConstants.highContrastPalette, everyElement(isA<Color>()));
-      
+
       // Verify extreme contrast colors
       expect(ThemeConstants.highContrastPalette[0].value, equals(0xFF000000)); // Black
       expect(ThemeConstants.highContrastPalette[1].value, equals(0xFFFFFFFF)); // White
@@ -112,14 +112,14 @@ void main() {
     test('minimums are reasonable for accessibility', () {
       // WCAG 2.1 recommends 10-12px minimum font size
       expect(ThemeConstants.minFontSize, greaterThanOrEqualTo(10.0));
-      
+
       // Line widths should be visible but not intrusive
       expect(ThemeConstants.minLineWidth, greaterThanOrEqualTo(0.5));
       expect(ThemeConstants.minLineWidth, lessThan(5.0));
-      
+
       // Marker sizes should be visible
       expect(ThemeConstants.minMarkerSize, greaterThanOrEqualTo(3.0));
-      
+
       // Padding should provide breathing room
       expect(ThemeConstants.minPadding, greaterThanOrEqualTo(8.0));
     });
@@ -133,25 +133,25 @@ void main() {
         equals(ThemeConstants.corporateBluePalette.length),
         reason: 'corporateBluePalette should have no duplicate colors',
       );
-      
+
       expect(
         ThemeConstants.vibrantPalette.toSet().length,
         equals(ThemeConstants.vibrantPalette.length),
         reason: 'vibrantPalette should have no duplicate colors',
       );
-      
+
       expect(
         ThemeConstants.colorblindSafePalette.toSet().length,
         equals(ThemeConstants.colorblindSafePalette.length),
         reason: 'colorblindSafePalette should have no duplicate colors',
       );
-      
+
       expect(
         ThemeConstants.minimalPalette.toSet().length,
         equals(ThemeConstants.minimalPalette.length),
         reason: 'minimalPalette should have no duplicate colors',
       );
-      
+
       expect(
         ThemeConstants.highContrastPalette.toSet().length,
         equals(ThemeConstants.highContrastPalette.length),
@@ -172,9 +172,9 @@ void main() {
     test('scale factors are reasonable (0.8-1.2 range)', () {
       expect(ThemeConstants.mobileScaleFactor, greaterThanOrEqualTo(0.8));
       expect(ThemeConstants.mobileScaleFactor, lessThanOrEqualTo(1.0));
-      
+
       expect(ThemeConstants.tabletScaleFactor, equals(1.0));
-      
+
       expect(ThemeConstants.desktopScaleFactor, greaterThanOrEqualTo(1.0));
       expect(ThemeConstants.desktopScaleFactor, lessThanOrEqualTo(1.2));
     });

@@ -51,18 +51,16 @@
 /// final protanopia = ColorUtils.simulateProtanopia(color);
 /// final deuteranopia = ColorUtils.simulateDeuteranopia(color);
 /// ```
-library theming;
+library;
 
 // Root theme
 export 'chart_theme.dart';
-
+export 'components/animation_theme.dart';
+export 'components/axis_style.dart';
 // Component themes
 export 'components/grid_style.dart';
-export 'components/axis_style.dart';
-export 'components/series_theme.dart';
 export 'components/interaction_theme.dart';
+export 'components/series_theme.dart';
 export 'components/typography_theme.dart';
-export 'components/animation_theme.dart';
-
 // Utilities
 export 'utilities/color_utils.dart';

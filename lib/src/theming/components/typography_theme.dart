@@ -22,6 +22,44 @@
 /// );
 /// ```
 class TypographyTheme {
+  // ========== Constructor ==========
+
+  /// Creates a typography theme with the specified settings.
+  ///
+  /// Validates that:
+  /// - [baseFontSize] > 0
+  /// - [scaleFactorMobile] > 0
+  /// - [scaleFactorTablet] > 0
+  /// - [scaleFactorDesktop] > 0
+  /// - [titleMultiplier] > 0
+  /// - [labelMultiplier] > 0
+  TypographyTheme({
+    required this.fontFamily,
+    required this.baseFontSize,
+    required this.scaleFactorMobile,
+    required this.scaleFactorTablet,
+    required this.scaleFactorDesktop,
+    required this.titleMultiplier,
+    required this.labelMultiplier,
+  })  : assert(baseFontSize > 0, 'baseFontSize must be > 0'),
+        assert(scaleFactorMobile > 0, 'scaleFactorMobile must be > 0'),
+        assert(scaleFactorTablet > 0, 'scaleFactorTablet must be > 0'),
+        assert(scaleFactorDesktop > 0, 'scaleFactorDesktop must be > 0'),
+        assert(titleMultiplier > 0, 'titleMultiplier must be > 0'),
+        assert(labelMultiplier > 0, 'labelMultiplier must be > 0');
+
+  /// Creates a theme from a JSON map.
+  factory TypographyTheme.fromJson(Map<String, dynamic> json) {
+    return TypographyTheme(
+      fontFamily: json['fontFamily'] as String,
+      baseFontSize: (json['baseFontSize'] as num).toDouble(),
+      scaleFactorMobile: (json['scaleFactorMobile'] as num).toDouble(),
+      scaleFactorTablet: (json['scaleFactorTablet'] as num).toDouble(),
+      scaleFactorDesktop: (json['scaleFactorDesktop'] as num).toDouble(),
+      titleMultiplier: (json['titleMultiplier'] as num).toDouble(),
+      labelMultiplier: (json['labelMultiplier'] as num).toDouble(),
+    );
+  }
   // ========== Properties ==========
 
   /// Font family used for all text in charts.
@@ -50,32 +88,6 @@ class TypographyTheme {
   /// Multiplier for label text sizes.
   /// Must be > 0. Typically 0.9-1.1 for axis labels and legends.
   final double labelMultiplier;
-
-  // ========== Constructor ==========
-
-  /// Creates a typography theme with the specified settings.
-  ///
-  /// Validates that:
-  /// - [baseFontSize] > 0
-  /// - [scaleFactorMobile] > 0
-  /// - [scaleFactorTablet] > 0
-  /// - [scaleFactorDesktop] > 0
-  /// - [titleMultiplier] > 0
-  /// - [labelMultiplier] > 0
-  TypographyTheme({
-    required this.fontFamily,
-    required this.baseFontSize,
-    required this.scaleFactorMobile,
-    required this.scaleFactorTablet,
-    required this.scaleFactorDesktop,
-    required this.titleMultiplier,
-    required this.labelMultiplier,
-  })  : assert(baseFontSize > 0, 'baseFontSize must be > 0'),
-        assert(scaleFactorMobile > 0, 'scaleFactorMobile must be > 0'),
-        assert(scaleFactorTablet > 0, 'scaleFactorTablet must be > 0'),
-        assert(scaleFactorDesktop > 0, 'scaleFactorDesktop must be > 0'),
-        assert(titleMultiplier > 0, 'titleMultiplier must be > 0'),
-        assert(labelMultiplier > 0, 'labelMultiplier must be > 0');
 
   // ========== Predefined Themes ==========
 
@@ -183,19 +195,6 @@ class TypographyTheme {
       'titleMultiplier': titleMultiplier,
       'labelMultiplier': labelMultiplier,
     };
-  }
-
-  /// Creates a theme from a JSON map.
-  factory TypographyTheme.fromJson(Map<String, dynamic> json) {
-    return TypographyTheme(
-      fontFamily: json['fontFamily'] as String,
-      baseFontSize: (json['baseFontSize'] as num).toDouble(),
-      scaleFactorMobile: (json['scaleFactorMobile'] as num).toDouble(),
-      scaleFactorTablet: (json['scaleFactorTablet'] as num).toDouble(),
-      scaleFactorDesktop: (json['scaleFactorDesktop'] as num).toDouble(),
-      titleMultiplier: (json['titleMultiplier'] as num).toDouble(),
-      labelMultiplier: (json['labelMultiplier'] as num).toDouble(),
-    );
   }
 
   // ========== Equality ==========

@@ -5,12 +5,11 @@
 // This test MUST FAIL initially because TypographyTheme is not yet implemented.
 // After Phase 1 (T013), this test should PASS.
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 // Import will fail initially - this is expected for TDD
 // ignore: unused_import
 import 'package:braven_charts/src/theming/components/typography_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TypographyTheme Contract Tests', () {
@@ -92,10 +91,8 @@ void main() {
         final theme = TypographyTheme.defaultLight;
 
         // Mobile <= Tablet <= Desktop (typically)
-        expect(theme.scaleFactorMobile,
-            lessThanOrEqualTo(theme.scaleFactorTablet));
-        expect(theme.scaleFactorTablet,
-            lessThanOrEqualTo(theme.scaleFactorDesktop));
+        expect(theme.scaleFactorMobile, lessThanOrEqualTo(theme.scaleFactorTablet));
+        expect(theme.scaleFactorTablet, lessThanOrEqualTo(theme.scaleFactorDesktop));
       });
 
       test('scale factors can be customized per breakpoint', () {
@@ -157,8 +154,7 @@ void main() {
         expect(modified.fontFamily, equals(original.fontFamily));
         expect(modified.baseFontSize, equals(16.0));
         expect(modified.scaleFactorMobile, equals(original.scaleFactorMobile));
-        expect(
-            modified.scaleFactorTablet, equals(original.scaleFactorTablet));
+        expect(modified.scaleFactorTablet, equals(original.scaleFactorTablet));
       });
     });
 
@@ -184,8 +180,7 @@ void main() {
 
         expect(reconstructed.fontFamily, equals(original.fontFamily));
         expect(reconstructed.baseFontSize, equals(original.baseFontSize));
-        expect(reconstructed.scaleFactorMobile,
-            equals(original.scaleFactorMobile));
+        expect(reconstructed.scaleFactorMobile, equals(original.scaleFactorMobile));
       });
 
       test('round-trip serialization preserves all properties', () {

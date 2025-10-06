@@ -22,6 +22,32 @@ import 'package:flutter/material.dart';
 /// );
 /// ```
 class InteractionTheme {
+  // ========== Constructor ==========
+
+  /// Creates an interaction theme with the specified styling.
+  ///
+  /// Validates that:
+  /// - [crosshairWidth] >= 0
+  InteractionTheme({
+    required this.crosshairColor,
+    required this.crosshairWidth,
+    required this.crosshairDashPattern,
+    required this.tooltipBackground,
+    required this.tooltipTextStyle,
+    required this.selectionColor,
+  }) : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0');
+
+  /// Creates a theme from a JSON map.
+  factory InteractionTheme.fromJson(Map<String, dynamic> json) {
+    return InteractionTheme(
+      crosshairColor: _parseColor(json['crosshairColor'] as String),
+      crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
+      crosshairDashPattern: (json['crosshairDashPattern'] as List).map((e) => (e as num).toDouble()).toList(),
+      tooltipBackground: _parseColor(json['tooltipBackground'] as String),
+      tooltipTextStyle: _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
+      selectionColor: _parseColor(json['selectionColor'] as String),
+    );
+  }
   // ========== Properties ==========
 
   /// Color of the crosshair lines.
@@ -43,21 +69,6 @@ class InteractionTheme {
 
   /// Color used for selection highlights.
   final Color selectionColor;
-
-  // ========== Constructor ==========
-
-  /// Creates an interaction theme with the specified styling.
-  ///
-  /// Validates that:
-  /// - [crosshairWidth] >= 0
-  InteractionTheme({
-    required this.crosshairColor,
-    required this.crosshairWidth,
-    required this.crosshairDashPattern,
-    required this.tooltipBackground,
-    required this.tooltipTextStyle,
-    required this.selectionColor,
-  })  : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0');
 
   // ========== Predefined Themes ==========
 
@@ -185,20 +196,6 @@ class InteractionTheme {
     };
   }
 
-  /// Creates a theme from a JSON map.
-  factory InteractionTheme.fromJson(Map<String, dynamic> json) {
-    return InteractionTheme(
-      crosshairColor: _parseColor(json['crosshairColor'] as String),
-      crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
-      crosshairDashPattern: (json['crosshairDashPattern'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      tooltipBackground: _parseColor(json['tooltipBackground'] as String),
-      tooltipTextStyle: _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
-      selectionColor: _parseColor(json['selectionColor'] as String),
-    );
-  }
-
   // ========== Equality ==========
 
   @override
@@ -237,11 +234,9 @@ class InteractionTheme {
   /// Converts a TextStyle to JSON.
   static Map<String, dynamic> _textStyleToJson(TextStyle style) {
     return {
-      if (style.color != null)
-        'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
+      if (style.color != null) 'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
       if (style.fontSize != null) 'fontSize': style.fontSize,
-      if (style.fontWeight != null)
-        'fontWeight': style.fontWeight!.index,
+      if (style.fontWeight != null) 'fontWeight': style.fontWeight!.index,
       if (style.fontFamily != null) 'fontFamily': style.fontFamily,
     };
   }
@@ -251,9 +246,7 @@ class InteractionTheme {
     return TextStyle(
       color: json['color'] != null ? _parseColor(json['color'] as String) : null,
       fontSize: json['fontSize'] != null ? (json['fontSize'] as num).toDouble() : null,
-      fontWeight: json['fontWeight'] != null
-          ? FontWeight.values[json['fontWeight'] as int]
-          : null,
+      fontWeight: json['fontWeight'] != null ? FontWeight.values[json['fontWeight'] as int] : null,
       fontFamily: json['fontFamily'] as String?,
     );
   }

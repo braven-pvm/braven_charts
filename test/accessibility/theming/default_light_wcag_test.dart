@@ -136,10 +136,8 @@ void main() {
 
         // Selection uses semi-transparent color, so we need to composite it
         // For now, just check that it has some opacity
-        expect(selectionColor.alpha, greaterThan(0),
-            reason: 'Selection color should be visible (not fully transparent)');
-        expect(selectionColor.alpha, lessThan(255),
-            reason: 'Selection color should be semi-transparent for better UX');
+        expect(selectionColor.alpha, greaterThan(0), reason: 'Selection color should be visible (not fully transparent)');
+        expect(selectionColor.alpha, lessThan(255), reason: 'Selection color should be semi-transparent for better UX');
       });
     });
 

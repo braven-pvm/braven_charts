@@ -5,12 +5,11 @@
 // This test MUST FAIL initially because InteractionTheme is not yet implemented.
 // After Phase 1 (T012), this test should PASS.
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 // Import will fail initially - this is expected for TDD
 // ignore: unused_import
 import 'package:braven_charts/src/theming/components/interaction_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('InteractionTheme Contract Tests', () {

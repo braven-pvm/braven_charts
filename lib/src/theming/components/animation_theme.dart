@@ -22,6 +22,36 @@ import 'package:flutter/animation.dart';
 /// );
 /// ```
 class AnimationTheme {
+  // ========== Constructor ==========
+
+  /// Creates an animation theme with the specified settings.
+  ///
+  /// Validates that:
+  /// - [dataUpdateDuration] >= Duration.zero
+  /// - [themeChangeDuration] >= Duration.zero
+  /// - [interactionDuration] >= Duration.zero
+  AnimationTheme({
+    required this.dataUpdateDuration,
+    required this.dataUpdateCurve,
+    required this.themeChangeDuration,
+    required this.themeChangeCurve,
+    required this.interactionDuration,
+    required this.interactionCurve,
+  })  : assert(dataUpdateDuration >= Duration.zero, 'dataUpdateDuration must be >= Duration.zero'),
+        assert(themeChangeDuration >= Duration.zero, 'themeChangeDuration must be >= Duration.zero'),
+        assert(interactionDuration >= Duration.zero, 'interactionDuration must be >= Duration.zero');
+
+  /// Creates a theme from a JSON map.
+  factory AnimationTheme.fromJson(Map<String, dynamic> json) {
+    return AnimationTheme(
+      dataUpdateDuration: Duration(milliseconds: json['dataUpdateDurationMs'] as int),
+      dataUpdateCurve: _parseCurve(json['dataUpdateCurve'] as String),
+      themeChangeDuration: Duration(milliseconds: json['themeChangeDurationMs'] as int),
+      themeChangeCurve: _parseCurve(json['themeChangeCurve'] as String),
+      interactionDuration: Duration(milliseconds: json['interactionDurationMs'] as int),
+      interactionCurve: _parseCurve(json['interactionCurve'] as String),
+    );
+  }
   // ========== Properties ==========
 
   /// Duration for animating data updates.
@@ -44,25 +74,6 @@ class AnimationTheme {
 
   /// Curve for interaction animations.
   final Curve interactionCurve;
-
-  // ========== Constructor ==========
-
-  /// Creates an animation theme with the specified settings.
-  ///
-  /// Validates that:
-  /// - [dataUpdateDuration] >= Duration.zero
-  /// - [themeChangeDuration] >= Duration.zero
-  /// - [interactionDuration] >= Duration.zero
-  AnimationTheme({
-    required this.dataUpdateDuration,
-    required this.dataUpdateCurve,
-    required this.themeChangeDuration,
-    required this.themeChangeCurve,
-    required this.interactionDuration,
-    required this.interactionCurve,
-  })  : assert(dataUpdateDuration >= Duration.zero, 'dataUpdateDuration must be >= Duration.zero'),
-        assert(themeChangeDuration >= Duration.zero, 'themeChangeDuration must be >= Duration.zero'),
-        assert(interactionDuration >= Duration.zero, 'interactionDuration must be >= Duration.zero');
 
   // ========== Predefined Themes ==========
 
@@ -160,18 +171,6 @@ class AnimationTheme {
       'interactionDurationMs': interactionDuration.inMilliseconds,
       'interactionCurve': _curveName(interactionCurve),
     };
-  }
-
-  /// Creates a theme from a JSON map.
-  factory AnimationTheme.fromJson(Map<String, dynamic> json) {
-    return AnimationTheme(
-      dataUpdateDuration: Duration(milliseconds: json['dataUpdateDurationMs'] as int),
-      dataUpdateCurve: _parseCurve(json['dataUpdateCurve'] as String),
-      themeChangeDuration: Duration(milliseconds: json['themeChangeDurationMs'] as int),
-      themeChangeCurve: _parseCurve(json['themeChangeCurve'] as String),
-      interactionDuration: Duration(milliseconds: json['interactionDurationMs'] as int),
-      interactionCurve: _parseCurve(json['interactionCurve'] as String),
-    );
   }
 
   // ========== Equality ==========

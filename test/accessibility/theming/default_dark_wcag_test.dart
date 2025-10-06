@@ -69,8 +69,7 @@ void main() {
         for (int i = 0; i < colors.length; i++) {
           for (int j = i + 1; j < colors.length; j++) {
             final contrastRatio = ColorUtils.calculateContrastRatio(colors[i], colors[j]);
-            expect(contrastRatio, greaterThan(1.0),
-                reason: 'Series colors ${i + 1} and ${j + 1} should be distinguishable');
+            expect(contrastRatio, greaterThan(1.0), reason: 'Series colors ${i + 1} and ${j + 1} should be distinguishable');
           }
         }
       });
@@ -85,8 +84,7 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(2.0),
-              reason: 'Series color ${i + 1} should be visible on dark background');
+          expect(contrastRatio, greaterThanOrEqualTo(2.0), reason: 'Series color ${i + 1} should be visible on dark background');
         }
       });
     });
@@ -96,8 +94,7 @@ void main() {
         final backgroundColor = theme.backgroundColor;
         final luminance = ColorUtils.calculateRelativeLuminance(backgroundColor);
 
-        expect(luminance, lessThan(0.5),
-            reason: 'Default dark theme should have a dark background');
+        expect(luminance, lessThan(0.5), reason: 'Default dark theme should have a dark background');
       });
     });
   });

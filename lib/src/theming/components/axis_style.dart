@@ -64,13 +64,8 @@ class AxisStyle {
   static const AxisStyle defaultLight = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 1.0,
-    labelStyle: TextStyle(
-        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
-    titleStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF000000)),
+    labelStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
+    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
     showTicks: true,
     tickLength: 6.0,
     tickColor: Color(0xFF000000),
@@ -80,13 +75,8 @@ class AxisStyle {
   static const AxisStyle defaultDark = AxisStyle(
     lineColor: Color(0xFFFFFFFF),
     lineWidth: 1.0,
-    labelStyle: TextStyle(
-        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
-    titleStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w500,
-        color: Color(0xFFFFFFFF)),
+    labelStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
+    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFFFFFFFF)),
     showTicks: true,
     tickLength: 6.0,
     tickColor: Color(0xFFFFFFFF),
@@ -96,13 +86,8 @@ class AxisStyle {
   static const AxisStyle corporateBlue = AxisStyle(
     lineColor: Color(0xFF37474F),
     lineWidth: 1.0,
-    labelStyle: TextStyle(
-        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
-    titleStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF1976D2)),
+    labelStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
+    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF1976D2)),
     showTicks: true,
     tickLength: 6.0,
     tickColor: Color(0xFF37474F),
@@ -112,16 +97,8 @@ class AxisStyle {
   static const AxisStyle vibrant = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 2.0,
-    labelStyle: TextStyle(
-        fontSize: 13.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF000000)),
-    titleStyle: TextStyle(
-        fontSize: 16.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF000000)),
+    labelStyle: TextStyle(fontSize: 13.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
+    titleStyle: TextStyle(fontSize: 16.0, fontFamily: 'Roboto', fontWeight: FontWeight.bold, color: Color(0xFF000000)),
     showTicks: true,
     tickLength: 8.0,
     tickColor: Color(0xFF000000),
@@ -131,13 +108,8 @@ class AxisStyle {
   static const AxisStyle minimal = AxisStyle(
     lineColor: Color(0xFF9E9E9E),
     lineWidth: 0.5,
-    labelStyle: TextStyle(
-        fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
-    titleStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w400,
-        color: Color(0xFF424242)),
+    labelStyle: TextStyle(fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
+    titleStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', fontWeight: FontWeight.w400, color: Color(0xFF424242)),
     showTicks: true,
     tickLength: 4.0,
     tickColor: Color(0xFF9E9E9E),
@@ -147,16 +119,8 @@ class AxisStyle {
   static const AxisStyle highContrast = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 2.0,
-    labelStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF000000)),
-    titleStyle: TextStyle(
-        fontSize: 16.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF000000)),
+    labelStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF000000)),
+    titleStyle: TextStyle(fontSize: 16.0, fontFamily: 'Roboto', fontWeight: FontWeight.bold, color: Color(0xFF000000)),
     showTicks: true,
     tickLength: 8.0,
     tickColor: Color(0xFF000000),
@@ -166,16 +130,8 @@ class AxisStyle {
   static const AxisStyle colorblindFriendly = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 1.5,
-    labelStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF000000)),
-    titleStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Roboto',
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF000000)),
+    labelStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
+    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF000000)),
     showTicks: true,
     tickLength: 6.0,
     tickColor: Color(0xFF000000),
@@ -215,17 +171,13 @@ class AxisStyle {
       'labelStyle': {
         'fontSize': labelStyle.fontSize,
         'fontFamily': labelStyle.fontFamily,
-        'color': labelStyle.color != null
-            ? '#${labelStyle.color!.value.toRadixString(16).padLeft(8, '0')}'
-            : null,
+        'color': labelStyle.color != null ? '#${labelStyle.color!.value.toRadixString(16).padLeft(8, '0')}' : null,
         'fontWeight': labelStyle.fontWeight?.toString(),
       },
       'titleStyle': {
         'fontSize': titleStyle.fontSize,
         'fontFamily': titleStyle.fontFamily,
-        'color': titleStyle.color != null
-            ? '#${titleStyle.color!.value.toRadixString(16).padLeft(8, '0')}'
-            : null,
+        'color': titleStyle.color != null ? '#${titleStyle.color!.value.toRadixString(16).padLeft(8, '0')}' : null,
         'fontWeight': titleStyle.fontWeight?.toString(),
       },
       'showTicks': showTicks,
@@ -238,18 +190,13 @@ class AxisStyle {
   static AxisStyle fromJson(Map<String, dynamic> json) {
     return AxisStyle(
       lineColor: _parseColor(json['lineColor']) ?? defaultLight.lineColor,
-      lineWidth:
-          (json['lineWidth'] as num?)?.toDouble() ?? defaultLight.lineWidth,
-      labelStyle:
-          _parseTextStyle(json['labelStyle']) ?? defaultLight.labelStyle,
-      titleStyle:
-          _parseTextStyle(json['titleStyle']) ?? defaultLight.titleStyle,
+      lineWidth: (json['lineWidth'] as num?)?.toDouble() ?? defaultLight.lineWidth,
+      labelStyle: _parseTextStyle(json['labelStyle']) ?? defaultLight.labelStyle,
+      titleStyle: _parseTextStyle(json['titleStyle']) ?? defaultLight.titleStyle,
       showTicks: json['showTicks'] as bool? ?? defaultLight.showTicks,
-      tickLength:
-          (json['tickLength'] as num?)?.toDouble() ?? defaultLight.tickLength,
+      tickLength: (json['tickLength'] as num?)?.toDouble() ?? defaultLight.tickLength,
       tickColor: _parseColor(json['tickColor']) ?? defaultLight.tickColor,
-      tickWidth:
-          (json['tickWidth'] as num?)?.toDouble() ?? defaultLight.tickWidth,
+      tickWidth: (json['tickWidth'] as num?)?.toDouble() ?? defaultLight.tickWidth,
     );
   }
 

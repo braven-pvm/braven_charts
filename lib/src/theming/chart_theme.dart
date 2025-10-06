@@ -2,6 +2,7 @@
 // Licensed under the MIT License
 
 import 'package:flutter/material.dart';
+
 import 'components/animation_theme.dart';
 import 'components/axis_style.dart';
 import 'components/grid_style.dart';
@@ -31,6 +32,40 @@ import 'components/typography_theme.dart';
 /// );
 /// ```
 class ChartTheme {
+  // ========== Constructor ==========
+
+  /// Creates a chart theme with the specified styling.
+  ///
+  /// Validates that:
+  /// - [borderWidth] >= 0
+  ChartTheme({
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.padding,
+    required this.gridStyle,
+    required this.axisStyle,
+    required this.seriesTheme,
+    required this.interactionTheme,
+    required this.typographyTheme,
+    required this.animationTheme,
+  }) : assert(borderWidth >= 0, 'borderWidth must be >= 0');
+
+  /// Creates a theme from a JSON map.
+  factory ChartTheme.fromJson(Map<String, dynamic> json) {
+    return ChartTheme(
+      backgroundColor: _parseColor(json['backgroundColor'] as String),
+      borderColor: _parseColor(json['borderColor'] as String),
+      borderWidth: (json['borderWidth'] as num).toDouble(),
+      padding: _parsePadding(json['padding'] as Map<String, dynamic>),
+      gridStyle: GridStyle.fromJson(json['gridStyle'] as Map<String, dynamic>),
+      axisStyle: AxisStyle.fromJson(json['axisStyle'] as Map<String, dynamic>),
+      seriesTheme: SeriesTheme.fromJson(json['seriesTheme'] as Map<String, dynamic>),
+      interactionTheme: InteractionTheme.fromJson(json['interactionTheme'] as Map<String, dynamic>),
+      typographyTheme: TypographyTheme.fromJson(json['typographyTheme'] as Map<String, dynamic>),
+      animationTheme: AnimationTheme.fromJson(json['animationTheme'] as Map<String, dynamic>),
+    );
+  }
   // ========== Chart-Level Properties ==========
 
   /// Background color of the chart canvas.
@@ -65,25 +100,6 @@ class ChartTheme {
 
   /// Animation settings (durations, curves).
   final AnimationTheme animationTheme;
-
-  // ========== Constructor ==========
-
-  /// Creates a chart theme with the specified styling.
-  ///
-  /// Validates that:
-  /// - [borderWidth] >= 0
-  ChartTheme({
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.borderWidth,
-    required this.padding,
-    required this.gridStyle,
-    required this.axisStyle,
-    required this.seriesTheme,
-    required this.interactionTheme,
-    required this.typographyTheme,
-    required this.animationTheme,
-  }) : assert(borderWidth >= 0, 'borderWidth must be >= 0');
 
   // ========== Predefined Themes ==========
 
@@ -226,22 +242,6 @@ class ChartTheme {
       'typographyTheme': typographyTheme.toJson(),
       'animationTheme': animationTheme.toJson(),
     };
-  }
-
-  /// Creates a theme from a JSON map.
-  factory ChartTheme.fromJson(Map<String, dynamic> json) {
-    return ChartTheme(
-      backgroundColor: _parseColor(json['backgroundColor'] as String),
-      borderColor: _parseColor(json['borderColor'] as String),
-      borderWidth: (json['borderWidth'] as num).toDouble(),
-      padding: _parsePadding(json['padding'] as Map<String, dynamic>),
-      gridStyle: GridStyle.fromJson(json['gridStyle'] as Map<String, dynamic>),
-      axisStyle: AxisStyle.fromJson(json['axisStyle'] as Map<String, dynamic>),
-      seriesTheme: SeriesTheme.fromJson(json['seriesTheme'] as Map<String, dynamic>),
-      interactionTheme: InteractionTheme.fromJson(json['interactionTheme'] as Map<String, dynamic>),
-      typographyTheme: TypographyTheme.fromJson(json['typographyTheme'] as Map<String, dynamic>),
-      animationTheme: AnimationTheme.fromJson(json['animationTheme'] as Map<String, dynamic>),
-    );
   }
 
   // ========== Equality ==========
