@@ -273,7 +273,7 @@ This is a **single Flutter library** project:
   - Test grayscale: verify series separable by shape/pattern
   - **DEPENDS ON**: T016
 
-- [ ] **T025** [P] Create theme constants in `lib/src/theming/constants/theme_constants.dart`
+- [x] **T025** [P] Create theme constants in `lib/src/theming/constants/theme_constants.dart`
   - Define color palettes (corporateBlue, vibrant, colorblindSafe)
   - Define breakpoint constants (mobile, tablet, desktop)
   - Define validation minimums (minFontSize, minLineWidth)
