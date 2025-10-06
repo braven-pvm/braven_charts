@@ -219,13 +219,12 @@
   - Stacked bar algorithm (cumulative with negatives)
   - Algorithms from research.md
   - **Must pass T029 tests** ✅ 15/15 PASSED
-  - **Must pass T029 tests**
 
-- [ ] **T035** [P] Implement ScatterClusterer in lib/src/charts/scatter/scatter_clusterer.dart
+- [x] **T035** [P] Implement ScatterClusterer in lib/src/charts/scatter/scatter_clusterer.dart ✅ 2025-10-06
   - Optional clustering for dense data (>clusterThreshold points in radius)
   - K-means or grid-based clustering
   - Cluster info calculation
-  - **Must pass T030 tests**
+  - **Must pass T030 tests** ✅ 16/16 PASSED
 
 - [ ] **T036** [P] Implement ChartRenderer (shared utilities) in lib/src/charts/base/chart_renderer.dart
   - MarkerRenderer: 6 shapes with object pooling (from research.md)
@@ -605,12 +604,12 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 **Status**: Ready for execution  
 **Total Tasks**: 72  
-**Completed**: 34  
+**Completed**: 35  
 **In Progress**: 0  
 **Blocked**: 0
 
 **Last Updated**: 2025-10-06  
-**Next Action**: Begin T035 (ScatterClusterer implementation)
+**Next Action**: Begin T036 (ChartRenderer implementation)
 
 ---
 
