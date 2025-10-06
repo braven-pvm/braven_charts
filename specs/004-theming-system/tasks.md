@@ -70,7 +70,7 @@ This is a **single Flutter library** project:
   - Test equality operator and hashCode
   - **MUST FAIL**: ChartTheme class not implemented yet
 
-- [ ] **T002** [P] Contract test for GridStyle in `test/contract/theming/grid_style_contract_test.dart`
+- [x] **T002** [P] Contract test for GridStyle in `test/contract/theming/grid_style_contract_test.dart`
   - Test major grid configuration (color, width, dash pattern)
   - Test optional minor grid (showMinor flag)
   - Test 7 predefined styles
