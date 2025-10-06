@@ -195,7 +195,7 @@
   - Test cluster threshold parameter
   - Test no clustering when disabled
 
-- [ ] **T031** [P] Unit test for ChartRenderer (markers, gradients) in test/charts/unit/chart_renderer_test.dart
+- [x] **T031** [P] Unit test for ChartRenderer (markers, gradients) in test/charts/unit/chart_renderer_test.dart ✅ 2025-01-06
   - Test all 6 marker shapes render correctly
   - Test gradient shader caching
   - Test object pooling for marker paths
