@@ -149,7 +149,7 @@ This is a **single Flutter library** project:
   - Validation: widths >= 0, font sizes >= minimums
   - **VERIFY**: T003 contract test now passes
 
-- [ ] **T011** [P] Implement SeriesTheme in `lib/src/theming/components/series_theme.dart`
+- [x] **T011** [P] Implement SeriesTheme in `lib/src/theming/components/series_theme.dart`
   - Immutable class with const constructor
   - MarkerShape enum (circle, square, triangle, diamond, cross, plus, star, none)
   - 7 predefined themes
