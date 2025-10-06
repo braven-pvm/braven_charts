@@ -157,7 +157,7 @@
   - **Must pass T007 tests** ✅ 13/13 PASSED
 
 ### Internal Models (Parallel - Independent)
-- [ ] **T024** [P] Implement InterpolatedPoint class in lib/src/charts/line/line_interpolator.dart
+- [x] **T024** [P] Implement InterpolatedPoint class in lib/src/charts/line/line_interpolator.dart ✅ 2025-01-06
   - Fields: Offset position, Offset? controlPoint1, Offset? controlPoint2, bool isControlPoint
   - Used internally by line interpolator for bezier curves
 
