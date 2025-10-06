@@ -6,8 +6,7 @@
 // Constitutional Requirement: Performance benchmarks must pass before merge
 
 import 'dart:ui' as ui;
-import 'package:flutter/painting.dart';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:braven_charts/src/charts/area/area_chart_config.dart';
 import 'package:braven_charts/src/charts/area/area_chart_layer.dart';
 import 'package:braven_charts/src/charts/base/chart_layer.dart';
@@ -18,6 +17,8 @@ import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AreaChartLayer Performance Benchmarks', () {
@@ -83,8 +84,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Solid fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Solid fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with gradient fill in <16ms', () {
@@ -116,8 +116,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Gradient fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Gradient fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with pattern fill in <16ms', () {
@@ -149,8 +148,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Pattern fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Pattern fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 3 stacked series (30K total points) in <16ms', () {
@@ -199,8 +197,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Stacked areas (30K points) render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Stacked areas (30K points) render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Paint pool hit rate > 90%', () {
@@ -235,8 +232,7 @@ void main() {
       final paintStats = paintPool.statistics;
 
       // Constitutional requirement: >90% hit rate
-      expect(paintStats.hitRate, greaterThan(0.9),
-          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }
@@ -245,10 +241,10 @@ void main() {
 class _MockCanvas implements Canvas {
   @override
   void drawPath(Path path, Paint paint) {}
-  
+
   @override
   void drawCircle(Offset c, double radius, Paint paint) {}
-  
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

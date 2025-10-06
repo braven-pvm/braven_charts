@@ -393,10 +393,13 @@
   - ✅ All tests pass in <16ms (constitutional requirement met)
   - Constitutional requirement from FR-015
 
-- [ ] **T058** [P] Performance benchmark for BarChartLayer in test/charts/performance/bar_chart_benchmark.dart
-  - 1,000 bars, both orientations (vertical, horizontal)
-  - Both grouping modes (grouped, stacked)
-  - Stopwatch measurement: <16ms required
+- [x] **T058** [P] Performance benchmark for BarChartLayer in test/charts/performance/bar_chart_benchmark.dart ✅ 2025-01-06
+  - ✅ 6 performance benchmarks implemented
+  - ✅ 1,000 bars tested with both orientations (vertical, horizontal)
+  - ✅ Both grouping modes validated (grouped, stacked)
+  - ✅ Rounded corners, borders, and gradient fills tested
+  - ✅ Object pool hit rate >90% verified
+  - ✅ All tests pass in <16ms (constitutional requirement met)
   - Constitutional requirement from FR-023
 
 - [ ] **T059** [P] Performance benchmark for ScatterChartLayer in test/charts/performance/scatter_chart_benchmark.dart

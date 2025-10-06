@@ -6,11 +6,12 @@
 // Constitutional Requirement: Performance benchmarks must pass before merge
 
 import 'dart:ui' as ui;
-import 'package:flutter/painting.dart';
-import 'package:flutter_test/flutter_test.dart';
+
+// Import MarkerShape from chart_config.dart
+import 'package:braven_charts/src/charts/base/chart_config.dart' show MarkerShape;
+import 'package:braven_charts/src/charts/base/chart_layer.dart';
 import 'package:braven_charts/src/charts/line/line_chart_config.dart';
 import 'package:braven_charts/src/charts/line/line_chart_layer.dart';
-import 'package:braven_charts/src/charts/base/chart_layer.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 import 'package:braven_charts/src/foundation/performance/object_pool.dart';
@@ -18,8 +19,8 @@ import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
-// Import MarkerShape from chart_config.dart
-import 'package:braven_charts/src/charts/base/chart_config.dart' show MarkerShape;
+import 'package:flutter/painting.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LineChartLayer Performance Benchmarks', () {
@@ -86,10 +87,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      
+
       // Constitutional requirement: <16ms frame time
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Straight line render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Straight line render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with smooth bezier in <16ms', () {
@@ -122,8 +122,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Smooth bezier render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Smooth bezier render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with stepped lines in <16ms', () {
@@ -156,8 +155,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0),
-          reason: 'Stepped line render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0), reason: 'Stepped line render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders with all 6 marker shapes in <16ms', () {
@@ -200,8 +198,7 @@ void main() {
         stopwatch.stop();
 
         final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-        expect(elapsedMs, lessThan(16.0),
-            reason: 'Marker shape $shape render took ${elapsedMs}ms, exceeds 16ms budget');
+        expect(elapsedMs, lessThan(16.0), reason: 'Marker shape $shape render took ${elapsedMs}ms, exceeds 16ms budget');
       }
     });
 
@@ -240,8 +237,7 @@ void main() {
       // Constitutional requirement: >90% hit rate
       // Note: LineInterpolator uses internal path caching, not the RenderContext path pool,
       // so we only check paint pool hit rate here.
-      expect(paintStats.hitRate, greaterThan(0.9),
-          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }
@@ -250,10 +246,10 @@ void main() {
 class _MockCanvas implements Canvas {
   @override
   void drawPath(Path path, Paint paint) {}
-  
+
   @override
   void drawCircle(Offset c, double radius, Paint paint) {}
-  
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
