@@ -93,7 +93,8 @@ class ObjectPool<T> {
   ///
   /// Performance: <100ns per operation (FR-005.3)
   void release(T object) {
-    assert(_inUse.contains(object), 'Cannot release object not acquired from this pool');
+    assert(_inUse.contains(object),
+        'Cannot release object not acquired from this pool');
     _inUse.remove(object);
 
     _releaseCount++;

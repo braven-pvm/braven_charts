@@ -59,14 +59,19 @@ void main() {
         const Point<double>(100.0, 50.0), // Data max
       ];
 
-      final screenPoints = dataPoints.map((p) => renderContext.dataToScreen(p)).toList();
+      final screenPoints =
+          dataPoints.map((p) => renderContext.dataToScreen(p)).toList();
 
       // All points should be within chart area bounds
       for (final point in screenPoints) {
-        expect(point.x, greaterThanOrEqualTo(50.0), reason: 'Screen X >= chartArea left');
-        expect(point.x, lessThanOrEqualTo(750.0), reason: 'Screen X <= chartArea right');
-        expect(point.y, greaterThanOrEqualTo(30.0), reason: 'Screen Y >= chartArea top');
-        expect(point.y, lessThanOrEqualTo(570.0), reason: 'Screen Y <= chartArea bottom');
+        expect(point.x, greaterThanOrEqualTo(50.0),
+            reason: 'Screen X >= chartArea left');
+        expect(point.x, lessThanOrEqualTo(750.0),
+            reason: 'Screen X <= chartArea right');
+        expect(point.y, greaterThanOrEqualTo(30.0),
+            reason: 'Screen Y >= chartArea top');
+        expect(point.y, lessThanOrEqualTo(570.0),
+            reason: 'Screen Y <= chartArea bottom');
       }
     });
 
@@ -78,8 +83,10 @@ void main() {
       final dataCoord = renderContext.screenToData(mouseClick);
 
       // Click at chart center should map to data center
-      expect(dataCoord.x, closeTo(50.0, 1.0), reason: 'Click X maps to data center X');
-      expect(dataCoord.y, closeTo(0.0, 1.0), reason: 'Click Y maps to data center Y');
+      expect(dataCoord.x, closeTo(50.0, 1.0),
+          reason: 'Click X maps to data center X');
+      expect(dataCoord.y, closeTo(0.0, 1.0),
+          reason: 'Click Y maps to data center Y');
     });
 
     test('should position annotations correctly', () {
@@ -115,8 +122,10 @@ void main() {
       );
 
       // Marker should be shifted by offset
-      expect(screenPoint.x, isNot(equals(directScreenPoint.x)), reason: 'Marker X offset applied');
-      expect(screenPoint.y, isNot(equals(directScreenPoint.y)), reason: 'Marker Y offset applied');
+      expect(screenPoint.x, isNot(equals(directScreenPoint.x)),
+          reason: 'Marker X offset applied');
+      expect(screenPoint.y, isNot(equals(directScreenPoint.y)),
+          reason: 'Marker Y offset applied');
     });
 
     test('should perform batch transformation in <1ms for 10K points', () {
@@ -147,7 +156,8 @@ void main() {
         reason: 'Batch transformation of 10K points must complete in <1ms',
       );
 
-      expect(screenPoints.length, equals(10000), reason: 'All points transformed');
+      expect(screenPoints.length, equals(10000),
+          reason: 'All points transformed');
     });
 
     test('should maintain 60 FPS with transformations in rendering loop', () {
@@ -180,13 +190,15 @@ void main() {
       }
 
       // Calculate average frame time
-      final avgFrameTime = frameTimes.reduce((a, b) => a + b) / frameTimes.length;
+      final avgFrameTime =
+          frameTimes.reduce((a, b) => a + b) / frameTimes.length;
 
       // Transformation should use <1% of frame budget (160μs of 16670μs)
       expect(
         avgFrameTime,
         lessThan(160),
-        reason: 'Average transformation time should be <160μs (<1% of frame budget)',
+        reason:
+            'Average transformation time should be <160μs (<1% of frame budget)',
       );
     });
 

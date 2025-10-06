@@ -223,7 +223,10 @@ class ViewportState {
   /// }
   /// ```
   bool containsPoint(Point<double> dataPoint) {
-    return dataPoint.x >= xRange.min && dataPoint.x <= xRange.max && dataPoint.y >= yRange.min && dataPoint.y <= yRange.max;
+    return dataPoint.x >= xRange.min &&
+        dataPoint.x <= xRange.max &&
+        dataPoint.y >= yRange.min &&
+        dataPoint.y <= yRange.max;
   }
 
   /// Check if viewport is identity (no zoom/pan).

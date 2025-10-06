@@ -108,7 +108,8 @@ class IntegrationTestUtils {
       expect(find.byWidget(chart), findsOneWidget);
 
       // Take screenshot for manual verification
-      await binding.takeScreenshot('chart_${size.width.toInt()}x${size.height.toInt()}');
+      await binding
+          .takeScreenshot('chart_${size.width.toInt()}x${size.height.toInt()}');
     }
 
     // Reset to default
@@ -161,7 +162,8 @@ class IntegrationTestUtils {
       stopwatch.stop();
 
       // Verify reasonable performance (less than 500ms for initial render)
-      expect(stopwatch.elapsedMilliseconds, lessThan(500), reason: 'Chart with $size points took too long to render');
+      expect(stopwatch.elapsedMilliseconds, lessThan(500),
+          reason: 'Chart with $size points took too long to render');
 
       // Test interaction performance
       final chartFinder = find.byWidget(chart);

@@ -56,7 +56,8 @@ class FitResult {
   });
 
   @override
-  String toString() => 'FitResult(equation: $equation, R²: ${rSquared.toStringAsFixed(4)})';
+  String toString() =>
+      'FitResult(equation: $equation, R²: ${rSquared.toStringAsFixed(4)})';
 }
 
 /// Curve fitting and regression analysis functions.
@@ -141,7 +142,8 @@ class CurveFittingFunctions {
 
     // Format equation
     final signStr = intercept >= 0 ? '+' : '';
-    final equation = 'y = ${slope.toStringAsFixed(2)}x $signStr ${intercept.toStringAsFixed(2)}';
+    final equation =
+        'y = ${slope.toStringAsFixed(2)}x $signStr ${intercept.toStringAsFixed(2)}';
 
     return FitResult(
       coefficients: [intercept, slope],
@@ -169,12 +171,14 @@ class CurveFittingFunctions {
   ///
   /// Returns [FitResult] with coefficients [a₀, a₁, ..., aₙ].
   /// Throws [ArgumentError] if degree < 1, degree > 5, or insufficient points.
-  static FitResult polynomialFit(List<ChartDataPoint> points, {required int degree}) {
+  static FitResult polynomialFit(List<ChartDataPoint> points,
+      {required int degree}) {
     if (degree < 1 || degree > 5) {
       throw ArgumentError('Polynomial degree must be between 1 and 5');
     }
     if (points.length < degree + 1) {
-      throw ArgumentError('Need at least ${degree + 1} points for degree $degree polynomial');
+      throw ArgumentError(
+          'Need at least ${degree + 1} points for degree $degree polynomial');
     }
 
     final n = points.length;
@@ -258,9 +262,11 @@ class CurveFittingFunctions {
       if (i == 0) {
         term = coef.toStringAsFixed(2);
       } else if (i == 1) {
-        term = '${coef >= 0 && terms.isNotEmpty ? '+ ' : ''}${coef.toStringAsFixed(2)}x';
+        term =
+            '${coef >= 0 && terms.isNotEmpty ? '+ ' : ''}${coef.toStringAsFixed(2)}x';
       } else {
-        term = '${coef >= 0 && terms.isNotEmpty ? '+ ' : ''}${coef.toStringAsFixed(2)}x^$i';
+        term =
+            '${coef >= 0 && terms.isNotEmpty ? '+ ' : ''}${coef.toStringAsFixed(2)}x^$i';
       }
       terms.add(term);
     }
@@ -300,12 +306,14 @@ class CurveFittingFunctions {
     // Check for non-positive y values
     for (final point in points) {
       if (point.y <= 0) {
-        throw ArgumentError('Exponential fit requires all y values to be positive');
+        throw ArgumentError(
+            'Exponential fit requires all y values to be positive');
       }
     }
 
     // Transform to linear: ln(y) = ln(a) + b×x
-    final transformedPoints = points.map((p) => ChartDataPoint(x: p.x, y: math.log(p.y))).toList();
+    final transformedPoints =
+        points.map((p) => ChartDataPoint(x: p.x, y: math.log(p.y))).toList();
 
     final linFit = linearFit(transformedPoints);
     final lnA = linFit.coefficients[0];
@@ -332,7 +340,8 @@ class CurveFittingFunctions {
 
     final rSquared = sumTotalSq > 0 ? 1.0 - (sumResidualsSq / sumTotalSq) : 0.0;
 
-    final equation = 'y = ${a.toStringAsFixed(2)}×exp(${b.toStringAsFixed(2)}x)';
+    final equation =
+        'y = ${a.toStringAsFixed(2)}×exp(${b.toStringAsFixed(2)}x)';
 
     return FitResult(
       coefficients: [a, b],
@@ -367,12 +376,14 @@ class CurveFittingFunctions {
     // Check for non-positive x values
     for (final point in points) {
       if (point.x <= 0) {
-        throw ArgumentError('Logarithmic fit requires all x values to be positive');
+        throw ArgumentError(
+            'Logarithmic fit requires all x values to be positive');
       }
     }
 
     // Transform: y = a + b×ln(x)
-    final transformedPoints = points.map((p) => ChartDataPoint(x: math.log(p.x), y: p.y)).toList();
+    final transformedPoints =
+        points.map((p) => ChartDataPoint(x: math.log(p.x), y: p.y)).toList();
 
     final linFit = linearFit(transformedPoints);
     final a = linFit.coefficients[0];
@@ -399,7 +410,8 @@ class CurveFittingFunctions {
     final rSquared = sumTotalSq > 0 ? 1.0 - (sumResidualsSq / sumTotalSq) : 0.0;
 
     final signStr = b >= 0 ? '+' : '';
-    final equation = 'y = ${a.toStringAsFixed(2)} $signStr ${b.toStringAsFixed(2)}×ln(x)';
+    final equation =
+        'y = ${a.toStringAsFixed(2)} $signStr ${b.toStringAsFixed(2)}×ln(x)';
 
     return FitResult(
       coefficients: [a, b],

@@ -103,7 +103,8 @@ void main() {
   acquireBench.report();
 
   final acquireTimeMs = acquireBench.measure();
-  final nsPerOperation = (acquireTimeMs * 1000000) / (ObjectPoolAcquireBenchmark.iterations * 2);
+  final nsPerOperation =
+      (acquireTimeMs * 1000000) / (ObjectPoolAcquireBenchmark.iterations * 2);
 
   print('');
   print('Results (acquire + release):');

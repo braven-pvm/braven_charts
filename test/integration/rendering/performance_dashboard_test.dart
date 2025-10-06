@@ -65,7 +65,8 @@ void main() {
       pipeline.addLayer(_SimpleRectLayer(zIndex: 0));
     });
 
-    testWidgets('Metrics update every frame (60Hz)', (WidgetTester tester) async {
+    testWidgets('Metrics update every frame (60Hz)',
+        (WidgetTester tester) async {
       final metricsHistory = <PerformanceMetrics>[];
 
       for (int i = 0; i < 100; i++) {
@@ -96,7 +97,8 @@ void main() {
       }
     });
 
-    testWidgets('Jank counter increments on frame spike >16ms', (WidgetTester tester) async {
+    testWidgets('Jank counter increments on frame spike >16ms',
+        (WidgetTester tester) async {
       // Render initial frames (no jank)
       for (int i = 0; i < 10; i++) {
         await tester.pumpWidget(
@@ -135,7 +137,8 @@ void main() {
       );
     });
 
-    testWidgets('Frame time measurement accuracy ±0.5ms', (WidgetTester tester) async {
+    testWidgets('Frame time measurement accuracy ±0.5ms',
+        (WidgetTester tester) async {
       // Add layer with known delay (5ms)
       pipeline.addLayer(_HeavyComputeLayer(
         zIndex: 1,
@@ -160,7 +163,8 @@ void main() {
       );
     });
 
-    testWidgets('Pool statistics track hit/miss/allocation', (WidgetTester tester) async {
+    testWidgets('Pool statistics track hit/miss/allocation',
+        (WidgetTester tester) async {
       // Render 10 frames to accumulate pool statistics
       for (int i = 0; i < 10; i++) {
         await tester.pumpWidget(
@@ -196,7 +200,8 @@ void main() {
       );
     });
 
-    testWidgets('Monitoring overhead <1ms per frame', (WidgetTester tester) async {
+    testWidgets('Monitoring overhead <1ms per frame',
+        (WidgetTester tester) async {
       // Measure overhead by comparing with/without monitoring
       final baselineStopwatch = Stopwatch()..start();
 
@@ -219,7 +224,8 @@ void main() {
       expect(
         avgFrameTime,
         lessThan(9000),
-        reason: 'Average frame time with monitoring should be <9ms (8ms target + 1ms overhead)',
+        reason:
+            'Average frame time with monitoring should be <9ms (8ms target + 1ms overhead)',
       );
     });
 

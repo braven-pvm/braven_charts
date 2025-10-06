@@ -297,7 +297,8 @@ class InterpolationFunctions {
     for (int i = 0; i < samples; i++) {
       final t = i / (samples - 1);
       final oneMinusT = 1.0 - t;
-      final y = oneMinusT * oneMinusT * p0 + 2.0 * oneMinusT * t * p1 + t * t * p2;
+      final y =
+          oneMinusT * oneMinusT * p0 + 2.0 * oneMinusT * t * p1 + t * t * p2;
       result.add(y);
     }
 

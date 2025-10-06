@@ -27,7 +27,8 @@ void main() {
 
     test('detects backgroundColor change only', () {
       final oldTheme = ChartTheme.defaultLight;
-      final newTheme = oldTheme.copyWith(backgroundColor: const Color(0xFF000000));
+      final newTheme =
+          oldTheme.copyWith(backgroundColor: const Color(0xFF000000));
 
       final changeSet = ThemeChangeSet.compute(oldTheme, newTheme);
 
@@ -104,7 +105,8 @@ void main() {
     test('detects gridStyle change only', () {
       final oldTheme = ChartTheme.defaultLight;
       final newTheme = oldTheme.copyWith(
-        gridStyle: oldTheme.gridStyle.copyWith(majorColor: const Color(0xFFFF0000)),
+        gridStyle:
+            oldTheme.gridStyle.copyWith(majorColor: const Color(0xFFFF0000)),
       );
 
       final changeSet = ThemeChangeSet.compute(oldTheme, newTheme);
@@ -125,7 +127,8 @@ void main() {
     test('detects axisStyle change only', () {
       final oldTheme = ChartTheme.defaultLight;
       final newTheme = oldTheme.copyWith(
-        axisStyle: oldTheme.axisStyle.copyWith(lineColor: const Color(0xFFFF0000)),
+        axisStyle:
+            oldTheme.axisStyle.copyWith(lineColor: const Color(0xFFFF0000)),
       );
 
       final changeSet = ThemeChangeSet.compute(oldTheme, newTheme);
@@ -279,7 +282,8 @@ void main() {
 
     test('returns true when background changes', () {
       final oldTheme = ChartTheme.defaultLight;
-      final newTheme = oldTheme.copyWith(backgroundColor: const Color(0xFF000000));
+      final newTheme =
+          oldTheme.copyWith(backgroundColor: const Color(0xFF000000));
       final changeSet = ThemeChangeSet.compute(oldTheme, newTheme);
 
       expect(changeSet.anyChanged, isTrue);

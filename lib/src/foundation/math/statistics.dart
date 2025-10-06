@@ -60,7 +60,8 @@ class StatisticalFunctions {
     // Compute using logarithms for numerical stability
     double logSum = 0.0;
     for (final value in values) {
-      if (value <= 0) return double.nan; // Geometric mean undefined for non-positive
+      if (value <= 0)
+        return double.nan; // Geometric mean undefined for non-positive
       logSum += math.log(value);
     }
     return math.exp(logSum / values.length);

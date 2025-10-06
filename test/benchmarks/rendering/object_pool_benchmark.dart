@@ -30,7 +30,8 @@ import 'dart:collection' show Queue;
 import 'dart:ui' show Paint, Path, Color, PaintingStyle;
 
 import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool;
-import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextDirection;
+import 'package:flutter/rendering.dart'
+    show TextPainter, TextSpan, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -77,8 +78,10 @@ void main() {
       final p99 = latencies[(latencies.length * 0.99).floor()];
 
       // Validate NFR-001 targets
-      expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
-      expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
+      expect(avg, lessThan(10),
+          reason: 'Average latency should be <10μs (NFR-001)');
+      expect(p99, lessThan(20),
+          reason: 'P99 latency should be <20μs (NFR-001)');
 
       print('Paint Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
@@ -119,8 +122,10 @@ void main() {
       final avg = sum / latencies.length;
       final p99 = latencies[(latencies.length * 0.99).floor()];
 
-      expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
-      expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
+      expect(avg, lessThan(10),
+          reason: 'Average latency should be <10μs (NFR-001)');
+      expect(p99, lessThan(20),
+          reason: 'P99 latency should be <20μs (NFR-001)');
 
       print('Path Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
@@ -166,8 +171,10 @@ void main() {
       final avg = sum / latencies.length;
       final p99 = latencies[(latencies.length * 0.99).floor()];
 
-      expect(avg, lessThan(10), reason: 'Average latency should be <10μs (NFR-001)');
-      expect(p99, lessThan(20), reason: 'P99 latency should be <20μs (NFR-001)');
+      expect(avg, lessThan(10),
+          reason: 'Average latency should be <10μs (NFR-001)');
+      expect(p99, lessThan(20),
+          reason: 'P99 latency should be <20μs (NFR-001)');
 
       print('TextPainter Pool: avg ${avg.toStringAsFixed(1)}μs, p99 $p99μs');
     });
@@ -215,7 +222,8 @@ void main() {
       print('Pool cycles: $totalAcquires acquires, $totalReleases releases');
 
       // Basic validation: acquires/releases balanced
-      expect(totalAcquires, equals(totalReleases), reason: 'All acquired objects should be released');
+      expect(totalAcquires, equals(totalReleases),
+          reason: 'All acquired objects should be released');
     });
   });
 }

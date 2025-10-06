@@ -75,7 +75,8 @@ void main() {
 
       pool.release(paint4);
 
-      print('✅ ObjectPool acquire: ${acquireTime}μs, release: ${releaseTime}μs');
+      print(
+          '✅ ObjectPool acquire: ${acquireTime}μs, release: ${releaseTime}μs');
       print('   Hit rate: ${(stats.hitRate * 100).toStringAsFixed(1)}%');
     });
 
@@ -113,7 +114,8 @@ void main() {
         reason: 'Hit rate should be >90% after warmup',
       );
 
-      print('✅ ObjectPool hit rate after warmup: ${(stats.hitRate * 100).toStringAsFixed(1)}%');
+      print(
+          '✅ ObjectPool hit rate after warmup: ${(stats.hitRate * 100).toStringAsFixed(1)}%');
     });
 
     test('2.3 - ViewportCuller performance with ordered data', () {
@@ -141,7 +143,8 @@ void main() {
       expect(
         stopwatch.elapsedMilliseconds,
         lessThan(2),
-        reason: 'ViewportCuller should be <2ms for 10k points in test environment (FR-005.4 target <1ms)',
+        reason:
+            'ViewportCuller should be <2ms for 10k points in test environment (FR-005.4 target <1ms)',
       );
 
       // Validate culling worked
@@ -156,7 +159,8 @@ void main() {
         expect(p.x, lessThanOrEqualTo(expectedMax));
       }
 
-      print('✅ ViewportCuller: Culled ${points.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
+      print(
+          '✅ ViewportCuller: Culled ${points.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
     });
 
     test('2.4 - ViewportCuller comparison: ordered vs unordered', () {
@@ -197,11 +201,15 @@ void main() {
       expect(visibleOrdered.length, equals(visibleUnordered.length));
 
       // Ordered should be faster (binary search vs linear)
-      expect(stopwatch1.elapsedMicroseconds, lessThan(stopwatch2.elapsedMicroseconds));
+      expect(stopwatch1.elapsedMicroseconds,
+          lessThan(stopwatch2.elapsedMicroseconds));
 
-      final speedup = stopwatch2.elapsedMicroseconds / stopwatch1.elapsedMicroseconds;
-      print('✅ ViewportCuller speedup (ordered vs unordered): ${speedup.toStringAsFixed(1)}x');
-      print('   Ordered: ${stopwatch1.elapsedMicroseconds}μs, Unordered: ${stopwatch2.elapsedMicroseconds}μs');
+      final speedup =
+          stopwatch2.elapsedMicroseconds / stopwatch1.elapsedMicroseconds;
+      print(
+          '✅ ViewportCuller speedup (ordered vs unordered): ${speedup.toStringAsFixed(1)}x');
+      print(
+          '   Ordered: ${stopwatch1.elapsedMicroseconds}μs, Unordered: ${stopwatch2.elapsedMicroseconds}μs');
     });
 
     test('2.5 - ViewportCuller with small viewport (stress test)', () {
@@ -232,18 +240,25 @@ void main() {
       final cullRatio = visible.length / points.length;
       expect(cullRatio, lessThan(0.02)); // <2% visible (with margin)
 
-      print('✅ ViewportCuller (1% viewport): ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
+      print(
+          '✅ ViewportCuller (1% viewport): ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
     });
 
     test('2.6 - BatchProcessor grouping by key', () {
       // Create points with different colors (simulating render batching)
       final items = [
-        _ColoredPoint(ChartDataPoint(x: 1, y: 1), const Color(0xFFFF0000)), // Red
-        _ColoredPoint(ChartDataPoint(x: 2, y: 2), const Color(0xFF0000FF)), // Blue
-        _ColoredPoint(ChartDataPoint(x: 3, y: 3), const Color(0xFFFF0000)), // Red
-        _ColoredPoint(ChartDataPoint(x: 4, y: 4), const Color(0xFF0000FF)), // Blue
-        _ColoredPoint(ChartDataPoint(x: 5, y: 5), const Color(0xFF00FF00)), // Green
-        _ColoredPoint(ChartDataPoint(x: 6, y: 6), const Color(0xFFFF0000)), // Red
+        _ColoredPoint(
+            ChartDataPoint(x: 1, y: 1), const Color(0xFFFF0000)), // Red
+        _ColoredPoint(
+            ChartDataPoint(x: 2, y: 2), const Color(0xFF0000FF)), // Blue
+        _ColoredPoint(
+            ChartDataPoint(x: 3, y: 3), const Color(0xFFFF0000)), // Red
+        _ColoredPoint(
+            ChartDataPoint(x: 4, y: 4), const Color(0xFF0000FF)), // Blue
+        _ColoredPoint(
+            ChartDataPoint(x: 5, y: 5), const Color(0xFF00FF00)), // Green
+        _ColoredPoint(
+            ChartDataPoint(x: 6, y: 6), const Color(0xFFFF0000)), // Red
       ];
 
       // Batch by color
@@ -260,9 +275,11 @@ void main() {
       expect(batches[const Color(0xFF0000FF)]?.length, equals(2)); // 2 blue
       expect(batches[const Color(0xFF00FF00)]?.length, equals(1)); // 1 green
 
-      print('✅ BatchProcessor: ${items.length} items → ${batches.length} batches');
+      print(
+          '✅ BatchProcessor: ${items.length} items → ${batches.length} batches');
       for (final entry in batches.entries) {
-        print('   Color ${entry.key.value.toRadixString(16)}: ${entry.value.length} items');
+        print(
+            '   Color ${entry.key.value.toRadixString(16)}: ${entry.value.length} items');
       }
     });
 
@@ -292,7 +309,8 @@ void main() {
       expect(batchesProcessed, equals(2)); // Red and blue
       expect(totalItemsProcessed, equals(100)); // All items processed
 
-      print('✅ BatchProcessor processBatches: $batchesProcessed batches, $totalItemsProcessed items');
+      print(
+          '✅ BatchProcessor processBatches: $batchesProcessed batches, $totalItemsProcessed items');
     });
 
     test('2.8 - BatchProcessor performance with large dataset', () {
@@ -348,7 +366,8 @@ void main() {
       );
       stopwatch.stop();
 
-      print('   Culled ${points.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
+      print(
+          '   Culled ${points.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
       expect(stopwatch.elapsedMilliseconds, lessThan(1));
 
       // Step 3: Batch visible points by color (simulated)
@@ -373,7 +392,8 @@ void main() {
       final batches = processor.batch(items);
       stopwatch.stop();
 
-      print('   Batched ${items.length} items into ${batches.length} groups in ${stopwatch.elapsedMicroseconds}μs');
+      print(
+          '   Batched ${items.length} items into ${batches.length} groups in ${stopwatch.elapsedMicroseconds}μs');
 
       // Step 4: Simulate rendering with object pool
       print('4. Simulating render with object pool...');
@@ -401,7 +421,8 @@ void main() {
       stopwatch.stop();
 
       final stats = paintPool.statistics;
-      print('   Rendered $pointsRendered points in ${stopwatch.elapsedMicroseconds}μs');
+      print(
+          '   Rendered $pointsRendered points in ${stopwatch.elapsedMicroseconds}μs');
       print('   Pool hit rate: ${(stats.hitRate * 100).toStringAsFixed(1)}%');
 
       print('\n✅ All performance primitives working together successfully');

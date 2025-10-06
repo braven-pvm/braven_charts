@@ -30,7 +30,8 @@ void main() {
         viewport: const Rect.fromLTWH(0, 0, 800, 600),
         culler: const ViewportCuller(),
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
         textPainterPool: ObjectPool<TextPainter>(
           factory: () => TextPainter(textDirection: TextDirection.ltr),
           reset: (tp) {},

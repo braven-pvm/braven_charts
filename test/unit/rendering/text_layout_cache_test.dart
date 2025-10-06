@@ -40,11 +40,16 @@ void main() {
       );
       cache.put('Fourth', style, painter4);
 
-      expect(cache.length, equals(3), reason: 'Cache size should remain at maxSize');
-      expect(cache.get('First', style), isNull, reason: 'Oldest entry should be evicted');
-      expect(cache.get('Second', style), isNotNull, reason: 'Second entry should remain');
-      expect(cache.get('Third', style), isNotNull, reason: 'Third entry should remain');
-      expect(cache.get('Fourth', style), isNotNull, reason: 'New entry should be cached');
+      expect(cache.length, equals(3),
+          reason: 'Cache size should remain at maxSize');
+      expect(cache.get('First', style), isNull,
+          reason: 'Oldest entry should be evicted');
+      expect(cache.get('Second', style), isNotNull,
+          reason: 'Second entry should remain');
+      expect(cache.get('Third', style), isNotNull,
+          reason: 'Third entry should remain');
+      expect(cache.get('Fourth', style), isNotNull,
+          reason: 'New entry should be cached');
     });
 
     test('evicts multiple entries as cache fills beyond capacity', () {
@@ -78,7 +83,8 @@ void main() {
         textDirection: TextDirection.ltr,
       );
       cache.put('Evicted', style, painter1);
-      expect(cache.get('Evicted', style), isNotNull, reason: 'Entry should exist before eviction');
+      expect(cache.get('Evicted', style), isNotNull,
+          reason: 'Entry should exist before eviction');
 
       // Add second entry, evicting first
       final painter2 = TextPainter(
@@ -87,8 +93,10 @@ void main() {
       );
       cache.put('Retained', style, painter2);
 
-      expect(cache.get('Evicted', style), isNull, reason: 'Evicted entry should return null');
-      expect(cache.get('Retained', style), isNotNull, reason: 'Current entry should exist');
+      expect(cache.get('Evicted', style), isNull,
+          reason: 'Evicted entry should return null');
+      expect(cache.get('Retained', style), isNotNull,
+          reason: 'Current entry should exist');
     });
 
     test('accessing entry moves it to most recently used position', () {
@@ -96,9 +104,14 @@ void main() {
       final style = const TextStyle(fontSize: 14);
 
       // Fill cache
-      final painter1 = TextPainter(text: const TextSpan(text: 'Old'), textDirection: TextDirection.ltr);
-      final painter2 = TextPainter(text: const TextSpan(text: 'Middle'), textDirection: TextDirection.ltr);
-      final painter3 = TextPainter(text: const TextSpan(text: 'Recent'), textDirection: TextDirection.ltr);
+      final painter1 = TextPainter(
+          text: const TextSpan(text: 'Old'), textDirection: TextDirection.ltr);
+      final painter2 = TextPainter(
+          text: const TextSpan(text: 'Middle'),
+          textDirection: TextDirection.ltr);
+      final painter3 = TextPainter(
+          text: const TextSpan(text: 'Recent'),
+          textDirection: TextDirection.ltr);
 
       cache.put('Old', style, painter1);
       cache.put('Middle', style, painter2);
@@ -108,13 +121,18 @@ void main() {
       cache.get('Old', style);
 
       // Add new entry - should evict 'Middle' (now oldest)
-      final painter4 = TextPainter(text: const TextSpan(text: 'New'), textDirection: TextDirection.ltr);
+      final painter4 = TextPainter(
+          text: const TextSpan(text: 'New'), textDirection: TextDirection.ltr);
       cache.put('New', style, painter4);
 
-      expect(cache.get('Old', style), isNotNull, reason: 'Accessed entry should be retained');
-      expect(cache.get('Middle', style), isNull, reason: 'Least recently used should be evicted');
-      expect(cache.get('Recent', style), isNotNull, reason: 'Recent entry should be retained');
-      expect(cache.get('New', style), isNotNull, reason: 'New entry should be cached');
+      expect(cache.get('Old', style), isNotNull,
+          reason: 'Accessed entry should be retained');
+      expect(cache.get('Middle', style), isNull,
+          reason: 'Least recently used should be evicted');
+      expect(cache.get('Recent', style), isNotNull,
+          reason: 'Recent entry should be retained');
+      expect(cache.get('New', style), isNotNull,
+          reason: 'New entry should be cached');
     });
   });
 
@@ -137,23 +155,28 @@ void main() {
       );
       cache.put('Label', style, painter2);
 
-      expect(cache.length, equals(1), reason: 'Should update existing key, not add duplicate');
+      expect(cache.length, equals(1),
+          reason: 'Should update existing key, not add duplicate');
 
       final retrieved = cache.get('Label', style);
-      expect(retrieved, equals(painter2), reason: 'Should return most recent painter');
+      expect(retrieved, equals(painter2),
+          reason: 'Should return most recent painter');
     });
 
     test('different text with same style creates separate cache entries', () {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle(fontSize: 14);
 
-      final painter1 = TextPainter(text: const TextSpan(text: 'A'), textDirection: TextDirection.ltr);
-      final painter2 = TextPainter(text: const TextSpan(text: 'B'), textDirection: TextDirection.ltr);
+      final painter1 = TextPainter(
+          text: const TextSpan(text: 'A'), textDirection: TextDirection.ltr);
+      final painter2 = TextPainter(
+          text: const TextSpan(text: 'B'), textDirection: TextDirection.ltr);
 
       cache.put('A', style, painter1);
       cache.put('B', style, painter2);
 
-      expect(cache.length, equals(2), reason: 'Different text should create separate entries');
+      expect(cache.length, equals(2),
+          reason: 'Different text should create separate entries');
       expect(cache.get('A', style), equals(painter1));
       expect(cache.get('B', style), equals(painter2));
     });
@@ -163,13 +186,18 @@ void main() {
       final style1 = const TextStyle(fontSize: 14);
       final style2 = const TextStyle(fontSize: 16); // Different style
 
-      final painter1 = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
-      final painter2 = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
+      final painter1 = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
+      final painter2 = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
 
       cache.put('Label', style1, painter1);
       cache.put('Label', style2, painter2);
 
-      expect(cache.length, equals(2), reason: 'Different styles should create separate entries');
+      expect(cache.length, equals(2),
+          reason: 'Different styles should create separate entries');
       expect(cache.get('Label', style1), equals(painter1));
       expect(cache.get('Label', style2), equals(painter2));
     });
@@ -179,19 +207,43 @@ void main() {
       final style = const TextStyle(fontSize: 14);
 
       // Fill cache
-      cache.put('First', style, TextPainter(text: const TextSpan(text: 'F'), textDirection: TextDirection.ltr));
-      cache.put('Second', style, TextPainter(text: const TextSpan(text: 'S'), textDirection: TextDirection.ltr));
-      cache.put('Third', style, TextPainter(text: const TextSpan(text: 'T'), textDirection: TextDirection.ltr));
+      cache.put(
+          'First',
+          style,
+          TextPainter(
+              text: const TextSpan(text: 'F'),
+              textDirection: TextDirection.ltr));
+      cache.put(
+          'Second',
+          style,
+          TextPainter(
+              text: const TextSpan(text: 'S'),
+              textDirection: TextDirection.ltr));
+      cache.put(
+          'Third',
+          style,
+          TextPainter(
+              text: const TextSpan(text: 'T'),
+              textDirection: TextDirection.ltr));
 
       // Update 'First' (should move to end)
-      final updated = TextPainter(text: const TextSpan(text: 'Updated'), textDirection: TextDirection.ltr);
+      final updated = TextPainter(
+          text: const TextSpan(text: 'Updated'),
+          textDirection: TextDirection.ltr);
       cache.put('First', style, updated);
 
       // Add new entry - should evict 'Second' (now oldest)
-      cache.put('Fourth', style, TextPainter(text: const TextSpan(text: 'Fo'), textDirection: TextDirection.ltr));
+      cache.put(
+          'Fourth',
+          style,
+          TextPainter(
+              text: const TextSpan(text: 'Fo'),
+              textDirection: TextDirection.ltr));
 
-      expect(cache.get('First', style), equals(updated), reason: 'Updated entry should be retained');
-      expect(cache.get('Second', style), isNull, reason: 'Least recently used should be evicted');
+      expect(cache.get('First', style), equals(updated),
+          reason: 'Updated entry should be retained');
+      expect(cache.get('Second', style), isNull,
+          reason: 'Least recently used should be evicted');
       expect(cache.get('Third', style), isNotNull);
       expect(cache.get('Fourth', style), isNotNull);
     });
@@ -212,7 +264,8 @@ void main() {
       cache.get('B', style);
       cache.get('C', style);
 
-      expect(cache.hitRate, equals(0.0), reason: 'hitRate should be 0% with all misses');
+      expect(cache.hitRate, equals(0.0),
+          reason: 'hitRate should be 0% with all misses');
     });
 
     test('hitRate calculates correctly after all hits', () {
@@ -220,7 +273,9 @@ void main() {
       final style = const TextStyle(fontSize: 14);
 
       // Add entry
-      final painter = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
       cache.put('Label', style, painter);
 
       // All hits (3 successful lookups)
@@ -228,14 +283,17 @@ void main() {
       cache.get('Label', style);
       cache.get('Label', style);
 
-      expect(cache.hitRate, equals(1.0), reason: 'hitRate should be 100% with all hits');
+      expect(cache.hitRate, equals(1.0),
+          reason: 'hitRate should be 100% with all hits');
     });
 
     test('hitRate calculates correctly with mixed hits and misses', () {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle(fontSize: 14);
 
-      final painter = TextPainter(text: const TextSpan(text: 'Cached'), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: 'Cached'),
+          textDirection: TextDirection.ltr);
       cache.put('Cached', style, painter);
 
       // 2 hits
@@ -255,7 +313,9 @@ void main() {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle(fontSize: 14);
 
-      final painter = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
       cache.put('Label', style, painter);
 
       // Initial: 1 hit
@@ -276,7 +336,9 @@ void main() {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle(fontSize: 14);
 
-      final painter = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
       cache.put('Label', style, painter);
 
       // 70 hits
@@ -290,7 +352,8 @@ void main() {
       }
 
       // hitRate = 70 / 100 = 0.70 (70%)
-      expect(cache.hitRate, closeTo(0.70, 0.001), reason: 'hitRate should be 70% ±0.1%');
+      expect(cache.hitRate, closeTo(0.70, 0.001),
+          reason: 'hitRate should be 70% ±0.1%');
     });
   });
 
@@ -301,32 +364,39 @@ void main() {
 
       // Add multiple entries
       for (int i = 0; i < 5; i++) {
-        final painter = TextPainter(text: TextSpan(text: 'Entry$i'), textDirection: TextDirection.ltr);
+        final painter = TextPainter(
+            text: TextSpan(text: 'Entry$i'), textDirection: TextDirection.ltr);
         cache.put('Entry$i', style, painter);
       }
       expect(cache.length, equals(5));
 
       cache.clear();
 
-      expect(cache.length, equals(0), reason: 'Cache should be empty after clear()');
-      expect(cache.get('Entry0', style), isNull, reason: 'All entries should be removed');
+      expect(cache.length, equals(0),
+          reason: 'Cache should be empty after clear()');
+      expect(cache.get('Entry0', style), isNull,
+          reason: 'All entries should be removed');
     });
 
     test('clear() resets hit and miss counters to zero', () {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle(fontSize: 14);
 
-      final painter = TextPainter(text: const TextSpan(text: 'Label'), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: 'Label'),
+          textDirection: TextDirection.ltr);
       cache.put('Label', style, painter);
 
       // Generate hits and misses
       cache.get('Label', style); // hit
       cache.get('Unknown', style); // miss
-      expect(cache.hitRate, equals(0.5), reason: 'Should have 50% hit rate before clear');
+      expect(cache.hitRate, equals(0.5),
+          reason: 'Should have 50% hit rate before clear');
 
       cache.clear();
 
-      expect(cache.hitRate, equals(0.0), reason: 'Hit rate should reset to 0% after clear');
+      expect(cache.hitRate, equals(0.0),
+          reason: 'Hit rate should reset to 0% after clear');
     });
 
     test('clear() allows cache to be reused normally', () {
@@ -334,20 +404,26 @@ void main() {
       final style = const TextStyle(fontSize: 14);
 
       // Use cache
-      final painter1 = TextPainter(text: const TextSpan(text: 'Before'), textDirection: TextDirection.ltr);
+      final painter1 = TextPainter(
+          text: const TextSpan(text: 'Before'),
+          textDirection: TextDirection.ltr);
       cache.put('Before', style, painter1);
       cache.get('Before', style);
 
       cache.clear();
 
       // Reuse cache
-      final painter2 = TextPainter(text: const TextSpan(text: 'After'), textDirection: TextDirection.ltr);
+      final painter2 = TextPainter(
+          text: const TextSpan(text: 'After'),
+          textDirection: TextDirection.ltr);
       cache.put('After', style, painter2);
       final retrieved = cache.get('After', style);
 
-      expect(retrieved, equals(painter2), reason: 'Cache should work normally after clear');
+      expect(retrieved, equals(painter2),
+          reason: 'Cache should work normally after clear');
       expect(cache.length, equals(1));
-      expect(cache.hitRate, equals(1.0), reason: 'New hit rate should calculate correctly');
+      expect(cache.hitRate, equals(1.0),
+          reason: 'New hit rate should calculate correctly');
     });
   });
 
@@ -356,14 +432,17 @@ void main() {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 1);
       final style = const TextStyle(fontSize: 14);
 
-      final painter1 = TextPainter(text: const TextSpan(text: 'A'), textDirection: TextDirection.ltr);
+      final painter1 = TextPainter(
+          text: const TextSpan(text: 'A'), textDirection: TextDirection.ltr);
       cache.put('A', style, painter1);
       expect(cache.length, equals(1));
 
-      final painter2 = TextPainter(text: const TextSpan(text: 'B'), textDirection: TextDirection.ltr);
+      final painter2 = TextPainter(
+          text: const TextSpan(text: 'B'), textDirection: TextDirection.ltr);
       cache.put('B', style, painter2);
       expect(cache.length, equals(1));
-      expect(cache.get('A', style), isNull, reason: 'Previous entry should be evicted');
+      expect(cache.get('A', style), isNull,
+          reason: 'Previous entry should be evicted');
       expect(cache.get('B', style), equals(painter2));
     });
 
@@ -371,11 +450,13 @@ void main() {
       final cache = LinkedHashMapTextLayoutCache(maxSize: 10);
       final style = const TextStyle();
 
-      final painter = TextPainter(text: const TextSpan(text: ''), textDirection: TextDirection.ltr);
+      final painter = TextPainter(
+          text: const TextSpan(text: ''), textDirection: TextDirection.ltr);
       cache.put('', style, painter);
 
       expect(cache.length, equals(1));
-      expect(cache.get('', style), equals(painter), reason: 'Empty string should be valid key');
+      expect(cache.get('', style), equals(painter),
+          reason: 'Empty string should be valid key');
     });
 
     test('cache handles unicode and special characters in text', () {
@@ -385,14 +466,17 @@ void main() {
       final texts = ['emoji 😀', '中文字符', 'العربية', 'Ñoño', '\n\t\r'];
 
       for (final text in texts) {
-        final painter = TextPainter(text: TextSpan(text: text), textDirection: TextDirection.ltr);
+        final painter = TextPainter(
+            text: TextSpan(text: text), textDirection: TextDirection.ltr);
         cache.put(text, style, painter);
       }
 
-      expect(cache.length, equals(texts.length), reason: 'All special character texts should be cached');
+      expect(cache.length, equals(texts.length),
+          reason: 'All special character texts should be cached');
 
       for (final text in texts) {
-        expect(cache.get(text, style), isNotNull, reason: 'Should retrieve: $text');
+        expect(cache.get(text, style), isNotNull,
+            reason: 'Should retrieve: $text');
       }
     });
 
@@ -402,7 +486,8 @@ void main() {
 
       // Add 100 entries (well below maxSize)
       for (int i = 0; i < 100; i++) {
-        final painter = TextPainter(text: TextSpan(text: 'Entry$i'), textDirection: TextDirection.ltr);
+        final painter = TextPainter(
+            text: TextSpan(text: 'Entry$i'), textDirection: TextDirection.ltr);
         cache.put('Entry$i', style, painter);
       }
 
@@ -410,7 +495,8 @@ void main() {
 
       // All entries should be retrievable
       for (int i = 0; i < 100; i++) {
-        expect(cache.get('Entry$i', style), isNotNull, reason: 'Entry$i should exist');
+        expect(cache.get('Entry$i', style), isNotNull,
+            reason: 'Entry$i should exist');
       }
     });
   });

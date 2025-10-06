@@ -34,13 +34,19 @@ void main() {
         );
 
         // Calculate effective sizes with mobile scaling
-        final effectiveTitleSize = mobileTheme.baseFontSize * mobileTheme.scaleFactorMobile * mobileTheme.titleMultiplier;
+        final effectiveTitleSize = mobileTheme.baseFontSize *
+            mobileTheme.scaleFactorMobile *
+            mobileTheme.titleMultiplier;
 
-        final effectiveLabelSize = mobileTheme.baseFontSize * mobileTheme.scaleFactorMobile * mobileTheme.labelMultiplier;
+        final effectiveLabelSize = mobileTheme.baseFontSize *
+            mobileTheme.scaleFactorMobile *
+            mobileTheme.labelMultiplier;
 
         // Verify scaling is applied
-        expect(effectiveTitleSize, lessThan(mobileTheme.baseFontSize * mobileTheme.titleMultiplier));
-        expect(effectiveLabelSize, lessThan(mobileTheme.baseFontSize * mobileTheme.labelMultiplier));
+        expect(effectiveTitleSize,
+            lessThan(mobileTheme.baseFontSize * mobileTheme.titleMultiplier));
+        expect(effectiveLabelSize,
+            lessThan(mobileTheme.baseFontSize * mobileTheme.labelMultiplier));
       });
 
       test('mobile viewport (400px) uses mobile scale factor', () {
@@ -64,7 +70,8 @@ void main() {
         );
 
         // Even with scaling, result should not go below reasonable minimum
-        final scaled = smallTypography.baseFontSize * smallTypography.scaleFactorMobile;
+        final scaled =
+            smallTypography.baseFontSize * smallTypography.scaleFactorMobile;
 
         // 8.0 * 0.9 = 7.2 (this would need clamping in real usage)
         expect(scaled, equals(7.2));
@@ -89,7 +96,9 @@ void main() {
         );
 
         // Calculate effective sizes with tablet scaling
-        final effectiveTitleSize = tabletTheme.baseFontSize * tabletTheme.scaleFactorTablet * tabletTheme.titleMultiplier;
+        final effectiveTitleSize = tabletTheme.baseFontSize *
+            tabletTheme.scaleFactorTablet *
+            tabletTheme.titleMultiplier;
 
         // Should equal base size with multiplier (no scaling)
         expect(
@@ -108,7 +117,9 @@ void main() {
       test('tablet is baseline - no size adjustment', () {
         final typography = baseTheme.typographyTheme;
 
-        final tabletTitle = typography.baseFontSize * typography.scaleFactorTablet * typography.titleMultiplier;
+        final tabletTitle = typography.baseFontSize *
+            typography.scaleFactorTablet *
+            typography.titleMultiplier;
 
         final baseTitle = typography.baseFontSize * typography.titleMultiplier;
 
@@ -130,9 +141,12 @@ void main() {
         );
 
         // Calculate effective sizes with desktop scaling
-        final effectiveTitleSize = desktopTheme.baseFontSize * desktopTheme.scaleFactorDesktop * desktopTheme.titleMultiplier;
+        final effectiveTitleSize = desktopTheme.baseFontSize *
+            desktopTheme.scaleFactorDesktop *
+            desktopTheme.titleMultiplier;
 
-        final baseTitle = desktopTheme.baseFontSize * desktopTheme.titleMultiplier;
+        final baseTitle =
+            desktopTheme.baseFontSize * desktopTheme.titleMultiplier;
 
         // Should be larger than base
         expect(effectiveTitleSize, greaterThan(baseTitle));
@@ -167,9 +181,12 @@ void main() {
       test('effective sizes scale proportionally across viewports', () {
         final typography = baseTheme.typographyTheme;
 
-        final mobileSize = typography.baseFontSize * typography.scaleFactorMobile;
-        final tabletSize = typography.baseFontSize * typography.scaleFactorTablet;
-        final desktopSize = typography.baseFontSize * typography.scaleFactorDesktop;
+        final mobileSize =
+            typography.baseFontSize * typography.scaleFactorMobile;
+        final tabletSize =
+            typography.baseFontSize * typography.scaleFactorTablet;
+        final desktopSize =
+            typography.baseFontSize * typography.scaleFactorDesktop;
 
         // Sizes should increase
         expect(mobileSize < tabletSize, isTrue);
@@ -200,10 +217,14 @@ void main() {
         final typography = baseTheme.typographyTheme;
 
         // Mobile title
-        final mobileTitle = typography.baseFontSize * typography.scaleFactorMobile * typography.titleMultiplier;
+        final mobileTitle = typography.baseFontSize *
+            typography.scaleFactorMobile *
+            typography.titleMultiplier;
 
         // Desktop label
-        final desktopLabel = typography.baseFontSize * typography.scaleFactorDesktop * typography.labelMultiplier;
+        final desktopLabel = typography.baseFontSize *
+            typography.scaleFactorDesktop *
+            typography.labelMultiplier;
 
         // Both should use their respective multipliers
         expect(mobileTitle, closeTo(15.12, 0.01)); // 12 * 0.9 * 1.4
@@ -226,7 +247,8 @@ void main() {
           viewport: const Rect.fromLTWH(0, 0, 400, 700),
           culler: const ViewportCuller(),
           paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-          pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+          pathPool:
+              ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
           textPainterPool: ObjectPool<TextPainter>(
             factory: () => TextPainter(textDirection: TextDirection.ltr),
             reset: (tp) {},
@@ -241,7 +263,8 @@ void main() {
           viewport: const Rect.fromLTWH(0, 0, 800, 1024),
           culler: const ViewportCuller(),
           paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-          pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+          pathPool:
+              ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
           textPainterPool: ObjectPool<TextPainter>(
             factory: () => TextPainter(textDirection: TextDirection.ltr),
             reset: (tp) {},
@@ -256,7 +279,8 @@ void main() {
           viewport: const Rect.fromLTWH(0, 0, 1920, 1080),
           culler: const ViewportCuller(),
           paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-          pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+          pathPool:
+              ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
           textPainterPool: ObjectPool<TextPainter>(
             factory: () => TextPainter(textDirection: TextDirection.ltr),
             reset: (tp) {},
@@ -273,16 +297,22 @@ void main() {
         // but rendering code would select appropriate scale factor based on viewport width
 
         // Mobile (400px) - would use scaleFactorMobile
-        final mobileScale = mobileContext.viewport.width < 600 ? typography.scaleFactorMobile : typography.scaleFactorTablet;
+        final mobileScale = mobileContext.viewport.width < 600
+            ? typography.scaleFactorMobile
+            : typography.scaleFactorTablet;
         expect(mobileScale, equals(0.9));
 
         // Tablet (800px) - would use scaleFactorTablet
-        final tabletScale =
-            tabletContext.viewport.width >= 600 && tabletContext.viewport.width < 1200 ? typography.scaleFactorTablet : typography.scaleFactorDesktop;
+        final tabletScale = tabletContext.viewport.width >= 600 &&
+                tabletContext.viewport.width < 1200
+            ? typography.scaleFactorTablet
+            : typography.scaleFactorDesktop;
         expect(tabletScale, equals(1.0));
 
         // Desktop (1920px) - would use scaleFactorDesktop
-        final desktopScale = desktopContext.viewport.width >= 1200 ? typography.scaleFactorDesktop : typography.scaleFactorTablet;
+        final desktopScale = desktopContext.viewport.width >= 1200
+            ? typography.scaleFactorDesktop
+            : typography.scaleFactorTablet;
         expect(desktopScale, equals(1.1));
       });
 
@@ -297,7 +327,8 @@ void main() {
           labelMultiplier: 0.95,
         );
 
-        final customTheme = baseTheme.copyWith(typographyTheme: customTypography);
+        final customTheme =
+            baseTheme.copyWith(typographyTheme: customTypography);
 
         expect(customTheme.typographyTheme.baseFontSize, equals(14.0));
         expect(customTheme.typographyTheme.scaleFactorMobile, equals(0.85));

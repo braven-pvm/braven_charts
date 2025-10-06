@@ -20,7 +20,8 @@ void main() {
     setUp(() {
       context = TransformContext(
         widgetSize: const Size(800, 600),
-        chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540), // Offset from screen
+        chartAreaBounds:
+            const Rect.fromLTWH(50, 30, 700, 540), // Offset from screen
         xDataRange: const DataRange(min: 0, max: 100),
         yDataRange: const DataRange(min: -50, max: 50),
         viewport: ViewportState.identity(),
@@ -107,8 +108,10 @@ void main() {
           context: context,
         );
 
-        expect(screenPoint.x, closeTo(expectedScreen[i].x, 0.01), reason: 'Corner $i X coordinate');
-        expect(screenPoint.y, closeTo(expectedScreen[i].y, 0.01), reason: 'Corner $i Y coordinate');
+        expect(screenPoint.x, closeTo(expectedScreen[i].x, 0.01),
+            reason: 'Corner $i X coordinate');
+        expect(screenPoint.y, closeTo(expectedScreen[i].y, 0.01),
+            reason: 'Corner $i Y coordinate');
       }
     });
 

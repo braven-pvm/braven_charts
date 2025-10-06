@@ -103,7 +103,8 @@ class TypographyTheme {
 
   static final TypographyTheme defaultDark = TypographyTheme(
     fontFamily: 'Roboto',
-    baseFontSize: 13.0, // Slightly larger for better readability on dark backgrounds
+    baseFontSize:
+        13.0, // Slightly larger for better readability on dark backgrounds
     scaleFactorMobile: 0.9,
     scaleFactorTablet: 1.0,
     scaleFactorDesktop: 1.1,

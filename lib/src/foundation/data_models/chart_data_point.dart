@@ -58,7 +58,8 @@ class ChartDataPoint {
   ///
   /// Points with NaN or infinity values are considered invalid
   /// for rendering purposes.
-  bool get isValid => ValidationUtils.isFiniteNumber(x) && ValidationUtils.isFiniteNumber(y);
+  bool get isValid =>
+      ValidationUtils.isFiniteNumber(x) && ValidationUtils.isFiniteNumber(y);
 
   /// Creates a copy of this point with optional property overrides.
   ///

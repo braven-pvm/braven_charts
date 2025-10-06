@@ -172,7 +172,9 @@ class TimeSeriesData {
   }) {
     // Convert timestamp to milliseconds for x-axis
     final convertedPoints = data.map((point) {
-      final x = point.hasTimestamp ? point.timestamp!.millisecondsSinceEpoch.toDouble() : point.x;
+      final x = point.hasTimestamp
+          ? point.timestamp!.millisecondsSinceEpoch.toDouble()
+          : point.x;
 
       return ChartDataPoint(
         x: x,
@@ -220,7 +222,11 @@ class TimeSeriesData {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TimeSeriesData && runtimeType == other.runtimeType && id == other.id && name == other.name && _listEquals(data, other.data);
+      other is TimeSeriesData &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          _listEquals(data, other.data);
   // Note: metadata is intentionally excluded from equality
 
   @override

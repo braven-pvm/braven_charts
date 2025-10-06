@@ -15,7 +15,8 @@ void main() {
       test('calculates arithmetic mean correctly', () {
         expect(StatisticalFunctions.mean([1, 2, 3, 4, 5]), equals(3.0));
         expect(StatisticalFunctions.mean([10, 20, 30]), equals(20.0));
-        expect(StatisticalFunctions.mean([2.5, 3.5, 4.5]), closeTo(3.5, 0.0001));
+        expect(
+            StatisticalFunctions.mean([2.5, 3.5, 4.5]), closeTo(3.5, 0.0001));
       });
 
       test('calculates geometric mean correctly', () {
@@ -141,7 +142,8 @@ void main() {
     group('standardDeviation()', () {
       test('calculates sample standard deviation', () {
         final values = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
-        expect(StatisticalFunctions.standardDeviation(values), closeTo(2.138, 0.01));
+        expect(StatisticalFunctions.standardDeviation(values),
+            closeTo(2.138, 0.01));
       });
 
       test('calculates population standard deviation', () {
@@ -153,7 +155,8 @@ void main() {
       });
 
       test('returns zero for identical values', () {
-        expect(StatisticalFunctions.standardDeviation([5, 5, 5, 5]), equals(0.0));
+        expect(
+            StatisticalFunctions.standardDeviation([5, 5, 5, 5]), equals(0.0));
       });
 
       test('handles empty list', () {
@@ -280,7 +283,8 @@ void main() {
       test('calculates inverse parameter', () {
         expect(InterpolationFunctions.lerpInverse(0.0, 10.0, 5.0), equals(0.5));
         expect(InterpolationFunctions.lerpInverse(0.0, 10.0, 0.0), equals(0.0));
-        expect(InterpolationFunctions.lerpInverse(0.0, 10.0, 10.0), equals(1.0));
+        expect(
+            InterpolationFunctions.lerpInverse(0.0, 10.0, 10.0), equals(1.0));
       });
 
       test('is inverse of lerp', () {
@@ -392,8 +396,10 @@ void main() {
           const ChartDataPoint(x: 2.0, y: 0.5),
           const ChartDataPoint(x: 3.0, y: 2.0),
         ];
-        final loose = InterpolationFunctions.catmullRom(points, 50, tension: 0.0);
-        final tight = InterpolationFunctions.catmullRom(points, 50, tension: 1.0);
+        final loose =
+            InterpolationFunctions.catmullRom(points, 50, tension: 0.0);
+        final tight =
+            InterpolationFunctions.catmullRom(points, 50, tension: 1.0);
         // Different tensions should produce different curves
         expect(loose, isNot(equals(tight)));
       });
@@ -424,14 +430,17 @@ void main() {
 
     group('quadraticBezier()', () {
       test('preserves endpoints', () {
-        final samples = InterpolationFunctions.quadraticBezier(0.0, 1.0, 2.0, 10);
+        final samples =
+            InterpolationFunctions.quadraticBezier(0.0, 1.0, 2.0, 10);
         expect(samples.first, equals(0.0));
         expect(samples.last, equals(2.0));
       });
 
       test('control point influences curve shape', () {
-        final straight = InterpolationFunctions.quadraticBezier(0.0, 1.0, 2.0, 10);
-        final curved = InterpolationFunctions.quadraticBezier(0.0, 5.0, 2.0, 10);
+        final straight =
+            InterpolationFunctions.quadraticBezier(0.0, 1.0, 2.0, 10);
+        final curved =
+            InterpolationFunctions.quadraticBezier(0.0, 5.0, 2.0, 10);
         // Different control points should produce different curves
         expect(straight, isNot(equals(curved)));
       });
@@ -439,13 +448,15 @@ void main() {
 
     group('cubicBezier()', () {
       test('preserves endpoints', () {
-        final samples = InterpolationFunctions.cubicBezier(0.0, 1.0, 2.0, 3.0, 10);
+        final samples =
+            InterpolationFunctions.cubicBezier(0.0, 1.0, 2.0, 3.0, 10);
         expect(samples.first, equals(0.0));
         expect(samples.last, equals(3.0));
       });
 
       test('produces correct number of samples', () {
-        final samples = InterpolationFunctions.cubicBezier(0.0, 1.0, 2.0, 3.0, 25);
+        final samples =
+            InterpolationFunctions.cubicBezier(0.0, 1.0, 2.0, 3.0, 25);
         expect(samples.length, equals(25));
       });
     });
@@ -492,7 +503,8 @@ void main() {
 
       test('requires at least 2 points', () {
         expect(
-          () => CurveFittingFunctions.linearFit([const ChartDataPoint(x: 0, y: 0)]),
+          () => CurveFittingFunctions.linearFit(
+              [const ChartDataPoint(x: 0, y: 0)]),
           throwsArgumentError,
         );
       });
@@ -552,7 +564,10 @@ void main() {
       });
 
       test('validates degree constraints', () {
-        final points = [const ChartDataPoint(x: 0, y: 0), const ChartDataPoint(x: 1, y: 1)];
+        final points = [
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1)
+        ];
         expect(
           () => CurveFittingFunctions.polynomialFit(points, degree: 0),
           throwsArgumentError,
@@ -564,7 +579,10 @@ void main() {
       });
 
       test('validates sufficient points for degree', () {
-        final points = [const ChartDataPoint(x: 0, y: 0), const ChartDataPoint(x: 1, y: 1)];
+        final points = [
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1)
+        ];
         expect(
           () => CurveFittingFunctions.polynomialFit(points, degree: 2),
           throwsArgumentError,

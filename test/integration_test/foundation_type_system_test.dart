@@ -186,8 +186,10 @@ void main() {
       final emptyList = <double>[];
 
       // Not empty validation
-      expect(ValidationUtils.validateNotEmpty(validList, 'data').isSuccess, isTrue);
-      expect(ValidationUtils.validateNotEmpty(emptyList, 'data').isFailure, isTrue);
+      expect(ValidationUtils.validateNotEmpty(validList, 'data').isSuccess,
+          isTrue);
+      expect(ValidationUtils.validateNotEmpty(emptyList, 'data').isFailure,
+          isTrue);
 
       // Size validation
       expect(
@@ -206,8 +208,10 @@ void main() {
       // Unique validation
       final uniqueList = [1.0, 2.0, 3.0];
       final duplicateList = [1.0, 2.0, 1.0];
-      expect(ValidationUtils.validateUnique(uniqueList, 'data').isSuccess, isTrue);
-      expect(ValidationUtils.validateUnique(duplicateList, 'data').isFailure, isTrue);
+      expect(
+          ValidationUtils.validateUnique(uniqueList, 'data').isSuccess, isTrue);
+      expect(ValidationUtils.validateUnique(duplicateList, 'data').isFailure,
+          isTrue);
 
       print('✅ ValidationUtils collection validation works correctly');
     });
@@ -336,8 +340,11 @@ void main() {
 
       // Step 4: Chain operations with ChartResult
       print('4. Chaining operations...');
-      final finalResult = seriesResult.map((series) => series.length).flatMap((length) {
-        return length > 0 ? Success<String>('Created series with $length points') : Failure<String>(ChartError.validation('Empty series'));
+      final finalResult =
+          seriesResult.map((series) => series.length).flatMap((length) {
+        return length > 0
+            ? Success<String>('Created series with $length points')
+            : Failure<String>(ChartError.validation('Empty series'));
       });
 
       expect(finalResult.isSuccess, isTrue);
@@ -399,7 +406,10 @@ void main() {
       expect(failures, equals(10));
 
       // Extract valid points
-      final validPoints = validationResults.where((r) => r.isSuccess).map((r) => r.getOrNull()!).toList();
+      final validPoints = validationResults
+          .where((r) => r.isSuccess)
+          .map((r) => r.getOrNull()!)
+          .toList();
 
       expect(validPoints.length, equals(90));
 

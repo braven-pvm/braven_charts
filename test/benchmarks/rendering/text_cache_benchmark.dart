@@ -30,7 +30,8 @@ library;
 import 'package:flutter/rendering.dart' show TextStyle, TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
 
 void main() {
   group('TextLayoutCache Performance Benchmarks', () {
@@ -64,11 +65,13 @@ void main() {
       }
 
       hitLatencies.sort();
-      final avgHit = hitLatencies.fold<int>(0, (a, b) => a + b) / hitLatencies.length;
+      final avgHit =
+          hitLatencies.fold<int>(0, (a, b) => a + b) / hitLatencies.length;
       final p99Hit = hitLatencies[(hitLatencies.length * 0.99).floor()];
 
       // Validate NFR-003 target: cache hit should be very fast (<1μs ideally)
-      expect(avgHit, lessThan(10), reason: 'Cache hit should be <10μs (NFR-003)');
+      expect(avgHit, lessThan(10),
+          reason: 'Cache hit should be <10μs (NFR-003)');
 
       print('Cache hit: avg ${avgHit.toStringAsFixed(1)}μs, p99 $p99Hitμs');
     });
@@ -97,13 +100,15 @@ void main() {
       }
 
       missLatencies.sort();
-      final avgMiss = missLatencies.fold<int>(0, (a, b) => a + b) / missLatencies.length;
+      final avgMiss =
+          missLatencies.fold<int>(0, (a, b) => a + b) / missLatencies.length;
       final p99Miss = missLatencies[(missLatencies.length * 0.99).floor()];
 
       // Cache miss is expected to be much slower due to TextPainter creation
       // No hard assertion, just baseline measurement
       print('Cache miss: avg ${avgMiss.toStringAsFixed(1)}μs, p99 $p99Missμs');
-      print('Speedup factor: ${(avgMiss / 1).toStringAsFixed(0)}x (miss vs hit)');
+      print(
+          'Speedup factor: ${(avgMiss / 1).toStringAsFixed(0)}x (miss vs hit)');
     });
 
     test('Hit rate after 1000 renders (NFR-003)', () {
@@ -140,7 +145,8 @@ void main() {
       final hitRate = (cacheHits / totalGets) * 100;
 
       // Validate NFR-003 target: >70% hit rate
-      expect(hitRate, greaterThan(70), reason: 'Cache hit rate should be >70% (NFR-003)');
+      expect(hitRate, greaterThan(70),
+          reason: 'Cache hit rate should be >70% (NFR-003)');
 
       print('Hit rate: ${hitRate.toStringAsFixed(1)}% '
           '($cacheHits hits / $totalGets gets after 1000 renders)');
@@ -174,11 +180,14 @@ void main() {
       }
 
       // Validate LRU eviction happened
-      expect(evictionCount, greaterThan(0), reason: 'LRU eviction should occur when exceeding maxSize');
+      expect(evictionCount, greaterThan(0),
+          reason: 'LRU eviction should occur when exceeding maxSize');
 
-      expect(cache.length, lessThanOrEqualTo(10), reason: 'Cache size should not exceed maxSize');
+      expect(cache.length, lessThanOrEqualTo(10),
+          reason: 'Cache size should not exceed maxSize');
 
-      print('LRU evictions: $evictionCount evictions for $uniqueEntries unique entries '
+      print(
+          'LRU evictions: $evictionCount evictions for $uniqueEntries unique entries '
           '(maxSize=10, final size=${cache.length})');
     });
 
@@ -203,7 +212,8 @@ void main() {
       // Total: 22 gets, 20 hits (after initial 2 misses)
       final hitRate = cache.hitRate;
 
-      expect(hitRate, greaterThan(0.8), reason: 'Hit rate should be ~90% (20/22)');
+      expect(hitRate, greaterThan(0.8),
+          reason: 'Hit rate should be ~90% (20/22)');
 
       expect(cache.length, equals(2), reason: 'Cache should have 2 entries');
 

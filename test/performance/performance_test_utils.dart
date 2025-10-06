@@ -152,7 +152,8 @@ class MemoryUsage {
   });
 
   @override
-  String toString() => 'MemoryUsage(before: $before, after: $after, diff: $difference)';
+  String toString() =>
+      'MemoryUsage(before: $before, after: $after, diff: $difference)';
 }
 
 /// Result of benchmark testing
@@ -183,7 +184,8 @@ class FramePerformance {
 
   Duration get averageFrameTime {
     if (frameTimings.isEmpty) return Duration.zero;
-    final totalMicroseconds = frameTimings.map((d) => d.inMicroseconds).reduce((a, b) => a + b);
+    final totalMicroseconds =
+        frameTimings.map((d) => d.inMicroseconds).reduce((a, b) => a + b);
     return Duration(microseconds: totalMicroseconds ~/ frameTimings.length);
   }
 

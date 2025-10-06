@@ -50,7 +50,8 @@ void main() {
       expect(allPredefinedThemes['vibrant'], same(vibrant));
       expect(allPredefinedThemes['minimal'], same(minimal));
       expect(allPredefinedThemes['highContrast'], same(highContrast));
-      expect(allPredefinedThemes['colorblindFriendly'], same(colorblindFriendly));
+      expect(
+          allPredefinedThemes['colorblindFriendly'], same(colorblindFriendly));
     });
 
     test('all themes have unique configurations', () {

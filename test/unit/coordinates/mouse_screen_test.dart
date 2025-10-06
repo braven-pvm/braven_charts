@@ -44,8 +44,10 @@ void main() {
         context: context,
       );
 
-      expect(screenPoint.x, equals(mousePoint.x), reason: 'Mouse X should equal Screen X');
-      expect(screenPoint.y, equals(mousePoint.y), reason: 'Mouse Y should equal Screen Y');
+      expect(screenPoint.x, equals(mousePoint.x),
+          reason: 'Mouse X should equal Screen X');
+      expect(screenPoint.y, equals(mousePoint.y),
+          reason: 'Mouse Y should equal Screen Y');
     });
 
     test('should transform screen to mouse (identity)', () {
@@ -59,8 +61,10 @@ void main() {
         context: context,
       );
 
-      expect(mousePoint.x, equals(screenPoint.x), reason: 'Screen X should equal Mouse X');
-      expect(mousePoint.y, equals(screenPoint.y), reason: 'Screen Y should equal Mouse Y');
+      expect(mousePoint.x, equals(screenPoint.x),
+          reason: 'Screen X should equal Mouse X');
+      expect(mousePoint.y, equals(screenPoint.y),
+          reason: 'Screen Y should equal Mouse Y');
     });
 
     test('should have perfect round-trip accuracy', () {
@@ -81,8 +85,10 @@ void main() {
         context: context,
       );
 
-      expect(roundTripPoint.x, closeTo(originalPoint.x, 0.01), reason: 'Round-trip X within 0.01 pixels');
-      expect(roundTripPoint.y, closeTo(originalPoint.y, 0.01), reason: 'Round-trip Y within 0.01 pixels');
+      expect(roundTripPoint.x, closeTo(originalPoint.x, 0.01),
+          reason: 'Round-trip X within 0.01 pixels');
+      expect(roundTripPoint.y, closeTo(originalPoint.y, 0.01),
+          reason: 'Round-trip Y within 0.01 pixels');
     });
 
     test('should handle corner cases', () {
@@ -91,7 +97,8 @@ void main() {
         const Point<double>(0.0, 0.0), // Top-left
         Point<double>(context.widgetSize.width, 0.0), // Top-right
         const Point<double>(0.0, 0.0), // Bottom-left (Y=height)
-        Point<double>(context.widgetSize.width, context.widgetSize.height), // Bottom-right
+        Point<double>(context.widgetSize.width,
+            context.widgetSize.height), // Bottom-right
       ];
 
       for (final corner in corners) {
@@ -147,7 +154,8 @@ void main() {
         context: context,
       );
 
-      expect(screenPoints.length, equals(mousePoints.length), reason: 'Batch output length matches input');
+      expect(screenPoints.length, equals(mousePoints.length),
+          reason: 'Batch output length matches input');
 
       // Verify each point transformed correctly
       for (int i = 0; i < mousePoints.length; i++) {

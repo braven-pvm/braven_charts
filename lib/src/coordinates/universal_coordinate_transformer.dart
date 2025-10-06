@@ -181,10 +181,12 @@ class UniversalCoordinateTransformer {
     }
 
     // Path 7: chartArea ↔ normalized (scale to/from 0.0-1.0)
-    if (from == CoordinateSystem.chartArea && to == CoordinateSystem.normalized) {
+    if (from == CoordinateSystem.chartArea &&
+        to == CoordinateSystem.normalized) {
       return _chartAreaToNormalized(point, context);
     }
-    if (from == CoordinateSystem.normalized && to == CoordinateSystem.chartArea) {
+    if (from == CoordinateSystem.normalized &&
+        to == CoordinateSystem.chartArea) {
       return _normalizedToChartArea(point, context);
     }
 
@@ -243,7 +245,8 @@ class UniversalCoordinateTransformer {
     }
     if (to == CoordinateSystem.mouse) {
       // ... → screen → mouse
-      final screenPoint = transform(point, from: from, to: screenHub, context: context);
+      final screenPoint =
+          transform(point, from: from, to: screenHub, context: context);
       return _screenToMouse(screenPoint, context);
     }
 
@@ -251,11 +254,13 @@ class UniversalCoordinateTransformer {
     if (from == CoordinateSystem.screen) {
       // screen → chartArea → ...
       final chartAreaPoint = _screenToChartArea(point, context);
-      return transform(chartAreaPoint, from: chartAreaHub, to: to, context: context);
+      return transform(chartAreaPoint,
+          from: chartAreaHub, to: to, context: context);
     }
     if (to == CoordinateSystem.screen) {
       // ... → chartArea → screen
-      final chartAreaPoint = transform(point, from: from, to: chartAreaHub, context: context);
+      final chartAreaPoint =
+          transform(point, from: from, to: chartAreaHub, context: context);
       return _chartAreaToScreen(chartAreaPoint, context);
     }
 
@@ -267,7 +272,8 @@ class UniversalCoordinateTransformer {
     }
     if (to == CoordinateSystem.chartArea) {
       // ... → data → chartArea
-      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      final dataPoint =
+          transform(point, from: from, to: centralHub, context: context);
       return _dataToChartArea(dataPoint, context);
     }
 
@@ -280,7 +286,8 @@ class UniversalCoordinateTransformer {
     }
     if (to == CoordinateSystem.normalized) {
       // ... → data → chartArea → normalized
-      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      final dataPoint =
+          transform(point, from: from, to: centralHub, context: context);
       final chartAreaPoint = _dataToChartArea(dataPoint, context);
       return _chartAreaToNormalized(chartAreaPoint, context);
     }
@@ -293,7 +300,8 @@ class UniversalCoordinateTransformer {
     }
     if (to == CoordinateSystem.viewport) {
       // ... → data → viewport
-      final dataPoint = transform(point, from: from, to: centralHub, context: context);
+      final dataPoint =
+          transform(point, from: from, to: centralHub, context: context);
       return _dataToViewport(dataPoint, context);
     }
 
@@ -374,7 +382,9 @@ class UniversalCoordinateTransformer {
 
     // Fall back to point-by-point transformation for non-matrix paths
     // (e.g., dataPoint lookups, complex transitive paths)
-    return points.map((point) => transform(point, from: from, to: to, context: context)).toList();
+    return points
+        .map((point) => transform(point, from: from, to: to, context: context))
+        .toList();
   }
 
   /// Check if transformation can use matrix operations.
@@ -386,7 +396,8 @@ class UniversalCoordinateTransformer {
   /// **Internal method** - used by transformBatch().
   bool _canUseMatrixTransformation(CoordinateSystem from, CoordinateSystem to) {
     // DataPoint transformations require series lookups (non-matrix)
-    if (from == CoordinateSystem.dataPoint || to == CoordinateSystem.dataPoint) {
+    if (from == CoordinateSystem.dataPoint ||
+        to == CoordinateSystem.dataPoint) {
       return false;
     }
 
@@ -507,8 +518,10 @@ class UniversalCoordinateTransformer {
 
     // Check 3: Range validation
     final validRange = getValidRange(system, context);
-    final isXInRange = point.x >= validRange.left && point.x <= validRange.right;
-    final isYInRange = point.y >= validRange.top && point.y <= validRange.bottom;
+    final isXInRange =
+        point.x >= validRange.left && point.x <= validRange.right;
+    final isYInRange =
+        point.y >= validRange.top && point.y <= validRange.bottom;
 
     if (!isXInRange || !isYInRange) {
       final outOfRangeAxis = !isXInRange && !isYInRange
@@ -621,13 +634,15 @@ class UniversalCoordinateTransformer {
         // Mouse coordinates: entire widget area
         // Origin: top-left (0, 0)
         // Extent: widgetSize
-        return Rect.fromLTWH(0, 0, context.widgetSize.width, context.widgetSize.height);
+        return Rect.fromLTWH(
+            0, 0, context.widgetSize.width, context.widgetSize.height);
 
       case CoordinateSystem.screen:
         // Screen coordinates: entire widget area (same as mouse when devicePixelRatio=1)
         // Origin: top-left (0, 0)
         // Extent: widgetSize
-        return Rect.fromLTWH(0, 0, context.widgetSize.width, context.widgetSize.height);
+        return Rect.fromLTWH(
+            0, 0, context.widgetSize.width, context.widgetSize.height);
 
       case CoordinateSystem.chartArea:
         // ChartArea coordinates: chart drawing area (excluding axes, legends)
@@ -730,7 +745,8 @@ class UniversalCoordinateTransformer {
   /// chartArea.x = screen.x - chartAreaBounds.left
   /// chartArea.y = screen.y - chartAreaBounds.top
   /// ```
-  Point<double> _screenToChartArea(Point<double> point, TransformContext context) {
+  Point<double> _screenToChartArea(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     return Point(
       point.x - bounds.left,
@@ -745,7 +761,8 @@ class UniversalCoordinateTransformer {
   /// screen.x = chartArea.x + chartAreaBounds.left
   /// screen.y = chartArea.y + chartAreaBounds.top
   /// ```
-  Point<double> _chartAreaToScreen(Point<double> point, TransformContext context) {
+  Point<double> _chartAreaToScreen(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     return Point(
       point.x + bounds.left,
@@ -763,7 +780,8 @@ class UniversalCoordinateTransformer {
   ///
   /// Note: Y-axis is flipped because screen Y increases downward,
   /// but data Y typically increases upward.
-  Point<double> _chartAreaToData(Point<double> point, TransformContext context) {
+  Point<double> _chartAreaToData(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     final xRange = context.xDataRange;
     final yRange = context.yDataRange;
@@ -784,7 +802,8 @@ class UniversalCoordinateTransformer {
   /// chartArea.x = (data.x - xMin) / (xMax - xMin) * chartArea.width
   /// chartArea.y = (yMax - data.y) / (yMax - yMin) * chartArea.height
   /// ```
-  Point<double> _dataToChartArea(Point<double> point, TransformContext context) {
+  Point<double> _dataToChartArea(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     final xRange = context.xDataRange;
     final yRange = context.yDataRange;
@@ -841,9 +860,11 @@ class UniversalCoordinateTransformer {
   ///
   /// This is a reverse lookup - find which series/point is closest to
   /// the given data coordinate.
-  Point<double> _dataToDataPoint(Point<double> point, TransformContext context) {
+  Point<double> _dataToDataPoint(
+      Point<double> point, TransformContext context) {
     if (context.series.isEmpty) {
-      throw ArgumentError('Cannot transform to dataPoint: no series in context');
+      throw ArgumentError(
+          'Cannot transform to dataPoint: no series in context');
     }
 
     double minDistance = double.infinity;
@@ -877,7 +898,8 @@ class UniversalCoordinateTransformer {
   /// data.x = series[dataPoint.x].points[dataPoint.y].x
   /// data.y = series[dataPoint.x].points[dataPoint.y].y
   /// ```
-  Point<double> _dataPointToData(Point<double> point, TransformContext context) {
+  Point<double> _dataPointToData(
+      Point<double> point, TransformContext context) {
     final seriesIdx = point.x.round();
     final pointIdx = point.y.round();
 
@@ -936,7 +958,8 @@ class UniversalCoordinateTransformer {
   Point<double> _markerToData(Point<double> point, TransformContext context) {
     // Remove marker offset
     final offset = context.markerOffset;
-    final chartAreaPoint = offset == null ? point : Point(point.x - offset.x, point.y - offset.y);
+    final chartAreaPoint =
+        offset == null ? point : Point(point.x - offset.x, point.y - offset.y);
 
     // Transform to data coordinates
     return _chartAreaToData(chartAreaPoint, context);
@@ -949,7 +972,8 @@ class UniversalCoordinateTransformer {
   /// normalized.x = chartArea.x / chartArea.width
   /// normalized.y = chartArea.y / chartArea.height
   /// ```
-  Point<double> _chartAreaToNormalized(Point<double> point, TransformContext context) {
+  Point<double> _chartAreaToNormalized(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     return Point(
       point.x / bounds.width,
@@ -964,7 +988,8 @@ class UniversalCoordinateTransformer {
   /// chartArea.x = normalized.x * chartArea.width
   /// chartArea.y = normalized.y * chartArea.height
   /// ```
-  Point<double> _normalizedToChartArea(Point<double> point, TransformContext context) {
+  Point<double> _normalizedToChartArea(
+      Point<double> point, TransformContext context) {
     final bounds = context.chartAreaBounds;
     return Point(
       point.x * bounds.width,
@@ -1070,7 +1095,8 @@ class UniversalCoordinateTransformer {
       final yRange = context.yDataRange;
 
       final xScale = (xRange.max - xRange.min) / bounds.width;
-      final yScale = -(yRange.max - yRange.min) / bounds.height; // Negative for Y-flip
+      final yScale =
+          -(yRange.max - yRange.min) / bounds.height; // Negative for Y-flip
 
       // Combined: scale then translate
       final scale = TransformMatrix.scale(xScale, yScale);
@@ -1083,7 +1109,8 @@ class UniversalCoordinateTransformer {
       final yRange = context.yDataRange;
 
       final xScale = bounds.width / (xRange.max - xRange.min);
-      final yScale = -bounds.height / (yRange.max - yRange.min); // Negative for Y-flip
+      final yScale =
+          -bounds.height / (yRange.max - yRange.min); // Negative for Y-flip
 
       // Combined: translate then scale
       final translate = TransformMatrix.translation(-xRange.min, -yRange.max);
@@ -1092,11 +1119,13 @@ class UniversalCoordinateTransformer {
     }
 
     // chartArea ↔ normalized (scale to/from 0-1)
-    if (from == CoordinateSystem.chartArea && to == CoordinateSystem.normalized) {
+    if (from == CoordinateSystem.chartArea &&
+        to == CoordinateSystem.normalized) {
       final bounds = context.chartAreaBounds;
       return TransformMatrix.scale(1.0 / bounds.width, 1.0 / bounds.height);
     }
-    if (from == CoordinateSystem.normalized && to == CoordinateSystem.chartArea) {
+    if (from == CoordinateSystem.normalized &&
+        to == CoordinateSystem.chartArea) {
       final bounds = context.chartAreaBounds;
       return TransformMatrix.scale(bounds.width, bounds.height);
     }
@@ -1114,8 +1143,10 @@ class UniversalCoordinateTransformer {
     // For transitive paths, compose matrices recursively
     // This handles complex paths like mouse → screen → chartArea → data
     if (from == CoordinateSystem.mouse && to == CoordinateSystem.chartArea) {
-      final m1 = _buildTransformationMatrix(from, CoordinateSystem.screen, context);
-      final m2 = _buildTransformationMatrix(CoordinateSystem.screen, to, context);
+      final m1 =
+          _buildTransformationMatrix(from, CoordinateSystem.screen, context);
+      final m2 =
+          _buildTransformationMatrix(CoordinateSystem.screen, to, context);
       return m2 * m1;
     }
 

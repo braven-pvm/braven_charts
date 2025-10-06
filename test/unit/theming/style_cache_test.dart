@@ -8,17 +8,22 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('StyleCacheKey', () {
     test('equality works correctly', () {
-      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key3 = const StyleCacheKey(themeHash: 999, elementType: 'axis', overridesHash: 456);
+      final key1 = const StyleCacheKey(
+          themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key2 = const StyleCacheKey(
+          themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key3 = const StyleCacheKey(
+          themeHash: 999, elementType: 'axis', overridesHash: 456);
 
       expect(key1, equals(key2));
       expect(key1, isNot(equals(key3)));
     });
 
     test('hashCode is consistent', () {
-      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key1 = const StyleCacheKey(
+          themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key2 = const StyleCacheKey(
+          themeHash: 123, elementType: 'axis', overridesHash: 456);
 
       expect(key1.hashCode, equals(key2.hashCode));
     });
@@ -26,7 +31,8 @@ void main() {
     test('null overridesHash works correctly', () {
       final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
-      final key3 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key3 = const StyleCacheKey(
+          themeHash: 123, elementType: 'axis', overridesHash: 456);
 
       expect(key1, equals(key2));
       expect(key1, isNot(equals(key3)));
@@ -99,7 +105,8 @@ void main() {
 
       cache.put(key, 'value');
       cache.get<String>(key); // hit
-      cache.get<String>(const StyleCacheKey(themeHash: 999, elementType: 'other')); // miss
+      cache.get<String>(
+          const StyleCacheKey(themeHash: 999, elementType: 'other')); // miss
 
       expect(cache.hits, equals(1));
       expect(cache.misses, equals(1));
@@ -154,8 +161,12 @@ void main() {
       cache.put(newKey, 'new-value');
 
       expect(cache.size, equals(StyleCache.maxSize)); // Still at max
-      expect(cache.get<String>(const StyleCacheKey(themeHash: 0, elementType: 'test')), isNull); // First entry evicted
-      expect(cache.get<String>(newKey), equals('new-value')); // New entry exists
+      expect(
+          cache.get<String>(
+              const StyleCacheKey(themeHash: 0, elementType: 'test')),
+          isNull); // First entry evicted
+      expect(
+          cache.get<String>(newKey), equals('new-value')); // New entry exists
     });
 
     test('get() moves entry to end (most recently used)', () {
@@ -242,9 +253,12 @@ void main() {
     });
 
     test('hitRate is 0.0 with all misses', () {
-      cache.get<String>(const StyleCacheKey(themeHash: 1, elementType: 'a')); // miss
-      cache.get<String>(const StyleCacheKey(themeHash: 2, elementType: 'b')); // miss
-      cache.get<String>(const StyleCacheKey(themeHash: 3, elementType: 'c')); // miss
+      cache.get<String>(
+          const StyleCacheKey(themeHash: 1, elementType: 'a')); // miss
+      cache.get<String>(
+          const StyleCacheKey(themeHash: 2, elementType: 'b')); // miss
+      cache.get<String>(
+          const StyleCacheKey(themeHash: 3, elementType: 'c')); // miss
 
       expect(cache.hitRate, equals(0.0));
       expect(cache.hits, equals(0));
@@ -323,7 +337,8 @@ void main() {
     test('isEmpty works correctly', () {
       expect(cache.isEmpty, isTrue);
 
-      cache.put(const StyleCacheKey(themeHash: 1, elementType: 'test'), 'value');
+      cache.put(
+          const StyleCacheKey(themeHash: 1, elementType: 'test'), 'value');
 
       expect(cache.isEmpty, isFalse);
 

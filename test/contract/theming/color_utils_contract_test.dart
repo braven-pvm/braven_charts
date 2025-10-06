@@ -38,9 +38,12 @@ void main() {
       });
 
       test('calculateContrastRatio() returns ratio >= 1', () {
-        final ratio1 = ColorUtils.calculateContrastRatio(Colors.black, Colors.white);
-        final ratio2 = ColorUtils.calculateContrastRatio(Colors.black, Colors.black);
-        final ratio3 = ColorUtils.calculateContrastRatio(Colors.blue, Colors.yellow);
+        final ratio1 =
+            ColorUtils.calculateContrastRatio(Colors.black, Colors.white);
+        final ratio2 =
+            ColorUtils.calculateContrastRatio(Colors.black, Colors.black);
+        final ratio3 =
+            ColorUtils.calculateContrastRatio(Colors.blue, Colors.yellow);
 
         expect(ratio1, greaterThanOrEqualTo(1.0));
         expect(ratio2, greaterThanOrEqualTo(1.0));
@@ -48,26 +51,36 @@ void main() {
       });
 
       test('black and white have maximum contrast (21:1)', () {
-        final ratio = ColorUtils.calculateContrastRatio(Colors.black, Colors.white);
+        final ratio =
+            ColorUtils.calculateContrastRatio(Colors.black, Colors.white);
         expect(ratio, greaterThan(20.0)); // Should be 21:1
       });
 
       test('identical colors have minimum contrast (1:1)', () {
-        final ratio = ColorUtils.calculateContrastRatio(Colors.blue, Colors.blue);
+        final ratio =
+            ColorUtils.calculateContrastRatio(Colors.blue, Colors.blue);
         expect(ratio, closeTo(1.0, 0.01));
       });
 
       test('contrast ratio is symmetric', () {
-        final ratio1 = ColorUtils.calculateContrastRatio(Colors.red, Colors.blue);
-        final ratio2 = ColorUtils.calculateContrastRatio(Colors.blue, Colors.red);
+        final ratio1 =
+            ColorUtils.calculateContrastRatio(Colors.red, Colors.blue);
+        final ratio2 =
+            ColorUtils.calculateContrastRatio(Colors.blue, Colors.red);
         expect(ratio1, equals(ratio2));
       });
     });
 
     group('WCAG Compliance', () {
       test('meetsWCAG_AA() validates 4.5:1 contrast for normal text', () {
-        expect(ColorUtils.meetsWCAG_AA(Colors.black, Colors.white, isLargeText: false), isTrue);
-        expect(ColorUtils.meetsWCAG_AA(Colors.grey, Colors.grey, isLargeText: false), isFalse);
+        expect(
+            ColorUtils.meetsWCAG_AA(Colors.black, Colors.white,
+                isLargeText: false),
+            isTrue);
+        expect(
+            ColorUtils.meetsWCAG_AA(Colors.grey, Colors.grey,
+                isLargeText: false),
+            isFalse);
       });
 
       test('meetsWCAG_AA() validates 3:1 contrast for large text', () {
@@ -89,11 +102,17 @@ void main() {
       });
 
       test('meetsWCAG_AAA() validates 7:1 contrast for normal text', () {
-        expect(ColorUtils.meetsWCAG_AAA(Colors.black, Colors.white, isLargeText: false), isTrue);
+        expect(
+            ColorUtils.meetsWCAG_AAA(Colors.black, Colors.white,
+                isLargeText: false),
+            isTrue);
       });
 
       test('meetsWCAG_AAA() validates 4.5:1 contrast for large text', () {
-        expect(ColorUtils.meetsWCAG_AAA(Colors.black, Colors.white, isLargeText: true), isTrue);
+        expect(
+            ColorUtils.meetsWCAG_AAA(Colors.black, Colors.white,
+                isLargeText: true),
+            isTrue);
       });
     });
 
@@ -153,11 +172,13 @@ void main() {
         }
       });
 
-      test('generated palette has sufficient contrast between adjacent colors', () {
+      test('generated palette has sufficient contrast between adjacent colors',
+          () {
         final palette = ColorUtils.generateColorblindFriendlyPalette(3);
 
         for (int i = 0; i < palette.length - 1; i++) {
-          final contrast = ColorUtils.calculateContrastRatio(palette[i], palette[i + 1]);
+          final contrast =
+              ColorUtils.calculateContrastRatio(palette[i], palette[i + 1]);
           // Adjacent colors should have some contrast (exact threshold TBD)
           expect(contrast, greaterThan(1.5));
         }

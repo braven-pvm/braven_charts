@@ -28,7 +28,8 @@ void main() {
       expect(theme.backgroundColor, const Color(0xFF121212));
       expect(theme.gridStyle.majorColor, const Color(0xFF424242));
       expect(theme.seriesTheme.colors.length, 5); // defaultDark has 5 colors
-      expect(theme.seriesTheme.colors[0], const Color(0xFF64B5F6)); // Light Blue
+      expect(
+          theme.seriesTheme.colors[0], const Color(0xFF64B5F6)); // Light Blue
 
       // WHEN: Theme is applied to chart (simulated - full chart not implemented yet)
       final appliedTheme = theme; // In real usage: ChartWidget(theme: theme)
@@ -37,7 +38,8 @@ void main() {
       expect(appliedTheme.backgroundColor.value, 0xFF121212);
       expect(appliedTheme.axisStyle.lineColor, const Color(0xFFFFFFFF));
       expect(appliedTheme.typographyTheme.fontFamily, 'Roboto');
-      expect(appliedTheme.animationTheme.dataUpdateDuration, const Duration(milliseconds: 350)); // defaultDark uses 350ms
+      expect(appliedTheme.animationTheme.dataUpdateDuration,
+          const Duration(milliseconds: 350)); // defaultDark uses 350ms
 
       print('✅ Example 1 PASS: Default Dark theme applied successfully');
     });
@@ -69,10 +71,12 @@ void main() {
       expect(chartState['selectedIndex'], 5);
 
       // THEN: New theme is active
-      expect(currentTheme.backgroundColor, const Color(0xFF121212)); // Dark background
+      expect(currentTheme.backgroundColor,
+          const Color(0xFF121212)); // Dark background
       expect(currentTheme, isNot(equals(ChartTheme.defaultLight)));
 
-      print('✅ Example 2 PASS: Theme switched in ${stopwatch.elapsedMilliseconds}ms, state preserved');
+      print(
+          '✅ Example 2 PASS: Theme switched in ${stopwatch.elapsedMilliseconds}ms, state preserved');
     });
 
     test('Example 3: Build custom brand theme', () {
@@ -83,7 +87,11 @@ void main() {
 
       // WHEN: Custom theme is built
       final customSeriesTheme = SeriesTheme(
-        colors: [brandPrimary, brandSecondary, const Color(0xFF28A745)], // Green
+        colors: [
+          brandPrimary,
+          brandSecondary,
+          const Color(0xFF28A745)
+        ], // Green
         lineWidths: const [2.0],
         markerSizes: const [8.0],
         markerShapes: const [MarkerShape.circle],
@@ -200,12 +208,18 @@ void main() {
       expect(deserializedTheme.backgroundColor, originalTheme.backgroundColor);
       expect(deserializedTheme.borderColor, originalTheme.borderColor);
       expect(deserializedTheme.borderWidth, originalTheme.borderWidth);
-      expect(deserializedTheme.gridStyle.majorColor, originalTheme.gridStyle.majorColor);
-      expect(deserializedTheme.gridStyle.majorWidth, originalTheme.gridStyle.majorWidth);
-      expect(deserializedTheme.seriesTheme.colors.length, originalTheme.seriesTheme.colors.length);
-      expect(deserializedTheme.seriesTheme.colors[0], originalTheme.seriesTheme.colors[0]);
-      expect(deserializedTheme.axisStyle.lineColor, originalTheme.axisStyle.lineColor);
-      expect(deserializedTheme.typographyTheme.fontFamily, originalTheme.typographyTheme.fontFamily);
+      expect(deserializedTheme.gridStyle.majorColor,
+          originalTheme.gridStyle.majorColor);
+      expect(deserializedTheme.gridStyle.majorWidth,
+          originalTheme.gridStyle.majorWidth);
+      expect(deserializedTheme.seriesTheme.colors.length,
+          originalTheme.seriesTheme.colors.length);
+      expect(deserializedTheme.seriesTheme.colors[0],
+          originalTheme.seriesTheme.colors[0]);
+      expect(deserializedTheme.axisStyle.lineColor,
+          originalTheme.axisStyle.lineColor);
+      expect(deserializedTheme.typographyTheme.fontFamily,
+          originalTheme.typographyTheme.fontFamily);
       expect(
         deserializedTheme.animationTheme.dataUpdateDuration,
         originalTheme.animationTheme.dataUpdateDuration,

@@ -42,9 +42,12 @@ class InteractionTheme {
     return InteractionTheme(
       crosshairColor: _parseColor(json['crosshairColor'] as String),
       crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
-      crosshairDashPattern: (json['crosshairDashPattern'] as List).map((e) => (e as num).toDouble()).toList(),
+      crosshairDashPattern: (json['crosshairDashPattern'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList(),
       tooltipBackground: _parseColor(json['tooltipBackground'] as String),
-      tooltipTextStyle: _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
+      tooltipTextStyle:
+          _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
       selectionColor: _parseColor(json['selectionColor'] as String),
     );
   }
@@ -187,12 +190,15 @@ class InteractionTheme {
   /// Converts this theme to a JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'crosshairColor': '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
+      'crosshairColor':
+          '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
       'crosshairWidth': crosshairWidth,
       'crosshairDashPattern': crosshairDashPattern,
-      'tooltipBackground': '#${tooltipBackground.value.toRadixString(16).padLeft(8, '0')}',
+      'tooltipBackground':
+          '#${tooltipBackground.value.toRadixString(16).padLeft(8, '0')}',
       'tooltipTextStyle': _textStyleToJson(tooltipTextStyle),
-      'selectionColor': '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
+      'selectionColor':
+          '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
     };
   }
 
@@ -234,7 +240,8 @@ class InteractionTheme {
   /// Converts a TextStyle to JSON.
   static Map<String, dynamic> _textStyleToJson(TextStyle style) {
     return {
-      if (style.color != null) 'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
+      if (style.color != null)
+        'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
       if (style.fontSize != null) 'fontSize': style.fontSize,
       if (style.fontWeight != null) 'fontWeight': style.fontWeight!.index,
       if (style.fontFamily != null) 'fontFamily': style.fontFamily,
@@ -244,9 +251,14 @@ class InteractionTheme {
   /// Parses a TextStyle from JSON.
   static TextStyle _parseTextStyle(Map<String, dynamic> json) {
     return TextStyle(
-      color: json['color'] != null ? _parseColor(json['color'] as String) : null,
-      fontSize: json['fontSize'] != null ? (json['fontSize'] as num).toDouble() : null,
-      fontWeight: json['fontWeight'] != null ? FontWeight.values[json['fontWeight'] as int] : null,
+      color:
+          json['color'] != null ? _parseColor(json['color'] as String) : null,
+      fontSize: json['fontSize'] != null
+          ? (json['fontSize'] as num).toDouble()
+          : null,
+      fontWeight: json['fontWeight'] != null
+          ? FontWeight.values[json['fontWeight'] as int]
+          : null,
       fontFamily: json['fontFamily'] as String?,
     );
   }

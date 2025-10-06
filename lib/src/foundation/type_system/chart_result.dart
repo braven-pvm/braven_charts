@@ -103,7 +103,11 @@ final class Success<T> extends ChartResult<T> {
   const Success(this.value);
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is Success<T> && runtimeType == other.runtimeType && value == other.value;
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Success<T> &&
+          runtimeType == other.runtimeType &&
+          value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -120,7 +124,11 @@ final class Failure<T> extends ChartResult<T> {
   const Failure(this.error);
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is Failure<T> && runtimeType == other.runtimeType && error == other.error;
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Failure<T> &&
+          runtimeType == other.runtimeType &&
+          error == other.error;
 
   @override
   int get hashCode => error.hashCode;

@@ -37,18 +37,24 @@ class AnimationTheme {
     required this.themeChangeCurve,
     required this.interactionDuration,
     required this.interactionCurve,
-  })  : assert(dataUpdateDuration >= Duration.zero, 'dataUpdateDuration must be >= Duration.zero'),
-        assert(themeChangeDuration >= Duration.zero, 'themeChangeDuration must be >= Duration.zero'),
-        assert(interactionDuration >= Duration.zero, 'interactionDuration must be >= Duration.zero');
+  })  : assert(dataUpdateDuration >= Duration.zero,
+            'dataUpdateDuration must be >= Duration.zero'),
+        assert(themeChangeDuration >= Duration.zero,
+            'themeChangeDuration must be >= Duration.zero'),
+        assert(interactionDuration >= Duration.zero,
+            'interactionDuration must be >= Duration.zero');
 
   /// Creates a theme from a JSON map.
   factory AnimationTheme.fromJson(Map<String, dynamic> json) {
     return AnimationTheme(
-      dataUpdateDuration: Duration(milliseconds: json['dataUpdateDurationMs'] as int),
+      dataUpdateDuration:
+          Duration(milliseconds: json['dataUpdateDurationMs'] as int),
       dataUpdateCurve: _parseCurve(json['dataUpdateCurve'] as String),
-      themeChangeDuration: Duration(milliseconds: json['themeChangeDurationMs'] as int),
+      themeChangeDuration:
+          Duration(milliseconds: json['themeChangeDurationMs'] as int),
       themeChangeCurve: _parseCurve(json['themeChangeCurve'] as String),
-      interactionDuration: Duration(milliseconds: json['interactionDurationMs'] as int),
+      interactionDuration:
+          Duration(milliseconds: json['interactionDurationMs'] as int),
       interactionCurve: _parseCurve(json['interactionCurve'] as String),
     );
   }

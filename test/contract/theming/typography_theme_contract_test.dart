@@ -91,8 +91,10 @@ void main() {
         final theme = TypographyTheme.defaultLight;
 
         // Mobile <= Tablet <= Desktop (typically)
-        expect(theme.scaleFactorMobile, lessThanOrEqualTo(theme.scaleFactorTablet));
-        expect(theme.scaleFactorTablet, lessThanOrEqualTo(theme.scaleFactorDesktop));
+        expect(theme.scaleFactorMobile,
+            lessThanOrEqualTo(theme.scaleFactorTablet));
+        expect(theme.scaleFactorTablet,
+            lessThanOrEqualTo(theme.scaleFactorDesktop));
       });
 
       test('scale factors can be customized per breakpoint', () {
@@ -180,7 +182,8 @@ void main() {
 
         expect(reconstructed.fontFamily, equals(original.fontFamily));
         expect(reconstructed.baseFontSize, equals(original.baseFontSize));
-        expect(reconstructed.scaleFactorMobile, equals(original.scaleFactorMobile));
+        expect(reconstructed.scaleFactorMobile,
+            equals(original.scaleFactorMobile));
       });
 
       test('round-trip serialization preserves all properties', () {

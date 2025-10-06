@@ -55,7 +55,8 @@ class StyleCacheKey {
           overridesHash == other.overridesHash;
 
   @override
-  String toString() => 'StyleCacheKey(themeHash: $themeHash, elementType: $elementType, overridesHash: $overridesHash)';
+  String toString() =>
+      'StyleCacheKey(themeHash: $themeHash, elementType: $elementType, overridesHash: $overridesHash)';
 }
 
 /// LRU cache for resolved chart styles.

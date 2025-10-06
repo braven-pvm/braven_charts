@@ -15,7 +15,8 @@ void main() {
   group('ViewportState contract', () {
     test('should be immutable with 4 final fields', () {
       // Contract: xRange, yRange, zoomFactor, panOffset (all final)
-      expect(true, isTrue, reason: 'Immutability enforced by const constructor');
+      expect(true, isTrue,
+          reason: 'Immutability enforced by const constructor');
     });
 
     test('should have identity factory constructor', () {

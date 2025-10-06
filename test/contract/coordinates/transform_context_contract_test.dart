@@ -16,7 +16,8 @@ void main() {
     test('should be immutable with 9 final fields', () {
       // Contract: All fields must be final for immutability
       // This is enforced by the analyzer if implemented correctly
-      expect(true, isTrue, reason: 'Immutability enforced by const constructor');
+      expect(true, isTrue,
+          reason: 'Immutability enforced by const constructor');
     });
 
     test('should have required fields', () {

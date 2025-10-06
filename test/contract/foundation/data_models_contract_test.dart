@@ -95,14 +95,16 @@ void main() {
         const ChartDataPoint(x: 2.0, y: 3.0),
         const ChartDataPoint(x: 3.0, y: 1.0),
       ];
-      final series = ChartSeries(id: 'test', points: orderedPoints, isXOrdered: true);
+      final series =
+          ChartSeries(id: 'test', points: orderedPoints, isXOrdered: true);
       expect(series.validateOrdering(), isTrue);
 
       final unorderedPoints = [
         const ChartDataPoint(x: 3.0, y: 1.0),
         const ChartDataPoint(x: 1.0, y: 2.0),
       ];
-      final badSeries = ChartSeries(id: 'test', points: unorderedPoints, isXOrdered: true);
+      final badSeries =
+          ChartSeries(id: 'test', points: unorderedPoints, isXOrdered: true);
       expect(badSeries.validateOrdering(), isFalse);
     });
 

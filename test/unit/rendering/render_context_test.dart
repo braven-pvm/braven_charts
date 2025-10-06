@@ -24,8 +24,10 @@ void main() {
       viewport: viewport ?? const Rect.fromLTWH(0, 0, 800, 600),
       culler: const ViewportCuller(),
       paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-      pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-      textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+      pathPool:
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+      textPainterPool:
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
       textCache: LinkedHashMapTextLayoutCache(),
       performanceMonitor: StopwatchPerformanceMonitor(),
     );
@@ -130,7 +132,8 @@ void main() {
 
     test('viewport can extend beyond canvas (panned out)', () {
       const size = Size(800, 600);
-      final viewport = const Rect.fromLTWH(-200, -100, 1200, 800); // Extends beyond
+      final viewport =
+          const Rect.fromLTWH(-200, -100, 1200, 800); // Extends beyond
 
       expect(
         () => createValidContext(size: size, viewport: viewport),
@@ -144,13 +147,16 @@ void main() {
       final context = createValidContext(viewport: viewport);
 
       // Point inside viewport
-      expect(context.isPointVisible(400, 300), isTrue, reason: 'Point in center of viewport should be visible');
+      expect(context.isPointVisible(400, 300), isTrue,
+          reason: 'Point in center of viewport should be visible');
 
       // Point outside viewport
-      expect(context.isPointVisible(1000, 1000), isFalse, reason: 'Point outside viewport should not be visible');
+      expect(context.isPointVisible(1000, 1000), isFalse,
+          reason: 'Point outside viewport should not be visible');
 
       // Point on viewport edge
-      expect(context.isPointVisible(0, 0), isTrue, reason: 'Point on viewport edge should be visible');
+      expect(context.isPointVisible(0, 0), isTrue,
+          reason: 'Point on viewport edge should be visible');
     });
 
     test('isPointVisible respects viewport boundaries', () {
@@ -222,7 +228,8 @@ void main() {
       final mockCanvas = _MockCanvas();
       final context = createValidContext(canvas: mockCanvas);
 
-      expect(context.canvas, equals(mockCanvas), reason: 'Should provide access to injected canvas');
+      expect(context.canvas, equals(mockCanvas),
+          reason: 'Should provide access to injected canvas');
     });
 
     test('provides access to size dimensions', () {
@@ -230,8 +237,10 @@ void main() {
       final context = createValidContext(size: size);
 
       expect(context.size, equals(size));
-      expect(context.width, equals(1024), reason: 'width getter should return size.width');
-      expect(context.height, equals(768), reason: 'height getter should return size.height');
+      expect(context.width, equals(1024),
+          reason: 'width getter should return size.width');
+      expect(context.height, equals(768),
+          reason: 'height getter should return size.height');
     });
 
     test('provides access to viewport culler', () {
@@ -242,19 +251,25 @@ void main() {
         viewport: const Rect.fromLTWH(0, 0, 800, 600),
         culler: culler,
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
       );
 
-      expect(context.culler, equals(culler), reason: 'Should provide access to injected culler');
+      expect(context.culler, equals(culler),
+          reason: 'Should provide access to injected culler');
     });
 
     test('provides access to all object pools', () {
-      final paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      final pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      final textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      final paintPool =
+          ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
+      final pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      final textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
 
       final context = RenderContext(
         canvas: _MockCanvas(),
@@ -281,13 +296,16 @@ void main() {
         viewport: const Rect.fromLTWH(0, 0, 800, 600),
         culler: const ViewportCuller(),
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
       );
 
-      expect(context.textCache, equals(textCache), reason: 'Should provide access to injected text cache');
+      expect(context.textCache, equals(textCache),
+          reason: 'Should provide access to injected text cache');
     });
 
     test('provides access to performance monitor', () {
@@ -298,13 +316,16 @@ void main() {
         viewport: const Rect.fromLTWH(0, 0, 800, 600),
         culler: const ViewportCuller(),
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
       );
 
-      expect(context.performanceMonitor, equals(monitor), reason: 'Should provide access to injected performance monitor');
+      expect(context.performanceMonitor, equals(monitor),
+          reason: 'Should provide access to injected performance monitor');
     });
   });
 

@@ -14,11 +14,16 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
-import 'package:braven_charts/src/rendering/layers/data_series_layer.dart' show DataSeriesLayer, ChartDataPoint;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/layers/data_series_layer.dart'
+    show DataSeriesLayer, ChartDataPoint;
 
 void main() {
   group('Edge Case: Rapid Viewport Panning', () {
@@ -57,7 +62,8 @@ void main() {
       canvas = _MockCanvas();
 
       // Add a data series layer for realistic rendering
-      final dataPoints = List.generate(1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(
+          1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
@@ -93,16 +99,20 @@ void main() {
 
       // Validate: No frame drops (all <16ms)
       final droppedFrames = frameTimes.where((t) => t >= 16).length;
-      expect(droppedFrames, equals(0), reason: 'No frames should exceed 16ms during rapid panning');
+      expect(droppedFrames, equals(0),
+          reason: 'No frames should exceed 16ms during rapid panning');
 
       // Validate: Average frame time still within budget
-      final avgFrameTime = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
-      expect(avgFrameTime, lessThan(8), reason: 'Average frame time should remain <8ms');
+      final avgFrameTime =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      expect(avgFrameTime, lessThan(8),
+          reason: 'Average frame time should remain <8ms');
 
       // Validate: Viewport states updated correctly
       for (int i = 0; i < 100; i++) {
         final expectedLeft = i * 10.0;
-        expect(viewportStates[i].left, equals(expectedLeft), reason: 'Viewport should update correctly for frame $i');
+        expect(viewportStates[i].left, equals(expectedLeft),
+            reason: 'Viewport should update correctly for frame $i');
       }
 
       print('Rapid pan test: 100 updates, '
@@ -128,9 +138,12 @@ void main() {
       // Verify each viewport state matches what we set
       for (int i = 0; i < 50; i++) {
         final expectedLeft = i * i * 0.5;
-        expect(viewportHistory[i].left, equals(expectedLeft), reason: 'Viewport left should be $expectedLeft at frame $i');
-        expect(viewportHistory[i].width, equals(800), reason: 'Viewport width should remain constant');
-        expect(viewportHistory[i].height, equals(600), reason: 'Viewport height should remain constant');
+        expect(viewportHistory[i].left, equals(expectedLeft),
+            reason: 'Viewport left should be $expectedLeft at frame $i');
+        expect(viewportHistory[i].width, equals(800),
+            reason: 'Viewport width should remain constant');
+        expect(viewportHistory[i].height, equals(600),
+            reason: 'Viewport height should remain constant');
       }
 
       print('Viewport state validation: 50 frames, all states correct');
@@ -154,11 +167,15 @@ void main() {
 
       // Pool sizes should be stable (may grow initially, but not unbounded)
       // Allow some growth but not linear with frame count
-      expect(finalPaintSize, lessThan(initialPaintSize + 50), reason: 'Paint pool should not grow unbounded');
-      expect(finalPathSize, lessThan(initialPathSize + 50), reason: 'Path pool should not grow unbounded');
-      expect(finalTextPainterSize, lessThan(initialTextPainterSize + 50), reason: 'TextPainter pool should not grow unbounded');
+      expect(finalPaintSize, lessThan(initialPaintSize + 50),
+          reason: 'Paint pool should not grow unbounded');
+      expect(finalPathSize, lessThan(initialPathSize + 50),
+          reason: 'Path pool should not grow unbounded');
+      expect(finalTextPainterSize, lessThan(initialTextPainterSize + 50),
+          reason: 'TextPainter pool should not grow unbounded');
 
-      print('Memory leak check: Paint pool $initialPaintSize -> $finalPaintSize, '
+      print(
+          'Memory leak check: Paint pool $initialPaintSize -> $finalPaintSize, '
           'Path pool $initialPathSize -> $finalPathSize, '
           'TextPainter pool $initialTextPainterSize -> $finalTextPainterSize');
     });
@@ -191,14 +208,20 @@ void main() {
         secondHalfFrameTimes.add(stopwatch.elapsedMicroseconds / 1000);
       }
 
-      final firstHalfAvg = firstHalfFrameTimes.fold<double>(0, (a, b) => a + b) / firstHalfFrameTimes.length;
-      final secondHalfAvg = secondHalfFrameTimes.fold<double>(0, (a, b) => a + b) / secondHalfFrameTimes.length;
+      final firstHalfAvg =
+          firstHalfFrameTimes.fold<double>(0, (a, b) => a + b) /
+              firstHalfFrameTimes.length;
+      final secondHalfAvg =
+          secondHalfFrameTimes.fold<double>(0, (a, b) => a + b) /
+              secondHalfFrameTimes.length;
 
       // Performance should not degrade significantly
       final degradation = secondHalfAvg / firstHalfAvg;
-      expect(degradation, lessThan(1.2), reason: 'Performance should not degrade >20% over extended panning');
+      expect(degradation, lessThan(1.2),
+          reason: 'Performance should not degrade >20% over extended panning');
 
-      print('Performance stability: first 50 frames ${firstHalfAvg.toStringAsFixed(1)}ms, '
+      print(
+          'Performance stability: first 50 frames ${firstHalfAvg.toStringAsFixed(1)}ms, '
           'second 50 frames ${secondHalfAvg.toStringAsFixed(1)}ms, '
           'degradation ${((degradation - 1) * 100).toStringAsFixed(1)}%');
     });
@@ -231,7 +254,8 @@ void main() {
       }
 
       final droppedFrames = frameTimes.where((t) => t >= 16).length;
-      expect(droppedFrames, equals(0), reason: 'Bidirectional panning should not drop frames');
+      expect(droppedFrames, equals(0),
+          reason: 'Bidirectional panning should not drop frames');
 
       print('Bidirectional pan test: 100 frames, $droppedFrames drops');
     });

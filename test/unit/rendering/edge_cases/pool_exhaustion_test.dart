@@ -14,12 +14,17 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/render_context.dart'
+    show RenderContext;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
 
 void main() {
   group('Edge Case: Pool Exhaustion', () {
@@ -58,13 +63,15 @@ void main() {
       final initialStats = paintPool.statistics;
 
       // Rendering should not crash even when pool exhausted
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally,
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
           reason: 'Pool exhaustion should not crash (allocate on demand)');
 
       final finalStats = paintPool.statistics;
 
       // Verify pool created new objects beyond capacity
-      expect(finalStats.acquireCount, greaterThan(initialStats.acquireCount), reason: 'Pool should have allocated new objects');
+      expect(finalStats.acquireCount, greaterThan(initialStats.acquireCount),
+          reason: 'Pool should have allocated new objects');
 
       print('Pool exhaustion test: '
           '${finalStats.acquireCount} Paint objects acquired, '
@@ -186,7 +193,8 @@ void main() {
 
       // Verify pool recovered (hit rate should improve)
       // After exhaustion, subsequent frames should hit pool more often
-      expect(afterRecoveryStats.acquireCount, greaterThan(afterExhaustionStats.acquireCount),
+      expect(afterRecoveryStats.acquireCount,
+          greaterThan(afterExhaustionStats.acquireCount),
           reason: 'Pool should continue working after exhaustion');
 
       print('Pool recovery test: '
@@ -232,14 +240,20 @@ void main() {
       final initialPathStats = pathPool.statistics;
 
       // Both pools exhausted simultaneously
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Multiple pool exhaustion should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Multiple pool exhaustion should not crash');
 
       final finalPaintStats = paintPool.statistics;
       final finalPathStats = pathPool.statistics;
 
       // Verify both pools handled exhaustion
-      expect(finalPaintStats.acquireCount, greaterThan(initialPaintStats.acquireCount), reason: 'Paint pool should have allocated');
-      expect(finalPathStats.acquireCount, greaterThan(initialPathStats.acquireCount), reason: 'Path pool should have allocated');
+      expect(finalPaintStats.acquireCount,
+          greaterThan(initialPaintStats.acquireCount),
+          reason: 'Paint pool should have allocated');
+      expect(finalPathStats.acquireCount,
+          greaterThan(initialPathStats.acquireCount),
+          reason: 'Path pool should have allocated');
 
       print('Multiple pool exhaustion: '
           'Paint ${finalPaintStats.acquireCount} acquires, '
@@ -292,8 +306,10 @@ void main() {
       final actualAcquires = afterAcquires - beforeAcquires;
       final actualReleases = afterReleases - beforeReleases;
 
-      expect(actualAcquires, equals(200), reason: '200 Paint objects should be acquired');
-      expect(actualReleases, equals(200), reason: '200 Paint objects should be released');
+      expect(actualAcquires, equals(200),
+          reason: '200 Paint objects should be acquired');
+      expect(actualReleases, equals(200),
+          reason: '200 Paint objects should be released');
 
       print('Pool statistics accuracy: '
           '$actualAcquires acquires, $actualReleases releases, '
@@ -332,13 +348,15 @@ void main() {
       final canvas = _MockCanvas();
 
       // Should handle extreme exhaustion without crash
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally,
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
           reason: 'Extreme pool exhaustion (1000 objects) should not crash');
 
       final stats = paintPool.statistics;
 
       // Verify all 1000 objects were acquired
-      expect(stats.acquireCount, greaterThanOrEqualTo(1000), reason: 'All 1000 Paint objects should be acquired');
+      expect(stats.acquireCount, greaterThanOrEqualTo(1000),
+          reason: 'All 1000 Paint objects should be acquired');
 
       print('Extreme exhaustion test: 1000 Paint objects, no crash');
     });

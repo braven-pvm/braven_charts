@@ -28,8 +28,10 @@ import 'dart:ui' show Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ViewportCuller;
-import 'package:braven_charts/src/rendering/layers/data_series_layer.dart' show ChartDataPoint;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ViewportCuller;
+import 'package:braven_charts/src/rendering/layers/data_series_layer.dart'
+    show ChartDataPoint;
 
 void main() {
   group('ViewportCuller Performance Benchmarks', () {
@@ -75,9 +77,11 @@ void main() {
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
       // Validate NFR-002 target: <3ms for 10,000 points
-      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3),
+          reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, lessThanOrEqualTo(10), reason: 'Should have ~5% visible points');
+      expect(visibilityPercent, lessThanOrEqualTo(10),
+          reason: 'Should have ~5% visible points');
 
       print('5% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -106,10 +110,13 @@ void main() {
 
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
-      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3),
+          reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, greaterThan(40), reason: 'Should have ~50% visible points');
-      expect(visibilityPercent, lessThan(60), reason: 'Should have ~50% visible points');
+      expect(visibilityPercent, greaterThan(40),
+          reason: 'Should have ~50% visible points');
+      expect(visibilityPercent, lessThan(60),
+          reason: 'Should have ~50% visible points');
 
       print('50% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -138,9 +145,11 @@ void main() {
 
       final visibilityPercent = (visiblePoints.length / allPoints.length) * 100;
 
-      expect(latencyMs, lessThan(3), reason: 'Culling latency should be <3ms (NFR-002)');
+      expect(latencyMs, lessThan(3),
+          reason: 'Culling latency should be <3ms (NFR-002)');
 
-      expect(visibilityPercent, greaterThan(90), reason: 'Should have ~95% visible points');
+      expect(visibilityPercent, greaterThan(90),
+          reason: 'Should have ~95% visible points');
 
       print('95% visible: ${latencyMs.toStringAsFixed(1)}ms '
           '(${visiblePoints.length}/${allPoints.length} points, '
@@ -153,8 +162,10 @@ void main() {
       const culler2 = ViewportCuller(margin: 0.1);
 
       // ViewportCuller is const, so instances should be identical or follow const semantics
-      expect(culler1.margin, equals(0.0), reason: 'Default margin should be 0.0');
-      expect(culler2.margin, equals(0.1), reason: 'Custom margin should be 0.1');
+      expect(culler1.margin, equals(0.0),
+          reason: 'Default margin should be 0.0');
+      expect(culler2.margin, equals(0.1),
+          reason: 'Custom margin should be 0.1');
 
       print('ViewportCuller reuse validated (Foundation layer integration)');
     });
@@ -188,7 +199,8 @@ void main() {
       // Verify approximate linear scaling: 10x data should be ~10x time
       final ratio = latencies[10000]! / latencies[1000]!;
 
-      expect(ratio, lessThan(20), reason: 'Culling should scale linearly O(n), not worse');
+      expect(ratio, lessThan(20),
+          reason: 'Culling should scale linearly O(n), not worse');
 
       print('Linear scaling: ${latencies[1000]!.toStringAsFixed(2)}ms (1K), '
           '${latencies[5000]!.toStringAsFixed(2)}ms (5K), '

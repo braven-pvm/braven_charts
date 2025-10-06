@@ -114,7 +114,8 @@ void main() {
 
     test('Interpolation endpoints are preserved', () {
       // cubicBezier should preserve endpoints
-      final samples = InterpolationFunctions.cubicBezier(0.0, 1.0, 1.0, 2.0, 10);
+      final samples =
+          InterpolationFunctions.cubicBezier(0.0, 1.0, 1.0, 2.0, 10);
       expect(samples.first, equals(0.0));
       expect(samples.last, equals(2.0));
     });

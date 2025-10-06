@@ -42,13 +42,16 @@ void main() {
     );
   }
   warmupSw.stop();
-  print('  Warmup complete: ${warmupSw.elapsedMilliseconds}ms for 3 iterations');
+  print(
+      '  Warmup complete: ${warmupSw.elapsedMilliseconds}ms for 3 iterations');
   print('  (Caches primed, steady-state structures allocated)\n');
 
   // Steady-state phase: Should have zero allocations
   print('Phase 2: Steady-state transformation (zero-allocation target)');
-  print('  Note: Dart VM may perform some internal GC/optimization allocations');
-  print('  Target: Zero user-visible allocations (reuse cached matrices & lists)\n');
+  print(
+      '  Note: Dart VM may perform some internal GC/optimization allocations');
+  print(
+      '  Target: Zero user-visible allocations (reuse cached matrices & lists)\n');
 
   final steadySw = Stopwatch()..start();
   transformer.transformBatch(
@@ -59,10 +62,13 @@ void main() {
   );
   steadySw.stop();
 
-  print('  Steady-state time: ${steadySw.elapsedMicroseconds}μs (${steadySw.elapsedMilliseconds}ms)');
-  print('  Points/μs: ${(dataPoints.length / steadySw.elapsedMicroseconds).toStringAsFixed(2)}');
+  print(
+      '  Steady-state time: ${steadySw.elapsedMicroseconds}μs (${steadySw.elapsedMilliseconds}ms)');
+  print(
+      '  Points/μs: ${(dataPoints.length / steadySw.elapsedMicroseconds).toStringAsFixed(2)}');
   print('  Target: <1ms for 10K points');
-  print('  Status: ${steadySw.elapsedMilliseconds < 1 ? '✅ PASS' : '❌ FAIL'}\n');
+  print(
+      '  Status: ${steadySw.elapsedMilliseconds < 1 ? '✅ PASS' : '❌ FAIL'}\n');
 
   // Memory profile guidance
   print('Phase 3: Memory allocation analysis\n');
@@ -77,7 +83,8 @@ void main() {
   print('  ✗ Point object allocations (may reuse existing instances)');
 
   print('\nTo profile allocations:');
-  print('  1. Run with: dart run --observe test/benchmarks/coordinates/zero_allocation_benchmark.dart');
+  print(
+      '  1. Run with: dart run --observe test/benchmarks/coordinates/zero_allocation_benchmark.dart');
   print('  2. Open Observatory in browser');
   print('  3. Take heap snapshot before steady-state');
   print('  4. Take heap snapshot after steady-state');
@@ -91,11 +98,14 @@ void main() {
   // Summary
   print('\n====== Summary ======');
   final performancePass = steadySw.elapsedMilliseconds < 1;
-  print('Status: ${performancePass ? '✅ PERFORMANCE TARGET MET' : '❌ PERFORMANCE TARGET MISSED'}\n');
+  print(
+      'Status: ${performancePass ? '✅ PERFORMANCE TARGET MET' : '❌ PERFORMANCE TARGET MISSED'}\n');
 
   print('Performance:');
-  print('- Steady-state time: ${steadySw.elapsedMilliseconds}ms (target: <1ms)');
-  print('- Throughput: ${(dataPoints.length / steadySw.elapsedMicroseconds).toStringAsFixed(2)} points/μs');
+  print(
+      '- Steady-state time: ${steadySw.elapsedMilliseconds}ms (target: <1ms)');
+  print(
+      '- Throughput: ${(dataPoints.length / steadySw.elapsedMicroseconds).toStringAsFixed(2)} points/μs');
 
   print('\nZero-allocation design:');
   print('- Matrix cache: Eliminates recomputation');
@@ -103,5 +113,6 @@ void main() {
   print('- Efficient transformation: Minimizes object creation');
 
   print('\n✅ Zero-allocation benchmark complete');
-  print('For detailed allocation profiling, use Dart Observatory as described above.');
+  print(
+      'For detailed allocation profiling, use Dart Observatory as described above.');
 }

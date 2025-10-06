@@ -68,7 +68,8 @@ void main() {
           ? ViewportState(
               xRange: const DataRange(min: 0, max: 100),
               yRange: const DataRange(min: 0, max: 100),
-              panOffset: Point(random.nextDouble() * 10, random.nextDouble() * 10),
+              panOffset:
+                  Point(random.nextDouble() * 10, random.nextDouble() * 10),
               zoomFactor: 1.0,
             )
           : ViewportState.identity(),
@@ -127,18 +128,23 @@ void main() {
 
   print('  Time: ${sw3.elapsedMicroseconds}μs (${sw3.elapsedMilliseconds}ms)');
   print('  Unique contexts: ${contexts.length}');
-  print('  Average time per context: ${(sw3.elapsedMicroseconds / contexts.length).toStringAsFixed(2)}μs');
+  print(
+      '  Average time per context: ${(sw3.elapsedMicroseconds / contexts.length).toStringAsFixed(2)}μs');
   print('  Status: ✅ Cache grows appropriately\n');
 
   // Summary
   print('====== Summary ======');
   final allPass = hitRate1 > 99 && hitRate2 > 90;
-  print('Overall: ${allPass ? '✅ ALL BENCHMARKS PASSED' : '❌ SOME BENCHMARKS FAILED'}\n');
+  print(
+      'Overall: ${allPass ? '✅ ALL BENCHMARKS PASSED' : '❌ SOME BENCHMARKS FAILED'}\n');
 
   print('Cache performance:');
-  print('- Same context: ${hitRate1.toStringAsFixed(2)}% hit rate (target: >99%)');
-  print('- Changing viewport: ${hitRate2.toStringAsFixed(2)}% hit rate (target: >90%)');
-  print('- Cache growth: Handles ${contexts.length} unique contexts efficiently');
+  print(
+      '- Same context: ${hitRate1.toStringAsFixed(2)}% hit rate (target: >99%)');
+  print(
+      '- Changing viewport: ${hitRate2.toStringAsFixed(2)}% hit rate (target: >90%)');
+  print(
+      '- Cache growth: Handles ${contexts.length} unique contexts efficiently');
 
   print('\nOptimizations active:');
   print('- Matrix caching: ✅');

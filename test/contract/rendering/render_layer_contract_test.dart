@@ -43,7 +43,8 @@ void main() {
         final secondCallEffect = 'TODO: capture canvas state';
 
         // Should produce identical output
-        expect(firstCallEffect, equals(secondCallEffect), reason: 'render() must be idempotent');
+        expect(firstCallEffect, equals(secondCallEffect),
+            reason: 'render() must be idempotent');
       });
     });
 
@@ -55,14 +56,16 @@ void main() {
 
         expect(layer1.zIndex, lessThan(layer2.zIndex));
         expect(layer2.zIndex, lessThan(layer3.zIndex));
-        expect(layer1.zIndex, isNegative, reason: 'Negative zIndex allowed for backgrounds');
+        expect(layer1.zIndex, isNegative,
+            reason: 'Negative zIndex allowed for backgrounds');
       });
 
       test('layers with same zIndex are allowed', () {
         final layer1 = TestRenderLayer(zIndex: 0);
         final layer2 = TestRenderLayer(zIndex: 0);
 
-        expect(layer1.zIndex, equals(layer2.zIndex), reason: 'Multiple layers can have same zIndex');
+        expect(layer1.zIndex, equals(layer2.zIndex),
+            reason: 'Multiple layers can have same zIndex');
       });
     });
 
@@ -70,7 +73,8 @@ void main() {
       test('isVisible defaults to true', () {
         final layer = TestRenderLayer(zIndex: 0);
 
-        expect(layer.isVisible, isTrue, reason: 'Default visibility should be true');
+        expect(layer.isVisible, isTrue,
+            reason: 'Default visibility should be true');
       });
 
       test('isVisible can be set to false', () {
@@ -107,7 +111,8 @@ void main() {
           layer.render(mockContext);
         }
 
-        expect(renderCalled, isFalse, reason: 'Invisible layers should not have render() called');
+        expect(renderCalled, isFalse,
+            reason: 'Invisible layers should not have render() called');
       });
     });
 
@@ -115,7 +120,8 @@ void main() {
       test('isEmpty defaults to false', () {
         final layer = TestRenderLayer(zIndex: 0);
 
-        expect(layer.isEmpty, isFalse, reason: 'Default isEmpty should be false (assume content exists)');
+        expect(layer.isEmpty, isFalse,
+            reason: 'Default isEmpty should be false (assume content exists)');
       });
 
       test('isEmpty can be overridden to true', () {
@@ -134,7 +140,8 @@ void main() {
         stopwatch.stop();
 
         // Empty check should be near-instant (<0.1ms per spec)
-        expect(stopwatch.elapsedMicroseconds, lessThan(100), reason: 'isEmpty check must be very fast');
+        expect(stopwatch.elapsedMicroseconds, lessThan(100),
+            reason: 'isEmpty check must be very fast');
       });
     });
 
@@ -153,7 +160,8 @@ void main() {
         layer.render(mockContext);
         layer.render(mockContext);
 
-        expect(callSequence, equals(['render', 'render', 'render']), reason: 'render() should be callable multiple times');
+        expect(callSequence, equals(['render', 'render', 'render']),
+            reason: 'render() should be callable multiple times');
       });
     });
 

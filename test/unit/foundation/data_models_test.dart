@@ -125,7 +125,8 @@ void main() {
       });
 
       test('creates copy with modified metadata', () {
-        final original = const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
+        final original =
+            const ChartDataPoint(x: 1.0, y: 2.0, metadata: {'a': 1});
         final copy = original.copyWith(metadata: {'b': 2});
         expect(copy.metadata, equals({'b': 2}));
         expect(original.metadata, equals({'a': 1}));
@@ -425,7 +426,8 @@ void main() {
       });
 
       test('creates copy with modified color', () {
-        final original = ChartSeries(id: 'test', points: [], color: Colors.blue);
+        final original =
+            ChartSeries(id: 'test', points: [], color: Colors.blue);
         final copy = original.copyWith(color: Colors.red);
         expect(copy.color, equals(Colors.red));
         expect(original.color, equals(Colors.blue));

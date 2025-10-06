@@ -30,13 +30,20 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
 import 'package:flutter/rendering.dart' show TextPainter, TextStyle, Offset;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
-import 'package:braven_charts/src/rendering/layers/grid_layer.dart' show GridLayer;
-import 'package:braven_charts/src/rendering/layers/data_series_layer.dart' show DataSeriesLayer, ChartDataPoint;
-import 'package:braven_charts/src/rendering/layers/annotation_layer.dart' show AnnotationLayer;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/layers/grid_layer.dart'
+    show GridLayer;
+import 'package:braven_charts/src/rendering/layers/data_series_layer.dart'
+    show DataSeriesLayer, ChartDataPoint;
+import 'package:braven_charts/src/rendering/layers/annotation_layer.dart'
+    show AnnotationLayer;
 
 void main() {
   group('RenderPipeline Frame Time Benchmarks', () {
@@ -75,7 +82,8 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints = List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(
+          500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
@@ -109,13 +117,15 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
       final p99 = frameTimes[(frameTimes.length * 0.99).floor()];
       final jankCount = frameTimes.where((t) => t > 16).length;
 
       // Validate targets
       expect(avg, lessThan(8), reason: 'Average frame time should be <8ms');
-      expect(p99, lessThan(16), reason: 'P99 frame time should be <16ms (60 FPS)');
+      expect(p99, lessThan(16),
+          reason: 'P99 frame time should be <16ms (60 FPS)');
       expect(jankCount, equals(0), reason: 'Zero jank frames expected');
 
       print('500 visible points: avg ${avg.toStringAsFixed(1)}ms, '
@@ -129,7 +139,8 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints = List.generate(5000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(
+          5000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
@@ -151,11 +162,13 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
       final p99 = frameTimes[(frameTimes.length * 0.99).floor()];
 
       // More lenient for large data sets, but should still be reasonable
-      expect(avg, lessThan(16), reason: 'Average frame time should be <16ms for 5K points');
+      expect(avg, lessThan(16),
+          reason: 'Average frame time should be <16ms for 5K points');
 
       print('5000 visible points: avg ${avg.toStringAsFixed(1)}ms, '
           'p99 ${p99.toStringAsFixed(1)}ms');
@@ -168,7 +181,8 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints = List.generate(1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(
+          1000, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
@@ -191,13 +205,15 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
       final p50 = frameTimes[50];
       final p99 = frameTimes[99];
       final jankCount = frameTimes.where((t) => t > 16).length;
 
       expect(avg, lessThan(8), reason: 'Average frame time should be <8ms');
-      expect(p99, lessThan(16), reason: 'P99 frame time should be <16ms (60 FPS)');
+      expect(p99, lessThan(16),
+          reason: 'P99 frame time should be <16ms (60 FPS)');
       expect(jankCount, equals(0), reason: 'Zero jank frames over 100 frames');
 
       print('100 frame stability: avg ${avg.toStringAsFixed(1)}ms, '
@@ -212,7 +228,8 @@ void main() {
         zIndex: -1,
       ));
 
-      final dataPoints = List.generate(500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
+      final dataPoints = List.generate(
+          500, (i) => ChartDataPoint(i.toDouble(), (i % 100).toDouble()));
 
       pipeline.addLayer(DataSeriesLayer(
         dataPoints: dataPoints,
@@ -239,7 +256,8 @@ void main() {
       expect(jankCount, equals(0), reason: 'Zero jank expected for 500 points');
       expect(jankPercent, equals(0), reason: 'Jank percentage should be 0%');
 
-      print('Jank validation: $jankCount jank frames (${jankPercent.toStringAsFixed(1)}%) '
+      print(
+          'Jank validation: $jankCount jank frames (${jankPercent.toStringAsFixed(1)}%) '
           'over 50 frames');
     });
   });

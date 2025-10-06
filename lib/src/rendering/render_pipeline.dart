@@ -142,7 +142,8 @@ class RenderPipeline {
   ///   series: chartSeries,
   /// ),
   /// ```
-  final TransformContext? Function(Size size, Rect viewport)? transformContextFactory;
+  final TransformContext? Function(Size size, Rect viewport)?
+      transformContextFactory;
 
   /// Current viewport bounds (mutable via [updateViewport]).
   Rect _viewport;
@@ -280,11 +281,17 @@ class RenderPipeline {
         final pathStats = pathPool.statistics;
         final textStats = textPainterPool.statistics;
 
-        final totalPoolOperations = paintStats.acquireCount + pathStats.acquireCount + textStats.acquireCount;
-        final totalPoolReleases = paintStats.releaseCount + pathStats.releaseCount + textStats.releaseCount;
+        final totalPoolOperations = paintStats.acquireCount +
+            pathStats.acquireCount +
+            textStats.acquireCount;
+        final totalPoolReleases = paintStats.releaseCount +
+            pathStats.releaseCount +
+            textStats.releaseCount;
 
         monitor.updatePoolMetrics(
-          poolHitRate: totalPoolOperations > 0 ? totalPoolReleases / totalPoolOperations : 1.0,
+          poolHitRate: totalPoolOperations > 0
+              ? totalPoolReleases / totalPoolOperations
+              : 1.0,
           culledElementCount: culledCount,
           renderedElementCount: renderedCount,
         );

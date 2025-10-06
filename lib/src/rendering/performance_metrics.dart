@@ -120,12 +120,17 @@ class PerformanceMetrics {
     this.culledElementCount = 0,
     this.renderedElementCount = 0,
   })  : assert(frameTime >= Duration.zero, 'frameTime must be non-negative'),
-        assert(averageFrameTime >= Duration.zero, 'averageFrameTime must be non-negative'),
-        assert(p99FrameTime >= Duration.zero, 'p99FrameTime must be non-negative'),
+        assert(averageFrameTime >= Duration.zero,
+            'averageFrameTime must be non-negative'),
+        assert(
+            p99FrameTime >= Duration.zero, 'p99FrameTime must be non-negative'),
         assert(jankCount >= 0, 'jankCount must be non-negative'),
-        assert(culledElementCount >= 0, 'culledElementCount must be non-negative'),
-        assert(renderedElementCount >= 0, 'renderedElementCount must be non-negative'),
-        assert(poolHitRate >= 0.0 && poolHitRate <= 1.0, 'poolHitRate must be in range [0.0, 1.0]');
+        assert(
+            culledElementCount >= 0, 'culledElementCount must be non-negative'),
+        assert(renderedElementCount >= 0,
+            'renderedElementCount must be non-negative'),
+        assert(poolHitRate >= 0.0 && poolHitRate <= 1.0,
+            'poolHitRate must be in range [0.0, 1.0]');
 
   /// Check if performance meets constitutional targets.
   ///
@@ -142,7 +147,9 @@ class PerformanceMetrics {
   /// }
   /// ```
   bool get meetsTargets {
-    return averageFrameTime.inMicroseconds <= 8000 && p99FrameTime.inMicroseconds <= 16000 && poolHitRate >= 0.90;
+    return averageFrameTime.inMicroseconds <= 8000 &&
+        p99FrameTime.inMicroseconds <= 16000 &&
+        poolHitRate >= 0.90;
   }
 
   /// Average frame time in milliseconds (convenience getter).

@@ -17,7 +17,8 @@ void main() {
     });
 
     group('Background and Text Contrast', () {
-      test('axis labels have sufficient contrast with background (>= 4.5:1)', () {
+      test('axis labels have sufficient contrast with background (>= 4.5:1)',
+          () {
         final backgroundColor = theme.backgroundColor;
         final labelColor = theme.axisStyle.labelStyle.color!;
 
@@ -31,7 +32,8 @@ void main() {
                 'Found: ${contrastRatio.toStringAsFixed(2)}:1');
       });
 
-      test('axis titles have sufficient contrast with background (>= 4.5:1)', () {
+      test('axis titles have sufficient contrast with background (>= 4.5:1)',
+          () {
         final backgroundColor = theme.backgroundColor;
         final titleColor = theme.axisStyle.titleStyle.color!;
 
@@ -62,7 +64,9 @@ void main() {
     });
 
     group('Tooltip Contrast', () {
-      test('tooltip text has sufficient contrast with tooltip background (>= 4.5:1)', () {
+      test(
+          'tooltip text has sufficient contrast with tooltip background (>= 4.5:1)',
+          () {
         final tooltipBackground = theme.interactionTheme.tooltipBackground;
         final tooltipTextColor = theme.interactionTheme.tooltipTextStyle.color!;
 
@@ -88,11 +92,13 @@ void main() {
             final color2 = colors[j];
 
             // Calculate contrast ratio (basic distinguishability check)
-            final contrastRatio = ColorUtils.calculateContrastRatio(color1, color2);
+            final contrastRatio =
+                ColorUtils.calculateContrastRatio(color1, color2);
 
             // Colors should be at least somewhat different
             expect(contrastRatio, greaterThan(1.1),
-                reason: 'Series colors ${i + 1} and ${j + 1} should be distinguishable. '
+                reason:
+                    'Series colors ${i + 1} and ${j + 1} should be distinguishable. '
                     'Found contrast: ${contrastRatio.toStringAsFixed(2)}:1');
           }
         }
@@ -110,7 +116,8 @@ void main() {
 
           // Series colors should be visible on the background (relaxed threshold for color variety)
           expect(contrastRatio, greaterThanOrEqualTo(2.0),
-              reason: 'Series color ${i + 1} should be visible on white background. '
+              reason:
+                  'Series color ${i + 1} should be visible on white background. '
                   'Found: ${contrastRatio.toStringAsFixed(2)}:1');
         }
       });
@@ -136,15 +143,19 @@ void main() {
 
         // Selection uses semi-transparent color, so we need to composite it
         // For now, just check that it has some opacity
-        expect(selectionColor.alpha, greaterThan(0), reason: 'Selection color should be visible (not fully transparent)');
-        expect(selectionColor.alpha, lessThan(255), reason: 'Selection color should be semi-transparent for better UX');
+        expect(selectionColor.alpha, greaterThan(0),
+            reason:
+                'Selection color should be visible (not fully transparent)');
+        expect(selectionColor.alpha, lessThan(255),
+            reason: 'Selection color should be semi-transparent for better UX');
       });
     });
 
     group('Overall Theme Validation', () {
       test('theme is a light theme (light background)', () {
         final backgroundColor = theme.backgroundColor;
-        final luminance = ColorUtils.calculateRelativeLuminance(backgroundColor);
+        final luminance =
+            ColorUtils.calculateRelativeLuminance(backgroundColor);
 
         expect(luminance, greaterThan(0.5),
             reason: 'Default light theme should have a light background. '

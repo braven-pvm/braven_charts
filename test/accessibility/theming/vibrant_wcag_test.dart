@@ -17,7 +17,8 @@ void main() {
     });
 
     group('Background and Text Contrast', () {
-      test('axis labels have sufficient contrast with background (>= 4.5:1)', () {
+      test('axis labels have sufficient contrast with background (>= 4.5:1)',
+          () {
         final backgroundColor = theme.backgroundColor;
         final labelColor = theme.axisStyle.labelStyle.color!;
 
@@ -26,7 +27,8 @@ void main() {
           backgroundColor,
         );
 
-        expect(contrastRatio, greaterThanOrEqualTo(4.5), reason: 'Axis labels must meet WCAG AA');
+        expect(contrastRatio, greaterThanOrEqualTo(4.5),
+            reason: 'Axis labels must meet WCAG AA');
       });
     });
 
@@ -35,7 +37,8 @@ void main() {
         final colors = theme.seriesTheme.colors;
 
         // Vibrant theme should have multiple bold colors
-        expect(colors.length, greaterThanOrEqualTo(5), reason: 'Vibrant palette should have variety');
+        expect(colors.length, greaterThanOrEqualTo(5),
+            reason: 'Vibrant palette should have variety');
       });
 
       test('series colors are distinct and visible', () {
@@ -49,7 +52,8 @@ void main() {
           );
 
           // Vibrant theme prioritizes color variety; some colors may have lower contrast
-          expect(contrastRatio, greaterThanOrEqualTo(1.5), reason: 'Vibrant color ${i + 1} should be visible');
+          expect(contrastRatio, greaterThanOrEqualTo(1.5),
+              reason: 'Vibrant color ${i + 1} should be visible');
         }
       });
     });
@@ -57,7 +61,8 @@ void main() {
     group('Visual Impact', () {
       test('uses bold styling with visible border', () {
         final borderWidth = theme.borderWidth;
-        expect(borderWidth, greaterThanOrEqualTo(1.5), reason: 'Vibrant theme should have bold border');
+        expect(borderWidth, greaterThanOrEqualTo(1.5),
+            reason: 'Vibrant theme should have bold border');
       });
     });
   });

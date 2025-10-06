@@ -66,7 +66,9 @@ void main() {
 
   print('=== Performance Summary ===');
   print('Target: <100ms per theme switch');
-  print(_allBenchmarksPassed ? 'All benchmarks PASSED' : 'Some benchmarks FAILED');
+  print(_allBenchmarksPassed
+      ? 'All benchmarks PASSED'
+      : 'Some benchmarks FAILED');
 }
 
 bool _allBenchmarksPassed = true;

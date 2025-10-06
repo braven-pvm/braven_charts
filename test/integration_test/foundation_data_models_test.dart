@@ -40,7 +40,8 @@ void main() {
 
       // Test validation
       expect(point1.isValid, isTrue); // Finite numbers
-      expect(ChartDataPoint(x: double.nan, y: 5.0).isValid, isFalse); // NaN invalid
+      expect(ChartDataPoint(x: double.nan, y: 5.0).isValid,
+          isFalse); // NaN invalid
     });
 
     test('1.2 - Create ChartSeries with 100k points in <100ms', () {
@@ -79,7 +80,8 @@ void main() {
       expect(xRange.min, equals(0.0));
       expect(xRange.max, equals(99999.0));
 
-      print('✅ Series with 100k points created in ${stopwatch.elapsedMilliseconds}ms');
+      print(
+          '✅ Series with 100k points created in ${stopwatch.elapsedMilliseconds}ms');
     });
 
     test('1.3 - Data range calculations and operations', () {
@@ -131,7 +133,8 @@ void main() {
         reason: 'ChartDataPoint creation must be <1μs per point (FR-005.1)',
       );
 
-      print('✅ ChartDataPoint creation: ${averageMicroseconds.toStringAsFixed(3)}μs per point');
+      print(
+          '✅ ChartDataPoint creation: ${averageMicroseconds.toStringAsFixed(3)}μs per point');
     });
 
     test('1.5 - ChartSeries validation and ordering checks', () {

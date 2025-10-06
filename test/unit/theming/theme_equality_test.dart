@@ -29,9 +29,11 @@ void main() {
       for (var i = 0; i < themes.length; i++) {
         for (var j = 0; j < themes.length; j++) {
           if (i == j) {
-            expect(themes[i] == themes[j], isTrue, reason: 'Theme should equal itself');
+            expect(themes[i] == themes[j], isTrue,
+                reason: 'Theme should equal itself');
           } else {
-            expect(themes[i] == themes[j], isFalse, reason: 'Theme $i should not equal theme $j');
+            expect(themes[i] == themes[j], isFalse,
+                reason: 'Theme $i should not equal theme $j');
           }
         }
       }
@@ -104,7 +106,8 @@ void main() {
       final hashCodes = themes.map((t) => t.hashCode).toSet();
 
       // All 7 themes should have unique hash codes
-      expect(hashCodes.length, equals(7), reason: 'All predefined themes should have unique hash codes');
+      expect(hashCodes.length, equals(7),
+          reason: 'All predefined themes should have unique hash codes');
     });
 
     test('hashCode is consistent across multiple calls', () {
@@ -131,7 +134,8 @@ void main() {
       final theme = ChartTheme.defaultLight;
       final copy = theme.copyWith();
 
-      expect(identical(copy, theme), isFalse, reason: 'copyWith() should create a new instance');
+      expect(identical(copy, theme), isFalse,
+          reason: 'copyWith() should create a new instance');
     });
 
     test('copyWith(backgroundColor) only changes backgroundColor', () {
@@ -321,7 +325,8 @@ void main() {
       final jsonStrings = themes.map((t) => t.toJson().toString()).toSet();
 
       // All themes should produce unique JSON
-      expect(jsonStrings.length, equals(7), reason: 'Each theme should produce unique JSON');
+      expect(jsonStrings.length, equals(7),
+          reason: 'Each theme should produce unique JSON');
     });
   });
 

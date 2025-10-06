@@ -66,8 +66,10 @@ void main() {
         context: context,
       );
 
-      expect(dataPoint.x, closeTo(50.0, 0.01), reason: 'Series 0, point 2 X value');
-      expect(dataPoint.y, closeTo(20.0, 0.01), reason: 'Series 0, point 2 Y value');
+      expect(dataPoint.x, closeTo(50.0, 0.01),
+          reason: 'Series 0, point 2 X value');
+      expect(dataPoint.y, closeTo(20.0, 0.01),
+          reason: 'Series 0, point 2 Y value');
     });
 
     test('should handle multiple series', () {
@@ -81,8 +83,10 @@ void main() {
         context: context,
       );
 
-      expect(dataPoint.x, closeTo(50.0, 0.01), reason: 'Series 1, point 1 X value');
-      expect(dataPoint.y, closeTo(0.0, 0.01), reason: 'Series 1, point 1 Y value');
+      expect(dataPoint.x, closeTo(50.0, 0.01),
+          reason: 'Series 1, point 1 X value');
+      expect(dataPoint.y, closeTo(0.0, 0.01),
+          reason: 'Series 1, point 1 Y value');
     });
 
     test('should perform reverse lookup (data → nearest index)', () {
@@ -96,8 +100,10 @@ void main() {
         context: context,
       );
 
-      expect(indexPoint.x, closeTo(0.0, 0.01), reason: 'Nearest point is in series 0');
-      expect(indexPoint.y, closeTo(2.0, 0.01), reason: 'Nearest point is index 2');
+      expect(indexPoint.x, closeTo(0.0, 0.01),
+          reason: 'Nearest point is in series 0');
+      expect(indexPoint.y, closeTo(2.0, 0.01),
+          reason: 'Nearest point is index 2');
     });
 
     test('should handle out-of-bounds series index', () {

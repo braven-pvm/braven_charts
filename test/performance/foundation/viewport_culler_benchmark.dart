@@ -88,7 +88,8 @@ class ViewportCullerUnorderedBenchmark extends BenchmarkBase {
 
 /// Benchmark for ViewportCuller with small viewport (stress test).
 class ViewportCullerSmallViewportBenchmark extends BenchmarkBase {
-  ViewportCullerSmallViewportBenchmark() : super('ViewportCuller Small Viewport');
+  ViewportCullerSmallViewportBenchmark()
+      : super('ViewportCuller Small Viewport');
 
   static const int iterations = 100;
   static const int pointCount = 10000;
@@ -144,7 +145,8 @@ void main() {
   unorderedBench.report();
 
   final unorderedTimeMs = unorderedBench.measure();
-  final msPerCullUnordered = unorderedTimeMs / ViewportCullerUnorderedBenchmark.iterations;
+  final msPerCullUnordered =
+      unorderedTimeMs / ViewportCullerUnorderedBenchmark.iterations;
 
   print('');
   print('Results (10k unordered points):');
@@ -158,7 +160,8 @@ void main() {
   smallBench.report();
 
   final smallTimeMs = smallBench.measure();
-  final msPerCullSmall = smallTimeMs / ViewportCullerSmallViewportBenchmark.iterations;
+  final msPerCullSmall =
+      smallTimeMs / ViewportCullerSmallViewportBenchmark.iterations;
 
   print('');
   print('Results (10k points, 1% viewport):');
@@ -169,10 +172,13 @@ void main() {
 
   // Summary
   print('=== Summary ===');
-  final allPass = msPerCull < 1.0 && msPerCullUnordered < 1.0 && msPerCullSmall < 1.0;
+  final allPass =
+      msPerCull < 1.0 && msPerCullUnordered < 1.0 && msPerCullSmall < 1.0;
   print('Overall: ${allPass ? "✅ ALL TARGETS MET" : "❌ SOME TARGETS FAILED"}');
   print('');
   print('Analysis:');
-  print('  Ordered speedup: ${(msPerCullUnordered / msPerCull).toStringAsFixed(2)}x faster than unordered');
-  print('  Algorithm:       ${msPerCull < msPerCullUnordered ? "Binary search optimization active" : "Linear scan"}');
+  print(
+      '  Ordered speedup: ${(msPerCullUnordered / msPerCull).toStringAsFixed(2)}x faster than unordered');
+  print(
+      '  Algorithm:       ${msPerCull < msPerCullUnordered ? "Binary search optimization active" : "Linear scan"}');
 }

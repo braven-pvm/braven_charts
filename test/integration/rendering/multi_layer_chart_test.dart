@@ -94,7 +94,9 @@ void main() {
       ));
     });
 
-    testWidgets('Layers render in correct z-order (scatter → trend → annotations)', (WidgetTester tester) async {
+    testWidgets(
+        'Layers render in correct z-order (scatter → trend → annotations)',
+        (WidgetTester tester) async {
       final renderOrder = <String>[];
 
       // Instrument layers to track render order
@@ -117,7 +119,8 @@ void main() {
       expect(renderOrder[2], equals('Annotation')); // zIndex=2 (top)
     });
 
-    testWidgets('Text cache hit rate >80% after second render', (WidgetTester tester) async {
+    testWidgets('Text cache hit rate >80% after second render',
+        (WidgetTester tester) async {
       // First render: cold cache (misses)
       await tester.pumpWidget(
         CustomPaint(
@@ -145,11 +148,13 @@ void main() {
       expect(
         warmHitRate,
         greaterThan(0.80),
-        reason: 'Second render should reuse cached text layouts (>80% hit rate)',
+        reason:
+            'Second render should reuse cached text layouts (>80% hit rate)',
       );
     });
 
-    testWidgets('Toggle trend line visibility skips layer in <8ms', (WidgetTester tester) async {
+    testWidgets('Toggle trend line visibility skips layer in <8ms',
+        (WidgetTester tester) async {
       // Initial render with all layers visible
       await tester.pumpWidget(
         CustomPaint(
@@ -162,7 +167,8 @@ void main() {
       final initialRenderedCount = initialMetrics.renderedElementCount;
 
       // Toggle trend line visibility to false
-      final trendLayer = pipeline.layers.firstWhere((layer) => layer is _TrendLineLayer) as _TrendLineLayer;
+      final trendLayer = pipeline.layers
+          .firstWhere((layer) => layer is _TrendLineLayer) as _TrendLineLayer;
       trendLayer.isVisible = false;
 
       // Render with trend line hidden
@@ -186,7 +192,8 @@ void main() {
       );
     });
 
-    testWidgets('Dynamic annotation addition uses text cache', (WidgetTester tester) async {
+    testWidgets('Dynamic annotation addition uses text cache',
+        (WidgetTester tester) async {
       // Warm up cache
       await tester.pumpWidget(
         CustomPaint(
@@ -222,7 +229,8 @@ void main() {
       );
     });
 
-    testWidgets('Remove annotation layer maintains performance', (WidgetTester tester) async {
+    testWidgets('Remove annotation layer maintains performance',
+        (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -232,7 +240,8 @@ void main() {
       );
 
       // Remove annotation layer
-      final annotationLayer = pipeline.layers.firstWhere((layer) => layer is _AnnotationLayer);
+      final annotationLayer =
+          pipeline.layers.firstWhere((layer) => layer is _AnnotationLayer);
       pipeline.removeLayer(annotationLayer);
 
       // Render without annotations
@@ -257,7 +266,8 @@ void main() {
 class _ScatterLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _ScatterLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
+  _ScatterLayer({required this.data, required int zIndex})
+      : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -282,7 +292,8 @@ class _ScatterLayer extends RenderLayer {
 class _TrendLineLayer extends RenderLayer {
   final List<ChartDataPoint> data;
 
-  _TrendLineLayer({required this.data, required int zIndex}) : super(zIndex: zIndex);
+  _TrendLineLayer({required this.data, required int zIndex})
+      : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {
@@ -311,7 +322,8 @@ class _TrendLineLayer extends RenderLayer {
 class _AnnotationLayer extends RenderLayer {
   final List<String> annotations;
 
-  _AnnotationLayer({required this.annotations, required int zIndex}) : super(zIndex: zIndex);
+  _AnnotationLayer({required this.annotations, required int zIndex})
+      : super(zIndex: zIndex);
 
   @override
   void render(RenderContext context) {

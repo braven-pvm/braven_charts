@@ -22,7 +22,8 @@ void main() {
         final colors = theme.seriesTheme.colors;
 
         // Simulate protanopia for all colors
-        final simulatedColors = colors.map((c) => ColorUtils.simulateProtanopia(c)).toList();
+        final simulatedColors =
+            colors.map((c) => ColorUtils.simulateProtanopia(c)).toList();
 
         // Check that simulated colors are still distinguishable
         for (int i = 0; i < simulatedColors.length; i++) {
@@ -32,7 +33,9 @@ void main() {
               simulatedColors[j],
             );
 
-            expect(contrastRatio, greaterThan(1.1), reason: 'Colors ${i + 1} and ${j + 1} should be distinguishable with protanopia');
+            expect(contrastRatio, greaterThan(1.1),
+                reason:
+                    'Colors ${i + 1} and ${j + 1} should be distinguishable with protanopia');
           }
         }
       });
@@ -48,7 +51,8 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(1.2), reason: 'Color ${i + 1} should be visible with protanopia');
+          expect(contrastRatio, greaterThanOrEqualTo(1.2),
+              reason: 'Color ${i + 1} should be visible with protanopia');
         }
       });
     });
@@ -57,7 +61,8 @@ void main() {
       test('series colors remain distinguishable with deuteranopia', () {
         final colors = theme.seriesTheme.colors;
 
-        final simulatedColors = colors.map((c) => ColorUtils.simulateDeuteranopia(c)).toList();
+        final simulatedColors =
+            colors.map((c) => ColorUtils.simulateDeuteranopia(c)).toList();
 
         for (int i = 0; i < simulatedColors.length; i++) {
           for (int j = i + 1; j < simulatedColors.length; j++) {
@@ -66,7 +71,9 @@ void main() {
               simulatedColors[j],
             );
 
-            expect(contrastRatio, greaterThan(1.0), reason: 'Colors ${i + 1} and ${j + 1} should be distinguishable with deuteranopia');
+            expect(contrastRatio, greaterThan(1.0),
+                reason:
+                    'Colors ${i + 1} and ${j + 1} should be distinguishable with deuteranopia');
           }
         }
       });
@@ -76,7 +83,8 @@ void main() {
       test('series colors remain distinguishable with tritanopia', () {
         final colors = theme.seriesTheme.colors;
 
-        final simulatedColors = colors.map((c) => ColorUtils.simulateTritanopia(c)).toList();
+        final simulatedColors =
+            colors.map((c) => ColorUtils.simulateTritanopia(c)).toList();
 
         for (int i = 0; i < simulatedColors.length; i++) {
           for (int j = i + 1; j < simulatedColors.length; j++) {
@@ -85,7 +93,9 @@ void main() {
               simulatedColors[j],
             );
 
-            expect(contrastRatio, greaterThan(1.0), reason: 'Colors ${i + 1} and ${j + 1} should be distinguishable with tritanopia');
+            expect(contrastRatio, greaterThan(1.0),
+                reason:
+                    'Colors ${i + 1} and ${j + 1} should be distinguishable with tritanopia');
           }
         }
       });
@@ -96,7 +106,8 @@ void main() {
         final markerShapes = theme.seriesTheme.markerShapes;
 
         // Colorblind friendly theme should use varied shapes
-        expect(markerShapes.length, greaterThanOrEqualTo(3), reason: 'Should use multiple marker shapes for redundancy');
+        expect(markerShapes.length, greaterThanOrEqualTo(3),
+            reason: 'Should use multiple marker shapes for redundancy');
       });
     });
 
@@ -106,7 +117,8 @@ void main() {
 
         // The colorblind friendly theme should use the Okabe-Ito palette
         // Verify we have at least the minimum set
-        expect(colors.length, greaterThanOrEqualTo(5), reason: 'Should use comprehensive colorblind-safe palette');
+        expect(colors.length, greaterThanOrEqualTo(5),
+            reason: 'Should use comprehensive colorblind-safe palette');
       });
     });
   });

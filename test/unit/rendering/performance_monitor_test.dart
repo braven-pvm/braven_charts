@@ -19,7 +19,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'Frame time should be recorded and non-zero');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'Frame time should be recorded and non-zero');
     });
 
     test('multiple beginFrame/endFrame pairs record separate frame times', () {
@@ -36,8 +37,10 @@ void main() {
       }
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'Last frame time should be recorded');
-      expect(metrics.averageFrameTime.inMicroseconds, greaterThan(0), reason: 'Average should be calculated from all frames');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'Last frame time should be recorded');
+      expect(metrics.averageFrameTime.inMicroseconds, greaterThan(0),
+          reason: 'Average should be calculated from all frames');
     });
 
     test('frame time has microsecond precision', () {
@@ -49,7 +52,8 @@ void main() {
 
       final metrics = monitor.currentMetrics;
       // Even minimal work should register in microseconds
-      expect(metrics.frameTime.inMicroseconds, greaterThanOrEqualTo(0), reason: 'Microsecond precision should detect minimal work');
+      expect(metrics.frameTime.inMicroseconds, greaterThanOrEqualTo(0),
+          reason: 'Microsecond precision should detect minimal work');
     });
 
     test('beginFrame without endFrame throws assertion in debug mode', () {
@@ -58,14 +62,16 @@ void main() {
       monitor.beginFrame();
 
       // Second beginFrame should throw assertion error
-      expect(() => monitor.beginFrame(), throwsAssertionError, reason: 'Double beginFrame should assert');
+      expect(() => monitor.beginFrame(), throwsAssertionError,
+          reason: 'Double beginFrame should assert');
     });
 
     test('endFrame without beginFrame throws assertion in debug mode', () {
       final monitor = StopwatchPerformanceMonitor();
 
       // endFrame without beginFrame should throw assertion error
-      expect(() => monitor.endFrame(), throwsAssertionError, reason: 'endFrame without beginFrame should assert');
+      expect(() => monitor.endFrame(), throwsAssertionError,
+          reason: 'endFrame without beginFrame should assert');
     });
   });
 
@@ -79,7 +85,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.jankCount, equals(1), reason: 'Jank counter should increment for frame >16ms');
+      expect(metrics.jankCount, equals(1),
+          reason: 'Jank counter should increment for frame >16ms');
     });
 
     test('jank counter does not increment for frames under 16ms', () {
@@ -93,7 +100,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.jankCount, equals(0), reason: 'Jank counter should not increment for fast frames');
+      expect(metrics.jankCount, equals(0),
+          reason: 'Jank counter should not increment for fast frames');
     });
 
     test('jank counter accumulates across multiple slow frames', () async {
@@ -107,7 +115,8 @@ void main() {
       }
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.jankCount, equals(3), reason: 'Jank counter should accumulate across frames');
+      expect(metrics.jankCount, equals(3),
+          reason: 'Jank counter should accumulate across frames');
     });
 
     test('jank counter does not increment for exactly 16ms frame', () async {
@@ -120,7 +129,8 @@ void main() {
 
       final metrics = monitor.currentMetrics;
       // Jank threshold is >16ms (exclusive), so 15ms + small overhead should not count
-      expect(metrics.jankCount, equals(0), reason: 'Jank threshold is >16ms, so exactly 16ms should not count');
+      expect(metrics.jankCount, equals(0),
+          reason: 'Jank threshold is >16ms, so exactly 16ms should not count');
     });
 
     test('mixed fast and slow frames only count slow ones', () async {
@@ -140,7 +150,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.jankCount, equals(1), reason: 'Only the slow frame should increment jank counter');
+      expect(metrics.jankCount, equals(1),
+          reason: 'Only the slow frame should increment jank counter');
     });
   });
 
@@ -157,7 +168,8 @@ void main() {
       final metrics = monitor.currentMetrics;
       // Average should be calculated from last 3 frames only
       // (Cannot directly verify count, but average behavior confirms bounded history)
-      expect(metrics.averageFrameTime, isNotNull, reason: 'Average should be calculated from bounded history');
+      expect(metrics.averageFrameTime, isNotNull,
+          reason: 'Average should be calculated from bounded history');
     });
 
     test('history starts empty and builds up', () {
@@ -165,7 +177,8 @@ void main() {
 
       // Before any frames
       var metrics = monitor.currentMetrics;
-      expect(metrics.frameTime, equals(Duration.zero), reason: 'Empty history should return zero frame time');
+      expect(metrics.frameTime, equals(Duration.zero),
+          reason: 'Empty history should return zero frame time');
       expect(metrics.averageFrameTime, equals(Duration.zero));
       expect(metrics.jankCount, equals(0));
 
@@ -174,7 +187,8 @@ void main() {
       monitor.endFrame();
 
       metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'After first frame, metrics should be non-zero');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'After first frame, metrics should be non-zero');
     });
 
     test('maxHistorySize=1 only retains most recent frame', () {
@@ -192,8 +206,11 @@ void main() {
       final secondFrameTime = monitor.currentMetrics.frameTime;
 
       // Average should equal last frame time (only 1 frame in history)
-      expect(monitor.currentMetrics.averageFrameTime, equals(secondFrameTime), reason: 'With maxHistorySize=1, average should equal last frame');
-      expect(monitor.currentMetrics.averageFrameTime, isNot(equals(firstFrameTime)), reason: 'First frame should have been evicted');
+      expect(monitor.currentMetrics.averageFrameTime, equals(secondFrameTime),
+          reason: 'With maxHistorySize=1, average should equal last frame');
+      expect(monitor.currentMetrics.averageFrameTime,
+          isNot(equals(firstFrameTime)),
+          reason: 'First frame should have been evicted');
     });
 
     test('large maxHistorySize retains all frames without eviction', () {
@@ -207,7 +224,8 @@ void main() {
 
       final metrics = monitor.currentMetrics;
       // All frames should contribute to average (no eviction)
-      expect(metrics.averageFrameTime.inMicroseconds, greaterThan(0), reason: 'Average should include all recorded frames');
+      expect(metrics.averageFrameTime.inMicroseconds, greaterThan(0),
+          reason: 'Average should include all recorded frames');
     });
   });
 
@@ -231,7 +249,9 @@ void main() {
       final metrics = monitor.currentMetrics;
       // Average should be around 10ms (5+10+15)/3
       // Allow tolerance for timing variations (async overhead can be significant)
-      expect(metrics.averageFrameTimeMs, closeTo(10.0, 8.0), reason: 'Average frame time should be approximately (5+10+15)/3 = 10ms');
+      expect(metrics.averageFrameTimeMs, closeTo(10.0, 8.0),
+          reason:
+              'Average frame time should be approximately (5+10+15)/3 = 10ms');
     });
 
     test('p99FrameTime returns 99th percentile value', () {
@@ -253,7 +273,8 @@ void main() {
 
       final metrics = monitor.currentMetrics;
       // p99 should be the slow frame (99th percentile of 100 frames)
-      expect(metrics.p99FrameTime.inMicroseconds, greaterThan(metrics.averageFrameTime.inMicroseconds),
+      expect(metrics.p99FrameTime.inMicroseconds,
+          greaterThan(metrics.averageFrameTime.inMicroseconds),
           reason: 'p99 should be higher than average due to slow outlier');
     });
 
@@ -269,7 +290,8 @@ void main() {
       final metrics2 = monitor.currentMetrics;
 
       // Frame times should be different (different execution)
-      expect(metrics2.frameTime, isNot(equals(metrics1.frameTime)), reason: 'Each frame should have independent timing');
+      expect(metrics2.frameTime, isNot(equals(metrics1.frameTime)),
+          reason: 'Each frame should have independent timing');
     });
 
     test('currentMetrics includes poolHitRate from updatePoolMetrics', () {
@@ -285,7 +307,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.poolHitRate, equals(0.85), reason: 'Metrics should include updated pool hit rate');
+      expect(metrics.poolHitRate, equals(0.85),
+          reason: 'Metrics should include updated pool hit rate');
       expect(metrics.culledElementCount, equals(500));
       expect(metrics.renderedElementCount, equals(100));
     });
@@ -297,7 +320,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.poolHitRate, equals(1.0), reason: 'Default pool hit rate should be 1.0 (100%)');
+      expect(metrics.poolHitRate, equals(1.0),
+          reason: 'Default pool hit rate should be 1.0 (100%)');
       expect(metrics.culledElementCount, equals(0));
       expect(metrics.renderedElementCount, equals(0));
     });
@@ -315,14 +339,17 @@ void main() {
       monitor.beginFrame();
       monitor.endFrame();
 
-      expect(monitor.currentMetrics.jankCount, greaterThan(0), reason: 'Should have jank before reset');
+      expect(monitor.currentMetrics.jankCount, greaterThan(0),
+          reason: 'Should have jank before reset');
 
       monitor.reset();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime, equals(Duration.zero), reason: 'Frame time should be zero after reset');
+      expect(metrics.frameTime, equals(Duration.zero),
+          reason: 'Frame time should be zero after reset');
       expect(metrics.averageFrameTime, equals(Duration.zero));
-      expect(metrics.jankCount, equals(0), reason: 'Jank count should be zero after reset');
+      expect(metrics.jankCount, equals(0),
+          reason: 'Jank count should be zero after reset');
     });
 
     test('reset allows monitor to be reused', () {
@@ -339,7 +366,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'Monitor should work normally after reset');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'Monitor should work normally after reset');
     });
 
     test('reset clears jank counter', () async {
@@ -350,11 +378,13 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 20));
       monitor.endFrame();
 
-      expect(monitor.currentMetrics.jankCount, equals(1), reason: 'Should have jank before reset');
+      expect(monitor.currentMetrics.jankCount, equals(1),
+          reason: 'Should have jank before reset');
 
       monitor.reset();
 
-      expect(monitor.currentMetrics.jankCount, equals(0), reason: 'Jank counter should reset to zero');
+      expect(monitor.currentMetrics.jankCount, equals(0),
+          reason: 'Jank counter should reset to zero');
     });
 
     test('reset clears pool metrics', () {
@@ -372,7 +402,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.poolHitRate, equals(1.0), reason: 'Pool hit rate should reset to default 1.0');
+      expect(metrics.poolHitRate, equals(1.0),
+          reason: 'Pool hit rate should reset to default 1.0');
       expect(metrics.culledElementCount, equals(0));
       expect(metrics.renderedElementCount, equals(0));
     });
@@ -387,7 +418,8 @@ void main() {
 
       final metrics = monitor.currentMetrics;
       expect(metrics.frameTime, isNotNull);
-      expect(metrics.averageFrameTime, equals(metrics.frameTime), reason: 'With history of 1, average should equal single frame');
+      expect(metrics.averageFrameTime, equals(metrics.frameTime),
+          reason: 'With history of 1, average should equal single frame');
     });
 
     test('zero work frame still records time', () {
@@ -398,7 +430,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThanOrEqualTo(0), reason: 'Even zero-work frame should have non-negative time');
+      expect(metrics.frameTime.inMicroseconds, greaterThanOrEqualTo(0),
+          reason: 'Even zero-work frame should have non-negative time');
     });
 
     test('many consecutive frames maintain stability', () {
@@ -413,7 +446,8 @@ void main() {
       final metrics = monitor.currentMetrics;
       expect(metrics.frameTime, isNotNull);
       expect(metrics.averageFrameTime, isNotNull);
-      expect(metrics.p99FrameTime, isNotNull, reason: 'Metrics should remain stable after many frames');
+      expect(metrics.p99FrameTime, isNotNull,
+          reason: 'Metrics should remain stable after many frames');
     });
 
     test('p99 calculation handles small history sizes', () {
@@ -426,7 +460,8 @@ void main() {
       monitor.endFrame();
 
       final metrics = monitor.currentMetrics;
-      expect(metrics.p99FrameTime, isNotNull, reason: 'p99 should handle small sample sizes gracefully');
+      expect(metrics.p99FrameTime, isNotNull,
+          reason: 'p99 should handle small sample sizes gracefully');
     });
   });
 }

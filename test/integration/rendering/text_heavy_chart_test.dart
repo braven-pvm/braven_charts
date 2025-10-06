@@ -87,7 +87,8 @@ void main() {
       ));
     });
 
-    testWidgets('Initial text layout completes in <50ms', (WidgetTester tester) async {
+    testWidgets('Initial text layout completes in <50ms',
+        (WidgetTester tester) async {
       final stopwatch = Stopwatch()..start();
 
       await tester.pumpWidget(
@@ -105,7 +106,8 @@ void main() {
       );
     });
 
-    testWidgets('Text cache hit rate >70% on second frame', (WidgetTester tester) async {
+    testWidgets('Text cache hit rate >70% on second frame',
+        (WidgetTester tester) async {
       // First render: cold cache (all misses)
       await tester.pumpWidget(
         CustomPaint(
@@ -137,7 +139,8 @@ void main() {
       );
     });
 
-    testWidgets('Cached layouts reused for repeated text after pan', (WidgetTester tester) async {
+    testWidgets('Cached layouts reused for repeated text after pan',
+        (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -164,7 +167,8 @@ void main() {
       );
     });
 
-    testWidgets('Cache eviction maintains bounded memory', (WidgetTester tester) async {
+    testWidgets('Cache eviction maintains bounded memory',
+        (WidgetTester tester) async {
       // Render initial frame (populate cache)
       await tester.pumpWidget(
         CustomPaint(
@@ -207,7 +211,8 @@ void main() {
       );
     });
 
-    testWidgets('Performance remains stable with text-heavy rendering', (WidgetTester tester) async {
+    testWidgets('Performance remains stable with text-heavy rendering',
+        (WidgetTester tester) async {
       // Render 30 frames with text-heavy content
       for (int i = 0; i < 30; i++) {
         await tester.pumpWidget(

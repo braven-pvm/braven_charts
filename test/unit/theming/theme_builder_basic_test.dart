@@ -35,7 +35,10 @@ void main() {
     });
 
     test('build() creates ChartTheme with set values', () {
-      final theme = ChartThemeBuilder().backgroundColor(Colors.grey).borderWidth(2.0).build();
+      final theme = ChartThemeBuilder()
+          .backgroundColor(Colors.grey)
+          .borderWidth(2.0)
+          .build();
 
       expect(theme.backgroundColor, equals(Colors.grey));
       expect(theme.borderWidth, equals(2.0));

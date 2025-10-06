@@ -17,7 +17,8 @@ void main() {
     });
 
     group('Background and Text Contrast', () {
-      test('axis labels have sufficient contrast with background (>= 4.5:1)', () {
+      test('axis labels have sufficient contrast with background (>= 4.5:1)',
+          () {
         final backgroundColor = theme.backgroundColor;
         final labelColor = theme.axisStyle.labelStyle.color!;
 
@@ -31,7 +32,8 @@ void main() {
                 'Found: ${contrastRatio.toStringAsFixed(2)}:1');
       });
 
-      test('axis titles have sufficient contrast with background (>= 4.5:1)', () {
+      test('axis titles have sufficient contrast with background (>= 4.5:1)',
+          () {
         final backgroundColor = theme.backgroundColor;
         final titleColor = theme.axisStyle.titleStyle.color!;
 
@@ -47,7 +49,9 @@ void main() {
     });
 
     group('Tooltip Contrast', () {
-      test('tooltip text has sufficient contrast with tooltip background (>= 4.5:1)', () {
+      test(
+          'tooltip text has sufficient contrast with tooltip background (>= 4.5:1)',
+          () {
         final tooltipBackground = theme.interactionTheme.tooltipBackground;
         final tooltipTextColor = theme.interactionTheme.tooltipTextStyle.color!;
 
@@ -68,8 +72,11 @@ void main() {
 
         for (int i = 0; i < colors.length; i++) {
           for (int j = i + 1; j < colors.length; j++) {
-            final contrastRatio = ColorUtils.calculateContrastRatio(colors[i], colors[j]);
-            expect(contrastRatio, greaterThan(1.0), reason: 'Series colors ${i + 1} and ${j + 1} should be distinguishable');
+            final contrastRatio =
+                ColorUtils.calculateContrastRatio(colors[i], colors[j]);
+            expect(contrastRatio, greaterThan(1.0),
+                reason:
+                    'Series colors ${i + 1} and ${j + 1} should be distinguishable');
           }
         }
       });
@@ -84,7 +91,9 @@ void main() {
             backgroundColor,
           );
 
-          expect(contrastRatio, greaterThanOrEqualTo(2.0), reason: 'Series color ${i + 1} should be visible on dark background');
+          expect(contrastRatio, greaterThanOrEqualTo(2.0),
+              reason:
+                  'Series color ${i + 1} should be visible on dark background');
         }
       });
     });
@@ -92,9 +101,11 @@ void main() {
     group('Overall Theme Validation', () {
       test('theme is a dark theme (dark background)', () {
         final backgroundColor = theme.backgroundColor;
-        final luminance = ColorUtils.calculateRelativeLuminance(backgroundColor);
+        final luminance =
+            ColorUtils.calculateRelativeLuminance(backgroundColor);
 
-        expect(luminance, lessThan(0.5), reason: 'Default dark theme should have a dark background');
+        expect(luminance, lessThan(0.5),
+            reason: 'Default dark theme should have a dark background');
       });
     });
   });

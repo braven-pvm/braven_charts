@@ -43,8 +43,10 @@ void main() {
         context: context,
       );
 
-      expect(normalized.x, closeTo(0.0, 0.001), reason: 'Chart origin X → normalized 0.0');
-      expect(normalized.y, closeTo(0.0, 0.001), reason: 'Chart origin Y → normalized 0.0');
+      expect(normalized.x, closeTo(0.0, 0.001),
+          reason: 'Chart origin X → normalized 0.0');
+      expect(normalized.y, closeTo(0.0, 0.001),
+          reason: 'Chart origin Y → normalized 0.0');
     });
 
     test('should handle corner case (1.0, 1.0)', () {
@@ -58,8 +60,10 @@ void main() {
         context: context,
       );
 
-      expect(normalized.x, closeTo(1.0, 0.001), reason: 'Chart max X → normalized 1.0');
-      expect(normalized.y, closeTo(1.0, 0.001), reason: 'Chart max Y → normalized 1.0');
+      expect(normalized.x, closeTo(1.0, 0.001),
+          reason: 'Chart max X → normalized 1.0');
+      expect(normalized.y, closeTo(1.0, 0.001),
+          reason: 'Chart max Y → normalized 1.0');
     });
 
     test('should map mid-point (0.5, 0.5) to chart area center', () {
@@ -73,8 +77,10 @@ void main() {
         context: context,
       );
 
-      expect(chartPoint.x, closeTo(350.0, 0.01), reason: 'Normalized 0.5 X → chart center X');
-      expect(chartPoint.y, closeTo(270.0, 0.01), reason: 'Normalized 0.5 Y → chart center Y');
+      expect(chartPoint.x, closeTo(350.0, 0.01),
+          reason: 'Normalized 0.5 X → chart center X');
+      expect(chartPoint.y, closeTo(270.0, 0.01),
+          reason: 'Normalized 0.5 Y → chart center Y');
     });
 
     test('should have round-trip accuracy', () {
@@ -95,8 +101,10 @@ void main() {
         context: context,
       );
 
-      expect(roundTripChart.x, closeTo(originalChart.x, 0.01), reason: 'Round-trip X accuracy');
-      expect(roundTripChart.y, closeTo(originalChart.y, 0.01), reason: 'Round-trip Y accuracy');
+      expect(roundTripChart.x, closeTo(originalChart.x, 0.01),
+          reason: 'Round-trip X accuracy');
+      expect(roundTripChart.y, closeTo(originalChart.y, 0.01),
+          reason: 'Round-trip Y accuracy');
     });
 
     test('should handle percentage-based positioning', () {
@@ -110,8 +118,10 @@ void main() {
         context: context,
       );
 
-      expect(chartPoint.x, closeTo(560.0, 0.01), reason: '80% of width = 0.8 * 700');
-      expect(chartPoint.y, closeTo(108.0, 0.01), reason: '20% of height = 0.2 * 540');
+      expect(chartPoint.x, closeTo(560.0, 0.01),
+          reason: '80% of width = 0.8 * 700');
+      expect(chartPoint.y, closeTo(108.0, 0.01),
+          reason: '20% of height = 0.2 * 540');
     });
 
     test('should validate out-of-range normalized coordinates', () {
@@ -137,7 +147,8 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Out-of-range normalized coords should fail validation');
+      expect(validation.isValid, isFalse,
+          reason: 'Out-of-range normalized coords should fail validation');
     });
   });
 }

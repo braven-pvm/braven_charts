@@ -11,13 +11,19 @@ library;
 
 import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/render_context.dart'
+    show RenderContext;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
-import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextStyle, TextDirection;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
+import 'package:flutter/rendering.dart'
+    show TextPainter, TextSpan, TextStyle, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -53,10 +59,13 @@ void main() {
       final canvas = _MockCanvas();
 
       // Render frame with 1000 unique text entries
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Cache overflow should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Cache overflow should not crash');
 
       // Verify cache size bounded by maxSize
-      expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should not exceed maxSize (LRU eviction)');
+      expect(textCache.length, lessThanOrEqualTo(500),
+          reason: 'Cache size should not exceed maxSize (LRU eviction)');
 
       print('Cache overflow test: '
           '1000 unique labels, cache size ${textCache.length} (≤500), '
@@ -109,11 +118,13 @@ void main() {
       final afterThirdHitRate = textCache.hitRate;
 
       // Hit rate should improve and stabilize
-      expect(afterSecondHitRate, greaterThan(afterFirstHitRate), reason: 'Second render should have better hit rate');
+      expect(afterSecondHitRate, greaterThan(afterFirstHitRate),
+          reason: 'Second render should have better hit rate');
 
       // By third render, hit rate should stabilize (recent 500 labels cached)
       // We expect ~50% hit rate (500 cached / 1000 total)
-      expect(afterThirdHitRate, greaterThan(0.4), reason: 'Hit rate should stabilize around 50% (500/1000 cached)');
+      expect(afterThirdHitRate, greaterThan(0.4),
+          reason: 'Hit rate should stabilize around 50% (500/1000 cached)');
 
       print('Hit rate stabilization: '
           'first ${(afterFirstHitRate * 100).toStringAsFixed(1)}%, '
@@ -156,13 +167,15 @@ void main() {
         pipeline.renderFrame(canvas, const Size(800, 600));
 
         // After each frame, cache size should remain bounded
-        expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should remain ≤500 across frames');
+        expect(textCache.length, lessThanOrEqualTo(500),
+            reason: 'Cache size should remain ≤500 across frames');
       }
 
       final finalLength = textCache.length;
 
       // After 10 frames, cache should still be bounded
-      expect(finalLength, lessThanOrEqualTo(500), reason: 'Cache size should not grow unbounded');
+      expect(finalLength, lessThanOrEqualTo(500),
+          reason: 'Cache size should not grow unbounded');
 
       print('Memory growth test: '
           '10 frames with 1000 labels each, '
@@ -207,8 +220,10 @@ void main() {
       final afterFirstLength = textCache.length;
 
       // Cache should grow to maxSize
-      expect(afterFirstLength, greaterThan(initialLength), reason: 'Cache should populate on first render');
-      expect(afterFirstLength, lessThanOrEqualTo(500), reason: 'Cache should not exceed maxSize');
+      expect(afterFirstLength, greaterThan(initialLength),
+          reason: 'Cache should populate on first render');
+      expect(afterFirstLength, lessThanOrEqualTo(500),
+          reason: 'Cache should not exceed maxSize');
 
       // Second render to check hit rate
       pipeline.renderFrame(canvas, const Size(800, 600));
@@ -216,7 +231,8 @@ void main() {
       final afterSecondHitRate = textCache.hitRate;
 
       // Hit rate should improve
-      expect(afterSecondHitRate, greaterThan(initialHitRate), reason: 'Hit rate should improve after population');
+      expect(afterSecondHitRate, greaterThan(initialHitRate),
+          reason: 'Hit rate should improve after population');
 
       print('Cache statistics: '
           'initial length $initialLength, '
@@ -262,7 +278,8 @@ void main() {
       final afterFirstLength = textCache.length;
 
       // Cache should contain ~500 unique labels
-      expect(afterFirstLength, lessThanOrEqualTo(500), reason: 'Cache should contain unique labels only');
+      expect(afterFirstLength, lessThanOrEqualTo(500),
+          reason: 'Cache should contain unique labels only');
 
       // Second render should have high hit rate (all labels cached)
       pipeline.renderFrame(canvas, const Size(800, 600));
@@ -270,7 +287,8 @@ void main() {
       final hitRate = textCache.hitRate;
 
       // With only 500 unique labels (all fit in cache), hit rate should be very high
-      expect(hitRate, greaterThan(0.7), reason: 'Hit rate should be high when all labels fit in cache');
+      expect(hitRate, greaterThan(0.7),
+          reason: 'Hit rate should be high when all labels fit in cache');
 
       print('Mixed labels test: '
           '1000 labels (500 unique), '
@@ -309,10 +327,13 @@ void main() {
       final canvas = _MockCanvas();
 
       // Should handle extreme overflow without crash
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Extreme overflow (5000 labels) should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Extreme overflow (5000 labels) should not crash');
 
       // Cache size should still be bounded
-      expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should remain ≤500 even with 5000 labels');
+      expect(textCache.length, lessThanOrEqualTo(500),
+          reason: 'Cache size should remain ≤500 even with 5000 labels');
 
       print('Extreme overflow test: '
           '5000 unique labels, '
@@ -347,7 +368,8 @@ class _CacheOverflowLayer implements RenderLayer {
     for (int i = 0; i < labelCount; i++) {
       final text = uniqueStyles ? 'Label$i' : 'Label${i % 500}';
       final fontSize = uniqueStyles ? 12.0 + (i % 10) : 12.0;
-      final style = TextStyle(fontSize: fontSize, color: const Color(0xFF000000));
+      final style =
+          TextStyle(fontSize: fontSize, color: const Color(0xFF000000));
 
       final textPainter = context.textPainterPool.acquire();
       try {
@@ -355,14 +377,16 @@ class _CacheOverflowLayer implements RenderLayer {
         final cached = context.textCache.get(text, style);
         if (cached != null) {
           // Cache hit: use cached painter
-          cached.paint(context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
+          cached.paint(
+              context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
         } else {
           // Cache miss: create, layout, cache, paint
           textPainter.text = TextSpan(text: text, style: style);
           textPainter.textDirection = TextDirection.ltr;
           textPainter.layout();
           context.textCache.put(text, style, textPainter);
-          textPainter.paint(context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
+          textPainter.paint(
+              context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
         }
       } finally {
         context.textPainterPool.release(textPainter);

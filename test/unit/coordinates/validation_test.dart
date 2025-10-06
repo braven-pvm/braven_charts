@@ -46,8 +46,10 @@ void main() {
       );
 
       expect(validation.isValid, isFalse, reason: 'NaN should fail validation');
-      expect(validation.errorType, equals(ValidationErrorType.invalidValue), reason: 'Error type should be invalidValue');
-      expect(validation.errorMessage, contains('NaN'), reason: 'Error message should mention NaN');
+      expect(validation.errorType, equals(ValidationErrorType.invalidValue),
+          reason: 'Error type should be invalidValue');
+      expect(validation.errorMessage, contains('NaN'),
+          reason: 'Error message should mention NaN');
     });
 
     test('should detect infinity coordinates', () {
@@ -59,9 +61,12 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Infinity should fail validation');
-      expect(validation.errorType, equals(ValidationErrorType.invalidValue), reason: 'Error type should be invalidValue');
-      expect(validation.errorMessage, contains('infinite'), reason: 'Error message should mention infinity');
+      expect(validation.isValid, isFalse,
+          reason: 'Infinity should fail validation');
+      expect(validation.errorType, equals(ValidationErrorType.invalidValue),
+          reason: 'Error type should be invalidValue');
+      expect(validation.errorMessage, contains('infinite'),
+          reason: 'Error message should mention infinity');
     });
 
     test('should detect negative infinity', () {
@@ -73,12 +78,14 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Negative infinity should fail validation');
+      expect(validation.isValid, isFalse,
+          reason: 'Negative infinity should fail validation');
       expect(validation.errorType, equals(ValidationErrorType.invalidValue));
     });
 
     test('should detect out-of-range data coordinates', () {
-      final outOfRangePoint = const Point<double>(150.0, 75.0); // Beyond data range
+      final outOfRangePoint =
+          const Point<double>(150.0, 75.0); // Beyond data range
 
       final validation = transformer.validate(
         outOfRangePoint,
@@ -86,14 +93,19 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Out-of-range should fail validation');
-      expect(validation.errorType, equals(ValidationErrorType.outOfRange), reason: 'Error type should be outOfRange');
-      expect(validation.errorMessage, contains('150'), reason: 'Error message should include actual value');
-      expect(validation.errorMessage, contains('100'), reason: 'Error message should include max range');
+      expect(validation.isValid, isFalse,
+          reason: 'Out-of-range should fail validation');
+      expect(validation.errorType, equals(ValidationErrorType.outOfRange),
+          reason: 'Error type should be outOfRange');
+      expect(validation.errorMessage, contains('150'),
+          reason: 'Error message should include actual value');
+      expect(validation.errorMessage, contains('100'),
+          reason: 'Error message should include max range');
     });
 
     test('should detect out-of-range screen coordinates', () {
-      final outOfScreenPoint = const Point<double>(1000.0, 50.0); // Beyond widget bounds
+      final outOfScreenPoint =
+          const Point<double>(1000.0, 50.0); // Beyond widget bounds
 
       final validation = transformer.validate(
         outOfScreenPoint,
@@ -101,7 +113,8 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Out-of-screen should fail validation');
+      expect(validation.isValid, isFalse,
+          reason: 'Out-of-screen should fail validation');
       expect(validation.errorType, equals(ValidationErrorType.outOfRange));
     });
 
@@ -114,7 +127,8 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isFalse, reason: 'Normalized coords outside [0,1] should fail');
+      expect(validation.isValid, isFalse,
+          reason: 'Normalized coords outside [0,1] should fail');
       expect(validation.errorType, equals(ValidationErrorType.outOfRange));
     });
 
@@ -132,9 +146,12 @@ void main() {
       // - Actual value
       // - Expected range
       // - Suggestion for fixing
-      expect(validation.errorMessage, contains('120'), reason: 'Include actual X value');
-      expect(validation.errorMessage, contains('-60'), reason: 'Include actual Y value');
-      expect(validation.errorMessage, isNot(isEmpty), reason: 'Error message should not be empty');
+      expect(validation.errorMessage, contains('120'),
+          reason: 'Include actual X value');
+      expect(validation.errorMessage, contains('-60'),
+          reason: 'Include actual Y value');
+      expect(validation.errorMessage, isNot(isEmpty),
+          reason: 'Error message should not be empty');
     });
 
     test('should validate correct coordinates as valid', () {
@@ -146,47 +163,60 @@ void main() {
         context,
       );
 
-      expect(validation.isValid, isTrue, reason: 'Valid point should pass validation');
-      expect(validation.errorMessage, isEmpty, reason: 'Valid point should have no error message');
+      expect(validation.isValid, isTrue,
+          reason: 'Valid point should pass validation');
+      expect(validation.errorMessage, isEmpty,
+          reason: 'Valid point should have no error message');
     });
 
     test('should validate edge case coordinates', () {
       // Data range min
       final minPoint = const Point<double>(0.0, -50.0);
-      var validation = transformer.validate(minPoint, CoordinateSystem.data, context);
-      expect(validation.isValid, isTrue, reason: 'Data range min should be valid');
+      var validation =
+          transformer.validate(minPoint, CoordinateSystem.data, context);
+      expect(validation.isValid, isTrue,
+          reason: 'Data range min should be valid');
 
       // Data range max
       final maxPoint = const Point<double>(100.0, 50.0);
-      validation = transformer.validate(maxPoint, CoordinateSystem.data, context);
-      expect(validation.isValid, isTrue, reason: 'Data range max should be valid');
+      validation =
+          transformer.validate(maxPoint, CoordinateSystem.data, context);
+      expect(validation.isValid, isTrue,
+          reason: 'Data range max should be valid');
 
       // Normalized 0.0
       final normalizedZero = const Point<double>(0.0, 0.0);
-      validation = transformer.validate(normalizedZero, CoordinateSystem.normalized, context);
-      expect(validation.isValid, isTrue, reason: 'Normalized 0.0 should be valid');
+      validation = transformer.validate(
+          normalizedZero, CoordinateSystem.normalized, context);
+      expect(validation.isValid, isTrue,
+          reason: 'Normalized 0.0 should be valid');
 
       // Normalized 1.0
       final normalizedOne = const Point<double>(1.0, 1.0);
-      validation = transformer.validate(normalizedOne, CoordinateSystem.normalized, context);
-      expect(validation.isValid, isTrue, reason: 'Normalized 1.0 should be valid');
+      validation = transformer.validate(
+          normalizedOne, CoordinateSystem.normalized, context);
+      expect(validation.isValid, isTrue,
+          reason: 'Normalized 1.0 should be valid');
     });
 
     test('should handle getValidRange for all coordinate systems', () {
       // Data range
-      final dataRange = transformer.getValidRange(CoordinateSystem.data, context);
+      final dataRange =
+          transformer.getValidRange(CoordinateSystem.data, context);
       expect(dataRange.left, closeTo(0.0, 0.01), reason: 'Data range min X');
       expect(dataRange.top, closeTo(-50.0, 0.01), reason: 'Data range min Y');
       expect(dataRange.right, closeTo(100.0, 0.01), reason: 'Data range max X');
       expect(dataRange.bottom, closeTo(50.0, 0.01), reason: 'Data range max Y');
 
       // Screen range
-      final screenRange = transformer.getValidRange(CoordinateSystem.screen, context);
+      final screenRange =
+          transformer.getValidRange(CoordinateSystem.screen, context);
       expect(screenRange.right, closeTo(800.0, 0.01), reason: 'Screen width');
       expect(screenRange.bottom, closeTo(600.0, 0.01), reason: 'Screen height');
 
       // Normalized range
-      final normalizedRange = transformer.getValidRange(CoordinateSystem.normalized, context);
+      final normalizedRange =
+          transformer.getValidRange(CoordinateSystem.normalized, context);
       expect(normalizedRange.left, closeTo(0.0, 0.01));
       expect(normalizedRange.top, closeTo(0.0, 0.01));
       expect(normalizedRange.right, closeTo(1.0, 0.01));

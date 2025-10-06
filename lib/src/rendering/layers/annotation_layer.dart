@@ -39,7 +39,8 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter/rendering.dart' show TextSpan, TextPainter, TextDirection, TextStyle;
+import 'package:flutter/rendering.dart'
+    show TextSpan, TextPainter, TextDirection, TextStyle;
 
 import '../render_context.dart' show RenderContext;
 import '../render_layer.dart' show RenderLayer;
@@ -76,7 +77,8 @@ final class AnnotationLayer extends RenderLayer {
     required this.positions,
     required this.textStyle,
     required super.zIndex,
-  }) : assert(labels.length == positions.length, 'labels and positions must have same length');
+  }) : assert(labels.length == positions.length,
+            'labels and positions must have same length');
 
   /// Returns true when no labels to render.
   ///

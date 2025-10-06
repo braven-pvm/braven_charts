@@ -179,7 +179,9 @@ void main() {
     group('Type safety and pattern matching', () {
       test('exhaustive pattern matching with when', () {
         ChartResult<int> getResult(bool succeed) {
-          return succeed ? const Success(42) : Failure(ChartError.validation('Error'));
+          return succeed
+              ? const Success(42)
+              : Failure(ChartError.validation('Error'));
         }
 
         // Both branches must be handled
@@ -422,7 +424,8 @@ void main() {
 
       test('returns false for infinity', () {
         expect(ValidationUtils.isFiniteNumber(double.infinity), isFalse);
-        expect(ValidationUtils.isFiniteNumber(double.negativeInfinity), isFalse);
+        expect(
+            ValidationUtils.isFiniteNumber(double.negativeInfinity), isFalse);
       });
     });
 
@@ -459,8 +462,10 @@ void main() {
       });
 
       test('returns default for infinity', () {
-        expect(ValidationUtils.sanitizeNumber(double.infinity, 0.0), equals(0.0));
-        expect(ValidationUtils.sanitizeNumber(double.negativeInfinity, -1.0), equals(-1.0));
+        expect(
+            ValidationUtils.sanitizeNumber(double.infinity, 0.0), equals(0.0));
+        expect(ValidationUtils.sanitizeNumber(double.negativeInfinity, -1.0),
+            equals(-1.0));
       });
     });
 
@@ -530,7 +535,8 @@ void main() {
       });
 
       test('fails when size above max', () {
-        final result = ValidationUtils.validateSize([1, 2, 3, 4], min: 1, max: 3);
+        final result =
+            ValidationUtils.validateSize([1, 2, 3, 4], min: 1, max: 3);
         expect(result.isFailure, isTrue);
         final error = (result as Failure).error;
         expect(error.message, contains('maximum'));
@@ -548,7 +554,8 @@ void main() {
         final result = ValidationUtils.validateSize([1, 2, 3], max: 5);
         expect(result.isSuccess, isTrue);
 
-        final failResult = ValidationUtils.validateSize([1, 2, 3, 4, 5, 6], max: 5);
+        final failResult =
+            ValidationUtils.validateSize([1, 2, 3, 4, 5, 6], max: 5);
         expect(failResult.isFailure, isTrue);
       });
     });
@@ -581,7 +588,8 @@ void main() {
         final result = ValidationUtils.validateUnique(['a', 'b', 'c'], 'list');
         expect(result.isSuccess, isTrue);
 
-        final dupResult = ValidationUtils.validateUnique(['a', 'b', 'a'], 'list');
+        final dupResult =
+            ValidationUtils.validateUnique(['a', 'b', 'a'], 'list');
         expect(dupResult.isFailure, isTrue);
       });
     });

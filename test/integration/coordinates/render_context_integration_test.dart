@@ -34,7 +34,8 @@ void main() {
 
       expect(transformContext.widgetSize, equals(renderContext.size));
       expect(transformContext.chartAreaBounds, equals(renderContext.viewport));
-      expect(transformContext.viewport.isIdentity(), isTrue, reason: 'Default viewport should be identity');
+      expect(transformContext.viewport.isIdentity(), isTrue,
+          reason: 'Default viewport should be identity');
     });
 
     test('should have RenderContext.transformContext field', () {
@@ -44,7 +45,8 @@ void main() {
       );
 
       // Should have transformContext field (may be null initially)
-      expect(() => renderContext.transformContext, returnsNormally, reason: 'transformContext field should exist');
+      expect(() => renderContext.transformContext, returnsNormally,
+          reason: 'transformContext field should exist');
     });
 
     test('should have RenderContext convenience methods', () {
@@ -101,7 +103,8 @@ void main() {
       final dataPoint = const Point<double>(50.0, 0.0);
       final screenPoint = renderContext.dataToScreen(dataPoint);
 
-      expect(screenPoint, isNotNull, reason: 'Transformation should work via RenderContext');
+      expect(screenPoint, isNotNull,
+          reason: 'Transformation should work via RenderContext');
     });
 
     test('should validate transformContext exists before transformation', () {
@@ -147,8 +150,10 @@ void main() {
         CoordinateSystem.screen,
       );
 
-      expect(screenPoints.length, equals(dataPoints.length), reason: 'Batch size should match');
-      expect(screenPoints.every((p) => p != null), isTrue, reason: 'All points should transform');
+      expect(screenPoints.length, equals(dataPoints.length),
+          reason: 'Batch size should match');
+      expect(screenPoints.every((p) => p != null), isTrue,
+          reason: 'All points should transform');
     });
   });
 }

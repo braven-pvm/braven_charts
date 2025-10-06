@@ -60,10 +60,14 @@ class ChartTheme {
       padding: _parsePadding(json['padding'] as Map<String, dynamic>),
       gridStyle: GridStyle.fromJson(json['gridStyle'] as Map<String, dynamic>),
       axisStyle: AxisStyle.fromJson(json['axisStyle'] as Map<String, dynamic>),
-      seriesTheme: SeriesTheme.fromJson(json['seriesTheme'] as Map<String, dynamic>),
-      interactionTheme: InteractionTheme.fromJson(json['interactionTheme'] as Map<String, dynamic>),
-      typographyTheme: TypographyTheme.fromJson(json['typographyTheme'] as Map<String, dynamic>),
-      animationTheme: AnimationTheme.fromJson(json['animationTheme'] as Map<String, dynamic>),
+      seriesTheme:
+          SeriesTheme.fromJson(json['seriesTheme'] as Map<String, dynamic>),
+      interactionTheme: InteractionTheme.fromJson(
+          json['interactionTheme'] as Map<String, dynamic>),
+      typographyTheme: TypographyTheme.fromJson(
+          json['typographyTheme'] as Map<String, dynamic>),
+      animationTheme: AnimationTheme.fromJson(
+          json['animationTheme'] as Map<String, dynamic>),
     );
   }
   // ========== Chart-Level Properties ==========
@@ -226,7 +230,8 @@ class ChartTheme {
   /// Converts this theme to a JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'backgroundColor': '#${backgroundColor.value.toRadixString(16).padLeft(8, '0')}',
+      'backgroundColor':
+          '#${backgroundColor.value.toRadixString(16).padLeft(8, '0')}',
       'borderColor': '#${borderColor.value.toRadixString(16).padLeft(8, '0')}',
       'borderWidth': borderWidth,
       'padding': {

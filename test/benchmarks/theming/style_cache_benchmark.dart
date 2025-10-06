@@ -34,7 +34,9 @@ void main() {
   print('=== Performance Summary ===');
   print('Target hit rate: >95%');
   print('Target lookup time: <0.1ms');
-  print(_allBenchmarksPassed ? 'All benchmarks PASSED' : 'Some benchmarks FAILED');
+  print(_allBenchmarksPassed
+      ? 'All benchmarks PASSED'
+      : 'Some benchmarks FAILED');
 }
 
 bool _allBenchmarksPassed = true;
@@ -68,7 +70,8 @@ void _benchmarkHitPerformance() {
 
   print('  Iterations: $iterations (all cache hits)');
   print('  Total time: ${sw.elapsedMilliseconds}ms');
-  print('  Average: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
+  print(
+      '  Average: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
   print('  Status: ${avgMs < 0.1 ? "PASS" : "FAIL"}');
 
   if (avgMs >= 0.1) _allBenchmarksPassed = false;
@@ -94,7 +97,8 @@ void _benchmarkMissPerformance() {
 
   print('  Iterations: $iterations (all cache misses)');
   print('  Total time: ${sw.elapsedMilliseconds}ms');
-  print('  Average: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
+  print(
+      '  Average: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
   print('  Status: ${avgMs < 0.1 ? "PASS" : "FAIL"}');
 
   if (avgMs >= 0.1) _allBenchmarksPassed = false;
@@ -107,7 +111,18 @@ void _benchmarkHitRate() {
   // Simulate realistic rendering pattern:
   // - 10 unique style types
   // - Multiple frames re-using same styles
-  const styleTypes = ['axis', 'grid', 'series', 'legend', 'tooltip', 'crosshair', 'marker', 'label', 'title', 'background'];
+  const styleTypes = [
+    'axis',
+    'grid',
+    'series',
+    'legend',
+    'tooltip',
+    'crosshair',
+    'marker',
+    'label',
+    'title',
+    'background'
+  ];
 
   // First pass: populate cache (all misses)
   for (final type in styleTypes) {
@@ -178,7 +193,8 @@ void _benchmarkEviction() {
   print('  Iterations: $iterations (with LRU eviction)');
   print('  Cache size: ${cache.size}/${StyleCache.maxSize}');
   print('  Total time: ${sw.elapsedMilliseconds}ms');
-  print('  Average put time: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
+  print(
+      '  Average put time: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
   print('  Status: ${avgMs < 0.1 ? "PASS" : "FAIL"}');
 
   if (avgMs >= 0.1) _allBenchmarksPassed = false;
@@ -189,7 +205,18 @@ void _benchmarkConcurrentAccess() {
   const themeHash = 12345;
 
   // Simulate rendering multiple chart elements concurrently
-  const elementTypes = ['axis', 'grid', 'series', 'legend', 'tooltip', 'crosshair', 'marker', 'label', 'title', 'background'];
+  const elementTypes = [
+    'axis',
+    'grid',
+    'series',
+    'legend',
+    'tooltip',
+    'crosshair',
+    'marker',
+    'label',
+    'title',
+    'background'
+  ];
 
   // Populate cache
   for (final type in elementTypes) {
@@ -226,7 +253,8 @@ void _benchmarkConcurrentAccess() {
   print('  Iterations: $iterations (80% read, 20% write)');
   print('  Cache size: ${cache.size}');
   print('  Total time: ${sw.elapsedMilliseconds}ms');
-  print('  Average operation time: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
+  print(
+      '  Average operation time: ${avgUs.toStringAsFixed(3)}μs (${avgMs.toStringAsFixed(4)}ms)');
   print('  Status: ${avgMs < 0.1 ? "PASS" : "FAIL"}');
 
   if (avgMs >= 0.1) _allBenchmarksPassed = false;

@@ -177,10 +177,12 @@ void main() {
         // Builder should enforce the same rule
 
         // Valid for both
-        expect(() => ChartThemeBuilder().borderWidth(1.0).build(), returnsNormally);
+        expect(() => ChartThemeBuilder().borderWidth(1.0).build(),
+            returnsNormally);
 
         // Invalid for both (builder throws ArgumentError, constructor would assert)
-        expect(() => ChartThemeBuilder().borderWidth(-1.0).build(), throwsArgumentError);
+        expect(() => ChartThemeBuilder().borderWidth(-1.0).build(),
+            throwsArgumentError);
       });
     });
   });

@@ -55,7 +55,8 @@ void main() {
       stopwatch.stop();
 
       expect(validationResult.isSuccess, isTrue);
-      print('   Series created and validated in ${stopwatch.elapsedMilliseconds}ms');
+      print(
+          '   Series created and validated in ${stopwatch.elapsedMilliseconds}ms');
 
       // Step 3: Calculate statistics
       print('\n3. Computing statistics...');
@@ -70,7 +71,8 @@ void main() {
       stopwatch.stop();
       print('   Mean: ${mean.toStringAsFixed(2)}');
       print('   StdDev: ${stdDev.toStringAsFixed(2)}');
-      print('   Range: [${minMaxResult.min.toStringAsFixed(2)}, ${minMaxResult.max.toStringAsFixed(2)}]');
+      print(
+          '   Range: [${minMaxResult.min.toStringAsFixed(2)}, ${minMaxResult.max.toStringAsFixed(2)}]');
       print('   Computed in ${stopwatch.elapsedMilliseconds}ms');
 
       expect(mean.isFinite, isTrue);
@@ -92,8 +94,10 @@ void main() {
       );
 
       stopwatch.stop();
-      print('   Culled ${rawData.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
-      expect(stopwatch.elapsedMilliseconds, lessThan(5)); // <5ms in test environment
+      print(
+          '   Culled ${rawData.length} → ${visible.length} points in ${stopwatch.elapsedMicroseconds}μs');
+      expect(stopwatch.elapsedMilliseconds,
+          lessThan(5)); // <5ms in test environment
       expect(visible.length, greaterThan(0));
       expect(visible.length, lessThan(rawData.length));
 
@@ -249,8 +253,10 @@ void main() {
       );
 
       stopwatch.stop();
-      print('   Culled ${largeData.length} → ${culled.length} points in ${stopwatch.elapsedMicroseconds}μs');
-      expect(stopwatch.elapsedMilliseconds, lessThan(5)); // <5ms in test environment
+      print(
+          '   Culled ${largeData.length} → ${culled.length} points in ${stopwatch.elapsedMicroseconds}μs');
+      expect(stopwatch.elapsedMilliseconds,
+          lessThan(5)); // <5ms in test environment
 
       // Step 3: Batch processing
       print('3. Testing batch processor...');
@@ -352,7 +358,8 @@ void main() {
       }
 
       final stats = paintPool.statistics;
-      print('   Reused ${stats.currentSize} Paint objects (${stats.acquireCount} acquires)');
+      print(
+          '   Reused ${stats.currentSize} Paint objects (${stats.acquireCount} acquires)');
       expect(stats.currentSize, lessThanOrEqualTo(10));
 
       print('\n✅ Memory efficiency workflow validated');
@@ -440,7 +447,8 @@ void main() {
       final quartiles = StatisticalFunctions.quartiles(yValues);
       statsStopwatch.stop();
 
-      print('   Statistics computed in ${statsStopwatch.elapsedMilliseconds}ms:');
+      print(
+          '   Statistics computed in ${statsStopwatch.elapsedMilliseconds}ms:');
       print('     Mean: ${stats['mean']!.toStringAsFixed(2)}');
       print('     Median: ${stats['median']!.toStringAsFixed(2)}');
       print('     StdDev: ${stats['stdDev']!.toStringAsFixed(2)}');
@@ -450,7 +458,8 @@ void main() {
       print('\n5. Fitting trend line to visible data...');
       final fitStopwatch = Stopwatch()..start();
 
-      final fit = CurveFittingFunctions.linearFit(visiblePoints.take(500).toList());
+      final fit =
+          CurveFittingFunctions.linearFit(visiblePoints.take(500).toList());
       fitStopwatch.stop();
 
       print('   ${fit.equation}');

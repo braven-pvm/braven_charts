@@ -41,11 +41,13 @@ void main() {
         type: MeanType.harmonic,
       );
       expect(harmonicMean, greaterThan(20.0));
-      expect(harmonicMean, lessThan(geometricMean)); // Harmonic < geometric < arithmetic
+      expect(harmonicMean,
+          lessThan(geometricMean)); // Harmonic < geometric < arithmetic
 
       print('✅ Statistical central tendency calculations work correctly');
       print('   Mean: $mean, Median: $median');
-      print('   Geometric: ${geometricMean.toStringAsFixed(2)}, Harmonic: ${harmonicMean.toStringAsFixed(2)}');
+      print(
+          '   Geometric: ${geometricMean.toStringAsFixed(2)}, Harmonic: ${harmonicMean.toStringAsFixed(2)}');
     });
 
     test('4.2 - Statistical dispersion calculations', () {
@@ -65,7 +67,8 @@ void main() {
       expect(range, equals(40.0)); // 50 - 10
 
       print('✅ Statistical dispersion calculations work correctly');
-      print('   StdDev: ${stdDev.toStringAsFixed(2)}, Variance: ${variance.toStringAsFixed(2)}, Range: $range');
+      print(
+          '   StdDev: ${stdDev.toStringAsFixed(2)}, Variance: ${variance.toStringAsFixed(2)}, Range: $range');
     });
 
     test('4.3 - Quartiles and percentiles', () {
@@ -89,7 +92,8 @@ void main() {
       expect(p75, equals(quartiles.q3));
 
       print('✅ Quartiles and percentiles work correctly');
-      print('   Q1: ${quartiles.q1}, Q2: ${quartiles.q2}, Q3: ${quartiles.q3}, IQR: ${quartiles.iqr}');
+      print(
+          '   Q1: ${quartiles.q1}, Q2: ${quartiles.q2}, Q3: ${quartiles.q3}, IQR: ${quartiles.iqr}');
     });
 
     test('4.4 - Statistical calculations performance (FR-005.5)', () {
@@ -105,7 +109,8 @@ void main() {
       expect(stopwatch.elapsedMilliseconds, lessThan(10)); // <10ms (FR-005.5)
 
       print('✅ Statistical calculations performance validated');
-      print('   Calculated mean of 10k values in ${stopwatch.elapsedMilliseconds}ms (target: <10ms)');
+      print(
+          '   Calculated mean of 10k values in ${stopwatch.elapsedMilliseconds}ms (target: <10ms)');
     });
 
     test('4.5 - Statistical edge cases', () {
@@ -117,7 +122,8 @@ void main() {
       // Single value
       expect(StatisticalFunctions.mean([42.0]), equals(42.0));
       expect(StatisticalFunctions.median([42.0]), equals(42.0));
-      expect(StatisticalFunctions.standardDeviation([42.0]), isNaN); // Single value -> NaN
+      expect(StatisticalFunctions.standardDeviation([42.0]),
+          isNaN); // Single value -> NaN
 
       // All same values
       final constant = [5.0, 5.0, 5.0, 5.0];
@@ -168,7 +174,8 @@ void main() {
 
       // Check interpolation produces smooth curve
       for (int i = 1; i < spline.length; i++) {
-        expect(spline[i], greaterThanOrEqualTo(spline[i - 1])); // Monotonically increasing
+        expect(spline[i],
+            greaterThanOrEqualTo(spline[i - 1])); // Monotonically increasing
       }
 
       print('✅ Cubic spline interpolation works correctly');
@@ -222,7 +229,8 @@ void main() {
       stopwatch.stop();
 
       // Validate coefficients
-      expect((fit.coefficients[0] - 5.0).abs(), lessThan(0.01)); // Intercept ≈ 5
+      expect(
+          (fit.coefficients[0] - 5.0).abs(), lessThan(0.01)); // Intercept ≈ 5
       expect((fit.coefficients[1] - 2.0).abs(), lessThan(0.01)); // Slope ≈ 2
       expect(fit.rSquared, greaterThan(0.99)); // Perfect fit
       expect(stopwatch.elapsedMilliseconds, lessThan(50)); // Fast computation
@@ -251,7 +259,8 @@ void main() {
       // Check coefficients approximately: y = 0 + 0x + 1x²
       expect(polyFit.coefficients[0].abs(), lessThan(0.01)); // Constant ≈ 0
       expect(polyFit.coefficients[1].abs(), lessThan(0.01)); // Linear ≈ 0
-      expect((polyFit.coefficients[2] - 1.0).abs(), lessThan(0.01)); // Quadratic ≈ 1
+      expect((polyFit.coefficients[2] - 1.0).abs(),
+          lessThan(0.01)); // Quadratic ≈ 1
 
       print('✅ Polynomial regression fit works correctly');
       print('   Equation: ${polyFit.equation}');
@@ -277,7 +286,8 @@ void main() {
       expect(stopwatch.elapsedMilliseconds, lessThan(50)); // <50ms (FR-005.6)
 
       print('✅ Curve fitting performance validated');
-      print('   Linear fit of 10k points in ${stopwatch.elapsedMilliseconds}ms (target: <50ms)');
+      print(
+          '   Linear fit of 10k points in ${stopwatch.elapsedMilliseconds}ms (target: <50ms)');
     });
 
     test('4.13 - Curve fitting with noisy data', () {

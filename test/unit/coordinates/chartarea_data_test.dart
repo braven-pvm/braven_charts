@@ -47,9 +47,11 @@ void main() {
         context: context,
       );
 
-      expect(dataPoint.x, closeTo(0.0, 0.01), reason: 'Chart origin X should map to xDataRange.min');
+      expect(dataPoint.x, closeTo(0.0, 0.01),
+          reason: 'Chart origin X should map to xDataRange.min');
       // Y-axis flip: chart area top (Y=0) maps to data max (Y=50)
-      expect(dataPoint.y, closeTo(50.0, 0.01), reason: 'Chart origin Y should map to yDataRange.max (Y-flip)');
+      expect(dataPoint.y, closeTo(50.0, 0.01),
+          reason: 'Chart origin Y should map to yDataRange.max (Y-flip)');
     });
 
     test('should handle Y-axis flip correctly', () {
@@ -64,7 +66,8 @@ void main() {
       );
 
       expect(dataPoint.x, closeTo(0.0, 0.01), reason: 'X should be at min');
-      expect(dataPoint.y, closeTo(-50.0, 0.01), reason: 'Chart bottom should map to data min Y');
+      expect(dataPoint.y, closeTo(-50.0, 0.01),
+          reason: 'Chart bottom should map to data min Y');
     });
 
     test('should map data range min/max to chart area bounds', () {
@@ -79,9 +82,11 @@ void main() {
       );
 
       // 50 is halfway in [0, 100], so should be at X = 350 (half of 700)
-      expect(chartPoint.x, closeTo(350.0, 0.01), reason: 'Data mid-X should map to chart mid-X');
+      expect(chartPoint.x, closeTo(350.0, 0.01),
+          reason: 'Data mid-X should map to chart mid-X');
       // Y=0 is center of [-50, 50], chart area Y should be at middle (270)
-      expect(chartPoint.y, closeTo(270.0, 0.01), reason: 'Data mid-Y should map to chart mid-Y');
+      expect(chartPoint.y, closeTo(270.0, 0.01),
+          reason: 'Data mid-Y should map to chart mid-Y');
     });
 
     test('should have round-trip accuracy within 0.01 pixels', () {
@@ -102,8 +107,10 @@ void main() {
         context: context,
       );
 
-      expect(roundTripData.x, closeTo(originalData.x, 0.01), reason: 'Round-trip X accuracy');
-      expect(roundTripData.y, closeTo(originalData.y, 0.01), reason: 'Round-trip Y accuracy');
+      expect(roundTripData.x, closeTo(originalData.x, 0.01),
+          reason: 'Round-trip X accuracy');
+      expect(roundTripData.y, closeTo(originalData.y, 0.01),
+          reason: 'Round-trip Y accuracy');
     });
 
     test('should handle data range corners correctly', () {
@@ -116,8 +123,10 @@ void main() {
         context: context,
       );
 
-      expect(chartMin.x, closeTo(0.0, 0.01), reason: 'Data min X → chart origin X');
-      expect(chartMin.y, closeTo(540.0, 0.01), reason: 'Data min Y → chart bottom Y (Y-flip)');
+      expect(chartMin.x, closeTo(0.0, 0.01),
+          reason: 'Data min X → chart origin X');
+      expect(chartMin.y, closeTo(540.0, 0.01),
+          reason: 'Data min Y → chart bottom Y (Y-flip)');
 
       // Data max corner (100, 50)
       final dataMax = const Point<double>(100.0, 50.0);
@@ -128,8 +137,10 @@ void main() {
         context: context,
       );
 
-      expect(chartMax.x, closeTo(700.0, 0.01), reason: 'Data max X → chart right X');
-      expect(chartMax.y, closeTo(0.0, 0.01), reason: 'Data max Y → chart top Y (Y-flip)');
+      expect(chartMax.x, closeTo(700.0, 0.01),
+          reason: 'Data max X → chart right X');
+      expect(chartMax.y, closeTo(0.0, 0.01),
+          reason: 'Data max Y → chart top Y (Y-flip)');
     });
 
     test('should handle negative data ranges', () {
@@ -153,8 +164,10 @@ void main() {
       );
 
       // -60 is halfway in [-100, -20], should map to middle of chart
-      expect(chartPoint.x, closeTo(350.0, 0.01), reason: 'Negative data X maps correctly');
-      expect(chartPoint.y, closeTo(270.0, 0.01), reason: 'Negative data Y maps correctly');
+      expect(chartPoint.x, closeTo(350.0, 0.01),
+          reason: 'Negative data X maps correctly');
+      expect(chartPoint.y, closeTo(270.0, 0.01),
+          reason: 'Negative data Y maps correctly');
     });
   });
 }

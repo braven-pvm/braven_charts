@@ -74,7 +74,10 @@ final class ChartDataPoint {
 
   /// Check if point is within data bounds for culling.
   bool isInBounds(Rect bounds) {
-    return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+    return x >= bounds.left &&
+        x <= bounds.right &&
+        y >= bounds.top &&
+        y <= bounds.bottom;
   }
 
   @override

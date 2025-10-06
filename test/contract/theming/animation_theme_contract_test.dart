@@ -75,7 +75,8 @@ void main() {
           dataUpdateCurve: Curves.easeInOut,
         );
 
-        expect(theme.dataUpdateDuration, equals(const Duration(milliseconds: 500)));
+        expect(theme.dataUpdateDuration,
+            equals(const Duration(milliseconds: 500)));
         expect(theme.dataUpdateCurve, equals(Curves.easeInOut));
       });
     });
@@ -99,7 +100,8 @@ void main() {
           themeChangeCurve: Curves.fastOutSlowIn,
         );
 
-        expect(theme.themeChangeDuration, equals(const Duration(milliseconds: 300)));
+        expect(theme.themeChangeDuration,
+            equals(const Duration(milliseconds: 300)));
         expect(theme.themeChangeCurve, equals(Curves.fastOutSlowIn));
       });
     });
@@ -123,7 +125,8 @@ void main() {
           interactionCurve: Curves.easeOut,
         );
 
-        expect(theme.interactionDuration, equals(const Duration(milliseconds: 150)));
+        expect(theme.interactionDuration,
+            equals(const Duration(milliseconds: 150)));
         expect(theme.interactionCurve, equals(Curves.easeOut));
       });
     });
@@ -135,7 +138,8 @@ void main() {
           dataUpdateDuration: const Duration(milliseconds: 600),
         );
 
-        expect(modified.dataUpdateDuration, equals(const Duration(milliseconds: 600)));
+        expect(modified.dataUpdateDuration,
+            equals(const Duration(milliseconds: 600)));
         expect(modified.dataUpdateCurve, equals(original.dataUpdateCurve));
         expect(identical(original, modified), isFalse);
       });
@@ -146,10 +150,13 @@ void main() {
           themeChangeCurve: Curves.bounceInOut,
         );
 
-        expect(modified.dataUpdateDuration, equals(original.dataUpdateDuration));
-        expect(modified.themeChangeDuration, equals(original.themeChangeDuration));
+        expect(
+            modified.dataUpdateDuration, equals(original.dataUpdateDuration));
+        expect(
+            modified.themeChangeDuration, equals(original.themeChangeDuration));
         expect(modified.themeChangeCurve, equals(Curves.bounceInOut));
-        expect(modified.interactionDuration, equals(original.interactionDuration));
+        expect(
+            modified.interactionDuration, equals(original.interactionDuration));
       });
     });
 
@@ -172,9 +179,12 @@ void main() {
         final json = original.toJson();
         final reconstructed = AnimationTheme.fromJson(json);
 
-        expect(reconstructed.dataUpdateDuration, equals(original.dataUpdateDuration));
-        expect(reconstructed.themeChangeDuration, equals(original.themeChangeDuration));
-        expect(reconstructed.interactionDuration, equals(original.interactionDuration));
+        expect(reconstructed.dataUpdateDuration,
+            equals(original.dataUpdateDuration));
+        expect(reconstructed.themeChangeDuration,
+            equals(original.themeChangeDuration));
+        expect(reconstructed.interactionDuration,
+            equals(original.interactionDuration));
       });
 
       test('round-trip serialization preserves all properties', () {

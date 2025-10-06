@@ -41,7 +41,8 @@ void main() {
 
     test('should have inverse method', () {
       // Contract: TransformMatrix inverse()
-      expect(true, isTrue, reason: 'Matrix inversion for bidirectional transforms');
+      expect(true, isTrue,
+          reason: 'Matrix inversion for bidirectional transforms');
     });
 
     test('should have multiplication operator', () {

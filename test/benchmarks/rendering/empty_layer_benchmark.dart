@@ -30,12 +30,17 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
+import 'package:braven_charts/src/rendering/render_context.dart'
+    show RenderContext;
 
 void main() {
   group('Empty Layer Short-Circuit Benchmarks', () {
@@ -84,12 +89,15 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
       final perLayer = avg / 50;
 
       // Validate targets
-      expect(avg, lessThan(5), reason: '50 empty layers should add <5ms overhead');
-      expect(perLayer, lessThan(0.1), reason: 'Per-layer overhead should be <0.1ms');
+      expect(avg, lessThan(5),
+          reason: '50 empty layers should add <5ms overhead');
+      expect(perLayer, lessThan(0.1),
+          reason: 'Per-layer overhead should be <0.1ms');
 
       print('50 empty layers: ${avg.toStringAsFixed(1)}ms total, '
           '${perLayer.toStringAsFixed(3)}ms per layer');
@@ -113,7 +121,8 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
       final perLayer = avg / 50;
 
       print('50 non-empty layers: ${avg.toStringAsFixed(1)}ms total, '
@@ -189,7 +198,8 @@ void main() {
       final speedup = nonEmptyTime / emptyTime;
 
       // isEmpty should provide measurable speedup
-      expect(speedup, greaterThan(1.5), reason: 'isEmpty optimization should provide >1.5x speedup');
+      expect(speedup, greaterThan(1.5),
+          reason: 'isEmpty optimization should provide >1.5x speedup');
 
       print('Speedup: ${speedup.toStringAsFixed(1)}x '
           '(empty: ${emptyTime.toStringAsFixed(2)}ms, '
@@ -215,10 +225,12 @@ void main() {
       }
 
       frameTimes.sort();
-      final avg = frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
+      final avg =
+          frameTimes.fold<double>(0, (a, b) => a + b) / frameTimes.length;
 
       // Should be roughly between pure empty (fast) and pure non-empty (slower)
-      print('Mixed 25 empty + 25 non-empty: ${avg.toStringAsFixed(1)}ms per frame');
+      print(
+          'Mixed 25 empty + 25 non-empty: ${avg.toStringAsFixed(1)}ms per frame');
     });
 
     test('isEmpty check overhead (minimal)', () {
@@ -260,7 +272,8 @@ void main() {
       final avg = latencies.fold<double>(0, (a, b) => a + b) / latencies.length;
 
       // Single empty layer overhead should be negligible
-      expect(avg, lessThan(0.1), reason: 'Single empty layer check should be <0.1ms');
+      expect(avg, lessThan(0.1),
+          reason: 'Single empty layer check should be <0.1ms');
 
       print('Single empty layer overhead: ${avg.toStringAsFixed(4)}ms');
     });

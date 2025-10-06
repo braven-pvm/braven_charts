@@ -22,7 +22,10 @@ void main() {
       });
 
       test('customize two properties (backgroundColor + borderWidth)', () {
-        final theme = ChartThemeBuilder().backgroundColor(Colors.blue).borderWidth(2.0).build();
+        final theme = ChartThemeBuilder()
+            .backgroundColor(Colors.blue)
+            .borderWidth(2.0)
+            .build();
 
         expect(theme.backgroundColor, equals(Colors.blue));
         expect(theme.borderWidth, equals(2.0));
@@ -31,7 +34,8 @@ void main() {
       });
 
       test('customize padding only', () {
-        final customPadding = const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0);
+        final customPadding =
+            const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0);
         final theme = ChartThemeBuilder().padding(customPadding).build();
 
         expect(theme.padding, equals(customPadding));
@@ -39,7 +43,10 @@ void main() {
       });
 
       test('customize border color and width', () {
-        final theme = ChartThemeBuilder().borderColor(const Color(0xFF1976D2)).borderWidth(3.0).build();
+        final theme = ChartThemeBuilder()
+            .borderColor(const Color(0xFF1976D2))
+            .borderWidth(3.0)
+            .build();
 
         expect(theme.borderColor, equals(const Color(0xFF1976D2)));
         expect(theme.borderWidth, equals(3.0));
@@ -48,44 +55,59 @@ void main() {
 
     group('Starting from Predefined Theme', () {
       test('customize vibrant theme with different padding', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.vibrant).padding(const EdgeInsets.all(32.0)).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.vibrant)
+            .padding(const EdgeInsets.all(32.0))
+            .build();
 
         // Custom property
         expect(theme.padding, equals(const EdgeInsets.all(32.0)));
 
         // Inherited from vibrant
-        expect(theme.backgroundColor, equals(ChartTheme.vibrant.backgroundColor));
+        expect(
+            theme.backgroundColor, equals(ChartTheme.vibrant.backgroundColor));
         expect(theme.borderColor, equals(ChartTheme.vibrant.borderColor));
         expect(theme.seriesTheme, equals(ChartTheme.vibrant.seriesTheme));
       });
 
       test('customize defaultDark with lighter border', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.defaultDark).borderWidth(2.0).borderColor(Colors.grey).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.defaultDark)
+            .borderWidth(2.0)
+            .borderColor(Colors.grey)
+            .build();
 
         expect(theme.borderWidth, equals(2.0));
         expect(theme.borderColor, equals(Colors.grey));
-        expect(theme.backgroundColor, equals(ChartTheme.defaultDark.backgroundColor));
+        expect(theme.backgroundColor,
+            equals(ChartTheme.defaultDark.backgroundColor));
       });
 
       test('start from corporateBlue and change background', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.corporateBlue).backgroundColor(const Color(0xFFF5F5F5)).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.corporateBlue)
+            .backgroundColor(const Color(0xFFF5F5F5))
+            .build();
 
         expect(theme.backgroundColor, equals(const Color(0xFFF5F5F5)));
         expect(theme.seriesTheme, equals(ChartTheme.corporateBlue.seriesTheme));
       });
 
       test('customize minimal theme with bolder grid', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.minimal).gridStyle(GridStyle.defaultLight).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.minimal)
+            .gridStyle(GridStyle.defaultLight)
+            .build();
 
         expect(theme.gridStyle, equals(GridStyle.defaultLight));
-        expect(theme.backgroundColor, equals(ChartTheme.minimal.backgroundColor));
+        expect(
+            theme.backgroundColor, equals(ChartTheme.minimal.backgroundColor));
       });
 
       test('high contrast with custom series colors', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.highContrast).seriesTheme(SeriesTheme.vibrant).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.highContrast)
+            .seriesTheme(SeriesTheme.vibrant)
+            .build();
 
         expect(theme.seriesTheme, equals(SeriesTheme.vibrant));
-        expect(theme.backgroundColor, equals(ChartTheme.highContrast.backgroundColor));
+        expect(theme.backgroundColor,
+            equals(ChartTheme.highContrast.backgroundColor));
       });
     });
 
@@ -105,7 +127,10 @@ void main() {
       });
 
       test('customize multiple component themes', () {
-        final theme = ChartThemeBuilder().gridStyle(GridStyle.minimal).seriesTheme(SeriesTheme.vibrant).build();
+        final theme = ChartThemeBuilder()
+            .gridStyle(GridStyle.minimal)
+            .seriesTheme(SeriesTheme.vibrant)
+            .build();
 
         expect(theme.gridStyle, equals(GridStyle.minimal));
         expect(theme.seriesTheme, equals(SeriesTheme.vibrant));
@@ -137,7 +162,8 @@ void main() {
             .seriesTheme(ChartTheme.corporateBlue.seriesTheme)
             .build();
 
-        expect(theme.backgroundColor, equals(ChartTheme.defaultLight.backgroundColor));
+        expect(theme.backgroundColor,
+            equals(ChartTheme.defaultLight.backgroundColor));
         expect(theme.borderColor, equals(ChartTheme.vibrant.borderColor));
         expect(theme.gridStyle, equals(ChartTheme.minimal.gridStyle));
         expect(theme.seriesTheme, equals(ChartTheme.corporateBlue.seriesTheme));
@@ -148,7 +174,11 @@ void main() {
       test('fluent API supports continuous chaining', () {
         final builder = ChartThemeBuilder();
 
-        final result = builder.backgroundColor(Colors.white).borderColor(Colors.grey).borderWidth(1.0).padding(const EdgeInsets.all(16.0));
+        final result = builder
+            .backgroundColor(Colors.white)
+            .borderColor(Colors.grey)
+            .borderWidth(1.0)
+            .padding(const EdgeInsets.all(16.0));
 
         // Each method should return the same builder instance
         expect(identical(result, builder), isTrue);
@@ -179,7 +209,10 @@ void main() {
       });
 
       test('chaining from predefined theme', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.vibrant).backgroundColor(Colors.white).borderWidth(1.0).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.vibrant)
+            .backgroundColor(Colors.white)
+            .borderWidth(1.0)
+            .build();
 
         expect(theme.backgroundColor, equals(Colors.white));
         expect(theme.borderWidth, equals(1.0));
@@ -188,7 +221,8 @@ void main() {
 
     group('Builder Reusability', () {
       test('builder state persists between builds', () {
-        final builder = ChartThemeBuilder().backgroundColor(Colors.grey).borderWidth(1.0);
+        final builder =
+            ChartThemeBuilder().backgroundColor(Colors.grey).borderWidth(1.0);
 
         final theme1 = builder.build();
 
@@ -207,7 +241,8 @@ void main() {
       });
 
       test('multiple builds from same builder state', () {
-        final builder = ChartThemeBuilder().backgroundColor(Colors.blue).borderWidth(2.0);
+        final builder =
+            ChartThemeBuilder().backgroundColor(Colors.blue).borderWidth(2.0);
 
         final theme1 = builder.build();
         final theme2 = builder.build();
@@ -224,21 +259,29 @@ void main() {
         final brandPrimary = const Color(0xFF1976D2);
         final brandBackground = const Color(0xFFFAFAFA);
 
-        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight).backgroundColor(brandBackground).borderColor(brandPrimary).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight)
+            .backgroundColor(brandBackground)
+            .borderColor(brandPrimary)
+            .build();
 
         expect(theme.backgroundColor, equals(brandBackground));
         expect(theme.borderColor, equals(brandPrimary));
       });
 
       test('create dark theme with accessibility improvements', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.defaultDark).borderWidth(2.0).seriesTheme(SeriesTheme.colorblindFriendly).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.defaultDark)
+            .borderWidth(2.0)
+            .seriesTheme(SeriesTheme.colorblindFriendly)
+            .build();
 
         expect(theme.borderWidth, equals(2.0));
         expect(theme.seriesTheme, equals(SeriesTheme.colorblindFriendly));
       });
 
       test('create mobile-optimized theme with larger padding', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight).padding(const EdgeInsets.all(20.0)).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight)
+            .padding(const EdgeInsets.all(20.0))
+            .build();
 
         expect(theme.padding, equals(const EdgeInsets.all(20.0)));
       });
@@ -258,7 +301,10 @@ void main() {
       });
 
       test('create dashboard theme with minimal styling', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.minimal).padding(const EdgeInsets.all(8.0)).borderWidth(0.0).build();
+        final theme = ChartThemeBuilder.from(ChartTheme.minimal)
+            .padding(const EdgeInsets.all(8.0))
+            .borderWidth(0.0)
+            .build();
 
         expect(theme.padding, equals(const EdgeInsets.all(8.0)));
         expect(theme.borderWidth, equals(0.0));
@@ -270,7 +316,8 @@ void main() {
         final builtTheme = ChartThemeBuilder().build();
         final defaultLight = ChartTheme.defaultLight;
 
-        expect(builtTheme.backgroundColor, equals(defaultLight.backgroundColor));
+        expect(
+            builtTheme.backgroundColor, equals(defaultLight.backgroundColor));
         expect(builtTheme.borderColor, equals(defaultLight.borderColor));
         expect(builtTheme.borderWidth, equals(defaultLight.borderWidth));
         expect(builtTheme.padding, equals(defaultLight.padding));

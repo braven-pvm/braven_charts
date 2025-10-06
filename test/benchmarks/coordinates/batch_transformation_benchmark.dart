@@ -51,10 +51,12 @@ void main() {
   sw1.stop();
 
   final time1Ms = sw1.elapsedMicroseconds / 1000.0;
-  print('  Result: ${sw1.elapsedMicroseconds}μs (${time1Ms.toStringAsFixed(3)}ms)');
+  print(
+      '  Result: ${sw1.elapsedMicroseconds}μs (${time1Ms.toStringAsFixed(3)}ms)');
   print('  Target: <1000μs (1ms)');
   print('  Status: ${time1Ms < 1.0 ? "✅ PASS" : "❌ FAIL"}');
-  print('  Points/μs: ${(10000 / sw1.elapsedMicroseconds).toStringAsFixed(2)}\n');
+  print(
+      '  Points/μs: ${(10000 / sw1.elapsedMicroseconds).toStringAsFixed(2)}\n');
 
   // Benchmark 2: 10K points screen → data (reverse)
   print('Benchmark 2: 10K points screen → data');
@@ -79,10 +81,12 @@ void main() {
   sw2.stop();
 
   final time2Ms = sw2.elapsedMicroseconds / 1000.0;
-  print('  Result: ${sw2.elapsedMicroseconds}μs (${time2Ms.toStringAsFixed(3)}ms)');
+  print(
+      '  Result: ${sw2.elapsedMicroseconds}μs (${time2Ms.toStringAsFixed(3)}ms)');
   print('  Target: <1000μs (1ms)');
   print('  Status: ${time2Ms < 1.0 ? "✅ PASS" : "❌ FAIL"}');
-  print('  Points/μs: ${(10000 / sw2.elapsedMicroseconds).toStringAsFixed(2)}\n');
+  print(
+      '  Points/μs: ${(10000 / sw2.elapsedMicroseconds).toStringAsFixed(2)}\n');
 
   // Benchmark 3: 100K points batch transformation
   print('Benchmark 3: 100K points data → screen');
@@ -99,7 +103,8 @@ void main() {
     context: context,
   );
   warmup3.stop();
-  print('  Warmup: ${warmup3.elapsedMicroseconds}μs (${(warmup3.elapsedMicroseconds / 1000.0).toStringAsFixed(3)}ms)');
+  print(
+      '  Warmup: ${warmup3.elapsedMicroseconds}μs (${(warmup3.elapsedMicroseconds / 1000.0).toStringAsFixed(3)}ms)');
 
   final sw3 = Stopwatch()..start();
   transformer.transformBatch(
@@ -111,15 +116,18 @@ void main() {
   sw3.stop();
 
   final time3Ms = sw3.elapsedMicroseconds / 1000.0;
-  print('  Result: ${sw3.elapsedMicroseconds}μs (${time3Ms.toStringAsFixed(3)}ms)');
+  print(
+      '  Result: ${sw3.elapsedMicroseconds}μs (${time3Ms.toStringAsFixed(3)}ms)');
   print('  Target: <10000μs (10ms)');
   print('  Status: ${time3Ms < 10.0 ? "✅ PASS" : "❌ FAIL"}');
-  print('  Points/μs: ${(100000 / sw3.elapsedMicroseconds).toStringAsFixed(2)}\n');
+  print(
+      '  Points/μs: ${(100000 / sw3.elapsedMicroseconds).toStringAsFixed(2)}\n');
 
   // Summary
   print('====== Summary ======');
   final allPass = time1Ms < 1.0 && time2Ms < 1.0 && time3Ms < 10.0;
-  print('Overall: ${allPass ? "✅ ALL BENCHMARKS PASSED" : "❌ SOME BENCHMARKS FAILED"}');
+  print(
+      'Overall: ${allPass ? "✅ ALL BENCHMARKS PASSED" : "❌ SOME BENCHMARKS FAILED"}');
   print('\nPerformance characteristics:');
   print('- 10K data→screen: ${time1Ms.toStringAsFixed(3)}ms (target: <1ms)');
   print('- 10K screen→data: ${time2Ms.toStringAsFixed(3)}ms (target: <1ms)');

@@ -43,7 +43,8 @@ class ValidationUtils {
   /// Sanitize a number by replacing NaN/Infinity with a default value.
   ///
   /// Returns the original value if finite, otherwise returns defaultValue.
-  static double sanitizeNumber(double value, double defaultValue) => isFiniteNumber(value) ? value : defaultValue;
+  static double sanitizeNumber(double value, double defaultValue) =>
+      isFiniteNumber(value) ? value : defaultValue;
 
   /// Validate that a value is non-null.
   ///

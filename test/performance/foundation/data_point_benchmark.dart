@@ -60,7 +60,8 @@ void main() {
 
   // Calculate microseconds per point
   final creationTimeMs = creationBench.measure();
-  final usPerPoint = (creationTimeMs * 1000) / ChartDataPointCreationBenchmark.iterations;
+  final usPerPoint =
+      (creationTimeMs * 1000) / ChartDataPointCreationBenchmark.iterations;
 
   print('');
   print('Results:');
@@ -74,7 +75,8 @@ void main() {
   copyWithBench.report();
 
   final copyWithTimeMs = copyWithBench.measure();
-  final usCopyWith = (copyWithTimeMs * 1000) / ChartDataPointCopyWithBenchmark.iterations;
+  final usCopyWith =
+      (copyWithTimeMs * 1000) / ChartDataPointCopyWithBenchmark.iterations;
 
   print('');
   print('Results:');

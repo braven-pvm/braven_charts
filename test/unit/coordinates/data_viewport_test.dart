@@ -52,8 +52,10 @@ void main() {
       );
 
       // In viewport space, (50, 0) is at center of visible range
-      expect(viewportPoint.x, closeTo(50.0, 0.01), reason: 'Data center maps to viewport center X');
-      expect(viewportPoint.y, closeTo(0.0, 0.01), reason: 'Data center maps to viewport center Y');
+      expect(viewportPoint.x, closeTo(50.0, 0.01),
+          reason: 'Data center maps to viewport center X');
+      expect(viewportPoint.y, closeTo(0.0, 0.01),
+          reason: 'Data center maps to viewport center Y');
     });
 
     test('should apply pan offset correctly', () {
@@ -85,8 +87,10 @@ void main() {
       );
 
       // Viewport point should account for pan offset
-      expect(viewportPoint.x, closeTo(10.0, 0.01), reason: 'Pan offset applied to X');
-      expect(viewportPoint.y, closeTo(5.0, 0.01), reason: 'Pan offset applied to Y');
+      expect(viewportPoint.x, closeTo(10.0, 0.01),
+          reason: 'Pan offset applied to X');
+      expect(viewportPoint.y, closeTo(5.0, 0.01),
+          reason: 'Pan offset applied to Y');
     });
 
     test('should handle identity viewport (no zoom/pan)', () {
@@ -110,8 +114,10 @@ void main() {
       );
 
       // Identity viewport: data == viewport
-      expect(viewportPoint.x, closeTo(dataPoint.x, 0.01), reason: 'Identity: data X == viewport X');
-      expect(viewportPoint.y, closeTo(dataPoint.y, 0.01), reason: 'Identity: data Y == viewport Y');
+      expect(viewportPoint.x, closeTo(dataPoint.x, 0.01),
+          reason: 'Identity: data X == viewport X');
+      expect(viewportPoint.y, closeTo(dataPoint.y, 0.01),
+          reason: 'Identity: data Y == viewport Y');
     });
 
     test('should have round-trip accuracy', () {
@@ -149,8 +155,10 @@ void main() {
         context: context,
       );
 
-      expect(roundTripData.x, closeTo(originalData.x, 0.01), reason: 'Round-trip X accuracy');
-      expect(roundTripData.y, closeTo(originalData.y, 0.01), reason: 'Round-trip Y accuracy');
+      expect(roundTripData.x, closeTo(originalData.x, 0.01),
+          reason: 'Round-trip X accuracy');
+      expect(roundTripData.y, closeTo(originalData.y, 0.01),
+          reason: 'Round-trip Y accuracy');
     });
 
     test('should handle zoom factor edge cases', () {
@@ -181,8 +189,10 @@ void main() {
       );
 
       // Data point should still map correctly in zoomed-out viewport
-      expect(viewportPoint.x, isNotNull, reason: 'Zoom out transformation works');
-      expect(viewportPoint.y, isNotNull, reason: 'Zoom out transformation works');
+      expect(viewportPoint.x, isNotNull,
+          reason: 'Zoom out transformation works');
+      expect(viewportPoint.y, isNotNull,
+          reason: 'Zoom out transformation works');
     });
   });
 }

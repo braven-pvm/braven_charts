@@ -78,8 +78,10 @@ void main() {
       );
 
       // Without offset, marker should equal chartArea coordinates
-      expect(markerPoint.x, closeTo(chartAreaPoint.x, 0.01), reason: 'No offset: marker X == chartArea X');
-      expect(markerPoint.y, closeTo(chartAreaPoint.y, 0.01), reason: 'No offset: marker Y == chartArea Y');
+      expect(markerPoint.x, closeTo(chartAreaPoint.x, 0.01),
+          reason: 'No offset: marker X == chartArea X');
+      expect(markerPoint.y, closeTo(chartAreaPoint.y, 0.01),
+          reason: 'No offset: marker Y == chartArea Y');
     });
 
     test('should handle negative offsets (annotations below/left)', () {
@@ -136,8 +138,10 @@ void main() {
         context: context,
       );
 
-      expect(roundTripData.x, closeTo(originalData.x, 0.01), reason: 'Round-trip X accuracy');
-      expect(roundTripData.y, closeTo(originalData.y, 0.01), reason: 'Round-trip Y accuracy');
+      expect(roundTripData.x, closeTo(originalData.x, 0.01),
+          reason: 'Round-trip X accuracy');
+      expect(roundTripData.y, closeTo(originalData.y, 0.01),
+          reason: 'Round-trip Y accuracy');
     });
 
     test('should work with zoomed viewport', () {

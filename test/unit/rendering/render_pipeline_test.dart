@@ -18,8 +18,10 @@ void main() {
   RenderPipeline createPipeline() {
     return RenderPipeline(
       paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-      pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-      textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+      pathPool:
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+      textPainterPool:
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
       textCache: LinkedHashMapTextLayoutCache(),
       performanceMonitor: StopwatchPerformanceMonitor(),
       culler: const ViewportCuller(),
@@ -201,7 +203,8 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['Background', 'Grid', 'Data', 'Annotation', 'Overlay']));
+      expect(canvas.renderOrder,
+          equals(['Background', 'Grid', 'Data', 'Annotation', 'Overlay']));
     });
   });
 
@@ -215,7 +218,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty, reason: 'Invisible layer should not render');
+      expect(canvas.renderOrder, isEmpty,
+          reason: 'Invisible layer should not render');
     });
 
     test('isVisible=true includes layer in rendering', () {
@@ -227,7 +231,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['Visible']), reason: 'Visible layer should render');
+      expect(canvas.renderOrder, equals(['Visible']),
+          reason: 'Visible layer should render');
     });
 
     test('toggling visibility affects subsequent renders', () {
@@ -272,7 +277,8 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['Visible1', 'Visible2']), reason: 'Only visible layers should render');
+      expect(canvas.renderOrder, equals(['Visible1', 'Visible2']),
+          reason: 'Only visible layers should render');
     });
 
     test('all invisible layers renders nothing', () {
@@ -290,7 +296,8 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty, reason: 'No layers should render when all invisible');
+      expect(canvas.renderOrder, isEmpty,
+          reason: 'No layers should render when all invisible');
     });
   });
 
@@ -303,7 +310,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty, reason: 'Empty layer should be skipped');
+      expect(canvas.renderOrder, isEmpty,
+          reason: 'Empty layer should be skipped');
     });
 
     test('isEmpty=false renders layer normally', () {
@@ -314,7 +322,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['NotEmpty']), reason: 'Non-empty layer should render');
+      expect(canvas.renderOrder, equals(['NotEmpty']),
+          reason: 'Non-empty layer should render');
     });
 
     test('mixed empty and non-empty layers only renders non-empty', () {
@@ -327,7 +336,8 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['HasContent', 'AlsoHasContent']), reason: 'Only non-empty layers should render');
+      expect(canvas.renderOrder, equals(['HasContent', 'AlsoHasContent']),
+          reason: 'Only non-empty layers should render');
     });
   });
 
@@ -353,7 +363,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty, reason: 'Invisible layer should not render regardless of isEmpty');
+      expect(canvas.renderOrder, isEmpty,
+          reason: 'Invisible layer should not render regardless of isEmpty');
     });
 
     test('visible but empty layer does not render', () {
@@ -365,7 +376,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, isEmpty, reason: 'Empty layer should not render regardless of visibility');
+      expect(canvas.renderOrder, isEmpty,
+          reason: 'Empty layer should not render regardless of visibility');
     });
 
     test('visible AND non-empty layer renders', () {
@@ -377,7 +389,8 @@ void main() {
       pipeline.addLayer(layer);
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(canvas.renderOrder, equals(['VisibleAndNotEmpty']), reason: 'Visible and non-empty layer should render');
+      expect(canvas.renderOrder, equals(['VisibleAndNotEmpty']),
+          reason: 'Visible and non-empty layer should render');
     });
   });
 
@@ -391,7 +404,8 @@ void main() {
       final newViewport = const Rect.fromLTWH(100, 50, 400, 300);
       pipeline.updateViewport(newViewport);
 
-      expect(pipeline.viewport, equals(newViewport), reason: 'Viewport should be updated to new value');
+      expect(pipeline.viewport, equals(newViewport),
+          reason: 'Viewport should be updated to new value');
     });
 
     test('viewport passed to RenderContext during renderFrame', () {
@@ -405,7 +419,8 @@ void main() {
 
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(newViewport), reason: 'RenderContext should receive updated viewport');
+      expect(layer.capturedViewport, equals(newViewport),
+          reason: 'RenderContext should receive updated viewport');
     });
 
     test('viewport changes take effect immediately on next render', () {
@@ -425,7 +440,8 @@ void main() {
       final canvas2 = _RecordingCanvas();
       pipeline.renderFrame(canvas2, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(newViewport), reason: 'Updated viewport should be used in next frame');
+      expect(layer.capturedViewport, equals(newViewport),
+          reason: 'Updated viewport should be used in next frame');
     });
 
     test('multiple viewport updates only use last value', () {
@@ -441,7 +457,8 @@ void main() {
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(finalViewport), reason: 'Only last viewport update should be used');
+      expect(layer.capturedViewport, equals(finalViewport),
+          reason: 'Only last viewport update should be used');
     });
 
     test('viewport getter returns current viewport value', () {
@@ -459,8 +476,10 @@ void main() {
       final monitor = StopwatchPerformanceMonitor();
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
@@ -472,15 +491,18 @@ void main() {
 
       // If beginFrame wasn't called, currentMetrics would show zero frame time
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'beginFrame should have been called to start timing');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'beginFrame should have been called to start timing');
     });
 
     test('endFrame called after all layers rendered', () {
       final monitor = StopwatchPerformanceMonitor();
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
@@ -495,15 +517,18 @@ void main() {
 
       // If endFrame wasn't called, metrics wouldn't be recorded
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should have been called to record timing');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'endFrame should have been called to record timing');
     });
 
     test('frame time recorded even if layer throws exception', () {
       final monitor = StopwatchPerformanceMonitor();
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
@@ -515,11 +540,14 @@ void main() {
       final canvas = _RecordingCanvas();
 
       // Render frame (layer will throw)
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          throwsException);
 
       // endFrame should still have been called (finally block)
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should be called in finally block even after exception');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason:
+              'endFrame should be called in finally block even after exception');
     });
 
     test('currentMetrics accessible via pipeline', () {
@@ -554,9 +582,12 @@ void main() {
 
   group('RenderPipeline - Object Pool Integration (T024)', () {
     test('RenderContext provides access to all 3 pools', () {
-      final paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      final pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      final textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      final paintPool =
+          ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
+      final pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      final textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
 
       final pipeline = RenderPipeline(
         paintPool: paintPool,
@@ -574,15 +605,21 @@ void main() {
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.hadPaintPool, isTrue, reason: 'RenderContext should provide paintPool');
-      expect(layer.hadPathPool, isTrue, reason: 'RenderContext should provide pathPool');
-      expect(layer.hadTextPainterPool, isTrue, reason: 'RenderContext should provide textPainterPool');
+      expect(layer.hadPaintPool, isTrue,
+          reason: 'RenderContext should provide paintPool');
+      expect(layer.hadPathPool, isTrue,
+          reason: 'RenderContext should provide pathPool');
+      expect(layer.hadTextPainterPool, isTrue,
+          reason: 'RenderContext should provide textPainterPool');
     });
 
     test('pools passed from pipeline to context correctly', () {
-      final paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      final pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      final textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      final paintPool =
+          ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
+      final pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      final textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
 
       final pipeline = RenderPipeline(
         paintPool: paintPool,
@@ -624,8 +661,10 @@ void main() {
       final textCache = LinkedHashMapTextLayoutCache(maxSize: 100);
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
@@ -638,15 +677,18 @@ void main() {
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.hadCache, isTrue, reason: 'RenderContext should provide text cache');
+      expect(layer.hadCache, isTrue,
+          reason: 'RenderContext should provide text cache');
     });
 
     test('cache passed from pipeline to context correctly', () {
       final textCache = LinkedHashMapTextLayoutCache(maxSize: 200);
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
@@ -666,8 +708,10 @@ void main() {
       final textCache = LinkedHashMapTextLayoutCache();
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: textCache,
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: const ViewportCuller(),
@@ -688,8 +732,10 @@ void main() {
       const culler = ViewportCuller(margin: 0.1);
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: culler,
@@ -702,15 +748,18 @@ void main() {
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.hadCuller, isTrue, reason: 'RenderContext should provide culler');
+      expect(layer.hadCuller, isTrue,
+          reason: 'RenderContext should provide culler');
     });
 
     test('culler passed from pipeline to context correctly', () {
       const culler = ViewportCuller(margin: 0.2);
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: StopwatchPerformanceMonitor(),
         culler: culler,
@@ -737,7 +786,8 @@ void main() {
       final canvas = _RecordingCanvas();
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(layer.capturedViewport, equals(viewport), reason: 'Viewport should be passed to context for culling');
+      expect(layer.capturedViewport, equals(viewport),
+          reason: 'Viewport should be passed to context for culling');
     });
   });
 
@@ -750,18 +800,22 @@ void main() {
 
       final canvas = _RecordingCanvas();
 
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          throwsException);
 
       // First layer should have rendered before exception
-      expect(canvas.renderOrder.contains('Before'), isTrue, reason: 'Layer before exception should render');
+      expect(canvas.renderOrder.contains('Before'), isTrue,
+          reason: 'Layer before exception should render');
     });
 
     test('endFrame called even if render throws', () {
       final monitor = StopwatchPerformanceMonitor();
       final pipeline = RenderPipeline(
         paintPool: ObjectPool<Paint>(factory: () => Paint(), reset: (p) {}),
-        pathPool: ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
-        textPainterPool: ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {}),
+        pathPool:
+            ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset()),
+        textPainterPool: ObjectPool<TextPainter>(
+            factory: () => TextPainter(), reset: (tp) {}),
         textCache: LinkedHashMapTextLayoutCache(),
         performanceMonitor: monitor,
         culler: const ViewportCuller(),
@@ -772,11 +826,13 @@ void main() {
 
       final canvas = _RecordingCanvas();
 
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), throwsException);
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          throwsException);
 
       // endFrame should have been called in finally block
       final metrics = monitor.currentMetrics;
-      expect(metrics.frameTime.inMicroseconds, greaterThan(0), reason: 'endFrame should be called even after exception');
+      expect(metrics.frameTime.inMicroseconds, greaterThan(0),
+          reason: 'endFrame should be called even after exception');
     });
 
     test('subsequent frames continue after error', () {
@@ -784,7 +840,8 @@ void main() {
       pipeline.addLayer(_ThrowingLayer(zIndex: 0));
 
       final canvas1 = _RecordingCanvas();
-      expect(() => pipeline.renderFrame(canvas1, const Size(800, 600)), throwsException);
+      expect(() => pipeline.renderFrame(canvas1, const Size(800, 600)),
+          throwsException);
 
       // Remove throwing layer, add normal layer
       pipeline.clearLayers();
@@ -792,8 +849,10 @@ void main() {
 
       // Next frame should work normally
       final canvas2 = _RecordingCanvas();
-      expect(() => pipeline.renderFrame(canvas2, const Size(800, 600)), returnsNormally);
-      expect(canvas2.renderOrder, equals(['Recovery']), reason: 'Pipeline should recover and render normally after error');
+      expect(() => pipeline.renderFrame(canvas2, const Size(800, 600)),
+          returnsNormally);
+      expect(canvas2.renderOrder, equals(['Recovery']),
+          reason: 'Pipeline should recover and render normally after error');
     });
   });
 }

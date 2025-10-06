@@ -26,12 +26,18 @@ void main() {
       expect(ThemeConstants.colorblindSafePalette, everyElement(isA<Color>()));
 
       // Verify it matches the Okabe-Ito standard colors
-      expect(ThemeConstants.colorblindSafePalette[0].value, equals(0xFF0173B2)); // Blue
-      expect(ThemeConstants.colorblindSafePalette[1].value, equals(0xFFDE8F05)); // Orange
-      expect(ThemeConstants.colorblindSafePalette[2].value, equals(0xFF029E73)); // Teal
-      expect(ThemeConstants.colorblindSafePalette[3].value, equals(0xFFCC78BC)); // Pink
-      expect(ThemeConstants.colorblindSafePalette[4].value, equals(0xFFECE133)); // Yellow
-      expect(ThemeConstants.colorblindSafePalette[5].value, equals(0xFF56B4E9)); // Light Blue
+      expect(ThemeConstants.colorblindSafePalette[0].value,
+          equals(0xFF0173B2)); // Blue
+      expect(ThemeConstants.colorblindSafePalette[1].value,
+          equals(0xFFDE8F05)); // Orange
+      expect(ThemeConstants.colorblindSafePalette[2].value,
+          equals(0xFF029E73)); // Teal
+      expect(ThemeConstants.colorblindSafePalette[3].value,
+          equals(0xFFCC78BC)); // Pink
+      expect(ThemeConstants.colorblindSafePalette[4].value,
+          equals(0xFFECE133)); // Yellow
+      expect(ThemeConstants.colorblindSafePalette[5].value,
+          equals(0xFF56B4E9)); // Light Blue
     });
 
     test('minimalPalette has 3 gray shades', () {
@@ -46,10 +52,14 @@ void main() {
       expect(ThemeConstants.highContrastPalette, everyElement(isA<Color>()));
 
       // Verify extreme contrast colors
-      expect(ThemeConstants.highContrastPalette[0].value, equals(0xFF000000)); // Black
-      expect(ThemeConstants.highContrastPalette[1].value, equals(0xFFFFFFFF)); // White
-      expect(ThemeConstants.highContrastPalette[2].value, equals(0xFFFF0000)); // Red
-      expect(ThemeConstants.highContrastPalette[3].value, equals(0xFF0000FF)); // Blue
+      expect(ThemeConstants.highContrastPalette[0].value,
+          equals(0xFF000000)); // Black
+      expect(ThemeConstants.highContrastPalette[1].value,
+          equals(0xFFFFFFFF)); // White
+      expect(ThemeConstants.highContrastPalette[2].value,
+          equals(0xFFFF0000)); // Red
+      expect(ThemeConstants.highContrastPalette[3].value,
+          equals(0xFF0000FF)); // Blue
     });
   });
 
@@ -72,13 +82,15 @@ void main() {
       expect(ThemeConstants.getTypographyScaleFactor(599.0), equals(0.9));
     });
 
-    test('getTypographyScaleFactor returns tablet scale for widths 600-1023', () {
+    test('getTypographyScaleFactor returns tablet scale for widths 600-1023',
+        () {
       expect(ThemeConstants.getTypographyScaleFactor(600.0), equals(1.0));
       expect(ThemeConstants.getTypographyScaleFactor(800.0), equals(1.0));
       expect(ThemeConstants.getTypographyScaleFactor(1023.0), equals(1.0));
     });
 
-    test('getTypographyScaleFactor returns desktop scale for widths >= 1024', () {
+    test('getTypographyScaleFactor returns desktop scale for widths >= 1024',
+        () {
       expect(ThemeConstants.getTypographyScaleFactor(1024.0), equals(1.1));
       expect(ThemeConstants.getTypographyScaleFactor(1920.0), equals(1.1));
       expect(ThemeConstants.getTypographyScaleFactor(3840.0), equals(1.1));
@@ -160,13 +172,17 @@ void main() {
     });
 
     test('breakpoints are in ascending order', () {
-      expect(ThemeConstants.mobileBreakpoint, lessThanOrEqualTo(ThemeConstants.tabletBreakpoint));
-      expect(ThemeConstants.tabletBreakpoint, lessThanOrEqualTo(ThemeConstants.desktopBreakpoint));
+      expect(ThemeConstants.mobileBreakpoint,
+          lessThanOrEqualTo(ThemeConstants.tabletBreakpoint));
+      expect(ThemeConstants.tabletBreakpoint,
+          lessThanOrEqualTo(ThemeConstants.desktopBreakpoint));
     });
 
     test('scale factors progress logically (mobile < tablet < desktop)', () {
-      expect(ThemeConstants.mobileScaleFactor, lessThan(ThemeConstants.tabletScaleFactor));
-      expect(ThemeConstants.tabletScaleFactor, lessThan(ThemeConstants.desktopScaleFactor));
+      expect(ThemeConstants.mobileScaleFactor,
+          lessThan(ThemeConstants.tabletScaleFactor));
+      expect(ThemeConstants.tabletScaleFactor,
+          lessThan(ThemeConstants.desktopScaleFactor));
     });
 
     test('scale factors are reasonable (0.8-1.2 range)', () {

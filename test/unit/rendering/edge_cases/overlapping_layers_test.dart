@@ -15,12 +15,17 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/render_context.dart'
+    show RenderContext;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
 
 void main() {
   group('Edge Case: Overlapping Layers', () {
@@ -80,7 +85,9 @@ void main() {
       pipeline.renderFrame(canvas, const Size(800, 600));
 
       // Verify render order matches z-index (lowest to highest)
-      expect(renderOrder, equals(['background', 'mid', 'foreground']), reason: 'Layers should render in z-order (background first, foreground last)');
+      expect(renderOrder, equals(['background', 'mid', 'foreground']),
+          reason:
+              'Layers should render in z-order (background first, foreground last)');
 
       print('Z-order validation: $renderOrder (background → mid → foreground)');
     });
@@ -136,9 +143,12 @@ void main() {
       final canvas = _MockCanvas();
 
       // Rendering with alpha blending should not crash
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Alpha blending should work correctly');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Alpha blending should work correctly');
 
-      print('Alpha blending test: 3 semi-transparent layers rendered successfully');
+      print(
+          'Alpha blending test: 3 semi-transparent layers rendered successfully');
     });
 
     test('Performance with 10 overlapping layers', () {
@@ -181,7 +191,8 @@ void main() {
       final frameTime = stopwatch.elapsedMicroseconds / 1000;
 
       // With minimal rendering work, 10 layers should be very fast
-      expect(frameTime, lessThan(5), reason: '10 overlapping layers should render quickly (<5ms)');
+      expect(frameTime, lessThan(5),
+          reason: '10 overlapping layers should render quickly (<5ms)');
 
       print('10 overlapping layers: ${frameTime.toStringAsFixed(2)}ms');
     });
@@ -228,13 +239,17 @@ void main() {
 
       // Verify each layer rendered exactly once
       for (final entry in renderCount.entries) {
-        expect(entry.value, equals(1), reason: 'Layer ${entry.key} should render exactly once');
+        expect(entry.value, equals(1),
+            reason: 'Layer ${entry.key} should render exactly once');
       }
 
       // Verify no crashes
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Multiple renders should not cause artifacts');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Multiple renders should not cause artifacts');
 
-      print('Rendering artifacts check: All 5 layers rendered correctly without artifacts');
+      print(
+          'Rendering artifacts check: All 5 layers rendered correctly without artifacts');
     });
 
     test('Z-order update correctness', () {
@@ -290,7 +305,8 @@ void main() {
       // Render with initial z-order
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(renderOrder, equals(['A', 'B', 'C']), reason: 'Initial z-order should be A → B → C');
+      expect(renderOrder, equals(['A', 'B', 'C']),
+          reason: 'Initial z-order should be A → B → C');
 
       renderOrder.clear();
 
@@ -306,7 +322,8 @@ void main() {
       // Render with updated z-order
       pipeline.renderFrame(canvas, const Size(800, 600));
 
-      expect(renderOrder, equals(['C', 'A', 'B']), reason: 'Updated z-order should be C → A → B');
+      expect(renderOrder, equals(['C', 'A', 'B']),
+          reason: 'Updated z-order should be C → A → B');
 
       print('Z-order update test: Initial [A, B, C] → Updated [C, A, B]');
     });
@@ -342,7 +359,8 @@ class _TrackedLayer implements RenderLayer {
     final paint = context.paintPool.acquire();
     try {
       paint.color = color;
-      context.canvas.drawRect(Rect.fromLTWH(0, 0, context.size.width, context.size.height), paint);
+      context.canvas.drawRect(
+          Rect.fromLTWH(0, 0, context.size.width, context.size.height), paint);
     } finally {
       context.paintPool.release(paint);
     }

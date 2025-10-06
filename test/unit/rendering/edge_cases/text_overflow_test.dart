@@ -11,15 +11,21 @@ library;
 
 import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 
-import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextStyle, TextDirection;
+import 'package:flutter/rendering.dart'
+    show TextPainter, TextSpan, TextStyle, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
+import 'package:braven_charts/src/foundation/foundation.dart'
+    show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/render_pipeline.dart'
+    show RenderPipeline;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
-import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:braven_charts/src/rendering/render_context.dart'
+    show RenderContext;
+import 'package:braven_charts/src/rendering/performance_monitor.dart'
+    show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+    show LinkedHashMapTextLayoutCache;
 
 void main() {
   group('Edge Case: Text Overflow', () {
@@ -44,7 +50,8 @@ void main() {
       );
 
       // Create layer with extremely long text label
-      const longText = 'This is an extremely long text label that will definitely exceed '
+      const longText =
+          'This is an extremely long text label that will definitely exceed '
           'the viewport bounds and should be handled gracefully by the rendering system';
 
       pipeline.addLayer(_TextOverflowLayer(
@@ -56,7 +63,9 @@ void main() {
       final canvas = _MockCanvas();
 
       // Rendering should not crash with overflowing text
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Should handle text overflow gracefully');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Should handle text overflow gracefully');
 
       print('Text overflow test: Long text label rendered without crash');
     });
@@ -96,10 +105,13 @@ void main() {
 
       // Render multiple frames with overflowing text
       for (int frame = 0; frame < 5; frame++) {
-        expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Frame $frame should handle multiple overflows');
+        expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+            returnsNormally,
+            reason: 'Frame $frame should handle multiple overflows');
       }
 
-      print('Stability test: 5 frames with 10 overflowing text labels, all successful');
+      print(
+          'Stability test: 5 frames with 10 overflowing text labels, all successful');
     });
 
     test('Text overflow at all viewport edges', () {
@@ -155,9 +167,12 @@ void main() {
       final canvas = _MockCanvas();
 
       // All edge overflows should be handled
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'All edge overflows should be handled gracefully');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'All edge overflows should be handled gracefully');
 
-      print('Edge overflow test: Top, right, bottom, left edges all handled correctly');
+      print(
+          'Edge overflow test: Top, right, bottom, left edges all handled correctly');
     });
 
     test('Performance with very large text labels', () {
@@ -200,9 +215,12 @@ void main() {
 
       // Even with 1000 character text, should be reasonable
       // Text layout can be expensive, allow up to 20ms
-      expect(frameTime, lessThan(20), reason: 'Very large text should still render in reasonable time (<20ms)');
+      expect(frameTime, lessThan(20),
+          reason:
+              'Very large text should still render in reasonable time (<20ms)');
 
-      print('Large text performance: 1000 characters in ${frameTime.toStringAsFixed(1)}ms');
+      print(
+          'Large text performance: 1000 characters in ${frameTime.toStringAsFixed(1)}ms');
     });
 
     test('Text cache with overflowing labels', () {
@@ -251,8 +269,10 @@ void main() {
       final afterSecondHitRate = textCache.hitRate;
 
       // Verify cache was used
-      expect(afterFirstLength, greaterThan(initialLength), reason: 'First render should add to cache');
-      expect(afterSecondHitRate, greaterThan(initialHitRate), reason: 'Second render should improve hit rate');
+      expect(afterFirstLength, greaterThan(initialLength),
+          reason: 'First render should add to cache');
+      expect(afterSecondHitRate, greaterThan(initialHitRate),
+          reason: 'Second render should improve hit rate');
 
       print('Text cache test: '
           'First render (added to cache), second render (cache hit), '
@@ -296,9 +316,12 @@ void main() {
       final canvas = _MockCanvas();
 
       // Should handle empty/whitespace text gracefully
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Empty and whitespace-only text should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
+          returnsNormally,
+          reason: 'Empty and whitespace-only text should not crash');
 
-      print('Edge case test: Empty string and whitespace-only labels handled correctly');
+      print(
+          'Edge case test: Empty string and whitespace-only labels handled correctly');
     });
   });
 }

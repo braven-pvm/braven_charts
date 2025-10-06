@@ -86,7 +86,9 @@ void main() {
       pipeline.addLayer(stockLayer);
     });
 
-    testWidgets('Initial render with 500 visible points completes in <16ms (no jank)', (WidgetTester tester) async {
+    testWidgets(
+        'Initial render with 500 visible points completes in <16ms (no jank)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         CustomPaint(
           size: const Size(800, 600),
@@ -107,7 +109,8 @@ void main() {
       );
     });
 
-    testWidgets('Viewport culling reduces render to ~500 points after pan', (WidgetTester tester) async {
+    testWidgets('Viewport culling reduces render to ~500 points after pan',
+        (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -139,7 +142,8 @@ void main() {
       );
     });
 
-    testWidgets('Zoom in to 50 visible points maintains <8ms frame time', (WidgetTester tester) async {
+    testWidgets('Zoom in to 50 visible points maintains <8ms frame time',
+        (WidgetTester tester) async {
       // Initial render
       await tester.pumpWidget(
         CustomPaint(
@@ -162,11 +166,13 @@ void main() {
       expect(
         metrics.frameTime.inMicroseconds,
         lessThan(8000),
-        reason: 'Zoomed render with 50 points should be <8ms (target: <8ms avg)',
+        reason:
+            'Zoomed render with 50 points should be <8ms (target: <8ms avg)',
       );
     });
 
-    testWidgets('Pool hit rate >90% over 60 frames', (WidgetTester tester) async {
+    testWidgets('Pool hit rate >90% over 60 frames',
+        (WidgetTester tester) async {
       for (int i = 0; i < 60; i++) {
         await tester.pumpWidget(
           CustomPaint(
@@ -187,7 +193,8 @@ void main() {
       );
     });
 
-    testWidgets('Average frame time <8ms over 60 frames', (WidgetTester tester) async {
+    testWidgets('Average frame time <8ms over 60 frames',
+        (WidgetTester tester) async {
       for (int i = 0; i < 60; i++) {
         await tester.pumpWidget(
           CustomPaint(
@@ -225,8 +232,10 @@ class _StockDataLayer extends RenderLayer {
   void render(RenderContext context) {
     // Cull points outside viewport
     // Convert Rect viewport to DataRange for X and Y
-    final viewportX = DataRange(min: context.viewport.left, max: context.viewport.right);
-    final viewportY = DataRange(min: context.viewport.top, max: context.viewport.bottom);
+    final viewportX =
+        DataRange(min: context.viewport.left, max: context.viewport.right);
+    final viewportY =
+        DataRange(min: context.viewport.top, max: context.viewport.bottom);
 
     final visiblePoints = context.culler.cull(
       points: data,

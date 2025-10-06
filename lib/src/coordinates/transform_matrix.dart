@@ -65,7 +65,8 @@ class TransformMatrix {
   /// - [TransformMatrix.translation]
   /// - [TransformMatrix.scale]
   /// - [TransformMatrix.combined]
-  const TransformMatrix._(this._values) : assert(_values.length == 9, 'Matrix must have exactly 9 values');
+  const TransformMatrix._(this._values)
+      : assert(_values.length == 9, 'Matrix must have exactly 9 values');
 
   /// Create identity matrix (no transformation).
   ///
@@ -267,10 +268,14 @@ class TransformMatrix {
     );
 
     // Apply matrix in parallel: x' = x * m00 + y * m10 + m20
-    final xPrime = xVec.scale(_values[0]) + yVec.scale(_values[3]) + Float32x4.splat(_values[6]);
+    final xPrime = xVec.scale(_values[0]) +
+        yVec.scale(_values[3]) +
+        Float32x4.splat(_values[6]);
 
     // y' = x * m01 + y * m11 + m21
-    final yPrime = xVec.scale(_values[1]) + yVec.scale(_values[4]) + Float32x4.splat(_values[7]);
+    final yPrime = xVec.scale(_values[1]) +
+        yVec.scale(_values[4]) +
+        Float32x4.splat(_values[7]);
 
     // Extract results
     return [
