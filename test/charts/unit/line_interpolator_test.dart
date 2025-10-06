@@ -4,11 +4,11 @@
 /// and stepped (horizontal-vertical segments).
 library;
 
-import 'dart:ui' show Offset, Path, PathMetric;
+import 'dart:ui' show Offset;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/charts/line/line_interpolator.dart';
-import 'package:braven_charts/src/charts/base/chart_config.dart';
+import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
 
 void main() {
   group('LineInterpolator', () {

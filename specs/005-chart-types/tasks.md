@@ -201,12 +201,12 @@
   - Test object pooling for marker paths
 
 ### Algorithm Implementations (Parallel)
-- [ ] **T032** [P] Implement LineInterpolator in lib/src/charts/line/line_interpolator.dart
+- [x] **T032** [P] Implement LineInterpolator in lib/src/charts/line/line_interpolator.dart ✅ 2025-01-06
   - Straight: Linear path between points
   - Smooth: Catmull-Rom to cubic bezier conversion (algorithm from research.md)
   - Stepped: Horizontal then vertical segments
   - Path caching optimization
-  - **Must pass T027 tests**
+  - **Must pass T027 tests** ✅ 15/15 PASSED
 
 - [ ] **T033** [P] Implement AreaStacking in lib/src/charts/area/area_stacking.dart
   - Cumulative stacking algorithm
