@@ -305,7 +305,7 @@ This is a **single Flutter library** project:
 
 **GATE**: T018-T027 must be complete.
 
-- [ ] **T028** Implement ChartThemeBuilder in `lib/src/theming/builder/chart_theme_builder.dart`
+- [x] **T028** Implement ChartThemeBuilder in `lib/src/theming/builder/chart_theme_builder.dart`
   - Default constructor (starts from defaults)
   - from(ChartTheme) constructor (starts from existing theme)
   - Fluent setters for all 10 fields (return this)
