@@ -18,11 +18,6 @@ import 'dart:ui' show Size, Rect;
 import 'package:braven_charts/braven_charts.dart';
 import 'package:test/test.dart';
 
-import 'package:braven_charts/src/coordinates/coordinate_system.dart';
-import 'package:braven_charts/src/coordinates/transform_context.dart';
-import 'package:braven_charts/src/coordinates/universal_coordinate_transformer.dart';
-import 'package:braven_charts/src/coordinates/viewport_state.dart';
-
 void main() {
   group('Edge Cases -', () {
     late UniversalCoordinateTransformer transformer;
@@ -36,8 +31,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
         );
@@ -57,8 +52,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
         );
@@ -78,8 +73,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
         );
@@ -100,8 +95,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
         );
@@ -121,8 +116,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
         );
@@ -145,8 +140,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(0, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -159,8 +154,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 0),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -173,8 +168,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 0, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -187,8 +182,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 0),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -203,8 +198,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 50, max: 50),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 50, max: 50),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -217,8 +212,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 25, max: 25),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 25, max: 25),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -232,7 +227,7 @@ void main() {
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
             xDataRange: DataRange(min: 100, max: 0),
-            yDataRange: DataRange(min: 0, max: 50),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
           ),
@@ -245,7 +240,7 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
+            xDataRange: const DataRange(min: 0, max: 100),
             yDataRange: DataRange(min: 50, max: 0),
             viewport: ViewportState.identity(),
             series: const [],
@@ -259,8 +254,8 @@ void main() {
       test('should reject negative zoom factor', () {
         expect(
           () => ViewportState(
-            xRange: DataRange(min: 0, max: 100),
-            yRange: DataRange(min: 0, max: 50),
+            xRange: const DataRange(min: 0, max: 100),
+            yRange: const DataRange(min: 0, max: 50),
             zoomFactor: -1.0,
             panOffset: const Point(0, 0),
           ),
@@ -271,8 +266,8 @@ void main() {
       test('should reject zero zoom factor', () {
         expect(
           () => ViewportState(
-            xRange: DataRange(min: 0, max: 100),
-            yRange: DataRange(min: 0, max: 50),
+            xRange: const DataRange(min: 0, max: 100),
+            yRange: const DataRange(min: 0, max: 50),
             zoomFactor: 0.0,
             panOffset: const Point(0, 0),
           ),
@@ -287,8 +282,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
             animationProgress: -0.1,
@@ -302,8 +297,8 @@ void main() {
           () => TransformContext(
             widgetSize: const Size(800, 600),
             chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-            xDataRange: DataRange(min: 0, max: 100),
-            yDataRange: DataRange(min: 0, max: 50),
+            xDataRange: const DataRange(min: 0, max: 100),
+            yDataRange: const DataRange(min: 0, max: 50),
             viewport: ViewportState.identity(),
             series: const [],
             animationProgress: 1.1,
@@ -316,8 +311,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
           animationProgress: 0.0,
@@ -330,8 +325,8 @@ void main() {
         final context = TransformContext(
           widgetSize: const Size(800, 600),
           chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-          xDataRange: DataRange(min: 0, max: 100),
-          yDataRange: DataRange(min: 0, max: 50),
+          xDataRange: const DataRange(min: 0, max: 100),
+          yDataRange: const DataRange(min: 0, max: 50),
           viewport: ViewportState.identity(),
           series: const [],
           animationProgress: 1.0,

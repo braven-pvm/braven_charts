@@ -10,10 +10,6 @@ import 'dart:math' show Point, sin;
 import 'dart:ui' show Size, Rect;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/coordinates/coordinate_system.dart';
-import 'package:braven_charts/src/coordinates/transform_context.dart';
-import 'package:braven_charts/src/coordinates/universal_coordinate_transformer.dart';
-import 'package:braven_charts/src/coordinates/viewport_state.dart';
 
 void main() {
   print('====== Batch Transformation Performance Benchmark ======\n');
@@ -22,8 +18,8 @@ void main() {
   final context = TransformContext(
     widgetSize: const Size(800, 600),
     chartAreaBounds: const Rect.fromLTWH(50, 30, 700, 540),
-    xDataRange: DataRange(min: 0, max: 100),
-    yDataRange: DataRange(min: -1, max: 1),
+    xDataRange: const DataRange(min: 0, max: 100),
+    yDataRange: const DataRange(min: -1, max: 1),
     viewport: ViewportState.identity(),
     series: const [],
   );
@@ -62,7 +58,7 @@ void main() {
 
   // Benchmark 2: 10K points screen → data (reverse)
   print('Benchmark 2: 10K points screen → data');
-  
+
   final warmup2 = Stopwatch()..start();
   transformer.transformBatch(
     screenPoints10K,

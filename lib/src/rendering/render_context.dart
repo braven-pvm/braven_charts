@@ -75,6 +75,30 @@ import 'package:flutter/painting.dart';
 /// - Immutable value object (all fields final)
 /// - Validation enforced via assertions (debug mode)
 class RenderContext {
+  /// Create immutable rendering context.
+  ///
+  /// All parameters except [transformContext] and [transformer] are required.
+  /// Validates:
+  /// - Canvas size must be positive (width > 0, height > 0)
+  /// - Viewport must intersect canvas bounds
+  ///
+  /// Validation is assertion-based (debug mode only) for zero runtime
+  /// overhead in release builds.
+  RenderContext({
+    required this.canvas,
+    required this.size,
+    required this.viewport,
+    required this.culler,
+    required this.paintPool,
+    required this.pathPool,
+    required this.textPainterPool,
+    required this.textCache,
+    required this.performanceMonitor,
+    this.transformContext,
+    this.transformer,
+  })  : assert(size.width > 0, 'Canvas width must be positive'),
+        assert(size.height > 0, 'Canvas height must be positive');
+
   /// Flutter canvas for drawing operations.
   ///
   /// Layers use this to draw paths, text, shapes. Canvas is owned by
@@ -151,30 +175,6 @@ class RenderContext {
   ///
   /// See: Layer 2 (003-coordinate-system) for details.
   final UniversalCoordinateTransformer? transformer;
-
-  /// Create immutable rendering context.
-  ///
-  /// All parameters except [transformContext] and [transformer] are required.
-  /// Validates:
-  /// - Canvas size must be positive (width > 0, height > 0)
-  /// - Viewport must intersect canvas bounds
-  ///
-  /// Validation is assertion-based (debug mode only) for zero runtime
-  /// overhead in release builds.
-  RenderContext({
-    required this.canvas,
-    required this.size,
-    required this.viewport,
-    required this.culler,
-    required this.paintPool,
-    required this.pathPool,
-    required this.textPainterPool,
-    required this.textCache,
-    required this.performanceMonitor,
-    this.transformContext,
-    this.transformer,
-  })  : assert(size.width > 0, 'Canvas width must be positive'),
-        assert(size.height > 0, 'Canvas height must be positive');
   // Note: Viewport intersection validation removed for performance.
   // Layers are responsible for handling viewport edge cases.
 

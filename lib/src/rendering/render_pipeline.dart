@@ -75,6 +75,33 @@ import 'package:flutter/painting.dart';
 /// - Mutable state (layers, viewport) for runtime updates
 /// - Immutable context (recreated per frame)
 class RenderPipeline {
+  /// Create rendering pipeline with shared infrastructure.
+  ///
+  /// All parameters except [transformer] and [transformContextFactory] are required.
+  /// Infrastructure (pools, cache, monitor) typically created once and shared
+  /// across charts/widgets.
+  ///
+  /// [initialViewport] sets starting visible bounds. Call [updateViewport]
+  /// to change viewport at runtime (pan/zoom operations).
+  ///
+  /// **Coordinate Transformation (Optional)**:
+  /// - [transformer]: UniversalCoordinateTransformer instance (from Layer 2)
+  /// - [transformContextFactory]: Function to create TransformContext each frame
+  ///
+  /// If both are provided, RenderContext will include coordinate transformation
+  /// support, enabling layers to use `dataToScreen()`, `screenToData()`, etc.
+  RenderPipeline({
+    required this.paintPool,
+    required this.pathPool,
+    required this.textPainterPool,
+    required this.textCache,
+    required this.performanceMonitor,
+    required this.culler,
+    required Rect initialViewport,
+    this.transformer,
+    this.transformContextFactory,
+  }) : _viewport = initialViewport;
+
   /// Object pool for Paint instances (shared across layers).
   final ObjectPool<Paint> paintPool;
 
@@ -125,33 +152,6 @@ class RenderPipeline {
 
   /// Flag to track if layers need z-order sorting.
   bool _needsSort = false;
-
-  /// Create rendering pipeline with shared infrastructure.
-  ///
-  /// All parameters except [transformer] and [transformContextFactory] are required.
-  /// Infrastructure (pools, cache, monitor) typically created once and shared
-  /// across charts/widgets.
-  ///
-  /// [initialViewport] sets starting visible bounds. Call [updateViewport]
-  /// to change viewport at runtime (pan/zoom operations).
-  ///
-  /// **Coordinate Transformation (Optional)**:
-  /// - [transformer]: UniversalCoordinateTransformer instance (from Layer 2)
-  /// - [transformContextFactory]: Function to create TransformContext each frame
-  ///
-  /// If both are provided, RenderContext will include coordinate transformation
-  /// support, enabling layers to use `dataToScreen()`, `screenToData()`, etc.
-  RenderPipeline({
-    required this.paintPool,
-    required this.pathPool,
-    required this.textPainterPool,
-    required this.textCache,
-    required this.performanceMonitor,
-    required this.culler,
-    required Rect initialViewport,
-    this.transformer,
-    this.transformContextFactory,
-  }) : _viewport = initialViewport;
 
   /// Get current viewport bounds.
   Rect get viewport => _viewport;
