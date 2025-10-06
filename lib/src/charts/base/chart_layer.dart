@@ -7,8 +7,7 @@
 // - Must achieve <16ms frame time for specified data sizes (Performance First)
 // - TDD: Contract tests written first (test/charts/contract/chart_layer_contract_test.dart)
 
-import 'package:braven_charts/src/foundation/foundation.dart'
-    show ChartSeries;
+import 'package:braven_charts/src/foundation/foundation.dart' show ChartSeries;
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
 
@@ -106,6 +105,21 @@ class ChartAnimationConfig {
 /// 4. **Updates**: Call [updateData] when series changes
 /// 5. **Cleanup**: Call [dispose] to release resources
 abstract class ChartLayer extends RenderLayer {
+  /// Constructs a chart layer with required data and styling.
+  ///
+  /// [series] is the data to render (can be empty list).
+  /// [theme] defines the visual styling.
+  /// [animationConfig] controls data update animations.
+  /// [zIndex] determines rendering order (inherited from RenderLayer).
+  /// [isVisible] determines if layer renders (inherited from RenderLayer).
+  ChartLayer({
+    required this.series,
+    required this.theme,
+    required this.animationConfig,
+    required super.zIndex,
+    super.isVisible,
+  });
+
   /// The data series to be rendered.
   ///
   /// Each series contains a list of data points with optional metadata.
@@ -123,21 +137,6 @@ abstract class ChartLayer extends RenderLayer {
   /// Controls whether animations are enabled, their duration, and easing curves.
   /// When [updateData] is called, this config determines animation behavior.
   final ChartAnimationConfig animationConfig;
-
-  /// Constructs a chart layer with required data and styling.
-  ///
-  /// [series] is the data to render (can be empty list).
-  /// [theme] defines the visual styling.
-  /// [animationConfig] controls data update animations.
-  /// [zIndex] determines rendering order (inherited from RenderLayer).
-  /// [isVisible] determines if layer renders (inherited from RenderLayer).
-  ChartLayer({
-    required this.series,
-    required this.theme,
-    required this.animationConfig,
-    required super.zIndex,
-    super.isVisible,
-  });
 
   /// Renders the chart to the canvas.
   ///
@@ -222,6 +221,5 @@ abstract class ChartLayer extends RenderLayer {
   bool get isEmpty => series.isEmpty;
 
   @override
-  String toString() =>
-      'ChartLayer(series: ${series.length}, zIndex: $zIndex, isVisible: $isVisible)';
+  String toString() => 'ChartLayer(series: ${series.length}, zIndex: $zIndex, isVisible: $isVisible)';
 }

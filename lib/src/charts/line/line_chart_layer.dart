@@ -40,15 +40,6 @@ import 'package:braven_charts/src/rendering/render_context.dart';
 /// );
 /// ```
 class LineChartLayer extends ChartLayer {
-  /// Configuration for line rendering (interpolation mode, markers, etc.)
-  final LineChartConfig config;
-
-  /// Line interpolator for path generation.
-  final LineInterpolator _interpolator;
-
-  /// Shared renderer for markers and gradients.
-  final ChartRenderer _renderer;
-
   /// Constructs a line chart layer.
   ///
   /// [series] is the data to render.
@@ -66,13 +57,22 @@ class LineChartLayer extends ChartLayer {
   })  : _interpolator = LineInterpolator(config.lineStyle),
         _renderer = ChartRenderer();
 
+  /// Configuration for line rendering (interpolation mode, markers, etc.)
+  final LineChartConfig config;
+
+  /// Line interpolator for path generation.
+  final LineInterpolator _interpolator;
+
+  /// Shared renderer for markers and gradients.
+  final ChartRenderer _renderer;
+
   @override
   void render(RenderContext context) {
     if (isEmpty) return;
 
     // Acquire pooled paint object
     final paint = context.paintPool.acquire();
-    
+
     try {
       // Configure paint for line drawing
       paint.style = PaintingStyle.stroke;
@@ -101,9 +101,7 @@ class LineChartLayer extends ChartLayer {
         // Convert ChartDataPoint to Offset for interpolation
         // TODO: Use context.transformer when coordinate system is integrated
         // For now, use direct x,y as screen coordinates (temporary)
-        final points = chartSeries.points
-            .map((p) => Offset(p.x, p.y))
-            .toList();
+        final points = chartSeries.points.map((p) => Offset(p.x, p.y)).toList();
 
         // TODO: Implement viewport culling using context.culler
         // For now, render all points (will be optimized later)
@@ -130,7 +128,7 @@ class LineChartLayer extends ChartLayer {
   /// Renders markers at each data point.
   void _renderMarkers(RenderContext context, List<Offset> points, Color color) {
     final paint = context.paintPool.acquire();
-    
+
     try {
       paint.color = color;
       paint.style = PaintingStyle.fill;
@@ -160,17 +158,16 @@ class LineChartLayer extends ChartLayer {
   void dispose() {
     // Clear interpolator cache
     _interpolator.clearCache();
-    
+
     // Clear renderer caches
     _renderer.clearCache();
     _renderer.clearPathPool();
-    
+
     super.dispose();
   }
 
   @override
-  String toString() =>
-      'LineChartLayer(series: ${series.length}, lineStyle: ${config.lineStyle}, zIndex: $zIndex)';
+  String toString() => 'LineChartLayer(series: ${series.length}, lineStyle: ${config.lineStyle}, zIndex: $zIndex)';
 
   // Default color palette (will be replaced by theme colors)
   static final List<Color> _defaultColors = [
