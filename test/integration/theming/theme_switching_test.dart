@@ -12,7 +12,6 @@ import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/theming/extensions/render_context_theme_extension.dart';
 import 'package:braven_charts/src/theming/utilities/style_cache.dart';
 import 'package:flutter/material.dart' show TextPainter, Color;
-import 'package:flutter/painting.dart' show Paint, Path, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

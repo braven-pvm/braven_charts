@@ -11,7 +11,6 @@ import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/theming/components/typography_theme.dart';
 import 'package:flutter/material.dart' show TextPainter;
-import 'package:flutter/painting.dart' show Paint, Path, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -35,13 +34,9 @@ void main() {
         );
 
         // Calculate effective sizes with mobile scaling
-        final effectiveTitleSize = mobileTheme.baseFontSize *
-            mobileTheme.scaleFactorMobile *
-            mobileTheme.titleMultiplier;
+        final effectiveTitleSize = mobileTheme.baseFontSize * mobileTheme.scaleFactorMobile * mobileTheme.titleMultiplier;
 
-        final effectiveLabelSize = mobileTheme.baseFontSize *
-            mobileTheme.scaleFactorMobile *
-            mobileTheme.labelMultiplier;
+        final effectiveLabelSize = mobileTheme.baseFontSize * mobileTheme.scaleFactorMobile * mobileTheme.labelMultiplier;
 
         // Verify scaling is applied
         expect(effectiveTitleSize, lessThan(mobileTheme.baseFontSize * mobileTheme.titleMultiplier));
@@ -94,9 +89,7 @@ void main() {
         );
 
         // Calculate effective sizes with tablet scaling
-        final effectiveTitleSize = tabletTheme.baseFontSize *
-            tabletTheme.scaleFactorTablet *
-            tabletTheme.titleMultiplier;
+        final effectiveTitleSize = tabletTheme.baseFontSize * tabletTheme.scaleFactorTablet * tabletTheme.titleMultiplier;
 
         // Should equal base size with multiplier (no scaling)
         expect(
@@ -115,9 +108,7 @@ void main() {
       test('tablet is baseline - no size adjustment', () {
         final typography = baseTheme.typographyTheme;
 
-        final tabletTitle = typography.baseFontSize *
-            typography.scaleFactorTablet *
-            typography.titleMultiplier;
+        final tabletTitle = typography.baseFontSize * typography.scaleFactorTablet * typography.titleMultiplier;
 
         final baseTitle = typography.baseFontSize * typography.titleMultiplier;
 
@@ -139,9 +130,7 @@ void main() {
         );
 
         // Calculate effective sizes with desktop scaling
-        final effectiveTitleSize = desktopTheme.baseFontSize *
-            desktopTheme.scaleFactorDesktop *
-            desktopTheme.titleMultiplier;
+        final effectiveTitleSize = desktopTheme.baseFontSize * desktopTheme.scaleFactorDesktop * desktopTheme.titleMultiplier;
 
         final baseTitle = desktopTheme.baseFontSize * desktopTheme.titleMultiplier;
 
@@ -211,14 +200,10 @@ void main() {
         final typography = baseTheme.typographyTheme;
 
         // Mobile title
-        final mobileTitle = typography.baseFontSize *
-            typography.scaleFactorMobile *
-            typography.titleMultiplier;
+        final mobileTitle = typography.baseFontSize * typography.scaleFactorMobile * typography.titleMultiplier;
 
         // Desktop label
-        final desktopLabel = typography.baseFontSize *
-            typography.scaleFactorDesktop *
-            typography.labelMultiplier;
+        final desktopLabel = typography.baseFontSize * typography.scaleFactorDesktop * typography.labelMultiplier;
 
         // Both should use their respective multipliers
         expect(mobileTitle, closeTo(15.12, 0.01)); // 12 * 0.9 * 1.4
@@ -288,19 +273,16 @@ void main() {
         // but rendering code would select appropriate scale factor based on viewport width
 
         // Mobile (400px) - would use scaleFactorMobile
-        final mobileScale = mobileContext.viewport.width < 600 ?
-            typography.scaleFactorMobile : typography.scaleFactorTablet;
+        final mobileScale = mobileContext.viewport.width < 600 ? typography.scaleFactorMobile : typography.scaleFactorTablet;
         expect(mobileScale, equals(0.9));
 
         // Tablet (800px) - would use scaleFactorTablet
-        final tabletScale = tabletContext.viewport.width >= 600 &&
-            tabletContext.viewport.width < 1200 ?
-            typography.scaleFactorTablet : typography.scaleFactorDesktop;
+        final tabletScale =
+            tabletContext.viewport.width >= 600 && tabletContext.viewport.width < 1200 ? typography.scaleFactorTablet : typography.scaleFactorDesktop;
         expect(tabletScale, equals(1.0));
 
         // Desktop (1920px) - would use scaleFactorDesktop
-        final desktopScale = desktopContext.viewport.width >= 1200 ?
-            typography.scaleFactorDesktop : typography.scaleFactorTablet;
+        final desktopScale = desktopContext.viewport.width >= 1200 ? typography.scaleFactorDesktop : typography.scaleFactorTablet;
         expect(desktopScale, equals(1.1));
       });
 

@@ -107,8 +107,7 @@ void _benchmarkHitRate() {
   // Simulate realistic rendering pattern:
   // - 10 unique style types
   // - Multiple frames re-using same styles
-  const styleTypes = ['axis', 'grid', 'series', 'legend', 'tooltip',
-                      'crosshair', 'marker', 'label', 'title', 'background'];
+  const styleTypes = ['axis', 'grid', 'series', 'legend', 'tooltip', 'crosshair', 'marker', 'label', 'title', 'background'];
 
   // First pass: populate cache (all misses)
   for (final type in styleTypes) {
@@ -190,8 +189,7 @@ void _benchmarkConcurrentAccess() {
   const themeHash = 12345;
 
   // Simulate rendering multiple chart elements concurrently
-  const elementTypes = ['axis', 'grid', 'series', 'legend', 'tooltip',
-                        'crosshair', 'marker', 'label', 'title', 'background'];
+  const elementTypes = ['axis', 'grid', 'series', 'legend', 'tooltip', 'crosshair', 'marker', 'label', 'title', 'background'];
 
   // Populate cache
   for (final type in elementTypes) {

@@ -14,7 +14,6 @@ import 'package:braven_charts/src/rendering/text_layout_cache.dart';
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/theming/extensions/render_context_theme_extension.dart';
 import 'package:flutter/material.dart' show TextPainter;
-import 'package:flutter/painting.dart' show Paint, Path, TextDirection;
 
 void main() {
   print('=== Theme Switching Benchmark ===\n');

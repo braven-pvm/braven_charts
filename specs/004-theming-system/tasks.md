@@ -480,13 +480,13 @@ This is a **single Flutter library** project:
   - Testing for accessibility
   - **DEPENDS ON**: T015 (ColorUtils)
 
-- [ ] **T047** [P] Execute quickstart examples in `specs/004-theming-system/quickstart.md`
-  - Run Example 1: Apply predefined theme
-  - Run Example 2: Switch theme <100ms
-  - Run Example 3: Build custom theme
-  - Run Example 4: Verify WCAG AAA contrast
-  - Run Example 5: JSON serialization round-trip
-  - All examples MUST PASS
+- [x] **T047** [P] Execute quickstart examples in `specs/004-theming-system/quickstart.md`
+  - ✅ Run Example 1: Apply predefined theme
+  - ✅ Run Example 2: Switch theme <100ms (0ms actual)
+  - ✅ Run Example 3: Build custom theme
+  - ✅ Run Example 4: Verify WCAG AAA contrast (21:1 ratios)
+  - ✅ Run Example 5: JSON serialization round-trip (1373 bytes)
+  - ✅ All examples PASS - `test/integration/theming/quickstart_examples_test.dart`
   - **DEPENDS ON**: T028, T039
 
 - [ ] **T048** Final validation and cleanup
