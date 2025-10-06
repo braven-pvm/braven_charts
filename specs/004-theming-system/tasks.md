@@ -63,7 +63,7 @@ This is a **single Flutter library** project:
 
 **Purpose**: Define the contract (API) for all theming components through tests that specify expected behavior.
 
-- [ ] **T001** [P] Contract test for ChartTheme in `test/contract/theming/chart_theme_contract_test.dart`
+- [x] **T001** [P] Contract test for ChartTheme in `test/contract/theming/chart_theme_contract_test.dart`
   - Test 7 predefined themes exist (defaultLight, defaultDark, corporateBlue, vibrant, minimal, highContrast, colorblindFriendly)
   - Test copyWith() preserves unchanged fields
   - Test toJson() / fromJson() round-trip
