@@ -112,17 +112,17 @@
 - [x] **T016** [P] Implement MarkerStyle enum in lib/src/charts/scatter/scatter_chart_config.dart (filled, outlined, both) ✅ 2025-01-06
 
 ### Supporting Models (Parallel - Independent)
-- [ ] **T017** [P] Implement AreaBaseline class in lib/src/charts/area/area_chart_config.dart
+- [x] **T017** [P] Implement AreaBaseline class in lib/src/charts/area/area_chart_config.dart ✅ 2025-01-06
   - Fields: AreaBaselineType type, double? fixedValue, String? seriesId
   - Validation in constructor
   - Immutable with copyWith()
 
-- [ ] **T018** [P] Implement ChartAnimationConfig class in lib/src/charts/base/chart_config.dart
+- [x] **T018** [P] Implement ChartAnimationConfig class in lib/src/charts/base/chart_config.dart ✅ 2025-01-06
   - Fields: bool enabled, Duration duration, Curve curve, double changeThreshold
   - Immutable with copyWith()
   - Default values: enabled=true, duration=300ms, curve=Curves.easeInOut, changeThreshold=0.01
 
-- [ ] **T019** [P] Implement ChartSeriesStyle class in lib/src/charts/base/chart_config.dart
+- [x] **T019** [P] Implement ChartSeriesStyle class in lib/src/charts/base/chart_config.dart ✅ 2025-01-06
   - Fields: Color? color, double? lineWidth, double? markerSize, double? fillOpacity, double? barWidthRatio
   - Immutable with copyWith()
   - Used for per-series overrides
