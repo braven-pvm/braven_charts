@@ -171,16 +171,58 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 **Ready For:**
 - v0.4.0-charts release
 - Merge to main branch
-- Next layer: Interaction System (005-interaction-system)
+- Next layer: Chart Widgets (005-chart-widgets) 🆕
 
 ---
 
-### Layer 5: Interaction System (005-interaction-system) ⏳ PENDING
-**What**: Mouse, touch, keyboard interactions  
-**Why**: Professional-grade user experience  
+### Layer 5: Chart Widgets (005-chart-widgets) 🆕 NEXT
+**What**: User-facing Flutter widgets wrapping chart layers  
+**Why**: Make charts usable by Flutter developers without boilerplate  
 **Dependencies**: Layers 0-4
 
-**Status**: ⏳ Awaiting Layer 4 spec
+**Status**: ⏳ Specification starting NOW
+
+**Planned Components:**
+- LineChart Widget: StatelessWidget wrapper for LineChartLayer
+- AreaChart Widget: StatelessWidget wrapper for AreaChartLayer
+- BarChart Widget: StatelessWidget wrapper for BarChartLayer
+- ScatterChart Widget: StatelessWidget wrapper for ScatterChartLayer
+- ChartContainer: Reusable container with title, legend, controls
+- Automatic RenderPipeline setup and resource management
+- Data binding: Simple API (List<ChartDataPoint> → Widget)
+- State management: Internal handling of animations and updates
+- Event callbacks: onTap, onHover, onZoom, onPan
+
+**Target API:**
+```dart
+// Simple 5-line usage - no boilerplate!
+LineChart(
+  data: myChartData,
+  config: LineChartConfig(),
+  theme: ChartTheme.defaultLight,
+)
+```
+
+**Next Steps:**
+- Create spec.md defining widget contracts
+- Define widget API surface (properties, callbacks)
+- Specify resource lifecycle (build/dispose)
+- Plan automatic RenderPipeline management
+- Create quickstart examples
+
+**Will Unblock:**
+- 4 deferred golden tests from Layer 4 (T062-T065)
+- User-facing library release (v0.5.0-widgets)
+- Real-world usage and feedback collection
+
+---
+
+### Layer 6: Interaction System (006-interaction-system) ⏳ PENDING
+**What**: Mouse, touch, keyboard interactions  
+**Why**: Professional-grade user experience  
+**Dependencies**: Layers 0-5
+
+**Status**: ⏳ Awaiting Chart Widgets
 
 **Planned Components:**
 - Event Handling: Mouse, touch, keyboard delegation
@@ -206,12 +248,12 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 
 ---
 
-### Layer 6: Annotation System (006-annotation-system) ⏳ PENDING
+### Layer 7: Annotation System (007-annotation-system) ⏳ PENDING
 **What**: Five annotation types for data storytelling  
 **Why**: Critical user requirement for data analysis  
-**Dependencies**: Layers 0-5
+**Dependencies**: Layers 0-6
 
-**Status**: ⏳ Awaiting Layer 5 spec
+**Status**: ⏳ Awaiting Interaction System
 
 **5 Annotation Types:**
 1. Text Annotations (free-floating labels)
@@ -230,12 +272,12 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 
 ---
 
-### Layer 7: Advanced Features (007-advanced-features) ⏳ PENDING
+### Layer 8: Advanced Features (008-advanced-features) ⏳ PENDING
 **What**: Trendline analysis, statistics, streaming, export  
 **Why**: Professional analytics capabilities  
-**Dependencies**: Layers 0-6
+**Dependencies**: Layers 0-7
 
-**Status**: ⏳ Awaiting Layer 6 spec
+**Status**: ⏳ Awaiting Annotation System
 
 **Planned Features:**
 - Trendline Analysis: 6 curve types with R²

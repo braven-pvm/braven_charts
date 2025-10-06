@@ -193,9 +193,51 @@ Core chart type implementations leveraging all foundation layers for efficient, 
 - ✅ quickstart.md - 10 executable examples
 - ✅ docs/guides/chart-types.md - 988-line comprehensive usage guide
 
-### Layer 5: Interaction System (005-interaction-system)
-**Status**: ⏳ Awaiting Chart Types  
+### Layer 5: Chart Widgets (005-chart-widgets) 🆕 NEXT
+**Status**: ⏳ Specification Starting  
 **Dependencies**: Layers 0-4
+
+User-facing Flutter widgets that wrap chart layers for easy integration into Flutter apps.
+
+**Components:**
+- **Widget Wrappers**: LineChart, AreaChart, BarChart, ScatterChart StatelessWidget/StatefulWidget
+- **Chart Container**: Reusable container with titles, legends, and controls
+- **Data Binding**: Simple data model to widget API
+- **Responsive Layout**: Automatic sizing and viewport management
+- **State Management**: Internal state handling for animations and updates
+- **Event Callbacks**: User interaction callbacks (onTap, onHover, etc.)
+
+**Widget API Examples:**
+```dart
+LineChart(
+  data: myChartData,
+  config: LineChartConfig(),
+  theme: ChartTheme.defaultLight,
+  onDataPointTap: (point) => print(point),
+)
+```
+
+**Critical Success Factors:**
+- Simple, intuitive API for Flutter developers
+- Zero boilerplate (no manual RenderPipeline setup)
+- Automatic resource management (pools, caching)
+- Hot reload support
+- Consistent with Flutter widget patterns
+- Comprehensive examples and documentation
+
+**Specification Documents:**
+- ⏳ spec.md - Awaiting creation
+- ⏳ plan.md - Awaiting creation
+- ⏳ tasks.md - Awaiting creation
+- ⏳ data-model.md - Awaiting creation
+- ⏳ contracts/ - Awaiting creation
+- ⏳ quickstart.md - Awaiting creation
+
+---
+
+### Layer 6: Interaction System (006-interaction-system)
+**Status**: ⏳ Awaiting Chart Widgets  
+**Dependencies**: Layers 0-5
 
 Professional-grade interaction system with mouse, touch, and keyboard support.
 
@@ -212,9 +254,9 @@ Professional-grade interaction system with mouse, touch, and keyboard support.
 - Smooth 60 FPS during pan/zoom
 - Natural, predictable interaction patterns
 
-### Layer 6: Annotation System (006-annotation-system)
+### Layer 7: Annotation System (007-annotation-system)
 **Status**: ⏳ Awaiting Interaction System  
-**Dependencies**: Layers 0-5
+**Dependencies**: Layers 0-6
 
 Comprehensive annotation system with five annotation types for data storytelling.
 
@@ -231,9 +273,9 @@ Comprehensive annotation system with five annotation types for data storytelling
 - Persistence (localStorage, JSON export)
 - Performance with 100+ annotations
 
-### Layer 7: Advanced Features (007-advanced-features)
+### Layer 8: Advanced Features (008-advanced-features)
 **Status**: ⏳ Awaiting Annotation System  
-**Dependencies**: Layers 0-6
+**Dependencies**: Layers 0-7
 
 Advanced analytics and professional features built on complete foundation.
 
@@ -287,16 +329,40 @@ Advanced analytics and professional features built on complete foundation.
 - 100% test coverage ✅ ACHIEVED
 - Professional code quality ✅ ACHIEVED (no linter errors)
 
-### Phase 3: Advanced Interactions (Weeks 9-12)
+### Phase 3: Chart Widgets (Weeks 9-10) 🆕 NEXT PHASE
+**Goal**: Developer-friendly Flutter widgets for easy chart integration
+
+**Deliverables:**
+- ⏳ 005-chart-widgets spec complete
+- ⏳ LineChart widget implementation
+- ⏳ AreaChart widget implementation
+- ⏳ BarChart widget implementation
+- ⏳ ScatterChart widget implementation
+- ⏳ ChartContainer reusable wrapper
+- ⏳ Simple data binding API
+- ⏳ Automatic resource management
+- ⏳ Example app with widget demos
+- ⏳ Comprehensive widget documentation
+
+**Success Criteria:**
+- Zero boilerplate for basic charts
+- Simple 5-line widget usage
+- Hot reload support
+- Automatic RenderPipeline setup
+- Memory leak-free widget lifecycle
+- 100% widget test coverage
+- Golden tests for all 4 chart types ✅ (unblocks deferred tasks from Layer 4)
+
+### Phase 4: Advanced Interactions (Weeks 11-14)
 **Goal**: Professional-grade interaction system
 
 **Deliverables:**
-- ✅ Complete 005-interaction-system implementation
-- ✅ Crosshair system
-- ✅ Professional scrollbars
-- ✅ Touch gesture support
-- ✅ Keyboard navigation
-- ✅ Accessibility features
+- ⏳ Complete 006-interaction-system implementation
+- ⏳ Crosshair system
+- ⏳ Professional scrollbars
+- ⏳ Touch gesture support
+- ⏳ Keyboard navigation
+- ⏳ Accessibility features
 
 **Success Criteria:**
 - <100ms interaction response time
@@ -304,16 +370,16 @@ Advanced analytics and professional features built on complete foundation.
 - WCAG 2.1 AA compliance
 - User testing validation
 
-### Phase 4: Annotations & Analytics (Weeks 13-16)
+### Phase 5: Annotations & Analytics (Weeks 15-18)
 **Goal**: Complete annotation system and advanced features
 
 **Deliverables:**
-- ✅ 006-annotation-system implementation
-- ✅ 007-advanced-features implementation
-- ✅ All 5 annotation types working
-- ✅ 6 trendline algorithms
-- ✅ Statistical analysis tools
-- ✅ Export capabilities
+- ⏳ 007-annotation-system implementation
+- ⏳ 008-advanced-features implementation
+- ⏳ All 5 annotation types working
+- ⏳ 6 trendline algorithms
+- ⏳ Statistical analysis tools
+- ⏳ Export capabilities
 
 **Success Criteria:**
 - 100+ annotations at 60 FPS
@@ -420,4 +486,4 @@ Every specification must pass:
 **Last Updated**: 2025-01-06  
 **Status**: Layer 4 (Chart Types) implementation complete - 68/72 tasks (94%)  
 **Current Branch**: 005-chart-types (ready for merge)  
-**Next Milestone**: Begin Layer 5 (Interaction System) specification
+**Next Milestone**: Layer 5 (Chart Widgets) specification - Make charts usable by developers!
