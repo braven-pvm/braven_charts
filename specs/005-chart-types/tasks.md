@@ -51,7 +51,7 @@
 ## Phase 3.1: Setup & Structure
 **Goal**: Create project directory structure and barrel file
 
-- [ ] **T001** Create chart types directory structure (lib/src/charts/{base,line,area,bar,scatter}/)
+- [x] **T001** Create chart types directory structure (lib/src/charts/{base,line,area,bar,scatter}/) ✅ 2025-10-06
 - [ ] **T002** Create test directory structure (test/charts/{contract,unit,integration,performance,golden}/)
 - [ ] **T003** Create barrel file lib/src/charts/charts.dart (empty initially, export added incrementally)
 
