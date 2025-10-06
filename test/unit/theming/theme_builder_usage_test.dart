@@ -52,7 +52,7 @@ void main() {
 
         // Custom property
         expect(theme.padding, equals(const EdgeInsets.all(32.0)));
-        
+
         // Inherited from vibrant
         expect(theme.backgroundColor, equals(ChartTheme.vibrant.backgroundColor));
         expect(theme.borderColor, equals(ChartTheme.vibrant.borderColor));
@@ -105,10 +105,7 @@ void main() {
       });
 
       test('customize multiple component themes', () {
-        final theme = ChartThemeBuilder()
-            .gridStyle(GridStyle.minimal)
-            .seriesTheme(SeriesTheme.vibrant)
-            .build();
+        final theme = ChartThemeBuilder().gridStyle(GridStyle.minimal).seriesTheme(SeriesTheme.vibrant).build();
 
         expect(theme.gridStyle, equals(GridStyle.minimal));
         expect(theme.seriesTheme, equals(SeriesTheme.vibrant));
@@ -151,11 +148,7 @@ void main() {
       test('fluent API supports continuous chaining', () {
         final builder = ChartThemeBuilder();
 
-        final result = builder
-            .backgroundColor(Colors.white)
-            .borderColor(Colors.grey)
-            .borderWidth(1.0)
-            .padding(const EdgeInsets.all(16.0));
+        final result = builder.backgroundColor(Colors.white).borderColor(Colors.grey).borderWidth(1.0).padding(const EdgeInsets.all(16.0));
 
         // Each method should return the same builder instance
         expect(identical(result, builder), isTrue);
@@ -186,10 +179,7 @@ void main() {
       });
 
       test('chaining from predefined theme', () {
-        final theme = ChartThemeBuilder.from(ChartTheme.vibrant)
-            .backgroundColor(Colors.white)
-            .borderWidth(1.0)
-            .build();
+        final theme = ChartThemeBuilder.from(ChartTheme.vibrant).backgroundColor(Colors.white).borderWidth(1.0).build();
 
         expect(theme.backgroundColor, equals(Colors.white));
         expect(theme.borderWidth, equals(1.0));
@@ -201,10 +191,10 @@ void main() {
         final builder = ChartThemeBuilder().backgroundColor(Colors.grey).borderWidth(1.0);
 
         final theme1 = builder.build();
-        
+
         // Modify builder after first build
         builder.borderWidth(2.0);
-        
+
         final theme2 = builder.build();
 
         // First theme has original state
@@ -234,10 +224,7 @@ void main() {
         final brandPrimary = const Color(0xFF1976D2);
         final brandBackground = const Color(0xFFFAFAFA);
 
-        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight)
-            .backgroundColor(brandBackground)
-            .borderColor(brandPrimary)
-            .build();
+        final theme = ChartThemeBuilder.from(ChartTheme.defaultLight).backgroundColor(brandBackground).borderColor(brandPrimary).build();
 
         expect(theme.backgroundColor, equals(brandBackground));
         expect(theme.borderColor, equals(brandPrimary));

@@ -67,12 +67,9 @@ class ThemeChangeSet {
       gridStyleChanged: oldTheme.gridStyle != newTheme.gridStyle,
       axisStyleChanged: oldTheme.axisStyle != newTheme.axisStyle,
       seriesThemeChanged: oldTheme.seriesTheme != newTheme.seriesTheme,
-      interactionThemeChanged:
-          oldTheme.interactionTheme != newTheme.interactionTheme,
-      typographyThemeChanged:
-          oldTheme.typographyTheme != newTheme.typographyTheme,
-      animationThemeChanged:
-          oldTheme.animationTheme != newTheme.animationTheme,
+      interactionThemeChanged: oldTheme.interactionTheme != newTheme.interactionTheme,
+      typographyThemeChanged: oldTheme.typographyTheme != newTheme.typographyTheme,
+      animationThemeChanged: oldTheme.animationTheme != newTheme.animationTheme,
     );
   }
 

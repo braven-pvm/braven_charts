@@ -46,14 +46,14 @@ void main() {
       test('component themes validate on construction (delegated)', () {
         // This test verifies that component validation is delegated
         // Component themes throw on invalid construction, not the builder
-        
+
         // Example: GridStyle validates majorWidth >= 0
         // If we tried to create an invalid GridStyle and pass it to the builder,
         // the GridStyle constructor would throw, not the builder
-        
+
         // This is by design - builder validates chart-level constraints,
         // component themes validate their own constraints
-        
+
         final builder = ChartThemeBuilder();
         expect(() => builder.build(), returnsNormally);
       });
@@ -109,8 +109,7 @@ void main() {
     group('Multiple Validation Failures', () {
       test('validation fails on first error encountered', () {
         // Set multiple invalid values
-        final builder = ChartThemeBuilder()
-            .borderWidth(-1.0); // Invalid
+        final builder = ChartThemeBuilder().borderWidth(-1.0); // Invalid
 
         // Should throw on the first validation error
         expect(() => builder.build(), throwsArgumentError);

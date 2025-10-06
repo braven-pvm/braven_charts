@@ -1,8 +1,8 @@
 /// Tests for theme versioning.
 library;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/theming/utilities/theme_version.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ThemeVersion Construction', () {
@@ -212,10 +212,8 @@ void main() {
       ];
 
       for (final version in testVersions) {
-        expect(v1.isCompatible(version), isTrue,
-            reason: 'v1.0.0 should be compatible with $version');
-        expect(version.isCompatible(v1), isTrue,
-            reason: '$version should be compatible with v1.0.0');
+        expect(v1.isCompatible(version), isTrue, reason: 'v1.0.0 should be compatible with $version');
+        expect(version.isCompatible(v1), isTrue, reason: '$version should be compatible with v1.0.0');
       }
     });
 
@@ -230,10 +228,8 @@ void main() {
       ];
 
       for (final version in testVersions) {
-        expect(v2.isCompatible(version), isFalse,
-            reason: 'v2.0.0 should be incompatible with $version');
-        expect(version.isCompatible(v2), isFalse,
-            reason: '$version should be incompatible with v2.0.0');
+        expect(v2.isCompatible(version), isFalse, reason: 'v2.0.0 should be incompatible with $version');
+        expect(version.isCompatible(v2), isFalse, reason: '$version should be incompatible with v2.0.0');
       }
     });
   });

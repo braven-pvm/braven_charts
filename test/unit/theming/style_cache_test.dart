@@ -8,33 +8,33 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('StyleCacheKey', () {
     test('equality works correctly', () {
-      final key1 = StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key2 = StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key3 = StyleCacheKey(themeHash: 999, elementType: 'axis', overridesHash: 456);
+      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key3 = const StyleCacheKey(themeHash: 999, elementType: 'axis', overridesHash: 456);
 
       expect(key1, equals(key2));
       expect(key1, isNot(equals(key3)));
     });
 
     test('hashCode is consistent', () {
-      final key1 = StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
-      final key2 = StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
 
       expect(key1.hashCode, equals(key2.hashCode));
     });
 
     test('null overridesHash works correctly', () {
-      final key1 = StyleCacheKey(themeHash: 123, elementType: 'axis');
-      final key2 = StyleCacheKey(themeHash: 123, elementType: 'axis');
-      final key3 = StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
+      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key3 = const StyleCacheKey(themeHash: 123, elementType: 'axis', overridesHash: 456);
 
       expect(key1, equals(key2));
       expect(key1, isNot(equals(key3)));
     });
 
     test('different element types are not equal', () {
-      final key1 = StyleCacheKey(themeHash: 123, elementType: 'axis');
-      final key2 = StyleCacheKey(themeHash: 123, elementType: 'grid');
+      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key2 = const StyleCacheKey(themeHash: 123, elementType: 'grid');
 
       expect(key1, isNot(equals(key2)));
     });
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('get() returns null for missing key', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       final result = cache.get<String>(key);
 
       expect(result, isNull);
@@ -57,7 +57,7 @@ void main() {
     });
 
     test('put() and get() work correctly', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       const value = 'test-style';
 
       cache.put(key, value);
@@ -69,7 +69,7 @@ void main() {
     });
 
     test('put() updates existing entry', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
 
       cache.put(key, 'first');
       cache.put(key, 'second');
@@ -79,8 +79,8 @@ void main() {
     });
 
     test('clear() empties the cache', () {
-      final key1 = StyleCacheKey(themeHash: 123, elementType: 'axis');
-      final key2 = StyleCacheKey(themeHash: 456, elementType: 'grid');
+      final key1 = const StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key2 = const StyleCacheKey(themeHash: 456, elementType: 'grid');
 
       cache.put(key1, 'value1');
       cache.put(key2, 'value2');
@@ -95,11 +95,11 @@ void main() {
     });
 
     test('clear() resets hit/miss counters', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
 
       cache.put(key, 'value');
       cache.get<String>(key); // hit
-      cache.get<String>(StyleCacheKey(themeHash: 999, elementType: 'other')); // miss
+      cache.get<String>(const StyleCacheKey(themeHash: 999, elementType: 'other')); // miss
 
       expect(cache.hits, equals(1));
       expect(cache.misses, equals(1));
@@ -111,7 +111,7 @@ void main() {
     });
 
     test('containsKey() works correctly', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
 
       expect(cache.containsKey(key), isFalse);
 
@@ -121,7 +121,7 @@ void main() {
     });
 
     test('containsKey() does not affect hit rate', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       cache.put(key, 'value');
 
       cache.containsKey(key);
@@ -150,19 +150,19 @@ void main() {
       expect(cache.isFull, isTrue);
 
       // Add one more - should evict first entry
-      final newKey = StyleCacheKey(themeHash: 9999, elementType: 'new');
+      final newKey = const StyleCacheKey(themeHash: 9999, elementType: 'new');
       cache.put(newKey, 'new-value');
 
       expect(cache.size, equals(StyleCache.maxSize)); // Still at max
-      expect(cache.get<String>(StyleCacheKey(themeHash: 0, elementType: 'test')), isNull); // First entry evicted
+      expect(cache.get<String>(const StyleCacheKey(themeHash: 0, elementType: 'test')), isNull); // First entry evicted
       expect(cache.get<String>(newKey), equals('new-value')); // New entry exists
     });
 
     test('get() moves entry to end (most recently used)', () {
       // Add three entries
-      final key1 = StyleCacheKey(themeHash: 1, elementType: 'test');
-      final key2 = StyleCacheKey(themeHash: 2, elementType: 'test');
-      final key3 = StyleCacheKey(themeHash: 3, elementType: 'test');
+      final key1 = const StyleCacheKey(themeHash: 1, elementType: 'test');
+      final key2 = const StyleCacheKey(themeHash: 2, elementType: 'test');
+      final key3 = const StyleCacheKey(themeHash: 3, elementType: 'test');
 
       cache.put(key1, 'value1');
       cache.put(key2, 'value2');
@@ -179,7 +179,7 @@ void main() {
       }
 
       // Cache is full. Next put should evict key2 (oldest unreferenced)
-      final newKey = StyleCacheKey(themeHash: 99999, elementType: 'new');
+      final newKey = const StyleCacheKey(themeHash: 99999, elementType: 'new');
       cache.put(newKey, 'new-value');
 
       // key2 should be evicted, key3 and key1 should still exist
@@ -190,8 +190,8 @@ void main() {
 
     test('put() on existing key moves it to end', () {
       // Add two entries
-      final key1 = StyleCacheKey(themeHash: 1, elementType: 'test');
-      final key2 = StyleCacheKey(themeHash: 2, elementType: 'test');
+      final key1 = const StyleCacheKey(themeHash: 1, elementType: 'test');
+      final key2 = const StyleCacheKey(themeHash: 2, elementType: 'test');
 
       cache.put(key1, 'value1');
       cache.put(key2, 'value2');
@@ -207,7 +207,7 @@ void main() {
       }
 
       // Cache is full. Next put should evict key2 (oldest)
-      final newKey = StyleCacheKey(themeHash: 99999, elementType: 'new');
+      final newKey = const StyleCacheKey(themeHash: 99999, elementType: 'new');
       cache.put(newKey, 'new-value');
 
       // key1 should still exist (was moved to end on update)
@@ -229,7 +229,7 @@ void main() {
     });
 
     test('hitRate is 1.0 with all hits', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       cache.put(key, 'value');
 
       cache.get<String>(key); // hit
@@ -242,9 +242,9 @@ void main() {
     });
 
     test('hitRate is 0.0 with all misses', () {
-      cache.get<String>(StyleCacheKey(themeHash: 1, elementType: 'a')); // miss
-      cache.get<String>(StyleCacheKey(themeHash: 2, elementType: 'b')); // miss
-      cache.get<String>(StyleCacheKey(themeHash: 3, elementType: 'c')); // miss
+      cache.get<String>(const StyleCacheKey(themeHash: 1, elementType: 'a')); // miss
+      cache.get<String>(const StyleCacheKey(themeHash: 2, elementType: 'b')); // miss
+      cache.get<String>(const StyleCacheKey(themeHash: 3, elementType: 'c')); // miss
 
       expect(cache.hitRate, equals(0.0));
       expect(cache.hits, equals(0));
@@ -252,8 +252,8 @@ void main() {
     });
 
     test('hitRate calculates correctly with mixed hits/misses', () {
-      final key1 = StyleCacheKey(themeHash: 1, elementType: 'test');
-      final key2 = StyleCacheKey(themeHash: 2, elementType: 'test');
+      final key1 = const StyleCacheKey(themeHash: 1, elementType: 'test');
+      final key2 = const StyleCacheKey(themeHash: 2, elementType: 'test');
 
       cache.put(key1, 'value');
 
@@ -268,7 +268,7 @@ void main() {
     });
 
     test('hitRate updates after clear', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'axis');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'axis');
       cache.put(key, 'value');
       cache.get<String>(key); // hit
 
@@ -288,7 +288,7 @@ void main() {
     });
 
     test('generic get() returns correct type', () {
-      final key = StyleCacheKey(themeHash: 123, elementType: 'test');
+      final key = const StyleCacheKey(themeHash: 123, elementType: 'test');
       const value = 'string-value';
 
       cache.put(key, value);
@@ -299,9 +299,9 @@ void main() {
     });
 
     test('can store different types', () {
-      final key1 = StyleCacheKey(themeHash: 1, elementType: 'string');
-      final key2 = StyleCacheKey(themeHash: 2, elementType: 'int');
-      final key3 = StyleCacheKey(themeHash: 3, elementType: 'bool');
+      final key1 = const StyleCacheKey(themeHash: 1, elementType: 'string');
+      final key2 = const StyleCacheKey(themeHash: 2, elementType: 'int');
+      final key3 = const StyleCacheKey(themeHash: 3, elementType: 'bool');
 
       cache.put(key1, 'text');
       cache.put(key2, 42);
@@ -323,7 +323,7 @@ void main() {
     test('isEmpty works correctly', () {
       expect(cache.isEmpty, isTrue);
 
-      cache.put(StyleCacheKey(themeHash: 1, elementType: 'test'), 'value');
+      cache.put(const StyleCacheKey(themeHash: 1, elementType: 'test'), 'value');
 
       expect(cache.isEmpty, isFalse);
 

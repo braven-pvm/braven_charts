@@ -1,9 +1,9 @@
 /// Tests for serialization helpers.
 library;
 
+import 'package:braven_charts/src/theming/utilities/serialization_helpers.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/theming/utilities/serialization_helpers.dart';
 
 void main() {
   group('parseColor', () {
@@ -34,8 +34,8 @@ void main() {
     });
 
     test('returns null for wrong length', () {
-      expect(parseColor('#FFF'), isNull);      // too short
-      expect(parseColor('#FFFFFF'), isNull);   // 6 digits (missing alpha)
+      expect(parseColor('#FFF'), isNull); // too short
+      expect(parseColor('#FFFFFF'), isNull); // 6 digits (missing alpha)
       expect(parseColor('#FFFFFFFFF'), isNull); // too long
     });
 
@@ -109,10 +109,12 @@ void main() {
         'bottom': 10.5,
         'left': 20.5,
       });
-      expect(result, equals(const EdgeInsets.symmetric(
-        vertical: 10.5,
-        horizontal: 20.5,
-      )));
+      expect(
+          result,
+          equals(const EdgeInsets.symmetric(
+            vertical: 10.5,
+            horizontal: 20.5,
+          )));
     });
 
     test('handles mixed int and double values', () {
@@ -150,53 +152,65 @@ void main() {
     });
 
     test('returns null for missing top', () {
-      expect(parseEdgeInsets({
-        'right': 16,
-        'bottom': 16,
-        'left': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'right': 16,
+            'bottom': 16,
+            'left': 16,
+          }),
+          isNull);
     });
 
     test('returns null for missing right', () {
-      expect(parseEdgeInsets({
-        'top': 16,
-        'bottom': 16,
-        'left': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'top': 16,
+            'bottom': 16,
+            'left': 16,
+          }),
+          isNull);
     });
 
     test('returns null for missing bottom', () {
-      expect(parseEdgeInsets({
-        'top': 16,
-        'right': 16,
-        'left': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'top': 16,
+            'right': 16,
+            'left': 16,
+          }),
+          isNull);
     });
 
     test('returns null for missing left', () {
-      expect(parseEdgeInsets({
-        'top': 16,
-        'right': 16,
-        'bottom': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'top': 16,
+            'right': 16,
+            'bottom': 16,
+          }),
+          isNull);
     });
 
     test('returns null for non-numeric values', () {
-      expect(parseEdgeInsets({
-        'top': '16',
-        'right': 16,
-        'bottom': 16,
-        'left': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'top': '16',
+            'right': 16,
+            'bottom': 16,
+            'left': 16,
+          }),
+          isNull);
     });
 
     test('returns null for null values', () {
-      expect(parseEdgeInsets({
-        'top': null,
-        'right': 16,
-        'bottom': 16,
-        'left': 16,
-      }), isNull);
+      expect(
+          parseEdgeInsets({
+            'top': null,
+            'right': 16,
+            'bottom': 16,
+            'left': 16,
+          }),
+          isNull);
     });
 
     test('returns null for empty map', () {
@@ -218,12 +232,14 @@ void main() {
   group('edgeInsetsToJson', () {
     test('converts EdgeInsets.all to JSON', () {
       final result = edgeInsetsToJson(const EdgeInsets.all(16));
-      expect(result, equals({
-        'top': 16.0,
-        'right': 16.0,
-        'bottom': 16.0,
-        'left': 16.0,
-      }));
+      expect(
+          result,
+          equals({
+            'top': 16.0,
+            'right': 16.0,
+            'bottom': 16.0,
+            'left': 16.0,
+          }));
     });
 
     test('converts EdgeInsets.symmetric to JSON', () {
@@ -231,12 +247,14 @@ void main() {
         vertical: 10,
         horizontal: 20,
       ));
-      expect(result, equals({
-        'top': 10.0,
-        'right': 20.0,
-        'bottom': 10.0,
-        'left': 20.0,
-      }));
+      expect(
+          result,
+          equals({
+            'top': 10.0,
+            'right': 20.0,
+            'bottom': 10.0,
+            'left': 20.0,
+          }));
     });
 
     test('converts EdgeInsets.only to JSON', () {
@@ -246,22 +264,26 @@ void main() {
         bottom: 3,
         left: 4,
       ));
-      expect(result, equals({
-        'top': 1.0,
-        'right': 2.0,
-        'bottom': 3.0,
-        'left': 4.0,
-      }));
+      expect(
+          result,
+          equals({
+            'top': 1.0,
+            'right': 2.0,
+            'bottom': 3.0,
+            'left': 4.0,
+          }));
     });
 
     test('converts EdgeInsets.zero to JSON', () {
       final result = edgeInsetsToJson(EdgeInsets.zero);
-      expect(result, equals({
-        'top': 0.0,
-        'right': 0.0,
-        'bottom': 0.0,
-        'left': 0.0,
-      }));
+      expect(
+          result,
+          equals({
+            'top': 0.0,
+            'right': 0.0,
+            'bottom': 0.0,
+            'left': 0.0,
+          }));
     });
 
     test('handles decimal values', () {
@@ -271,12 +293,14 @@ void main() {
         30.5,
         40.5,
       ));
-      expect(result, equals({
-        'top': 20.5,
-        'right': 30.5,
-        'bottom': 40.5,
-        'left': 10.5,
-      }));
+      expect(
+          result,
+          equals({
+            'top': 20.5,
+            'right': 30.5,
+            'bottom': 40.5,
+            'left': 10.5,
+          }));
     });
 
     test('round-trips with parseEdgeInsets', () {

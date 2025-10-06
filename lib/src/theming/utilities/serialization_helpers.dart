@@ -25,18 +25,18 @@ import 'package:flutter/painting.dart';
 /// ```
 Color? parseColor(String? colorString) {
   if (colorString == null) return null;
-  
+
   // Must start with # and have exactly 8 hex digits
   if (!colorString.startsWith('#') || colorString.length != 9) {
     return null;
   }
-  
+
   // Parse hex string (remove #)
   final hexString = colorString.substring(1);
   final hexValue = int.tryParse(hexString, radix: 16);
-  
+
   if (hexValue == null) return null;
-  
+
   // AARRGGBB format
   return Color(hexValue);
 }
@@ -53,7 +53,7 @@ Color? parseColor(String? colorString) {
 /// ```
 String colorToHex(Color color) {
   // Extract ARGB components and format as 8-digit hex
-  final hex = color.value.toRadixString(16).toUpperCase().padLeft(8, '0');
+  final hex = color.toARGB32().toRadixString(16).toUpperCase().padLeft(8, '0');
   return '#$hex';
 }
 
@@ -80,22 +80,22 @@ String colorToHex(Color color) {
 /// ```
 EdgeInsets? parseEdgeInsets(Map<String, dynamic>? json) {
   if (json == null) return null;
-  
+
   // All four keys are required
   final top = json['top'];
   final right = json['right'];
   final bottom = json['bottom'];
   final left = json['left'];
-  
+
   if (top == null || right == null || bottom == null || left == null) {
     return null;
   }
-  
+
   // Convert to doubles (handles both int and double)
   if (top is! num || right is! num || bottom is! num || left is! num) {
     return null;
   }
-  
+
   return EdgeInsets.fromLTRB(
     left.toDouble(),
     top.toDouble(),

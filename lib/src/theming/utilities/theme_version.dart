@@ -116,10 +116,7 @@ class ThemeVersion {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ThemeVersion &&
-        other.major == major &&
-        other.minor == minor &&
-        other.patch == patch;
+    return other is ThemeVersion && other.major == major && other.minor == minor && other.patch == patch;
   }
 
   @override
