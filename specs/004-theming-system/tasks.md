@@ -190,7 +190,7 @@ This is a **single Flutter library** project:
   - Equality operator and hashCode
   - **VERIFY**: T007 contract test now passes
 
-- [ ] **T015** [P] Implement ColorUtils in `lib/src/theming/utilities/color_utils.dart`
+- [x] **T015** [P] Implement ColorUtils in `lib/src/theming/utilities/color_utils.dart`
   - Static utility class (private constructor)
   - relativeLuminance(Color) - WCAG 2.1 spec
   - contrastRatio(Color, Color) - WCAG 2.1 spec
