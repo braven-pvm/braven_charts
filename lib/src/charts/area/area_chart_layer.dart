@@ -124,13 +124,13 @@ class AreaChartLayer extends ChartLayer {
           final bounds = areaPath.getBounds();
           final shader = _renderer.createGradientShader(
             bounds: bounds,
-            startColor: color.withOpacity(config.fillOpacity),
-            endColor: color.withOpacity(0.1),
+            startColor: color.withValues(alpha: config.fillOpacity),
+            endColor: color.withValues(alpha: 0.1),
             vertical: true,
           );
           paint.shader = shader;
         } else {
-          paint.color = color.withOpacity(config.fillOpacity);
+          paint.color = color.withValues(alpha: config.fillOpacity);
           paint.shader = null;
         }
 

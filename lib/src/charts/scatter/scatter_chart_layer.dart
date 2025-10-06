@@ -187,8 +187,9 @@ class ScatterChartLayer extends ChartLayer {
       if (config.markerStyle == MarkerStyle.outlined) {
         paint.color = seriesColor;
       } else {
-        // Create darker border by adjusting opacity
-        paint.color = seriesColor.withAlpha((seriesColor.alpha * 0.8).round());
+        // Create darker border by adjusting opacity (80% of original alpha)
+        final alphaValue = (seriesColor.a * 0.8).clamp(0.0, 1.0);
+        paint.color = seriesColor.withValues(alpha: alphaValue);
       }
       _renderer.drawMarker(
         canvas: context.canvas,
@@ -210,7 +211,7 @@ class ScatterChartLayer extends ChartLayer {
     for (final cluster in clusters) {
       // Draw cluster circle
       paint.style = PaintingStyle.fill;
-      paint.color = color.withOpacity(0.3);
+      paint.color = color.withValues(alpha: 0.3);
       context.canvas.drawCircle(cluster.center, cluster.radius, paint);
 
       // Draw cluster border
