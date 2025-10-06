@@ -165,7 +165,7 @@
   - Fields: String seriesId, int categoryIndex, Rect bounds, double value, bool isNegative
   - Used internally by bar positioner
 
-- [ ] **T026** [P] Implement ClusterInfo class in lib/src/charts/scatter/scatter_clusterer.dart
+- [x] **T026** [P] Implement ClusterInfo class in lib/src/charts/scatter/scatter_clusterer.dart ✅ 2025-01-06
   - Fields: Offset center, int pointCount, List<int> pointIndices, double radius
   - Used internally by scatter clusterer
 
