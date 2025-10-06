@@ -371,7 +371,7 @@ This is a **single Flutter library** project:
   - Test null handling
   - **DEPENDS ON**: T033
 
-- [ ] **T035** [P] Create theme versioning in `lib/src/theming/utilities/theme_version.dart`
+- [x] **T035** [P] Create theme versioning in `lib/src/theming/utilities/theme_version.dart`
   - ThemeVersion class (major, minor, patch)
   - fromString() parser
   - toString() formatter
@@ -379,7 +379,7 @@ This is a **single Flutter library** project:
   - currentVersion constant (1.0.0)
   - **DEPENDS ON**: T017
 
-- [ ] **T036** [P] Create versioning tests in `test/unit/theming/theme_version_test.dart`
+- [x] **T036** [P] Create versioning tests in `test/unit/theming/theme_version_test.dart`
   - Test version parsing (1.0.0, 1.2.3)
   - Test compatibility checks (1.0 compatible with 1.1, not with 2.0)
   - Test toString() format
