@@ -77,7 +77,7 @@ This is a **single Flutter library** project:
   - Test validation (widths >= 0, dash pattern format)
   - **MUST FAIL**: GridStyle class not implemented yet
 
-- [ ] **T003** [P] Contract test for AxisStyle in `test/contract/theming/axis_style_contract_test.dart`
+- [x] **T003** [P] Contract test for AxisStyle in `test/contract/theming/axis_style_contract_test.dart`
   - Test axis line styling
   - Test text styles (labels and titles)
   - Test tick mark configuration
