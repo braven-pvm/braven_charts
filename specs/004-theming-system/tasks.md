@@ -320,7 +320,7 @@ This is a **single Flutter library** project:
   - Test all validations from data-model.md
   - **DEPENDS ON**: T028
 
-- [ ] **T030** Create builder usage tests in `test/unit/theming/theme_builder_usage_test.dart`
+- [x] **T030** Create builder usage tests in `test/unit/theming/theme_builder_usage_test.dart`
   - Test minimal customization (1-2 fields)
   - Test starting from predefined theme
   - Test complex customization (all fields)
