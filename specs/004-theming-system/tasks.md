@@ -239,34 +239,34 @@ This is a **single Flutter library** project:
   - Test all series colors distinguishable (ΔE > 40)
   - **DEPENDS ON**: T016
 
-- [ ] **T019** [P] Validate Default Dark theme in `test/accessibility/theming/default_dark_wcag_test.dart`
+- [x] **T019** [P] Validate Default Dark theme in `test/accessibility/theming/default_dark_wcag_test.dart`
   - Test background/text contrast >= 4.5:1 (WCAG AA)
   - Test tooltip background/text contrast >= 4.5:1
   - Test all series colors distinguishable (ΔE > 40)
   - **DEPENDS ON**: T016
 
-- [ ] **T020** [P] Validate Corporate Blue theme in `test/accessibility/theming/corporate_blue_wcag_test.dart`
+- [x] **T020** [P] Validate Corporate Blue theme in `test/accessibility/theming/corporate_blue_wcag_test.dart`
   - Test background/text contrast >= 4.5:1 (WCAG AA)
   - Test blue color palette (5+ shades)
   - **DEPENDS ON**: T016
 
-- [ ] **T021** [P] Validate Vibrant theme in `test/accessibility/theming/vibrant_wcag_test.dart`
+- [x] **T021** [P] Validate Vibrant theme in `test/accessibility/theming/vibrant_wcag_test.dart`
   - Test background/text contrast >= 4.5:1 (WCAG AA)
   - Test high saturation colors
   - **DEPENDS ON**: T016
 
-- [ ] **T022** [P] Validate Minimal theme in `test/accessibility/theming/minimal_wcag_test.dart`
+- [x] **T022** [P] Validate Minimal theme in `test/accessibility/theming/minimal_wcag_test.dart`
   - Test background/text contrast >= 4.5:1 (WCAG AA)
   - Test subtle gray palette
   - **DEPENDS ON**: T016
 
-- [ ] **T023** [P] Validate High Contrast theme in `test/accessibility/theming/high_contrast_wcag_test.dart`
+- [x] **T023** [P] Validate High Contrast theme in `test/accessibility/theming/high_contrast_wcag_test.dart`
   - Test background/text contrast >= 7.0:1 (WCAG AAA)
   - Test tooltip background/text contrast >= 7.0:1
   - Test all text meets AAA standard
   - **DEPENDS ON**: T016
 
-- [ ] **T024** [P] Validate Colorblind Friendly theme in `test/accessibility/theming/colorblind_friendly_test.dart`
+- [x] **T024** [P] Validate Colorblind Friendly theme in `test/accessibility/theming/colorblind_friendly_test.dart`
   - Simulate protanopia: verify series distinguishable (ΔE > 40)
   - Simulate deuteranopia: verify series distinguishable (ΔE > 40)
   - Simulate tritanopia: verify series distinguishable (ΔE > 40)
