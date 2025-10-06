@@ -90,7 +90,11 @@ void main() {
       });
 
       test('minor grid can be enabled', () {
-        final style = GridStyle.defaultLight.copyWith(showMinor: true);
+        final style = GridStyle.defaultLight.copyWith(
+          showMinor: true,
+          minorColor: const Color(0xFFF0F0F0),
+          minorWidth: 0.5,
+        );
         expect(style.showMinor, isTrue);
       });
 
@@ -205,7 +209,7 @@ void main() {
             majorWidth: 1.0,
             majorDashPattern: const [],
             showMinor: true,
-            minorColor: Colors.lightGrey,
+            minorColor: Colors.grey.shade300,
             minorWidth: -0.5, // Invalid
             minorDashPattern: const [],
           ),
