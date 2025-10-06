@@ -275,12 +275,13 @@
   - Animation support
   - **Must pass T008 contract tests**
 
-- [ ] **T041** Implement ChartLayer base class in lib/src/charts/base/chart_layer.dart
+- [x] **T041** Implement ChartLayer base class in lib/src/charts/base/chart_layer.dart ✅ 2025-01-06
   - Extends RenderLayer from Core Rendering Engine
   - Common properties: series, theme, animationConfig
-  - Common methods: render(), shouldRender(), updateData(), prepare(), dispose()
-  - Animation controller for data updates
-  - **Blocks T037-T040**
+  - Common methods: render(), updateData(), prepare(), dispose()
+  - Placeholder types for ChartTheme and ChartAnimationConfig (until Layer 3/4 implemented)
+  - Abstract class ready for concrete implementations
+  - **Blocks T037-T040** (now unblocked)
 
 ---
 
@@ -616,11 +617,11 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 ## Changelog
 
-### 2025-10-06
+### 2025-01-06
 - Initial tasks.md generated from design documents
 - 72 tasks defined across 10 phases
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
-- **Tasks completed: 36/72** (Phase 3.4 COMPLETE!)
+- **Tasks completed: 37/72** (Phase 3.4 COMPLETE, T041 complete!)
 

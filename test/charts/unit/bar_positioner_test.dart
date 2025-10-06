@@ -4,8 +4,7 @@
 /// and stacked (cumulative) modes with proper spacing and negative value handling.
 library;
 
-import 'package:braven_charts/src/charts/bar/bar_chart_config.dart'
-    show BarOrientation, BarGroupingMode;
+import 'package:braven_charts/src/charts/bar/bar_chart_config.dart' show BarOrientation, BarGroupingMode;
 import 'package:braven_charts/src/charts/bar/bar_positioner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +12,7 @@ void main() {
   group('BarPositioner', () {
     group('Grouped Bar Positioning (Side-by-Side)', () {
       test('positions two series side-by-side with spacing', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -46,7 +45,7 @@ void main() {
       });
 
       test('calculates bar width correctly based on ratio', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.5, // Half the available width
@@ -73,7 +72,7 @@ void main() {
       });
 
       test('handles three series grouped together', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -100,7 +99,7 @@ void main() {
       });
 
       test('applies group spacing between categories', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -131,7 +130,7 @@ void main() {
       });
 
       test('handles horizontal orientation', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.horizontal,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -159,7 +158,7 @@ void main() {
 
     group('Stacked Bar Positioning (Cumulative)', () {
       test('stacks two series vertically', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -190,7 +189,7 @@ void main() {
       });
 
       test('stacks three series cumulatively', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -221,7 +220,7 @@ void main() {
       });
 
       test('handles multiple categories in stacked mode', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -254,7 +253,7 @@ void main() {
 
     group('Negative Value Handling', () {
       test('positions negative values below baseline in grouped mode', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -285,7 +284,7 @@ void main() {
       });
 
       test('stacks negative values separately in stacked mode', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -317,7 +316,7 @@ void main() {
       });
 
       test('handles mixed positive and negative values across series', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -354,7 +353,7 @@ void main() {
 
     group('Edge Cases', () {
       test('handles empty series data', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -373,7 +372,7 @@ void main() {
       });
 
       test('handles single value in single series', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -395,7 +394,7 @@ void main() {
       });
 
       test('handles zero values', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.stacked,
           barWidthRatio: 0.8,
@@ -421,7 +420,7 @@ void main() {
       });
 
       test('handles very small bar width ratio', () {
-        final positioner = BarPositioner(
+        final positioner = const BarPositioner(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.1, // Very thin bars

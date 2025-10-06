@@ -52,7 +52,7 @@ class ChartRenderer {
     }
 
     final path = getMarkerPath(shape, position, size);
-    
+
     if (shape == MarkerShape.circle) {
       // Use drawCircle for better performance
       canvas.drawCircle(position, size / 2, paint);
@@ -173,7 +173,7 @@ class ChartRenderer {
     // Determine which shape this path belongs to (simplified - just use circle pool)
     // In practice, you might want to track this when creating paths
     final pool = _pathPools.putIfAbsent(MarkerShape.circle, () => []);
-    
+
     if (pool.length < _maxPoolSize) {
       path.reset();
       pool.add(path);
@@ -200,7 +200,7 @@ class ChartRenderer {
   }) {
     // Create cache key
     final cacheKey = '${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}'
-        '_${startColor.value}_${endColor.value}_$vertical';
+        '_${startColor.toARGB32()}_${endColor.toARGB32()}_$vertical';
 
     // Return cached shader if available
     if (_shaderCache.containsKey(cacheKey)) {
