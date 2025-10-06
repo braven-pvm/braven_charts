@@ -84,34 +84,34 @@ This is a **single Flutter library** project:
   - Test 7 predefined styles
   - **MUST FAIL**: AxisStyle class not implemented yet
 
-- [ ] **T004** [P] Contract test for SeriesTheme in `test/contract/theming/series_theme_contract_test.dart`
+- [x] **T004** [P] Contract test for SeriesTheme in `test/contract/theming/series_theme_contract_test.dart`
   - Test cycling behavior: colorAt(index), lineWidthAt(index), etc.
   - Test MarkerShape enum values
   - Test 7 predefined themes
   - Test validation (all lists length >= 1)
   - **MUST FAIL**: SeriesTheme class not implemented yet
 
-- [ ] **T005** [P] Contract test for InteractionTheme in `test/contract/theming/interaction_theme_contract_test.dart`
+- [x] **T005** [P] Contract test for InteractionTheme in `test/contract/theming/interaction_theme_contract_test.dart`
   - Test crosshair styling
   - Test tooltip styling
   - Test selection styling
   - Test 7 predefined themes
   - **MUST FAIL**: InteractionTheme class not implemented yet
 
-- [ ] **T006** [P] Contract test for TypographyTheme in `test/contract/theming/typography_theme_contract_test.dart`
+- [x] **T006** [P] Contract test for TypographyTheme in `test/contract/theming/typography_theme_contract_test.dart`
   - Test font configuration
   - Test responsive scaling: computeScaleFactor(), withScaleFactor()
   - Test effective sizes with scale factor applied
   - Test 7 predefined themes
   - **MUST FAIL**: TypographyTheme class not implemented yet
 
-- [ ] **T007** [P] Contract test for AnimationTheme in `test/contract/theming/animation_theme_contract_test.dart`
+- [x] **T007** [P] Contract test for AnimationTheme in `test/contract/theming/animation_theme_contract_test.dart`
   - Test duration and curve configuration
   - Test 7 predefined themes
   - Test serialization (curve names)
   - **MUST FAIL**: AnimationTheme class not implemented yet
 
-- [ ] **T008** [P] Contract test for ColorUtils in `test/contract/theming/color_utils_contract_test.dart`
+- [x] **T008** [P] Contract test for ColorUtils in `test/contract/theming/color_utils_contract_test.dart`
   - Test WCAG 2.1 contrast ratio calculation (known test cases)
   - Test isWCAG_AA(), isWCAG_AAA() helpers
   - Test autoContrastText() (white background → black text, etc.)
