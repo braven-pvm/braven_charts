@@ -102,14 +102,14 @@
 ## Phase 3.3: Core Models (TDD Phase 2) - ONLY after contract tests are failing
 
 ### Enums (Parallel - Independent)
-- [ ] **T009** [P] Implement LineStyle enum in lib/src/charts/line/line_chart_config.dart (straight, smooth, stepped)
-- [ ] **T010** [P] Implement MarkerShape enum in lib/src/charts/base/chart_config.dart (circle, square, triangle, diamond, cross, plus, none)
-- [ ] **T011** [P] Implement AreaFillStyle enum in lib/src/charts/area/area_chart_config.dart (solid, gradient, pattern)
-- [ ] **T012** [P] Implement AreaBaselineType enum in lib/src/charts/area/area_chart_config.dart (zero, fixed, series)
-- [ ] **T013** [P] Implement BarOrientation enum in lib/src/charts/bar/bar_chart_config.dart (vertical, horizontal)
-- [ ] **T014** [P] Implement BarGroupingMode enum in lib/src/charts/bar/bar_chart_config.dart (grouped, stacked)
-- [ ] **T015** [P] Implement MarkerSizingMode enum in lib/src/charts/scatter/scatter_chart_config.dart (fixed, dataDriven)
-- [ ] **T016** [P] Implement MarkerStyle enum in lib/src/charts/scatter/scatter_chart_config.dart (filled, outlined, both)
+- [x] **T009** [P] Implement LineStyle enum in lib/src/charts/line/line_chart_config.dart (straight, smooth, stepped) ✅ 2025-01-06
+- [x] **T010** [P] Implement MarkerShape enum in lib/src/charts/base/chart_config.dart (circle, square, triangle, diamond, cross, plus, none) ✅ 2025-01-06
+- [x] **T011** [P] Implement AreaFillStyle enum in lib/src/charts/area/area_chart_config.dart (solid, gradient, pattern) ✅ 2025-01-06
+- [x] **T012** [P] Implement AreaBaselineType enum in lib/src/charts/area/area_chart_config.dart (zero, fixed, series) ✅ 2025-01-06
+- [x] **T013** [P] Implement BarOrientation enum in lib/src/charts/bar/bar_chart_config.dart (vertical, horizontal) ✅ 2025-01-06
+- [x] **T014** [P] Implement BarGroupingMode enum in lib/src/charts/bar/bar_chart_config.dart (grouped, stacked) ✅ 2025-01-06
+- [x] **T015** [P] Implement MarkerSizingMode enum in lib/src/charts/scatter/scatter_chart_config.dart (fixed, dataDriven) ✅ 2025-01-06
+- [x] **T016** [P] Implement MarkerStyle enum in lib/src/charts/scatter/scatter_chart_config.dart (filled, outlined, both) ✅ 2025-01-06
 
 ### Supporting Models (Parallel - Independent)
 - [ ] **T017** [P] Implement AreaBaseline class in lib/src/charts/area/area_chart_config.dart
