@@ -448,13 +448,13 @@
   - Dependencies: T030 (matrix caching implemented)
   - **Status**: Benchmark implemented with 3 scenarios (same context, changing viewport, cache growth) ✅
 
-- [ ] **T050** [P] Benchmark: Zero-allocation validation in `test/benchmarks/coordinates/zero_allocation_benchmark.dart`
+- [x] **T050** [P] Benchmark: Zero-allocation validation in `test/benchmarks/coordinates/zero_allocation_benchmark.dart`
   - Profile: Memory allocations during 10K batch transformation
   - Verify: Zero allocations in steady-state (after warmup)
   - Verify: ObjectPool reuse working correctly
   - Files: `test/benchmarks/coordinates/zero_allocation_benchmark.dart`
   - Dependencies: T033 (ObjectPool integration)
-  - **Expected**: Zero allocations after warmup ✅
+  - **Status**: Benchmark implemented with warmup/steady-state phases & Observatory profiling guidance ✅
 
 ### Documentation
 
