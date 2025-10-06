@@ -466,12 +466,14 @@ This is a **single Flutter library** project:
   - ✅ All 34 source files have comprehensive Dartdoc
   - **DEPENDS ON**: T017
 
-- [ ] **T045** [P] Create usage guide in `docs/guides/theming-usage.md`
-  - Quick start with predefined themes
-  - Custom theme creation with builder
-  - Theme switching best practices
-  - Accessibility guidelines
-  - Performance tips
+- [x] **T045** [P] Create usage guide in `docs/guides/theming-usage.md`
+  - ✅ Quick start with predefined themes
+  - ✅ Custom theme creation with builder
+  - ✅ Theme switching best practices
+  - ✅ Accessibility guidelines
+  - ✅ Performance tips
+  - ✅ JSON serialization examples
+  - ✅ Advanced patterns (inheritance, interpolation, dynamic generation)
   - **DEPENDS ON**: T028
 
 - [ ] **T046** [P] Create accessibility guide in `docs/guides/theming-accessibility.md`
