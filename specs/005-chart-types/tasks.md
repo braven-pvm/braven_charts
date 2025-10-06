@@ -375,12 +375,14 @@
 
 ## Phase 3.8: Performance Benchmarks (Constitutional Requirement)
 **Goal**: Validate <16ms frame time for all chart types  
-**Status**: ✅ **READY** - All dependencies available (Layers 0-3 complete)
+**Status**: 🔄 **IN PROGRESS** - 1/6 tasks complete
 
-- [ ] **T056** [P] Performance benchmark for LineChartLayer in test/charts/performance/line_chart_benchmark.dart
-  - 10,000 points, all 3 line styles (straight, smooth, stepped)
-  - Stopwatch measurement: <16ms required
-  - All 6 marker shapes
+- [x] **T056** [P] Performance benchmark for LineChartLayer in test/charts/performance/line_chart_benchmark.dart ✅ 2025-01-06
+  - ✅ 5 performance benchmarks implemented
+  - ✅ 10,000 points tested with all 3 line styles (straight, smooth, stepped)
+  - ✅ All 6 marker shapes validated
+  - ✅ Object pool hit rate >90% verified  
+  - ✅ All tests pass in <16ms (constitutional requirement met)
   - Constitutional requirement from FR-009
 
 - [ ] **T057** [P] Performance benchmark for AreaChartLayer in test/charts/performance/area_chart_benchmark.dart
