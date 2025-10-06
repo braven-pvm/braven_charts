@@ -440,13 +440,13 @@
   - Dependencies: T032 (batch optimization implemented)
   - **Status**: Benchmark implemented, requires SDK fix to run (Flutter dev channel breaking changes) ✅
 
-- [ ] **T049** [P] Benchmark: Cache hit rate in `test/benchmarks/coordinates/cache_hit_rate_benchmark.dart`
+- [x] **T049** [P] Benchmark: Cache hit rate in `test/benchmarks/coordinates/cache_hit_rate_benchmark.dart`
   - Benchmark: 1000 transformations with same context (hit rate should be ~99%)
   - Benchmark: 1000 transformations with changing viewport (hit rate should be >90%)
   - Measure: Cache size growth over time
   - Files: `test/benchmarks/coordinates/cache_hit_rate_benchmark.dart`
   - Dependencies: T030 (matrix caching implemented)
-  - **Expected**: >90% cache hit rate ✅
+  - **Status**: Benchmark implemented with 3 scenarios (same context, changing viewport, cache growth) ✅
 
 - [ ] **T050** [P] Benchmark: Zero-allocation validation in `test/benchmarks/coordinates/zero_allocation_benchmark.dart`
   - Profile: Memory allocations during 10K batch transformation
