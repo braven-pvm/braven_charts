@@ -258,14 +258,14 @@
   - Pool usage: acquires Paint from context, releases in finally block
   - **Must pass T008 contract tests** (tests still use fail() placeholders)
 
-- [ ] **T039** Implement BarChartLayer in lib/src/charts/bar/bar_chart_layer.dart
-  - Extends ChartLayer
-  - Uses BarPositioner for layout
-  - Supports vertical/horizontal orientation
-  - Supports grouped/stacked modes
-  - Rounded corners, borders, gradients
-  - Theme integration
-  - Animation support
+- [x] **T039** Implement BarChartLayer in lib/src/charts/bar/bar_chart_layer.dart ✅ 2025-01-06
+  - Extends ChartLayer (uses series, theme, animationConfig, zIndex)
+  - Uses BarPositioner for grouped/stacked layout calculation
+  - Supports vertical/horizontal orientation via config
+  - Supports grouped/stacked modes via BarPositioner
+  - Rounded corners (RRect with cornerRadius), borders (stroke paint), gradients (ChartRenderer shader)
+  - Theme integration: placeholder default colors (8-color palette, will use theme when Layer 3 integrated)
+  - Animation support: inherited from ChartLayer base class
   - **Must pass T008 contract tests**
 
 - [ ] **T040** Implement ScatterChartLayer in lib/src/charts/scatter/scatter_chart_layer.dart
@@ -626,5 +626,6 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
-- **Tasks completed: 39/72** (Phase 3.4 COMPLETE, Phase 3.5 in progress: T037-T038 complete!)
+- **Tasks completed: 40/72** (Phase 3.4 COMPLETE, Phase 3.5 80% complete: T037-T039 done, T040 remaining!)
+
 
