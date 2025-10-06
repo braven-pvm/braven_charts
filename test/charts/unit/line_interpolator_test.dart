@@ -4,11 +4,9 @@
 /// and stepped (horizontal-vertical segments).
 library;
 
-import 'dart:ui' show Offset;
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/charts/line/line_interpolator.dart';
 import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
+import 'package:braven_charts/src/charts/line/line_interpolator.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LineInterpolator', () {
@@ -25,7 +23,7 @@ void main() {
         // Path should start at first point
         final metrics = path.computeMetrics().toList();
         expect(metrics.length, equals(1));
-        
+
         // Linear path between two points should be approximately equal to distance
         final metric = metrics.first;
         final expectedDistance = (points[1] - points[0]).distance;
@@ -79,11 +77,10 @@ void main() {
 
         final metrics = path.computeMetrics().toList();
         expect(metrics.isNotEmpty, isTrue);
-        
+
         // Smooth curve should be longer than straight line distance
         final metric = metrics.first;
-        final straightDistance = (points[1] - points[0]).distance + 
-                                (points[2] - points[1]).distance;
+        final straightDistance = (points[1] - points[0]).distance + (points[2] - points[1]).distance;
         expect(metric.length, greaterThanOrEqualTo(straightDistance * 0.9));
       });
 
@@ -101,7 +98,7 @@ void main() {
         // Verify path exists
         final metrics = path.computeMetrics().toList();
         expect(metrics.isNotEmpty, isTrue);
-        
+
         // For Catmull-Rom, the curve should pass through all interior points
         // (We can't easily verify exact point passage without path sampling,
         // but we verify the path was created)
@@ -141,11 +138,10 @@ void main() {
 
         final metrics = path.computeMetrics().toList();
         expect(metrics.isNotEmpty, isTrue);
-        
+
         // Stepped path (horizontal then vertical) should be sum of dx + dy
         final metric = metrics.first;
-        final expectedLength = (points[1].dx - points[0].dx).abs() + 
-                              (points[1].dy - points[0].dy).abs();
+        final expectedLength = (points[1].dx - points[0].dx).abs() + (points[1].dy - points[0].dy).abs();
         expect(metric.length, closeTo(expectedLength, 0.1));
       });
 
@@ -231,9 +227,9 @@ void main() {
 
         final interpolator = LineInterpolator(LineStyle.straight);
         final path1 = interpolator.interpolate(points);
-        
+
         interpolator.clearCache();
-        
+
         final path2 = interpolator.interpolate(points);
 
         // After clearCache(), should not be same instance

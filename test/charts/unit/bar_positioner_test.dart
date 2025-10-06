@@ -6,9 +6,9 @@ library;
 
 import 'dart:ui' show Rect;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/charts/bar/bar_positioner.dart';
 import 'package:braven_charts/src/charts/base/chart_config.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BarPositioner', () {
@@ -55,7 +55,9 @@ void main() {
           groupSpacing: 0.0,
         );
 
-        final seriesData = [[10.0]]; // Single series, single value
+        final seriesData = [
+          [10.0]
+        ]; // Single series, single value
 
         final layout = positioner.calculateLayout(
           seriesData: seriesData,
@@ -65,7 +67,7 @@ void main() {
         );
 
         expect(layout.length, equals(1));
-        
+
         // Bar width should be approximately categoryWidth * barWidthRatio
         final barWidth = layout[0].bounds.width;
         expect(barWidth, closeTo(50.0, 5.0)); // 100 * 0.5
@@ -167,7 +169,7 @@ void main() {
         );
 
         final series1 = [10.0]; // First series
-        final series2 = [5.0];  // Second series stacks on top
+        final series2 = [5.0]; // Second series stacks on top
 
         final layout = positioner.calculateLayout(
           seriesData: [series1, series2],
@@ -306,12 +308,12 @@ void main() {
 
         // Category 0: Positive stacking upward
         expect(layout[0].bounds.bottom, equals(100.0)); // series1: baseline - 10
-        expect(layout[1].bounds.bottom, equals(90.0));  // series2: stacks on series1
+        expect(layout[1].bounds.bottom, equals(90.0)); // series2: stacks on series1
 
         // Category 1: Negative stacking downward
-        expect(layout[2].bounds.top, equals(100.0));    // series1: baseline
+        expect(layout[2].bounds.top, equals(100.0)); // series1: baseline
         expect(layout[2].isNegative, isTrue);
-        expect(layout[3].bounds.top, equals(110.0));    // series2: stacks below series1
+        expect(layout[3].bounds.top, equals(110.0)); // series2: stacks below series1
         expect(layout[3].isNegative, isTrue);
       });
 
@@ -324,9 +326,9 @@ void main() {
           groupSpacing: 0.0,
         );
 
-        final series1 = [10.0];   // Positive
-        final series2 = [-5.0];   // Negative
-        final series3 = [3.0];    // Positive
+        final series1 = [10.0]; // Positive
+        final series2 = [-5.0]; // Negative
+        final series3 = [3.0]; // Positive
 
         final layout = positioner.calculateLayout(
           seriesData: [series1, series2, series3],
@@ -381,7 +383,9 @@ void main() {
         );
 
         final layout = positioner.calculateLayout(
-          seriesData: [[10.0]],
+          seriesData: [
+            [10.0]
+          ],
           categoryWidth: 100.0,
           chartHeight: 200.0,
           baseline: 100.0,
@@ -427,7 +431,9 @@ void main() {
         );
 
         final layout = positioner.calculateLayout(
-          seriesData: [[10.0]],
+          seriesData: [
+            [10.0]
+          ],
           categoryWidth: 100.0,
           chartHeight: 200.0,
           baseline: 100.0,

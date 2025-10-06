@@ -6,17 +6,17 @@ library;
 
 import 'dart:ui' show Canvas, Paint, Path, Rect, Shader, Offset, Size, Color;
 
+import 'package:braven_charts/src/charts/base/chart_config.dart';
+import 'package:braven_charts/src/charts/base/chart_renderer.dart';
 import 'package:flutter/material.dart' hide Paint;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/charts/base/chart_renderer.dart';
-import 'package:braven_charts/src/charts/base/chart_config.dart';
 
 void main() {
   group('ChartRenderer', () {
     group('Marker Shape Rendering', () {
       testWidgets('renders circle marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -35,7 +35,7 @@ void main() {
 
       testWidgets('renders square marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -53,7 +53,7 @@ void main() {
 
       testWidgets('renders triangle marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -71,7 +71,7 @@ void main() {
 
       testWidgets('renders diamond marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -89,7 +89,7 @@ void main() {
 
       testWidgets('renders cross marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -107,7 +107,7 @@ void main() {
 
       testWidgets('renders plus marker correctly', (tester) async {
         final renderer = ChartRenderer();
-        
+
         await tester.pumpWidget(
           CustomPaint(
             painter: _TestMarkerPainter(
@@ -125,7 +125,7 @@ void main() {
 
       test('marker shapes have different path definitions', () {
         final renderer = ChartRenderer();
-        
+
         // Get paths for different shapes
         final circlePath = renderer.getMarkerPath(
           MarkerShape.circle,
@@ -151,7 +151,7 @@ void main() {
 
       test('marker size affects path dimensions', () {
         final renderer = ChartRenderer();
-        
+
         final smallPath = renderer.getMarkerPath(
           MarkerShape.circle,
           const Offset(0, 0),
@@ -169,7 +169,7 @@ void main() {
 
       testWidgets('none marker shape does not render', (tester) async {
         final renderer = ChartRenderer();
-        
+
         // Should not throw when trying to render 'none' marker
         await tester.pumpWidget(
           CustomPaint(
@@ -190,7 +190,7 @@ void main() {
     group('Gradient Shader Caching', () {
       test('creates gradient shader for area fills', () {
         final renderer = ChartRenderer();
-        
+
         final shader = renderer.createGradientShader(
           bounds: const Rect.fromLTWH(0, 0, 100, 100),
           startColor: Colors.blue,
@@ -204,7 +204,7 @@ void main() {
 
       test('caches shader for same parameters', () {
         final renderer = ChartRenderer();
-        
+
         final bounds = const Rect.fromLTWH(0, 0, 100, 100);
         final shader1 = renderer.createGradientShader(
           bounds: bounds,
@@ -225,7 +225,7 @@ void main() {
 
       test('creates different shader for different colors', () {
         final renderer = ChartRenderer();
-        
+
         final bounds = const Rect.fromLTWH(0, 0, 100, 100);
         final shader1 = renderer.createGradientShader(
           bounds: bounds,
@@ -246,7 +246,7 @@ void main() {
 
       test('creates different shader for different bounds', () {
         final renderer = ChartRenderer();
-        
+
         final shader1 = renderer.createGradientShader(
           bounds: const Rect.fromLTWH(0, 0, 100, 100),
           startColor: Colors.blue,
@@ -266,7 +266,7 @@ void main() {
 
       test('creates different shader for different orientations', () {
         final renderer = ChartRenderer();
-        
+
         final bounds = const Rect.fromLTWH(0, 0, 100, 100);
         final shaderVertical = renderer.createGradientShader(
           bounds: bounds,
@@ -287,7 +287,7 @@ void main() {
 
       test('clearCache() invalidates shader cache', () {
         final renderer = ChartRenderer();
-        
+
         final bounds = const Rect.fromLTWH(0, 0, 100, 100);
         final shader1 = renderer.createGradientShader(
           bounds: bounds,
@@ -313,7 +313,7 @@ void main() {
     group('Object Pooling for Marker Paths', () {
       test('pools marker paths for reuse', () {
         final renderer = ChartRenderer();
-        
+
         // Get path from pool
         final path1 = renderer.getMarkerPath(
           MarkerShape.circle,
@@ -338,7 +338,7 @@ void main() {
 
       test('pools paths separately by shape', () {
         final renderer = ChartRenderer();
-        
+
         final circlePath = renderer.getMarkerPath(
           MarkerShape.circle,
           const Offset(0, 0),
@@ -356,7 +356,7 @@ void main() {
 
       test('pool handles concurrent access', () {
         final renderer = ChartRenderer();
-        
+
         // Get multiple paths concurrently
         final paths = List.generate(
           10,
@@ -383,7 +383,7 @@ void main() {
 
       test('clearPathPool() releases all pooled objects', () {
         final renderer = ChartRenderer();
-        
+
         // Create and pool several paths
         for (int i = 0; i < 5; i++) {
           final path = renderer.getMarkerPath(
@@ -408,7 +408,7 @@ void main() {
 
       test('pool limits prevent memory bloat', () {
         final renderer = ChartRenderer();
-        
+
         // Create many paths
         final paths = List.generate(
           100,
@@ -432,7 +432,7 @@ void main() {
     group('Edge Cases', () {
       test('handles zero marker size', () {
         final renderer = ChartRenderer();
-        
+
         expect(
           () => renderer.getMarkerPath(
             MarkerShape.circle,
@@ -445,7 +445,7 @@ void main() {
 
       test('handles negative position coordinates', () {
         final renderer = ChartRenderer();
-        
+
         expect(
           () => renderer.getMarkerPath(
             MarkerShape.square,
@@ -458,7 +458,7 @@ void main() {
 
       test('handles very large marker size', () {
         final renderer = ChartRenderer();
-        
+
         final path = renderer.getMarkerPath(
           MarkerShape.circle,
           const Offset(0, 0),
@@ -498,8 +498,5 @@ class _TestMarkerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_TestMarkerPainter oldDelegate) =>
-      shape != oldDelegate.shape ||
-      position != oldDelegate.position ||
-      size != oldDelegate.size;
+  bool shouldRepaint(_TestMarkerPainter oldDelegate) => shape != oldDelegate.shape || position != oldDelegate.position || size != oldDelegate.size;
 }

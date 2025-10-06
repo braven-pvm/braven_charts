@@ -6,8 +6,8 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/charts/scatter/scatter_clusterer.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ScatterClusterer', () {
@@ -114,7 +114,7 @@ void main() {
       test('points outside cluster radius form separate entities', () {
         final points = [
           const Offset(0, 0),
-          const Offset(1, 0),   // Within cluster radius
+          const Offset(1, 0), // Within cluster radius
           const Offset(50, 50), // Far outside cluster radius
         ];
 
