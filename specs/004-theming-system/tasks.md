@@ -233,7 +233,7 @@ This is a **single Flutter library** project:
 
 **GATE**: T001-T017 must be complete and all contract tests passing.
 
-- [ ] **T018** [P] Validate Default Light theme in `test/accessibility/theming/default_light_wcag_test.dart`
+- [x] **T018** [P] Validate Default Light theme in `test/accessibility/theming/default_light_wcag_test.dart`
   - Test background/text contrast >= 4.5:1 (WCAG AA)
   - Test tooltip background/text contrast >= 4.5:1
   - Test all series colors distinguishable (ΔE > 40)
