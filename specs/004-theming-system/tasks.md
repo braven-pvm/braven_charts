@@ -356,7 +356,7 @@ This is a **single Flutter library** project:
   - Test cache miss returns null
   - **DEPENDS ON**: T031
 
-- [ ] **T033** [P] Create serialization helpers in `lib/src/theming/utilities/serialization_helpers.dart`
+- [x] **T033** [P] Create serialization helpers in `lib/src/theming/utilities/serialization_helpers.dart`
   - parseColor(String) helper
   - colorToHex(Color) helper
   - parseEdgeInsets(Map) helper
@@ -364,7 +364,7 @@ This is a **single Flutter library** project:
   - Add error handling and null safety
   - **DEPENDS ON**: T017
 
-- [ ] **T034** [P] Create serialization tests in `test/unit/theming/serialization_test.dart`
+- [x] **T034** [P] Create serialization tests in `test/unit/theming/serialization_test.dart`
   - Test valid color parsing (#AARRGGBB)
   - Test invalid color formats return null
   - Test EdgeInsets round-trip
