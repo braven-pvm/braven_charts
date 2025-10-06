@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 6: Stacked Bars with Negatives', () {
     // TODO: Implement when all layers integrated
     // Example: Income/expenses with negative values
-    
+
     test('Renders stacked bars with negative values without errors', () {
       // PLACEHOLDER: Will create BarChartLayer with stacked mode, negative values
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

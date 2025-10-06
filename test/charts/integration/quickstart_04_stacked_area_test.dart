@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 4: Stacked Area Chart', () {
     // TODO: Implement when all layers integrated
     // Example: 3 series stacked, composition visualization
-    
+
     test('Renders 3 stacked series without errors', () {
       // PLACEHOLDER: Will create AreaChartLayer with 3 series, stacked: true
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

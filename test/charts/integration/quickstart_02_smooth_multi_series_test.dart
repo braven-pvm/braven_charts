@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 2: Smooth Multi-Series Line', () {
     // TODO: Implement when theming layer integrated
     // Example: Bezier curves, 2 series, 10 points each
-    
+
     test('Renders 2 series without errors', () {
       // PLACEHOLDER: Will create LineChartLayer with 2 series
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

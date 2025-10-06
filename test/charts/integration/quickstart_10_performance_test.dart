@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 10: Performance Test', () {
     // NOTE: This functionality will be covered by T056-T061 (performance benchmarks)
     // This is a quickstart-specific validation
-    
+
     test('10,000 points render in <16ms', () {
       // PLACEHOLDER: Will measure frame time with Stopwatch
       // Constitutional requirement: <16ms for 60 FPS

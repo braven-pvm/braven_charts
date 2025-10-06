@@ -10,7 +10,7 @@ void main() {
   group('Theme Integration Tests', () {
     // TODO: Implement when Layer 3 (Theming System) is integrated
     // These tests require actual ChartTheme and SeriesTheme implementations
-    
+
     test('Chart layers use automatic color cycling from theme', () {
       // PLACEHOLDER: Will test theme.seriesTheme.colors usage
       // Currently using default hardcoded colors in each chart layer

@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 8: Scatter Data-Driven Sizing', () {
     // TODO: Implement when all layers integrated and ChartDataPoint has size property
     // Example: 4 points with metadata['size']
-    
+
     test('Renders 4 points without errors', () {
       // PLACEHOLDER: Will create ScatterChartLayer with 4 points
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 9: Animated Updates', () {
     // NOTE: This functionality is already covered by T045 (animation_test.dart)
     // These are specific validation tests for quickstart Example 9
-    
+
     test('300ms transition between datasets', () {
       // PLACEHOLDER: Will verify ChartAnimationConfig(duration: 300ms)
       expect(true, isTrue, reason: 'Placeholder - awaiting animation system integration');

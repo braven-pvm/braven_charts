@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 5: Grouped Bar Chart', () {
     // TODO: Implement when all layers integrated
     // Example: Vertical, side-by-side, 2 series, 3 categories
-    
+
     test('Renders 2 series in 3 categories without errors', () {
       // PLACEHOLDER: Will create BarChartLayer with grouped mode
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

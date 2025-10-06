@@ -11,7 +11,7 @@ void main() {
   group('Animation Integration Tests', () {
     // TODO: Implement when animation system is fully integrated
     // These tests require ChartAnimationConfig implementation and animation controller
-    
+
     test('LineChartLayer smoothly animates data updates', () {
       // PLACEHOLDER: Will test diff-based lerp between old/new points
       // Currently ChartAnimationConfig is a placeholder class

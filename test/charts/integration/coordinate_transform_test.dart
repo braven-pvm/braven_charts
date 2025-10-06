@@ -10,7 +10,7 @@ void main() {
   group('Coordinate Transformation Integration Tests', () {
     // TODO: Implement when Layer 2 (Coordinate System) is integrated
     // These tests require UniversalCoordinateTransformer from Layer 2
-    
+
     test('LineChartLayer uses data-to-screen transformations', () {
       // PLACEHOLDER: Will test context.transformer.dataToScreen(point)
       // Currently using direct Offset(x, y) conversion

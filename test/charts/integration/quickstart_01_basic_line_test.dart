@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 1: Basic Line Chart', () {
     // TODO: Implement when all layers (Rendering, Coordinate, Theming) integrated
     // Example: Straight lines, circle markers, 5 points
-    
+
     test('Renders without errors', () {
       // PLACEHOLDER: Will create LineChartLayer with 5 points
       // config: straight lines, circle markers

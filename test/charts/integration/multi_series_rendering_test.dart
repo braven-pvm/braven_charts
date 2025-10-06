@@ -11,7 +11,7 @@ void main() {
   group('Multi-Series Rendering Integration Tests', () {
     // TODO: Implement when Layer 3 (Theming System) is integrated
     // These tests require ChartTheme with actual SeriesTheme colors
-    
+
     test('LineChartLayer renders 3 series with distinct colors', () {
       // PLACEHOLDER: Will test color cycling from theme
       // Currently ChartTheme is a placeholder class

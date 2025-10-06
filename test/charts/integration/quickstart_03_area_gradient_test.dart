@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 3: Area Chart with Gradient', () {
     // TODO: Implement when all layers integrated
     // Example: Vertical gradient fill, smooth line overlay, 5 points
-    
+
     test('Renders without errors', () {
       // PLACEHOLDER: Will create AreaChartLayer with gradient config
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');

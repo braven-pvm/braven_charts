@@ -11,7 +11,7 @@ void main() {
   group('Quickstart Example 7: Scatter Fixed-Size', () {
     // TODO: Implement when all layers integrated
     // Example: 50 random points, 6px circles, filled style
-    
+
     test('Renders 50 points without errors', () {
       // PLACEHOLDER: Will create ScatterChartLayer with 50 points
       expect(true, isTrue, reason: 'Placeholder - awaiting full integration');
