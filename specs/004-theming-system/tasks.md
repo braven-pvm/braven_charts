@@ -286,7 +286,7 @@ This is a **single Flutter library** project:
   - Create comparison table in docs
   - **DEPENDS ON**: T016
 
-- [ ] **T027** Update unit tests in `test/unit/theming/theme_equality_test.dart`
+- [x] **T027** Update unit tests in `test/unit/theming/theme_equality_test.dart`
   - Test theme equality across all 7 themes
   - Test hashCode consistency
   - Test copyWith() creates new instance
