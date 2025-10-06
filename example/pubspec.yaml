@@ -1,7 +1,7 @@
 name: braven_charts_example
 description: Example app demonstrating Braven Charts capabilities
 version: 1.0.0+1
-publish_to: 'none'
+publish_to: "none"
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Local dependency on braven_charts
   braven_charts:
     path: ../
@@ -19,3 +19,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
