@@ -201,7 +201,7 @@ This is a **single Flutter library** project:
   - colorDistance(Color, Color) - ΔE in CIELAB
   - **VERIFY**: T008 contract test now passes
 
-- [ ] **T016** Implement ChartTheme in `lib/src/theming/chart_theme.dart`
+- [x] **T016** Implement ChartTheme in `lib/src/theming/chart_theme.dart`
   - Immutable class with const constructor
   - 7 predefined themes (each references component predefined themes)
   - copyWith() method (all 10 fields)
