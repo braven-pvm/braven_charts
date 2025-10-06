@@ -476,11 +476,13 @@ This is a **single Flutter library** project:
   - ✅ Advanced patterns (inheritance, interpolation, dynamic generation)
   - **DEPENDS ON**: T028
 
-- [ ] **T046** [P] Create accessibility guide in `docs/guides/theming-accessibility.md`
-  - WCAG 2.1 compliance overview
-  - How to verify contrast ratios
-  - Colorblind-friendly design patterns
-  - Testing for accessibility
+- [x] **T046** [P] Create accessibility guide in `docs/guides/theming-accessibility.md`
+  - ✅ WCAG 2.1 compliance overview
+  - ✅ How to verify contrast ratios (with code examples)
+  - ✅ Colorblind-friendly design patterns (Okabe-Ito palette)
+  - ✅ Testing for accessibility (manual + automated)
+  - ✅ Accessible theme checklist
+  - ✅ Common pitfalls and solutions
   - **DEPENDS ON**: T015 (ColorUtils)
 
 - [x] **T047** [P] Execute quickstart examples in `specs/004-theming-system/quickstart.md`
