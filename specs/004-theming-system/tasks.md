@@ -339,7 +339,7 @@ This is a **single Flutter library** project:
 
 **GATE**: T028-T030 must be complete.
 
-- [ ] **T031** [P] Implement StyleCache in `lib/src/theming/utilities/style_cache.dart`
+- [x] **T031** [P] Implement StyleCache in `lib/src/theming/utilities/style_cache.dart`
   - StyleCacheKey class (themeHash, elementType, overridesHash)
   - StyleCache class with LinkedHashMap
   - LRU eviction (maxSize = 1000)
@@ -348,7 +348,7 @@ This is a **single Flutter library** project:
   - size getter
   - **DEPENDS ON**: T017
 
-- [ ] **T032** [P] Create cache tests in `test/unit/theming/style_cache_test.dart`
+- [x] **T032** [P] Create cache tests in `test/unit/theming/style_cache_test.dart`
   - Test LRU eviction (add 1001 items, verify oldest removed)
   - Test hit rate calculation
   - Test get() moves item to end
