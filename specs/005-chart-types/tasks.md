@@ -373,22 +373,30 @@
 
 ---
 
-## Phase 3.8: Performance Benchmarks (Constitutional Requirement)
-**Goal**: Validate <16ms frame time for all chart types
+## Phase 3.8: Performance Benchmarks (Constitutional Requirement) ⏸️ BLOCKED
+**Goal**: Validate <16ms frame time for all chart types  
+**Status**: ⚠️ **DEFERRED** - Requires full RenderPipeline integration (Layers 1-3)  
+**Move to**: Integration phase after all foundation layers complete
 
-- [ ] **T056** [P] Performance benchmark for LineChartLayer in test/charts/performance/line_chart_benchmark.dart
+- [ ] **T056** [P] ⏸️ **BLOCKED** Performance benchmark for LineChartLayer in test/charts/performance/line_chart_benchmark.dart
+  - **BLOCKER**: Requires RenderPipeline, RenderContext, Canvas rendering from Layers 1-3
+  - **DEFER TO**: Integration phase when foundation layers complete
   - 10,000 points, all 3 line styles (straight, smooth, stepped)
   - Stopwatch measurement: <16ms required
   - All 6 marker shapes
   - Constitutional requirement from FR-009
 
-- [ ] **T057** [P] Performance benchmark for AreaChartLayer in test/charts/performance/area_chart_benchmark.dart
+- [ ] **T057** [P] ⏸️ **BLOCKED** Performance benchmark for AreaChartLayer in test/charts/performance/area_chart_benchmark.dart
+  - **BLOCKER**: Requires RenderPipeline, RenderContext, Canvas rendering from Layers 1-3
+  - **DEFER TO**: Integration phase when foundation layers complete
   - 10,000 points, all 3 fill styles (solid, gradient, pattern)
   - Stopwatch measurement: <16ms required
   - Stacked mode with 3 series
   - Constitutional requirement from FR-015
 
-- [ ] **T058** [P] Performance benchmark for BarChartLayer in test/charts/performance/bar_chart_benchmark.dart
+- [ ] **T058** [P] ⏸️ **BLOCKED** Performance benchmark for BarChartLayer in test/charts/performance/bar_chart_benchmark.dart
+  - **BLOCKER**: Requires RenderPipeline, RenderContext, Canvas rendering from Layers 1-3
+  - **DEFER TO**: Integration phase when foundation layers complete
   - 1,000 bars, both orientations (vertical, horizontal)
   - Both grouping modes (grouped, stacked)
   - Stopwatch measurement: <16ms required
@@ -401,40 +409,54 @@
   - Stopwatch measurement: <16ms required
   - Constitutional requirement from FR-029
 
-- [ ] **T060** [P] Performance benchmark for viewport culling in test/charts/performance/viewport_culling_benchmark.dart
+- [ ] **T060** [P] ⏸️ **BLOCKED** Performance benchmark for viewport culling in test/charts/performance/viewport_culling_benchmark.dart
+  - **BLOCKER**: Requires RenderPipeline with ViewportCuller from Layer 0 integrated
+  - **DEFER TO**: Integration phase when foundation layers complete
   - Measure culling overhead: <1ms required
   - Test with 10,000 points across all chart types
   - Constitutional requirement from FR-034
 
-- [ ] **T061** [P] Performance benchmark for object pooling in test/charts/performance/object_pooling_benchmark.dart
+- [ ] **T061** [P] ⏸️ **BLOCKED** Performance benchmark for object pooling in test/charts/performance/object_pooling_benchmark.dart
+  - **BLOCKER**: Requires RenderPipeline with ObjectPool from Layer 0 integrated
+  - **DEFER TO**: Integration phase when foundation layers complete
   - Measure pool hit rate: >90% required
   - Test Paint/Path pooling during rendering
   - Constitutional requirement (Performance First principle)
 
 ---
 
-## Phase 3.9: Visual Regression Tests (Golden Tests)
-**Goal**: Ensure UI consistency across changes
+## Phase 3.9: Visual Regression Tests (Golden Tests) ⏸️ BLOCKED
+**Goal**: Ensure UI consistency across changes  
+**Status**: ⚠️ **DEFERRED** - Requires Chart Widgets + Full Integration  
+**Move to**: After Chart Widget layer created + Layers 1-3 integrated
 
-- [ ] **T062** [P] Golden test for line charts in test/charts/golden/line_chart_golden_test.dart
+- [ ] **T062** [P] ⏸️ **BLOCKED** Golden test for line charts in test/charts/golden/line_chart_golden_test.dart
+  - **BLOCKER**: Requires LineChart widget (doesn't exist), theming, full rendering pipeline
+  - **DEFER TO**: After Chart Widgets created + Layers 1-3 integrated
   - All 3 line styles (straight, smooth, stepped)
   - All 6 marker shapes
   - Multi-series with distinct colors
   - Edge cases: empty data, single point, null values
 
-- [ ] **T063** [P] Golden test for area charts in test/charts/golden/area_chart_golden_test.dart
+- [ ] **T063** [P] ⏸️ **BLOCKED** Golden test for area charts in test/charts/golden/area_chart_golden_test.dart
+  - **BLOCKER**: Requires AreaChart widget (doesn't exist), theming, full rendering pipeline
+  - **DEFER TO**: After Chart Widgets created + Layers 1-3 integrated
   - All 3 fill styles (solid, gradient, pattern)
   - Stacked mode (3 series)
   - All baseline types (zero, fixed, series)
   - Edge cases: negative values, single point
 
-- [ ] **T064** [P] Golden test for bar charts in test/charts/golden/bar_chart_golden_test.dart
+- [ ] **T064** [P] ⏸️ **BLOCKED** Golden test for bar charts in test/charts/golden/bar_chart_golden_test.dart
+  - **BLOCKER**: Requires BarChart widget (doesn't exist), theming, full rendering pipeline
+  - **DEFER TO**: After Chart Widgets created + Layers 1-3 integrated
   - Both orientations (vertical, horizontal)
   - Both grouping modes (grouped, stacked)
   - With rounded corners, borders, gradients
   - Edge cases: negative values, zero values
 
-- [ ] **T065** [P] Golden test for scatter plots in test/charts/golden/scatter_chart_golden_test.dart
+- [ ] **T065** [P] ⏸️ **BLOCKED** Golden test for scatter plots in test/charts/golden/scatter_chart_golden_test.dart
+  - **BLOCKER**: Requires ScatterChart widget (doesn't exist), theming, full rendering pipeline
+  - **DEFER TO**: After Chart Widgets created + Layers 1-3 integrated
   - All 6 marker shapes
   - All 3 marker styles (filled, outlined, both)
   - Both sizing modes (fixed, data-driven)
