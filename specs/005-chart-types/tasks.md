@@ -61,7 +61,7 @@
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Configuration Validation Tests (Parallel)
-- [ ] **T004** [P] Contract test for LineChartConfig validation in test/charts/contract/line_chart_config_test.dart
+- [x] **T004** [P] Create LineChartConfig contract test (test/charts/contract/line_chart_config_test.dart) - MUST FAIL ✅ 2025-01-06
   - Test markerSize > 0 (must throw)
   - Test lineWidth > 0 (must throw)
   - Test dashPattern even length (must throw if odd)
