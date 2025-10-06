@@ -411,21 +411,21 @@ This is a **single Flutter library** project:
   - Test anyChanged getter
   - **DEPENDS ON**: T037
 
-- [ ] **T039** Create RenderContext extension in `lib/src/theming/extensions/render_context_theme_extension.dart`
+- [x] **T039** Create RenderContext extension in `lib/src/theming/extensions/render_context_theme_extension.dart`
   - applyTheme(ChartTheme) method
   - updateTheme(ChartTheme) with diffing
   - currentTheme getter
   - Private cache instance
   - **DEPENDS ON**: T037, T031 (StyleCache)
 
-- [ ] **T040** Create integration tests in `test/integration/theming/theme_switching_test.dart`
+- [x] **T040** Create integration tests in `test/integration/theming/theme_switching_test.dart`
   - Test theme application (apply defaultLight)
   - Test theme switching preserves state (zoom, pan)
   - Test partial re-render (only changed components)
   - Test cache invalidation on theme change
   - **DEPENDS ON**: T039
 
-- [ ] **T041** Create responsive typography integration in `test/integration/theming/responsive_typography_test.dart`
+- [x] **T041** Create responsive typography integration in `test/integration/theming/responsive_typography_test.dart`
   - Test mobile viewport (400px): 0.9x scale factor
   - Test tablet viewport (800px): 1.0x scale factor
   - Test desktop viewport (1920px): 1.1x scale factor
