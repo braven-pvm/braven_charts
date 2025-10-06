@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/chart_data_generator.dart';
 import '../widgets/chart_container.dart';
 
@@ -116,7 +117,7 @@ class _BarChartScreenState extends State<BarChartScreen> {
       subtitle: 'Bars extending left-to-right',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'HORIZONTAL',
         color: Colors.purple,
         description: 'Using BarOrientation.horizontal with grouped mode.\n'

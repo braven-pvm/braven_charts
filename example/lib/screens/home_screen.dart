@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'line_chart_screen.dart';
+
 import 'area_chart_screen.dart';
 import 'bar_chart_screen.dart';
+import 'line_chart_screen.dart';
 import 'scatter_chart_screen.dart';
 
 class HomeScreen extends StatelessWidget {

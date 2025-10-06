@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/chart_data_generator.dart';
 import '../widgets/chart_container.dart';
 
@@ -118,7 +119,7 @@ class _LineChartScreenState extends State<LineChartScreen> {
       subtitle: 'Multiple series with different markers',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'MULTI-SERIES',
         color: Colors.purple,
         description: '3 series with smooth interpolation.\n'

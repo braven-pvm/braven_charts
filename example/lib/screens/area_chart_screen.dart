@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/chart_data_generator.dart';
 import '../widgets/chart_container.dart';
 
@@ -88,7 +89,7 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Vertical gradient fill from top to bottom',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'GRADIENT',
         color: Colors.purple,
         description: 'Using AreaFillStyle.gradient with custom colors.\n'
@@ -103,7 +104,7 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Multiple series stacked on top of each other',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'STACKED',
         color: Colors.green,
         description: '3 series with AreaStacking algorithm.\n'
@@ -118,7 +119,7 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Area chart with fixed baseline value',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'CUSTOM BASELINE',
         color: Colors.orange,
         description: 'Using AreaBaselineType.fixed at y=50.\n'

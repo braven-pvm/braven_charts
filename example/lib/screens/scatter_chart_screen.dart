@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/chart_data_generator.dart';
 import '../widgets/chart_container.dart';
 
@@ -132,7 +133,7 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
       subtitle: 'Demonstrating marker shape variety',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
+      chart: const DemoChartWidget(
         chartType: 'MARKER VARIETY',
         color: Colors.purple,
         description: '4 series with different marker shapes:\n'

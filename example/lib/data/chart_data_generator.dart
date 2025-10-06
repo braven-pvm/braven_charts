@@ -15,13 +15,13 @@ class ChartDataGenerator {
   }) {
     final points = <DataPoint>[];
     final step = (endX - startX) / (pointCount - 1);
-    
+
     for (int i = 0; i < pointCount; i++) {
       final x = startX + (i * step);
       final y = startY + (slope * x) + (_random.nextDouble() * noise * 2 - noise);
       points.add(DataPoint(x, y));
     }
-    
+
     return points;
   }
 
@@ -36,14 +36,14 @@ class ChartDataGenerator {
   }) {
     final points = <DataPoint>[];
     final step = (endX - startX) / (pointCount - 1);
-    
+
     for (int i = 0; i < pointCount; i++) {
       final x = startX + (i * step);
       final radians = x * math.pi / 180 * frequency;
       final y = offset + (amplitude * math.sin(radians));
       points.add(DataPoint(x, y));
     }
-    
+
     return points;
   }
 
@@ -57,13 +57,13 @@ class ChartDataGenerator {
   }) {
     final points = <DataPoint>[];
     final step = (maxX - minX) / (pointCount - 1);
-    
+
     for (int i = 0; i < pointCount; i++) {
       final x = minX + (i * step);
       final y = minY + (_random.nextDouble() * (maxY - minY));
       points.add(DataPoint(x, y));
     }
-    
+
     return points;
   }
 
@@ -77,8 +77,18 @@ class ChartDataGenerator {
   }) {
     final categories = <CategoricalData>[];
     final categoryNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     for (int i = 0; i < categoryCount; i++) {
@@ -111,16 +121,14 @@ class ChartDataGenerator {
     bool includeSize = false,
   }) {
     final points = <ScatterPoint>[];
-    
+
     for (int i = 0; i < pointCount; i++) {
       final x = minX + (_random.nextDouble() * (maxX - minX));
       final y = minY + (_random.nextDouble() * (maxY - minY));
-      final size = includeSize
-          ? minSize + (_random.nextDouble() * (maxSize - minSize))
-          : null;
+      final size = includeSize ? minSize + (_random.nextDouble() * (maxSize - minSize)) : null;
       points.add(ScatterPoint(x, y, size: size));
     }
-    
+
     return points;
   }
 
@@ -133,13 +141,13 @@ class ChartDataGenerator {
   }) {
     final points = <DataPoint>[];
     var currentValue = startValue;
-    
+
     for (int i = 0; i < dayCount; i++) {
       final change = (_random.nextDouble() * volatility * 2 - volatility) + trend;
       currentValue = math.max(0, currentValue + change);
       points.add(DataPoint(i.toDouble(), currentValue));
     }
-    
+
     return points;
   }
 }

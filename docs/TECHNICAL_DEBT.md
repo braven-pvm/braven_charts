@@ -1,7 +1,7 @@
 # Technical Debt Register
 
 **Project**: braven_charts_v2.0  
-**Last Updated**: 2025-10-05  
+**Last Updated**: 2025-10-06  
 **Status**: Active tracking of known issues and deferred improvements
 
 ## Purpose
@@ -169,7 +169,40 @@ Metrics are effectively immutable (all fields final). `const` is nice-to-have, n
 
 ---
 
-## Resolved Debt Items
+### 005-chart-types (v0.5.0-chart-types)
+
+#### TD-006: Golden Tests Require Chart Widget Layer
+**Created**: 2025-10-06 | **Status**: Open | **Severity**: Medium | **Impact**: Internal (visual regression testing)
+
+**Description**:
+Tasks T062-T065 (golden tests for all 4 chart types) cannot be implemented because Chart Widgets don't exist yet. Layer 4 provides RenderLayer implementations (LineChartLayer, AreaChartLayer, etc.) but not user-facing widgets (LineChart, AreaChart, etc.).
+
+**Affected Tasks** (4 blocked):
+- T062: LineChart golden test
+- T063: AreaChart golden test
+- T064: BarChart golden test
+- T065: ScatterChart golden test
+
+**Root Cause**:
+Architecture defines chart types as RenderLayer extensions for composability. User-facing widgets are intended for a future layer (Layer 5 or separate widget layer). Golden tests require actual widgets to render and compare against golden images.
+
+**Workaround**:
+Visual testing deferred until widget layer created. RenderLayer implementations can be validated through integration tests with manual RenderPipeline setup.
+
+**Solution Options**:
+1. **Create widget layer now**: Add LineChart/AreaChart/BarChart/ScatterChart widgets to Layer 4
+2. **Defer to Layer 5**: Wait for interaction/widget layer specification
+3. **Skip golden tests**: Rely on integration tests and manual testing only
+
+**Recommendation**: Option 2 - Defer to proper widget layer (maintains clean architecture)
+
+**Effort**: N/A (requires widget layer design + implementation)  
+**Target Release**: After widget layer specification complete  
+**Dependencies**: Widget layer architecture decision
+
+---
+
+##Resolved Debt Items
 
 *Items moved here when completed. Includes resolution date and commit hash.*
 
@@ -177,21 +210,22 @@ Metrics are effectively immutable (all fields final). `const` is nice-to-have, n
 
 ## Debt Statistics
 
-**Total Active Items**: 5  
+**Total Active Items**: 6  
 **By Severity**:
 - Critical: 0
 - High: 0
-- Medium: 0
+- Medium: 1
 - Low: 5
 
 **By Target Release**:
 - v0.2.1 (patches): 3 items (~2.5 hours effort)
 - v0.3.0 (features): 2 items (~12 hours effort)
+- Future (widget layer): 1 item (TBD)
 
 **Test Impact**:
 - Total failing tests: 22/739 (3%)
 - Critical path blocked: 0
-- User-facing features affected: 0
+- User-facing features affected: 0 (chart widgets deferred)
 
 ---
 
