@@ -68,20 +68,20 @@
   - Test copyWith() creates new instance
   - Test validate() with valid config (must pass)
 
-- [ ] **T005** [P] Contract test for AreaChartConfig validation in test/charts/contract/area_chart_config_test.dart
+- [x] **T005** [P] Contract test for AreaChartConfig validation in test/charts/contract/area_chart_config_test.dart ✅ 2025-01-06
   - Test fillOpacity in [0.0, 1.0] (must throw if outside)
   - Test showLine implies lineConfig != null (must throw if violated)
   - Test copyWith() creates new instance
   - Test validate() with valid config (must pass)
 
-- [ ] **T006** [P] Contract test for BarChartConfig validation in test/charts/contract/bar_chart_config_test.dart
+- [x] **T006** [P] Contract test for BarChartConfig validation in test/charts/contract/bar_chart_config_test.dart ✅ 2025-01-06
   - Test barWidthRatio in (0.0, 1.0] (must throw if outside)
   - Test spacing >= 0 (must throw if negative)
   - Test useGradient implies gradientStart or gradientEnd (must throw if violated)
   - Test copyWith() creates new instance
   - Test validate() with valid config (must pass)
 
-- [ ] **T007** [P] Contract test for ScatterChartConfig validation in test/charts/contract/scatter_chart_config_test.dart
+- [x] **T007** [P] Contract test for ScatterChartConfig validation in test/charts/contract/scatter_chart_config_test.dart ✅ 2025-01-06
   - Test fixed sizing requires fixedSize > 0 (must throw)
   - Test data-driven sizing requires minSize < maxSize (must throw if violated)
   - Test clusterThreshold >= 2 (must throw if less)
