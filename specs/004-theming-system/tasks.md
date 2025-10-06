@@ -444,14 +444,14 @@ This is a **single Flutter library** project:
 
 **GATE**: T037-T041 must be complete.
 
-- [ ] **T042** [P] Create theme switching benchmark in `test/benchmarks/theming/theme_switching_benchmark.dart`
+- [x] **T042** [P] Create theme switching benchmark in `test/benchmarks/theming/theme_switching_benchmark.dart`
   - Measure theme switch time (target: <100ms)
   - Measure with/without cache
   - Test on various theme pairs (similar vs different)
   - Generate performance report
   - **DEPENDS ON**: T039
 
-- [ ] **T043** [P] Create style cache benchmark in `test/benchmarks/theming/style_cache_benchmark.dart`
+- [x] **T043** [P] Create style cache benchmark in `test/benchmarks/theming/style_cache_benchmark.dart`
   - Measure cache hit rate (target: >95%)
   - Measure lookup time (target: <0.1ms)
   - Test with realistic rendering patterns
