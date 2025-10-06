@@ -182,7 +182,7 @@ This is a **single Flutter library** project:
   - Validation: font sizes >= minimums, scaleFactor 0.5-2.0
   - **VERIFY**: T006 contract test now passes
 
-- [ ] **T014** [P] Implement AnimationTheme in `lib/src/theming/components/animation_theme.dart`
+- [x] **T014** [P] Implement AnimationTheme in `lib/src/theming/components/animation_theme.dart`
   - Immutable class with const constructor
   - 7 predefined themes
   - copyWith() method
