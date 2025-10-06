@@ -9,6 +9,14 @@ import 'dart:ui' show Offset;
 /// Each point can be either a data point or a control point, with optional
 /// bezier control points for smooth curve rendering.
 class InterpolatedPoint {
+  /// Creates an interpolated point.
+  const InterpolatedPoint({
+    required this.position,
+    this.controlPoint1,
+    this.controlPoint2,
+    required this.isControlPoint,
+  });
+
   /// The position of this point.
   final Offset position;
 
@@ -24,14 +32,6 @@ class InterpolatedPoint {
 
   /// Whether this is a control point (true) or a data point (false).
   final bool isControlPoint;
-
-  /// Creates an interpolated point.
-  const InterpolatedPoint({
-    required this.position,
-    this.controlPoint1,
-    this.controlPoint2,
-    required this.isControlPoint,
-  });
 
   @override
   bool operator ==(Object other) {

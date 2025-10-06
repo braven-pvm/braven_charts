@@ -4,9 +4,9 @@
 /// the contract defined in specs/005-chart-types/contracts/scatter_chart_config.dart
 library;
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/charts/scatter/scatter_chart_config.dart';
 import 'package:braven_charts/src/charts/base/chart_config.dart';
+import 'package:braven_charts/src/charts/scatter/scatter_chart_config.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ScatterChartConfig Contract Tests', () {
@@ -62,7 +62,7 @@ void main() {
 
     group('Validation Rules - Data-Driven Sizing Mode', () {
       test('sizingMode=dataDriven requires minSize < maxSize', () {
-        final config = ScatterChartConfig(
+        final config = const ScatterChartConfig(
           markerShape: MarkerShape.circle,
           sizingMode: MarkerSizingMode.dataDriven,
           minSize: 10.0,
@@ -72,7 +72,7 @@ void main() {
           enableClustering: false,
           clusterThreshold: 2,
         );
-        
+
         // This validation is checked in validate() method, not in constructor
         // (const constructors can't use null-aware operators in assertions)
         expect(
@@ -118,7 +118,7 @@ void main() {
 
       test('sizingMode=dataDriven with valid range is accepted', () {
         expect(
-          () => ScatterChartConfig(
+          () => const ScatterChartConfig(
             markerShape: MarkerShape.circle,
             sizingMode: MarkerSizingMode.dataDriven,
             minSize: 5.0,
@@ -152,7 +152,7 @@ void main() {
 
       test('clusterThreshold = 2 is valid (minimum)', () {
         expect(
-          () => ScatterChartConfig(
+          () => const ScatterChartConfig(
             markerShape: MarkerShape.circle,
             sizingMode: MarkerSizingMode.fixed,
             fixedSize: 6.0,
@@ -186,7 +186,7 @@ void main() {
 
     group('copyWith() behavior', () {
       test('copyWith creates new instance with modified properties', () {
-        final original = ScatterChartConfig(
+        final original = const ScatterChartConfig(
           markerShape: MarkerShape.circle,
           sizingMode: MarkerSizingMode.fixed,
           fixedSize: 6.0,
@@ -208,7 +208,7 @@ void main() {
       });
 
       test('copyWith without arguments returns equivalent instance', () {
-        final original = ScatterChartConfig(
+        final original = const ScatterChartConfig(
           markerShape: MarkerShape.circle,
           sizingMode: MarkerSizingMode.fixed,
           fixedSize: 6.0,
@@ -232,7 +232,7 @@ void main() {
 
     group('validate() method', () {
       test('validate() does not throw for valid config', () {
-        final config = ScatterChartConfig(
+        final config = const ScatterChartConfig(
           markerShape: MarkerShape.circle,
           sizingMode: MarkerSizingMode.fixed,
           fixedSize: 6.0,

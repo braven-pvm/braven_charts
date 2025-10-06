@@ -30,6 +30,42 @@ enum BarGroupingMode {
 /// All instances are immutable and validated at construction.
 /// Constitutional requirement: Input validation (Testing Excellence)
 class BarChartConfig {
+  // TODO: Use Flutter Color when available
+
+  /// Creates bar chart configuration
+  ///
+  /// Throws [ArgumentError] if validation fails:
+  /// - [barWidthRatio] not in (0.0, 1.0]
+  /// - [barSpacing] < 0.0
+  /// - [groupSpacing] < 0.0
+  /// - [cornerRadius] < 0.0
+  /// - [borderWidth] < 0.0
+  /// - [useGradient] = true but both gradientStart and gradientEnd are null
+  const BarChartConfig({
+    required this.orientation,
+    required this.groupingMode,
+    required this.barWidthRatio,
+    required this.barSpacing,
+    required this.groupSpacing,
+    required this.cornerRadius,
+    required this.borderWidth,
+    this.borderColor,
+    required this.useGradient,
+    this.gradientStart,
+    this.gradientEnd,
+  })  : assert(
+          barWidthRatio > 0.0 && barWidthRatio <= 1.0,
+          'barWidthRatio must be in range (0.0, 1.0]',
+        ),
+        assert(barSpacing >= 0.0, 'barSpacing must be >= 0.0'),
+        assert(groupSpacing >= 0.0, 'groupSpacing must be >= 0.0'),
+        assert(cornerRadius >= 0.0, 'cornerRadius must be >= 0.0'),
+        assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
+        assert(
+          !useGradient || gradientStart != null || gradientEnd != null,
+          'useGradient=true requires at least one gradient color',
+        );
+
   /// Chart orientation (vertical or horizontal)
   final BarOrientation orientation;
 
@@ -71,41 +107,7 @@ class BarChartConfig {
   final int? gradientStart; // TODO: Use Flutter Color when available
 
   /// Gradient end color (null = lighter series color)
-  final int? gradientEnd; // TODO: Use Flutter Color when available
-
-  /// Creates bar chart configuration
-  ///
-  /// Throws [ArgumentError] if validation fails:
-  /// - [barWidthRatio] not in (0.0, 1.0]
-  /// - [barSpacing] < 0.0
-  /// - [groupSpacing] < 0.0
-  /// - [cornerRadius] < 0.0
-  /// - [borderWidth] < 0.0
-  /// - [useGradient] = true but both gradientStart and gradientEnd are null
-  const BarChartConfig({
-    required this.orientation,
-    required this.groupingMode,
-    required this.barWidthRatio,
-    required this.barSpacing,
-    required this.groupSpacing,
-    required this.cornerRadius,
-    required this.borderWidth,
-    this.borderColor,
-    required this.useGradient,
-    this.gradientStart,
-    this.gradientEnd,
-  }) : assert(
-          barWidthRatio > 0.0 && barWidthRatio <= 1.0,
-          'barWidthRatio must be in range (0.0, 1.0]',
-        ),
-       assert(barSpacing >= 0.0, 'barSpacing must be >= 0.0'),
-       assert(groupSpacing >= 0.0, 'groupSpacing must be >= 0.0'),
-       assert(cornerRadius >= 0.0, 'cornerRadius must be >= 0.0'),
-       assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
-       assert(
-          !useGradient || gradientStart != null || gradientEnd != null,
-          'useGradient=true requires at least one gradient color',
-        );
+  final int? gradientEnd;
 
   /// Creates a copy with modified properties
   BarChartConfig copyWith({
@@ -206,4 +208,3 @@ class BarChartConfig {
         'gradientEnd: $gradientEnd)';
   }
 }
-

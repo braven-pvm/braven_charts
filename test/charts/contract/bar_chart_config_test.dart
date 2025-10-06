@@ -4,8 +4,8 @@
 /// the contract defined in specs/005-chart-types/contracts/bar_chart_config.dart
 library;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/charts/bar/bar_chart_config.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BarChartConfig Contract Tests', () {
@@ -46,7 +46,7 @@ void main() {
 
       test('barWidthRatio = 1.0 is valid (inclusive upper bound)', () {
         expect(
-          () => BarChartConfig(
+          () => const BarChartConfig(
             orientation: BarOrientation.vertical,
             groupingMode: BarGroupingMode.grouped,
             barWidthRatio: 1.0, // VALID: maximum
@@ -149,7 +149,7 @@ void main() {
 
       test('useGradient=false allows null gradient colors', () {
         expect(
-          () => BarChartConfig(
+          () => const BarChartConfig(
             orientation: BarOrientation.vertical,
             groupingMode: BarGroupingMode.grouped,
             barWidthRatio: 0.8,
@@ -168,7 +168,7 @@ void main() {
 
     group('copyWith() behavior', () {
       test('copyWith creates new instance with modified properties', () {
-        final original = BarChartConfig(
+        final original = const BarChartConfig(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -191,7 +191,7 @@ void main() {
       });
 
       test('copyWith without arguments returns equivalent instance', () {
-        final original = BarChartConfig(
+        final original = const BarChartConfig(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,
@@ -217,7 +217,7 @@ void main() {
 
     group('validate() method', () {
       test('validate() does not throw for valid config', () {
-        final config = BarChartConfig(
+        final config = const BarChartConfig(
           orientation: BarOrientation.vertical,
           groupingMode: BarGroupingMode.grouped,
           barWidthRatio: 0.8,

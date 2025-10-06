@@ -6,9 +6,9 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/charts/area/area_stacking.dart';
 import 'package:braven_charts/src/charts/area/area_chart_config.dart';
+import 'package:braven_charts/src/charts/area/area_stacking.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AreaStacking', () {
@@ -156,7 +156,7 @@ void main() {
         ];
 
         final stacker = AreaStacking();
-        final stacked = stacker.stack([series], baseline: AreaBaseline.zero());
+        final stacked = stacker.stack([series], baseline: const AreaBaseline.zero());
 
         final baselinePoints = stacked.last;
         expect(baselinePoints[0].dy, equals(0));
@@ -172,7 +172,7 @@ void main() {
         final stacker = AreaStacking();
         final stacked = stacker.stack(
           [series],
-          baseline: AreaBaseline.fixed(50),
+          baseline: const AreaBaseline.fixed(50),
         );
 
         final baselinePoints = stacked.last;
@@ -193,7 +193,7 @@ void main() {
         final stacker = AreaStacking();
         final stacked = stacker.stack(
           [series1, series2],
-          baseline: AreaBaseline.series('series1'),
+          baseline: const AreaBaseline.series('series1'),
           seriesIds: ['series1', 'series2'],
         );
 
@@ -212,7 +212,7 @@ void main() {
         final stacker = AreaStacking();
         final stacked = stacker.stack(
           [series],
-          baseline: AreaBaseline.series('nonExistent'),
+          baseline: const AreaBaseline.series('nonExistent'),
           seriesIds: ['series1'],
         );
 
@@ -229,7 +229,7 @@ void main() {
         final stacker = AreaStacking();
         final stacked = stacker.stack(
           [series1, series2],
-          baseline: AreaBaseline.fixed(20),
+          baseline: const AreaBaseline.fixed(20),
         );
 
         // With baseline at 20:

@@ -139,6 +139,29 @@ class AreaBaseline {
 /// All instances are immutable and validated at construction.
 /// Constitutional requirement: Input validation (Testing Excellence)
 class AreaChartConfig {
+  // TODO: Replace with LineChartConfig when available
+
+  /// Creates area chart configuration
+  ///
+  /// Throws [ArgumentError] if validation fails:
+  /// - [fillOpacity] not in [0.0, 1.0]
+  /// - [showLine] = true but [lineConfig] is null
+  const AreaChartConfig({
+    required this.fillStyle,
+    required this.baseline,
+    required this.stacked,
+    required this.fillOpacity,
+    required this.showLine,
+    this.lineConfig,
+  })  : assert(
+          fillOpacity >= 0.0 && fillOpacity <= 1.0,
+          'fillOpacity must be in range [0.0, 1.0]',
+        ),
+        assert(
+          !showLine || lineConfig != null,
+          'lineConfig is required when showLine is true',
+        );
+
   /// Fill style for the area
   final AreaFillStyle fillStyle;
 
@@ -159,28 +182,7 @@ class AreaChartConfig {
   /// Line configuration (required if showLine is true)
   ///
   /// VALIDATION: Must be non-null if showLine is true
-  final dynamic lineConfig; // TODO: Replace with LineChartConfig when available
-
-  /// Creates area chart configuration
-  ///
-  /// Throws [ArgumentError] if validation fails:
-  /// - [fillOpacity] not in [0.0, 1.0]
-  /// - [showLine] = true but [lineConfig] is null
-  const AreaChartConfig({
-    required this.fillStyle,
-    required this.baseline,
-    required this.stacked,
-    required this.fillOpacity,
-    required this.showLine,
-    this.lineConfig,
-  }) : assert(
-          fillOpacity >= 0.0 && fillOpacity <= 1.0,
-          'fillOpacity must be in range [0.0, 1.0]',
-        ),
-       assert(
-          !showLine || lineConfig != null,
-          'lineConfig is required when showLine is true',
-        );
+  final dynamic lineConfig;
 
   /// Creates a copy with modified properties
   AreaChartConfig copyWith({

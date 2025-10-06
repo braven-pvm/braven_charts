@@ -9,6 +9,14 @@ import 'dart:ui' show Offset;
 /// When many points are close together, they can be grouped into clusters
 /// to improve performance and readability.
 class ClusterInfo {
+  /// Creates a cluster info.
+  const ClusterInfo({
+    required this.center,
+    required this.pointCount,
+    required this.pointIndices,
+    required this.radius,
+  });
+
   /// The center position of the cluster.
   final Offset center;
 
@@ -20,14 +28,6 @@ class ClusterInfo {
 
   /// The radius of the cluster (for visual indicator).
   final double radius;
-
-  /// Creates a cluster info.
-  const ClusterInfo({
-    required this.center,
-    required this.pointCount,
-    required this.pointIndices,
-    required this.radius,
-  });
 
   @override
   bool operator ==(Object other) {

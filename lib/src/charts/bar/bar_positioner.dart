@@ -9,6 +9,15 @@ import 'dart:ui' show Rect;
 /// needed to draw a single bar, including its bounds, associated data value,
 /// and metadata about its position in the chart.
 class BarLayoutInfo {
+  /// Creates a bar layout info.
+  const BarLayoutInfo({
+    required this.seriesId,
+    required this.categoryIndex,
+    required this.bounds,
+    required this.value,
+    required this.isNegative,
+  });
+
   /// The ID of the series this bar belongs to.
   final String seriesId;
 
@@ -23,15 +32,6 @@ class BarLayoutInfo {
 
   /// Whether the value is negative (value < 0).
   final bool isNegative;
-
-  /// Creates a bar layout info.
-  const BarLayoutInfo({
-    required this.seriesId,
-    required this.categoryIndex,
-    required this.bounds,
-    required this.value,
-    required this.isNegative,
-  });
 
   @override
   bool operator ==(Object other) {

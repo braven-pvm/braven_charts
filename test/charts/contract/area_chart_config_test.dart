@@ -4,8 +4,8 @@
 /// the contract defined in specs/005-chart-types/contracts/area_chart_config.dart
 library;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/charts/area/area_chart_config.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AreaChartConfig Contract Tests', () {
@@ -14,7 +14,7 @@ void main() {
         expect(
           () => AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
-            baseline: AreaBaseline.zero(),
+            baseline: const AreaBaseline.zero(),
             stacked: false,
             fillOpacity: -0.1, // INVALID: < 0.0
             showLine: false,
@@ -28,7 +28,7 @@ void main() {
         expect(
           () => AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
-            baseline: AreaBaseline.zero(),
+            baseline: const AreaBaseline.zero(),
             stacked: false,
             fillOpacity: 1.5, // INVALID: > 1.0
             showLine: false,
@@ -40,7 +40,7 @@ void main() {
 
       test('fillOpacity boundaries (0.0 and 1.0) are valid', () {
         expect(
-          () => AreaChartConfig(
+          () => const AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
             baseline: AreaBaseline.zero(),
             stacked: false,
@@ -51,7 +51,7 @@ void main() {
         );
 
         expect(
-          () => AreaChartConfig(
+          () => const AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
             baseline: AreaBaseline.zero(),
             stacked: false,
@@ -66,7 +66,7 @@ void main() {
         expect(
           () => AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
-            baseline: AreaBaseline.zero(),
+            baseline: const AreaBaseline.zero(),
             stacked: false,
             fillOpacity: 0.5,
             showLine: true, // INVALID: lineConfig is null
@@ -79,7 +79,7 @@ void main() {
 
       test('showLine=false allows null lineConfig', () {
         expect(
-          () => AreaChartConfig(
+          () => const AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
             baseline: AreaBaseline.zero(),
             stacked: false,
@@ -94,7 +94,7 @@ void main() {
       test('showLine=true with valid lineConfig is accepted', () {
         // Using a mock lineConfig since we don't want cross-dependencies
         expect(
-          () => AreaChartConfig(
+          () => const AreaChartConfig(
             fillStyle: AreaFillStyle.solid,
             baseline: AreaBaseline.zero(),
             stacked: false,
@@ -109,7 +109,7 @@ void main() {
 
     group('copyWith() behavior', () {
       test('copyWith creates new instance with modified properties', () {
-        final original = AreaChartConfig(
+        final original = const AreaChartConfig(
           fillStyle: AreaFillStyle.solid,
           baseline: AreaBaseline.zero(),
           stacked: false,
@@ -130,7 +130,7 @@ void main() {
       });
 
       test('copyWith without arguments returns equivalent instance', () {
-        final original = AreaChartConfig(
+        final original = const AreaChartConfig(
           fillStyle: AreaFillStyle.solid,
           baseline: AreaBaseline.zero(),
           stacked: false,
@@ -151,7 +151,7 @@ void main() {
 
     group('validate() method', () {
       test('validate() does not throw for valid config', () {
-        final config = AreaChartConfig(
+        final config = const AreaChartConfig(
           fillStyle: AreaFillStyle.solid,
           baseline: AreaBaseline.zero(),
           stacked: false,
@@ -190,7 +190,7 @@ void main() {
 
       test('type=zero does not require fixedValue or seriesId', () {
         expect(
-          () => AreaBaseline.zero(),
+          () => const AreaBaseline.zero(),
           returnsNormally,
         );
       });

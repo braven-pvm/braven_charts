@@ -185,7 +185,7 @@
   - Test handling negative values (separate stacks)
   - Test baseline calculation (zero, fixed, series)
 
-- [ ] **T029** [P] Unit test for BarPositioner in test/charts/unit/bar_positioner_test.dart
+- [x] **T029** [P] Unit test for BarPositioner in test/charts/unit/bar_positioner_test.dart ✅ 2025-01-06
   - Test grouped bar positioning (side-by-side with spacing)
   - Test stacked bar positioning (cumulative)
   - Test negative value handling in stacks

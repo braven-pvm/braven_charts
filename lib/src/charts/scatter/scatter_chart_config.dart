@@ -36,6 +36,42 @@ enum MarkerStyle {
 /// All instances are immutable and validated at construction.
 /// Constitutional requirement: Input validation (Testing Excellence)
 class ScatterChartConfig {
+  /// Creates scatter chart configuration
+  ///
+  /// Throws [ArgumentError] if validation fails:
+  /// - sizingMode = fixed but fixedSize is null or <= 0
+  /// - sizingMode = dataDriven but minSize or maxSize is null
+  /// - sizingMode = dataDriven but minSize >= maxSize
+  /// - borderWidth < 0
+  /// - enableClustering = true but clusterThreshold < 2
+  const ScatterChartConfig({
+    required this.markerShape,
+    required this.sizingMode,
+    this.fixedSize,
+    this.minSize,
+    this.maxSize,
+    required this.markerStyle,
+    required this.borderWidth,
+    required this.enableClustering,
+    required this.clusterThreshold,
+  })  : assert(
+          sizingMode != MarkerSizingMode.fixed || (fixedSize != null && fixedSize > 0),
+          'fixedSize is required and must be > 0 when sizingMode is fixed',
+        ),
+        assert(
+          sizingMode != MarkerSizingMode.dataDriven || minSize != null,
+          'minSize is required when sizingMode is dataDriven',
+        ),
+        assert(
+          sizingMode != MarkerSizingMode.dataDriven || maxSize != null,
+          'maxSize is required when sizingMode is dataDriven',
+        ),
+        assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
+        assert(
+          clusterThreshold >= 2,
+          'clusterThreshold must be >= 2',
+        );
+
   /// Marker shape for data points
   final MarkerShape markerShape;
 
@@ -72,42 +108,6 @@ class ScatterChartConfig {
   ///
   /// VALIDATION: Must be >= 2 if enableClustering is true
   final int clusterThreshold;
-
-  /// Creates scatter chart configuration
-  ///
-  /// Throws [ArgumentError] if validation fails:
-  /// - sizingMode = fixed but fixedSize is null or <= 0
-  /// - sizingMode = dataDriven but minSize or maxSize is null
-  /// - sizingMode = dataDriven but minSize >= maxSize
-  /// - borderWidth < 0
-  /// - enableClustering = true but clusterThreshold < 2
-  const ScatterChartConfig({
-    required this.markerShape,
-    required this.sizingMode,
-    this.fixedSize,
-    this.minSize,
-    this.maxSize,
-    required this.markerStyle,
-    required this.borderWidth,
-    required this.enableClustering,
-    required this.clusterThreshold,
-  }) : assert(
-          sizingMode != MarkerSizingMode.fixed || (fixedSize != null && fixedSize > 0),
-          'fixedSize is required and must be > 0 when sizingMode is fixed',
-        ),
-       assert(
-          sizingMode != MarkerSizingMode.dataDriven || minSize != null,
-          'minSize is required when sizingMode is dataDriven',
-        ),
-       assert(
-          sizingMode != MarkerSizingMode.dataDriven || maxSize != null,
-          'maxSize is required when sizingMode is dataDriven',
-        ),
-       assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
-       assert(
-          clusterThreshold >= 2,
-          'clusterThreshold must be >= 2',
-        );
 
   /// Creates a copy with modified properties
   ScatterChartConfig copyWith({
@@ -207,4 +207,3 @@ class ScatterChartConfig {
         'enableClustering: $enableClustering, clusterThreshold: $clusterThreshold)';
   }
 }
-
