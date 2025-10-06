@@ -313,7 +313,7 @@ This is a **single Flutter library** project:
   - build() method with validation
   - **DEPENDS ON**: T016
 
-- [ ] **T029** Create builder validation tests in `test/unit/theming/theme_builder_validation_test.dart`
+- [x] **T029** Create builder validation tests in `test/unit/theming/theme_builder_validation_test.dart`
   - Test negative borderWidth throws
   - Test empty seriesColors throws
   - Test invalid scaleFactor throws
