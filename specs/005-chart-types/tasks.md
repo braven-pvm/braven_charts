@@ -180,7 +180,7 @@
   - Test stepped line produces horizontal-vertical segments
   - Test path caching optimization
 
-- [ ] **T028** [P] Unit test for AreaStacking in test/charts/unit/area_stacking_test.dart
+- [x] **T028** [P] Unit test for AreaStacking in test/charts/unit/area_stacking_test.dart ✅ 2025-01-06
   - Test cumulative stacking for positive values
   - Test handling negative values (separate stacks)
   - Test baseline calculation (zero, fixed, series)
