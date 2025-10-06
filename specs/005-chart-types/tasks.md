@@ -174,7 +174,7 @@
 ## Phase 3.4: Utility Algorithms (TDD Phase 3)
 
 ### Unit Tests for Algorithms (Parallel)
-- [ ] **T027** [P] Unit test for LineInterpolator in test/charts/unit/line_interpolator_test.dart
+- [x] **T027** [P] Unit test for LineInterpolator in test/charts/unit/line_interpolator_test.dart ✅ 2025-01-06
   - Test straight line produces linear path
   - Test smooth line produces bezier curves (Catmull-Rom algorithm)
   - Test stepped line produces horizontal-vertical segments
