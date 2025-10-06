@@ -211,7 +211,7 @@ This is a **single Flutter library** project:
   - **VERIFY**: T001 contract test now passes
   - **DEPENDS ON**: T009-T015 (imports all component themes)
 
-- [ ] **T017** Create barrel file `lib/src/theming/theming.dart`
+- [x] **T017** Create barrel file `lib/src/theming/theming.dart`
   - Export chart_theme.dart
   - Export all component files (grid_style, axis_style, series_theme, interaction_theme, typography_theme, animation_theme)
   - Export color_utils.dart
