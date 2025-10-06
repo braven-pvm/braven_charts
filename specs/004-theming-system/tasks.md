@@ -398,13 +398,13 @@ This is a **single Flutter library** project:
 
 **GATE**: T031-T036 must be complete.
 
-- [ ] **T037** Create ThemeChangeSet in `lib/src/theming/utilities/theme_change_set.dart`
+- [x] **T037** Create ThemeChangeSet in `lib/src/theming/utilities/theme_change_set.dart`
   - Factory constructor compute(oldTheme, newTheme)
   - Boolean fields for each component (backgroundChanged, gridStyleChanged, etc.)
   - anyChanged getter
   - **DEPENDS ON**: T016
 
-- [ ] **T038** Create theme diffing tests in `test/unit/theming/theme_diffing_test.dart`
+- [x] **T038** Create theme diffing tests in `test/unit/theming/theme_diffing_test.dart`
   - Test no changes returns all false
   - Test single component change detected
   - Test multiple component changes detected
