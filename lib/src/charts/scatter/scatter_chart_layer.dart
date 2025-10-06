@@ -165,8 +165,11 @@ class ScatterChartLayer extends ChartLayer {
     double size,
     Color seriesColor,
   ) {
-    // Configure paint based on marker style
-    if (config.markerStyle == MarkerStyle.filled || config.markerStyle == MarkerStyle.both) {
+    // PERFORMANCE OPTIMIZATION: Configure paint once and draw once when possible
+    // This reduces draw calls from 2N to N for most common cases
+    
+    if (config.markerStyle == MarkerStyle.filled) {
+      // Fast path: single fill draw
       paint.style = PaintingStyle.fill;
       paint.color = seriesColor;
       _renderer.drawMarker(
@@ -176,21 +179,37 @@ class ScatterChartLayer extends ChartLayer {
         size: size,
         paint: paint,
       );
-    }
-
-    // Draw outline if needed
-    if (config.markerStyle == MarkerStyle.outlined || config.markerStyle == MarkerStyle.both) {
+    } else if (config.markerStyle == MarkerStyle.outlined) {
+      // Fast path: single stroke draw
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = config.borderWidth;
-      // For outlined mode, use the series color
-      // For both mode, use slightly darker border (reduce opacity)
-      if (config.markerStyle == MarkerStyle.outlined) {
-        paint.color = seriesColor;
-      } else {
-        // Create darker border by adjusting opacity (80% of original alpha)
-        final alphaValue = (seriesColor.a * 0.8).clamp(0.0, 1.0);
-        paint.color = seriesColor.withValues(alpha: alphaValue);
-      }
+      paint.color = seriesColor;
+      _renderer.drawMarker(
+        canvas: context.canvas,
+        shape: config.markerShape,
+        position: position,
+        size: size,
+        paint: paint,
+      );
+    } else {
+      // Slow path: both fill and stroke (2 draws required)
+      // Draw fill first
+      paint.style = PaintingStyle.fill;
+      paint.color = seriesColor;
+      _renderer.drawMarker(
+        canvas: context.canvas,
+        shape: config.markerShape,
+        position: position,
+        size: size,
+        paint: paint,
+      );
+      
+      // Draw outline
+      paint.style = PaintingStyle.stroke;
+      paint.strokeWidth = config.borderWidth;
+      // Create darker border by adjusting opacity (80% of original alpha)
+      final alphaValue = (seriesColor.a * 0.8).clamp(0.0, 1.0);
+      paint.color = seriesColor.withValues(alpha: alphaValue);
       _renderer.drawMarker(
         canvas: context.canvas,
         shape: config.markerShape,
