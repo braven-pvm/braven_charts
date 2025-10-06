@@ -499,20 +499,24 @@
   - ✅ Clustering algorithm (scatter_clusterer.dart) - distance-based grouping
   - ✅ All critical algorithms have inline comments and DartDoc explanations
 
-- [ ] **T069** [P] Update main README.md with chart types examples
-  - Add "Chart Types" section
-  - Include code snippets for all 4 chart types
-  - Link to quickstart.md
-  - Show visual examples (screenshots or ASCII art)
+- [x] **T069** [P] Update main README.md with chart types examples ✅ 2025-01-06
+  - ✅ Added "Chart Types" section to README.md
+  - ✅ Included code snippets for all 4 chart types (Line, Area, Bar, Scatter)
+  - ✅ Linked to quickstart.md (10 examples)
+  - ✅ Updated "Development Status" with Chart Types completion (66/72 tasks)
+  - ✅ Updated test status (197/197 tests passing)
+  - Note: Visual examples (screenshots) deferred to Chart Widgets layer
 
-- [ ] **T070** [P] Create usage guide in docs/guides/chart-types.md
-  - "Getting Started" section
-  - "Line Charts" section with all styles
-  - "Area Charts" section with stacking
-  - "Bar Charts" section with grouping modes
-  - "Scatter Plots" section with sizing modes
-  - "Animations" section with data updates
-  - "Performance" section with optimization tips
+- [x] **T070** [P] Create usage guide in docs/guides/chart-types.md ✅ 2025-01-06
+  - ✅ "Getting Started" section (installation, basic concepts, creating chart layers)
+  - ✅ "Line Charts" section (3 interpolation modes, 6 marker shapes, dashed lines, multi-series)
+  - ✅ "Area Charts" section (3 fill styles, 3 baseline types, stacking algorithm)
+  - ✅ "Bar Charts" section (2 orientations, 2 grouping modes, appearance customization)
+  - ✅ "Scatter Charts" section (2 sizing modes, 3 marker styles, clustering)
+  - ✅ "Animations" section (enabling/disabling, parameters, curves, data updates)
+  - ✅ "Performance" section (targets, object pooling, viewport culling, optimization tips)
+  - ✅ "Best Practices" section (data prep, configuration, theming, error handling, testing)
+  - ✅ Comprehensive 600+ line guide with examples and troubleshooting
 
 - [x] **T071** Code cleanup and refactoring ✅ 2025-01-06
   - Fixed deprecated Color API calls (withOpacity → withValues, alpha → a)
@@ -653,14 +657,14 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 ## Progress Tracking
 
-**Status**: Ready for execution  
+**Status**: Ready for final validation  
 **Total Tasks**: 72  
-**Completed**: 66  
+**Completed**: 68  
 **In Progress**: 0  
 **Blocked**: 4 (T062-T065 - require Chart Widgets)
 
 **Last Updated**: 2025-01-06  
-**Next Action**: T069 - Update README.md with chart types examples
+**Next Action**: T072 - Final validation (all tests, coverage, linter)
 
 ---
 
@@ -673,8 +677,8 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
-- **Tasks completed: 66/72** (T067-T068 documentation complete - comprehensive DartDoc coverage!)  
-- **Remaining**: T069-T070 (README/guide), T072 (final validation)  
+- **Tasks completed: 68/72** (T070 comprehensive usage guide created - 600+ lines!)  
+- **Remaining**: T072 (final validation)  
 - **Blocked**: T062-T065 (golden tests - require Chart Widgets)
 
 
