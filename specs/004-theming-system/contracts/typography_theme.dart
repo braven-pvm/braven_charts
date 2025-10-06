@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 ///   labelFontSize: 11.0,
 ///   fontWeight: FontWeight.normal,
 /// );
-/// 
+///
 /// // With responsive scaling:
 /// final scaledTypography = typography.withScaleFactor(1.1); // Desktop
 /// ```
@@ -233,11 +233,11 @@ class TypographyTheme {
 
   @override
   int get hashCode => Object.hash(
-    fontFamily,
-    baseFontSize,
-    titleFontSize,
-    labelFontSize,
-    fontWeight,
-    scaleFactor,
-  );
+        fontFamily,
+        baseFontSize,
+        titleFontSize,
+        labelFontSize,
+        fontWeight,
+        scaleFactor,
+      );
 }

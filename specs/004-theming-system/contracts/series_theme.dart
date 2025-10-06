@@ -32,7 +32,7 @@ enum MarkerShape {
 ///   markerShapes: [MarkerShape.circle, MarkerShape.square],
 ///   markerSizes: [8.0],
 /// );
-/// 
+///
 /// // Series 0: blue, 2.0px, solid, circle, 8.0px
 /// // Series 1: orange, 2.0px, dashed, square, 8.0px
 /// // Series 2: green, 2.0px, solid, circle, 8.0px (cycles back)
@@ -154,7 +154,11 @@ class SeriesTheme {
       Color(0xFFBDBDBD), // Light Gray
     ],
     lineWidths: [1.5],
-    dashPatterns: [null, [5.0, 5.0], [10.0, 5.0, 2.0, 5.0]], // Varied patterns
+    dashPatterns: [
+      null,
+      [5.0, 5.0],
+      [10.0, 5.0, 2.0, 5.0]
+    ], // Varied patterns
     markerShapes: [MarkerShape.none],
     markerSizes: [6.0],
   );
@@ -183,7 +187,11 @@ class SeriesTheme {
       Color(0xFFECE133), // Yellow (safe for all types)
     ],
     lineWidths: [2.5],
-    dashPatterns: [null, [8.0, 4.0], [2.0, 2.0]], // Varied for redundant encoding
+    dashPatterns: [
+      null,
+      [8.0, 4.0],
+      [2.0, 2.0]
+    ], // Varied for redundant encoding
     markerShapes: [
       MarkerShape.circle,
       MarkerShape.square,
@@ -228,23 +236,15 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)
-          ?.map((c) => _parseColor(c))
-          .whereType<Color>()
-          .toList() ?? defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)
-          ?.map((w) => (w as num).toDouble())
-          .toList() ?? defaultLight.lineWidths,
+      colors: (json['colors'] as List<dynamic>?)?.map((c) => _parseColor(c)).whereType<Color>().toList() ?? defaultLight.colors,
+      lineWidths: (json['lineWidths'] as List<dynamic>?)?.map((w) => (w as num).toDouble()).toList() ?? defaultLight.lineWidths,
       dashPatterns: (json['dashPatterns'] as List<dynamic>?)
-          ?.map((p) => p == null ? null : (p as List<dynamic>).map((e) => (e as num).toDouble()).toList())
-          .toList() ?? defaultLight.dashPatterns,
-      markerShapes: (json['markerShapes'] as List<dynamic>?)
-          ?.map((s) => _parseMarkerShape(s))
-          .whereType<MarkerShape>()
-          .toList() ?? defaultLight.markerShapes,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)
-          ?.map((s) => (s as num).toDouble())
-          .toList() ?? defaultLight.markerSizes,
+              ?.map((p) => p == null ? null : (p as List<dynamic>).map((e) => (e as num).toDouble()).toList())
+              .toList() ??
+          defaultLight.dashPatterns,
+      markerShapes:
+          (json['markerShapes'] as List<dynamic>?)?.map((s) => _parseMarkerShape(s)).whereType<MarkerShape>().toList() ?? defaultLight.markerShapes,
+      markerSizes: (json['markerSizes'] as List<dynamic>?)?.map((s) => (s as num).toDouble()).toList() ?? defaultLight.markerSizes,
     );
   }
 
@@ -276,12 +276,12 @@ class SeriesTheme {
 
   @override
   int get hashCode => Object.hash(
-    Object.hashAll(colors),
-    Object.hashAll(lineWidths),
-    Object.hashAll(dashPatterns.map((p) => p == null ? 0 : Object.hashAll(p))),
-    Object.hashAll(markerShapes),
-    Object.hashAll(markerSizes),
-  );
+        Object.hashAll(colors),
+        Object.hashAll(lineWidths),
+        Object.hashAll(dashPatterns.map((p) => p == null ? 0 : Object.hashAll(p))),
+        Object.hashAll(markerShapes),
+        Object.hashAll(markerSizes),
+      );
 
   bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

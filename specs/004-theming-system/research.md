@@ -666,6 +666,71 @@ void updateTheme(ChartTheme newTheme) {
 
 ---
 
+## 9. Platform Font Strategy
+
+### Decision
+**Platform-specific font detection** with fallback chain: Roboto (Android/Web), SF Pro (iOS), Segoe UI (Windows).
+
+### Rationale
+- **Native feel**: Each platform uses its system font for familiarity
+- **Performance**: System fonts already loaded, no network fetch
+- **Consistency**: Font metrics stable across same platform
+- **Reliability**: Fallback chain ensures text always renders
+- **Compliance**: Matches platform UI guidelines (Material Design, HIG)
+
+### Implementation Pattern
+```dart
+class TypographyTheme {
+  static String getPlatformFont() {
+    if (Platform.isIOS || Platform.isMacOS) {
+      return 'SF Pro Display';
+    } else if (Platform.isAndroid) {
+      return 'Roboto';
+    } else if (Platform.isWindows) {
+      return 'Segoe UI';
+    } else if (Platform.isLinux) {
+      return 'Ubuntu';
+    } else {
+      // Web or unknown platform
+      return 'Roboto'; // Web default
+    }
+  }
+  
+  static const List<String> fallbackFonts = [
+    'Roboto',
+    'Helvetica Neue',
+    'Arial',
+    'sans-serif',
+  ];
+  
+  const TypographyTheme({
+    String? fontFamily,
+    // ... other fields
+  }) : fontFamily = fontFamily ?? getPlatformFont();
+}
+```
+
+### Font Loading
+- **System fonts**: Immediately available (no load time)
+- **Custom fonts**: Use `FontLoader` with 3-second timeout
+- **Fallback**: If font unavailable, use next in chain
+- **No layout shift**: Reserve space with fallback metrics
+
+### Alternatives Considered
+1. **Single universal font (Roboto everywhere)**
+   - Rejected: Doesn't match iOS/macOS native feel
+   - Rejected: Users expect SF Pro on Apple devices
+
+2. **Web fonts only (no platform detection)**
+   - Rejected: Slower initial load (network fetch)
+   - Rejected: Increases bundle size
+
+3. **User-configurable font (no defaults)**
+   - Rejected: Requires all users to make font decision
+   - Rejected: More complex API for common use case
+
+---
+
 ## Summary of Key Decisions
 
 | Area | Decision | Why |
@@ -676,6 +741,7 @@ void updateTheme(ChartTheme newTheme) {
 | Serialization | Versioned JSON | Human-readable, forward-compatible |
 | Performance | LRU style cache | Bounded memory, high hit rate |
 | Typography | Breakpoint scaling | Material Design aligned, predictable |
+| Platform Fonts | Platform detection + fallbacks | Native feel, performance, reliability |
 | Builder API | Fluent with validation | Discoverable, type-safe, readable |
 | Theme Switching | Diff + partial render | Fast, state-preserving, smooth |
 

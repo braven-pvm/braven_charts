@@ -136,13 +136,20 @@ class AnimationTheme {
   static Curve _parseCurve(dynamic value) {
     if (value is! String) return Curves.easeInOut;
     switch (value) {
-      case 'linear': return Curves.linear;
-      case 'easeIn': return Curves.easeIn;
-      case 'easeOut': return Curves.easeOut;
-      case 'easeInOut': return Curves.easeInOut;
-      case 'fastOutSlowIn': return Curves.fastOutSlowIn;
-      case 'elasticOut': return Curves.elasticOut;
-      default: return Curves.easeInOut;
+      case 'linear':
+        return Curves.linear;
+      case 'easeIn':
+        return Curves.easeIn;
+      case 'easeOut':
+        return Curves.easeOut;
+      case 'easeInOut':
+        return Curves.easeInOut;
+      case 'fastOutSlowIn':
+        return Curves.fastOutSlowIn;
+      case 'elasticOut':
+        return Curves.elasticOut;
+      default:
+        return Curves.easeInOut;
     }
   }
 
@@ -160,9 +167,9 @@ class AnimationTheme {
 
   @override
   int get hashCode => Object.hash(
-    dataUpdateDuration,
-    dataUpdateCurve,
-    themeSwitchDuration,
-    themeSwitchCurve,
-  );
+        dataUpdateDuration,
+        dataUpdateCurve,
+        themeSwitchDuration,
+        themeSwitchCurve,
+      );
 }

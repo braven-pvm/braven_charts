@@ -234,12 +234,12 @@ class AxisStyle {
 
   @override
   int get hashCode => Object.hash(
-    lineColor,
-    lineWidth,
-    textStyle,
-    titleStyle,
-    tickLength,
-    tickColor,
-    tickWidth,
-  );
+        lineColor,
+        lineWidth,
+        textStyle,
+        titleStyle,
+        tickLength,
+        tickColor,
+        tickWidth,
+      );
 }

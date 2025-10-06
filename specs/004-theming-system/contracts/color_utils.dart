@@ -5,6 +5,7 @@
 // Provides WCAG 2.1 compliance checks and colorblind simulation.
 
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Utility functions for color accessibility and manipulation.
@@ -21,7 +22,7 @@ import 'package:flutter/material.dart';
 /// final bg = Color(0xFF1976D2);
 /// final textColor = ColorUtils.autoContrastText(bg); // Returns white or black
 /// final ratio = ColorUtils.contrastRatio(textColor, bg); // >= 4.5 for WCAG AA
-/// 
+///
 /// final protanopiaView = ColorUtils.simulateProtanopia(Color(0xFFFF0000));
 /// ```
 class ColorUtils {
@@ -30,9 +31,9 @@ class ColorUtils {
   // ========== WCAG 2.1 Compliance ==========
 
   /// Calculates relative luminance per WCAG 2.1 specification.
-  /// 
+  ///
   /// Returns value between 0.0 (darkest) and 1.0 (lightest).
-  /// 
+  ///
   /// Reference: https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
   static double relativeLuminance(Color color) {
     final r = _sRGBtoLinear(color.red / 255.0);
@@ -50,15 +51,15 @@ class ColorUtils {
   }
 
   /// Calculates contrast ratio per WCAG 2.1 specification.
-  /// 
+  ///
   /// Returns value between 1.0 (no contrast) and 21.0 (maximum contrast).
-  /// 
+  ///
   /// WCAG 2.1 Requirements:
   /// - AA (normal text): >= 4.5:1
   /// - AA (large text 18pt+): >= 3.0:1
   /// - AAA (normal text): >= 7.0:1
   /// - AAA (large text 18pt+): >= 4.5:1
-  /// 
+  ///
   /// Reference: https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio
   static double contrastRatio(Color c1, Color c2) {
     final l1 = relativeLuminance(c1);
@@ -89,7 +90,7 @@ class ColorUtils {
   }
 
   /// Automatically selects black or white text color for best contrast.
-  /// 
+  ///
   /// Returns Color(0xFF000000) or Color(0xFFFFFFFF) based on which
   /// provides better contrast with the background.
   static Color autoContrastText(Color background) {
@@ -101,7 +102,7 @@ class ColorUtils {
   // ========== Colorblind Simulation ==========
 
   /// Simulates protanopia (L-cone deficiency, red-blind).
-  /// 
+  ///
   /// Uses Brettel et al. algorithm for dichromatic simulation.
   /// Reference: Brettel, H., Viénot, F., & Mollon, J. D. (1997)
   /// "Computerized simulation of color appearance for dichromats"
@@ -149,21 +150,39 @@ class ColorUtils {
 
   // Brettel transformation matrices (simplified for protanopia/deuteranopia/tritanopia)
   static const List<double> _protanopiaMatrix = [
-    0.0, 1.05118, -0.05116,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
+    0.0,
+    1.05118,
+    -0.05116,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
   ];
 
   static const List<double> _deuteranopiaMatrix = [
-    1.0, 0.0, 0.0,
-    0.9513, 0.0, 0.04866,
-    0.0, 0.0, 1.0,
+    1.0,
+    0.0,
+    0.0,
+    0.9513,
+    0.0,
+    0.04866,
+    0.0,
+    0.0,
+    1.0,
   ];
 
   static const List<double> _tritanopiaMatrix = [
-    1.0, 0.0, 0.0,
-    0.0, 1.0, 0.0,
-    -0.86744, 1.86727, 0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    -0.86744,
+    1.86727,
+    0.0,
   ];
 
   // ========== Color Manipulation ==========
@@ -176,7 +195,7 @@ class ColorUtils {
   }
 
   /// Calculates color distance using ΔE (Delta-E) in CIELAB color space.
-  /// 
+  ///
   /// Returns value >= 0. Typical interpretation:
   /// - ΔE < 1: Not perceptible by human eyes
   /// - ΔE 1-2: Perceptible through close observation

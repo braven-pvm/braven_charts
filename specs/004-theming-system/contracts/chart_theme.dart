@@ -7,12 +7,13 @@
 // serialization, customization via copyWith(), and validation.
 
 import 'package:flutter/material.dart';
-import 'grid_style.dart';
-import 'axis_style.dart';
-import 'series_theme.dart';
-import 'interaction_theme.dart';
-import 'typography_theme.dart';
+
 import 'animation_theme.dart';
+import 'axis_style.dart';
+import 'grid_style.dart';
+import 'interaction_theme.dart';
+import 'series_theme.dart';
+import 'typography_theme.dart';
 
 /// Root theme container for all chart visual styling.
 ///
@@ -330,15 +331,15 @@ class ChartTheme {
 
   @override
   int get hashCode => Object.hash(
-    backgroundColor,
-    borderColor,
-    borderWidth,
-    padding,
-    gridStyle,
-    axisStyle,
-    seriesTheme,
-    interactionTheme,
-    typographyTheme,
-    animationTheme,
-  );
+        backgroundColor,
+        borderColor,
+        borderWidth,
+        padding,
+        gridStyle,
+        axisStyle,
+        seriesTheme,
+        interactionTheme,
+        typographyTheme,
+        animationTheme,
+      );
 }

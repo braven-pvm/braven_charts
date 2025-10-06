@@ -237,6 +237,7 @@ System MUST provide comprehensive theme definition:
   - JSON import: `ChartTheme.fromJson(json)` → ChartTheme
   - Versioned schema (forward/backward compatibility)
   - Missing properties use defaults
+  - Validation errors return `ValidationResult` with descriptive messages
   - **Validation**: Round-trip serialization preserves all properties
 
 #### Predefined Themes (FR-002)
@@ -520,14 +521,14 @@ System MUST provide animation configuration:
   - Auto-complete friendly (well-named properties)
   - Comprehensive dartdoc with examples
   - Type-safe (no stringly-typed properties)
-  - **Measurement**: Developer survey (time to first custom theme)
+  - **Measurement**: Documentation completeness (all public APIs documented with examples)
 
 - **NFR-003.2**: Theme debugging MUST be simple
   - Theme inspector widget (shows applied styles)
   - Validation errors include fix suggestions
   - Hot reload support (no chart recreation)
   - Visual diff tool (compare two themes)
-  - **Measurement**: Debugging task completion time
+  - **Measurement**: Zero validation errors without descriptive messages, hot reload functional
 
 - **NFR-003.3**: Documentation MUST be comprehensive
   - All 7 predefined themes documented with screenshots
@@ -1436,22 +1437,45 @@ const _defaultLight = ChartTheme(
 
 ---
 
-## Open Questions
+## Design Decisions
 
-1. **Animation Performance**: Should theme change animations be skipped if frame budget exceeded?
-   - **Recommendation**: Yes, use adaptive quality (skip animation if >16ms)
+**Resolved for v1.0**:
 
-2. **Theme Versioning**: How should we handle breaking changes to theme schema?
-   - **Recommendation**: Semantic versioning + automatic migration from older schemas
+1. ✅ **Animation Performance**: Theme animations will use adaptive quality
+   - Skip animation if frame time >16ms (maintains 60fps)
+   - Documented in research.md Section 5 (Performance Optimization)
 
-3. **Platform Fonts**: Should we have platform-specific font defaults (Roboto on Android, SF Pro on iOS)?
-   - **Recommendation**: Yes, detect platform and use appropriate system font
+2. ✅ **Theme Versioning**: Semantic versioning with automatic migration
+   - Schema version 1.0 for initial release
+   - Unknown properties ignored (forward compatible)
+   - Missing properties use defaults (backward compatible)
+   - Documented in research.md Section 4 (Serialization Strategy)
 
-4. **Theme Inheritance**: Should child charts inherit parent chart themes?
-   - **Recommendation**: Yes, but allow explicit override per chart
+3. ✅ **Platform Fonts**: Platform detection with fallbacks
+   - Roboto (Android/Web), SF Pro (iOS), Segoe UI (Windows)
+   - Implemented in TypographyTheme (T013)
+   - Fallback chain ensures consistency if platform font unavailable
 
-5. **Dynamic Theming**: Should themes support dynamic values (e.g., theme-aware dark mode)?
-   - **Recommendation**: Future enhancement, not in initial implementation
+**Deferred to v2.0+** (Future Work):
+
+4. 🔜 **Theme Inheritance**: Parent-child chart theme propagation
+   - v1.0: Each chart has independent theme
+   - v2.0: Investigate context-based theme inheritance with explicit overrides
+
+5. 🔜 **Dynamic Theming**: Runtime theme adaptation
+   - v1.0: Static themes (manually switch between light/dark)
+   - v2.0: System dark mode detection, dynamic color generation
+
+---
+
+## Terminology & Style Guide
+
+**For Consistency Across Documentation**:
+
+- **ChartTheme** (PascalCase): Use for class/type references (e.g., "ChartTheme.defaultLight")
+- **theme** (lowercase): Use for concept/variable references (e.g., "apply a theme", "custom theme")
+- **Predefined Themes**: Preferred term over "Theme Definitions" (shorter, clearer)
+- **MarkerShape**: Enum values are `circle`, `square`, `triangle`, `diamond`, `cross`, `plus`, `star`, `none`
 
 ---
 

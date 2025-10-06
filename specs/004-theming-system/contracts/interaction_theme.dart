@@ -264,16 +264,16 @@ class InteractionTheme {
 
   @override
   int get hashCode => Object.hash(
-    crosshairColor,
-    crosshairWidth,
-    Object.hashAll(crosshairDashPattern ?? []),
-    tooltipBackground,
-    tooltipTextStyle,
-    tooltipBorderColor,
-    tooltipBorderWidth,
-    selectionColor,
-    selectionOpacity,
-  );
+        crosshairColor,
+        crosshairWidth,
+        Object.hashAll(crosshairDashPattern ?? []),
+        tooltipBackground,
+        tooltipTextStyle,
+        tooltipBorderColor,
+        tooltipBorderWidth,
+        selectionColor,
+        selectionOpacity,
+      );
 
   bool _listEquals(List<double>? a, List<double>? b) {
     if (a == null && b == null) return true;
