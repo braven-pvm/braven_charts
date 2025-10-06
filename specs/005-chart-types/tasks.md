@@ -483,17 +483,21 @@
   - Exports: Utility classes (LineInterpolator, AreaStacking, BarPositioner, ChartRenderer)
   - Exports: Supporting types (BarLayoutInfo)
 
-- [ ] **T067** [P] Add DartDoc comments to all public APIs in lib/src/charts/
-  - Document all classes, methods, properties
-  - Include usage examples in doc comments
-  - Document performance requirements
-  - Document validation rules
+- [x] **T067** [P] Add DartDoc comments to all public APIs in lib/src/charts/ ✅ 2025-01-06
+  - ✅ Documented all classes, methods, properties
+  - ✅ Included usage examples in doc comments (all 4 chart layers have code examples)
+  - ✅ Documented performance requirements (all layers state <16ms requirement)
+  - ✅ Documented validation rules (all configs document assertions)
+  - ✅ Library-level documentation in all barrel files
+  - ✅ Comprehensive coverage: 100+ doc comments across all public APIs
 
-- [ ] **T068** [P] Add algorithm explanations in code comments
-  - Bezier interpolation algorithm (line_interpolator.dart)
-  - Bar positioning algorithm (bar_positioner.dart)
-  - Stacking algorithm (area_stacking.dart)
-  - Gradient shader caching (chart_renderer.dart)
+- [x] **T068** [P] Add algorithm explanations in code comments ✅ 2025-01-06
+  - ✅ Bezier interpolation algorithm (line_interpolator.dart) - Catmull-Rom to cubic bezier conversion
+  - ✅ Bar positioning algorithm (bar_positioner.dart) - grouped/stacked layout calculations
+  - ✅ Stacking algorithm (area_stacking.dart) - cumulative stacking with negative handling
+  - ✅ Gradient shader caching (chart_renderer.dart) - cache key generation and management
+  - ✅ Clustering algorithm (scatter_clusterer.dart) - distance-based grouping
+  - ✅ All critical algorithms have inline comments and DartDoc explanations
 
 - [ ] **T069** [P] Update main README.md with chart types examples
   - Add "Chart Types" section
@@ -651,12 +655,12 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 **Status**: Ready for execution  
 **Total Tasks**: 72  
-**Completed**: 35  
+**Completed**: 66  
 **In Progress**: 0  
-**Blocked**: 0
+**Blocked**: 4 (T062-T065 - require Chart Widgets)
 
-**Last Updated**: 2025-10-06  
-**Next Action**: Begin T036 (ChartRenderer implementation)
+**Last Updated**: 2025-01-06  
+**Next Action**: T069 - Update README.md with chart types examples
 
 ---
 
@@ -669,6 +673,8 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
-- **Tasks completed: 57/72** (T071 code cleanup complete - deprecated APIs fixed!)
+- **Tasks completed: 66/72** (T067-T068 documentation complete - comprehensive DartDoc coverage!)  
+- **Remaining**: T069-T070 (README/guide), T072 (final validation)  
+- **Blocked**: T062-T065 (golden tests - require Chart Widgets)
 
 
