@@ -4,9 +4,9 @@
 /// the contract defined in specs/005-chart-types/contracts/line_chart_config.dart
 library;
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/charts/line/line_chart_config.dart';
 import 'package:braven_charts/src/charts/base/chart_config.dart';
+import 'package:braven_charts/src/charts/line/line_chart_config.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LineChartConfig Contract Tests', () {
@@ -74,7 +74,7 @@ void main() {
 
       test('dashPattern can be null (solid line)', () {
         expect(
-          () => LineChartConfig(
+          () => const LineChartConfig(
             lineStyle: LineStyle.straight,
             markerShape: MarkerShape.circle,
             markerSize: 6.0,
@@ -107,7 +107,7 @@ void main() {
 
     group('copyWith() behavior', () {
       test('copyWith creates new instance with modified properties', () {
-        final original = LineChartConfig(
+        final original = const LineChartConfig(
           lineStyle: LineStyle.straight,
           markerShape: MarkerShape.circle,
           markerSize: 6.0,
@@ -130,7 +130,7 @@ void main() {
       });
 
       test('copyWith without arguments returns equivalent instance', () {
-        final original = LineChartConfig(
+        final original = const LineChartConfig(
           lineStyle: LineStyle.straight,
           markerShape: MarkerShape.circle,
           markerSize: 6.0,
@@ -153,7 +153,7 @@ void main() {
 
     group('validate() method', () {
       test('validate() does not throw for valid config', () {
-        final config = LineChartConfig(
+        final config = const LineChartConfig(
           lineStyle: LineStyle.straight,
           markerShape: MarkerShape.circle,
           markerSize: 6.0,
@@ -168,7 +168,7 @@ void main() {
       test('validate() throws for invalid markerSize', () {
         // markerSize is validated in constructor via assert
         // validate() method provides runtime validation
-        final config = LineChartConfig(
+        final config = const LineChartConfig(
           lineStyle: LineStyle.straight,
           markerShape: MarkerShape.circle,
           markerSize: 6.0,
@@ -176,7 +176,7 @@ void main() {
           lineWidth: 2.0,
           connectNulls: false,
         );
-        
+
         // Validated config should pass
         expect(() => config.validate(), returnsNormally);
       });
@@ -186,7 +186,7 @@ void main() {
       test('LineChartConfig instances are immutable', () {
         // This is verified by the class having final fields
         // Dart's type system enforces this at compile time
-        final config = LineChartConfig(
+        final config = const LineChartConfig(
           lineStyle: LineStyle.straight,
           markerShape: MarkerShape.circle,
           markerSize: 6.0,

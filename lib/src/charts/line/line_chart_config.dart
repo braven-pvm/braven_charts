@@ -25,6 +25,27 @@ enum LineStyle {
 /// All instances are immutable and validated at construction.
 /// Constitutional requirement: Input validation (Testing Excellence)
 class LineChartConfig {
+  /// Creates line chart configuration
+  ///
+  /// Throws [ArgumentError] if validation fails:
+  /// - [markerSize] <= 0
+  /// - [lineWidth] <= 0
+  /// - [dashPattern] has odd length
+  const LineChartConfig({
+    required this.lineStyle,
+    required this.markerShape,
+    required this.markerSize,
+    required this.showMarkers,
+    required this.lineWidth,
+    this.dashPattern,
+    required this.connectNulls,
+  })  : assert(markerSize > 0, 'markerSize must be > 0'),
+        assert(lineWidth > 0, 'lineWidth must be > 0'),
+        assert(
+          dashPattern == null || dashPattern.length % 2 == 0,
+          'dashPattern must have even length (on/off pairs)',
+        );
+
   /// Line rendering style
   final LineStyle lineStyle;
 
@@ -57,27 +78,6 @@ class LineChartConfig {
   /// If true, null data points are skipped and the line continues.
   /// If false, null data points create gaps in the line.
   final bool connectNulls;
-
-  /// Creates line chart configuration
-  ///
-  /// Throws [ArgumentError] if validation fails:
-  /// - [markerSize] <= 0
-  /// - [lineWidth] <= 0
-  /// - [dashPattern] has odd length
-  const LineChartConfig({
-    required this.lineStyle,
-    required this.markerShape,
-    required this.markerSize,
-    required this.showMarkers,
-    required this.lineWidth,
-    this.dashPattern,
-    required this.connectNulls,
-  }) : assert(markerSize > 0, 'markerSize must be > 0'),
-       assert(lineWidth > 0, 'lineWidth must be > 0'),
-       assert(
-          dashPattern == null || dashPattern.length % 2 == 0,
-          'dashPattern must have even length (on/off pairs)',
-        );
 
   /// Creates a copy with modified properties
   LineChartConfig copyWith({
@@ -161,4 +161,3 @@ class LineChartConfig {
     return true;
   }
 }
-

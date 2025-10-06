@@ -31,7 +31,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'barWidthRatio must be > 0.0',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when barWidthRatio <= 0.0');
       });
 
@@ -51,7 +51,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'barWidthRatio must be <= 1.0',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when barWidthRatio > 1.0');
       });
 
@@ -70,7 +70,7 @@ void main() {
         //   ),
         //   returnsNormally,
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: accept barWidthRatio = 1.0');
       });
 
@@ -90,7 +90,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'barSpacing must be non-negative',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when barSpacing < 0.0');
       });
 
@@ -110,7 +110,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'groupSpacing must be non-negative',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when groupSpacing < 0.0');
       });
 
@@ -130,7 +130,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'cornerRadius must be non-negative',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when cornerRadius < 0.0');
       });
 
@@ -150,7 +150,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'borderWidth must be non-negative',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when borderWidth < 0.0');
       });
 
@@ -172,7 +172,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'useGradient=true requires at least one gradient color',
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: throw ArgumentError when useGradient=true but no gradient colors');
       });
 
@@ -193,7 +193,7 @@ void main() {
         //   ),
         //   returnsNormally,
         // );
-        
+
         fail('BarChartConfig not implemented yet - expected behavior: accept null gradient colors when useGradient=false');
       });
     });

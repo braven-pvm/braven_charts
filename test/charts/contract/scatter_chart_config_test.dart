@@ -29,7 +29,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'fixedSize must be > 0 when sizingMode is fixed',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when sizingMode=fixed but fixedSize <= 0');
       });
 
@@ -48,7 +48,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'fixedSize must be provided when sizingMode is fixed',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when sizingMode=fixed but fixedSize=null');
       });
 
@@ -67,7 +67,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'fixedSize must be positive',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when fixedSize < 0');
       });
     });
@@ -89,7 +89,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'minSize must be < maxSize for data-driven sizing',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when minSize >= maxSize');
       });
 
@@ -109,7 +109,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'minSize must be provided when sizingMode is dataDriven',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when sizingMode=dataDriven but minSize=null');
       });
 
@@ -129,7 +129,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'maxSize must be provided when sizingMode is dataDriven',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when sizingMode=dataDriven but maxSize=null');
       });
 
@@ -148,7 +148,7 @@ void main() {
         //   ),
         //   returnsNormally,
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: accept valid minSize/maxSize range');
       });
     });
@@ -169,7 +169,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'clusterThreshold must be at least 2 points',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when clusterThreshold < 2');
       });
 
@@ -187,7 +187,7 @@ void main() {
         //   ),
         //   returnsNormally,
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: accept clusterThreshold = 2');
       });
     });
@@ -208,7 +208,7 @@ void main() {
         //   throwsA(isA<ArgumentError>()),
         //   reason: 'borderWidth must be non-negative',
         // );
-        
+
         fail('ScatterChartConfig not implemented yet - expected behavior: throw ArgumentError when borderWidth < 0.0');
       });
     });

@@ -30,7 +30,7 @@ void main() {
         //   () => layer.render(testCanvas, testSize, testContext),
         //   returnsNormally,
         // );
-        
+
         fail('LineChartLayer not implemented yet - expected behavior: implement render() method');
       });
 
@@ -208,7 +208,7 @@ void main() {
         //   lessThan(16),
         //   reason: 'Line charts must render 10,000 points in <16ms',
         // );
-        
+
         fail('LineChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
       });
 

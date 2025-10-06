@@ -42,21 +42,6 @@ enum MarkerShape {
 ///
 /// Constitutional requirement: Input validation (Testing Excellence)
 class ChartAnimationConfig {
-  /// Whether animations are enabled
-  final bool enabled;
-
-  /// Duration of the animation
-  final Duration duration;
-
-  /// Animation curve
-  final Curve curve;
-
-  /// Minimum relative change to trigger animation
-  ///
-  /// Value is between 0.0 and 1.0. A value of 0.01 means changes smaller
-  /// than 1% of the value range won't trigger animation.
-  final double changeThreshold;
-
   /// Creates animation configuration
   ///
   /// Throws [ArgumentError] if:
@@ -77,6 +62,21 @@ class ChartAnimationConfig {
         duration = Duration.zero,
         curve = Curves.linear,
         changeThreshold = 0.0;
+
+  /// Whether animations are enabled
+  final bool enabled;
+
+  /// Duration of the animation
+  final Duration duration;
+
+  /// Animation curve
+  final Curve curve;
+
+  /// Minimum relative change to trigger animation
+  ///
+  /// Value is between 0.0 and 1.0. A value of 0.01 means changes smaller
+  /// than 1% of the value range won't trigger animation.
+  final double changeThreshold;
 
   /// Creates a copy with modified properties
   ChartAnimationConfig copyWith({
@@ -119,6 +119,30 @@ class ChartAnimationConfig {
 ///
 /// Constitutional requirement: Input validation (Testing Excellence)
 class ChartSeriesStyle {
+  /// Creates per-series style overrides
+  ///
+  /// Throws [ArgumentError] if:
+  /// - [lineWidth] < 0
+  /// - [markerSize] < 0
+  /// - [fillOpacity] not in [0.0, 1.0]
+  /// - [barWidthRatio] not in (0.0, 1.0]
+  const ChartSeriesStyle({
+    this.color,
+    this.lineWidth,
+    this.markerSize,
+    this.fillOpacity,
+    this.barWidthRatio,
+  })  : assert(lineWidth == null || lineWidth >= 0, 'lineWidth must be >= 0'),
+        assert(markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
+        assert(
+          fillOpacity == null || (fillOpacity >= 0.0 && fillOpacity <= 1.0),
+          'fillOpacity must be between 0.0 and 1.0',
+        ),
+        assert(
+          barWidthRatio == null || (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
+          'barWidthRatio must be in (0.0, 1.0]',
+        );
+
   /// Series color (overrides theme color)
   final Color? color;
 
@@ -133,30 +157,6 @@ class ChartSeriesStyle {
 
   /// Bar width ratio for bar charts (0.0 to 1.0)
   final double? barWidthRatio;
-
-  /// Creates per-series style overrides
-  ///
-  /// Throws [ArgumentError] if:
-  /// - [lineWidth] < 0
-  /// - [markerSize] < 0
-  /// - [fillOpacity] not in [0.0, 1.0]
-  /// - [barWidthRatio] not in (0.0, 1.0]
-  const ChartSeriesStyle({
-    this.color,
-    this.lineWidth,
-    this.markerSize,
-    this.fillOpacity,
-    this.barWidthRatio,
-  }) : assert(lineWidth == null || lineWidth >= 0, 'lineWidth must be >= 0'),
-       assert(markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
-       assert(
-          fillOpacity == null || (fillOpacity >= 0.0 && fillOpacity <= 1.0),
-          'fillOpacity must be between 0.0 and 1.0',
-        ),
-       assert(
-          barWidthRatio == null || (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
-          'barWidthRatio must be in (0.0, 1.0]',
-        );
 
   /// Creates a copy with modified properties
   ChartSeriesStyle copyWith({
@@ -197,4 +197,3 @@ class ChartSeriesStyle {
 
 /// Color class placeholder (will use Flutter's Color in actual implementation)
 typedef Color = int;
-

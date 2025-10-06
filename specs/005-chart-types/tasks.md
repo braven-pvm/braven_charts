@@ -135,12 +135,12 @@
   - validate() method
   - **Must pass T004 tests** ✅ 11/11 PASSED
 
-- [ ] **T021** Implement AreaChartConfig class in lib/src/charts/area/area_chart_config.dart
+- [x] **T021** Implement AreaChartConfig class in lib/src/charts/area/area_chart_config.dart ✅ 2025-01-06
   - All fields from data-model.md
   - Validation in constructor (fillOpacity [0,1], showLine implies lineConfig)
   - Immutable with copyWith()
   - validate() method
-  - **Must pass T005 tests**
+  - **Must pass T005 tests** ✅ 12/12 PASSED
 
 - [ ] **T022** Implement BarChartConfig class in lib/src/charts/bar/bar_chart_config.dart
   - All fields from data-model.md

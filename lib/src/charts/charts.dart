@@ -5,7 +5,7 @@
 ///
 /// This library exports all public APIs for chart type implementations,
 /// configuration classes, and enumerations.
-library charts;
+library;
 
 // Base classes and utilities
 // Exports will be added incrementally as components are implemented
