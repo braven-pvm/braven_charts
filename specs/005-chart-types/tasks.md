@@ -190,7 +190,7 @@
   - Test stacked bar positioning (cumulative)
   - Test negative value handling in stacks
 
-- [ ] **T030** [P] Unit test for ScatterClusterer in test/charts/unit/scatter_clusterer_test.dart
+- [x] **T030** [P] Unit test for ScatterClusterer in test/charts/unit/scatter_clusterer_test.dart ✅ 2025-01-06
   - Test clustering algorithm for dense points
   - Test cluster threshold parameter
   - Test no clustering when disabled
