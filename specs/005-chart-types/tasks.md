@@ -128,12 +128,12 @@
   - Used for per-series overrides
 
 ### Configuration Classes (Sequential - Depend on enums)
-- [ ] **T020** Implement LineChartConfig class in lib/src/charts/line/line_chart_config.dart
+- [x] **T020** Implement LineChartConfig class in lib/src/charts/line/line_chart_config.dart ✅ 2025-01-06
   - All fields from data-model.md
   - Validation in constructor (markerSize > 0, lineWidth > 0, dashPattern even)
   - Immutable with copyWith()
   - validate() method
-  - **Must pass T004 tests**
+  - **Must pass T004 tests** ✅ 11/11 PASSED
 
 - [ ] **T021** Implement AreaChartConfig class in lib/src/charts/area/area_chart_config.dart
   - All fields from data-model.md
