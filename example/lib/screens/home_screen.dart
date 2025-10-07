@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'area_chart_screen.dart';
 import 'bar_chart_screen.dart';
 import 'line_chart_screen.dart';
+import 'quickstart_screen.dart';
 import 'scatter_chart_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -98,6 +99,18 @@ class HomeScreen extends StatelessWidget {
                 ),
           ),
         ),
+        _buildChartCard(
+          context,
+          title: 'Quickstart Guide',
+          subtitle: 'All 6 quickstart scenarios in one screen',
+          icon: Icons.rocket_launch,
+          color: Colors.red,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const QuickstartScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         _buildChartCard(
           context,
           title: 'Line Charts',
