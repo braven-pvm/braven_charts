@@ -233,7 +233,13 @@ void main() {
 
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup
+      // Cleanup - dispose widget first to cancel subscriptions
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+      
+      // Give time for subscription cancellation to complete
+      await Future.delayed(const Duration(milliseconds: 10));
+      
       await streamController1.close();
       await streamController2.close();
     });
@@ -276,7 +282,13 @@ void main() {
       // Assert - subscription should be canceled
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup
+      // Cleanup - dispose widget first
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+      
+      // Give time for subscription cancellation to complete
+      await Future.delayed(const Duration(milliseconds: 10));
+      
       await streamController.close();
     });
 
@@ -344,7 +356,13 @@ void main() {
       // Assert
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup
+      // Cleanup - dispose widget first
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+      
+      // Give time for subscription cancellation to complete
+      await Future.delayed(const Duration(milliseconds: 10));
+      
       await streamController.close();
     });
 
