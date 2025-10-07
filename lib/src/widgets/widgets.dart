@@ -21,7 +21,7 @@ export 'controller/chart_controller.dart';
 export 'enums/annotation_anchor.dart';
 export 'enums/annotation_axis.dart';
 export 'enums/axis_position.dart';
-export 'enums/axis_range.dart';
+// Note: AxisRange enum removed - using AxisRange class from axis_config.dart instead
 // Enums
 export 'enums/chart_type.dart';
 export 'enums/marker_shape.dart';
