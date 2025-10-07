@@ -146,17 +146,17 @@ export 'braven_chart.dart';
 
 **IMPORTANT**: Contract tests are already written (moved in T002). This phase verifies they fail correctly.
 
-### T004: Verify contract tests fail with correct errors
+### T004: Verify contract tests fail with correct errors ✅
 **Description**: Run all contract tests and confirm they fail with "undefined type" errors  
-**Command**: `flutter test test/widgets/contracts/`
+**Command**: `flutter analyze test/widgets/contracts/`
 
 **Expected Failures**:
-- `braven_chart_contract.dart`: ~166 errors (BravenChart, ChartType undefined)
-- `chart_controller_contract.dart`: ~147 errors (ChartController, ChangeNotifier undefined)
-- `axis_config_contract.dart`: ~8 errors (AxisConfig undefined)
-- `annotation_contracts.dart`: ~14 errors (TextAnnotation, PointAnnotation, etc. undefined)
+- `braven_chart_contract.dart`: ~166 errors (BravenChart, ChartType undefined) ✅
+- `chart_controller_contract.dart`: ~147 errors (ChartController, ChangeNotifier undefined) ✅
+- `axis_config_contract.dart`: ~8 errors (AxisConfig undefined) ✅
+- `annotation_contracts.dart`: ~14 errors (TextAnnotation, PointAnnotation, etc. undefined) ✅
 
-**Success Criteria**: Tests compile, all fail with "undefined name" errors (TDD red phase confirmed)
+**Success Criteria**: Tests compile, all fail with "undefined name" errors (TDD red phase confirmed) ✅
 
 ---
 
