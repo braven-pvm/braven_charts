@@ -144,8 +144,8 @@ void main() {
     });
 
     testWidgets('cancels stream subscription on dispose', (WidgetTester tester) async {
-      // Arrange
-      final streamController = StreamController<ChartDataPoint>();
+      // Arrange - use broadcast stream
+      final streamController = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
         id: 'test-series',
         points: [const ChartDataPoint(x: 0, y: 10)],
