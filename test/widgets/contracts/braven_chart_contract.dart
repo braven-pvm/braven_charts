@@ -1,12 +1,14 @@
 /// API Contract: BravenChart Widget
-/// 
+///
 /// This contract defines the expected behavior of the BravenChart widget.
 /// Tests should be written BEFORE implementation (TDD red phase).
 library;
 
+import 'dart:async';
+
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 void main() {
   group('BravenChart Widget Contract', () {
@@ -28,7 +30,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             width: 400,
             height: 300,
           ),
@@ -40,7 +44,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             theme: ChartTheme.defaultLight,
           ),
           returnsNormally,
@@ -51,7 +57,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             xAxis: AxisConfig.defaults(),
             yAxis: AxisConfig.minimal(),
           ),
@@ -63,9 +71,11 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             annotations: [
-              TextAnnotation(position: const Offset(100, 50), label: 'Test'),
+              TextAnnotation(position: const Offset(100, 50), text: 'Test'),
             ],
           ),
           returnsNormally,
@@ -77,7 +87,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             controller: controller,
           ),
           returnsNormally,
@@ -89,7 +101,7 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [],
+            series: const [],
             dataStream: stream,
           ),
           returnsNormally,
@@ -100,7 +112,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             title: 'Sales Chart',
             subtitle: 'Monthly Revenue',
           ),
@@ -112,7 +126,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             showLegend: true,
             showToolbar: false,
           ),
@@ -124,9 +140,11 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
-            onPointTap: (point) {},
-            onPointHover: (point) {},
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
+            onPointTap: (point, seriesId) {},
+            onPointHover: (point, seriesId) {},
             onBackgroundTap: (offset) {},
             onSeriesSelected: (seriesId) {},
             onAnnotationTap: (annotation) {},
@@ -143,7 +161,7 @@ void main() {
           () => BravenChart.fromValues(
             chartType: ChartType.line,
             seriesId: 's1',
-            yValues: [1, 2, 3, 4, 5],
+            yValues: const [1, 2, 3, 4, 5],
           ),
           returnsNormally,
         );
@@ -154,7 +172,7 @@ void main() {
           () => BravenChart.fromMap(
             chartType: ChartType.line,
             seriesId: 's1',
-            data: {0: 1.0, 1: 2.0, 2: 3.0},
+            data: const {0: 1.0, 1: 2.0, 2: 3.0},
           ),
           returnsNormally,
         );
@@ -164,6 +182,7 @@ void main() {
         expect(
           () => BravenChart.fromJson(
             chartType: ChartType.line,
+            seriesId: 's1',
             json: '[{"x":0,"y":1},{"x":1,"y":2}]',
           ),
           returnsNormally,
@@ -177,7 +196,7 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [], // Empty!
+            series: const [], // Empty!
             // No dataStream either
           ),
           throwsAssertionError,
@@ -188,7 +207,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             width: -100, // Invalid!
           ),
           throwsAssertionError,
@@ -199,7 +220,9 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+            ],
             height: -100, // Invalid!
           ),
           throwsAssertionError,
@@ -218,9 +241,9 @@ void main() {
                   ChartSeries(
                     id: 's1',
                     points: [
-                      const ChartDataPoint(0, 0),
-                      const ChartDataPoint(1, 1),
-                      const ChartDataPoint(2, 2),
+                      const ChartDataPoint(x: 0, y: 0),
+                      const ChartDataPoint(x: 1, y: 1),
+                      const ChartDataPoint(x: 2, y: 2),
                     ],
                   ),
                 ],
@@ -239,7 +262,9 @@ void main() {
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+                series: [
+                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                ],
                 width: 400,
                 height: 300,
               ),
@@ -262,7 +287,7 @@ void main() {
                 body: BravenChart(
                   chartType: chartType,
                   series: [
-                    ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)]),
+                    ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)]),
                   ],
                 ),
               ),
@@ -296,14 +321,13 @@ void main() {
         );
 
         // Trigger controller update
-        controller.addPoint('s1', const ChartDataPoint(1, 1));
+        controller.addPoint('s1', const ChartDataPoint(x: 1, y: 1));
         await tester.pump();
 
         expect(listenerCalled, isTrue);
       });
 
-      testWidgets('MUST unsubscribe from controller in dispose',
-          (tester) async {
+      testWidgets('MUST unsubscribe from controller in dispose', (tester) async {
         final controller = ChartController();
 
         await tester.pumpWidget(
@@ -322,14 +346,12 @@ void main() {
         await tester.pumpWidget(Container());
 
         // Controller should still work but widget shouldn't respond
-        expect(() => controller.addPoint('s1', const ChartDataPoint(2, 2)),
-            returnsNormally);
+        expect(() => controller.addPoint('s1', const ChartDataPoint(x: 2, y: 2)), returnsNormally);
       });
     });
 
     group('Stream Integration', () {
-      testWidgets('MUST subscribe to dataStream in initState',
-          (tester) async {
+      testWidgets('MUST subscribe to dataStream in initState', (tester) async {
         final streamController = StreamController<ChartDataPoint>();
 
         await tester.pumpWidget(
@@ -337,7 +359,7 @@ void main() {
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [],
+                series: const [],
                 dataStream: streamController.stream,
               ),
             ),
@@ -345,15 +367,14 @@ void main() {
         );
 
         // Add data to stream
-        streamController.add(const ChartDataPoint(1, 1));
+        streamController.add(const ChartDataPoint(x: 1, y: 1));
         await tester.pump(const Duration(milliseconds: 20)); // Allow throttling
 
         expect(find.byType(BravenChart), findsOneWidget);
         streamController.close();
       });
 
-      testWidgets('MUST cancel stream subscription in dispose',
-          (tester) async {
+      testWidgets('MUST cancel stream subscription in dispose', (tester) async {
         final streamController = StreamController<ChartDataPoint>();
 
         await tester.pumpWidget(
@@ -361,7 +382,7 @@ void main() {
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [],
+                series: const [],
                 dataStream: streamController.stream,
               ),
             ),
@@ -372,8 +393,7 @@ void main() {
         await tester.pumpWidget(Container());
 
         // Stream should still work but widget shouldn't crash
-        expect(() => streamController.add(const ChartDataPoint(2, 2)),
-            returnsNormally);
+        expect(() => streamController.add(const ChartDataPoint(x: 2, y: 2)), returnsNormally);
         streamController.close();
       });
     });
@@ -385,11 +405,13 @@ void main() {
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+                series: [
+                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                ],
                 annotations: [
                   TextAnnotation(
                     position: const Offset(100, 50),
-                    label: 'Test Annotation',
+                    text: 'Test Annotation',
                   ),
                 ],
               ),
@@ -403,14 +425,15 @@ void main() {
     });
 
     group('Hot Reload Support', () {
-      testWidgets('MUST support configuration changes without leaks',
-          (tester) async {
+      testWidgets('MUST support configuration changes without leaks', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+                series: [
+                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                ],
                 xAxis: AxisConfig.defaults(),
               ),
             ),
@@ -423,7 +446,9 @@ void main() {
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
-                series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+                series: [
+                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                ],
                 xAxis: AxisConfig.hidden(), // Changed!
               ),
             ),
@@ -436,3 +461,4 @@ void main() {
     });
   });
 }
+
