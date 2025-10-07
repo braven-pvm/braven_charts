@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'chart_annotation.dart';
-import 'annotation_style.dart';
+
 import '../enums/annotation_axis.dart';
+import 'annotation_style.dart';
+import 'chart_annotation.dart';
 import 'range_annotation.dart';
 
 /// A threshold annotation that draws a reference line at a fixed axis value.

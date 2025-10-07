@@ -6,18 +6,6 @@ typedef AxisLabelFormatter = String Function(double value);
 
 /// Value object representing a fixed axis range.
 class AxisRange {
-  /// Creates an axis range with the specified min and max values.
-  ///
-  /// Throws [AssertionError] if min >= max.
-  const AxisRange(this.min, this.max)
-      : assert(min < max, 'Axis range min must be less than max');
-
-  /// The minimum value of the axis range.
-  final double min;
-
-  /// The maximum value of the axis range.
-  final double max;
-
   /// Creates a fixed range with explicit min and max values.
   factory AxisRange.fixed(double min, double max) {
     return AxisRange(min, max);
@@ -30,6 +18,17 @@ class AxisRange {
     final halfRange = range / 2;
     return AxisRange(center - halfRange, center + halfRange);
   }
+
+  /// Creates an axis range with the specified min and max values.
+  ///
+  /// Throws [AssertionError] if min >= max.
+  const AxisRange(this.min, this.max) : assert(min < max, 'Axis range min must be less than max');
+
+  /// The minimum value of the axis range.
+  final double min;
+
+  /// The maximum value of the axis range.
+  final double max;
 
   @override
   bool operator ==(Object other) {
@@ -66,6 +65,49 @@ class AxisRange {
 /// )
 /// ```
 class AxisConfig {
+  // ========== Factory Constructors ==========
+
+  /// Creates a standard axis configuration with all components visible.
+  factory AxisConfig.defaults() {
+    return const AxisConfig();
+  }
+
+  /// Creates a hidden axis configuration (for sparklines, embedded charts).
+  ///
+  /// All axis components are hidden: axis line, grid, ticks, and labels.
+  factory AxisConfig.hidden() {
+    return const AxisConfig(
+      showAxis: false,
+      showGrid: false,
+      showTicks: false,
+      showLabels: false,
+    );
+  }
+
+  /// Creates a minimal axis configuration with grid lines only.
+  ///
+  /// Hides axis line, ticks, and labels but shows grid for reference.
+  factory AxisConfig.minimal() {
+    return const AxisConfig(
+      showAxis: false,
+      showTicks: false,
+      showLabels: false,
+      showGrid: true,
+    );
+  }
+
+  /// Creates a grid-only configuration.
+  ///
+  /// Shows only grid lines, hiding axis line, ticks, and labels.
+  factory AxisConfig.gridOnly() {
+    return const AxisConfig(
+      showAxis: false,
+      showGrid: true,
+      showTicks: false,
+      showLabels: false,
+    );
+  }
+
   /// Creates an axis configuration.
   ///
   /// All parameters are optional with sensible defaults.
@@ -231,49 +273,6 @@ class AxisConfig {
 
   /// Whether to invert the axis direction (reverse min/max).
   final bool inverted;
-
-  // ========== Factory Constructors ==========
-
-  /// Creates a standard axis configuration with all components visible.
-  factory AxisConfig.defaults() {
-    return const AxisConfig();
-  }
-
-  /// Creates a hidden axis configuration (for sparklines, embedded charts).
-  ///
-  /// All axis components are hidden: axis line, grid, ticks, and labels.
-  factory AxisConfig.hidden() {
-    return const AxisConfig(
-      showAxis: false,
-      showGrid: false,
-      showTicks: false,
-      showLabels: false,
-    );
-  }
-
-  /// Creates a minimal axis configuration with grid lines only.
-  ///
-  /// Hides axis line, ticks, and labels but shows grid for reference.
-  factory AxisConfig.minimal() {
-    return const AxisConfig(
-      showAxis: false,
-      showTicks: false,
-      showLabels: false,
-      showGrid: true,
-    );
-  }
-
-  /// Creates a grid-only configuration.
-  ///
-  /// Shows only grid lines, hiding axis line, ticks, and labels.
-  factory AxisConfig.gridOnly() {
-    return const AxisConfig(
-      showAxis: false,
-      showGrid: true,
-      showTicks: false,
-      showLabels: false,
-    );
-  }
 
   // ========== Methods ==========
 

@@ -1,5 +1,5 @@
 /// Trend calculation types
-/// 
+///
 /// Defines the statistical method used for trend annotations.
 enum TrendType {
   /// Linear regression trend line

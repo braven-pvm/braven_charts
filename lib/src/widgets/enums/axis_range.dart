@@ -1,5 +1,5 @@
 /// Axis range calculation modes
-/// 
+///
 /// Defines how axis ranges are determined.
 enum AxisRange {
   /// Automatically calculate from data

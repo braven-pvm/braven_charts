@@ -1,5 +1,5 @@
 /// Marker shapes for point annotations
-/// 
+///
 /// Defines the visual shape used to mark data points in annotations.
 enum MarkerShape {
   /// Circular marker (default)

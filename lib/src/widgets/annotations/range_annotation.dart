@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'chart_annotation.dart';
+
 import 'annotation_style.dart';
+import 'chart_annotation.dart';
 
 /// A range annotation that highlights a rectangular region on the chart.
 ///

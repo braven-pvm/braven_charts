@@ -1,5 +1,5 @@
 /// Axis positioning
-/// 
+///
 /// Defines where axes are positioned relative to the chart.
 enum AxisPosition {
   /// Bottom position (X-axis default)

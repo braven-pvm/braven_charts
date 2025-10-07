@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'chart_annotation.dart';
-import 'annotation_style.dart';
+
 import '../enums/trend_type.dart';
+import 'annotation_style.dart';
+import 'chart_annotation.dart';
 
 /// A trend annotation that overlays statistical trend lines on chart data.
 ///

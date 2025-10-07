@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Immutable annotation style configuration
-/// 
+///
 /// Defines the visual styling for chart annotations.
 @immutable
 class AnnotationStyle {

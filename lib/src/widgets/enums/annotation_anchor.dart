@@ -1,5 +1,5 @@
 /// Anchor point for text annotations
-/// 
+///
 /// Defines how text annotations are positioned relative to their coordinate.
 enum AnnotationAnchor {
   /// Anchor at top-left corner

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'chart_annotation.dart';
-import 'annotation_style.dart';
+
 import '../enums/marker_shape.dart';
+import 'annotation_style.dart';
+import 'chart_annotation.dart';
 
 /// A point annotation that marks a specific data point with a custom marker.
 ///

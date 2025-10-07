@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'chart_annotation.dart';
-import 'annotation_style.dart';
+
 import '../enums/annotation_anchor.dart';
+import 'annotation_style.dart';
+import 'chart_annotation.dart';
 
 /// A text annotation that displays text at a specific screen position.
 ///
