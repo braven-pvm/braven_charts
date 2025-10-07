@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
+import 'package:flutter/material.dart';
+
 import '../annotations/chart_annotation.dart';
 
 /// ChangeNotifier-based controller for programmatic chart updates.
@@ -101,9 +101,7 @@ class ChartController extends ChangeNotifier {
   ///
   /// Notifies listeners after the annotation is added.
   String addAnnotation(ChartAnnotation annotation) {
-    final id = annotation.id.isEmpty
-        ? 'annotation_${_annotationIdCounter++}'
-        : annotation.id;
+    final id = annotation.id.isEmpty ? 'annotation_${_annotationIdCounter++}' : annotation.id;
 
     _annotations[id] = annotation;
     notifyListeners();
