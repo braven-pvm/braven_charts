@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' show cos, sin;
 
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
@@ -10,10 +11,18 @@ import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
+import 'package:braven_charts/src/widgets/annotations/point_annotation.dart';
+import 'package:braven_charts/src/widgets/annotations/range_annotation.dart';
+import 'package:braven_charts/src/widgets/annotations/text_annotation.dart';
+import 'package:braven_charts/src/widgets/annotations/threshold_annotation.dart';
+import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
+import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 // Layer 5: Widgets
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
+import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
+import 'package:braven_charts/src/widgets/enums/trend_type.dart';
 import 'package:flutter/material.dart';
 
 /// Primary user-facing widget for rendering interactive charts.
@@ -697,7 +706,10 @@ class _BravenChartState extends State<BravenChart> {
     // Get all series (widget series + controller series)
     final allSeries = _getAllSeries();
 
-    // Build widget tree
+    // Get all annotations (widget annotations + controller annotations)
+    final allAnnotations = _getAllAnnotations();
+
+    // Build the chart widget
     Widget chartWidget = RepaintBoundary(
       child: CustomPaint(
         painter: _BravenChartPainter(
@@ -706,11 +718,27 @@ class _BravenChartState extends State<BravenChart> {
           theme: effectiveTheme,
           xAxis: effectiveXAxis,
           yAxis: effectiveYAxis,
-          annotations: _getAllAnnotations(),
+          annotations: [], // Chart painter doesn't render annotations
         ),
         size: Size(widget.width ?? double.infinity, widget.height ?? double.infinity),
       ),
     );
+
+    // Add annotation overlay if annotations exist
+    if (allAnnotations.isNotEmpty) {
+      chartWidget = Stack(
+        children: [
+          chartWidget,
+          // Annotation overlay
+          _AnnotationOverlay(
+            annotations: allAnnotations,
+            interactiveAnnotations: widget.interactiveAnnotations,
+            onAnnotationTap: widget.onAnnotationTap,
+            onAnnotationDragged: widget.onAnnotationDragged,
+          ),
+        ],
+      );
+    }
 
     // Wrap with dimensions if specified
     if (widget.width != null || widget.height != null) {
@@ -909,5 +937,364 @@ class _BravenChartPainter extends CustomPainter {
         xAxis != oldDelegate.xAxis ||
         yAxis != oldDelegate.yAxis ||
         annotations != oldDelegate.annotations;
+  }
+}
+
+// ==================== ANNOTATION OVERLAY ====================
+
+/// Widget that renders annotations as an overlay on top of the chart.
+///
+/// This widget handles rendering all 5 annotation types with z-index ordering
+/// and optional interaction support.
+class _AnnotationOverlay extends StatelessWidget {
+  const _AnnotationOverlay({
+    required this.annotations,
+    required this.interactiveAnnotations,
+    this.onAnnotationTap,
+    this.onAnnotationDragged,
+  });
+
+  final List<ChartAnnotation> annotations;
+  final bool interactiveAnnotations;
+  final void Function(ChartAnnotation annotation)? onAnnotationTap;
+  final void Function(ChartAnnotation annotation, Offset newPosition)?
+      onAnnotationDragged;
+
+  @override
+  Widget build(BuildContext context) {
+    // Annotations are already sorted by z-index in _getAllAnnotations()
+    return Stack(
+      children: annotations.map((annotation) {
+        return _buildAnnotationWidget(annotation);
+      }).toList(),
+    );
+  }
+
+  /// Builds the appropriate widget for each annotation type.
+  Widget _buildAnnotationWidget(ChartAnnotation annotation) {
+    // Import the annotation types
+    if (annotation is TextAnnotation) {
+      return _buildTextAnnotation(annotation);
+    } else if (annotation is PointAnnotation) {
+      return _buildPointAnnotation(annotation);
+    } else if (annotation is RangeAnnotation) {
+      return _buildRangeAnnotation(annotation);
+    } else if (annotation is ThresholdAnnotation) {
+      return _buildThresholdAnnotation(annotation);
+    } else if (annotation is TrendAnnotation) {
+      return _buildTrendAnnotation(annotation);
+    }
+
+    // Unknown annotation type - return empty widget
+    return const SizedBox.shrink();
+  }
+
+  /// Builds a text annotation widget.
+  Widget _buildTextAnnotation(TextAnnotation annotation) {
+    Widget textWidget = Positioned(
+      left: annotation.position.dx,
+      top: annotation.position.dy,
+      child: GestureDetector(
+        onTap: interactiveAnnotations && onAnnotationTap != null
+            ? () => onAnnotationTap!(annotation)
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: annotation.backgroundColor,
+            border: annotation.borderColor != null
+                ? Border.all(color: annotation.borderColor!)
+                : null,
+          ),
+          child: Text(
+            annotation.text,
+            style: TextStyle(
+              fontSize: annotation.style.fontSize,
+              fontWeight: annotation.style.fontWeight,
+              color: annotation.style.textColor,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return textWidget;
+  }
+
+  /// Builds a point annotation widget (marker on specific data point).
+  Widget _buildPointAnnotation(PointAnnotation annotation) {
+    // Simplified: Just show a marker at the approximate position
+    // Full implementation would transform data coordinates to screen coordinates
+    return Positioned(
+      left: 100, // Placeholder - would use coordinate transformation
+      top: 100, // Placeholder - would use coordinate transformation
+      child: GestureDetector(
+        onTap: interactiveAnnotations && onAnnotationTap != null
+            ? () => onAnnotationTap!(annotation)
+            : null,
+        child: CustomPaint(
+          size: Size(annotation.markerSize * 2, annotation.markerSize * 2),
+          painter: _MarkerPainter(
+            shape: annotation.markerShape,
+            size: annotation.markerSize,
+            color: annotation.markerColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a range annotation widget (rectangular region).
+  Widget _buildRangeAnnotation(RangeAnnotation annotation) {
+    // Simplified: Show a semi-transparent rectangle
+    // Full implementation would transform data coordinates to screen coordinates
+    return Positioned(
+      left: 50, // Placeholder
+      top: 50, // Placeholder
+      width: 200, // Placeholder
+      height: 100, // Placeholder
+      child: GestureDetector(
+        onTap: interactiveAnnotations && onAnnotationTap != null
+            ? () => onAnnotationTap!(annotation)
+            : null,
+        child: Container(
+          decoration: BoxDecoration(
+            color: annotation.style.backgroundColor ?? Colors.blue.withOpacity(0.2),
+            border: Border.all(
+              color: annotation.style.borderColor ?? Colors.blue,
+              width: annotation.style.borderWidth,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a threshold annotation widget (horizontal or vertical line).
+  Widget _buildThresholdAnnotation(ThresholdAnnotation annotation) {
+    // Simplified: Show a line across the chart
+    // Full implementation would use coordinate transformation
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: interactiveAnnotations && onAnnotationTap != null
+            ? () => onAnnotationTap!(annotation)
+            : null,
+        child: CustomPaint(
+          painter: _ThresholdPainter(
+            axis: annotation.axis,
+            value: annotation.value,
+            color: annotation.style.borderColor ?? Colors.red,
+            width: annotation.style.borderWidth,
+            dashPattern: annotation.dashPattern,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a trend annotation widget (trend line or regression).
+  Widget _buildTrendAnnotation(TrendAnnotation annotation) {
+    // Simplified: Placeholder for trend line
+    // Full implementation would calculate and render the trend
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: interactiveAnnotations && onAnnotationTap != null
+            ? () => onAnnotationTap!(annotation)
+            : null,
+        child: CustomPaint(
+          painter: _TrendPainter(
+            trendType: annotation.trendType,
+            color: annotation.style.borderColor ?? Colors.purple,
+            width: annotation.style.borderWidth,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== ANNOTATION PAINTERS ====================
+
+/// Custom painter for marker shapes.
+class _MarkerPainter extends CustomPainter {
+  _MarkerPainter({
+    required this.shape,
+    required this.size,
+    required this.color,
+  });
+
+  final MarkerShape shape;
+  final double size;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size canvasSize) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final center = Offset(canvasSize.width / 2, canvasSize.height / 2);
+
+    switch (shape) {
+      case MarkerShape.circle:
+        canvas.drawCircle(center, size, paint);
+        break;
+      case MarkerShape.square:
+        canvas.drawRect(
+          Rect.fromCenter(center: center, width: size * 2, height: size * 2),
+          paint,
+        );
+        break;
+      case MarkerShape.triangle:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - size)
+          ..lineTo(center.dx + size, center.dy + size)
+          ..lineTo(center.dx - size, center.dy + size)
+          ..close();
+        canvas.drawPath(path, paint);
+        break;
+      case MarkerShape.diamond:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - size)
+          ..lineTo(center.dx + size, center.dy)
+          ..lineTo(center.dx, center.dy + size)
+          ..lineTo(center.dx - size, center.dy)
+          ..close();
+        canvas.drawPath(path, paint);
+        break;
+      case MarkerShape.cross:
+        paint.style = PaintingStyle.stroke;
+        paint.strokeWidth = 2;
+        canvas.drawLine(
+          Offset(center.dx - size, center.dy),
+          Offset(center.dx + size, center.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - size),
+          Offset(center.dx, center.dy + size),
+          paint,
+        );
+        break;
+      case MarkerShape.plus:
+        paint.style = PaintingStyle.stroke;
+        paint.strokeWidth = 2;
+        canvas.drawLine(
+          Offset(center.dx - size, center.dy),
+          Offset(center.dx + size, center.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - size),
+          Offset(center.dx, center.dy + size),
+          paint,
+        );
+        break;
+      case MarkerShape.star:
+        // Draw a simple star shape
+        final path = Path();
+        for (var i = 0; i < 5; i++) {
+          final angle = -90 + (i * 144) * 3.14159 / 180;
+          final radius = i % 2 == 0 ? size : size / 2;
+          final x = center.dx + radius * cos(angle);
+          final y = center.dy + radius * sin(angle);
+          if (i == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MarkerPainter oldDelegate) {
+    return shape != oldDelegate.shape ||
+        size != oldDelegate.size ||
+        color != oldDelegate.color;
+  }
+}
+
+/// Custom painter for threshold lines.
+class _ThresholdPainter extends CustomPainter {
+  _ThresholdPainter({
+    required this.axis,
+    required this.value,
+    required this.color,
+    required this.width,
+    this.dashPattern,
+  });
+
+  final AnnotationAxis axis;
+  final double value;
+  final Color color;
+  final double width;
+  final List<double>? dashPattern;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width;
+
+    // Simplified: Draw line at 50% of the canvas
+    // Full implementation would use coordinate transformation
+    if (axis == AnnotationAxis.y) {
+      // Horizontal line
+      final y = size.height / 2;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    } else {
+      // Vertical line
+      final x = size.width / 2;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ThresholdPainter oldDelegate) {
+    return axis != oldDelegate.axis ||
+        value != oldDelegate.value ||
+        color != oldDelegate.color ||
+        width != oldDelegate.width;
+  }
+}
+
+/// Custom painter for trend lines.
+class _TrendPainter extends CustomPainter {
+  _TrendPainter({
+    required this.trendType,
+    required this.color,
+    required this.width,
+  });
+
+  final TrendType trendType;
+  final Color color;
+  final double width;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width;
+
+    // Simplified: Draw diagonal line as placeholder
+    // Full implementation would calculate actual trend
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, 0),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TrendPainter oldDelegate) {
+    return trendType != oldDelegate.trendType ||
+        color != oldDelegate.color ||
+        width != oldDelegate.width;
   }
 }
