@@ -225,6 +225,7 @@ void main() {
         );
 
         final obj = pool.acquire();
+        expect(obj, isNotNull);
         pool.clear();
 
         expect(pool.statistics.currentInUse, equals(0));

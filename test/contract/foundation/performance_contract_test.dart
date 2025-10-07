@@ -29,9 +29,11 @@ void main() {
       );
 
       final obj1 = pool.acquire();
+      expect(obj1, isNotNull);
       expect(createCount, equals(1));
 
       final obj2 = pool.acquire();
+      expect(obj2, isNotNull);
       expect(createCount, equals(2));
     });
 
@@ -51,6 +53,7 @@ void main() {
 
       // Acquiring again should reuse the object
       final obj2 = pool.acquire();
+      expect(obj2, isNotNull);
       expect(createCount, equals(1)); // No new creation
     });
 

@@ -7,9 +7,9 @@
 // - Performance: <8ms toggle visibility, >80% text cache hit (NFR-001, NFR-003)
 // - Accuracy: Correct z-order rendering, dynamic layer management (FR-001, FR-005)
 
-import 'package:braven_charts/src/foundation/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/object_pool.dart';
-import 'package:braven_charts/src/foundation/viewport_culler.dart';
+import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';

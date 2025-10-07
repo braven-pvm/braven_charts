@@ -12,9 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('PerformanceMetrics', () {
     group('meetsTargets', () {
-      test(
-          'returns true when all targets met (avg<8ms, p99<16ms, hitRate>0.90)',
-          () {
+      test('returns true when all targets met (avg<8ms, p99<16ms, hitRate>0.90)', () {
         final metrics = PerformanceMetrics(
           frameTime: const Duration(microseconds: 7000),
           averageFrameTime: const Duration(microseconds: 7500), // <8ms ✓

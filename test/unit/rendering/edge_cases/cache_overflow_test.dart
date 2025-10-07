@@ -11,19 +11,13 @@ library;
 
 import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas, Paragraph;
 
-import 'package:braven_charts/src/foundation/foundation.dart'
-    show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/performance_monitor.dart'
-    show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/render_context.dart'
-    show RenderContext;
+import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool, ViewportCuller;
+import 'package:braven_charts/src/rendering/performance_monitor.dart' show StopwatchPerformanceMonitor;
+import 'package:braven_charts/src/rendering/render_context.dart' show RenderContext;
 import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_pipeline.dart'
-    show RenderPipeline;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart'
-    show LinkedHashMapTextLayoutCache;
-import 'package:flutter/rendering.dart'
-    show TextPainter, TextSpan, TextStyle, TextDirection;
+import 'package:braven_charts/src/rendering/render_pipeline.dart' show RenderPipeline;
+import 'package:braven_charts/src/rendering/text_layout_cache.dart' show LinkedHashMapTextLayoutCache;
+import 'package:flutter/rendering.dart' show TextPainter, TextSpan, TextStyle, TextDirection;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -59,13 +53,10 @@ void main() {
       final canvas = _MockCanvas();
 
       // Render frame with 1000 unique text entries
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
-          returnsNormally,
-          reason: 'Cache overflow should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Cache overflow should not crash');
 
       // Verify cache size bounded by maxSize
-      expect(textCache.length, lessThanOrEqualTo(500),
-          reason: 'Cache size should not exceed maxSize (LRU eviction)');
+      expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should not exceed maxSize (LRU eviction)');
 
       print('Cache overflow test: '
           '1000 unique labels, cache size ${textCache.length} (≤500), '
@@ -75,7 +66,8 @@ void main() {
     // TD-003: Cache hit rate testing requires real Canvas (see text_heavy_chart_test.dart)
     // MockCanvas doesn't simulate text layout, so cache.get() always returns null
     // Cache hit rate is already validated in integration/rendering/text_heavy_chart_test.dart
-    test('Hit rate stabilizes after cache population', () {}, skip: 'Cache hit rate testing requires real Canvas - covered in integration tests (TD-003)');
+    test('Hit rate stabilizes after cache population', () {},
+        skip: 'Cache hit rate testing requires real Canvas - covered in integration tests (TD-003)');
 
     test('No unbounded memory growth', () {
       final textCache = LinkedHashMapTextLayoutCache(maxSize: 500);
@@ -112,15 +104,13 @@ void main() {
         pipeline.renderFrame(canvas, const Size(800, 600));
 
         // After each frame, cache size should remain bounded
-        expect(textCache.length, lessThanOrEqualTo(500),
-            reason: 'Cache size should remain ≤500 across frames');
+        expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should remain ≤500 across frames');
       }
 
       final finalLength = textCache.length;
 
       // After 10 frames, cache should still be bounded
-      expect(finalLength, lessThanOrEqualTo(500),
-          reason: 'Cache size should not grow unbounded');
+      expect(finalLength, lessThanOrEqualTo(500), reason: 'Cache size should not grow unbounded');
 
       print('Memory growth test: '
           '10 frames with 1000 labels each, '
@@ -130,7 +120,8 @@ void main() {
     // TD-003: Cache statistics testing requires real Canvas (see text_heavy_chart_test.dart)
     // MockCanvas doesn't simulate text layout, so cache.get() always returns null
     // Cache statistics are already validated in integration/rendering/text_heavy_chart_test.dart
-    test('Cache statistics accuracy under overflow', () {}, skip: 'Cache statistics testing requires real Canvas - covered in integration tests (TD-003)');
+    test('Cache statistics accuracy under overflow', () {},
+        skip: 'Cache statistics testing requires real Canvas - covered in integration tests (TD-003)');
 
     test('Mixed repeated and unique labels', () {
       final textCache = LinkedHashMapTextLayoutCache(maxSize: 500);
@@ -170,8 +161,7 @@ void main() {
       final afterFirstLength = textCache.length;
 
       // Cache should contain ~500 unique labels
-      expect(afterFirstLength, lessThanOrEqualTo(500),
-          reason: 'Cache should contain unique labels only');
+      expect(afterFirstLength, lessThanOrEqualTo(500), reason: 'Cache should contain unique labels only');
 
       // Second render should have high hit rate (all labels cached)
       pipeline.renderFrame(canvas, const Size(800, 600));
@@ -179,8 +169,7 @@ void main() {
       final hitRate = textCache.hitRate;
 
       // With only 500 unique labels (all fit in cache), hit rate should be very high
-      expect(hitRate, greaterThan(0.7),
-          reason: 'Hit rate should be high when all labels fit in cache');
+      expect(hitRate, greaterThan(0.7), reason: 'Hit rate should be high when all labels fit in cache');
 
       print('Mixed labels test: '
           '1000 labels (500 unique), '
@@ -219,13 +208,10 @@ void main() {
       final canvas = _MockCanvas();
 
       // Should handle extreme overflow without crash
-      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)),
-          returnsNormally,
-          reason: 'Extreme overflow (5000 labels) should not crash');
+      expect(() => pipeline.renderFrame(canvas, const Size(800, 600)), returnsNormally, reason: 'Extreme overflow (5000 labels) should not crash');
 
       // Cache size should still be bounded
-      expect(textCache.length, lessThanOrEqualTo(500),
-          reason: 'Cache size should remain ≤500 even with 5000 labels');
+      expect(textCache.length, lessThanOrEqualTo(500), reason: 'Cache size should remain ≤500 even with 5000 labels');
 
       print('Extreme overflow test: '
           '5000 unique labels, '
@@ -260,8 +246,7 @@ class _CacheOverflowLayer implements RenderLayer {
     for (int i = 0; i < labelCount; i++) {
       final text = uniqueStyles ? 'Label$i' : 'Label${i % 500}';
       final fontSize = uniqueStyles ? 12.0 + (i % 10) : 12.0;
-      final style =
-          TextStyle(fontSize: fontSize, color: const Color(0xFF000000));
+      final style = TextStyle(fontSize: fontSize, color: const Color(0xFF000000));
 
       final textPainter = context.textPainterPool.acquire();
       try {
@@ -269,16 +254,14 @@ class _CacheOverflowLayer implements RenderLayer {
         final cached = context.textCache.get(text, style);
         if (cached != null) {
           // Cache hit: use cached painter
-          cached.paint(
-              context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
+          cached.paint(context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
         } else {
           // Cache miss: create, layout, cache, paint
           textPainter.text = TextSpan(text: text, style: style);
           textPainter.textDirection = TextDirection.ltr;
           textPainter.layout();
           context.textCache.put(text, style, textPainter);
-          textPainter.paint(
-              context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
+          textPainter.paint(context.canvas, Offset(i % 800.0, (i / 800).floor() * 20.0));
         }
       } finally {
         context.textPainterPool.release(textPainter);

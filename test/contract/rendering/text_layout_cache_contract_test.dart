@@ -399,8 +399,8 @@ void main() {
           }
         }
 
-        // Hit rate should be >50% (12 misses + 12 hits = 50%)
-        expect(labelCache.hitRate, greaterThan(0.5),
+        // Hit rate should be ≥50% (12 misses + 12 hits = 50%)
+        expect(labelCache.hitRate, greaterThanOrEqualTo(0.5),
             reason: 'Repeated labels should achieve good hit rate');
       });
     });

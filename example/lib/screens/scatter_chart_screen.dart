@@ -151,17 +151,20 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
             ChartSeries(
               id: 'series_a',
               name: 'Series A',
-              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 20, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'series_b',
               name: 'Series B',
-              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 40, maxY: 70).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 20, minY: 40, maxY: 70).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'series_c',
               name: 'Series C',
-              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 60, maxY: 90).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 20, minY: 60, maxY: 90).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           title: 'Multi-Series Scatter',

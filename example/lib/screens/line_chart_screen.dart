@@ -82,9 +82,7 @@ class _LineChartScreenState extends State<LineChartScreen> {
             ChartSeries(
               id: 'linear_data',
               name: 'Linear Growth',
-              points: ChartDataGenerator.generateLinearData(pointCount: 8)
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points: ChartDataGenerator.generateLinearData(pointCount: 8).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           width: constraints.maxWidth,
@@ -107,9 +105,7 @@ class _LineChartScreenState extends State<LineChartScreen> {
             ChartSeries(
               id: 'sine_wave',
               name: 'Sine Wave',
-              points: ChartDataGenerator.generateSineWave()
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points: ChartDataGenerator.generateSineWave().map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           width: constraints.maxWidth,
@@ -132,9 +128,7 @@ class _LineChartScreenState extends State<LineChartScreen> {
             ChartSeries(
               id: 'random_data',
               name: 'Random Data',
-              points: ChartDataGenerator.generateRandomData(pointCount: 10)
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points: ChartDataGenerator.generateRandomData(pointCount: 10).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           width: constraints.maxWidth,
@@ -157,23 +151,18 @@ class _LineChartScreenState extends State<LineChartScreen> {
             ChartSeries(
               id: 'revenue',
               name: 'Revenue',
-              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 100)
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 100).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'expenses',
               name: 'Expenses',
-              points: ChartDataGenerator.generateRandomData(pointCount: 8, minY: 500, maxY: 800)
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 8, minY: 500, maxY: 800).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'profit',
               name: 'Profit',
-              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 20)
-                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                  .toList(),
+              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 20).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           title: 'Financial Overview',

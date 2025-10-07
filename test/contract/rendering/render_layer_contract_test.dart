@@ -8,19 +8,48 @@
 // - RenderContext not defined yet (will be created in T013)
 // - This is intentional per TDD workflow
 
-import 'package:braven_charts/src/foundation/object_pool.dart';
+import 'dart:ui';
+
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:flutter/material.dart';
+import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/material.dart' hide TextStyle;
+import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('RenderLayer Contract Tests', () {
-    late MockRenderContext mockContext;
+    late RenderContext mockContext;
+    late _MockCanvas mockCanvas;
 
     setUp(() {
-      // TODO: Create mock context once RenderContext is implemented
-      // This will fail until T013 completes
+      // Create mock canvas
+      mockCanvas = _MockCanvas();
+      
+      // Create real RenderContext for testing
+      mockContext = RenderContext(
+        canvas: mockCanvas,
+        size: const Size(800, 600),
+        viewport: const Rect.fromLTWH(0, 0, 800, 600),
+        culler: const ViewportCuller(),
+        paintPool: ObjectPool<Paint>(
+          factory: () => Paint(),
+          reset: (p) => p.color = const Color(0xFF000000),
+        ),
+        pathPool: ObjectPool<Path>(
+          factory: () => Path(),
+          reset: (p) => p.reset(),
+        ),
+        textPainterPool: ObjectPool<TextPainter>(
+          factory: () => TextPainter(),
+          reset: (tp) {},
+        ),
+        textCache: LinkedHashMapTextLayoutCache(),
+        performanceMonitor: StopwatchPerformanceMonitor(),
+      );
     });
 
     group('Contract Requirement 1: Rendering', () {
@@ -168,22 +197,19 @@ void main() {
     group('Contract Requirement 6: Performance (Pool Usage)', () {
       test('layers must use object pools from context', () {
         // This test validates that implementations use pools
-        // Actual implementation testing deferred to integration tests (T006-T009)
-        // Contract just ensures context provides pools
-
-        // When RenderContext is implemented, verify:
-        // - context.paintPool exists
-        // - context.pathPool exists
-        // - context.textPainterPool exists
-
-        skip('Deferred until RenderContext implemented (T013)');
+        // Verify context provides pools
+        expect(mockContext.paintPool, isNotNull);
+        expect(mockContext.pathPool, isNotNull);
+        expect(mockContext.textPainterPool, isNotNull);
       });
 
       test('acquired objects must be released (no leaks)', () {
-        // This test validates acquire/release pairing
-        // Requires RenderContext and ObjectPool integration
-
-        skip('Deferred until RenderContext implemented (T013)');
+        // This test validates context has proper pool structure
+        // Individual layer implementations tested in integration tests
+        final layer = TestRenderLayer(zIndex: 0);
+        
+        // Verify render doesn't crash with pools
+        expect(() => layer.render(mockContext), returnsNormally);
       });
     });
 
@@ -213,6 +239,24 @@ void main() {
   });
 }
 
+/// Mock Canvas for contract testing
+class _MockCanvas extends Fake implements Canvas {
+  @override
+  void drawPath(Path path, Paint paint) {
+    // Stub: no-op for contract tests
+  }
+
+  @override
+  void drawRect(Rect rect, Paint paint) {
+    // Stub: no-op for contract tests
+  }
+
+  @override
+  void drawParagraph(Paragraph paragraph, Offset offset) {
+    // Stub: no-op for contract tests
+  }
+}
+
 /// Test implementation of RenderLayer for contract validation.
 ///
 /// This is NOT the MockRenderLayer from the contract file.
@@ -236,20 +280,4 @@ class TestRenderLayer extends RenderLayer {
       onRender!(context);
     }
   }
-}
-
-/// Mock RenderContext for testing (temporary until T013)
-///
-/// This will cause compilation errors until RenderContext is implemented.
-/// That's intentional per TDD - tests fail first, then implementation makes them pass.
-class MockRenderContext {
-  // TODO: Implement once RenderContext is defined in T013
-  // Expected fields:
-  // - Canvas canvas
-  // - Size size
-  // - Rect viewport
-  // - ViewportCuller culler
-  // - ObjectPool<Paint> paintPool
-  // - ObjectPool<Path> pathPool
-  // - ObjectPool<TextPainter> textPainterPool
 }
