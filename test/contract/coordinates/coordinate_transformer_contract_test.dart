@@ -8,8 +8,6 @@
 /// Expected: FAIL until T024 implements the interface
 library;
 
-import 'dart:math' show Point, Rectangle;
-
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 

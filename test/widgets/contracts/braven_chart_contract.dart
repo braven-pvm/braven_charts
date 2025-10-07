@@ -17,7 +17,7 @@ void main() {
           () => BravenChart(
             chartType: ChartType.line,
             series: [
-              ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)]),
+              ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)]),
             ],
           ),
           returnsNormally,
@@ -28,7 +28,7 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])],
             width: 400,
             height: 300,
           ),
@@ -40,7 +40,7 @@ void main() {
         expect(
           () => BravenChart(
             chartType: ChartType.line,
-            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(0, 0)])],
+            series: [ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])],
             theme: ChartTheme.defaultLight,
           ),
           returnsNormally,

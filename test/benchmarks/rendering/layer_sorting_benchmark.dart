@@ -26,7 +26,6 @@
 library;
 
 import 'dart:math' show Random;
-import 'dart:ui' show Canvas, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 

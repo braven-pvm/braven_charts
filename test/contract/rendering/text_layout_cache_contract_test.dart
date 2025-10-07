@@ -44,12 +44,9 @@ void main() {
         final retrieved1 = cache.get('Label', testStyle1);
         final retrieved2 = cache.get('Label', testStyle2);
 
-        expect(retrieved1, same(painter1),
-            reason: 'Should retrieve painter for style1');
-        expect(retrieved2, same(painter2),
-            reason: 'Should retrieve painter for style2');
-        expect(retrieved1, isNot(same(retrieved2)),
-            reason: 'Different styles should have different cache entries');
+        expect(retrieved1, same(painter1), reason: 'Should retrieve painter for style1');
+        expect(retrieved2, same(painter2), reason: 'Should retrieve painter for style2');
+        expect(retrieved1, isNot(same(retrieved2)), reason: 'Different styles should have different cache entries');
       });
 
       test('different text with same style have different keys', () {
@@ -95,8 +92,7 @@ void main() {
 
         final avgHitMicros = stopwatch.elapsedMicroseconds / 100;
 
-        expect(avgHitMicros, lessThan(500),
-            reason: 'Cache hit must be <500 microseconds (0.5ms)');
+        expect(avgHitMicros, lessThan(500), reason: 'Cache hit must be <500 microseconds (0.5ms)');
       });
     });
 
@@ -114,8 +110,7 @@ void main() {
 
         final avgMissMicros = stopwatch.elapsedMicroseconds / 100;
 
-        expect(avgMissMicros, lessThan(500),
-            reason: 'Cache miss must be <500 microseconds (0.5ms)');
+        expect(avgMissMicros, lessThan(500), reason: 'Cache miss must be <500 microseconds (0.5ms)');
       });
 
       test('get() returns null for non-existent key', () {
@@ -140,15 +135,13 @@ void main() {
         }
 
         // Cache length should not exceed maxSize
-        expect(smallCache.length, lessThanOrEqualTo(3),
-            reason: 'Cache must respect maxSize boundary');
+        expect(smallCache.length, lessThanOrEqualTo(3), reason: 'Cache must respect maxSize boundary');
       });
 
       test('default maxSize is 500', () {
         final defaultCache = LinkedHashMapTextLayoutCache();
 
-        expect(defaultCache.maxSize, equals(500),
-            reason: 'Default maxSize should be 500 per contract');
+        expect(defaultCache.maxSize, equals(500), reason: 'Default maxSize should be 500 per contract');
       });
     });
 
@@ -186,18 +179,13 @@ void main() {
         // Add fourth entry (should evict 'First')
         smallCache.put('Fourth', testStyle1, painter4);
 
-        expect(smallCache.length, equals(3),
-            reason: 'Cache should still be at maxSize');
+        expect(smallCache.length, equals(3), reason: 'Cache should still be at maxSize');
 
-        expect(smallCache.get('First', testStyle1), isNull,
-            reason: 'Oldest entry (First) should be evicted');
+        expect(smallCache.get('First', testStyle1), isNull, reason: 'Oldest entry (First) should be evicted');
 
-        expect(smallCache.get('Second', testStyle1), isNotNull,
-            reason: 'Second entry should still exist');
-        expect(smallCache.get('Third', testStyle1), isNotNull,
-            reason: 'Third entry should still exist');
-        expect(smallCache.get('Fourth', testStyle1), isNotNull,
-            reason: 'Fourth entry should exist');
+        expect(smallCache.get('Second', testStyle1), isNotNull, reason: 'Second entry should still exist');
+        expect(smallCache.get('Third', testStyle1), isNotNull, reason: 'Third entry should still exist');
+        expect(smallCache.get('Fourth', testStyle1), isNotNull, reason: 'Fourth entry should exist');
       });
 
       test('put() on existing key does not create duplicate', () {
@@ -216,12 +204,10 @@ void main() {
 
         cache.put('Label', testStyle1, painter2);
 
-        expect(cache.length, equals(initialLength),
-            reason: 'Overwriting existing key should not increase length');
+        expect(cache.length, equals(initialLength), reason: 'Overwriting existing key should not increase length');
 
         final retrieved = cache.get('Label', testStyle1);
-        expect(retrieved, same(painter2),
-            reason: 'Should retrieve most recently put painter');
+        expect(retrieved, same(painter2), reason: 'Should retrieve most recently put painter');
       });
     });
 
@@ -247,15 +233,13 @@ void main() {
 
         final hitRate = cache.hitRate;
 
-        expect(hitRate, closeTo(0.7, 0.01),
-            reason: '7 hits / 10 lookups = 0.7 hit rate');
+        expect(hitRate, closeTo(0.7, 0.01), reason: '7 hits / 10 lookups = 0.7 hit rate');
       });
 
       test('hitRate handles division by zero (no lookups yet)', () {
         final freshCache = LinkedHashMapTextLayoutCache();
 
-        expect(freshCache.hitRate, equals(0.0),
-            reason: 'Hit rate should be 0.0 when no lookups performed');
+        expect(freshCache.hitRate, equals(0.0), reason: 'Hit rate should be 0.0 when no lookups performed');
       });
 
       test('hitRate is in range [0.0, 1.0]', () {
@@ -296,13 +280,10 @@ void main() {
 
         cache.clear();
 
-        expect(cache.length, equals(0),
-            reason: 'Cache should be empty after clear()');
+        expect(cache.length, equals(0), reason: 'Cache should be empty after clear()');
 
-        expect(cache.get('Label1', testStyle1), isNull,
-            reason: 'Cleared entries should return null');
-        expect(cache.get('Label2', testStyle1), isNull,
-            reason: 'Cleared entries should return null');
+        expect(cache.get('Label1', testStyle1), isNull, reason: 'Cleared entries should return null');
+        expect(cache.get('Label2', testStyle1), isNull, reason: 'Cleared entries should return null');
       });
 
       test('clear() resets hit/miss counters', () {
@@ -319,15 +300,13 @@ void main() {
 
         cache.clear();
 
-        expect(cache.hitRate, equals(0.0),
-            reason: 'Hit rate should reset to 0.0 after clear()');
+        expect(cache.hitRate, equals(0.0), reason: 'Hit rate should reset to 0.0 after clear()');
       });
     });
 
     group('length property', () {
       test('length reflects current cache size', () {
-        expect(cache.length, equals(0),
-            reason: 'Empty cache should have length 0');
+        expect(cache.length, equals(0), reason: 'Empty cache should have length 0');
 
         final painter1 = TextPainter(
           text: TextSpan(text: 'Label1', style: testStyle1),
@@ -360,8 +339,7 @@ void main() {
 
           smallCache.put('Label$i', testStyle1, painter);
 
-          expect(smallCache.length, lessThanOrEqualTo(5),
-              reason: 'Length should never exceed maxSize');
+          expect(smallCache.length, lessThanOrEqualTo(5), reason: 'Length should never exceed maxSize');
         }
       });
     });
@@ -400,8 +378,7 @@ void main() {
         }
 
         // Hit rate should be ≥50% (12 misses + 12 hits = 50%)
-        expect(labelCache.hitRate, greaterThanOrEqualTo(0.5),
-            reason: 'Repeated labels should achieve good hit rate');
+        expect(labelCache.hitRate, greaterThanOrEqualTo(0.5), reason: 'Repeated labels should achieve good hit rate');
       });
     });
   });

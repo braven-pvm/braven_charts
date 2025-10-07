@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
-import 'package:braven_charts/src/foundation/performance/batch_processor.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
+import 'package:braven_charts/src/foundation/performance/batch_processor.dart';
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ObjectPool<T> Unit Tests', () {
@@ -187,8 +187,7 @@ void main() {
         pool.release(obj3);
 
         // Pool should only hold maxSize objects
-        expect(
-            pool.statistics.currentSize, equals(1)); // Only last release kept
+        expect(pool.statistics.currentSize, equals(1)); // Only last release kept
       });
 
       test('throws assertion error for untracked object', () {
@@ -305,8 +304,7 @@ void main() {
         final obj2 = pool.acquire(); // Reuses obj1
         pool.release(obj2);
 
-        expect(
-            pool.statistics.currentSize, equals(1)); // Only one object in pool
+        expect(pool.statistics.currentSize, equals(1)); // Only one object in pool
       });
 
       test('tracks currentInUse correctly', () {
@@ -561,17 +559,14 @@ void main() {
       });
 
       test('applies margin correctly', () {
-        final culler =
-            const ViewportCuller(margin: 0.5); // 50% margin for clear math
+        final culler = const ViewportCuller(margin: 0.5); // 50% margin for clear math
         final points = [
           const ChartDataPoint(x: 4.0, y: 5.0), // Should be visible with margin
           const ChartDataPoint(x: 10.0, y: 5.0),
-          const ChartDataPoint(
-              x: 16.0, y: 5.0), // Should be visible with margin
+          const ChartDataPoint(x: 16.0, y: 5.0), // Should be visible with margin
         ];
 
-        final viewport =
-            const dr.DataRange(min: 8.0, max: 12.0); // Range of 4, center at 10
+        final viewport = const dr.DataRange(min: 8.0, max: 12.0); // Range of 4, center at 10
         // With 50% padding: paddedMin = 8 - (4 * 0.5) = 6, paddedMax = 12 + (4 * 0.5) = 14
         final visible = culler.cull(
           points: points,

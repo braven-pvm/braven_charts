@@ -11,10 +11,10 @@ void main() {
     test('MUST accept position and label', () {
       final annotation = TextAnnotation(
         position: const Offset(100, 50),
-        label: 'Test',
+        text: 'Test',
       );
       expect(annotation.position, equals(const Offset(100, 50)));
-      expect(annotation.label, equals('Test'));
+      expect(annotation.text, equals('Test'));
     });
   });
 

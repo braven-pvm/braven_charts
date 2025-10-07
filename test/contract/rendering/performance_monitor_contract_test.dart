@@ -65,10 +65,8 @@ void main() {
         final measuredMs = metrics.frameTime.inMilliseconds;
 
         // Allow ±2ms tolerance for platform variance
-        expect(measuredMs, greaterThanOrEqualTo(3),
-            reason: 'Should measure at least 3ms (5ms - 2ms tolerance)');
-        expect(measuredMs, lessThanOrEqualTo(10),
-            reason: 'Should measure at most 10ms (5ms + 5ms platform variance)');
+        expect(measuredMs, greaterThanOrEqualTo(3), reason: 'Should measure at least 3ms (5ms - 2ms tolerance)');
+        expect(measuredMs, lessThanOrEqualTo(10), reason: 'Should measure at most 10ms (5ms + 5ms platform variance)');
       });
 
       test('uses microsecond precision', () async {
@@ -79,8 +77,7 @@ void main() {
         final metrics = monitor.currentMetrics;
 
         // Should capture sub-millisecond precision
-        expect(metrics.frameTime.inMicroseconds, greaterThan(1000),
-            reason: 'Should use microsecond precision');
+        expect(metrics.frameTime.inMicroseconds, greaterThan(1000), reason: 'Should use microsecond precision');
       });
     });
 
@@ -96,8 +93,7 @@ void main() {
 
         final afterMetrics = monitor.currentMetrics;
 
-        expect(afterMetrics.jankCount, equals(initialJankCount + 1),
-            reason: 'Jank counter should increment for >16ms frame');
+        expect(afterMetrics.jankCount, equals(initialJankCount + 1), reason: 'Jank counter should increment for >16ms frame');
       });
 
       test('frames ≤16ms do not increment jank counter', () async {
@@ -111,8 +107,7 @@ void main() {
 
         final afterMetrics = monitor.currentMetrics;
 
-        expect(afterMetrics.jankCount, equals(initialJankCount),
-            reason: 'Jank counter should not increment for ≤16ms frame');
+        expect(afterMetrics.jankCount, equals(initialJankCount), reason: 'Jank counter should not increment for ≤16ms frame');
       });
 
       test('100% jank detection accuracy', () async {
@@ -133,8 +128,7 @@ void main() {
 
         final metrics = monitor.currentMetrics;
 
-        expect(metrics.jankCount, equals(5),
-            reason: 'Should detect exactly 5 jank frames');
+        expect(metrics.jankCount, equals(5), reason: 'Should detect exactly 5 jank frames');
       });
     });
 
@@ -153,8 +147,7 @@ void main() {
 
         final avgOverheadMicros = stopwatch.elapsedMicroseconds / 100;
 
-        expect(avgOverheadMicros, lessThan(1000),
-            reason: 'Monitoring overhead must be <1ms (1000 microseconds)');
+        expect(avgOverheadMicros, lessThan(1000), reason: 'Monitoring overhead must be <1ms (1000 microseconds)');
       });
     });
 
@@ -173,8 +166,7 @@ void main() {
         final metrics = smallMonitor.currentMetrics;
 
         // This validates that metrics calculation works with bounded history
-        expect(metrics.frameTime, isNotNull,
-            reason: 'Metrics should work with bounded history');
+        expect(metrics.frameTime, isNotNull, reason: 'Metrics should work with bounded history');
       });
 
       test('LRU eviction removes oldest frames', () {
@@ -191,8 +183,7 @@ void main() {
         // Metrics should be calculated from most recent 3 frames only
         final metrics = smallMonitor.currentMetrics;
 
-        expect(metrics.averageFrameTime, isNotNull,
-            reason: 'LRU eviction should maintain valid metrics');
+        expect(metrics.averageFrameTime, isNotNull, reason: 'LRU eviction should maintain valid metrics');
       });
     });
 
@@ -228,8 +219,7 @@ void main() {
 
         // After reset, should be clean state
         metrics = monitor.currentMetrics;
-        expect(metrics.jankCount, equals(0),
-            reason: 'Jank count should be zero after reset');
+        expect(metrics.jankCount, equals(0), reason: 'Jank count should be zero after reset');
       });
 
       test('reset() allows test reproducibility', () {
@@ -248,8 +238,7 @@ void main() {
         final secondMetrics = monitor.currentMetrics;
 
         // Both runs should have similar frame time (reproducible)
-        expect(secondMetrics.jankCount, equals(0),
-            reason: 'Reset should enable independent test runs');
+        expect(secondMetrics.jankCount, equals(0), reason: 'Reset should enable independent test runs');
       });
     });
 
@@ -280,8 +269,7 @@ void main() {
         final metrics2 = monitor.currentMetrics;
 
         // metrics1 should not be mutated by second frame
-        expect(metrics1, isNot(same(metrics2)),
-            reason: 'Each currentMetrics call should return new snapshot');
+        expect(metrics1, isNot(same(metrics2)), reason: 'Each currentMetrics call should return new snapshot');
       });
     });
 
@@ -297,8 +285,7 @@ void main() {
         // Default constructor should use 120
         final defaultMonitor = StopwatchPerformanceMonitor();
 
-        expect(defaultMonitor.maxHistorySize, equals(120),
-            reason: 'Default maxHistorySize should be 120 (2 seconds @ 60fps)');
+        expect(defaultMonitor.maxHistorySize, equals(120), reason: 'Default maxHistorySize should be 120 (2 seconds @ 60fps)');
       });
     });
   });
