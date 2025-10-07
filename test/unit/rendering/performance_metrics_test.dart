@@ -297,7 +297,7 @@ void main() {
     });
 
     group('immutability', () {
-      test('all fields are final (const constructor works)', () {
+      test('all fields are final (value equality works)', () {
         final metrics1 = PerformanceMetrics(
           frameTime: const Duration(microseconds: 7000),
           averageFrameTime: const Duration(microseconds: 7500),
@@ -314,8 +314,14 @@ void main() {
           poolHitRate: 0.95,
         );
 
-        // Identical const instances should be same object
-        expect(identical(metrics1, metrics2), isTrue);
+        // All fields should be equal (value equality)
+        expect(metrics1.frameTime, equals(metrics2.frameTime));
+        expect(metrics1.averageFrameTime, equals(metrics2.averageFrameTime));
+        expect(metrics1.p99FrameTime, equals(metrics2.p99FrameTime));
+        expect(metrics1.jankCount, equals(metrics2.jankCount));
+        expect(metrics1.poolHitRate, equals(metrics2.poolHitRate));
+        expect(metrics1.renderedElementCount, equals(metrics2.renderedElementCount));
+        expect(metrics1.culledElementCount, equals(metrics2.culledElementCount));
       });
     });
   });

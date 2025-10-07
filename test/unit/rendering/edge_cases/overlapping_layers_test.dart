@@ -368,4 +368,9 @@ class _TrackedLayer implements RenderLayer {
 }
 
 // Mock canvas for testing
-class _MockCanvas extends Fake implements Canvas {}
+class _MockCanvas extends Fake implements Canvas {
+  @override
+  void drawRect(Rect rect, Paint paint) {
+    // Stub implementation - no-op for testing
+  }
+}
