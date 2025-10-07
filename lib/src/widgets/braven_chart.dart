@@ -957,8 +957,7 @@ class _AnnotationOverlay extends StatelessWidget {
   final List<ChartAnnotation> annotations;
   final bool interactiveAnnotations;
   final void Function(ChartAnnotation annotation)? onAnnotationTap;
-  final void Function(ChartAnnotation annotation, Offset newPosition)?
-      onAnnotationDragged;
+  final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
 
   @override
   Widget build(BuildContext context) {
@@ -991,20 +990,16 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a text annotation widget.
   Widget _buildTextAnnotation(TextAnnotation annotation) {
-    Widget textWidget = Positioned(
+    final Widget textWidget = Positioned(
       left: annotation.position.dx,
       top: annotation.position.dy,
       child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null
-            ? () => onAnnotationTap!(annotation)
-            : null,
+        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: annotation.backgroundColor,
-            border: annotation.borderColor != null
-                ? Border.all(color: annotation.borderColor!)
-                : null,
+            border: annotation.borderColor != null ? Border.all(color: annotation.borderColor!) : null,
           ),
           child: Text(
             annotation.text,
@@ -1029,9 +1024,7 @@ class _AnnotationOverlay extends StatelessWidget {
       left: 100, // Placeholder - would use coordinate transformation
       top: 100, // Placeholder - would use coordinate transformation
       child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null
-            ? () => onAnnotationTap!(annotation)
-            : null,
+        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: CustomPaint(
           size: Size(annotation.markerSize * 2, annotation.markerSize * 2),
           painter: _MarkerPainter(
@@ -1054,9 +1047,7 @@ class _AnnotationOverlay extends StatelessWidget {
       width: 200, // Placeholder
       height: 100, // Placeholder
       child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null
-            ? () => onAnnotationTap!(annotation)
-            : null,
+        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: Container(
           decoration: BoxDecoration(
             color: annotation.style.backgroundColor ?? Colors.blue.withOpacity(0.2),
@@ -1076,9 +1067,7 @@ class _AnnotationOverlay extends StatelessWidget {
     // Full implementation would use coordinate transformation
     return Positioned.fill(
       child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null
-            ? () => onAnnotationTap!(annotation)
-            : null,
+        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: CustomPaint(
           painter: _ThresholdPainter(
             axis: annotation.axis,
@@ -1098,9 +1087,7 @@ class _AnnotationOverlay extends StatelessWidget {
     // Full implementation would calculate and render the trend
     return Positioned.fill(
       child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null
-            ? () => onAnnotationTap!(annotation)
-            : null,
+        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: CustomPaint(
           painter: _TrendPainter(
             trendType: annotation.trendType,
@@ -1212,9 +1199,7 @@ class _MarkerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MarkerPainter oldDelegate) {
-    return shape != oldDelegate.shape ||
-        size != oldDelegate.size ||
-        color != oldDelegate.color;
+    return shape != oldDelegate.shape || size != oldDelegate.size || color != oldDelegate.color;
   }
 }
 
@@ -1256,10 +1241,7 @@ class _ThresholdPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ThresholdPainter oldDelegate) {
-    return axis != oldDelegate.axis ||
-        value != oldDelegate.value ||
-        color != oldDelegate.color ||
-        width != oldDelegate.width;
+    return axis != oldDelegate.axis || value != oldDelegate.value || color != oldDelegate.color || width != oldDelegate.width;
   }
 }
 
@@ -1293,8 +1275,6 @@ class _TrendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TrendPainter oldDelegate) {
-    return trendType != oldDelegate.trendType ||
-        color != oldDelegate.color ||
-        width != oldDelegate.width;
+    return trendType != oldDelegate.trendType || color != oldDelegate.color || width != oldDelegate.width;
   }
 }

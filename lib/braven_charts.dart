@@ -15,6 +15,10 @@ export 'src/coordinates/universal_coordinate_transformer.dart';
 export 'src/coordinates/viewport_state.dart';
 // Foundation Layer - Core data structures and utilities
 export 'src/foundation/foundation.dart';
+// Theming Layer - Chart themes and styling
+export 'src/theming/chart_theme.dart';
+// Widgets Layer - User-facing chart widgets (Layer 5)
+export 'src/widgets/widgets.dart';
 
 // TODO: Uncomment as layers are implemented
 // Annotation system exports
