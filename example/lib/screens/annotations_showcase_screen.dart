@@ -13,12 +13,10 @@ class AnnotationsShowcaseScreen extends StatefulWidget {
   const AnnotationsShowcaseScreen({super.key});
 
   @override
-  State<AnnotationsShowcaseScreen> createState() =>
-      _AnnotationsShowcaseScreenState();
+  State<AnnotationsShowcaseScreen> createState() => _AnnotationsShowcaseScreenState();
 }
 
-class _AnnotationsShowcaseScreenState
-    extends State<AnnotationsShowcaseScreen> {
+class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
   // Sample data for demonstrations
   final _salesData = ChartSeries(
     id: 'sales',
@@ -127,32 +125,27 @@ class _AnnotationsShowcaseScreenState
                 FilterChip(
                   label: const Text('Text'),
                   selected: _showTextAnnotations,
-                  onSelected: (value) =>
-                      setState(() => _showTextAnnotations = value),
+                  onSelected: (value) => setState(() => _showTextAnnotations = value),
                 ),
                 FilterChip(
                   label: const Text('Point'),
                   selected: _showPointAnnotations,
-                  onSelected: (value) =>
-                      setState(() => _showPointAnnotations = value),
+                  onSelected: (value) => setState(() => _showPointAnnotations = value),
                 ),
                 FilterChip(
                   label: const Text('Range'),
                   selected: _showRangeAnnotations,
-                  onSelected: (value) =>
-                      setState(() => _showRangeAnnotations = value),
+                  onSelected: (value) => setState(() => _showRangeAnnotations = value),
                 ),
                 FilterChip(
                   label: const Text('Threshold'),
                   selected: _showThresholdAnnotations,
-                  onSelected: (value) =>
-                      setState(() => _showThresholdAnnotations = value),
+                  onSelected: (value) => setState(() => _showThresholdAnnotations = value),
                 ),
                 FilterChip(
                   label: const Text('Trend'),
                   selected: _showTrendAnnotations,
-                  onSelected: (value) =>
-                      setState(() => _showTrendAnnotations = value),
+                  onSelected: (value) => setState(() => _showTrendAnnotations = value),
                 ),
               ],
             ),

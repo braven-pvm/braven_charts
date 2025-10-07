@@ -1,6 +1,6 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
-import '../data/chart_data_generator.dart';
 import '../widgets/chart_container.dart';
 
 class BarChartScreen extends StatefulWidget {
@@ -69,79 +69,152 @@ class _BarChartScreenState extends State<BarChartScreen> {
   }
 
   Widget _buildGroupedBarChart(BuildContext context) {
-    final data = ChartDataGenerator.generateCategoricalData(
-      categoryCount: 6,
-      seriesCount: 3,
-    );
     return ChartContainer(
       title: 'Grouped Bar Chart',
       subtitle: 'Multiple series side-by-side',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'GROUPED',
-        color: Colors.blue,
-        description: 'Using BarGroupingMode.grouped with vertical orientation.\n'
-            '${data.length} categories × ${data.first.values.length} series\n'
-            'BarPositioner calculates layout automatically',
+      chart: BravenChart(
+        chartType: ChartType.bar,
+        series: [
+          ChartSeries(
+            id: 'q1',
+            name: 'Q1',
+            points: const [
+              ChartDataPoint(x: 1, y: 45),
+              ChartDataPoint(x: 2, y: 62),
+              ChartDataPoint(x: 3, y: 38),
+              ChartDataPoint(x: 4, y: 71),
+            ],
+          ),
+          ChartSeries(
+            id: 'q2',
+            name: 'Q2',
+            points: const [
+              ChartDataPoint(x: 1, y: 52),
+              ChartDataPoint(x: 2, y: 58),
+              ChartDataPoint(x: 3, y: 44),
+              ChartDataPoint(x: 4, y: 68),
+            ],
+          ),
+          ChartSeries(
+            id: 'q3',
+            name: 'Q3',
+            points: const [
+              ChartDataPoint(x: 1, y: 48),
+              ChartDataPoint(x: 2, y: 65),
+              ChartDataPoint(x: 3, y: 41),
+              ChartDataPoint(x: 4, y: 75),
+            ],
+          ),
+        ],
+        title: 'Quarterly Sales',
+        width: 400,
+        height: 300,
       ),
     );
   }
 
   Widget _buildStackedBarChart(BuildContext context) {
-    final data = ChartDataGenerator.generateCategoricalData(
-      categoryCount: 6,
-      seriesCount: 4,
-    );
     return ChartContainer(
       title: 'Stacked Bar Chart',
       subtitle: 'Series stacked on top of each other',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'STACKED',
-        color: Colors.green,
-        description: 'Using BarGroupingMode.stacked with vertical orientation.\n'
-            '${data.length} categories × ${data.first.values.length} series stacked',
+      chart: BravenChart(
+        chartType: ChartType.bar,
+        series: [
+          ChartSeries(
+            id: 'desktop',
+            name: 'Desktop',
+            points: const [
+              ChartDataPoint(x: 1, y: 30),
+              ChartDataPoint(x: 2, y: 28),
+              ChartDataPoint(x: 3, y: 25),
+              ChartDataPoint(x: 4, y: 22),
+              ChartDataPoint(x: 5, y: 20),
+            ],
+          ),
+          ChartSeries(
+            id: 'mobile',
+            name: 'Mobile',
+            points: const [
+              ChartDataPoint(x: 1, y: 50),
+              ChartDataPoint(x: 2, y: 55),
+              ChartDataPoint(x: 3, y: 60),
+              ChartDataPoint(x: 4, y: 65),
+              ChartDataPoint(x: 5, y: 70),
+            ],
+          ),
+          ChartSeries(
+            id: 'tablet',
+            name: 'Tablet',
+            points: const [
+              ChartDataPoint(x: 1, y: 20),
+              ChartDataPoint(x: 2, y: 17),
+              ChartDataPoint(x: 3, y: 15),
+              ChartDataPoint(x: 4, y: 13),
+              ChartDataPoint(x: 5, y: 10),
+            ],
+          ),
+        ],
+        title: 'Device Usage',
+        width: 400,
+        height: 300,
       ),
     );
   }
 
   Widget _buildHorizontalBarChart(BuildContext context) {
-    final data = ChartDataGenerator.generateCategoricalData(
-      categoryCount: 5,
-      seriesCount: 2,
-    );
     return ChartContainer(
       title: 'Horizontal Bar Chart',
       subtitle: 'Bars extending left-to-right',
       height: 250,
       onRefresh: _refreshData,
-      chart: const DemoChartWidget(
-        chartType: 'HORIZONTAL',
-        color: Colors.purple,
-        description: 'Using BarOrientation.horizontal with grouped mode.\n'
-            'Perfect for category name labels',
+      chart: BravenChart(
+        chartType: ChartType.bar,
+        series: [
+          ChartSeries(
+            id: 'sales',
+            name: 'Sales',
+            points: const [
+              ChartDataPoint(x: 1, y: 85),
+              ChartDataPoint(x: 2, y: 72),
+              ChartDataPoint(x: 3, y: 93),
+              ChartDataPoint(x: 4, y: 68),
+            ],
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
 
   Widget _buildNegativeBarChart(BuildContext context) {
-    final data = ChartDataGenerator.generateCategoricalData(
-      categoryCount: 6,
-      seriesCount: 2,
-      allowNegative: true,
-    );
     return ChartContainer(
       title: 'Bar Chart with Negative Values',
       subtitle: 'Stacked bars with positive and negative values',
       height: 300,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'NEGATIVE VALUES',
-        color: Colors.red,
-        description: 'Stacked mode handles negatives correctly.\n'
-            '${data.length} categories with mixed +/- values',
+      chart: BravenChart(
+        chartType: ChartType.bar,
+        series: [
+          ChartSeries(
+            id: 'profit',
+            name: 'Profit',
+            points: const [
+              ChartDataPoint(x: 1, y: 45),
+              ChartDataPoint(x: 2, y: -20),
+              ChartDataPoint(x: 3, y: 60),
+              ChartDataPoint(x: 4, y: -15),
+              ChartDataPoint(x: 5, y: 80),
+              ChartDataPoint(x: 6, y: 35),
+            ],
+          ),
+        ],
+        width: 400,
+        height: 300,
       ),
     );
   }

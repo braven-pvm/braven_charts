@@ -1,3 +1,4 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 import '../data/chart_data_generator.dart';
@@ -74,11 +75,19 @@ class _LineChartScreenState extends State<LineChartScreen> {
       subtitle: 'Linear interpolation between points',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'STRAIGHT',
-        color: Colors.blue,
-        description: 'Using LineStyle.straight with circle markers.\n'
-            'Data: ${ChartDataGenerator.generateLinearData(pointCount: 8).length} points',
+      chart: BravenChart(
+        chartType: ChartType.line,
+        series: [
+          ChartSeries(
+            id: 'linear_data',
+            name: 'Linear Growth',
+            points: ChartDataGenerator.generateLinearData(pointCount: 8)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
@@ -89,11 +98,19 @@ class _LineChartScreenState extends State<LineChartScreen> {
       subtitle: 'Bezier curve interpolation',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'SMOOTH',
-        color: Colors.green,
-        description: 'Using LineStyle.smooth with cubic Bezier curves.\n'
-            'Data: ${ChartDataGenerator.generateSineWave().length} sine wave points',
+      chart: BravenChart(
+        chartType: ChartType.line,
+        series: [
+          ChartSeries(
+            id: 'sine_wave',
+            name: 'Sine Wave',
+            points: ChartDataGenerator.generateSineWave()
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
@@ -104,11 +121,19 @@ class _LineChartScreenState extends State<LineChartScreen> {
       subtitle: 'Step interpolation (stair-step)',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'STEPPED',
-        color: Colors.orange,
-        description: 'Using LineStyle.stepped with square markers.\n'
-            'Data: ${ChartDataGenerator.generateRandomData(pointCount: 10).length} random points',
+      chart: BravenChart(
+        chartType: ChartType.line,
+        series: [
+          ChartSeries(
+            id: 'random_data',
+            name: 'Random Data',
+            points: ChartDataGenerator.generateRandomData(pointCount: 10)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
@@ -119,12 +144,34 @@ class _LineChartScreenState extends State<LineChartScreen> {
       subtitle: 'Multiple series with different markers',
       height: 300,
       onRefresh: _refreshData,
-      chart: const DemoChartWidget(
-        chartType: 'MULTI-SERIES',
-        color: Colors.purple,
-        description: '3 series with smooth interpolation.\n'
-            'Markers: circle, square, triangle\n'
-            'Demonstrates color cycling and marker variety',
+      chart: BravenChart(
+        chartType: ChartType.line,
+        series: [
+          ChartSeries(
+            id: 'revenue',
+            name: 'Revenue',
+            points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 100)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+          ChartSeries(
+            id: 'expenses',
+            name: 'Expenses',
+            points: ChartDataGenerator.generateRandomData(pointCount: 8, minY: 500, maxY: 800)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+          ChartSeries(
+            id: 'profit',
+            name: 'Profit',
+            points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 20)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        title: 'Financial Overview',
+        width: 400,
+        height: 300,
       ),
     );
   }

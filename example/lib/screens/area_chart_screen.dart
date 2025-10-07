@@ -1,3 +1,4 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 import '../data/chart_data_generator.dart';
@@ -74,11 +75,19 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Single color fill with optional line overlay',
       height: 250,
       onRefresh: _refreshData,
-      chart: DemoChartWidget(
-        chartType: 'SOLID FILL',
-        color: Colors.blue,
-        description: 'Using AreaFillStyle.solid with smooth interpolation.\n'
-            'Data: ${ChartDataGenerator.generateSineWave().length} sine wave points',
+      chart: BravenChart(
+        chartType: ChartType.area,
+        series: [
+          ChartSeries(
+            id: 'sine_wave',
+            name: 'Sine Wave',
+            points: ChartDataGenerator.generateSineWave()
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
@@ -89,11 +98,19 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Vertical gradient fill from top to bottom',
       height: 250,
       onRefresh: _refreshData,
-      chart: const DemoChartWidget(
-        chartType: 'GRADIENT',
-        color: Colors.purple,
-        description: 'Using AreaFillStyle.gradient with custom colors.\n'
-            'Gradient shader cached for performance',
+      chart: BravenChart(
+        chartType: ChartType.area,
+        series: [
+          ChartSeries(
+            id: 'gradient_data',
+            name: 'Gradient Area',
+            points: ChartDataGenerator.generateRandomData(pointCount: 15)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }
@@ -104,11 +121,34 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Multiple series stacked on top of each other',
       height: 300,
       onRefresh: _refreshData,
-      chart: const DemoChartWidget(
-        chartType: 'STACKED',
-        color: Colors.green,
-        description: '3 series with AreaStacking algorithm.\n'
-            'Handles positive values and automatic baseline calculation',
+      chart: BravenChart(
+        chartType: ChartType.area,
+        series: [
+          ChartSeries(
+            id: 'series1',
+            name: 'Series 1',
+            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 20, maxY: 50)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+          ChartSeries(
+            id: 'series2',
+            name: 'Series 2',
+            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 15, maxY: 40)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+          ChartSeries(
+            id: 'series3',
+            name: 'Series 3',
+            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 10, maxY: 30)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        title: 'Stacked Areas',
+        width: 400,
+        height: 300,
       ),
     );
   }
@@ -119,11 +159,19 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
       subtitle: 'Area chart with fixed baseline value',
       height: 250,
       onRefresh: _refreshData,
-      chart: const DemoChartWidget(
-        chartType: 'CUSTOM BASELINE',
-        color: Colors.orange,
-        description: 'Using AreaBaselineType.fixed at y=50.\n'
-            'Shows area above and below baseline',
+      chart: BravenChart(
+        chartType: ChartType.area,
+        series: [
+          ChartSeries(
+            id: 'baseline_data',
+            name: 'Data',
+            points: ChartDataGenerator.generateLinearData(pointCount: 10, startY: 40, slope: 0.8)
+                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                .toList(),
+          ),
+        ],
+        width: 400,
+        height: 250,
       ),
     );
   }

@@ -88,8 +88,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color:
-                          _isDarkMode ? Colors.blue.shade100 : Colors.blue.shade900,
+                      color: _isDarkMode ? Colors.blue.shade100 : Colors.blue.shade900,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -97,8 +96,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                     'Customize axes with 4 presets or create your own. '
                     'Apply light, dark, or custom themes.',
                     style: TextStyle(
-                      color:
-                          _isDarkMode ? Colors.blue.shade200 : Colors.blue.shade800,
+                      color: _isDarkMode ? Colors.blue.shade200 : Colors.blue.shade800,
                     ),
                   ),
                 ],
@@ -210,9 +208,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               yAxis: yAxis,
               width: 400,
               height: height,
-              theme: _isDarkMode
-                  ? ChartTheme.defaultDark
-                  : ChartTheme.defaultLight,
+              theme: _isDarkMode ? ChartTheme.defaultDark : ChartTheme.defaultLight,
             ),
             const SizedBox(height: 12),
             Container(
@@ -281,9 +277,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               ),
               width: 400,
               height: 300,
-              theme: _isDarkMode
-                  ? ChartTheme.defaultDark
-                  : ChartTheme.defaultLight,
+              theme: _isDarkMode ? ChartTheme.defaultDark : ChartTheme.defaultLight,
             ),
             const SizedBox(height: 12),
             Container(
@@ -380,9 +374,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: backgroundColor != null
-                        ? (backgroundColor == Colors.white
-                            ? Colors.black
-                            : Colors.white)
+                        ? (backgroundColor == Colors.white ? Colors.black : Colors.white)
                         : (_isDarkMode ? Colors.white : Colors.black),
                   ),
                 ),
@@ -393,9 +385,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               description,
               style: TextStyle(
                 color: backgroundColor != null
-                    ? (backgroundColor == Colors.white
-                        ? Colors.grey.shade700
-                        : Colors.grey.shade400)
+                    ? (backgroundColor == Colors.white ? Colors.grey.shade700 : Colors.grey.shade400)
                     : (_isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700),
               ),
             ),
@@ -415,9 +405,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: backgroundColor != null
-                    ? (backgroundColor == Colors.white
-                        ? Colors.grey.shade100
-                        : Colors.black)
+                    ? (backgroundColor == Colors.white ? Colors.grey.shade100 : Colors.black)
                     : (_isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100),
                 borderRadius: BorderRadius.circular(8),
               ),
