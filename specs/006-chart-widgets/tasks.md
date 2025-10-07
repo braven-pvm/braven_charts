@@ -737,59 +737,98 @@ enum AxisPosition {
 
 **Dependencies**: T021-T024 (BravenChart complete)
 
-### T031: [P] Golden test - Chart types
+### ✅ T031: [P] Golden test - Chart types
 **Description**: Visual regression for all 4 chart types  
 **File**: `test/widgets/golden/chart_types_golden_test.dart`
 
 **Golden Files** (generated):
-- `line_chart.png`
-- `area_chart.png`
-- `bar_chart.png`
-- `scatter_chart.png`
+- `line_chart.png` ✅
+- `area_chart.png` ✅
+- `bar_chart.png` ✅
+- `scatter_chart.png` ✅
+- `multiple_series.png` ✅
 
-**Success Criteria**: Golden files match on regeneration
+**Success Criteria**: Golden files match on regeneration ✅
+
+**Implementation Notes**:
+- Created 5 comprehensive golden tests for all chart types
+- Tests line, area, bar, scatter charts with identical data
+- Tests multiple series rendering (2 series)
+- All tests use 400×300 dimensions for consistency
+- Uses ChartTheme.defaultLight for consistent rendering
+- Fixed parameter names: chartType (not type), ChartSeries.name/.points (not label/data)
 
 ---
 
-### T032: [P] Golden test - Axis configurations
+### ✅ T032: [P] Golden test - Axis configurations
 **Description**: Visual regression for axis presets  
 **File**: `test/widgets/golden/axis_config_golden_test.dart`
 
 **Golden Files**:
-- `axis_defaults.png`
-- `axis_hidden.png` (sparkline)
-- `axis_minimal.png`
-- `axis_grid_only.png`
+- `axis_defaults.png` ✅
+- `axis_hidden.png` (sparkline) ✅
+- `axis_minimal.png` ✅
+- `axis_grid_only.png` ✅
+- `axis_custom.png` ✅
 
-**Success Criteria**: Golden files match axis configurations
+**Success Criteria**: Golden files match axis configurations ✅
+
+**Implementation Notes**:
+- Created 5 comprehensive golden tests for axis configurations
+- Tests all 4 factory presets: defaults(), hidden(), minimal(), gridOnly()
+- Tests custom axis configuration with labels and grid control
+- Validates sparkline mode (hidden axes for compact charts)
+- Uses consistent 400×300 dimensions and test data
 
 ---
 
-### T033: [P] Golden test - Annotations
+### ✅ T033: [P] Golden test - Annotations
 **Description**: Visual regression for all 5 annotation types  
 **File**: `test/widgets/golden/annotations_golden_test.dart`
 
 **Golden Files**:
-- `text_annotation.png`
-- `point_annotation.png`
-- `range_annotation.png`
-- `threshold_annotation.png`
-- `trend_annotation.png`
+- `text_annotation.png` ✅
+- `point_annotation.png` ✅
+- `range_annotation.png` ✅
+- `threshold_horizontal.png` ✅
+- `threshold_vertical.png` ✅
+- `trend_annotation.png` ✅
+- `multiple_annotations.png` ✅
 
-**Success Criteria**: Golden files match annotation rendering
+**Success Criteria**: Golden files match annotation rendering ✅
+
+**Implementation Notes**:
+- Created 7 comprehensive golden tests for all annotation types
+- Tests all 5 annotation types:
+  * TextAnnotation with Offset position (not x/y)
+  * PointAnnotation with dataPointIndex and MarkerShape.star
+  * RangeAnnotation with startX/endX range
+  * ThresholdAnnotation horizontal (AnnotationAxis.y) and vertical (AnnotationAxis.x)
+  * TrendAnnotation with TrendType.linear on scatter chart
+- Tests multiple annotations with z-index ordering (1, 5, 10)
+- Fixed parameter names: position (not x/y), dataPointIndex (not pointIndex), AnnotationAxis.y/.x (not yAxis/xAxis)
 
 ---
 
-### T034: [P] Golden test - Themes
+### ✅ T034: [P] Golden test - Themes
 **Description**: Visual regression for light/dark themes  
 **File**: `test/widgets/golden/themes_golden_test.dart`
 
 **Golden Files**:
-- `light_theme.png`
-- `dark_theme.png`
-- `custom_theme.png`
+- `light_theme.png` ✅
+- `dark_theme.png` ✅
+- `custom_theme.png` ✅
+- `dark_theme_with_annotations.png` ✅
 
-**Success Criteria**: Golden files match theme application
+**Success Criteria**: Golden files match theme application ✅
+
+**Implementation Notes**:
+- Created 4 comprehensive golden tests for theme variations
+- Tests ChartTheme.defaultLight with white background
+- Tests ChartTheme.defaultDark with grey[900] background
+- Tests custom theme (area chart variant of defaultLight)
+- Tests dark theme with annotations (ThresholdAnnotation + PointAnnotation)
+- All tests use multiple series for comprehensive theme validation
 
 ---
 
