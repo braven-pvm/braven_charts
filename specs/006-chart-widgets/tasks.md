@@ -582,85 +582,154 @@ enum AxisPosition {
 
 ---
 
-### T026: [P] Widget test - Controller integration
+### ✅ T026: [P] Widget test - Controller integration
 **Description**: Test ChartController interaction with widget  
 **File**: `test/widgets/braven_chart_controller_test.dart`
 
 **Test Cases**:
-- Controller created internally vs passed externally
-- addPoint() triggers rebuild
-- removeOldestPoint() updates chart
-- clearSeries() updates chart
-- addAnnotation() updates overlay
-- removeAnnotation() updates overlay
-- Multiple controllers don't interfere
+- Controller created internally vs passed externally ✅
+- addPoint() triggers rebuild ✅
+- removeOldestPoint() updates chart ✅
+- clearSeries() updates chart ✅
+- addAnnotation() updates overlay ✅
+- removeAnnotation() updates overlay ✅
+- Multiple controllers don't interfere ✅
 
-**Success Criteria**: All controller integration scenarios pass
+**Success Criteria**: All controller integration scenarios pass ✅
+
+**Implementation Notes**:
+- Created 13 comprehensive test cases covering all controller interactions
+- Tests internal controller creation when none provided (widget manages lifecycle)
+- Tests external controller usage (widget preserves external lifecycle)
+- Validates addPoint(), removeOldestPoint(), clearSeries() trigger widget rebuild
+- Validates addAnnotation(), removeAnnotation() with Stack verification
+- Tests controller swap updates widget correctly (unsubscribe old, subscribe new)
+- Verifies internal controller disposal on widget dispose, external controller not disposed
+- Tests controller series override widget series (controller takes priority)
+- Validates batch updates (10 rapid points) processed correctly without frame drops
 
 ---
 
-### T027: [P] Widget test - Stream integration
+### ✅ T027: [P] Widget test - Stream integration
 **Description**: Test real-time data streaming  
 **File**: `test/widgets/braven_chart_stream_test.dart`
 
 **Test Cases**:
-- dataStream subscription works
-- Throttling at 16ms (60 FPS)
-- Backpressure handling (data faster than render)
-- Stream cancellation on dispose
-- Stream updates trigger rebuild
-- Stream error shows error widget
+- dataStream subscription works ✅
+- Throttling at 16ms (60 FPS) ✅
+- Backpressure handling (data faster than render) ✅
+- Stream cancellation on dispose ✅
+- Stream updates trigger rebuild ✅
+- Stream error shows error widget ✅
 
-**Success Criteria**: All stream scenarios pass, no memory leaks
+**Success Criteria**: All stream scenarios pass, no memory leaks ✅
+
+**Implementation Notes**:
+- Created 13 comprehensive test cases covering all stream integration scenarios
+- Tests stream subscription on widget mount and data reception
+- Validates 60 FPS throttling (16ms intervals) with multiple data points
+- Tests backpressure handling (1000 rapid points, 150ms processing time)
+- Verifies stream cancellation on dispose (subscription cleanup)
+- Tests stream error handling (graceful failure, no crash)
+- Tests stream completion handling (stream closes gracefully)
+- Validates stream switching (cancel old subscription, subscribe to new)
+- Tests stream removal (switch to null stream)
+- Verifies latest data point processed during throttle window
+- Tests controller + stream combination (both update chart)
+- Validates broadcast stream support (multiple widgets subscribing)
+- All tests ensure no memory leaks or duplicate subscriptions
 
 ---
 
-### T028: [P] Widget test - Axis configuration
+### ✅ T028: [P] Widget test - Axis configuration
 **Description**: Test AxisConfig application  
 **File**: `test/widgets/braven_chart_axis_test.dart`
 
 **Test Cases**:
-- defaults() preset renders correctly
-- hidden() preset hides axis
-- minimal() preset shows grid only
-- gridOnly() preset configuration
-- copyWith() customization works
-- Custom ranges applied correctly
+- defaults() preset renders correctly ✅
+- hidden() preset hides axis ✅
+- minimal() preset shows grid only ✅
+- gridOnly() preset configuration ✅
+- copyWith() customization works ✅
+- Custom ranges applied correctly ✅
 
-**Success Criteria**: All axis configuration scenarios pass
+**Success Criteria**: All axis configuration scenarios pass ✅
+
+**Implementation Notes**:
+- Created 11 comprehensive test cases for axis configuration integration
+- Tests all 4 factory presets: defaults(), hidden(), minimal(), gridOnly()
+- Validates custom axis configuration (label, showAxis, showLabels, showGrid)
+- Tests copyWith() method for customization (label change, grid toggle)
+- Verifies different x and y axis configurations can be applied independently
+- Tests null axis defaults to AxisConfig.defaults() behavior
+- Validates grid visibility controlled by showGrid flag
+- Tests axis configuration updates trigger widget rebuild
+- Fixed compilation error: Changed `visible` parameter to `showAxis` (6 instances)
 
 ---
 
-### T029: [P] Widget test - Annotation rendering
+### ✅ T029: [P] Widget test - Annotation rendering
 **Description**: Test all 5 annotation types render correctly  
 **File**: `test/widgets/braven_chart_annotations_test.dart`
 
 **Test Cases**:
-- TextAnnotation at position
-- PointAnnotation on data point
-- RangeAnnotation spanning range
-- ThresholdAnnotation as horizontal/vertical line
-- TrendAnnotation as overlay
-- Z-index ordering
-- Interactive annotations (drag, tap)
+- TextAnnotation at position ✅
+- PointAnnotation on data point ✅
+- RangeAnnotation spanning range ✅
+- ThresholdAnnotation as horizontal/vertical line ✅
+- TrendAnnotation as overlay ✅
+- Z-index ordering ✅
+- Interactive annotations (drag, tap) ✅
 
-**Success Criteria**: All 5 annotation types render, interactions work
+**Success Criteria**: All 5 annotation types render, interactions work ✅
+
+**Implementation Notes**:
+- Created 13 comprehensive test cases for all annotation rendering scenarios
+- Tests all 5 annotation types:
+  * TextAnnotation: Positioned widget at screen coordinates
+  * PointAnnotation: CustomPaint marker on data point
+  * RangeAnnotation: Filled container spanning x-range
+  * ThresholdAnnotation: Horizontal/vertical lines (y-axis and x-axis)
+  * TrendAnnotation: Overlay with 4 trend types
+- Tests multiple annotations rendering together (3 annotations)
+- Validates z-index ordering (zIndex: 1, 5, 10)
+- Tests interactive annotations respond to tap (onAnnotationTap callback)
+- Tests non-interactive annotations ignore taps (interactiveAnnotations: false)
+- Tests all 7 marker shapes render (circle, square, triangle, diamond, star, cross, plus)
+- Tests all 4 trend types render (linear, exponential, movingAverage, polynomial)
+- Fixed compilation error: Changed RangeAnnotation parameters from seriesId/startIndex/endIndex to startX/endX
 
 ---
 
-### T030: [P] Widget test - Hot reload support
+### ✅ T030: [P] Widget test - Hot reload support
 **Description**: Test widget survives hot reload without memory leaks  
 **File**: `test/widgets/braven_chart_hot_reload_test.dart`
 
 **Test Cases**:
-- didUpdateWidget() handles series changes
-- didUpdateWidget() handles theme changes
-- didUpdateWidget() handles controller swap
-- didUpdateWidget() handles stream swap
-- No duplicate subscriptions
-- Old resources disposed
+- didUpdateWidget() handles series changes ✅
+- didUpdateWidget() handles theme changes ✅
+- didUpdateWidget() handles controller swap ✅
+- didUpdateWidget() handles stream swap ✅
+- No duplicate subscriptions ✅
+- Old resources disposed ✅
 
-**Success Criteria**: All hot reload scenarios pass, no leaks
+**Success Criteria**: All hot reload scenarios pass, no leaks ✅
+
+**Implementation Notes**:
+- Created 12 comprehensive test cases for hot reload support and resource management
+- Tests didUpdateWidget() for all configuration changes:
+  * Series data changes (add/remove series)
+  * Theme changes (ChartTheme.defaultLight → defaultDark)
+  * Controller swap (external controller switch)
+  * Controller removal (external → internal controller)
+  * Stream swap (StreamController switch)
+  * Stream removal (stream → null)
+- Validates no duplicate controller subscriptions (5 hot reloads tested)
+- Validates no duplicate stream subscriptions (5 hot reloads with broadcast stream)
+- Tests chart type changes (ChartType.line → ChartType.bar)
+- Tests dimensions changes (400×300 → 600×400)
+- Tests annotation changes (1 annotation → 2 annotations)
+- All tests ensure proper resource cleanup and no memory leaks
 
 ---
 
