@@ -206,7 +206,7 @@ class _AnnotationsShowcaseScreenState
           label: 'Summer Sales',
           startX: 6,
           endX: 8,
-          fillColor: Colors.yellow.withOpacity(0.2),
+          fillColor: Colors.yellow.withValues(alpha: 0.2),
           borderColor: Colors.orange,
         ),
       );
@@ -497,7 +497,7 @@ PointAnnotation(
                   label: 'Q1',
                   startX: 1,
                   endX: 3,
-                  fillColor: Colors.blue.withOpacity(0.1),
+                  fillColor: Colors.blue.withValues(alpha: 0.1),
                   borderColor: Colors.blue,
                   style: AnnotationStyle(
                     textColor: Colors.blue.shade700,
@@ -508,7 +508,7 @@ PointAnnotation(
                   label: 'Q2',
                   startX: 4,
                   endX: 6,
-                  fillColor: Colors.green.withOpacity(0.1),
+                  fillColor: Colors.green.withValues(alpha: 0.1),
                   borderColor: Colors.green,
                   style: AnnotationStyle(
                     textColor: Colors.green.shade700,
@@ -519,7 +519,7 @@ PointAnnotation(
                   label: 'Q3',
                   startX: 7,
                   endX: 8,
-                  fillColor: Colors.orange.withOpacity(0.1),
+                  fillColor: Colors.orange.withValues(alpha: 0.1),
                   borderColor: Colors.orange,
                   style: AnnotationStyle(
                     textColor: Colors.orange.shade700,
@@ -530,7 +530,7 @@ PointAnnotation(
                   label: 'Target Zone',
                   startY: 18000,
                   endY: 25000,
-                  fillColor: Colors.green.withOpacity(0.05),
+                  fillColor: Colors.green.withValues(alpha: 0.05),
                   borderColor: Colors.green.shade300,
                 ),
               ],
