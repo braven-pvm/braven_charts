@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'advanced_features_screen.dart';
+import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
+import 'axis_theming_screen.dart';
 import 'bar_chart_screen.dart';
 import 'line_chart_screen.dart';
 import 'quickstart_screen.dart';
@@ -20,6 +23,8 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildWelcomeCard(context),
+          const SizedBox(height: 24),
+          _buildShowcaseSection(context),
           const SizedBox(height: 24),
           _buildChartTypeSection(context),
         ],
@@ -83,6 +88,58 @@ class HomeScreen extends StatelessWidget {
       labelStyle: TextStyle(
         color: Theme.of(context).colorScheme.onPrimaryContainer,
       ),
+    );
+  }
+
+  Widget _buildShowcaseSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Feature Showcases',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        _buildChartCard(
+          context,
+          title: 'Annotations',
+          subtitle: '5 annotation types: Text, Point, Range, Threshold, Trend',
+          icon: Icons.label,
+          color: Colors.purple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AnnotationsShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: 'Advanced Features',
+          subtitle: 'Real-time streaming, ChartController, dynamic updates',
+          icon: Icons.science,
+          color: Colors.indigo,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AdvancedFeaturesScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: 'Axis & Theming',
+          subtitle: '4 axis presets, custom configs, light/dark themes',
+          icon: Icons.tune,
+          color: Colors.teal,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AxisAndThemingScreen()),
+          ),
+        ),
+      ],
     );
   }
 
