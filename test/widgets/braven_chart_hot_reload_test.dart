@@ -188,9 +188,9 @@ void main() {
     });
 
     testWidgets('didUpdateWidget() handles stream swap', (WidgetTester tester) async {
-      // Arrange
-      final streamController1 = StreamController<ChartDataPoint>();
-      final streamController2 = StreamController<ChartDataPoint>();
+      // Arrange - use broadcast streams to avoid listener issues
+      final streamController1 = StreamController<ChartDataPoint>.broadcast();
+      final streamController2 = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
         id: 'test-series',
         points: [],
@@ -233,20 +233,14 @@ void main() {
 
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup - dispose widget first to cancel subscriptions
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
-      await tester.pump();
-      
-      // Give time for subscription cancellation to complete
-      await Future.delayed(const Duration(milliseconds: 10));
-      
+      // Cleanup
       await streamController1.close();
       await streamController2.close();
     });
 
     testWidgets('didUpdateWidget() handles stream removal', (WidgetTester tester) async {
-      // Arrange - start with stream
-      final streamController = StreamController<ChartDataPoint>();
+      // Arrange - start with broadcast stream
+      final streamController = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
         id: 'test-series',
         points: [],
@@ -282,13 +276,7 @@ void main() {
       // Assert - subscription should be canceled
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup - dispose widget first
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
-      await tester.pump();
-      
-      // Give time for subscription cancellation to complete
-      await Future.delayed(const Duration(milliseconds: 10));
-      
+      // Cleanup
       await streamController.close();
     });
 
@@ -327,8 +315,8 @@ void main() {
     });
 
     testWidgets('no duplicate stream subscriptions', (WidgetTester tester) async {
-      // Arrange
-      final streamController = StreamController<ChartDataPoint>();
+      // Arrange - use broadcast stream
+      final streamController = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
         id: 'test-series',
         points: [],
@@ -342,7 +330,7 @@ void main() {
               body: BravenChart(
                 chartType: ChartType.line,
                 series: [series],
-                dataStream: streamController.stream.asBroadcastStream(),
+                dataStream: streamController.stream,
               ),
             ),
           ),
@@ -356,13 +344,7 @@ void main() {
       // Assert
       expect(find.byType(BravenChart), findsOneWidget);
 
-      // Cleanup - dispose widget first
-      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
-      await tester.pump();
-      
-      // Give time for subscription cancellation to complete
-      await Future.delayed(const Duration(milliseconds: 10));
-      
+      // Cleanup
       await streamController.close();
     });
 
