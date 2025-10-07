@@ -864,8 +864,7 @@ class _BravenChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // TODO: Full integration with Layer 4 chart implementations
-    // For now, draw a placeholder with basic information
+    if (series.isEmpty) return;
 
     // Draw background
     final backgroundPaint = Paint()
@@ -885,48 +884,251 @@ class _BravenChartPainter extends CustomPainter {
       );
     }
 
-    // Draw placeholder grid (if grid is visible)
-    if (xAxis.showGrid || yAxis.showGrid) {
-      final gridPaint = Paint()
-        ..color = theme.gridStyle.majorColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = theme.gridStyle.majorWidth;
+    // Calculate data bounds
+    final bounds = _calculateDataBounds();
+    if (bounds == null) return;
 
-      // Vertical grid lines (x-axis)
-      if (xAxis.showGrid) {
-        const gridCount = 5;
-        for (var i = 1; i < gridCount; i++) {
-          final x = size.width * i / gridCount;
-          canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-        }
-      }
+    // Calculate chart area (leave room for axes)
+    final padding = 40.0;
+    final chartRect = Rect.fromLTWH(padding, padding, size.width - padding * 2, size.height - padding * 2);
 
-      // Horizontal grid lines (y-axis)
-      if (yAxis.showGrid) {
-        const gridCount = 5;
-        for (var i = 1; i < gridCount; i++) {
-          final y = size.height * i / gridCount;
-          canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-        }
+    // Draw grid
+    _drawGrid(canvas, chartRect);
+
+    // Draw series based on chart type
+    switch (chartType) {
+      case ChartType.line:
+        _drawLineSeries(canvas, chartRect, bounds);
+        break;
+      case ChartType.area:
+        _drawAreaSeries(canvas, chartRect, bounds);
+        break;
+      case ChartType.bar:
+        _drawBarSeries(canvas, chartRect, bounds);
+        break;
+      case ChartType.scatter:
+        _drawScatterSeries(canvas, chartRect, bounds);
+        break;
+    }
+
+    // Draw axes
+    _drawAxes(canvas, size, chartRect, bounds);
+  }
+
+  _DataBounds? _calculateDataBounds() {
+    if (series.isEmpty) return null;
+
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final s in series) {
+      for (final point in s.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
       }
     }
 
-    // Draw placeholder chart type indicator
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: 'Chart Type: ${chartType.name}\n'
-            'Series: ${series.length}\n'
-            'Annotations: ${annotations.length}\n'
-            'Full rendering in T024',
-        style: TextStyle(
-          color: theme.gridStyle.majorColor,
-          fontSize: 14,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(canvas, Offset(size.width / 2 - textPainter.width / 2, size.height / 2 - textPainter.height / 2));
+    // Add padding to Y range
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
+
+    return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+
+  void _drawGrid(Canvas canvas, Rect chartRect) {
+    if (!xAxis.showGrid && !yAxis.showGrid) return;
+
+    final gridPaint = Paint()
+      ..color = theme.gridStyle.majorColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = theme.gridStyle.majorWidth;
+
+    if (yAxis.showGrid) {
+      for (var i = 0; i <= 5; i++) {
+        final y = chartRect.top + (chartRect.height * i / 5);
+        canvas.drawLine(Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
+      }
+    }
+
+    if (xAxis.showGrid) {
+      for (var i = 0; i <= 5; i++) {
+        final x = chartRect.left + (chartRect.width * i / 5);
+        canvas.drawLine(Offset(x, chartRect.top), Offset(x, chartRect.bottom), gridPaint);
+      }
+    }
+  }
+
+  void _drawLineSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
+    final colors = theme.seriesTheme.colors;
+
+    for (var i = 0; i < series.length; i++) {
+      final s = series[i];
+      if (s.points.isEmpty) continue;
+
+      final paint = Paint()
+        ..color = colors[i % colors.length]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final path = Path();
+      bool first = true;
+
+      for (final point in s.points) {
+        final offset = _dataToPixel(point, chartRect, bounds);
+        if (first) {
+          path.moveTo(offset.dx, offset.dy);
+          first = false;
+        } else {
+          path.lineTo(offset.dx, offset.dy);
+        }
+      }
+
+      canvas.drawPath(path, paint);
+
+      // Draw markers
+      final markerPaint = Paint()
+        ..color = colors[i % colors.length]
+        ..style = PaintingStyle.fill;
+
+      for (final point in s.points) {
+        final offset = _dataToPixel(point, chartRect, bounds);
+        canvas.drawCircle(offset, 4, markerPaint);
+      }
+    }
+  }
+
+  void _drawAreaSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
+    final colors = theme.seriesTheme.colors;
+
+    for (var i = 0; i < series.length; i++) {
+      final s = series[i];
+      if (s.points.isEmpty) continue;
+
+      final color = colors[i % colors.length];
+      final fillPaint = Paint()
+        ..color = color.withValues(alpha: 0.3)
+        ..style = PaintingStyle.fill;
+
+      final path = Path();
+      final firstPoint = _dataToPixel(s.points.first, chartRect, bounds);
+      path.moveTo(firstPoint.dx, chartRect.bottom);
+      path.lineTo(firstPoint.dx, firstPoint.dy);
+
+      for (final point in s.points) {
+        final offset = _dataToPixel(point, chartRect, bounds);
+        path.lineTo(offset.dx, offset.dy);
+      }
+
+      final lastPoint = _dataToPixel(s.points.last, chartRect, bounds);
+      path.lineTo(lastPoint.dx, chartRect.bottom);
+      path.close();
+
+      canvas.drawPath(path, fillPaint);
+
+      // Draw line on top
+      final linePaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      final linePath = Path();
+      bool first = true;
+
+      for (final point in s.points) {
+        final offset = _dataToPixel(point, chartRect, bounds);
+        if (first) {
+          linePath.moveTo(offset.dx, offset.dy);
+          first = false;
+        } else {
+          linePath.lineTo(offset.dx, offset.dy);
+        }
+      }
+
+      canvas.drawPath(linePath, linePaint);
+    }
+  }
+
+  void _drawBarSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
+    final colors = theme.seriesTheme.colors;
+    final barCount = series.isEmpty ? 0 : series.first.points.length;
+    final seriesCount = series.length;
+
+    if (barCount == 0) return;
+
+    final barGroupWidth = chartRect.width / barCount;
+    final barWidth = barGroupWidth / (seriesCount + 1);
+
+    for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+      final s = series[seriesIndex];
+      final color = colors[seriesIndex % colors.length];
+      final paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+
+      for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
+        final point = s.points[pointIndex];
+        final baseX = chartRect.left + (barGroupWidth * pointIndex);
+        final barX = baseX + (barWidth * seriesIndex) + (barWidth / 2);
+
+        final topY = _dataToPixel(point, chartRect, bounds).dy;
+        final bottomY = chartRect.bottom;
+        final barHeight = bottomY - topY;
+
+        final rect = Rect.fromLTWH(barX, topY, barWidth * 0.8, barHeight);
+        canvas.drawRect(rect, paint);
+      }
+    }
+  }
+
+  void _drawScatterSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
+    final colors = theme.seriesTheme.colors;
+
+    for (var i = 0; i < series.length; i++) {
+      final s = series[i];
+      final paint = Paint()
+        ..color = colors[i % colors.length]
+        ..style = PaintingStyle.fill;
+
+      for (final point in s.points) {
+        final offset = _dataToPixel(point, chartRect, bounds);
+        canvas.drawCircle(offset, 5, paint);
+      }
+    }
+  }
+
+  void _drawAxes(Canvas canvas, Size size, Rect chartRect, _DataBounds bounds) {
+    final axisPaint = Paint()
+      ..color = theme.axisStyle.lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = theme.axisStyle.lineWidth;
+
+    if (xAxis.showAxis) {
+      canvas.drawLine(Offset(chartRect.left, chartRect.bottom), Offset(chartRect.right, chartRect.bottom), axisPaint);
+    }
+
+    if (yAxis.showAxis) {
+      canvas.drawLine(Offset(chartRect.left, chartRect.top), Offset(chartRect.left, chartRect.bottom), axisPaint);
+    }
+  }
+
+  Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
+    final xRange = bounds.maxX - bounds.minX;
+    final yRange = bounds.maxY - bounds.minY;
+
+    final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
+    final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
+
+    final pixelX = chartRect.left + (xPercent * chartRect.width);
+    final pixelY = chartRect.bottom - (yPercent * chartRect.height);
+
+    return Offset(pixelX, pixelY);
   }
 
   @override
@@ -938,6 +1140,23 @@ class _BravenChartPainter extends CustomPainter {
         yAxis != oldDelegate.yAxis ||
         annotations != oldDelegate.annotations;
   }
+}
+
+// ==================== HELPER CLASSES ====================
+
+/// Helper class to store data bounds for chart rendering
+class _DataBounds {
+  final double minX;
+  final double maxX;
+  final double minY;
+  final double maxY;
+
+  _DataBounds({
+    required this.minX,
+    required this.maxX,
+    required this.minY,
+    required this.maxY,
+  });
 }
 
 // ==================== ANNOTATION OVERLAY ====================
