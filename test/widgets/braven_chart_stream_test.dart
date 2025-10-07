@@ -172,10 +172,13 @@ void main() {
         ),
       );
 
+      // Give time for dispose to complete
+      await tester.pump();
+
       // Assert - stream should still be closeable (subscription canceled)
       await streamController.close();
       expect(streamController.isClosed, isTrue);
-    });
+    }, timeout: const Timeout(Duration(seconds: 5)));
 
     testWidgets('handles stream errors gracefully', (WidgetTester tester) async {
       // Arrange
