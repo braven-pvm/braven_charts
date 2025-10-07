@@ -836,37 +836,86 @@ enum AxisPosition {
 
 **Dependencies**: All previous tasks complete
 
-### T035: Integration test - Quickstart Step 1 (Basic Line Chart)
+### ✅ T035: Integration test - Quickstart Step 1 (Basic Line Chart)
 **Description**: Validate 2-minute basic chart scenario from quickstart.md  
 **File**: `test/widgets/integration/quickstart_step1_test.dart`
 
-**Test**: Create line chart with sales data per quickstart.md Step 1
+**Test**: Create line chart with sales data per quickstart.md Step 1 ✅
 
-**Success Criteria**: Chart renders, axes auto-calculated, legend shown
+**Success Criteria**: Chart renders, axes auto-calculated, legend shown ✅
+
+**Implementation Notes**:
+- Created 5 comprehensive integration tests for Step 1 (Basic Line Chart)
+- Tests chart rendering with monthly sales data (6 data points)
+- Validates title rendering, chart dimensions (400×300), chart type (line)
+- Verifies series data structure and all data points
+- Tests default theme application (null theme uses internal default)
+- Validates axes auto-calculation from data (no axis config provided)
+- Tests legend shown by default (showLegend: true)
+- Verifies minimal required parameters work (chartType + series only)
 
 ---
 
-### T036: Integration test - Quickstart Step 2 (Annotations)
+### ✅ T036: Integration test - Quickstart Step 2 (Annotations)
 **Description**: Validate annotation scenario from quickstart.md  
 **File**: `test/widgets/integration/quickstart_step2_test.dart`
 
-**Test**: Add PointAnnotation + ThresholdAnnotation per quickstart.md Step 2
+**Test**: Add PointAnnotation + ThresholdAnnotation per quickstart.md Step 2 ✅
 
-**Success Criteria**: Annotations render on chart
+**Success Criteria**: Annotations render on chart ✅
+
+**Implementation Notes**:
+- Created 5 comprehensive integration tests for Step 2 (Annotations)
+- Tests PointAnnotation highlighting data point with MarkerShape.star
+- Tests ThresholdAnnotation showing target line (AnnotationAxis.y, value: 20000)
+- Validates combining PointAnnotation and ThresholdAnnotation on same chart
+- Verifies annotations render on top of chart using Stack overlay
+- Tests multiple marker shapes work (star, circle, square)
+- Validates annotation parameters: seriesId, dataPointIndex, markerShape, axis, value, label, style
 
 ---
 
-### T037: Integration test - Quickstart Step 3-6 (All Features)
+### ✅ T037: Integration test - Quickstart Step 3-6 (All Features)
 **Description**: Validate remaining quickstart scenarios  
 **File**: `test/widgets/integration/quickstart_full_test.dart`
 
 **Tests**:
-- Step 3: fromValues factory
-- Step 4: Axis customization (hidden, gridOnly)
-- Step 5: Real-time streaming
-- Step 6: Programmatic control via ChartController
+- Step 3: fromValues factory ✅
+- Step 4: Axis customization (hidden, gridOnly) ✅
+- Step 5: Real-time streaming ✅
+- Step 6: Programmatic control via ChartController ✅
 
-**Success Criteria**: All 6 quickstart scenarios work end-to-end
+**Success Criteria**: All 6 quickstart scenarios work end-to-end ✅
+
+**Implementation Notes**:
+- Created 15 comprehensive integration tests covering Steps 3-6
+
+**Step 3 Tests (fromValues factory)**:
+- Tests fromValues creates chart from y-values array (auto-generates x-values 0,1,2,3,4,5)
+- Validates custom seriesName parameter
+- Verifies simplified API for quick chart creation
+
+**Step 4 Tests (Axis customization)**:
+- Tests AxisConfig.hidden() creates sparkline (200×60 dimensions, no axes)
+- Tests AxisConfig.gridOnly() shows grid without axis lines
+- Validates copyWith() for axis config customization
+
+**Step 5 Tests (Real-time streaming)**:
+- Tests dataStream subscription updates chart automatically
+- Validates 60 FPS throttling (16ms intervals) with rapid data
+- Tests stream cleanup on dispose
+
+**Step 6 Tests (Programmatic control)**:
+- Tests ChartController.addPoint() adds data points dynamically
+- Tests ChartController.addAnnotation() adds annotations programmatically
+- Tests ChartController.removeOldestPoint() removes points
+- Tests ChartController.clearSeries() clears all points
+- Validates controller disposal
+
+**Integration Test (Combined features)**:
+- Tests all features working together (multi-series + annotations + streaming + controller)
+- Validates comprehensive real-world usage scenario
+- Fixed: getAllSeries() returns Map<String, List<ChartDataPoint>>, access .length directly
 
 ---
 
