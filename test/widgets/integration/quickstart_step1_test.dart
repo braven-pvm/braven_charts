@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T035: Integration test - Quickstart Step 1 (Basic Line Chart)
-/// 
+///
 /// Validates the 2-minute basic chart scenario from quickstart.md Step 1.
 /// Tests that users can create a simple line chart with minimal configuration.
-/// 
+///
 /// Run: flutter test test/widgets/integration/quickstart_step1_test.dart
 void main() {
   group('Quickstart Step 1: Basic Line Chart', () {
@@ -44,24 +44,24 @@ void main() {
 
       // Verify chart renders
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // Verify title renders
       expect(find.text('Monthly Sales 2025'), findsOneWidget);
-      
+
       // Verify chart dimensions
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.width, equals(400));
       expect(chartWidget.height, equals(300));
-      
+
       // Verify chart type
       expect(chartWidget.chartType, equals(ChartType.line));
-      
+
       // Verify series data
       expect(chartWidget.series.length, equals(1));
       expect(chartWidget.series[0].id, equals('monthly_sales'));
       expect(chartWidget.series[0].name, equals('Monthly Sales'));
       expect(chartWidget.series[0].points.length, equals(6));
-      
+
       // Verify data points
       expect(chartWidget.series[0].points[0].x, equals(1));
       expect(chartWidget.series[0].points[0].y, equals(10000));
@@ -97,7 +97,7 @@ void main() {
       // Verify chart renders with default theme when none specified
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.theme, isNull); // Should use internal default
-      
+
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
@@ -129,7 +129,7 @@ void main() {
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.xAxis, isNull); // Should auto-calculate
       expect(chartWidget.yAxis, isNull); // Should auto-calculate
-      
+
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
@@ -189,7 +189,7 @@ void main() {
 
       // Verify chart works with only required parameters
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.series.length, equals(1));
       expect(chartWidget.series[0].points.length, equals(2));

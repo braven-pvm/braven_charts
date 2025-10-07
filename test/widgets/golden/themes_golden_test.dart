@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T034: Golden test - Themes
-/// 
+///
 /// Visual regression tests for light/dark/custom themes.
 /// Ensures theme application consistency across code changes.
-/// 
+///
 /// Run: flutter test test/widgets/golden/themes_golden_test.dart
 /// Update: flutter test --update-goldens test/widgets/golden/themes_golden_test.dart
 void main() {
@@ -136,7 +136,7 @@ void main() {
                     label: 'Target',
                     value: 150,
                     axis: AnnotationAxis.y,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.greenAccent,
                       borderWidth: 2,
                     ),
@@ -148,7 +148,7 @@ void main() {
                     dataPointIndex: 3,
                     markerShape: MarkerShape.star,
                     markerSize: 12,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       textColor: Colors.yellowAccent,
                     ),
                   ),

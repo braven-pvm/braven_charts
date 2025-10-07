@@ -241,7 +241,7 @@ void main() {
       // Arrange
       final controller1 = ChartController();
       final controller2 = ChartController();
-      
+
       controller1.addPoint('series-1', const ChartDataPoint(x: 0, y: 10));
       controller2.addPoint('series-2', const ChartDataPoint(x: 0, y: 20));
 

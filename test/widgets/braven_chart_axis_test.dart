@@ -136,14 +136,14 @@ void main() {
         ],
       );
 
-      final customXAxis = AxisConfig(
+      final customXAxis = const AxisConfig(
         showAxis: true,
         showLabels: true,
         showGrid: true,
         label: 'Time (s)',
       );
 
-      final customYAxis = AxisConfig(
+      final customYAxis = const AxisConfig(
         showAxis: true,
         showLabels: true,
         showGrid: true,
@@ -277,12 +277,12 @@ void main() {
             body: BravenChart(
               chartType: ChartType.line,
               series: [series],
-              xAxis: AxisConfig(
+              xAxis: const AxisConfig(
                 showAxis: true,
                 showLabels: true,
                 showGrid: true,
               ),
-              yAxis: AxisConfig(
+              yAxis: const AxisConfig(
                 showAxis: true,
                 showLabels: true,
                 showGrid: true,
@@ -301,12 +301,12 @@ void main() {
             body: BravenChart(
               chartType: ChartType.line,
               series: [series],
-              xAxis: AxisConfig(
+              xAxis: const AxisConfig(
                 showAxis: true,
                 showLabels: true,
                 showGrid: false,
               ),
-              yAxis: AxisConfig(
+              yAxis: const AxisConfig(
                 showAxis: true,
                 showLabels: true,
                 showGrid: false,

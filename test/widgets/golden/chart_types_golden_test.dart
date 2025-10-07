@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T031: Golden test - Chart types
-/// 
+///
 /// Visual regression tests for all 4 chart types.
 /// Ensures rendering consistency across code changes.
-/// 
+///
 /// Run: flutter test test/widgets/golden/chart_types_golden_test.dart
 /// Update: flutter test --update-goldens test/widgets/golden/chart_types_golden_test.dart
 void main() {

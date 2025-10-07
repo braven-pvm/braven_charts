@@ -4,9 +4,9 @@
 /// Validates that the widget renders correctly with various configurations.
 library;
 
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 void main() {
   group('BravenChart Basic Rendering', () {

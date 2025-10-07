@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T037: Integration test - Quickstart Steps 3-6 (All Features)
-/// 
+///
 /// Validates remaining quickstart scenarios:
 /// - Step 3: fromValues factory
 /// - Step 4: Axis customization (hidden, gridOnly)
 /// - Step 5: Real-time streaming
 /// - Step 6: Programmatic control via ChartController
-/// 
+///
 /// Run: flutter test test/widgets/integration/quickstart_full_test.dart
 void main() {
   group('Quickstart Step 3: Simplified Data Input (fromValues)', () {
@@ -37,16 +37,16 @@ void main() {
 
       // Verify chart renders
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // Verify title
       expect(find.text('Monthly Sales 2025'), findsOneWidget);
-      
+
       // Verify series created with auto-generated x-values
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.series.length, equals(1));
       expect(chartWidget.series[0].id, equals('sales'));
       expect(chartWidget.series[0].points.length, equals(6));
-      
+
       // Verify auto-generated x-values (0, 1, 2, 3, 4, 5)
       expect(chartWidget.series[0].points[0].x, equals(0));
       expect(chartWidget.series[0].points[0].y, equals(10000));
@@ -103,7 +103,7 @@ void main() {
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.width, equals(200));
       expect(chartWidget.height, equals(60));
-      
+
       // Verify hidden axis config
       expect(chartWidget.xAxis, isNotNull);
       expect(chartWidget.yAxis, isNotNull);
@@ -177,7 +177,7 @@ void main() {
             body: Center(
               child: BravenChart(
                 chartType: ChartType.line,
-                series: [], // Start empty
+                series: const [], // Start empty
                 dataStream: streamController.stream,
                 title: 'Sensor Readings',
                 width: 400,
@@ -213,7 +213,7 @@ void main() {
             body: Center(
               child: BravenChart(
                 chartType: ChartType.line,
-                series: [],
+                series: const [],
                 dataStream: streamController.stream,
                 width: 400,
                 height: 300,
@@ -230,7 +230,7 @@ void main() {
 
       // Throttling should process at 60 FPS (16ms intervals)
       await tester.pump(const Duration(milliseconds: 50));
-      
+
       // Cleanup
       await streamController.close();
       await tester.pumpAndSettle();
@@ -473,7 +473,7 @@ void main() {
                   onPressed: () {
                     controller.addPoint(
                       'sales',
-                      ChartDataPoint(x: 3, y: 18000),
+                      const ChartDataPoint(x: 3, y: 18000),
                     );
                   },
                   child: const Text('Add Point'),
@@ -487,7 +487,7 @@ void main() {
       // Verify all features present
       expect(find.byType(BravenChart), findsOneWidget);
       expect(find.text('Comprehensive Chart'), findsOneWidget);
-      
+
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.series.length, equals(1));
       expect(chartWidget.annotations.length, equals(1));

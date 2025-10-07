@@ -5,7 +5,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 /// Quickstart Examples Screen
-/// 
+///
 /// Demonstrates all 6 quickstart scenarios from quickstart.md:
 /// 1. Basic Line Chart (2 minutes)
 /// 2. Add Annotations (1 minute)
@@ -80,7 +80,7 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
         TextAnnotation(
           id: 'event_${DateTime.now().millisecondsSinceEpoch}',
           text: 'Event at ${lastPoint.x.toInt()}',
-          position: Offset(200, 100),
+          position: const Offset(200, 100),
           style: const AnnotationStyle(
             fontSize: 12,
             textColor: Colors.blue,
@@ -341,7 +341,7 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: [],
+              series: const [],
               dataStream: _streamController.stream,
               title: 'Sensor Readings',
               width: 400,

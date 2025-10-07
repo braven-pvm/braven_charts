@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T036: Integration test - Quickstart Step 2 (Annotations)
-/// 
+///
 /// Validates the annotation scenario from quickstart.md Step 2.
 /// Tests that users can add PointAnnotation and ThresholdAnnotation to charts.
-/// 
+///
 /// Run: flutter test test/widgets/integration/quickstart_step2_test.dart
 void main() {
   group('Quickstart Step 2: Add Annotations', () {
@@ -52,11 +52,11 @@ void main() {
 
       // Verify chart renders
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // Verify annotation is present
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.annotations.length, equals(1));
-      
+
       // Verify annotation details
       final annotation = chartWidget.annotations[0] as PointAnnotation;
       expect(annotation.seriesId, equals('monthly_sales'));
@@ -92,7 +92,7 @@ void main() {
                     axis: AnnotationAxis.y,
                     value: 20000,
                     label: 'Sales Target',
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.green,
                     ),
                   ),
@@ -108,11 +108,11 @@ void main() {
 
       // Verify chart renders
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // Verify annotation is present
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.annotations.length, equals(1));
-      
+
       // Verify annotation details
       final annotation = chartWidget.annotations[0] as ThresholdAnnotation;
       expect(annotation.axis, equals(AnnotationAxis.y));
@@ -156,7 +156,7 @@ void main() {
                     axis: AnnotationAxis.y,
                     value: 20000,
                     label: 'Sales Target',
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.green,
                     ),
                   ),
@@ -173,11 +173,11 @@ void main() {
       // Verify both annotations render
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.annotations.length, equals(2));
-      
+
       // Verify PointAnnotation
       final pointAnnotation = chartWidget.annotations[0] as PointAnnotation;
       expect(pointAnnotation.markerShape, equals(MarkerShape.star));
-      
+
       // Verify ThresholdAnnotation
       final thresholdAnnotation = chartWidget.annotations[1] as ThresholdAnnotation;
       expect(thresholdAnnotation.value, equals(20000));
@@ -269,7 +269,7 @@ void main() {
       // Verify all marker shapes render
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.annotations.length, equals(3));
-      
+
       expect((chartWidget.annotations[0] as PointAnnotation).markerShape, equals(MarkerShape.star));
       expect((chartWidget.annotations[1] as PointAnnotation).markerShape, equals(MarkerShape.circle));
       expect((chartWidget.annotations[2] as PointAnnotation).markerShape, equals(MarkerShape.square));

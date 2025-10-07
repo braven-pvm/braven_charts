@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T032: Golden test - Axis configurations
-/// 
+///
 /// Visual regression tests for all 4 axis configuration presets.
 /// Ensures axis rendering consistency across code changes.
-/// 
+///
 /// Run: flutter test test/widgets/golden/axis_config_golden_test.dart
 /// Update: flutter test --update-goldens test/widgets/golden/axis_config_golden_test.dart
 void main() {
@@ -141,13 +141,13 @@ void main() {
                 chartType: ChartType.line,
                 series: testSeries,
                 title: 'Custom Axis',
-                xAxis: AxisConfig(
+                xAxis: const AxisConfig(
                   label: 'Time (s)',
                   showAxis: true,
                   showLabels: true,
                   showGrid: true,
                 ),
-                yAxis: AxisConfig(
+                yAxis: const AxisConfig(
                   label: 'Value',
                   showAxis: true,
                   showLabels: true,

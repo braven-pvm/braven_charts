@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// T033: Golden test - Annotations
-/// 
+///
 /// Visual regression tests for all 5 annotation types.
 /// Ensures annotation rendering consistency across code changes.
-/// 
+///
 /// Run: flutter test test/widgets/golden/annotations_golden_test.dart
 /// Update: flutter test --update-goldens test/widgets/golden/annotations_golden_test.dart
 void main() {
@@ -42,7 +42,7 @@ void main() {
                     id: 'note',
                     label: 'Important Note',
                     text: 'Important Note',
-                    position: Offset(200, 100),
+                    position: const Offset(200, 100),
                     style: AnnotationStyle(
                       fontSize: 14,
                       textColor: Colors.blue,
@@ -154,7 +154,7 @@ void main() {
                     label: 'Limit',
                     value: 20,
                     axis: AnnotationAxis.y,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.red,
                       borderWidth: 2,
                     ),
@@ -190,7 +190,7 @@ void main() {
                     label: 'Event',
                     value: 2,
                     axis: AnnotationAxis.x,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.orange,
                       borderWidth: 2,
                     ),
@@ -226,7 +226,7 @@ void main() {
                     label: 'Linear Trend',
                     seriesId: 'data',
                     trendType: TrendType.linear,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.purple,
                       borderWidth: 2,
                     ),
@@ -273,7 +273,7 @@ void main() {
                     value: 20,
                     axis: AnnotationAxis.y,
                     zIndex: 5,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       borderColor: Colors.red,
                       borderWidth: 2,
                     ),
@@ -286,7 +286,7 @@ void main() {
                     markerShape: MarkerShape.star,
                     markerSize: 12,
                     zIndex: 10,
-                    style: AnnotationStyle(
+                    style: const AnnotationStyle(
                       textColor: Colors.green,
                     ),
                   ),
