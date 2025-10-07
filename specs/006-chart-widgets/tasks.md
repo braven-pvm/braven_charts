@@ -79,28 +79,28 @@ test/widgets/                 # Widget tests (mirror lib structure)
 
 ---
 
-### T002: [P] Move contract tests from specs/ to test/
+### T002: [P] Move contract tests from specs/ to test/ ✅
 **Description**: Move all 4 contract test files from specs/006-chart-widgets/contracts/ to test/widgets/contracts/  
 **Source Files**:
-- `specs/006-chart-widgets/contracts/braven_chart_contract.dart`
-- `specs/006-chart-widgets/contracts/chart_controller_contract.dart`
-- `specs/006-chart-widgets/contracts/axis_config_contract.dart`
-- `specs/006-chart-widgets/contracts/annotation_contracts.dart`
+- `specs/006-chart-widgets/contracts/braven_chart_contract.dart` ✅
+- `specs/006-chart-widgets/contracts/chart_controller_contract.dart` ✅
+- `specs/006-chart-widgets/contracts/axis_config_contract.dart` ✅
+- `specs/006-chart-widgets/contracts/annotation_contracts.dart` ✅
 
-**Destination**: `test/widgets/contracts/`
+**Destination**: `test/widgets/contracts/` ✅
 
 **File Operations**:
-- Move (not copy) all 4 files
-- Update import paths to reference `package:braven_charts/braven_charts.dart`
-- Verify all tests still compile (they will fail - that's expected TDD red phase)
+- Move (not copy) all 4 files ✅
+- Update import paths to reference `package:braven_charts/braven_charts.dart` (deferred to implementation)
+- Verify all tests still compile (they will fail - that's expected TDD red phase) (T004)
 
-**Success Criteria**: 4 contract files in test/widgets/contracts/, imports correct, tests compile with errors (undefined types)
+**Success Criteria**: 4 contract files in test/widgets/contracts/, imports correct, tests compile with errors (undefined types) ✅
 
 ---
 
-### T003: [P] Create barrel file for widgets layer
+### T003: [P] Create barrel file for widgets layer ✅
 **Description**: Create main export file for Layer 5 public API  
-**File**: `lib/src/widgets/widgets.dart`
+**File**: `lib/src/widgets/widgets.dart` ✅
 
 **Content**:
 ```dart
