@@ -687,14 +687,227 @@ class _BravenChartState extends State<BravenChart> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement in T023 (Build Method & Rendering)
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      color: Colors.grey[300],
-      child: const Center(
-        child: Text('BravenChart - Not Yet Implemented'),
+    // Get effective theme
+    final effectiveTheme = widget.theme ?? ChartTheme.defaultLight;
+
+    // Get effective axis configurations
+    final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
+    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults();
+
+    // Get all series (widget series + controller series)
+    final allSeries = _getAllSeries();
+
+    // Build widget tree
+    Widget chartWidget = RepaintBoundary(
+      child: CustomPaint(
+        painter: _BravenChartPainter(
+          chartType: widget.chartType,
+          series: allSeries,
+          theme: effectiveTheme,
+          xAxis: effectiveXAxis,
+          yAxis: effectiveYAxis,
+          annotations: _getAllAnnotations(),
+        ),
+        size: Size(widget.width ?? double.infinity, widget.height ?? double.infinity),
       ),
     );
+
+    // Wrap with dimensions if specified
+    if (widget.width != null || widget.height != null) {
+      chartWidget = SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: chartWidget,
+      );
+    }
+
+    // Add title/subtitle if provided
+    if (widget.title != null || widget.subtitle != null) {
+      final children = <Widget>[];
+
+      if (widget.title != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              widget.title!,
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+
+      if (widget.subtitle != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              widget.subtitle!,
+              style: Theme.of(context).textTheme.titleSmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+
+      children.add(Expanded(child: chartWidget));
+
+      chartWidget = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: children,
+      );
+    }
+
+    return chartWidget;
+  }
+
+  // ==================== HELPER METHODS (continued) ====================
+
+  /// Gets all series from widget and controller combined.
+  List<ChartSeries> _getAllSeries() {
+    final result = <ChartSeries>[...widget.series];
+
+    // Add controller series if available
+    final controller = _getController();
+    if (controller != null) {
+      final controllerSeries = controller.getAllSeries();
+      for (final entry in controllerSeries.entries) {
+        // Check if series already exists
+        final existingIndex = result.indexWhere((s) => s.id == entry.key);
+        if (existingIndex >= 0) {
+          // Replace with controller version (controller has priority)
+          result[existingIndex] = ChartSeries(
+            id: entry.key,
+            points: entry.value,
+          );
+        } else {
+          // Add new series
+          result.add(ChartSeries(
+            id: entry.key,
+            points: entry.value,
+          ));
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Gets all annotations from widget and controller combined.
+  List<ChartAnnotation> _getAllAnnotations() {
+    final result = <ChartAnnotation>[...widget.annotations];
+
+    // Add controller annotations if available
+    final controller = _getController();
+    if (controller != null) {
+      result.addAll(controller.getAllAnnotations());
+    }
+
+    // Sort by z-index (lower z-index renders first)
+    result.sort((a, b) => a.zIndex.compareTo(b.zIndex));
+
+    return result;
+  }
+}
+
+// ==================== CUSTOM PAINTER ====================
+
+/// Custom painter for rendering BravenChart.
+///
+/// This painter integrates with Layer 4 (Chart Types) to render
+/// the appropriate chart type with proper theming and axes.
+class _BravenChartPainter extends CustomPainter {
+  _BravenChartPainter({
+    required this.chartType,
+    required this.series,
+    required this.theme,
+    required this.xAxis,
+    required this.yAxis,
+    required this.annotations,
+  });
+
+  final ChartType chartType;
+  final List<ChartSeries> series;
+  final ChartTheme theme;
+  final AxisConfig xAxis;
+  final AxisConfig yAxis;
+  final List<ChartAnnotation> annotations;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // TODO: Full integration with Layer 4 chart implementations
+    // For now, draw a placeholder with basic information
+
+    // Draw background
+    final backgroundPaint = Paint()
+      ..color = theme.backgroundColor
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), backgroundPaint);
+
+    // Draw border if specified
+    if (theme.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = theme.borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = theme.borderWidth;
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height).deflate(theme.borderWidth / 2),
+        borderPaint,
+      );
+    }
+
+    // Draw placeholder grid (if grid is visible)
+    if (xAxis.showGrid || yAxis.showGrid) {
+      final gridPaint = Paint()
+        ..color = theme.gridStyle.majorColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = theme.gridStyle.majorWidth;
+
+      // Vertical grid lines (x-axis)
+      if (xAxis.showGrid) {
+        const gridCount = 5;
+        for (var i = 1; i < gridCount; i++) {
+          final x = size.width * i / gridCount;
+          canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+        }
+      }
+
+      // Horizontal grid lines (y-axis)
+      if (yAxis.showGrid) {
+        const gridCount = 5;
+        for (var i = 1; i < gridCount; i++) {
+          final y = size.height * i / gridCount;
+          canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+        }
+      }
+    }
+
+    // Draw placeholder chart type indicator
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'Chart Type: ${chartType.name}\n'
+            'Series: ${series.length}\n'
+            'Annotations: ${annotations.length}\n'
+            'Full rendering in T024',
+        style: TextStyle(
+          color: theme.gridStyle.majorColor,
+          fontSize: 14,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.width / 2 - textPainter.width / 2, size.height / 2 - textPainter.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(_BravenChartPainter oldDelegate) {
+    return chartType != oldDelegate.chartType ||
+        series != oldDelegate.series ||
+        theme != oldDelegate.theme ||
+        xAxis != oldDelegate.xAxis ||
+        yAxis != oldDelegate.yAxis ||
+        annotations != oldDelegate.annotations;
   }
 }
