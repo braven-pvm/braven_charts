@@ -73,21 +73,23 @@ class _LineChartScreenState extends State<LineChartScreen> {
     return ChartContainer(
       title: 'Straight Line Chart',
       subtitle: 'Linear interpolation between points',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.line,
-        series: [
-          ChartSeries(
-            id: 'linear_data',
-            name: 'Linear Growth',
-            points: ChartDataGenerator.generateLinearData(pointCount: 8)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.line,
+          series: [
+            ChartSeries(
+              id: 'linear_data',
+              name: 'Linear Growth',
+              points: ChartDataGenerator.generateLinearData(pointCount: 8)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -96,21 +98,23 @@ class _LineChartScreenState extends State<LineChartScreen> {
     return ChartContainer(
       title: 'Smooth Line Chart',
       subtitle: 'Bezier curve interpolation',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.line,
-        series: [
-          ChartSeries(
-            id: 'sine_wave',
-            name: 'Sine Wave',
-            points: ChartDataGenerator.generateSineWave()
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.line,
+          series: [
+            ChartSeries(
+              id: 'sine_wave',
+              name: 'Sine Wave',
+              points: ChartDataGenerator.generateSineWave()
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -119,21 +123,23 @@ class _LineChartScreenState extends State<LineChartScreen> {
     return ChartContainer(
       title: 'Stepped Line Chart',
       subtitle: 'Step interpolation (stair-step)',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.line,
-        series: [
-          ChartSeries(
-            id: 'random_data',
-            name: 'Random Data',
-            points: ChartDataGenerator.generateRandomData(pointCount: 10)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.line,
+          series: [
+            ChartSeries(
+              id: 'random_data',
+              name: 'Random Data',
+              points: ChartDataGenerator.generateRandomData(pointCount: 10)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -142,36 +148,38 @@ class _LineChartScreenState extends State<LineChartScreen> {
     return ChartContainer(
       title: 'Multi-Series Line Chart',
       subtitle: 'Multiple series with different markers',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.line,
-        series: [
-          ChartSeries(
-            id: 'revenue',
-            name: 'Revenue',
-            points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 100)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'expenses',
-            name: 'Expenses',
-            points: ChartDataGenerator.generateRandomData(pointCount: 8, minY: 500, maxY: 800)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'profit',
-            name: 'Profit',
-            points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 20)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        title: 'Financial Overview',
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.line,
+          series: [
+            ChartSeries(
+              id: 'revenue',
+              name: 'Revenue',
+              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 100)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+            ChartSeries(
+              id: 'expenses',
+              name: 'Expenses',
+              points: ChartDataGenerator.generateRandomData(pointCount: 8, minY: 500, maxY: 800)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+            ChartSeries(
+              id: 'profit',
+              name: 'Profit',
+              points: ChartDataGenerator.generateLinearData(pointCount: 8, slope: 20)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
+            ),
+          ],
+          title: 'Financial Overview',
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }

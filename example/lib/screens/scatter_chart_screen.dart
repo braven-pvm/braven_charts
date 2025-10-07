@@ -73,21 +73,21 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
     return ChartContainer(
       title: 'Fixed-Size Scatter Plot',
       subtitle: 'All markers same size',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.scatter,
-        series: [
-          ChartSeries(
-            id: 'scatter_data',
-            name: 'Random Points',
-            points: ChartDataGenerator.generateRandomData(pointCount: 40)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.scatter,
+          series: [
+            ChartSeries(
+              id: 'scatter_data',
+              name: 'Random Points',
+              points: ChartDataGenerator.generateRandomData(pointCount: 40).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -96,21 +96,21 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
     return ChartContainer(
       title: 'Bubble Chart',
       subtitle: 'Data-driven marker sizing',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.scatter,
-        series: [
-          ChartSeries(
-            id: 'bubbles',
-            name: 'Bubbles',
-            points: ChartDataGenerator.generateRandomData(pointCount: 30)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.scatter,
+          series: [
+            ChartSeries(
+              id: 'bubbles',
+              name: 'Bubbles',
+              points: ChartDataGenerator.generateRandomData(pointCount: 30).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -119,21 +119,21 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
     return ChartContainer(
       title: 'Clustered Scatter Plot',
       subtitle: 'Automatic clustering for dense data',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.scatter,
-        series: [
-          ChartSeries(
-            id: 'cluster_data',
-            name: 'Dense Points',
-            points: ChartDataGenerator.generateRandomData(pointCount: 100)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.scatter,
+          series: [
+            ChartSeries(
+              id: 'cluster_data',
+              name: 'Dense Points',
+              points: ChartDataGenerator.generateRandomData(pointCount: 100).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -142,36 +142,32 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
     return ChartContainer(
       title: 'Multi-Series with Different Markers',
       subtitle: 'Demonstrating marker shape variety',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.scatter,
-        series: [
-          ChartSeries(
-            id: 'series_a',
-            name: 'Series A',
-            points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 20, maxY: 50)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'series_b',
-            name: 'Series B',
-            points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 40, maxY: 70)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'series_c',
-            name: 'Series C',
-            points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 60, maxY: 90)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        title: 'Multi-Series Scatter',
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.scatter,
+          series: [
+            ChartSeries(
+              id: 'series_a',
+              name: 'Series A',
+              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+            ChartSeries(
+              id: 'series_b',
+              name: 'Series B',
+              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 40, maxY: 70).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+            ChartSeries(
+              id: 'series_c',
+              name: 'Series C',
+              points: ChartDataGenerator.generateRandomData(pointCount: 20, minY: 60, maxY: 90).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          title: 'Multi-Series Scatter',
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }

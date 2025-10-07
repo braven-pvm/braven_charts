@@ -779,7 +779,7 @@ class _BravenChartState extends State<BravenChart> {
         );
       }
 
-      children.add(Expanded(child: chartWidget));
+      children.add(Flexible(child: chartWidget));
 
       chartWidget = Column(
         mainAxisSize: MainAxisSize.min,
@@ -889,7 +889,7 @@ class _BravenChartPainter extends CustomPainter {
     if (bounds == null) return;
 
     // Calculate chart area (leave room for axes)
-    final padding = 40.0;
+    const padding = 40.0;
     final chartRect = Rect.fromLTWH(padding, padding, size.width - padding * 2, size.height - padding * 2);
 
     // Draw grid
@@ -1146,17 +1146,16 @@ class _BravenChartPainter extends CustomPainter {
 
 /// Helper class to store data bounds for chart rendering
 class _DataBounds {
-  final double minX;
-  final double maxX;
-  final double minY;
-  final double maxY;
-
   _DataBounds({
     required this.minX,
     required this.maxX,
     required this.minY,
     required this.maxY,
   });
+  final double minX;
+  final double maxX;
+  final double minY;
+  final double maxY;
 }
 
 // ==================== ANNOTATION OVERLAY ====================

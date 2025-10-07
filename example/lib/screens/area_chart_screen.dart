@@ -73,21 +73,21 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
     return ChartContainer(
       title: 'Solid Fill Area Chart',
       subtitle: 'Single color fill with optional line overlay',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.area,
-        series: [
-          ChartSeries(
-            id: 'sine_wave',
-            name: 'Sine Wave',
-            points: ChartDataGenerator.generateSineWave()
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.area,
+          series: [
+            ChartSeries(
+              id: 'sine_wave',
+              name: 'Sine Wave',
+              points: ChartDataGenerator.generateSineWave().map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -96,21 +96,21 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
     return ChartContainer(
       title: 'Gradient Area Chart',
       subtitle: 'Vertical gradient fill from top to bottom',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.area,
-        series: [
-          ChartSeries(
-            id: 'gradient_data',
-            name: 'Gradient Area',
-            points: ChartDataGenerator.generateRandomData(pointCount: 15)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.area,
+          series: [
+            ChartSeries(
+              id: 'gradient_data',
+              name: 'Gradient Area',
+              points: ChartDataGenerator.generateRandomData(pointCount: 15).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -119,36 +119,32 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
     return ChartContainer(
       title: 'Stacked Area Chart',
       subtitle: 'Multiple series stacked on top of each other',
-      height: 300,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.area,
-        series: [
-          ChartSeries(
-            id: 'series1',
-            name: 'Series 1',
-            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 20, maxY: 50)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'series2',
-            name: 'Series 2',
-            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 15, maxY: 40)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-          ChartSeries(
-            id: 'series3',
-            name: 'Series 3',
-            points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 10, maxY: 30)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        title: 'Stacked Areas',
-        width: 400,
-        height: 300,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.area,
+          series: [
+            ChartSeries(
+              id: 'series1',
+              name: 'Series 1',
+              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+            ChartSeries(
+              id: 'series2',
+              name: 'Series 2',
+              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 15, maxY: 40).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+            ChartSeries(
+              id: 'series3',
+              name: 'Series 3',
+              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 10, maxY: 30).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          title: 'Stacked Areas',
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
@@ -157,21 +153,22 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
     return ChartContainer(
       title: 'Custom Baseline Area Chart',
       subtitle: 'Area chart with fixed baseline value',
-      height: 250,
+      height: 350,
       onRefresh: _refreshData,
-      chart: BravenChart(
-        chartType: ChartType.area,
-        series: [
-          ChartSeries(
-            id: 'baseline_data',
-            name: 'Data',
-            points: ChartDataGenerator.generateLinearData(pointCount: 10, startY: 40, slope: 0.8)
-                .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
-                .toList(),
-          ),
-        ],
-        width: 400,
-        height: 250,
+      chart: LayoutBuilder(
+        builder: (context, constraints) => BravenChart(
+          chartType: ChartType.area,
+          series: [
+            ChartSeries(
+              id: 'baseline_data',
+              name: 'Data',
+              points:
+                  ChartDataGenerator.generateLinearData(pointCount: 10, startY: 40, slope: 0.8).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+            ),
+          ],
+          width: constraints.maxWidth,
+          height: 350,
+        ),
       ),
     );
   }
