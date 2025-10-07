@@ -6,9 +6,9 @@
 // Constitutional Requirement: Performance benchmarks must pass before merge
 // Performance First principle: Object pooling must achieve >90% hit rate
 
+import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
 
 void main() {
   group('Object Pooling Performance Benchmarks', () {
@@ -22,12 +22,12 @@ void main() {
       // Simulate rendering multiple frames (10 frames, 100 paints per frame)
       for (var frame = 0; frame < 10; frame++) {
         final paints = <Paint>[];
-        
+
         // Acquire paints
         for (var i = 0; i < 100; i++) {
           paints.add(pool.acquire());
         }
-        
+
         // Release paints
         for (final paint in paints) {
           pool.release(paint);
@@ -35,7 +35,7 @@ void main() {
       }
 
       final stats = pool.statistics;
-      
+
       // After first frame, should have high hit rate
       // Hit rate = releases / acquires = objects reused / total operations
       // First frame: 100 creates, 100 releases = 0.1 hit rate
@@ -45,7 +45,7 @@ void main() {
       // Let's check what makes sense: we want to measure object reuse
       // Better metric: (acquires - creates) / acquires = reuse rate
       final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
-      
+
       expect(reuseRate, greaterThanOrEqualTo(0.9),
           reason: 'Paint pool reuse rate $reuseRate < 90% (created: ${stats.totalCreated}, acquired: ${stats.acquireCount})');
     });
@@ -60,12 +60,12 @@ void main() {
       // Simulate rendering multiple frames (10 frames, 200 paths per frame)
       for (var frame = 0; frame < 10; frame++) {
         final paths = <Path>[];
-        
+
         // Acquire paths
         for (var i = 0; i < 200; i++) {
           paths.add(pool.acquire());
         }
-        
+
         // Release paths
         for (final path in paths) {
           pool.release(path);
@@ -74,9 +74,8 @@ void main() {
 
       final stats = pool.statistics;
       final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
-      
-      expect(reuseRate, greaterThanOrEqualTo(0.9),
-          reason: 'Path pool reuse rate $reuseRate < 90%');
+
+      expect(reuseRate, greaterThanOrEqualTo(0.9), reason: 'Path pool reuse rate $reuseRate < 90%');
     });
 
     test('TextPainter pool achieves >90% hit rate', () {
@@ -89,11 +88,11 @@ void main() {
       // Simulate rendering text labels (10 frames, 20 labels per frame)
       for (var frame = 0; frame < 10; frame++) {
         final painters = <TextPainter>[];
-        
+
         for (var i = 0; i < 20; i++) {
           painters.add(pool.acquire());
         }
-        
+
         for (final painter in painters) {
           pool.release(painter);
         }
@@ -101,9 +100,8 @@ void main() {
 
       final stats = pool.statistics;
       final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
-      
-      expect(reuseRate, greaterThanOrEqualTo(0.9),
-          reason: 'TextPainter pool reuse rate $reuseRate < 90%');
+
+      expect(reuseRate, greaterThanOrEqualTo(0.9), reason: 'TextPainter pool reuse rate $reuseRate < 90%');
     });
 
     test('Acquire operation completes in <100ns', () {
@@ -127,12 +125,11 @@ void main() {
       stopwatch.stop();
 
       final avgNs = (stopwatch.elapsedMicroseconds * 1000) / (iterations * 2); // *2 for acquire+release
-      
+
       // Note: In practice, <100ns per operation is the target
       // However, Dart VM overhead might make this closer to 1000ns
       // The important thing is it's fast enough to not impact rendering
-      expect(avgNs, lessThan(10000.0),
-          reason: 'Acquire/Release took ${avgNs}ns on average, exceeds 10µs budget');
+      expect(avgNs, lessThan(10000.0), reason: 'Acquire/Release took ${avgNs}ns on average, exceeds 10µs budget');
     });
 
     test('Pool maintains maxSize limit', () {
@@ -154,14 +151,13 @@ void main() {
       }
 
       final stats = pool.statistics;
-      
+
       // Pool should not exceed maxSize
-      expect(stats.currentSize, lessThanOrEqualTo(10),
-          reason: 'Pool size ${stats.currentSize} exceeds maxSize 10');
-      
+      expect(stats.currentSize, lessThanOrEqualTo(10), reason: 'Pool size ${stats.currentSize} exceeds maxSize 10');
+
       // Should have created 20 objects
       expect(stats.totalCreated, equals(20));
-      
+
       // Only 10 should be in pool, rest discarded
       expect(stats.currentSize, equals(10));
     });
@@ -195,12 +191,12 @@ void main() {
 
       // Acquire again (should reuse from pool)
       final obj4 = pool.acquire();
-      
+
       stats = pool.statistics;
       expect(stats.totalCreated, equals(3)); // No new objects created
       expect(stats.acquireCount, equals(4));
       expect(stats.currentSize, equals(1)); // One object taken from pool
-      
+
       pool.release(obj3);
       pool.release(obj4);
     });
@@ -210,7 +206,7 @@ void main() {
         factory: () => Paint(),
         reset: (p) {},
       );
-      
+
       final pathPool = ObjectPool<Path>(
         factory: () => Path(),
         reset: (p) => p.reset(),

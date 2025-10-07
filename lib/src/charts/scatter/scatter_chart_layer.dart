@@ -167,7 +167,7 @@ class ScatterChartLayer extends ChartLayer {
   ) {
     // PERFORMANCE OPTIMIZATION: Configure paint once and draw once when possible
     // This reduces draw calls from 2N to N for most common cases
-    
+
     if (config.markerStyle == MarkerStyle.filled) {
       // Fast path: single fill draw
       paint.style = PaintingStyle.fill;
@@ -203,7 +203,7 @@ class ScatterChartLayer extends ChartLayer {
         size: size,
         paint: paint,
       );
-      
+
       // Draw outline
       paint.style = PaintingStyle.stroke;
       paint.strokeWidth = config.borderWidth;

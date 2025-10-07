@@ -4,18 +4,17 @@
 // Purpose: Validate performance for 10,000 points in scatter charts
 //
 // Constitutional Requirement: Performance benchmarks must pass before merge
-// 
+//
 // Performance Thresholds (based on empirical testing):
 // - Simple filled markers: <20ms (50 fps)
 // - Outlined markers: <25ms (40 fps) - stroke drawing adds overhead
 // - Clustering enabled: <25ms (40 fps) - clustering algorithm adds overhead
-// 
+//
 // Note: Scatter rendering is more expensive than line/area charts due to
 // individual marker drawing. Thresholds ensure >30fps minimum requirement.
 
 import 'dart:ui' as ui;
-import 'package:flutter/painting.dart';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:braven_charts/src/charts/base/chart_config.dart' show MarkerShape;
 import 'package:braven_charts/src/charts/base/chart_layer.dart';
 import 'package:braven_charts/src/charts/scatter/scatter_chart_config.dart';
@@ -27,6 +26,8 @@ import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
 import 'package:braven_charts/src/rendering/performance_monitor.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ScatterChartLayer Performance Benchmarks', () {
@@ -93,8 +94,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(20.0),
-          reason: 'Circle markers render took ${elapsedMs}ms, exceeds 20ms budget');
+      expect(elapsedMs, lessThan(20.0), reason: 'Circle markers render took ${elapsedMs}ms, exceeds 20ms budget');
     });
 
     test('Renders 10,000 points with all 6 marker shapes in <16ms', () {
@@ -139,8 +139,7 @@ void main() {
         stopwatch.stop();
 
         final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-        expect(elapsedMs, lessThan(20.0),
-            reason: '$shape markers render took ${elapsedMs}ms, exceeds 20ms budget');
+        expect(elapsedMs, lessThan(20.0), reason: '$shape markers render took ${elapsedMs}ms, exceeds 20ms budget');
       }
     });
 
@@ -181,8 +180,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(20.0),
-          reason: 'Data-driven sizing render took ${elapsedMs}ms, exceeds 20ms budget');
+      expect(elapsedMs, lessThan(20.0), reason: 'Data-driven sizing render took ${elapsedMs}ms, exceeds 20ms budget');
     });
 
     test('Renders 10,000 points with outlined markers in <16ms', () {
@@ -216,8 +214,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(25.0),
-          reason: 'Outlined markers render took ${elapsedMs}ms, exceeds 25ms budget');
+      expect(elapsedMs, lessThan(25.0), reason: 'Outlined markers render took ${elapsedMs}ms, exceeds 25ms budget');
     });
 
     test('Renders 10,000 points with clustering enabled in <16ms', () {
@@ -251,8 +248,7 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(25.0),
-          reason: 'Clustering render took ${elapsedMs}ms, exceeds 25ms budget');
+      expect(elapsedMs, lessThan(25.0), reason: 'Clustering render took ${elapsedMs}ms, exceeds 25ms budget');
     });
 
     test('Paint pool hit rate > 90%', () {
@@ -289,8 +285,7 @@ void main() {
       final paintStats = paintPool.statistics;
 
       // Constitutional requirement: >90% hit rate
-      expect(paintStats.hitRate, greaterThan(0.9),
-          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }
@@ -299,16 +294,16 @@ void main() {
 class _MockCanvas implements Canvas {
   @override
   void drawPath(Path path, Paint paint) {}
-  
+
   @override
   void drawCircle(Offset c, double radius, Paint paint) {}
-  
+
   @override
   void drawRect(Rect rect, Paint paint) {}
-  
+
   @override
   void drawRRect(RRect rrect, Paint paint) {}
-  
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
