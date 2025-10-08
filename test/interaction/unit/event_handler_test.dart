@@ -3,15 +3,12 @@
 // Task: T018
 // Status: MUST FAIL (implementation not yet created)
 
-import 'dart:ui' show Offset, Rect;
-
-import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 // This import will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/event_handler.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('EventHandler Component Tests', () {
@@ -86,7 +83,7 @@ void main() {
 
           stopwatch.stop();
           final avgTime = stopwatch.elapsedMicroseconds / 100;
-          
+
           expect(avgTime, lessThan(5000)); // 5ms = 5000 microseconds
         }, throwsA(anything));
       });
@@ -140,7 +137,7 @@ void main() {
           eventHandler.processKeyEvent(keyEvent);
 
           stopwatch.stop();
-          
+
           expect(stopwatch.elapsedMilliseconds, lessThan(50));
         }, throwsA(anything));
       });

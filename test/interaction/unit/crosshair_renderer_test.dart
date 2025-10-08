@@ -1,17 +1,16 @@
-// Unit Test: CrosshairRenderer Component  
+// Unit Test: CrosshairRenderer Component
 // Feature: Layer 7 Interaction System
 // Task: T019
 // Status: MUST FAIL (implementation not yet created)
 
 import 'dart:ui' show Canvas, PictureRecorder, Size, Offset, Rect;
 
-import 'package:flutter_test/flutter_test.dart';
-
 // This import will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/crosshair_renderer.dart';
 import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CrosshairRenderer Component Tests', () {
@@ -24,7 +23,7 @@ void main() {
     setUp(() {
       // This will fail - implementation doesn't exist yet
       // crosshairRenderer = CrosshairRenderer();
-      
+
       final recorder = PictureRecorder();
       canvas = Canvas(recorder);
       size = const Size(800, 600);
@@ -77,7 +76,7 @@ void main() {
           final stopwatch = Stopwatch()..start();
           crosshairRenderer.render(canvas, size, state, config);
           stopwatch.stop();
-          
+
           expect(stopwatch.elapsedMicroseconds, lessThan(2000));
         }, throwsA(anything));
       });

@@ -1,4 +1,4 @@
-// Unit Test: KeyboardHandler Component  
+// Unit Test: KeyboardHandler Component
 // Feature: Layer 7 Interaction System
 // Task: T023
 // Status: MUST FAIL (implementation not yet created)
@@ -32,7 +32,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.arrowRight);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.focusedPointIndex, equals(6));
         }, throwsA(anything));
       });
@@ -41,7 +41,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.arrowLeft);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.focusedPointIndex, equals(4));
         }, throwsA(anything));
       });
@@ -51,7 +51,7 @@ void main() {
           final firstPointState = state.copyWith(focusedPointIndex: 0);
           final event = createKeyEvent(LogicalKeyboardKey.arrowLeft);
           final newState = keyboardHandler.handleKeyEvent(event, firstPointState);
-          
+
           expect(newState.focusedPointIndex, equals(0));
         }, throwsA(anything));
       });
@@ -60,14 +60,14 @@ void main() {
         expect(() {
           final lastPointState = state.copyWith(focusedPointIndex: 99); // Assuming 100 points
           final dataPoints = List.generate(100, (i) => {'x': i.toDouble(), 'y': i.toDouble()});
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.arrowRight);
           final newState = keyboardHandler.handleKeyEvent(
             event,
             lastPointState,
             dataPoints: dataPoints,
           );
-          
+
           expect(newState.focusedPointIndex, equals(99));
         }, throwsA(anything));
       });
@@ -77,10 +77,10 @@ void main() {
           final multiSeriesState = state.copyWith(
             hoveredSeriesId: 'series1',
           );
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.arrowDown);
           final newState = keyboardHandler.handleKeyEvent(event, multiSeriesState);
-          
+
           expect(newState.hoveredSeriesId, isNot(equals('series1')));
         }, throwsA(anything));
       });
@@ -91,7 +91,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.equal, shift: true); // Shift+= is +
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.metadata?['zoomRequested'], equals(1.2)); // 20% zoom in
         }, throwsA(anything));
       });
@@ -100,7 +100,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.minus);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.metadata?['zoomRequested'], equals(0.8)); // 20% zoom out
         }, throwsA(anything));
       });
@@ -110,14 +110,14 @@ void main() {
           final maxZoomedState = state.copyWith(
             metadata: {'currentZoom': 10.0},
           );
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.equal, shift: true);
           final newState = keyboardHandler.handleKeyEvent(
             event,
             maxZoomedState,
             maxZoom: 10.0,
           );
-          
+
           // Should not zoom beyond max
           expect(newState.metadata?['currentZoom'], lessThanOrEqualTo(10.0));
         }, throwsA(anything));
@@ -129,7 +129,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.home);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.focusedPointIndex, equals(0));
         }, throwsA(anything));
       });
@@ -137,14 +137,14 @@ void main() {
       test('End key jumps to last data point', () {
         expect(() {
           final dataPoints = List.generate(100, (i) => {'x': i.toDouble(), 'y': i.toDouble()});
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.end);
           final newState = keyboardHandler.handleKeyEvent(
             event,
             state,
             dataPoints: dataPoints,
           );
-          
+
           expect(newState.focusedPointIndex, equals(99));
         }, throwsA(anything));
       });
@@ -155,7 +155,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.enter);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.metadata?['showTooltip'], isTrue);
         }, throwsA(anything));
       });
@@ -164,7 +164,7 @@ void main() {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.space);
           final newState = keyboardHandler.handleKeyEvent(event, state);
-          
+
           expect(newState.metadata?['toggleTooltip'], isTrue);
         }, throwsA(anything));
       });
@@ -176,10 +176,10 @@ void main() {
           final tooltipVisibleState = state.copyWith(
             metadata: {'tooltipVisible': true},
           );
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.escape);
           final newState = keyboardHandler.handleKeyEvent(event, tooltipVisibleState);
-          
+
           expect(newState.metadata?['tooltipVisible'], isFalse);
         }, throwsA(anything));
       });
@@ -192,10 +192,10 @@ void main() {
               {'x': 30.0, 'y': 40.0},
             ],
           );
-          
+
           final event = createKeyEvent(LogicalKeyboardKey.escape);
           final newState = keyboardHandler.handleKeyEvent(event, selectedState);
-          
+
           expect(newState.selectedPoints, isEmpty);
         }, throwsA(anything));
       });
@@ -222,11 +222,11 @@ void main() {
       test('key event handling completes in <5ms', () {
         expect(() {
           final event = createKeyEvent(LogicalKeyboardKey.arrowRight);
-          
+
           final stopwatch = Stopwatch()..start();
           keyboardHandler.handleKeyEvent(event, state);
           stopwatch.stop();
-          
+
           expect(stopwatch.elapsedMicroseconds, lessThan(5000));
         }, throwsA(anything));
       });
@@ -239,13 +239,13 @@ void main() {
             LogicalKeyboardKey.arrowUp,
             LogicalKeyboardKey.arrowDown,
           ];
-          
+
           for (var i = 0; i < 1000; i++) {
             final key = keys[i % keys.length];
             final event = createKeyEvent(key);
             keyboardHandler.handleKeyEvent(event, state);
           }
-          
+
           expect(true, isTrue);
         }, throwsA(anything));
       });

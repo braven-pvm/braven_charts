@@ -1,4 +1,4 @@
-// Unit Test: ZoomPanController Component  
+// Unit Test: ZoomPanController Component
 // Feature: Layer 7 Interaction System
 // Task: T021
 // Status: MUST FAIL (implementation not yet created)
@@ -22,7 +22,7 @@ void main() {
     setUp(() {
       // This will fail - implementation doesn't exist yet
       // zoomPanController = ZoomPanController();
-      zoomPanState = ZoomPanState.initial();
+      zoomPanState = const ZoomPanState.initial();
     });
 
     group('Zoom Operations', () {
@@ -33,7 +33,7 @@ void main() {
             zoomFactor: 1.5,
             focalPoint: const Offset(400, 300),
           );
-          
+
           expect(newState.zoomLevel, greaterThan(zoomPanState.zoomLevel));
         }, throwsA(anything));
       });
@@ -46,7 +46,7 @@ void main() {
             focalPoint: const Offset(400, 300),
             minZoom: 0.5,
           );
-          
+
           expect(newState.zoomLevel, greaterThanOrEqualTo(0.5));
         }, throwsA(anything));
       });
@@ -59,7 +59,7 @@ void main() {
             focalPoint: const Offset(400, 300),
             maxZoom: 10.0,
           );
-          
+
           expect(newState.zoomLevel, lessThanOrEqualTo(10.0));
         }, throwsA(anything));
       });
@@ -72,7 +72,7 @@ void main() {
             zoomFactor: 2.0,
             focalPoint: focalPoint,
           );
-          
+
           // Focal point should remain visually in the same place after zoom
           expect(newState.panOffset, isNot(equals(zoomPanState.panOffset)));
         }, throwsA(anything));
@@ -85,7 +85,7 @@ void main() {
             targetZoom: 3.0,
             focalPoint: const Offset(400, 300),
           );
-          
+
           expect(newState.zoomLevel, equals(3.0));
         }, throwsA(anything));
       });
@@ -94,7 +94,7 @@ void main() {
         expect(() {
           final zoomedState = zoomPanState.copyWith(zoomLevel: 5.0);
           final newState = zoomPanController.resetZoom(zoomedState);
-          
+
           expect(newState.zoomLevel, equals(1.0));
           expect(newState.panOffset, equals(Offset.zero));
         }, throwsA(anything));
@@ -106,7 +106,7 @@ void main() {
         expect(() {
           final delta = const Offset(50, -30);
           final newState = zoomPanController.pan(zoomPanState, delta);
-          
+
           expect(newState.panOffset, equals(delta));
         }, throwsA(anything));
       });
@@ -115,13 +115,13 @@ void main() {
         expect(() {
           final bounds = const Rect.fromLTWH(0, 0, 1000, 800);
           final largeDelta = const Offset(2000, 2000); // Try to pan too far
-          
+
           final newState = zoomPanController.pan(
             zoomPanState,
             largeDelta,
             bounds: bounds,
           );
-          
+
           expect(newState.panOffset.dx, lessThanOrEqualTo(bounds.right));
           expect(newState.panOffset.dy, lessThanOrEqualTo(bounds.bottom));
         }, throwsA(anything));
@@ -132,7 +132,7 @@ void main() {
           var state = zoomPanState;
           state = zoomPanController.pan(state, const Offset(10, 10));
           state = zoomPanController.pan(state, const Offset(5, -5));
-          
+
           expect(state.panOffset, equals(const Offset(15, 5)));
         }, throwsA(anything));
       });
@@ -147,12 +147,12 @@ void main() {
             focalPoint: const Offset(400, 300),
             timestamp: DateTime.now(),
           );
-          
+
           final newState = zoomPanController.processGesture(
             zoomPanState,
             scaleGesture,
           );
-          
+
           expect(newState.zoomLevel, greaterThan(zoomPanState.zoomLevel));
         }, throwsA(anything));
       });
@@ -164,12 +164,12 @@ void main() {
             delta: const Offset(20, -15),
             timestamp: DateTime.now(),
           );
-          
+
           final newState = zoomPanController.processGesture(
             zoomPanState,
             panGesture,
           );
-          
+
           expect(newState.panOffset, isNot(equals(Offset.zero)));
         }, throwsA(anything));
       });
@@ -181,13 +181,13 @@ void main() {
             tapPosition: const Offset(300, 200),
             timestamp: DateTime.now(),
           );
-          
+
           final newState = zoomPanController.processGesture(
             zoomPanState,
             doubleTapGesture,
             doubleTapZoomFactor: 2.0,
           );
-          
+
           expect(newState.zoomLevel, equals(2.0));
         }, throwsA(anything));
       });
@@ -200,12 +200,12 @@ void main() {
           final stateWithVelocity = zoomPanState.copyWith(
             panVelocity: velocity,
           );
-          
+
           final newState = zoomPanController.applyInertia(
             stateWithVelocity,
             deltaTime: const Duration(milliseconds: 16), // 60fps
           );
-          
+
           expect(newState.panOffset, isNot(equals(Offset.zero)));
           expect(newState.panVelocity!.distance, lessThan(velocity.distance));
         }, throwsA(anything));
@@ -216,7 +216,7 @@ void main() {
           var state = zoomPanState.copyWith(
             panVelocity: const Offset(1000, 0),
           );
-          
+
           // Apply inertia multiple times
           for (var i = 0; i < 10; i++) {
             state = zoomPanController.applyInertia(
@@ -224,7 +224,7 @@ void main() {
               deltaTime: const Duration(milliseconds: 16),
             );
           }
-          
+
           // Velocity should have decayed significantly
           expect(state.panVelocity!.distance, lessThan(100));
         }, throwsA(anything));
@@ -235,12 +235,12 @@ void main() {
           var state = zoomPanState.copyWith(
             panVelocity: const Offset(10, 10), // Very slow
           );
-          
+
           state = zoomPanController.applyInertia(
             state,
             deltaTime: const Duration(milliseconds: 100),
           );
-          
+
           expect(state.panVelocity, isNull);
         }, throwsA(anything));
       });
@@ -253,13 +253,13 @@ void main() {
             zoomLevel: 2.0,
             panOffset: const Offset(50, 50),
           );
-          
+
           final screenPoint = const Offset(400, 300);
           final dataPoint = zoomPanController.screenToData(
             screenPoint,
             zoomedState,
           );
-          
+
           expect(dataPoint, isNotNull);
           expect(dataPoint, isNot(equals(screenPoint)));
         }, throwsA(anything));
@@ -271,13 +271,13 @@ void main() {
             zoomLevel: 2.0,
             panOffset: const Offset(50, 50),
           );
-          
+
           final dataPoint = const Offset(100, 100);
           final screenPoint = zoomPanController.dataToScreen(
             dataPoint,
             zoomedState,
           );
-          
+
           expect(screenPoint, isNotNull);
           expect(screenPoint, isNot(equals(dataPoint)));
         }, throwsA(anything));
@@ -289,11 +289,11 @@ void main() {
             zoomLevel: 1.5,
             panOffset: const Offset(30, -20),
           );
-          
+
           final originalScreen = const Offset(250, 175);
           final data = zoomPanController.screenToData(originalScreen, zoomedState);
           final backToScreen = zoomPanController.dataToScreen(data, zoomedState);
-          
+
           expect(backToScreen.dx, closeTo(originalScreen.dx, 0.1));
           expect(backToScreen.dy, closeTo(originalScreen.dy, 0.1));
         }, throwsA(anything));
@@ -310,7 +310,7 @@ void main() {
             focalPoint: const Offset(400, 300),
           );
           stopwatch.stop();
-          
+
           expect(stopwatch.elapsedMicroseconds, lessThan(2000));
         }, throwsA(anything));
       });
@@ -322,7 +322,7 @@ void main() {
             state = zoomPanController.zoom(state, zoomFactor: 1.1, focalPoint: Offset(i.toDouble(), 100));
             state = zoomPanController.pan(state, Offset(i.toDouble(), i.toDouble()));
           }
-          
+
           expect(true, isTrue);
         }, throwsA(anything));
       });

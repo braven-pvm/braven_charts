@@ -1,17 +1,16 @@
-// Unit Test: TooltipProvider Component  
+// Unit Test: TooltipProvider Component
 // Feature: Layer 7 Interaction System
 // Task: T020
 // Status: MUST FAIL (implementation not yet created)
 
 import 'dart:ui' show Canvas, PictureRecorder, Size, Offset, Rect;
 
-import 'package:flutter_test/flutter_test.dart';
-
+import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 // This import will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/tooltip_provider.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TooltipProvider Component Tests', () {
@@ -24,7 +23,7 @@ void main() {
     setUp(() {
       // This will fail - implementation doesn't exist yet
       // tooltipProvider = TooltipProvider();
-      
+
       final recorder = PictureRecorder();
       canvas = Canvas(recorder);
       size = const Size(800, 600);
@@ -38,7 +37,7 @@ void main() {
           final hoveredState = state.copyWith(
             hoveredPoint: const Offset(100, 200),
           );
-          
+
           tooltipProvider.show(hoveredState, config);
           expect(tooltipProvider.isVisible, isTrue);
         }, throwsA(anything));
@@ -55,12 +54,12 @@ void main() {
         expect(() async {
           final delayConfig = config.copyWith(showDelay: const Duration(milliseconds: 200));
           final hoveredState = state.copyWith(hoveredPoint: const Offset(100, 200));
-          
+
           tooltipProvider.show(hoveredState, delayConfig);
-          
+
           // Should not be visible immediately
           expect(tooltipProvider.isVisible, isFalse);
-          
+
           // Should be visible after delay
           await Future.delayed(const Duration(milliseconds: 250));
           expect(tooltipProvider.isVisible, isTrue);
@@ -70,12 +69,12 @@ void main() {
       test('respects hideDelay configuration', () async {
         expect(() async {
           final delayConfig = config.copyWith(hideDelay: const Duration(milliseconds: 150));
-          
+
           tooltipProvider.hide();
-          
+
           // Should still be visible during delay
           expect(tooltipProvider.isVisible, isTrue);
-          
+
           // Should be hidden after delay
           await Future.delayed(const Duration(milliseconds: 200));
           expect(tooltipProvider.isVisible, isFalse);
@@ -88,7 +87,7 @@ void main() {
         expect(() {
           final dataPoint = {'x': 50.0, 'y': 100.0, 'label': 'Point A'};
           final content = tooltipProvider.formatContent(dataPoint, config);
-          
+
           expect(content, isNotNull);
           expect(content, contains('Point A'));
         }, throwsA(anything));
@@ -101,7 +100,7 @@ void main() {
           );
           final dataPoint = {'x': 50.0, 'y': 100.0, 'label': 'Test'};
           final content = tooltipProvider.formatContent(dataPoint, customConfig);
-          
+
           expect(content, equals('Custom: Test'));
         }, throwsA(anything));
       });
@@ -113,7 +112,7 @@ void main() {
             {'series': 'B', 'x': 10.0, 'y': 30.0},
           ];
           final content = tooltipProvider.formatContent(multiSeriesData, config);
-          
+
           expect(content, contains('A'));
           expect(content, contains('B'));
         }, throwsA(anything));
@@ -133,9 +132,9 @@ void main() {
         expect(() {
           final cursorPos = const Offset(50, 50); // Near edge
           final hoveredState = state.copyWith(hoveredPoint: cursorPos);
-          
+
           tooltipProvider.render(canvas, size, hoveredState, config);
-          
+
           final tooltipBounds = tooltipProvider.getTooltipBounds();
           expect(tooltipBounds.left, greaterThanOrEqualTo(0));
           expect(tooltipBounds.top, greaterThanOrEqualTo(0));
@@ -149,7 +148,7 @@ void main() {
           );
           final customConfig = config.copyWith(style: customStyle);
           final hoveredState = state.copyWith(hoveredPoint: const Offset(200, 200));
-          
+
           tooltipProvider.render(canvas, size, hoveredState, customConfig);
           expect(true, isTrue);
         }, throwsA(anything));
@@ -164,7 +163,7 @@ void main() {
           final customStyle = config.style.copyWith(textStyle: customTextStyle);
           final customConfig = config.copyWith(style: customStyle);
           final hoveredState = state.copyWith(hoveredPoint: const Offset(200, 200));
-          
+
           tooltipProvider.render(canvas, size, hoveredState, customConfig);
           expect(true, isTrue);
         }, throwsA(anything));
@@ -176,14 +175,14 @@ void main() {
         expect(() {
           final cursorPos = const Offset(400, 300);
           final tooltipSize = const Size(120, 60);
-          
+
           final position = tooltipProvider.calculatePosition(
             cursorPos,
             tooltipSize,
             size,
             config,
           );
-          
+
           expect(position.dy, lessThan(cursorPos.dy));
         }, throwsA(anything));
       });
@@ -192,14 +191,14 @@ void main() {
         expect(() {
           final cursorPos = const Offset(400, 30); // Near top
           final tooltipSize = const Size(120, 60);
-          
+
           final position = tooltipProvider.calculatePosition(
             cursorPos,
             tooltipSize,
             size,
             config,
           );
-          
+
           expect(position.dy, greaterThan(cursorPos.dy));
         }, throwsA(anything));
       });
@@ -208,14 +207,14 @@ void main() {
         expect(() {
           final cursorPos = const Offset(10, 300); // Near left edge
           final tooltipSize = const Size(120, 60);
-          
+
           final position = tooltipProvider.calculatePosition(
             cursorPos,
             tooltipSize,
             size,
             config,
           );
-          
+
           expect(position.dx, greaterThanOrEqualTo(0));
         }, throwsA(anything));
       });
@@ -224,14 +223,14 @@ void main() {
         expect(() {
           final cursorPos = const Offset(790, 300); // Near right edge
           final tooltipSize = const Size(120, 60);
-          
+
           final position = tooltipProvider.calculatePosition(
             cursorPos,
             tooltipSize,
             size,
             config,
           );
-          
+
           expect(position.dx + tooltipSize.width, lessThanOrEqualTo(size.width));
         }, throwsA(anything));
       });
@@ -241,11 +240,11 @@ void main() {
       test('render completes in <3ms', () {
         expect(() {
           final hoveredState = state.copyWith(hoveredPoint: const Offset(400, 300));
-          
+
           final stopwatch = Stopwatch()..start();
           tooltipProvider.render(canvas, size, hoveredState, config);
           stopwatch.stop();
-          
+
           expect(stopwatch.elapsedMicroseconds, lessThan(3000));
         }, throwsA(anything));
       });
@@ -259,7 +258,7 @@ void main() {
             tooltipProvider.show(hoveredState, config);
             tooltipProvider.hide();
           }
-          
+
           // Should not accumulate memory
           expect(true, isTrue);
         }, throwsA(anything));
