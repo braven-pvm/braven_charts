@@ -1,41 +1,56 @@
+// Copyright 2025 Braven Charts
+// SPDX-License-Identifier: MIT
+
+/// Interaction Examples Index Screen
+///
+/// Navigation hub for all 9 interaction system examples demonstrating:
+/// - Crosshair interactions
+/// - Tooltip configuration
+/// - Zoom and pan
+/// - Gesture handling
+/// - Keyboard navigation
+library;
+
 import 'package:flutter/material.dart';
 
-import 'advanced_features_screen.dart';
-import 'annotations_showcase_screen.dart';
-import 'area_chart_screen.dart';
-import 'axis_theming_screen.dart';
-import 'bar_chart_screen.dart';
-import 'interaction_examples_screen.dart';
-import 'line_chart_screen.dart';
-import 'quickstart_screen.dart';
-import 'scatter_chart_screen.dart';
+import 'interaction_examples/basic_crosshair.dart';
+import 'interaction_examples/complete_interaction.dart';
+import 'interaction_examples/custom_crosshair_style.dart';
+import 'interaction_examples/custom_tooltip_builder.dart';
+import 'interaction_examples/default_tooltip.dart';
+import 'interaction_examples/gesture_callbacks.dart';
+import 'interaction_examples/keyboard_navigation.dart';
+import 'interaction_examples/multi_series_crosshair.dart';
+import 'interaction_examples/zoom_pan_config.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class InteractionExamplesScreen extends StatelessWidget {
+  const InteractionExamplesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Braven Charts Example'),
+        title: const Text('Interaction Examples'),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildWelcomeCard(context),
+          _buildHeaderCard(context),
           const SizedBox(height: 24),
-          _buildShowcaseSection(context),
+          _buildCrosshairSection(context),
+          const SizedBox(height: 24),
+          _buildTooltipSection(context),
           const SizedBox(height: 24),
           _buildInteractionSection(context),
           const SizedBox(height: 24),
-          _buildChartTypeSection(context),
+          _buildAdvancedSection(context),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
+  Widget _buildHeaderCard(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -45,13 +60,13 @@ class HomeScreen extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.show_chart,
+                  Icons.touch_app,
                   size: 32,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Welcome to Braven Charts',
+                  'Interaction System',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -60,22 +75,12 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Explore all chart types available in the library. Each chart demonstrates '
-              'different features, configurations, and rendering capabilities.',
+              'Explore all interaction features: crosshair, tooltip, zoom/pan, '
+              'gestures, and keyboard navigation. Each example demonstrates '
+              'different configuration options and use cases.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildFeatureChip(context, Icons.speed, 'High Performance'),
-                _buildFeatureChip(context, Icons.palette, 'Customizable'),
-                _buildFeatureChip(context, Icons.code, 'Pure Flutter'),
-                _buildFeatureChip(context, Icons.animation, 'Animated'),
-              ],
             ),
           ],
         ),
@@ -83,63 +88,82 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureChip(BuildContext context, IconData icon, String label) {
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text(label),
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      labelStyle: TextStyle(
-        color: Theme.of(context).colorScheme.onPrimaryContainer,
-      ),
-    );
-  }
-
-  Widget _buildShowcaseSection(BuildContext context) {
+  Widget _buildCrosshairSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Feature Showcases',
+            'Crosshair Examples',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
         ),
-        _buildChartCard(
+        _buildExampleCard(
           context,
-          title: 'Annotations',
-          subtitle: '5 annotation types: Text, Point, Range, Threshold, Trend',
-          icon: Icons.label,
-          color: Colors.purple,
+          title: 'Example 1: Basic Crosshair',
+          subtitle: '5-line crosshair setup with default configuration',
+          icon: Icons.add,
+          color: Colors.blue,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AnnotationsShowcaseScreen()),
+            MaterialPageRoute(builder: (_) => const BasicCrosshairExample()),
           ),
         ),
         const SizedBox(height: 12),
-        _buildChartCard(
+        _buildExampleCard(
           context,
-          title: 'Advanced Features',
-          subtitle: 'Real-time streaming, ChartController, dynamic updates',
-          icon: Icons.science,
-          color: Colors.indigo,
+          title: 'Example 2: Custom Crosshair Style',
+          subtitle: 'Custom color, width, dash pattern, snap radius',
+          icon: Icons.style,
+          color: Colors.lightBlue,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AdvancedFeaturesScreen()),
+            MaterialPageRoute(
+                builder: (_) => const CustomCrosshairStyleExample()),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTooltipSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Tooltip Examples',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        _buildExampleCard(
+          context,
+          title: 'Example 3: Default Tooltip',
+          subtitle: 'Tooltip on hover/tap with default formatting',
+          icon: Icons.info_outline,
+          color: Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DefaultTooltipExample()),
           ),
         ),
         const SizedBox(height: 12),
-        _buildChartCard(
+        _buildExampleCard(
           context,
-          title: 'Axis & Theming',
-          subtitle: '4 axis presets, custom configs, light/dark themes',
-          icon: Icons.tune,
-          color: Colors.teal,
+          title: 'Example 4: Custom Tooltip Builder',
+          subtitle: 'Rich tooltip content with icons and badges',
+          icon: Icons.featured_play_list,
+          color: Colors.lightGreen,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AxisAndThemingScreen()),
+            MaterialPageRoute(
+                builder: (_) => const CustomTooltipBuilderExample()),
           ),
         ),
       ],
@@ -153,105 +177,96 @@ class HomeScreen extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Interaction System',
+            'User Interactions',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
         ),
-        _buildChartCard(
+        _buildExampleCard(
           context,
-          title: 'Interaction Examples',
-          subtitle: '9 examples: crosshair, tooltip, zoom/pan, gestures, keyboard',
+          title: 'Example 5: Zoom/Pan Configuration',
+          subtitle: 'Mouse wheel, pinch, drag gestures with zoom levels',
+          icon: Icons.zoom_in,
+          color: Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ZoomPanConfigExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 6: Gesture Callbacks',
+          subtitle: 'Tap, hover, long-press, zoom, pan event handling',
           icon: Icons.touch_app,
-          color: Colors.deepPurple,
+          color: Colors.deepOrange,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (_) => const InteractionExamplesScreen()),
+                builder: (_) => const GestureCallbacksExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 7: Keyboard Navigation',
+          subtitle: 'Arrow keys, zoom keys (+/-), shortcuts',
+          icon: Icons.keyboard,
+          color: Colors.amber,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const KeyboardNavigationExample()),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildChartTypeSection(BuildContext context) {
+  Widget _buildAdvancedSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Chart Types',
+            'Advanced Examples',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
         ),
-        _buildChartCard(
+        _buildExampleCard(
           context,
-          title: 'Quickstart Guide',
-          subtitle: 'All 6 quickstart scenarios in one screen',
-          icon: Icons.rocket_launch,
-          color: Colors.red,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const QuickstartScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildChartCard(
-          context,
-          title: 'Line Charts',
-          subtitle: 'Straight, smooth, and stepped interpolation',
-          icon: Icons.show_chart,
-          color: Colors.blue,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const LineChartScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildChartCard(
-          context,
-          title: 'Area Charts',
-          subtitle: 'Filled areas with gradients and stacking',
-          icon: Icons.area_chart,
-          color: Colors.green,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AreaChartScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildChartCard(
-          context,
-          title: 'Bar Charts',
-          subtitle: 'Grouped and stacked bars, vertical & horizontal',
-          icon: Icons.bar_chart,
-          color: Colors.orange,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const BarChartScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildChartCard(
-          context,
-          title: 'Scatter Plots',
-          subtitle: 'Fixed-size, bubble charts, and clustering',
-          icon: Icons.scatter_plot,
+          title: 'Example 8: Complete Configuration',
+          subtitle: 'All interaction features working together',
+          icon: Icons.dashboard,
           color: Colors.purple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ScatterChartScreen()),
+            MaterialPageRoute(
+                builder: (_) => const CompleteInteractionExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 9: Multi-Series Crosshair',
+          subtitle: 'Crosshair snapping across multiple series',
+          icon: Icons.stacked_line_chart,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const MultiSeriesCrosshairExample()),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildChartCard(
+  Widget _buildExampleCard(
     BuildContext context, {
     required String title,
     required String subtitle,
@@ -277,7 +292,7 @@ class HomeScreen extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: color,
-                  size: 32,
+                  size: 28,
                 ),
               ),
               const SizedBox(width: 16),
