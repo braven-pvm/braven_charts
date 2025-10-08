@@ -787,16 +787,22 @@ Single Flutter library project:
     * Includes dartdoc comments explaining all tooltip configuration
     * No lint errors, analysis clean
 
-- [ ] **T039** Create Example 4: Tooltip with Custom Builder
+- [x] **T039** Create Example 4: Tooltip with Custom Builder
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/custom_tooltip_builder.dart`
   - **Acceptance Criteria**:
-    - [ ] Executable example with custom tooltip builder
-    - [ ] Custom tooltip content (e.g., chart, rich text) demonstrated
-    - [ ] Example runs without errors
-    - [ ] dartdoc comments explaining custom builder pattern
+    - [x] Executable example with custom tooltip builder
+    - [x] Custom tooltip content (e.g., chart, rich text) demonstrated
+    - [x] Example runs without errors
+    - [x] dartdoc comments explaining custom builder pattern
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 4 in quickstart.md
+  - **Completion Notes**:
+    * Created CustomTooltipBuilderExample with rich tooltip content
+    * Custom builder using TooltipBuilder function signature
+    * Displays title, icons, formatted values, and conditional badge
+    * Blue-themed styling, positioned at top with 15px offset
+    * No lint errors, analysis clean
 
 - [ ] **T040** Create Example 5: Zoom/Pan Configuration
   - **Type**: Documentation
