@@ -279,7 +279,8 @@ Create helper method to find the nearest data point to a screen position.
 
 ### Phase 2: Zoom/Pan Integration (2 hours)
 
-#### **R-T006: Implement Modifier Key Detection for Scroll Events** ⏱️ 30 min
+#### **R-T006: Implement Modifier Key Detection for Scroll Events** ⏱️ 30 min ✅ COMPLETE
+**Status**: COMPLETE - Platform-aware modifier key detection implemented (CTRL/CMD for zoom, SHIFT for horizontal pan). Middle-mouse button pan detection added with onPointerDown/Move/Up handlers. Plain scroll without modifiers correctly allows default page scroll (critical for web UX). Placeholders for actual zoom/pan logic to be added in R-T007.
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T004

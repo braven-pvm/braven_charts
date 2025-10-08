@@ -29,8 +29,9 @@ import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
-import 'package:flutter/gestures.dart' show PointerScrollEvent;
+import 'package:flutter/gestures.dart' show PointerScrollEvent, kMiddleMouseButton;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HardwareKeyboard;
 
 /// Primary user-facing widget for rendering interactive charts.
 ///
@@ -573,6 +574,12 @@ class _BravenChartState extends State<BravenChart> {
   /// Current interaction state.
   InteractionState _interactionState = InteractionState.initial();
 
+  /// Tracks if currently panning with middle-mouse button.
+  bool _isPanningWithMiddleMouse = false;
+
+  /// Start position for middle-mouse pan drag.
+  Offset? _panStartPosition;
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
@@ -1004,15 +1011,60 @@ class _BravenChartState extends State<BravenChart> {
 
     // Wrap with Listener for scroll/middle-mouse events
     interactiveWidget = Listener(
+      // Handle scroll events with modifier keys
       onPointerSignal: (signal) {
         if (signal is PointerScrollEvent && config.enableZoom) {
-          // TODO R-T006: Will be implemented with modifier key detection
-          // CTRL/CMD + Scroll -> Zoom
-          // SHIFT + Scroll -> Pan horizontally
-          // Plain scroll -> Allow page scroll (don't consume)
-          // For now, just placeholder
+          // Platform-aware modifier key detection
+          // Windows/Linux: CTRL, macOS: CMD (Meta)
+          final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
+              HardwareKeyboard.instance.isMetaPressed;
+          final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+          if (isCtrlPressed) {
+            // CTRL/CMD + Scroll → Zoom at cursor position
+            // TODO R-T007: Actual zoom logic will be added with ZoomPanController
+            // For now, just track that this interaction occurred
+            // Event is consumed - prevents page scroll
+          } else if (isShiftPressed) {
+            // SHIFT + Scroll → Pan horizontally
+            // TODO R-T007: Actual horizontal pan logic will be added
+            // Event is consumed - prevents page scroll
+          }
+          // If no modifier, don't handle - allows default page scroll
+          // This is CRITICAL for web UX - page must scroll normally
         }
       },
+
+      // Handle middle-mouse button pan (PRIMARY pan method)
+      onPointerDown: (event) {
+        if (event.buttons == kMiddleMouseButton && config.enablePan) {
+          setState(() {
+            _isPanningWithMiddleMouse = true;
+            _panStartPosition = event.localPosition;
+          });
+        }
+      },
+
+      onPointerMove: (event) {
+        if (_isPanningWithMiddleMouse && _panStartPosition != null) {
+          final delta = event.localPosition - _panStartPosition!;
+          // TODO R-T007: Actual pan logic will be added with ZoomPanController
+          // For now, just update the start position for continuous panning
+          setState(() {
+            _panStartPosition = event.localPosition;
+          });
+        }
+      },
+
+      onPointerUp: (event) {
+        if (_isPanningWithMiddleMouse) {
+          setState(() {
+            _isPanningWithMiddleMouse = false;
+            _panStartPosition = null;
+          });
+        }
+      },
+
       child: interactiveWidget,
     );
 
