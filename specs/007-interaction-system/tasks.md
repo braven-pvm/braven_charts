@@ -68,74 +68,74 @@ Single Flutter library project:
 
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
-- [ ] **T003** [P] Contract test for IEventHandler interface
+- [x] **T003** [P] Contract test for IEventHandler interface
   - **Type**: Contract Test
   - **Files**: `test/interaction/contracts/event_handler_contract_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `processPointerEvent()` returns ChartEvent with data coordinates
-    - [ ] Test `processKeyEvent()` returns KeyEventResult
-    - [ ] Test `routeEvent()` delegates to handlers by priority
-    - [ ] Test `registerHandler()` / `unregisterHandler()`
-    - [ ] Test `dispose()` cleans up resources
-    - [ ] Performance: `processPointerEvent()` completes in <5ms
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `processPointerEvent()` returns ChartEvent with data coordinates
+    - [x] Test `processKeyEvent()` returns KeyEventResult
+    - [x] Test `routeEvent()` delegates to handlers by priority
+    - [x] Test `registerHandler()` / `unregisterHandler()`
+    - [x] Test `dispose()` cleans up resources
+    - [x] Performance: `processPointerEvent()` completes in <5ms
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/contracts/i_event_handler.dart`
 
-- [ ] **T004** [P] Contract test for ICrosshairRenderer interface
+- [x] **T004** [P] Contract test for ICrosshairRenderer interface
   - **Type**: Contract Test
   - **Files**: `test/interaction/contracts/crosshair_renderer_contract_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `render()` draws crosshair on canvas
-    - [ ] Test `calculateSnapPoints()` finds nearest data points
-    - [ ] Test `renderCrosshairLines()` draws vertical/horizontal lines
-    - [ ] Test `renderCoordinateLabels()` displays coordinates
-    - [ ] Test `renderSnapPointHighlights()` highlights snap points
-    - [ ] Performance: `render()` completes in <2ms
-    - [ ] Performance: `calculateSnapPoints()` completes in <1ms for 10k points
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `render()` draws crosshair on canvas
+    - [x] Test `calculateSnapPoints()` finds nearest data points
+    - [x] Test `renderCrosshairLines()` draws vertical/horizontal lines
+    - [x] Test `renderCoordinateLabels()` displays coordinates
+    - [x] Test `renderSnapPointHighlights()` highlights snap points
+    - [x] Performance: `render()` completes in <2ms
+    - [x] Performance: `calculateSnapPoints()` completes in <1ms for 10k points
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/contracts/i_crosshair_renderer.dart`
 
-- [ ] **T005** [P] Contract test for ITooltipProvider interface
+- [x] **T005** [P] Contract test for ITooltipProvider interface
   - **Type**: Contract Test
   - **Files**: `test/interaction/contracts/tooltip_provider_contract_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `showTooltip()` displays tooltip widget
-    - [ ] Test `hideTooltip()` removes tooltip
-    - [ ] Test `calculateTooltipPosition()` smart positioning logic
-    - [ ] Test `buildTooltipContent()` generates default and custom content
-    - [ ] Test `shouldShowTooltip()` respects trigger mode and delays
-    - [ ] Performance: `showTooltip()` completes in <50ms
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `showTooltip()` displays tooltip widget
+    - [x] Test `hideTooltip()` removes tooltip
+    - [x] Test `calculateTooltipPosition()` smart positioning logic
+    - [x] Test `buildTooltipContent()` generates default and custom content
+    - [x] Test `shouldShowTooltip()` respects trigger mode and delays
+    - [x] Performance: `showTooltip()` completes in <50ms
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/contracts/i_tooltip_provider.dart`
 
-- [ ] **T006** [P] Contract test for IGestureRecognizer interface
+- [x] **T006** [P] Contract test for IGestureRecognizer interface
   - **Type**: Contract Test
   - **Files**: `test/interaction/contracts/gesture_recognizer_contract_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `recognizeTap()` detects tap gestures
-    - [ ] Test `recognizePan()` detects pan gestures
-    - [ ] Test `recognizePinch()` detects pinch-to-zoom
-    - [ ] Test `recognizeLongPress()` detects long-press
-    - [ ] Test gesture conflict resolution (tap vs pan)
-    - [ ] Performance: Gesture recognition completes in <16ms
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `recognizeTap()` detects tap gestures
+    - [x] Test `recognizePan()` detects pan gestures
+    - [x] Test `recognizePinch()` detects pinch-to-zoom
+    - [x] Test `recognizeLongPress()` detects long-press
+    - [x] Test gesture conflict resolution (tap vs pan)
+    - [x] Performance: Gesture recognition completes in <16ms
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/contracts/i_gesture_recognizer.dart`
 
-- [ ] **T007** [P] Contract test for IKeyboardHandler interface
+- [x] **T007** [P] Contract test for IKeyboardHandler interface
   - **Type**: Contract Test
   - **Files**: `test/interaction/contracts/keyboard_handler_contract_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `handleArrowKeys()` navigates data points
-    - [ ] Test `handleZoomKeys()` zooms in/out with +/-
-    - [ ] Test `handleHomeEnd()` jumps to first/last point
-    - [ ] Test `handleEnterSpace()` shows tooltip
-    - [ ] Test `handleEscape()` closes tooltip/clears selection
-    - [ ] Performance: Key event processing completes in <50ms
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `handleArrowKeys()` navigates data points
+    - [x] Test `handleZoomKeys()` zooms in/out with +/-
+    - [x] Test `handleHomeEnd()` jumps to first/last point
+    - [x] Test `handleEnterSpace()` shows tooltip
+    - [x] Test `handleEscape()` closes tooltip/clears selection
+    - [x] Performance: Key event processing completes in <50ms
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/contracts/i_keyboard_handler.dart`
 
