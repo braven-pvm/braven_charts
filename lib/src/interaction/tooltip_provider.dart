@@ -4,8 +4,6 @@
 /// Implements smart positioning to avoid clipping and supports custom content builders.
 library;
 
-import 'dart:ui' show Offset, Rect, Size;
-
 import 'package:flutter/material.dart';
 
 import '../foundation/data_models/chart_data_point.dart';
@@ -412,9 +410,7 @@ class TooltipProvider implements ITooltipProvider {
 
     // Update if point changed
     if (oldPoint != null && newPoint != null) {
-      return oldPoint.x != newPoint.x ||
-          oldPoint.y != newPoint.y ||
-          oldPoint.label != newPoint.label;
+      return oldPoint.x != newPoint.x || oldPoint.y != newPoint.y || oldPoint.label != newPoint.label;
     }
 
     return false;

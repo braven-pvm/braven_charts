@@ -16,7 +16,7 @@ void main() {
 
     setUp(() {
       tooltipProvider = TooltipProvider();
-      config = TooltipConfig();
+      config = const TooltipConfig();
     });
 
     group('Tooltip Show/Hide Logic', () {
@@ -26,7 +26,7 @@ void main() {
         );
 
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 100.0, y: 200.0);
+        final point = const ChartDataPoint(x: 100.0, y: 200.0);
         final widget = tooltipProvider.showTooltip(
           context,
           point,
@@ -53,7 +53,7 @@ void main() {
           customBuilder: (context, data) => const Text('Custom Tooltip'),
         );
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 50.0, y: 100.0);
+        final point = const ChartDataPoint(x: 50.0, y: 100.0);
 
         final widget = tooltipProvider.showTooltip(
           context,
@@ -72,7 +72,7 @@ void main() {
         );
 
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 50.0, y: 100.0);
+        final point = const ChartDataPoint(x: 50.0, y: 100.0);
 
         final widget = tooltipProvider.showTooltip(
           context,
@@ -93,8 +93,8 @@ void main() {
         );
 
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 50.0, y: 100.0, label: 'Point A');
-        final style = TooltipStyle();
+        final point = const ChartDataPoint(x: 50.0, y: 100.0, label: 'Point A');
+        final style = const TooltipStyle();
 
         final widget = tooltipProvider.buildDefaultTooltip(
           context,
@@ -112,8 +112,8 @@ void main() {
         );
 
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 12.34, y: 56.78);
-        final style = TooltipStyle();
+        final point = const ChartDataPoint(x: 12.34, y: 56.78);
+        final style = const TooltipStyle();
 
         final widget = tooltipProvider.buildDefaultTooltip(
           context,
@@ -136,11 +136,11 @@ void main() {
 
         final context = tester.element(find.byType(SizedBox));
         final points = [
-          ChartDataPoint(x: 10.0, y: 20.0),
-          ChartDataPoint(x: 10.0, y: 30.0),
+          const ChartDataPoint(x: 10.0, y: 20.0),
+          const ChartDataPoint(x: 10.0, y: 30.0),
         ];
         final seriesIds = ['Series A', 'Series B'];
-        final style = TooltipStyle();
+        final style = const TooltipStyle();
 
         final widget = tooltipProvider.buildMultiSeriesTooltip(
           context,
@@ -303,8 +303,8 @@ void main() {
 
     group('Update Detection', () {
       test('shouldUpdate() returns true for different points', () {
-        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0);
-        final newPoint = ChartDataPoint(x: 15.0, y: 25.0);
+        final oldPoint = const ChartDataPoint(x: 10.0, y: 20.0);
+        final newPoint = const ChartDataPoint(x: 15.0, y: 25.0);
 
         final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
 
@@ -312,7 +312,7 @@ void main() {
       });
 
       test('shouldUpdate() returns false for same point', () {
-        final point = ChartDataPoint(x: 10.0, y: 20.0);
+        final point = const ChartDataPoint(x: 10.0, y: 20.0);
 
         final shouldUpdate = tooltipProvider.shouldUpdate(point, point);
 
@@ -321,7 +321,7 @@ void main() {
 
       test('shouldUpdate() returns true when point becomes visible', () {
         const ChartDataPoint? oldPoint = null;
-        final newPoint = ChartDataPoint(x: 10.0, y: 20.0);
+        final newPoint = const ChartDataPoint(x: 10.0, y: 20.0);
 
         final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
 
@@ -329,7 +329,7 @@ void main() {
       });
 
       test('shouldUpdate() returns true when point becomes hidden', () {
-        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0);
+        final oldPoint = const ChartDataPoint(x: 10.0, y: 20.0);
         const ChartDataPoint? newPoint = null;
 
         final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
@@ -338,8 +338,8 @@ void main() {
       });
 
       test('shouldUpdate() returns true when label changes', () {
-        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0, label: 'A');
-        final newPoint = ChartDataPoint(x: 10.0, y: 20.0, label: 'B');
+        final oldPoint = const ChartDataPoint(x: 10.0, y: 20.0, label: 'A');
+        final newPoint = const ChartDataPoint(x: 10.0, y: 20.0, label: 'B');
 
         final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
 
@@ -354,7 +354,7 @@ void main() {
         );
 
         final context = tester.element(find.byType(SizedBox));
-        final point = ChartDataPoint(x: 100.0, y: 200.0);
+        final point = const ChartDataPoint(x: 100.0, y: 200.0);
 
         final stopwatch = Stopwatch()..start();
         tooltipProvider.showTooltip(

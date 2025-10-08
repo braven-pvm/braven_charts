@@ -3,12 +3,11 @@
 // Task: T005
 // Status: Tests should now PASS with implementation
 
+import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
+import 'package:braven_charts/src/interaction/tooltip_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:braven_charts/src/interaction/tooltip_provider.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 
 void main() {
   group('ITooltipProvider Contract Tests', () {
@@ -28,10 +27,10 @@ void main() {
       );
 
       final context = tester.element(find.byType(SizedBox));
-      final point = ChartDataPoint(x: 5.0, y: 10.0, label: 'Test Point');
+      final point = const ChartDataPoint(x: 5.0, y: 10.0, label: 'Test Point');
       const seriesId = 'series1';
       const screenPosition = Offset(400, 300);
-      final config = TooltipConfig();
+      final config = const TooltipConfig();
 
       final widget = tooltipProvider.showTooltip(
         context,
@@ -55,10 +54,10 @@ void main() {
       );
 
       final context = tester.element(find.byType(SizedBox));
-      final point = ChartDataPoint(x: 5.0, y: 10.0);
+      final point = const ChartDataPoint(x: 5.0, y: 10.0);
       const seriesId = 'series1';
       const screenPosition = Offset(400, 300);
-      final config = TooltipConfig();
+      final config = const TooltipConfig();
 
       final stopwatch = Stopwatch()..start();
       tooltipProvider.showTooltip(
@@ -75,14 +74,14 @@ void main() {
 
     test('hideTooltip() removes tooltip', () {
       final provider = TooltipProvider();
-      
+
       // Initially not visible
       expect(provider.isVisible, isFalse);
-      
+
       // After showing, should be visible
       // (We can't actually show here without BuildContext, but we can test hide)
       provider.hideTooltip();
-      
+
       // Should remain hidden
       expect(provider.isVisible, isFalse);
     });
@@ -119,9 +118,9 @@ void main() {
       );
 
       final context = tester.element(find.byType(SizedBox));
-      final point = ChartDataPoint(x: 5.0, y: 10.0, label: 'Test');
+      final point = const ChartDataPoint(x: 5.0, y: 10.0, label: 'Test');
       const seriesId = 'series1';
-      final style = TooltipStyle();
+      final style = const TooltipStyle();
 
       final widget = tooltipProvider.buildDefaultTooltip(
         context,
@@ -143,11 +142,11 @@ void main() {
 
       final context = tester.element(find.byType(SizedBox));
       final points = [
-        ChartDataPoint(x: 5.0, y: 10.0),
-        ChartDataPoint(x: 5.0, y: 15.0),
+        const ChartDataPoint(x: 5.0, y: 10.0),
+        const ChartDataPoint(x: 5.0, y: 15.0),
       ];
       final seriesIds = ['series1', 'series2'];
-      final style = TooltipStyle();
+      final style = const TooltipStyle();
 
       final widget = tooltipProvider.buildMultiSeriesTooltip(
         context,
@@ -161,8 +160,8 @@ void main() {
     });
 
     test('shouldUpdate() detects content changes', () {
-      final oldPoint = ChartDataPoint(x: 5.0, y: 10.0);
-      final newPoint = ChartDataPoint(x: 6.0, y: 11.0);
+      final oldPoint = const ChartDataPoint(x: 5.0, y: 10.0);
+      final newPoint = const ChartDataPoint(x: 6.0, y: 11.0);
 
       final shouldUpdate = tooltipProvider.shouldUpdate(
         oldPoint,
@@ -173,7 +172,7 @@ void main() {
     });
 
     test('shouldUpdate() returns false for same point', () {
-      final point = ChartDataPoint(x: 5.0, y: 10.0);
+      final point = const ChartDataPoint(x: 5.0, y: 10.0);
 
       final shouldUpdate = tooltipProvider.shouldUpdate(
         point,
@@ -184,4 +183,3 @@ void main() {
     });
   });
 }
-
