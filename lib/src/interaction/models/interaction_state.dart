@@ -99,6 +99,10 @@ class InteractionState {
   // Hover state (desktop mouse)
   /// The data point currently being hovered by the mouse/touch.
   ///
+  /// Stored as Map<String, dynamic> to avoid circular dependencies and maintain
+  /// JSON serializability. Contains keys: 'x', 'y', 'label', 'metadata', 'seriesId'.
+  /// Convert to ChartDataPoint using helper method in widget layer.
+  ///
   /// Null if no data point is hovered.
   final Map<String, dynamic>? hoveredPoint;
 
@@ -110,6 +114,10 @@ class InteractionState {
   // Focus state (keyboard navigation)
   /// The data point currently focused via keyboard navigation.
   ///
+  /// Stored as Map<String, dynamic> to avoid circular dependencies and maintain
+  /// JSON serializability. Contains keys: 'x', 'y', 'label', 'metadata', 'seriesId'.
+  /// Convert to ChartDataPoint using helper method in widget layer.
+  ///
   /// Null if no data point is focused.
   final Map<String, dynamic>? focusedPoint;
 
@@ -120,6 +128,10 @@ class InteractionState {
 
   // Selection state (multi-select support)
   /// List of currently selected data points.
+  ///
+  /// Each point stored as Map<String, dynamic> to avoid circular dependencies and
+  /// maintain JSON serializability. Contains keys: 'x', 'y', 'label', 'metadata', 'seriesId'.
+  /// Convert to ChartDataPoint using helper method in widget layer.
   ///
   /// Empty list if no points are selected.
   final List<Map<String, dynamic>> selectedPoints;
