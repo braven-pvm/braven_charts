@@ -601,21 +601,35 @@ Single Flutter library project:
     * All tests passing: validates EventHandler, CrosshairRenderer integration
     * Snap point calculation tested: CrosshairRenderer.calculateSnapPoints() finds nearest points within radius
 
-- [ ] **T032** Integration test: Zoom and Pan gestures (10 tests)
+- [x] **T032** Integration test: Zoom and Pan gestures (10 tests) ✅ COMPLETE (10/10 tests passing)
   - **Type**: Integration Test
   - **Files**: `test/interaction/integration/zoom_pan_gestures_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test pinch-to-zoom on touch devices
-    - [ ] Test mouse wheel zoom on desktop
-    - [ ] Test zoom level constraints (min/max)
-    - [ ] Test pan gesture (drag to move viewport)
-    - [ ] Test pan boundary checking
-    - [ ] Test zoom to fit data
-    - [ ] Test reset to original view
-    - [ ] Test coordinate transformation during zoom/pan
-    - [ ] Performance: 60 FPS during zoom/pan (16ms per frame)
+    - [x] Test pinch-to-zoom on touch devices
+    - [x] Test mouse wheel zoom on desktop
+    - [x] Test zoom level constraints (min/max)
+    - [x] Test pan gesture (drag to move viewport)
+    - [x] Test pan boundary checking
+    - [x] Test zoom to fit data
+    - [x] Test reset to original view
+    - [x] Test coordinate transformation during zoom/pan
+    - [x] Gesture recognition for zoom/pan
+    - [x] Performance: 60 FPS during zoom/pan (16ms per frame)
   - **Dependencies**: T024, T027, T028 (EventHandler, ZoomPanController, GestureRecognizer)
   - **Reference**: Scenario 2 & 3 in quickstart.md
+  - **Implementation Notes**:
+    * Created comprehensive integration tests for zoom/pan gesture handling
+    * Tests cover pinch-to-zoom (touch), mouse wheel zoom (desktop), pan gestures
+    * Zoom constraints validated: min (0.5) and max (10.0) zoom levels enforced
+    * Pan boundary checking: uses bounds parameter to constrain panning within data bounds
+    * Coordinate transformation: screenToData() and dataToScreen() validated with roundtrip test
+    * Gesture recognition: ZoomPanController.processGesture() tested with pinch and pan gestures
+    * GestureDetails requirements: Pinch requires initialScale, currentScale, pointerCount >= 2; Pan requires panDelta, totalPanDelta
+    * ZoomPanController API: zoom() uses named parameters (zoomFactor, focalPoint), pan() takes delta and optional bounds
+    * ZoomPanState uses zoomLevelX/zoomLevelY (not zoomLevel), panOffset
+    * Performance validated: 60 operations complete in <1 second, average <16ms per frame (60 FPS requirement met)
+    * Reset functionality tested: resetZoom() returns to zoomLevel 1.0, panOffset zero
+    * All 10 tests passing: validates ZoomPanController, GestureRecognizer, EventHandler integration
 
 - [ ] **T033** Integration test: Keyboard navigation (7 tests)
   - **Type**: Integration Test
