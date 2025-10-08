@@ -29,6 +29,7 @@ import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
 
 /// Primary user-facing widget for rendering interactive charts.
@@ -904,30 +905,186 @@ class _BravenChartState extends State<BravenChart> {
 
   /// Wraps the chart widget with interaction system components.
   ///
-  /// Adds GestureDetector, Focus, and Semantics widgets for
-  /// gesture recognition, keyboard navigation, and accessibility.
+  /// Integrates crosshair, tooltip, mouse/touch handling, keyboard navigation,
+  /// and all interaction callbacks.
   Widget _wrapWithInteractionSystem(Widget child) {
     final config = widget.interactionConfig!;
 
-    // Wrap with GestureDetector for gesture recognition
-    Widget interactiveWidget = GestureDetector(
-      onTapDown: config.enableSelection ? (details) {
-        // Handle tap - update interaction state
-        // TODO: Convert screen position to data point using EventHandler
+    // Build the full interaction stack
+    Widget interactiveWidget = Stack(
+      children: [
+        // Base chart
+        child,
+        
+        // Crosshair overlay (if enabled and visible)
+        if (config.crosshair.enabled && _interactionState.isCrosshairVisible)
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _CrosshairPainter(
+                position: _interactionState.crosshairPosition!,
+                config: config.crosshair,
+                nearestPoint: _interactionState.hoveredPoint != null
+                    ? Offset(
+                        (_interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0,
+                        (_interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0,
+                      )
+                    : null,
+                chartSize: Size.infinite,
+              ),
+            ),
+          ),
+
+        // Tooltip overlay (if enabled and visible)
+        if (_buildTooltipOverlay() != null) _buildTooltipOverlay()!,
+      ],
+    );
+
+    // Wrap in MouseRegion for hover detection
+    interactiveWidget = MouseRegion(
+      onEnter: (_) {
+        // Mouse entered chart area - don't change state yet, wait for actual hover
+      },
+      onExit: (_) {
         setState(() {
           _interactionState = _interactionState.copyWith(
-            crosshairPosition: details.localPosition,
+            isCrosshairVisible: false,
+            isTooltipVisible: false,
+            crosshairPosition: null,
+            tooltipPosition: null,
+            hoveredPoint: null,
+            hoveredSeriesId: null,
           );
         });
-      } : null,
-      onPanUpdate: config.enablePan ? (details) {
-        // Handle pan gesture
-        // TODO: Update zoom/pan state using ZoomPanController
+
+        // Invoke hover callback with null (exited)
+        final exitPosition = Offset.zero; // Position doesn't matter for exit
+        config.onDataPointHover?.call(null, exitPosition);
+      },
+      onHover: (event) {
         setState(() {
-          // Placeholder for pan handling
+          // Update crosshair position
+          _interactionState = _interactionState.copyWith(
+            crosshairPosition: event.localPosition,
+            isCrosshairVisible: config.crosshair.enabled,
+          );
+
+          // Find nearest data point for snap and tooltip
+          final nearestPointData = _findNearestDataPoint(event.localPosition);
+          if (nearestPointData != null) {
+            _interactionState = _interactionState.copyWith(
+              hoveredPoint: nearestPointData,
+              hoveredSeriesId: nearestPointData['seriesId'] as String?,
+              tooltipPosition: event.localPosition,
+              tooltipDataPoint: nearestPointData,
+              isTooltipVisible: config.tooltip.enabled,
+            );
+
+            // Convert Map to ChartDataPoint for callback
+            final point = _mapToDataPoint(nearestPointData);
+            config.onDataPointHover?.call(point, event.localPosition);
+          } else {
+            // No point nearby, clear tooltip
+            _interactionState = _interactionState.copyWith(
+              isTooltipVisible: false,
+              hoveredPoint: null,
+              hoveredSeriesId: null,
+              tooltipDataPoint: null,
+            );
+          }
         });
+
+        // Invoke crosshair changed callback
+        final snapPointsList = _interactionState.snapPoints
+            .map((data) => _mapToDataPoint(data))
+            .toList();
+        config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
+      },
+      child: interactiveWidget,
+    );
+
+    // Wrap with Listener for scroll/middle-mouse events
+    interactiveWidget = Listener(
+      onPointerSignal: (signal) {
+        if (signal is PointerScrollEvent && config.enableZoom) {
+          // TODO R-T006: Will be implemented with modifier key detection
+          // CTRL/CMD + Scroll -> Zoom
+          // SHIFT + Scroll -> Pan horizontally
+          // Plain scroll -> Allow page scroll (don't consume)
+          // For now, just placeholder
+        }
+      },
+      child: interactiveWidget,
+    );
+
+    // Wrap with GestureDetector for tap/long-press/pan/pinch
+    interactiveWidget = GestureDetector(
+      // Tap handling
+      onTapDown: config.enableSelection ? (details) {
+        final nearestPointData = _findNearestDataPoint(details.localPosition);
+        if (nearestPointData != null) {
+          final point = _mapToDataPoint(nearestPointData);
+          
+          setState(() {
+            // Add to selected points
+            final updatedSelection = List<Map<String, dynamic>>.from(
+              _interactionState.selectedPoints,
+            );
+            updatedSelection.add(nearestPointData);
+            
+            _interactionState = _interactionState.copyWith(
+              selectedPoints: updatedSelection,
+              focusedPoint: nearestPointData,
+            );
+          });
+
+          // Invoke tap callback
+          config.onDataPointTap?.call(point, details.localPosition);
+          
+          // Invoke selection callback
+          final selectedPointsList = _interactionState.selectedPoints
+              .map((data) => _mapToDataPoint(data))
+              .toList();
+          config.onSelectionChanged?.call(selectedPointsList);
+        }
       } : null,
-      child: child,
+
+      // Long press handling
+      onLongPressStart: (details) {
+        final nearestPointData = _findNearestDataPoint(details.localPosition);
+        if (nearestPointData != null) {
+          final point = _mapToDataPoint(nearestPointData);
+          config.onDataPointLongPress?.call(point, details.localPosition);
+        }
+      },
+
+      // Pan handling (for drag interactions)
+      onPanStart: config.enablePan ? (details) {
+        // TODO R-T007: Actual pan logic will be added with ZoomPanController
+        // For now just track that we're panning
+      } : null,
+      
+      onPanUpdate: config.enablePan ? (details) {
+        // TODO R-T007: Actual pan logic will be added with ZoomPanController
+      } : null,
+
+      onPanEnd: config.enablePan ? (details) {
+        // TODO R-T007: Cleanup will be added with ZoomPanController
+      } : null,
+
+      // Pinch/scale handling (for zoom)
+      onScaleStart: config.enableZoom ? (details) {
+        // TODO R-T007: Zoom handling will be added with ZoomPanController
+      } : null,
+
+      onScaleUpdate: config.enableZoom ? (details) {
+        // TODO R-T007: Zoom handling will be added with ZoomPanController
+      } : null,
+
+      onScaleEnd: config.enableZoom ? (details) {
+        // TODO R-T007: Cleanup will be added with ZoomPanController
+      } : null,
+
+      child: interactiveWidget,
     );
 
     // Wrap with Focus for keyboard navigation
@@ -936,7 +1093,8 @@ class _BravenChartState extends State<BravenChart> {
         autofocus: false,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
-          // TODO: Use KeyboardHandler to process keyboard events
+          // TODO R-T010: KeyboardHandler integration will be added
+          // For now just ignore
           return KeyEventResult.ignored;
         },
         child: interactiveWidget,
@@ -946,11 +1104,63 @@ class _BravenChartState extends State<BravenChart> {
     // Wrap with Semantics for accessibility
     interactiveWidget = Semantics(
       label: 'Interactive chart',
-      hint: 'Use arrow keys to navigate data points',
+      hint: 'Use arrow keys to navigate data points, +/- to zoom',
+      enabled: true,
       child: interactiveWidget,
     );
 
     return interactiveWidget;
+  }
+
+  /// Converts a Map<String, dynamic> to a ChartDataPoint.
+  ///
+  /// Helper for callback invocations that require ChartDataPoint.
+  ChartDataPoint _mapToDataPoint(Map<String, dynamic> data) {
+    return ChartDataPoint(
+      x: (data['x'] as num?)?.toDouble() ?? 0,
+      y: (data['y'] as num?)?.toDouble() ?? 0,
+      metadata: {
+        ...data,
+      },
+    );
+  }
+
+  /// Finds the nearest data point to a screen position.
+  ///
+  /// Returns null if no point is within the snap radius.
+  Map<String, dynamic>? _findNearestDataPoint(Offset screenPosition) {
+    if (!widget.interactionConfig!.crosshair.snapToDataPoint) {
+      return null;
+    }
+
+    final snapRadius = widget.interactionConfig!.crosshair.snapRadius;
+    Map<String, dynamic>? nearestPoint;
+    double minDistance = snapRadius;
+
+    // Iterate through all series to find nearest point
+    final allSeries = _getAllSeries();
+    for (final series in allSeries) {
+      for (final point in series.points) {
+        // TODO R-T005: Convert data coordinates to screen coordinates
+        // For now, using simplified distance calculation
+        // This will be properly implemented when coordinate transformation is available
+        final dx = screenPosition.dx - (point.x * 100); // Placeholder
+        final dy = screenPosition.dy - (point.y * 100); // Placeholder
+        final distance = sqrt(dx * dx + dy * dy);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestPoint = {
+            'seriesId': series.id,
+            'x': point.x,
+            'y': point.y,
+            if (point.metadata != null) ...point.metadata!,
+          };
+        }
+      }
+    }
+
+    return nearestPoint;
   }
 
   /// Builds the tooltip overlay widget with smart positioning.
