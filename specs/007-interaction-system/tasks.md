@@ -143,74 +143,74 @@ Single Flutter library project:
 
 ## Phase 3.3: Tests First - Model Tests (TDD) ⚠️ MUST COMPLETE BEFORE 3.4
 
-- [ ] **T008** [P] Unit tests for InteractionState model
+- [x] **T008** [P] Unit tests for InteractionState model
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/models/interaction_state_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `InteractionState.initial()` creates default state
-    - [ ] Test `copyWith()` immutable updates
-    - [ ] Test validation: `isCrosshairVisible` requires `crosshairPosition`
-    - [ ] Test validation: `isTooltipVisible` requires `tooltipPosition` and `tooltipDataPoint`
-    - [ ] Test state transitions (mouse enter/move/exit)
-    - [ ] Test `toJson()` and `fromJson()` serialization
-    - [ ] Test helper getters (`hasHoveredPoint`, `hasFocusedPoint`, etc.)
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `InteractionState.initial()` creates default state
+    - [x] Test `copyWith()` immutable updates
+    - [x] Test validation: `isCrosshairVisible` requires `crosshairPosition`
+    - [x] Test validation: `isTooltipVisible` requires `tooltipPosition` and `tooltipDataPoint`
+    - [x] Test state transitions (mouse enter/move/exit)
+    - [x] Test `toJson()` and `fromJson()` serialization
+    - [x] Test helper getters (`hasHoveredPoint`, `hasFocusedPoint`, etc.)
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/data-model.md` section 1
 
-- [ ] **T009** [P] Unit tests for ZoomPanState model
+- [x] **T009** [P] Unit tests for ZoomPanState model
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/models/zoom_pan_state_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `ZoomPanState.initial()` creates default state (1.0 zoom, zero pan)
-    - [ ] Test zoom level constraints (min/max)
-    - [ ] Test `visibleDataBounds()` calculation after zoom/pan
-    - [ ] Test `copyWith()` immutable updates
-    - [ ] Test validation: zoom levels must be >= minZoom and <= maxZoom
-    - [ ] Test `toJson()` and `fromJson()` serialization
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `ZoomPanState.initial()` creates default state (1.0 zoom, zero pan)
+    - [x] Test zoom level constraints (min/max)
+    - [x] Test `visibleDataBounds()` calculation after zoom/pan
+    - [x] Test `copyWith()` immutable updates
+    - [x] Test validation: zoom levels must be >= minZoom and <= maxZoom
+    - [x] Test `toJson()` and `fromJson()` serialization
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/data-model.md` section 2
 
-- [ ] **T010** [P] Unit tests for GestureDetails model
+- [x] **T010** [P] Unit tests for GestureDetails model
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/models/gesture_details_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test gesture type enum values (tap, pan, pinch, longPress)
-    - [ ] Test position tracking (start, current)
-    - [ ] Test scale/delta calculations for pinch/pan
-    - [ ] Test timestamp recording
-    - [ ] Test `toJson()` and `fromJson()` serialization
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test gesture type enum values (tap, pan, pinch, longPress)
+    - [x] Test position tracking (start, current)
+    - [x] Test scale/delta calculations for pinch/pan
+    - [x] Test timestamp recording
+    - [x] Test `toJson()` and `fromJson()` serialization
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/data-model.md` section 3
 
-- [ ] **T011** [P] Unit tests for CrosshairConfig model
+- [x] **T011** [P] Unit tests for CrosshairConfig model
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/models/crosshair_config_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `CrosshairConfig.defaultConfig()` factory
-    - [ ] Test crosshair mode enum (vertical, horizontal, both, none)
-    - [ ] Test snap settings (enabled, radius)
-    - [ ] Test style properties (line color, width, dash pattern)
-    - [ ] Test coordinate label configuration
-    - [ ] Test `copyWith()` for immutable updates
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `CrosshairConfig.defaultConfig()` factory
+    - [x] Test crosshair mode enum (vertical, horizontal, both, none)
+    - [x] Test snap settings (enabled, radius)
+    - [x] Test style properties (line color, width, dash pattern)
+    - [x] Test coordinate label configuration
+    - [x] Test `copyWith()` for immutable updates
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/data-model.md` section 4
 
-- [ ] **T012** [P] Unit tests for TooltipConfig model
+- [x] **T012** [P] Unit tests for TooltipConfig model
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/models/tooltip_config_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test `TooltipConfig.defaultConfig()` factory
-    - [ ] Test trigger mode enum (hover, tap, both)
-    - [ ] Test delay configuration (show/hide)
-    - [ ] Test positioning logic (auto, above, below, left, right)
-    - [ ] Test style properties (background, border, shadow)
-    - [ ] Test custom builder support
-    - [ ] Test `copyWith()` for immutable updates
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test `TooltipConfig.defaultConfig()` factory
+    - [x] Test trigger mode enum (hover, tap, both)
+    - [x] Test delay configuration (show/hide)
+    - [x] Test positioning logic (auto, above, below, left, right)
+    - [x] Test style properties (background, border, shadow)
+    - [x] Test custom builder support
+    - [x] Test `copyWith()` for immutable updates
+    - [x] All tests FAIL (implementation not yet created)
   - **Dependencies**: None
   - **Reference**: `specs/007-interaction-system/data-model.md` section 5
 
