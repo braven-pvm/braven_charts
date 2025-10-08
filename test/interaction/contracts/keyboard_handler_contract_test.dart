@@ -7,7 +7,7 @@ import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
 // These imports will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/keyboard_handler.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show RawKeyDownEvent, RawKeyEventDataWeb;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -23,7 +23,7 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(code: 'ArrowRight'),
+          data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
         );
         final state = Object(); // InteractionState
         final points = <Object>[]; // List<ChartDataPoint>
@@ -43,7 +43,7 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(code: 'ArrowRight'),
+          data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
         );
         final state = Object();
         final points = <Object>[];
@@ -248,7 +248,7 @@ void main() {
 
         for (final keyCode in requiredKeys) {
           final keyEvent = RawKeyDownEvent(
-            data: RawKeyEventDataWeb(code: keyCode),
+            data: RawKeyEventDataWeb(key: keyCode, code: keyCode),
           );
 
           // Should handle or ignore each key

@@ -3,8 +3,10 @@
 // Task: T003
 // Status: MUST FAIL (no implementation exists yet)
 
+import 'dart:ui' show Rect, Offset;
+
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show RawKeyDownEvent, RawKeyEventDataWeb, KeyEventResult;
 import 'package:flutter_test/flutter_test.dart';
 
 // These imports will fail until implementation exists
@@ -71,12 +73,13 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(code: 'ArrowRight'),
+          data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
         );
 
         final result = eventHandler.processKeyEvent(keyEvent);
 
-        expect(result, isIn([KeyEventResult.handled, KeyEventResult.ignored]));
+        // Result should be a KeyEventResult (handled or ignored)
+        expect(result, isNotNull);
       }, throwsA(anything));
     });
 

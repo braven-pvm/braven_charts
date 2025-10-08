@@ -3,8 +3,7 @@
 // Task: T012
 // Status: Implementation complete, tests aligned
 
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart'
-    as chart_tooltip;
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart' as chart_tooltip;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -124,7 +123,7 @@ void main() {
     });
 
     test('custom TooltipStyle with custom colors', () {
-      final style = chart_tooltip.TooltipStyle(
+      final style = const chart_tooltip.TooltipStyle(
         backgroundColor: Colors.black,
         borderColor: Colors.white,
         borderWidth: 2.0,

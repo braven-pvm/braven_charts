@@ -6,7 +6,6 @@
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/interaction/models/gesture_details.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Helper function to convert ChartDataPoint to Map<String, dynamic>
@@ -56,7 +55,7 @@ void main() {
     });
 
     test('hasHoveredPoint returns true when hoveredPoint is not null', () {
-      final mockPoint = ChartDataPoint(x: 1.0, y: 10.0);
+      final mockPoint = const ChartDataPoint(x: 1.0, y: 10.0);
       final state = InteractionState.initial().copyWith(
         hoveredPoint: pointToMap(mockPoint),
       );
@@ -71,7 +70,7 @@ void main() {
     });
 
     test('hasFocusedPoint returns true when focusedPoint is not null', () {
-      final mockPoint = ChartDataPoint(x: 2.0, y: 20.0);
+      final mockPoint = const ChartDataPoint(x: 2.0, y: 20.0);
       final state = InteractionState.initial().copyWith(
         focusedPoint: pointToMap(mockPoint),
       );
@@ -115,13 +114,13 @@ void main() {
     });
 
     test('validation: focusedPoint can be set with focusedPointIndex', () {
-      final mockPoint = ChartDataPoint(x: 1.0, y: 10.0);
+      final mockPoint = const ChartDataPoint(x: 1.0, y: 10.0);
 
       final state = InteractionState.initial().copyWith(
         focusedPoint: pointToMap(mockPoint),
         focusedPointIndex: 0,
       );
-      
+
       expect(state.focusedPoint, isNotNull);
       expect(state.focusedPointIndex, equals(0));
     });
@@ -188,8 +187,8 @@ void main() {
     });
 
     test('complex state: multiple selections and active gesture', () {
-      final point1 = ChartDataPoint(x: 1.0, y: 10.0);
-      final point2 = ChartDataPoint(x: 2.0, y: 20.0);
+      final point1 = const ChartDataPoint(x: 1.0, y: 10.0);
+      final point2 = const ChartDataPoint(x: 2.0, y: 20.0);
       final gesture = GestureDetails.pan(
         startPosition: const Offset(0, 0),
         currentPosition: const Offset(50, 50),

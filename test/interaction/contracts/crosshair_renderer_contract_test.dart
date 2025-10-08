@@ -3,6 +3,8 @@
 // Task: T004
 // Status: MUST FAIL (no implementation exists yet)
 
+import 'dart:ui' show Canvas, PictureRecorder, Size;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

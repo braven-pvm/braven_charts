@@ -12,7 +12,7 @@ void main() {
     const testDataBounds = Rect.fromLTWH(0, 0, 100, 100);
 
     test('ZoomPanState.initial() creates default state with 1.0 zoom', () {
-      final state = ZoomPanState.initial(testDataBounds);
+      final state = const ZoomPanState.initial(testDataBounds);
 
       expect(state.zoomLevelX, equals(1.0));
       expect(state.zoomLevelY, equals(1.0));
@@ -25,14 +25,14 @@ void main() {
     });
 
     test('ZoomPanState.initial() with no bounds defaults to Rect.zero', () {
-      final state = ZoomPanState.initial();
+      final state = const ZoomPanState.initial();
 
       expect(state.originalDataBounds, equals(Rect.zero));
       expect(state.visibleDataBounds, equals(Rect.zero));
     });
 
     test('copyWith() creates new instance with updated fields', () {
-      final initial = ZoomPanState.initial(testDataBounds);
+      final initial = const ZoomPanState.initial(testDataBounds);
       final updated = initial.copyWith(
         zoomLevelX: 1.5,
         panOffset: const Offset(10, 20),
@@ -45,19 +45,19 @@ void main() {
     });
 
     test('copyWith() updates zoom levels independently', () {
-      final initial = ZoomPanState.initial(testDataBounds);
+      final initial = const ZoomPanState.initial(testDataBounds);
       final updatedX = initial.copyWith(zoomLevelX: 2.0);
       final updatedY = initial.copyWith(zoomLevelY: 2.0);
 
       expect(updatedX.zoomLevelX, equals(2.0));
       expect(updatedX.zoomLevelY, equals(1.0));
-      
+
       expect(updatedY.zoomLevelX, equals(1.0));
       expect(updatedY.zoomLevelY, equals(2.0));
     });
 
     test('copyWith() updates visible bounds', () {
-      final initial = ZoomPanState.initial(testDataBounds);
+      final initial = const ZoomPanState.initial(testDataBounds);
       const newBounds = Rect.fromLTWH(0, 0, 50, 50);
       final updated = initial.copyWith(visibleDataBounds: newBounds);
 
@@ -66,7 +66,7 @@ void main() {
     });
 
     test('isAnimating can be set via copyWith', () {
-      final initial = ZoomPanState.initial(testDataBounds);
+      final initial = const ZoomPanState.initial(testDataBounds);
       final animating = initial.copyWith(isAnimating: true);
 
       expect(initial.isAnimating, isFalse);
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('animationDuration can be customized', () {
-      final state = ZoomPanState.initial(testDataBounds).copyWith(
+      final state = const ZoomPanState.initial(testDataBounds).copyWith(
         animationDuration: const Duration(milliseconds: 500),
       );
 
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('allowOverscroll can be configured', () {
-      final state = ZoomPanState.initial(testDataBounds).copyWith(
+      final state = const ZoomPanState.initial(testDataBounds).copyWith(
         allowOverscroll: true,
       );
 
@@ -90,7 +90,7 @@ void main() {
     });
 
     test('min/max zoom levels can be customized', () {
-      final state = ZoomPanState.initial(testDataBounds).copyWith(
+      final state = const ZoomPanState.initial(testDataBounds).copyWith(
         minZoomLevel: 0.25,
         maxZoomLevel: 20.0,
       );
@@ -100,7 +100,7 @@ void main() {
     });
 
     test('toJson() serializes state correctly', () {
-      final state = ZoomPanState.initial(testDataBounds).copyWith(
+      final state = const ZoomPanState.initial(testDataBounds).copyWith(
         zoomLevelX: 2.0,
         panOffset: const Offset(10, 20),
       );
@@ -147,28 +147,28 @@ void main() {
     });
 
     test('equality: two states with same values are equal', () {
-      final state1 = ZoomPanState.initial(testDataBounds);
-      final state2 = ZoomPanState.initial(testDataBounds);
+      final state1 = const ZoomPanState.initial(testDataBounds);
+      final state2 = const ZoomPanState.initial(testDataBounds);
 
       expect(state1, equals(state2));
     });
 
     test('equality: two states with different values are not equal', () {
-      final state1 = ZoomPanState.initial(testDataBounds);
+      final state1 = const ZoomPanState.initial(testDataBounds);
       final state2 = state1.copyWith(zoomLevelX: 2.0);
 
       expect(state1, isNot(equals(state2)));
     });
 
     test('hashCode: equal states have same hashCode', () {
-      final state1 = ZoomPanState.initial(testDataBounds);
-      final state2 = ZoomPanState.initial(testDataBounds);
+      final state1 = const ZoomPanState.initial(testDataBounds);
+      final state2 = const ZoomPanState.initial(testDataBounds);
 
       expect(state1.hashCode, equals(state2.hashCode));
     });
 
     test('immutability: copyWith returns new instance', () {
-      final state1 = ZoomPanState.initial(testDataBounds);
+      final state1 = const ZoomPanState.initial(testDataBounds);
       final state2 = state1.copyWith(zoomLevelX: 2.0);
 
       expect(identical(state1, state2), isFalse);
@@ -177,7 +177,7 @@ void main() {
     });
 
     test('complex scenario: zoomed and panned state', () {
-      final state = ZoomPanState.initial(testDataBounds).copyWith(
+      final state = const ZoomPanState.initial(testDataBounds).copyWith(
         zoomLevelX: 2.0,
         zoomLevelY: 2.0,
         panOffset: const Offset(10, 10),
