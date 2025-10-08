@@ -167,8 +167,7 @@ class HomeScreen extends StatelessWidget {
           color: Colors.deepPurple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const InteractionExamplesScreen()),
+            MaterialPageRoute(builder: (_) => const InteractionExamplesScreen()),
           ),
         ),
       ],

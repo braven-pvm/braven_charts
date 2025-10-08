@@ -121,8 +121,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.lightBlue,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const CustomCrosshairStyleExample()),
+            MaterialPageRoute(builder: (_) => const CustomCrosshairStyleExample()),
           ),
         ),
       ],
@@ -162,8 +161,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.lightGreen,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const CustomTooltipBuilderExample()),
+            MaterialPageRoute(builder: (_) => const CustomTooltipBuilderExample()),
           ),
         ),
       ],
@@ -203,8 +201,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.deepOrange,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const GestureCallbacksExample()),
+            MaterialPageRoute(builder: (_) => const GestureCallbacksExample()),
           ),
         ),
         const SizedBox(height: 12),
@@ -216,8 +213,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.amber,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const KeyboardNavigationExample()),
+            MaterialPageRoute(builder: (_) => const KeyboardNavigationExample()),
           ),
         ),
       ],
@@ -245,8 +241,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.purple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const CompleteInteractionExample()),
+            MaterialPageRoute(builder: (_) => const CompleteInteractionExample()),
           ),
         ),
         const SizedBox(height: 12),
@@ -258,8 +253,7 @@ class InteractionExamplesScreen extends StatelessWidget {
           color: Colors.deepPurple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const MultiSeriesCrosshairExample()),
+            MaterialPageRoute(builder: (_) => const MultiSeriesCrosshairExample()),
           ),
         ),
       ],

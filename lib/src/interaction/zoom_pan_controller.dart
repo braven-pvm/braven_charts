@@ -39,8 +39,7 @@ class ZoomPanController {
   ZoomPanController({
     this.frictionCoefficient = 0.95,
     this.velocityThreshold = 50.0,
-  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1,
-            'frictionCoefficient must be between 0 and 1'),
+  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1, 'frictionCoefficient must be between 0 and 1'),
         assert(velocityThreshold >= 0, 'velocityThreshold must be non-negative');
 
   /// Friction coefficient for inertial scrolling (0-1).
@@ -85,7 +84,7 @@ class ZoomPanController {
     // Formula: new_pan = old_pan + focal * (1 - zoom_ratio)
     final zoomRatioX = clampedZoomX / state.zoomLevelX;
     final zoomRatioY = clampedZoomY / state.zoomLevelY;
-    
+
     final newPanX = state.panOffset.dx + focalPoint.dx * (1 - zoomRatioX);
     final newPanY = state.panOffset.dy + focalPoint.dy * (1 - zoomRatioY);
 

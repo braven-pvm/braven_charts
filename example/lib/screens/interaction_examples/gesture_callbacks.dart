@@ -20,8 +20,7 @@ class GestureCallbacksExample extends StatefulWidget {
   const GestureCallbacksExample({super.key});
 
   @override
-  State<GestureCallbacksExample> createState() =>
-      _GestureCallbacksExampleState();
+  State<GestureCallbacksExample> createState() => _GestureCallbacksExampleState();
 }
 
 class _GestureCallbacksExampleState extends State<GestureCallbacksExample> {
@@ -109,14 +108,12 @@ class _GestureCallbacksExampleState extends State<GestureCallbacksExample> {
                     },
                     onZoomChanged: (zoomLevelX, zoomLevelY) {
                       setState(() {
-                        lastEvent =
-                            'Zoom: X=${(zoomLevelX * 100).toInt()}%, Y=${(zoomLevelY * 100).toInt()}%';
+                        lastEvent = 'Zoom: X=${(zoomLevelX * 100).toInt()}%, Y=${(zoomLevelY * 100).toInt()}%';
                       });
                     },
                     onPanChanged: (panOffset) {
                       setState(() {
-                        lastEvent =
-                            'Pan: dx=${panOffset.dx.toStringAsFixed(1)}, dy=${panOffset.dy.toStringAsFixed(1)}';
+                        lastEvent = 'Pan: dx=${panOffset.dx.toStringAsFixed(1)}, dy=${panOffset.dy.toStringAsFixed(1)}';
                       });
                     },
                   ),

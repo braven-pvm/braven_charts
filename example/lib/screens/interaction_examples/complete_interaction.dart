@@ -20,12 +20,10 @@ class CompleteInteractionExample extends StatefulWidget {
   const CompleteInteractionExample({super.key});
 
   @override
-  State<CompleteInteractionExample> createState() =>
-      _CompleteInteractionExampleState();
+  State<CompleteInteractionExample> createState() => _CompleteInteractionExampleState();
 }
 
-class _CompleteInteractionExampleState
-    extends State<CompleteInteractionExample> {
+class _CompleteInteractionExampleState extends State<CompleteInteractionExample> {
   String statusMessage = 'Hover, tap, zoom, or use keyboard to interact';
   double zoomLevelX = 1.0;
   double zoomLevelY = 1.0;
@@ -49,8 +47,7 @@ class _CompleteInteractionExampleState
               children: [
                 Text('Status: $statusMessage'),
                 Text('Zoom: X=${(zoomLevelX * 100).toInt()}%, Y=${(zoomLevelY * 100).toInt()}%'),
-                if (selectedPoint != null)
-                  Text('Selected: X=${selectedPoint!['x']}, Y=${selectedPoint!['y']}'),
+                if (selectedPoint != null) Text('Selected: X=${selectedPoint!['x']}, Y=${selectedPoint!['y']}'),
               ],
             ),
           ),

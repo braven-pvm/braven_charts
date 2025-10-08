@@ -20,8 +20,7 @@ class KeyboardNavigationExample extends StatefulWidget {
   const KeyboardNavigationExample({super.key});
 
   @override
-  State<KeyboardNavigationExample> createState() =>
-      _KeyboardNavigationExampleState();
+  State<KeyboardNavigationExample> createState() => _KeyboardNavigationExampleState();
 }
 
 class _KeyboardNavigationExampleState extends State<KeyboardNavigationExample> {
@@ -94,14 +93,12 @@ class _KeyboardNavigationExampleState extends State<KeyboardNavigationExample> {
                     },
                     onPanChanged: (offset) {
                       setState(() {
-                        lastKeyAction =
-                            'Pan: dx=${offset.dx.toStringAsFixed(1)}, dy=${offset.dy.toStringAsFixed(1)}';
+                        lastKeyAction = 'Pan: dx=${offset.dx.toStringAsFixed(1)}, dy=${offset.dy.toStringAsFixed(1)}';
                       });
                     },
                     onZoomChanged: (zoomX, zoomY) {
                       setState(() {
-                        lastKeyAction =
-                            'Zoom: ${(zoomX * 100).toInt()}%';
+                        lastKeyAction = 'Zoom: ${(zoomX * 100).toInt()}%';
                       });
                     },
                   ),

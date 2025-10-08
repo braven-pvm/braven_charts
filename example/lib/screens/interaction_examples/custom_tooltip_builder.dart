@@ -61,7 +61,7 @@ class CustomTooltipBuilderExample extends StatelessWidget {
                       customBuilder: (context, dataPoint) {
                         final x = dataPoint['x'] as num;
                         final y = dataPoint['y'] as num;
-                        
+
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
