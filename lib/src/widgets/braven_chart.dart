@@ -14,6 +14,7 @@ import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
+import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
@@ -571,6 +572,9 @@ class _BravenChartState extends State<BravenChart> {
   /// Event handler for interaction system (Layer 7).
   EventHandler? _eventHandler;
 
+  /// Zoom/pan controller for viewport transformation.
+  ZoomPanController? _zoomPanController;
+
   /// Current interaction state.
   InteractionState _interactionState = InteractionState.initial();
 
@@ -603,6 +607,11 @@ class _BravenChartState extends State<BravenChart> {
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
       _eventHandler = EventHandler();
       _registerInteractionCallbacks();
+      
+      // Initialize ZoomPanController if zoom or pan is enabled
+      if (widget.interactionConfig!.enableZoom || widget.interactionConfig!.enablePan) {
+        _zoomPanController = ZoomPanController();
+      }
     }
   }
 
@@ -1013,7 +1022,7 @@ class _BravenChartState extends State<BravenChart> {
     interactiveWidget = Listener(
       // Handle scroll events with modifier keys
       onPointerSignal: (signal) {
-        if (signal is PointerScrollEvent && config.enableZoom) {
+        if (signal is PointerScrollEvent && config.enableZoom && _zoomPanController != null) {
           // Platform-aware modifier key detection
           // Windows/Linux: CTRL, macOS: CMD (Meta)
           final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
@@ -1022,13 +1031,53 @@ class _BravenChartState extends State<BravenChart> {
 
           if (isCtrlPressed) {
             // CTRL/CMD + Scroll → Zoom at cursor position
-            // TODO R-T007: Actual zoom logic will be added with ZoomPanController
-            // For now, just track that this interaction occurred
-            // Event is consumed - prevents page scroll
-          } else if (isShiftPressed) {
+            final scrollDelta = signal.scrollDelta.dy;
+            // Zoom in when scrolling up (negative delta), zoom out when scrolling down
+            final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
+            
+            setState(() {
+              final newZoomPanState = _zoomPanController!.zoom(
+                _interactionState.zoomPanState,
+                zoomFactor: zoomFactor,
+                focalPoint: signal.localPosition,
+              );
+              
+              _interactionState = _interactionState.copyWith(
+                zoomPanState: newZoomPanState,
+              );
+            });
+            
+            // Invoke zoom callback
+            config.onZoomChanged?.call(
+              _interactionState.zoomPanState.zoomLevelX,
+              _interactionState.zoomPanState.zoomLevelY,
+            );
+            
+            // Invoke viewport callback (visible bounds changed due to zoom)
+            _invokeViewportCallback();
+            
+          } else if (isShiftPressed && config.enablePan) {
             // SHIFT + Scroll → Pan horizontally
-            // TODO R-T007: Actual horizontal pan logic will be added
-            // Event is consumed - prevents page scroll
+            final scrollDelta = signal.scrollDelta.dy;
+            // Pan amount proportional to scroll
+            final panDelta = Offset(scrollDelta, 0);
+            
+            setState(() {
+              final newZoomPanState = _zoomPanController!.pan(
+                _interactionState.zoomPanState,
+                panDelta,
+              );
+              
+              _interactionState = _interactionState.copyWith(
+                zoomPanState: newZoomPanState,
+              );
+            });
+            
+            // Invoke pan callback
+            config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+            
+            // Invoke viewport callback
+            _invokeViewportCallback();
           }
           // If no modifier, don't handle - allows default page scroll
           // This is CRITICAL for web UX - page must scroll normally
@@ -1046,13 +1095,27 @@ class _BravenChartState extends State<BravenChart> {
       },
 
       onPointerMove: (event) {
-        if (_isPanningWithMiddleMouse && _panStartPosition != null) {
+        if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
           final delta = event.localPosition - _panStartPosition!;
-          // TODO R-T007: Actual pan logic will be added with ZoomPanController
-          // For now, just update the start position for continuous panning
+          
           setState(() {
+            final newZoomPanState = _zoomPanController!.pan(
+              _interactionState.zoomPanState,
+              delta,
+            );
+            
+            _interactionState = _interactionState.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            
             _panStartPosition = event.localPosition;
           });
+          
+          // Invoke pan callback
+          config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+          
+          // Invoke viewport callback
+          _invokeViewportCallback();
         }
       },
 
@@ -1124,16 +1187,57 @@ class _BravenChartState extends State<BravenChart> {
       } : null,
 
       // Pinch/scale handling (for zoom)
-      onScaleStart: config.enableZoom ? (details) {
-        // TODO R-T007: Zoom handling will be added with ZoomPanController
+      onScaleStart: config.enableZoom && _zoomPanController != null ? (details) {
+        // Track initial scale for pinch gestures
       } : null,
 
-      onScaleUpdate: config.enableZoom ? (details) {
-        // TODO R-T007: Zoom handling will be added with ZoomPanController
+      onScaleUpdate: config.enableZoom && _zoomPanController != null ? (details) {
+        // Pinch-to-zoom gesture
+        if (details.scale != 1.0) {
+          setState(() {
+            final newZoomPanState = _zoomPanController!.zoom(
+              _interactionState.zoomPanState,
+              zoomFactor: details.scale,
+              focalPoint: details.focalPoint,
+            );
+            
+            _interactionState = _interactionState.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+          });
+          
+          // Invoke zoom callback
+          config.onZoomChanged?.call(
+            _interactionState.zoomPanState.zoomLevelX,
+            _interactionState.zoomPanState.zoomLevelY,
+          );
+          
+          // Invoke viewport callback
+          _invokeViewportCallback();
+        }
       } : null,
 
-      onScaleEnd: config.enableZoom ? (details) {
-        // TODO R-T007: Cleanup will be added with ZoomPanController
+      onScaleEnd: config.enableZoom && _zoomPanController != null ? (details) {
+        // Pinch gesture ended - no cleanup needed
+      } : null,
+
+      // Double-tap to reset zoom
+      onDoubleTap: config.enableZoom && _zoomPanController != null ? () {
+        setState(() {
+          final newZoomPanState = _zoomPanController!.resetZoom(
+            _interactionState.zoomPanState,
+          );
+          
+          _interactionState = _interactionState.copyWith(
+            zoomPanState: newZoomPanState,
+          );
+        });
+        
+        // Invoke zoom callback (reset to 1.0, 1.0)
+        config.onZoomChanged?.call(1.0, 1.0);
+        
+        // Invoke viewport callback
+        _invokeViewportCallback();
       } : null,
 
       child: interactiveWidget,
@@ -1466,6 +1570,41 @@ class _BravenChartState extends State<BravenChart> {
     result.sort((a, b) => a.zIndex.compareTo(b.zIndex));
 
     return result;
+  }
+
+  /// Invokes the onViewportChanged callback with current visible bounds.
+  ///
+  /// Calculates the visible data range based on current zoom/pan state
+  /// and invokes the callback if it exists.
+  void _invokeViewportCallback() {
+    if (widget.interactionConfig?.onViewportChanged == null) return;
+
+    // Calculate visible data bounds from zoom/pan state
+    final zoomPanState = _interactionState.zoomPanState;
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) return;
+
+    // Get the original data bounds
+    final dataBounds = _calculateDataBounds(allSeries);
+    
+    // Calculate visible range accounting for zoom and pan
+    // Visible width = original width / zoom level
+    final visibleWidth = (dataBounds.maxX - dataBounds.minX) / zoomPanState.zoomLevelX;
+    final visibleHeight = (dataBounds.maxY - dataBounds.minY) / zoomPanState.zoomLevelY;
+    
+    // Pan offset shifts the visible region
+    // Negative pan = showing right/bottom data (shifted left/up visually)
+    final panOffsetX = -zoomPanState.panOffset.dx / zoomPanState.zoomLevelX;
+    final panOffsetY = -zoomPanState.panOffset.dy / zoomPanState.zoomLevelY;
+    
+    final visibleBounds = {
+      'minX': dataBounds.minX + panOffsetX,
+      'maxX': dataBounds.minX + panOffsetX + visibleWidth,
+      'minY': dataBounds.minY + panOffsetY,
+      'maxY': dataBounds.minY + panOffsetY + visibleHeight,
+    };
+
+    widget.interactionConfig!.onViewportChanged!(visibleBounds);
   }
 }
 
