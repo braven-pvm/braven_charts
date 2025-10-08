@@ -5,15 +5,14 @@
 
 import 'dart:ui' show Rect, Offset;
 
-import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart' show RawKeyDownEvent, RawKeyEventDataWeb, KeyEventResult;
-import 'package:flutter_test/flutter_test.dart';
-
+import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
+import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
 // These imports will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/event_handler.dart';
-import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
-import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart' show RawKeyDownEvent, RawKeyEventDataWeb, KeyEventResult;
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('IEventHandler Contract Tests', () {

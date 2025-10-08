@@ -5,16 +5,13 @@
 
 import 'dart:ui' show Canvas, PictureRecorder, Size;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
+import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
+import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
 // These imports will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/crosshair_renderer.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
-import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
-import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
-import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ICrosshairRenderer Contract Tests', () {
