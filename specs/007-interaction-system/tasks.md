@@ -54,12 +54,12 @@ Single Flutter library project:
     - [x] Directory structure matches plan.md specification
   - **Dependencies**: None
 
-- [ ] **T002** Update main library export to include interaction system
+- [x] **T002** Update main library export to include interaction system
   - **Type**: Setup
   - **Files**: `lib/braven_charts.dart`
   - **Acceptance Criteria**:
-    - [ ] Export statement for interaction system added
-    - [ ] No breaking changes to existing exports
+    - [x] Export statement for interaction system added
+    - [x] No breaking changes to existing exports
   - **Dependencies**: T001
 
 ---

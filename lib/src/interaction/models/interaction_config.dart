@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../foundation/data_models/chart_data_point.dart';
 import 'crosshair_config.dart';
 import 'tooltip_config.dart';
 import 'zoom_pan_state.dart';
@@ -365,13 +366,6 @@ typedef ModeChangeCallback = void Function(InteractionMode newMode);
 // ============================================================================
 // Placeholder Types (to be defined in their respective files)
 // ============================================================================
-
-/// Placeholder for ChartDataPoint (defined in foundation layer).
-class ChartDataPoint {
-  const ChartDataPoint({required this.x, required this.y});
-  final double x;
-  final double y;
-}
 
 /// Configuration for zoom/pan behavior.
 ///

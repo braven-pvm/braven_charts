@@ -17,6 +17,13 @@ export 'src/coordinates/viewport_state.dart';
 export 'src/foundation/foundation.dart';
 // Theming Layer - Chart themes and styling
 export 'src/theming/chart_theme.dart';
+// Interaction Layer - User interaction system (Layer 7)
+export 'src/interaction/models/interaction_state.dart';
+export 'src/interaction/models/zoom_pan_state.dart';
+export 'src/interaction/models/gesture_details.dart';
+export 'src/interaction/models/crosshair_config.dart';
+export 'src/interaction/models/tooltip_config.dart';
+export 'src/interaction/models/interaction_config.dart';
 // Widgets Layer - User-facing chart widgets (Layer 5)
 export 'src/widgets/widgets.dart';
 
