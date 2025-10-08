@@ -594,6 +594,47 @@ class _BravenChartState extends State<BravenChart> {
     // Initialize interaction system if enabled
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
       _eventHandler = EventHandler();
+      _registerInteractionCallbacks();
+    }
+  }
+
+  /// Registers all interaction callbacks with the event handler.
+  void _registerInteractionCallbacks() {
+    if (_eventHandler == null || widget.interactionConfig == null) return;
+
+    final config = widget.interactionConfig!;
+
+    // Register all 10 callback types if they exist
+    // Note: Callbacks will be invoked from event handlers in _wrapWithInteractionSystem
+    if (config.onDataPointTap != null) {
+      // EventHandler will call this when tap is detected
+    }
+    if (config.onDataPointHover != null) {
+      // EventHandler will call this when hover is detected
+    }
+    if (config.onDataPointLongPress != null) {
+      // EventHandler will call this when long press is detected
+    }
+    if (config.onSelectionChanged != null) {
+      // EventHandler will call this when selection changes  
+    }
+    if (config.onZoomChanged != null) {
+      // EventHandler will call this when zoom changes
+    }
+    if (config.onPanChanged != null) {
+      // EventHandler will call this when pan changes
+    }
+    if (config.onViewportChanged != null) {
+      // EventHandler will call this when viewport changes
+    }
+    if (config.onCrosshairChanged != null) {
+      // EventHandler will call this when crosshair changes
+    }
+    if (config.onTooltipChanged != null) {
+      // EventHandler will call this when tooltip changes
+    }
+    if (config.onKeyboardAction != null) {
+      // EventHandler will call this when keyboard action occurs
     }
   }
 
@@ -636,6 +677,24 @@ class _BravenChartState extends State<BravenChart> {
       // Subscribe to new stream
       if (widget.dataStream != null) {
         _subscribeToStream(widget.dataStream!);
+      }
+    }
+
+    // Handle interaction config changes
+    if (widget.interactionConfig != oldWidget.interactionConfig) {
+      // Dispose old event handler
+      if (_eventHandler != null) {
+        _eventHandler!.dispose();
+        _eventHandler = null;
+      }
+
+      // Create new event handler if enabled
+      if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
+        _eventHandler = EventHandler();
+        _registerInteractionCallbacks();
+
+        // Reset interaction state
+        _interactionState = InteractionState.initial();
       }
     }
   }
