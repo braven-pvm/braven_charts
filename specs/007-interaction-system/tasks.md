@@ -736,16 +736,22 @@ Single Flutter library project:
 
 ## Phase 3.9: Documentation & Examples
 
-- [ ] **T036** Create Example 1: Basic Crosshair Enablement
+- [x] **T036** Create Example 1: Basic Crosshair Enablement
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/basic_crosshair.dart`
   - **Acceptance Criteria**:
-    - [ ] Executable example matching quickstart.md Example 1
-    - [ ] <5 lines of code to enable basic crosshair
-    - [ ] Example runs without errors
-    - [ ] dartdoc comments explaining setup
+    - [x] Executable example matching quickstart.md Example 1
+    - [x] <5 lines of code to enable basic crosshair
+    - [x] Example runs without errors
+    - [x] dartdoc comments explaining setup
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 1 in quickstart.md
+  - **Completion Notes**:
+    * Created BasicCrosshairExample StatelessWidget
+    * Uses BravenChart with InteractionConfig(crosshair: CrosshairConfig.defaultConfig())
+    * Demonstrates 5-line crosshair enablement (chartType + series + interactionConfig)
+    * Includes dartdoc comments explaining behavior
+    * No lint errors, analysis clean
 
 - [ ] **T037** Create Example 2: Custom Crosshair Styling
   - **Type**: Documentation
