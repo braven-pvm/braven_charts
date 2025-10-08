@@ -21,7 +21,7 @@
    → Different files = [P] for parallel
    → Same file = sequential
    → TDD: Tests before implementation
-5. Total tasks: 89 (T001-T089)
+5. Total tasks: 87 (T001-T087)
 6. Dependencies tracked
 7. Parallel execution examples provided
 8. Validation: All contracts tested ✅, All entities modeled ✅, All examples tested ✅
@@ -734,43 +734,9 @@ Single Flutter library project:
 
 ---
 
-## Phase 3.9: Accessibility & Performance Validation
+## Phase 3.9: Documentation & Examples
 
-- [ ] **T036** [P] Accessibility tests (WCAG 2.1 AA compliance)
-  - **Type**: Widget Test
-  - **Files**: `test/interaction/widgets/accessibility_test.dart`
-  - **Acceptance Criteria**:
-    - [ ] Test keyboard navigation with Tab/Arrow keys
-    - [ ] Test focus indicator visibility (3:1 contrast ratio)
-    - [ ] Test screen reader announcements (Semantics labels)
-    - [ ] Test ARIA attributes on web platform
-    - [ ] Test keyboard shortcuts documentation
-    - [ ] All accessibility tests PASS
-    - [ ] WCAG 2.1 AA compliance verified
-  - **Dependencies**: T034 (widget integration)
-  - **Reference**: NFR-012 to NFR-015 in spec.md
-
-- [ ] **T037** [P] Performance benchmarks for interaction system
-  - **Type**: Performance Test
-  - **Files**: `test/performance/interaction_benchmarks.dart`
-  - **Acceptance Criteria**:
-    - [ ] Benchmark: Event processing <5ms (99th percentile)
-    - [ ] Benchmark: Crosshair render <2ms per frame
-    - [ ] Benchmark: Snap-to-point <1ms for 10k points
-    - [ ] Benchmark: Tooltip show <50ms
-    - [ ] Benchmark: Zoom/pan 60 FPS (16ms per frame)
-    - [ ] Benchmark: Gesture recognition <16ms
-    - [ ] Benchmark: Memory usage <5MB overhead
-    - [ ] Benchmark: Zero memory leaks after 10k interactions
-    - [ ] All benchmarks PASS (meet performance targets)
-  - **Dependencies**: T024-T030 (all components)
-  - **Reference**: NFR-001 to NFR-011 in spec.md
-
----
-
-## Phase 3.10: Documentation & Examples
-
-- [ ] **T038** Create Example 1: Basic Crosshair Enablement
+- [ ] **T036** Create Example 1: Basic Crosshair Enablement
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/basic_crosshair.dart`
   - **Acceptance Criteria**:
@@ -781,7 +747,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 1 in quickstart.md
 
-- [ ] **T039** Create Example 2: Custom Crosshair Styling
+- [ ] **T037** Create Example 2: Custom Crosshair Styling
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/custom_crosshair_style.dart`
   - **Acceptance Criteria**:
@@ -792,7 +758,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 2 in quickstart.md
 
-- [ ] **T040** Create Example 3: Tooltip with Default Content
+- [ ] **T038** Create Example 3: Tooltip with Default Content
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/default_tooltip.dart`
   - **Acceptance Criteria**:
@@ -803,7 +769,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 3 in quickstart.md
 
-- [ ] **T041** Create Example 4: Tooltip with Custom Builder
+- [ ] **T039** Create Example 4: Tooltip with Custom Builder
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/custom_tooltip_builder.dart`
   - **Acceptance Criteria**:
@@ -814,7 +780,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 4 in quickstart.md
 
-- [ ] **T042** Create Example 5: Zoom/Pan Configuration
+- [ ] **T040** Create Example 5: Zoom/Pan Configuration
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/zoom_pan_config.dart`
   - **Acceptance Criteria**:
@@ -826,7 +792,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 5 in quickstart.md
 
-- [ ] **T043** Create Example 6: Gesture Handling with Callbacks
+- [ ] **T041** Create Example 6: Gesture Handling with Callbacks
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/gesture_callbacks.dart`
   - **Acceptance Criteria**:
@@ -837,7 +803,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 6 in quickstart.md
 
-- [ ] **T044** Create Example 7: Keyboard Navigation Setup
+- [ ] **T042** Create Example 7: Keyboard Navigation Setup
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/keyboard_navigation.dart`
   - **Acceptance Criteria**:
@@ -849,7 +815,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 7 in quickstart.md
 
-- [ ] **T045** Create Example 8: Complete Interaction Configuration
+- [ ] **T043** Create Example 8: Complete Interaction Configuration
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/complete_interaction.dart`
   - **Acceptance Criteria**:
@@ -860,7 +826,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 8 in quickstart.md
 
-- [ ] **T046** Create Example 9: Multi-Series Crosshair
+- [ ] **T044** Create Example 9: Multi-Series Crosshair
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/multi_series_crosshair.dart`
   - **Acceptance Criteria**:
@@ -872,7 +838,7 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 9 in quickstart.md (bonus example)
 
-- [ ] **T047** Update main example app with interaction examples
+- [ ] **T045** Update main example app with interaction examples
   - **Type**: Documentation
   - **Files**: `example/lib/main.dart`, `example/lib/screens/home_screen.dart`
   - **Acceptance Criteria**:
@@ -880,9 +846,9 @@ Single Flutter library project:
     - [ ] Example descriptions displayed
     - [ ] All examples accessible from main app
     - [ ] App runs without errors
-  - **Dependencies**: T038-T046 (all examples created)
+  - **Dependencies**: T036-T044 (all examples created)
 
-- [ ] **T048** Update API documentation
+- [ ] **T046** Update API documentation
   - **Type**: Documentation
   - **Files**: Various (all interaction system files)
   - **Acceptance Criteria**:
@@ -897,9 +863,9 @@ Single Flutter library project:
 
 ---
 
-## Phase 3.11: Polish & Cleanup
+## Phase 3.10: Polish & Cleanup
 
-- [ ] **T049** Code review and refactoring
+- [ ] **T047** Code review and refactoring
   - **Type**: Polish
   - **Files**: All interaction system files
   - **Acceptance Criteria**:
@@ -909,9 +875,9 @@ Single Flutter library project:
     - [ ] Ensure SOLID principles followed
     - [ ] No linting errors
     - [ ] All tests still pass after refactoring
-  - **Dependencies**: T024-T048 (all implementation and tests)
+  - **Dependencies**: T024-T046 (all implementation and tests)
 
-- [ ] **T050** Final validation against spec.md
+- [ ] **T048** Final validation against spec.md
   - **Type**: Validation
   - **Files**: N/A (validation task)
   - **Acceptance Criteria**:
@@ -921,7 +887,7 @@ Single Flutter library project:
     - [ ] All test scenarios pass ✅
     - [ ] All quickstart examples run ✅
     - [ ] Constitution compliance verified ✅
-  - **Dependencies**: T001-T049 (all tasks)
+  - **Dependencies**: T001-T047 (all tasks)
   - **Reference**: `specs/007-interaction-system/spec.md`
 
 ---
