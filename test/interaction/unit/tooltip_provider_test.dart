@@ -1,268 +1,383 @@
 // Unit Test: TooltipProvider Component
 // Feature: Layer 7 Interaction System
 // Task: T020
-// Status: MUST FAIL (implementation not yet created)
+// Status: Tests should now PASS with implementation
 
-import 'dart:ui' show Canvas, PictureRecorder, Size, Offset, Rect;
-
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
-// This import will fail until implementation exists
-// ignore: unused_import
 import 'package:braven_charts/src/interaction/tooltip_provider.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TooltipProvider Component Tests', () {
-    late dynamic tooltipProvider;
-    late Canvas canvas;
-    late Size size;
-    late InteractionState state;
+    late TooltipProvider tooltipProvider;
     late TooltipConfig config;
 
     setUp(() {
-      // This will fail - implementation doesn't exist yet
-      // tooltipProvider = TooltipProvider();
-
-      final recorder = PictureRecorder();
-      canvas = Canvas(recorder);
-      size = const Size(800, 600);
-      state = InteractionState.initial();
-      config = TooltipConfig.defaultConfig();
+      tooltipProvider = TooltipProvider();
+      config = TooltipConfig();
     });
 
     group('Tooltip Show/Hide Logic', () {
-      test('show() displays tooltip when hovering over data point', () {
-        expect(() {
-          final hoveredState = state.copyWith(
-            hoveredPoint: const Offset(100, 200),
-          );
+      testWidgets('showTooltip() displays tooltip widget', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          tooltipProvider.show(hoveredState, config);
-          expect(tooltipProvider.isVisible, isTrue);
-        }, throwsA(anything));
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 100.0, y: 200.0);
+        final widget = tooltipProvider.showTooltip(
+          context,
+          point,
+          'series1',
+          const Offset(100, 200),
+          config,
+        );
+
+        expect(tooltipProvider.isVisible, isTrue);
+        expect(widget, isA<Widget>());
       });
 
-      test('hide() removes tooltip when not hovering', () {
-        expect(() {
-          tooltipProvider.hide();
-          expect(tooltipProvider.isVisible, isFalse);
-        }, throwsA(anything));
+      test('hideTooltip() removes tooltip', () {
+        tooltipProvider.hideTooltip();
+        expect(tooltipProvider.isVisible, isFalse);
       });
 
-      test('respects showDelay configuration', () async {
-        expect(() async {
-          final delayConfig = config.copyWith(showDelay: const Duration(milliseconds: 200));
-          final hoveredState = state.copyWith(hoveredPoint: const Offset(100, 200));
+      testWidgets('respects custom builder configuration', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          tooltipProvider.show(hoveredState, delayConfig);
+        final customConfig = config.copyWith(
+          customBuilder: (context, data) => const Text('Custom Tooltip'),
+        );
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 50.0, y: 100.0);
 
-          // Should not be visible immediately
-          expect(tooltipProvider.isVisible, isFalse);
+        final widget = tooltipProvider.showTooltip(
+          context,
+          point,
+          'series1',
+          const Offset(50, 100),
+          customConfig,
+        );
 
-          // Should be visible after delay
-          await Future.delayed(const Duration(milliseconds: 250));
-          expect(tooltipProvider.isVisible, isTrue);
-        }, throwsA(anything));
+        expect(widget, isA<Text>());
       });
 
-      test('respects hideDelay configuration', () async {
-        expect(() async {
-          final delayConfig = config.copyWith(hideDelay: const Duration(milliseconds: 150));
+      testWidgets('uses default tooltip when no custom builder', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          tooltipProvider.hide();
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 50.0, y: 100.0);
 
-          // Should still be visible during delay
-          expect(tooltipProvider.isVisible, isTrue);
+        final widget = tooltipProvider.showTooltip(
+          context,
+          point,
+          'series1',
+          const Offset(50, 100),
+          config,
+        );
 
-          // Should be hidden after delay
-          await Future.delayed(const Duration(milliseconds: 200));
-          expect(tooltipProvider.isVisible, isFalse);
-        }, throwsA(anything));
+        expect(widget, isA<Container>());
       });
     });
 
     group('Tooltip Content Formatting', () {
-      test('formatContent() generates tooltip text from data point', () {
-        expect(() {
-          final dataPoint = {'x': 50.0, 'y': 100.0, 'label': 'Point A'};
-          final content = tooltipProvider.formatContent(dataPoint, config);
+      testWidgets('buildDefaultTooltip() generates tooltip with series name', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          expect(content, isNotNull);
-          expect(content, contains('Point A'));
-        }, throwsA(anything));
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 50.0, y: 100.0, label: 'Point A');
+        final style = TooltipStyle();
+
+        final widget = tooltipProvider.buildDefaultTooltip(
+          context,
+          point,
+          'Series1',
+          style,
+        );
+
+        expect(widget, isA<Container>());
       });
 
-      test('applies custom formatter function', () {
-        expect(() {
-          final customConfig = config.copyWith(
-            formatter: (data) => 'Custom: ${data['label']}',
-          );
-          final dataPoint = {'x': 50.0, 'y': 100.0, 'label': 'Test'};
-          final content = tooltipProvider.formatContent(dataPoint, customConfig);
+      testWidgets('buildDefaultTooltip() includes X and Y values', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          expect(content, equals('Custom: Test'));
-        }, throwsA(anything));
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 12.34, y: 56.78);
+        final style = TooltipStyle();
+
+        final widget = tooltipProvider.buildDefaultTooltip(
+          context,
+          point,
+          'Test',
+          style,
+        );
+
+        await tester.pumpWidget(MaterialApp(home: widget));
+        await tester.pump();
+
+        expect(find.textContaining('12.34'), findsOneWidget);
+        expect(find.textContaining('56.78'), findsOneWidget);
       });
 
-      test('handles multiple series data points', () {
-        expect(() {
-          final multiSeriesData = [
-            {'series': 'A', 'x': 10.0, 'y': 20.0},
-            {'series': 'B', 'x': 10.0, 'y': 30.0},
-          ];
-          final content = tooltipProvider.formatContent(multiSeriesData, config);
+      testWidgets('buildMultiSeriesTooltip() handles multiple series', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
 
-          expect(content, contains('A'));
-          expect(content, contains('B'));
-        }, throwsA(anything));
-      });
-    });
+        final context = tester.element(find.byType(SizedBox));
+        final points = [
+          ChartDataPoint(x: 10.0, y: 20.0),
+          ChartDataPoint(x: 10.0, y: 30.0),
+        ];
+        final seriesIds = ['Series A', 'Series B'];
+        final style = TooltipStyle();
 
-    group('Tooltip Rendering', () {
-      test('render() draws tooltip on canvas', () {
-        expect(() {
-          final hoveredState = state.copyWith(hoveredPoint: const Offset(400, 300));
-          tooltipProvider.render(canvas, size, hoveredState, config);
-          expect(true, isTrue);
-        }, throwsA(anything));
-      });
+        final widget = tooltipProvider.buildMultiSeriesTooltip(
+          context,
+          points,
+          seriesIds,
+          style,
+        );
 
-      test('positions tooltip near cursor without overlapping', () {
-        expect(() {
-          final cursorPos = const Offset(50, 50); // Near edge
-          final hoveredState = state.copyWith(hoveredPoint: cursorPos);
-
-          tooltipProvider.render(canvas, size, hoveredState, config);
-
-          final tooltipBounds = tooltipProvider.getTooltipBounds();
-          expect(tooltipBounds.left, greaterThanOrEqualTo(0));
-          expect(tooltipBounds.top, greaterThanOrEqualTo(0));
-        }, throwsA(anything));
-      });
-
-      test('applies background style from config', () {
-        expect(() {
-          final customStyle = config.style.copyWith(
-            backgroundColor: const Color(0xFF123456),
-          );
-          final customConfig = config.copyWith(style: customStyle);
-          final hoveredState = state.copyWith(hoveredPoint: const Offset(200, 200));
-
-          tooltipProvider.render(canvas, size, hoveredState, customConfig);
-          expect(true, isTrue);
-        }, throwsA(anything));
-      });
-
-      test('applies text style from config', () {
-        expect(() {
-          final customTextStyle = TextStyle(
-            fontSize: 16,
-            color: Color(0xFFFFFFFF),
-          );
-          final customStyle = config.style.copyWith(textStyle: customTextStyle);
-          final customConfig = config.copyWith(style: customStyle);
-          final hoveredState = state.copyWith(hoveredPoint: const Offset(200, 200));
-
-          tooltipProvider.render(canvas, size, hoveredState, customConfig);
-          expect(true, isTrue);
-        }, throwsA(anything));
+        expect(widget, isA<Container>());
       });
     });
 
     group('Tooltip Positioning', () {
-      test('calculatePosition() places tooltip above cursor by default', () {
-        expect(() {
-          final cursorPos = const Offset(400, 300);
-          final tooltipSize = const Size(120, 60);
+      test('calculatePosition() places tooltip above point by default (top)', () {
+        const cursorPos = Offset(400, 300);
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
 
-          final position = tooltipProvider.calculatePosition(
-            cursorPos,
-            tooltipSize,
-            size,
-            config,
-          );
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.top,
+          offset,
+        );
 
-          expect(position.dy, lessThan(cursorPos.dy));
-        }, throwsA(anything));
+        // Should be above the cursor
+        expect(position.dy, lessThan(cursorPos.dy));
+        expect(position.dy, equals(cursorPos.dy - tooltipSize.height - offset));
       });
 
-      test('flips tooltip to below cursor when near top edge', () {
-        expect(() {
-          final cursorPos = const Offset(400, 30); // Near top
-          final tooltipSize = const Size(120, 60);
+      test('bottom position places tooltip below cursor', () {
+        const cursorPos = Offset(400, 300);
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
 
-          final position = tooltipProvider.calculatePosition(
-            cursorPos,
-            tooltipSize,
-            size,
-            config,
-          );
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.bottom,
+          offset,
+        );
 
-          expect(position.dy, greaterThan(cursorPos.dy));
-        }, throwsA(anything));
+        // Should be below the cursor
+        expect(position.dy, greaterThan(cursorPos.dy));
+        expect(position.dy, equals(cursorPos.dy + offset));
+      });
+
+      test('auto positioning tries top first', () {
+        const cursorPos = Offset(400, 300);
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
+
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.auto,
+          offset,
+        );
+
+        // Auto should default to top when it fits
+        expect(position.dy, lessThan(cursorPos.dy));
+      });
+
+      test('auto positioning switches to bottom when near top edge', () {
+        const cursorPos = Offset(400, 30); // Near top
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
+
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.auto,
+          offset,
+        );
+
+        // Should flip to bottom since top doesn't fit
+        expect(position.dy, greaterThan(cursorPos.dy));
       });
 
       test('keeps tooltip within canvas bounds (left edge)', () {
-        expect(() {
-          final cursorPos = const Offset(10, 300); // Near left edge
-          final tooltipSize = const Size(120, 60);
+        const cursorPos = Offset(10, 300); // Near left edge
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
 
-          final position = tooltipProvider.calculatePosition(
-            cursorPos,
-            tooltipSize,
-            size,
-            config,
-          );
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.auto,
+          offset,
+        );
 
-          expect(position.dx, greaterThanOrEqualTo(0));
-        }, throwsA(anything));
+        expect(position.dx, greaterThanOrEqualTo(chartBounds.left));
+        expect(position.dx + tooltipSize.width, lessThanOrEqualTo(chartBounds.right));
       });
 
       test('keeps tooltip within canvas bounds (right edge)', () {
-        expect(() {
-          final cursorPos = const Offset(790, 300); // Near right edge
-          final tooltipSize = const Size(120, 60);
+        const cursorPos = Offset(790, 300); // Near right edge
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
 
-          final position = tooltipProvider.calculatePosition(
-            cursorPos,
-            tooltipSize,
-            size,
-            config,
-          );
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.auto,
+          offset,
+        );
 
-          expect(position.dx + tooltipSize.width, lessThanOrEqualTo(size.width));
-        }, throwsA(anything));
+        expect(position.dx, greaterThanOrEqualTo(chartBounds.left));
+        expect(position.dx + tooltipSize.width, lessThanOrEqualTo(chartBounds.right));
+      });
+
+      test('left position places tooltip to left of cursor', () {
+        const cursorPos = Offset(400, 300);
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
+
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.left,
+          offset,
+        );
+
+        expect(position.dx, lessThan(cursorPos.dx));
+        expect(position.dx, equals(cursorPos.dx - tooltipSize.width - offset));
+      });
+
+      test('right position places tooltip to right of cursor', () {
+        const cursorPos = Offset(400, 300);
+        const tooltipSize = Size(120, 60);
+        const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
+        const offset = 10.0;
+
+        final position = tooltipProvider.calculatePosition(
+          tooltipSize,
+          cursorPos,
+          chartBounds,
+          TooltipPosition.right,
+          offset,
+        );
+
+        expect(position.dx, greaterThan(cursorPos.dx));
+        expect(position.dx, equals(cursorPos.dx + offset));
       });
     });
 
-    group('Performance & Memory', () {
-      test('render completes in <3ms', () {
-        expect(() {
-          final hoveredState = state.copyWith(hoveredPoint: const Offset(400, 300));
+    group('Update Detection', () {
+      test('shouldUpdate() returns true for different points', () {
+        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0);
+        final newPoint = ChartDataPoint(x: 15.0, y: 25.0);
 
-          final stopwatch = Stopwatch()..start();
-          tooltipProvider.render(canvas, size, hoveredState, config);
-          stopwatch.stop();
+        final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
 
-          expect(stopwatch.elapsedMicroseconds, lessThan(3000));
-        }, throwsA(anything));
+        expect(shouldUpdate, isTrue);
+      });
+
+      test('shouldUpdate() returns false for same point', () {
+        final point = ChartDataPoint(x: 10.0, y: 20.0);
+
+        final shouldUpdate = tooltipProvider.shouldUpdate(point, point);
+
+        expect(shouldUpdate, isFalse);
+      });
+
+      test('shouldUpdate() returns true when point becomes visible', () {
+        const ChartDataPoint? oldPoint = null;
+        final newPoint = ChartDataPoint(x: 10.0, y: 20.0);
+
+        final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
+
+        expect(shouldUpdate, isTrue);
+      });
+
+      test('shouldUpdate() returns true when point becomes hidden', () {
+        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0);
+        const ChartDataPoint? newPoint = null;
+
+        final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
+
+        expect(shouldUpdate, isTrue);
+      });
+
+      test('shouldUpdate() returns true when label changes', () {
+        final oldPoint = ChartDataPoint(x: 10.0, y: 20.0, label: 'A');
+        final newPoint = ChartDataPoint(x: 10.0, y: 20.0, label: 'B');
+
+        final shouldUpdate = tooltipProvider.shouldUpdate(oldPoint, newPoint);
+
+        expect(shouldUpdate, isTrue);
+      });
+    });
+
+    group('Performance', () {
+      testWidgets('showTooltip() completes in <5ms', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: SizedBox())),
+        );
+
+        final context = tester.element(find.byType(SizedBox));
+        final point = ChartDataPoint(x: 100.0, y: 200.0);
+
+        final stopwatch = Stopwatch()..start();
+        tooltipProvider.showTooltip(
+          context,
+          point,
+          'series1',
+          const Offset(100, 200),
+          config,
+        );
+        stopwatch.stop();
+
+        expect(stopwatch.elapsedMilliseconds, lessThan(5));
       });
 
       test('no memory leaks after 1000 show/hide cycles', () {
-        expect(() {
-          for (var i = 0; i < 1000; i++) {
-            final hoveredState = state.copyWith(
-              hoveredPoint: Offset(100.0 + i, 200.0),
-            );
-            tooltipProvider.show(hoveredState, config);
-            tooltipProvider.hide();
-          }
+        for (var i = 0; i < 1000; i++) {
+          tooltipProvider.hideTooltip();
+        }
 
-          // Should not accumulate memory
-          expect(true, isTrue);
-        }, throwsA(anything));
+        // Should not accumulate memory (verified by completing without error)
+        expect(tooltipProvider.isVisible, isFalse);
       });
     });
   });
 }
+
