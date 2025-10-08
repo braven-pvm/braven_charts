@@ -4,24 +4,10 @@
 /// including crosshair, tooltip, zoom/pan, gestures, and keyboard navigation.
 library;
 
+import '../interaction_callbacks.dart';
 import 'crosshair_config.dart';
 import 'tooltip_config.dart';
-import '../interaction_callbacks.dart';
 
-/// Configuration for gesture recognition.
-///
-/// Controls timeouts and thresholds for detecting tap, long-press, pan, and
-/// pinch gestures on charts.
-///
-/// Example:
-/// ```dart
-/// const gestureConfig = GestureConfig(
-///   tapTimeout: Duration(milliseconds: 200),
-///   longPressTimeout: Duration(milliseconds: 500),
-///   panThreshold: 10.0, // pixels
-///   pinchThreshold: 0.1, // scale factor
-/// );
-/// ```
 /// Configuration for gesture recognition.
 ///
 /// Controls timeouts and thresholds for detecting tap, long-press, pan, and
@@ -53,7 +39,6 @@ class GestureConfig {
   /// Minimum movement distance (pixels) to trigger pan gesture.
   final double panThreshold;
 
-  /// Minimum scale change to trigger pinch gesture.
   /// Minimum scale change to trigger pinch gesture.
   final double pinchThreshold;
 
@@ -127,7 +112,6 @@ class KeyboardConfig {
   /// Whether +/- keys can zoom the chart.
   final bool enablePlusMinusKeys;
 
-  /// Whether Home/End keys jump to boundaries.
   /// Whether Home/End keys jump to boundaries.
   final bool enableHomeEndKeys;
 
@@ -280,15 +264,15 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.all() => const InteractionConfig(
-    enabled: true,
-    crosshair: CrosshairConfig(enabled: true),
-    tooltip: TooltipConfig(enabled: true),
-    gesture: GestureConfig(),
-    keyboard: KeyboardConfig(enabled: true),
-    enableZoom: true,
-    enablePan: true,
-    enableSelection: true,
-  );
+        enabled: true,
+        crosshair: CrosshairConfig(enabled: true),
+        tooltip: TooltipConfig(enabled: true),
+        gesture: GestureConfig(),
+        keyboard: KeyboardConfig(enabled: true),
+        enableZoom: true,
+        enablePan: true,
+        enableSelection: true,
+      );
 
   /// Creates a configuration with all interaction features disabled.
   ///
@@ -303,15 +287,15 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.none() => const InteractionConfig(
-    enabled: false,
-    crosshair: CrosshairConfig(enabled: false),
-    tooltip: TooltipConfig(enabled: false),
-    gesture: GestureConfig(),
-    keyboard: KeyboardConfig(enabled: false),
-    enableZoom: false,
-    enablePan: false,
-    enableSelection: false,
-  );
+        enabled: false,
+        crosshair: CrosshairConfig(enabled: false),
+        tooltip: TooltipConfig(enabled: false),
+        gesture: GestureConfig(),
+        keyboard: KeyboardConfig(enabled: false),
+        enableZoom: false,
+        enablePan: false,
+        enableSelection: false,
+      );
 
   /// Creates a default configuration (same as unnamed constructor).
   ///
@@ -341,7 +325,6 @@ class InteractionConfig {
   /// Whether pan gestures are enabled (drag to move viewport).
   final bool enablePan;
 
-  /// Whether data point selection is enabled.
   /// Whether data point selection is enabled.
   final bool enableSelection;
 
@@ -381,7 +364,7 @@ class InteractionConfig {
   /// Example:
   /// ```dart
   /// onDataPointLongPress: (point, position) {
-  ///   showMenu(context: context, position: position, items: [...]); 
+  ///   showMenu(context: context, position: position, items: [...]);
   /// }
   /// ```
   final DataPointLongPressCallback? onDataPointLongPress;

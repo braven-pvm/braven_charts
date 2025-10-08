@@ -6,6 +6,7 @@ import 'area_chart_screen.dart';
 import 'axis_theming_screen.dart';
 import 'bar_chart_screen.dart';
 import 'interaction_examples_screen.dart';
+import 'interaction_showcase_screen.dart';
 import 'line_chart_screen.dart';
 import 'quickstart_screen.dart';
 import 'scatter_chart_screen.dart';
@@ -159,6 +160,18 @@ class HomeScreen extends StatelessWidget {
                 ),
           ),
         ),
+        _buildChartCard(
+          context,
+          title: '🚀 Full Interaction Showcase',
+          subtitle: 'ALL features: Factory constructors, callbacks, config panel',
+          icon: Icons.dashboard,
+          color: Colors.indigo,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const InteractionShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         _buildChartCard(
           context,
           title: 'Interaction Examples',
