@@ -13,6 +13,7 @@ import 'package:braven_charts/src/interaction/event_handler.dart' hide KeyEventR
 import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
@@ -891,6 +892,133 @@ class _BravenChartState extends State<BravenChart> {
     );
 
     return interactiveWidget;
+  }
+
+  /// Builds the tooltip overlay widget with smart positioning.
+  Widget? _buildTooltipOverlay() {
+    final config = widget.interactionConfig?.tooltip;
+    if (config == null || !config.enabled || !_interactionState.isTooltipVisible) {
+      return null;
+    }
+
+    final tooltipPosition = _interactionState.tooltipPosition;
+    final dataPoint = _interactionState.tooltipDataPoint;
+    
+    if (tooltipPosition == null || dataPoint == null) {
+      return null;
+    }
+
+    // Use custom builder if provided, otherwise default builder
+    Widget tooltipContent;
+    if (config.customBuilder != null) {
+      tooltipContent = config.customBuilder!(context, dataPoint);
+    } else {
+      // Default tooltip builder
+      tooltipContent = _buildDefaultTooltip(dataPoint, config);
+    }
+
+    // Wrap in container with style
+    tooltipContent = Container(
+      padding: EdgeInsets.all(config.style.padding),
+      decoration: BoxDecoration(
+        color: config.style.backgroundColor,
+        border: Border.all(
+          color: config.style.borderColor,
+          width: config.style.borderWidth,
+        ),
+        borderRadius: BorderRadius.circular(config.style.borderRadius),
+        boxShadow: config.style.shadowBlurRadius > 0
+            ? [
+                BoxShadow(
+                  color: config.style.shadowColor,
+                  blurRadius: config.style.shadowBlurRadius,
+                  offset: Offset(0, config.style.shadowBlurRadius / 2),
+                ),
+              ]
+            : null,
+      ),
+      child: tooltipContent,
+    );
+
+    // Calculate smart positioning
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return null;
+
+    final chartSize = renderBox.size;
+    const tooltipSize = Size(200, 80); // Estimate, will be measured
+    
+    // Smart positioning: flip to opposite side if clipping
+    double left = tooltipPosition.dx + config.offsetFromPoint;
+    double top = tooltipPosition.dy + config.offsetFromPoint;
+
+    // Check right boundary
+    if (left + tooltipSize.width > chartSize.width) {
+      left = tooltipPosition.dx - tooltipSize.width - config.offsetFromPoint;
+    }
+
+    // Check bottom boundary
+    if (top + tooltipSize.height > chartSize.height) {
+      top = tooltipPosition.dy - tooltipSize.height - config.offsetFromPoint;
+    }
+
+    // Ensure not off left edge
+    if (left < 0) {
+      left = 10;
+    }
+
+    // Ensure not off top edge
+    if (top < 0) {
+      top = 10;
+    }
+
+    return Positioned(
+      left: left,
+      top: top,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _interactionState.isTooltipVisible ? 1.0 : 0.0,
+          duration: config.showDelay,
+          child: tooltipContent,
+        ),
+      ),
+    );
+  }
+
+  /// Builds the default tooltip content.
+  Widget _buildDefaultTooltip(Map<String, dynamic> dataPoint, TooltipConfig config) {
+    final x = dataPoint['x'];
+    final y = dataPoint['y'];
+
+    final textStyle = TextStyle(
+      color: config.style.textColor,
+      fontSize: config.style.fontSize,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'X: ${x is num ? x.toStringAsFixed(2) : x.toString()}',
+          style: textStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Y: ${y is num ? y.toStringAsFixed(2) : y.toString()}',
+          style: textStyle,
+        ),
+        // Show additional properties if present
+        ...dataPoint.entries
+            .where((e) => e.key != 'x' && e.key != 'y')
+            .map((e) => Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${e.key}: ${e.value}',
+                    style: textStyle.copyWith(fontSize: config.style.fontSize * 0.83),
+                  ),
+                )),
+      ],
+    );
   }
 
   // ==================== HELPER METHODS (continued) ====================
