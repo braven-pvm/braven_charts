@@ -1127,25 +1127,37 @@ class _BravenChartState extends State<BravenChart> {
 
   /// Finds the nearest data point to a screen position.
   ///
+  /// Uses Euclidean distance with coordinate transformation.
   /// Returns null if no point is within the snap radius.
+  ///
+  /// Performance: O(n) where n = total points across all series.
+  /// For large datasets (>10k points), consider spatial indexing (future optimization).
   Map<String, dynamic>? _findNearestDataPoint(Offset screenPosition) {
     if (!widget.interactionConfig!.crosshair.snapToDataPoint) {
       return null;
     }
 
     final snapRadius = widget.interactionConfig!.crosshair.snapRadius;
+    
+    // Calculate data bounds and chart rect for coordinate transformation
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) return null;
+    
+    final bounds = _calculateDataBounds(allSeries);
+    final chartRect = _calculateChartRect(context.size!);
+    
     Map<String, dynamic>? nearestPoint;
     double minDistance = snapRadius;
 
     // Iterate through all series to find nearest point
-    final allSeries = _getAllSeries();
     for (final series in allSeries) {
       for (final point in series.points) {
-        // TODO R-T005: Convert data coordinates to screen coordinates
-        // For now, using simplified distance calculation
-        // This will be properly implemented when coordinate transformation is available
-        final dx = screenPosition.dx - (point.x * 100); // Placeholder
-        final dy = screenPosition.dy - (point.y * 100); // Placeholder
+        // Transform data coordinates to screen coordinates
+        final screenPoint = _dataToScreenPoint(point, chartRect, bounds);
+        
+        // Calculate Euclidean distance
+        final dx = screenPosition.dx - screenPoint.dx;
+        final dy = screenPosition.dy - screenPoint.dy;
         final distance = sqrt(dx * dx + dy * dy);
 
         if (distance < minDistance) {
@@ -1161,6 +1173,72 @@ class _BravenChartState extends State<BravenChart> {
     }
 
     return nearestPoint;
+  }
+
+  /// Transforms a data point to screen coordinates.
+  ///
+  /// Uses the same transformation logic as _BravenChartPainter._dataToPixel.
+  Offset _dataToScreenPoint(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
+    final xRange = bounds.maxX - bounds.minX;
+    final yRange = bounds.maxY - bounds.minY;
+
+    final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
+    final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
+
+    final pixelX = chartRect.left + (xPercent * chartRect.width);
+    final pixelY = chartRect.bottom - (yPercent * chartRect.height);
+
+    return Offset(pixelX, pixelY);
+  }
+
+  /// Calculates the chart rectangle within the widget.
+  ///
+  /// Same logic as _BravenChartPainter.paint, accounting for margins.
+  Rect _calculateChartRect(Size size) {
+    // Use same padding as painter (40.0 for axes)
+    const padding = 40.0;
+    return Rect.fromLTWH(
+      padding,
+      padding,
+      size.width - padding * 2,
+      size.height - padding * 2,
+    );
+  }
+
+  /// Calculates data bounds for all series.
+  ///
+  /// Same logic as _BravenChartPainter._computeDataBounds.
+  _DataBounds _calculateDataBounds(List<ChartSeries> series) {
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final s in series) {
+      for (final point in s.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    // Ensure valid bounds even for empty or single-point datasets
+    if (minX == double.infinity) minX = 0;
+    if (maxX == double.negativeInfinity) maxX = 1;
+    if (minY == double.infinity) minY = 0;
+    if (maxY == double.negativeInfinity) maxY = 1;
+
+    // Add 10% padding to bounds for better visualization
+    final xPadding = (maxX - minX) * 0.1;
+    final yPadding = (maxY - minY) * 0.1;
+
+    return _DataBounds(
+      minX: minX - xPadding,
+      maxX: maxX + xPadding,
+      minY: minY - yPadding,
+      maxY: maxY + yPadding,
+    );
   }
 
   /// Builds the tooltip overlay widget with smart positioning.
