@@ -823,16 +823,23 @@ Single Flutter library project:
     * Simplified from quickstart spec to match current InteractionConfig API
     * No lint errors, analysis clean
 
-- [ ] **T041** Create Example 6: Gesture Handling with Callbacks
+- [x] **T041** Create Example 6: Gesture Handling with Callbacks
   - **Type**: Documentation
   - **Files**: `example/lib/screens/interaction_examples/gesture_callbacks.dart`
   - **Acceptance Criteria**:
-    - [ ] Executable example with gesture callbacks
-    - [ ] onDataPointTap, onHover, onZoomChange demonstrated
-    - [ ] Example runs without errors
-    - [ ] dartdoc comments explaining callback usage
+    - [x] Executable example with gesture callbacks
+    - [x] onDataPointTap, onHover, onZoomChange demonstrated
+    - [x] Example runs without errors
+    - [x] dartdoc comments explaining callback usage
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 6 in quickstart.md
+  - **Completion Notes**:
+    * Created GestureCallbacksExample demonstrating all interaction callbacks
+    * Implements onDataPointTap, onDataPointHover, onDataPointLongPress
+    * Implements onZoomChanged and onPanChanged
+    * Event log displays all interactions with coordinates
+    * Long press shows custom dialog
+    * No lint errors, analysis clean
 
 - [ ] **T042** Create Example 7: Keyboard Navigation Setup
   - **Type**: Documentation
