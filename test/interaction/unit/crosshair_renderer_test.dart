@@ -26,13 +26,13 @@ void main() {
       final recorder = PictureRecorder();
       canvas = Canvas(recorder);
       size = const Size(800, 600);
-      
+
       // Create a visible crosshair state
       state = InteractionState.initial().copyWith(
         isCrosshairVisible: true,
         crosshairPosition: const Offset(400, 300),
       );
-      
+
       config = CrosshairConfig.defaultConfig();
     });
 
@@ -182,11 +182,11 @@ void main() {
     group('Snap Point Highlighting', () {
       test('renderSnapPointHighlights() highlights nearest point', () {
         final snapPoint = const ChartDataPoint(x: 50, y: 50);
-        final transformer = CoordinateTransformer(
-          chartBounds: const Rect.fromLTWH(0, 0, 800, 600),
-          dataBounds: const Rect.fromLTWH(0, 0, 100, 100),
+        final transformer = const CoordinateTransformer(
+          chartBounds: Rect.fromLTWH(0, 0, 800, 600),
+          dataBounds: Rect.fromLTWH(0, 0, 100, 100),
         );
-        
+
         crosshairRenderer.renderSnapPointHighlights(
           canvas,
           [snapPoint],

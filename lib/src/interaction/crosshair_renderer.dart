@@ -65,11 +65,7 @@ class HighlightStyle {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is HighlightStyle &&
-        other.color == color &&
-        other.radius == radius &&
-        other.strokeWidth == strokeWidth &&
-        other.filled == filled;
+    return other is HighlightStyle && other.color == color && other.radius == radius && other.strokeWidth == strokeWidth && other.filled == filled;
   }
 
   @override
@@ -233,7 +229,7 @@ class CrosshairRenderer implements ICrosshairRenderer {
         dataBounds: const Rect.fromLTWH(0, 0, 100, 100), // Placeholder
       );
 
-      final highlightStyle = const HighlightStyle();
+      const highlightStyle = HighlightStyle();
       renderSnapPointHighlights(canvas, snapPoints, transformer, highlightStyle);
     }
   }

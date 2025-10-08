@@ -107,7 +107,7 @@ void main() {
       const size = Size(800, 600);
       const position = Offset(400, 300);
 
-      final style = CrosshairStyle();
+      final style = const CrosshairStyle();
       const mode = CrosshairMode.both;
 
       crosshairRenderer.renderCrosshairLines(
@@ -145,9 +145,9 @@ void main() {
       final snapPoints = [
         const ChartDataPoint(x: 50, y: 50),
       ];
-      final coordinateTransformer = CoordinateTransformer(
-        chartBounds: const Rect.fromLTWH(0, 0, 800, 600),
-        dataBounds: const Rect.fromLTWH(0, 0, 100, 100),
+      final coordinateTransformer = const CoordinateTransformer(
+        chartBounds: Rect.fromLTWH(0, 0, 800, 600),
+        dataBounds: Rect.fromLTWH(0, 0, 100, 100),
       );
       const highlightStyle = HighlightStyle();
 
