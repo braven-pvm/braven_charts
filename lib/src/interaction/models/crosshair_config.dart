@@ -31,7 +31,7 @@ class CrosshairStyle {
   const CrosshairStyle({
     this.lineColor = const Color(0xFF666666),
     this.lineWidth = 1.0,
-    this.dashPattern,
+    this.dashPattern = const [5, 3],  // Default dashed pattern per spec
     this.strokeCap = StrokeCap.round,
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
@@ -143,7 +143,7 @@ class CrosshairConfig {
   const CrosshairConfig({
     this.enabled = true,
     this.mode = CrosshairMode.both,
-    this.snapToDataPoint = false,
+    this.snapToDataPoint = true,  // Changed to true to match spec
     this.snapRadius = 20.0,
     this.showCoordinateLabels = true,
     this.coordinateLabelStyle,
@@ -153,9 +153,14 @@ class CrosshairConfig {
   /// Creates a default crosshair configuration.
   ///
   /// Enables crosshair with both vertical and horizontal lines,
-  /// no snapping, and default styling.
+  /// snapping enabled, and default styling per specification.
   factory CrosshairConfig.defaultConfig() {
-    return const CrosshairConfig();
+    return const CrosshairConfig(
+      coordinateLabelStyle: TextStyle(
+        fontSize: 12,
+        color: Color(0xDE000000), // Colors.black87
+      ),
+    );
   }
 
   /// Whether the crosshair is enabled.

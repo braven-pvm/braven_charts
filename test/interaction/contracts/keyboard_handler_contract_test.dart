@@ -3,15 +3,12 @@
 // Task: T007
 // Status: MUST FAIL (no implementation exists yet)
 
-import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
-
+import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
 // These imports will fail until implementation exists
 // ignore: unused_import
 import 'package:braven_charts/src/interaction/keyboard_handler.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
-import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
-import 'package:braven_charts/src/foundation/models/chart_data_point.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('IKeyboardHandler Contract Tests', () {
@@ -25,18 +22,18 @@ void main() {
     test('handleKeyEvent() processes keyboard events', () {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
-        final keyEvent = RawKeyDownEvent(
-          data: const RawKeyEventDataWeb(code: 'ArrowRight'),
+        final keyEvent = const RawKeyDownEvent(
+          data: RawKeyEventDataWeb(code: 'ArrowRight'),
         );
         final state = Object(); // InteractionState
         final points = <Object>[]; // List<ChartDataPoint>
-        
+
         final result = keyboardHandler.handleKeyEvent(
           keyEvent,
           state,
           points,
         );
-        
+
         // Result can be null or updated InteractionState
         expect(result == null || result is Object, isTrue);
       }, throwsA(anything));
@@ -45,12 +42,12 @@ void main() {
     test('handleKeyEvent() completes in <50ms', () {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
-        final keyEvent = RawKeyDownEvent(
-          data: const RawKeyEventDataWeb(code: 'ArrowRight'),
+        final keyEvent = const RawKeyDownEvent(
+          data: RawKeyEventDataWeb(code: 'ArrowRight'),
         );
         final state = Object();
         final points = <Object>[];
-        
+
         final stopwatch = Stopwatch()..start();
         keyboardHandler.handleKeyEvent(
           keyEvent,
@@ -58,7 +55,7 @@ void main() {
           points,
         );
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(50));
       }, throwsA(anything));
     });
@@ -72,12 +69,12 @@ void main() {
           currentPoint, // point 1
           Object(), // point 2
         ];
-        
+
         final nextPoint = keyboardHandler.navigateToNext(
           currentPoint,
           points,
         );
-        
+
         expect(nextPoint, isNotNull);
         expect(nextPoint, isNot(equals(currentPoint)));
       }, throwsA(anything));
@@ -93,12 +90,12 @@ void main() {
           Object(),
           lastPoint,
         ];
-        
+
         final nextPoint = keyboardHandler.navigateToNext(
           lastPoint,
           points,
         );
-        
+
         expect(nextPoint, equals(firstPoint));
       }, throwsA(anything));
     });
@@ -112,12 +109,12 @@ void main() {
           currentPoint, // point 1
           Object(), // point 2
         ];
-        
+
         final previousPoint = keyboardHandler.navigateToPrevious(
           currentPoint,
           points,
         );
-        
+
         expect(previousPoint, isNotNull);
         expect(previousPoint, isNot(equals(currentPoint)));
       }, throwsA(anything));
@@ -133,12 +130,12 @@ void main() {
           Object(),
           lastPoint,
         ];
-        
+
         final previousPoint = keyboardHandler.navigateToPrevious(
           firstPoint,
           points,
         );
-        
+
         expect(previousPoint, equals(lastPoint));
       }, throwsA(anything));
     });
@@ -152,9 +149,9 @@ void main() {
           Object(),
           Object(),
         ];
-        
+
         final result = keyboardHandler.navigateToFirst(points);
-        
+
         expect(result, equals(firstPoint));
       }, throwsA(anything));
     });
@@ -168,9 +165,9 @@ void main() {
           Object(),
           lastPoint,
         ];
-        
+
         final result = keyboardHandler.navigateToLast(points);
-        
+
         expect(result, equals(lastPoint));
       }, throwsA(anything));
     });
@@ -181,13 +178,13 @@ void main() {
         final direction = Object(); // PanDirection.right
         final currentState = Object(); // ZoomPanState
         const panAmount = 10.0;
-        
+
         final newState = keyboardHandler.panViewport(
           direction,
           currentState,
           panAmount,
         );
-        
+
         expect(newState, isNotNull);
         expect(newState, isNot(equals(currentState)));
       }, throwsA(anything));
@@ -199,13 +196,13 @@ void main() {
         const zoomIn = true;
         final currentState = Object(); // ZoomPanState
         const zoomFactor = 1.1;
-        
+
         final newState = keyboardHandler.zoomViewport(
           zoomIn,
           currentState,
           zoomFactor,
         );
-        
+
         expect(newState, isNotNull);
         expect(newState, isNot(equals(currentState)));
       }, throwsA(anything));
@@ -217,13 +214,13 @@ void main() {
         const zoomIn = false;
         final currentState = Object(); // ZoomPanState
         const zoomFactor = 0.9;
-        
+
         final newState = keyboardHandler.zoomViewport(
           zoomIn,
           currentState,
           zoomFactor,
         );
-        
+
         expect(newState, isNotNull);
         expect(newState, isNot(equals(currentState)));
       }, throwsA(anything));
@@ -234,7 +231,7 @@ void main() {
       expect(() {
         final state = Object(); // InteractionState
         final points = <Object>[Object(), Object(), Object()];
-        
+
         final requiredKeys = [
           'ArrowRight', // Navigate next
           'ArrowLeft', // Navigate previous
@@ -248,19 +245,19 @@ void main() {
           'Space', // Show tooltip
           'Escape', // Close/clear
         ];
-        
+
         for (final keyCode in requiredKeys) {
           final keyEvent = RawKeyDownEvent(
             data: RawKeyEventDataWeb(code: keyCode),
           );
-          
+
           // Should handle or ignore each key
           final result = keyboardHandler.handleKeyEvent(
             keyEvent,
             state,
             points,
           );
-          
+
           expect(result == null || result is Object, isTrue);
         }
       }, throwsA(anything));

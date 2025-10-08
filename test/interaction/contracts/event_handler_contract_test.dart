@@ -21,7 +21,7 @@ void main() {
     setUp(() {
       // This will fail - implementation doesn't exist yet
       // eventHandler = EventHandler();
-      
+
       // Mock coordinate transformer for testing
       coordinateTransformer = CoordinateTransformer(
         chartBounds: const Rect.fromLTWH(0, 0, 800, 600),
@@ -35,13 +35,13 @@ void main() {
         final pointerEvent = const PointerMoveEvent(
           position: Offset(400, 300),
         );
-        
+
         // This will fail when eventHandler is null/undefined
         final result = eventHandler.processPointerEvent(
           pointerEvent,
           coordinateTransformer,
         );
-        
+
         expect(result, isNotNull);
         expect(result.screenPosition, equals(const Offset(400, 300)));
         expect(result.dataPosition, isNotNull);
@@ -55,14 +55,14 @@ void main() {
         final pointerEvent = const PointerMoveEvent(
           position: Offset(400, 300),
         );
-        
+
         final stopwatch = Stopwatch()..start();
         eventHandler.processPointerEvent(
           pointerEvent,
           coordinateTransformer,
         );
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(5));
       }, throwsA(anything));
     });
@@ -70,12 +70,12 @@ void main() {
     test('processKeyEvent() returns KeyEventResult', () {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
-        final keyEvent = RawKeyDownEvent(
-          data: const RawKeyEventDataWeb(code: 'ArrowRight'),
+        final keyEvent = const RawKeyDownEvent(
+          data: RawKeyEventDataWeb(code: 'ArrowRight'),
         );
-        
+
         final result = eventHandler.processKeyEvent(keyEvent);
-        
+
         expect(result, isIn([KeyEventResult.handled, KeyEventResult.ignored]));
       }, throwsA(anything));
     });
@@ -84,7 +84,7 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final handlerCalled = <int>[];
-        
+
         // Register handlers with different priorities
         eventHandler.registerHandler(
           (event) {
@@ -93,7 +93,7 @@ void main() {
           },
           priority: 1,
         );
-        
+
         eventHandler.registerHandler(
           (event) {
             handlerCalled.add(2);
@@ -101,12 +101,12 @@ void main() {
           },
           priority: 2,
         );
-        
+
         // Create a mock ChartEvent
         final mockEvent = Object(); // Will be ChartEvent when implemented
-        
+
         final handled = eventHandler.routeEvent(mockEvent);
-        
+
         // Higher priority (2) should be called first
         expect(handlerCalled, equals([2, 1]));
         expect(handled, isTrue);
@@ -121,14 +121,14 @@ void main() {
           callCount++;
           return true;
         }
-        
+
         eventHandler.registerHandler(handler, priority: 1);
-        
+
         // Mock event
         final mockEvent = Object();
         eventHandler.routeEvent(mockEvent);
         expect(callCount, equals(1));
-        
+
         // Unregister and verify not called
         eventHandler.unregisterHandler(handler);
         eventHandler.routeEvent(mockEvent);
@@ -140,12 +140,14 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         eventHandler.dispose();
-        
+
         // After dispose, further operations should fail or be no-ops
-        expect(() => eventHandler.processPointerEvent(
-          const PointerMoveEvent(position: Offset.zero),
-          coordinateTransformer,
-        ), throwsA(anything));
+        expect(
+            () => eventHandler.processPointerEvent(
+                  const PointerMoveEvent(position: Offset.zero),
+                  coordinateTransformer,
+                ),
+            throwsA(anything));
       }, throwsA(anything));
     });
 
@@ -162,7 +164,7 @@ void main() {
             coordinateTransformer,
           );
         }
-        
+
         // Memory check would go here (platform-specific)
         // For now, just verify it doesn't crash
         expect(true, isTrue);

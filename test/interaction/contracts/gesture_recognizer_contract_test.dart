@@ -27,12 +27,12 @@ void main() {
           position: Offset(400, 300),
         );
         final state = Object(); // GestureRecognitionState
-        
+
         final result = gestureRecognizer.recognizeGesture(
           pointerEvent,
           state,
         );
-        
+
         // Result can be null or GestureDetails
         expect(result == null || result is Object, isTrue);
       }, throwsA(anything));
@@ -45,14 +45,14 @@ void main() {
           position: Offset(400, 300),
         );
         final state = Object();
-        
+
         final stopwatch = Stopwatch()..start();
         gestureRecognizer.recognizeGesture(
           pointerEvent,
           state,
         );
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(10));
       }, throwsA(anything));
     });
@@ -63,13 +63,13 @@ void main() {
         const position = Offset(400, 300);
         const pointerCount = 1;
         const deviceKind = PointerDeviceKind.touch;
-        
+
         final state = gestureRecognizer.startGesture(
           position,
           pointerCount,
           deviceKind,
         );
-        
+
         expect(state, isNotNull);
       }, throwsA(anything));
     });
@@ -80,13 +80,13 @@ void main() {
         final initialState = Object(); // GestureRecognitionState
         const position = Offset(410, 305);
         const delta = Offset(10, 5);
-        
+
         final updatedState = gestureRecognizer.updateGesture(
           initialState,
           position,
           delta,
         );
-        
+
         expect(updatedState, isNotNull);
       }, throwsA(anything));
     });
@@ -96,12 +96,12 @@ void main() {
       expect(() {
         final state = Object(); // GestureRecognitionState
         const position = Offset(420, 310);
-        
+
         final details = gestureRecognizer.completeGesture(
           state,
           position,
         );
-        
+
         expect(details, isNotNull);
       }, throwsA(anything));
     });
@@ -110,9 +110,9 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final state = Object(); // GestureRecognitionState
-        
+
         gestureRecognizer.cancelGesture(state);
-        
+
         // Should not throw
         expect(true, isTrue);
       }, throwsA(anything));
@@ -123,12 +123,12 @@ void main() {
       expect(() {
         final candidates = <Object>[]; // List<GestureType> [tap, pan]
         final state = Object(); // GestureRecognitionState
-        
+
         final winner = gestureRecognizer.resolveConflict(
           candidates,
           state,
         );
-        
+
         expect(winner, isNotNull);
       }, throwsA(anything));
     });
@@ -138,12 +138,12 @@ void main() {
       expect(() {
         final candidates = <Object>[]; // List<GestureType> [pan, pinch]
         final state = Object(); // GestureRecognitionState (2 pointers)
-        
+
         final winner = gestureRecognizer.resolveConflict(
           candidates,
           state,
         );
-        
+
         expect(winner, isNotNull);
       }, throwsA(anything));
     });
@@ -154,22 +154,22 @@ void main() {
         // Simulate tap sequence
         const downPosition = Offset(400, 300);
         const deviceKind = PointerDeviceKind.touch;
-        
+
         final state = gestureRecognizer.startGesture(
           downPosition,
           1,
           deviceKind,
         );
-        
+
         final stopwatch = Stopwatch()..start();
-        
+
         final details = gestureRecognizer.completeGesture(
           state,
           downPosition, // No movement = tap
         );
-        
+
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(10));
         expect(details, isNotNull);
       }, throwsA(anything));
@@ -181,24 +181,24 @@ void main() {
         const startPosition = Offset(400, 300);
         const endPosition = Offset(420, 300); // 20px movement
         const deviceKind = PointerDeviceKind.touch;
-        
+
         var state = gestureRecognizer.startGesture(
           startPosition,
           1,
           deviceKind,
         );
-        
+
         state = gestureRecognizer.updateGesture(
           state,
           endPosition,
           endPosition - startPosition,
         );
-        
+
         final details = gestureRecognizer.completeGesture(
           state,
           endPosition,
         );
-        
+
         expect(details, isNotNull);
         // Should be pan, not tap
       }, throwsA(anything));
@@ -210,19 +210,19 @@ void main() {
         const startPosition = Offset(400, 300);
         const movedPosition = Offset(412, 300); // 12px movement
         const deviceKind = PointerDeviceKind.touch;
-        
+
         var state = gestureRecognizer.startGesture(
           startPosition,
           1,
           deviceKind,
         );
-        
+
         state = gestureRecognizer.updateGesture(
           state,
           movedPosition,
           movedPosition - startPosition,
         );
-        
+
         // Long-press should be cancelled from candidates
         expect(state, isNotNull);
       }, throwsA(anything));

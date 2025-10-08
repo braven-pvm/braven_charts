@@ -29,7 +29,7 @@ void main() {
         const seriesId = 'series1';
         const screenPosition = Offset(400, 300);
         final config = Object(); // TooltipConfig
-        
+
         final widget = tooltipProvider.showTooltip(
           context,
           point,
@@ -37,7 +37,7 @@ void main() {
           screenPosition,
           config,
         );
-        
+
         expect(widget, isA<Widget>());
       }, throwsA(anything));
     });
@@ -52,13 +52,13 @@ void main() {
             ),
           ),
         );
-        
+
         final context = tester.element(find.byType(SizedBox));
         final point = Object();
         const seriesId = 'series1';
         const screenPosition = Offset(400, 300);
         final config = Object();
-        
+
         final stopwatch = Stopwatch()..start();
         tooltipProvider.showTooltip(
           context,
@@ -68,7 +68,7 @@ void main() {
           config,
         );
         stopwatch.stop();
-        
+
         expect(stopwatch.elapsedMilliseconds, lessThan(5));
       }, throwsA(anything));
     });
@@ -77,7 +77,7 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         tooltipProvider.hideTooltip();
-        
+
         // Verify tooltip is hidden (implementation-specific)
         expect(true, isTrue);
       }, throwsA(anything));
@@ -91,7 +91,7 @@ void main() {
         const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
         final preferredPosition = Object(); // TooltipPosition.auto
         const offset = 10.0;
-        
+
         final position = tooltipProvider.calculatePosition(
           tooltipSize,
           pointPosition,
@@ -99,9 +99,9 @@ void main() {
           preferredPosition,
           offset,
         );
-        
+
         expect(position, isA<Offset>());
-        
+
         // Verify tooltip stays within bounds
         expect(position.dx, greaterThanOrEqualTo(0));
         expect(position.dy, greaterThanOrEqualTo(0));
@@ -118,19 +118,19 @@ void main() {
             home: Scaffold(body: SizedBox()),
           ),
         );
-        
+
         final context = tester.element(find.byType(SizedBox));
         final point = Object(); // ChartDataPoint
         const seriesId = 'series1';
         final style = Object(); // TooltipStyle
-        
+
         final widget = tooltipProvider.buildDefaultTooltip(
           context,
           point,
           seriesId,
           style,
         );
-        
+
         expect(widget, isA<Widget>());
       }, throwsA(anything));
     });
@@ -143,19 +143,19 @@ void main() {
             home: Scaffold(body: SizedBox()),
           ),
         );
-        
+
         final context = tester.element(find.byType(SizedBox));
         final points = <Object>[]; // List<ChartDataPoint>
         final seriesIds = ['series1', 'series2'];
         final style = Object(); // TooltipStyle
-        
+
         final widget = tooltipProvider.buildMultiSeriesTooltip(
           context,
           points,
           seriesIds,
           style,
         );
-        
+
         expect(widget, isA<Widget>());
       }, throwsA(anything));
     });
@@ -165,12 +165,12 @@ void main() {
       expect(() {
         final oldPoint = Object(); // ChartDataPoint
         final newPoint = Object(); // Different ChartDataPoint
-        
+
         final shouldUpdate = tooltipProvider.shouldUpdate(
           oldPoint,
           newPoint,
         );
-        
+
         expect(shouldUpdate, isA<bool>());
       }, throwsA(anything));
     });
@@ -179,12 +179,12 @@ void main() {
       // EXPECTED TO FAIL - No implementation exists
       expect(() {
         final point = Object(); // ChartDataPoint
-        
+
         final shouldUpdate = tooltipProvider.shouldUpdate(
           point,
           point,
         );
-        
+
         expect(shouldUpdate, isFalse);
       }, throwsA(anything));
     });
