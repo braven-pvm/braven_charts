@@ -258,11 +258,14 @@ class KeyboardHandler {
   ///
   /// Called when Escape is pressed.
   InteractionState closeTooltipOrClearSelection(InteractionState state) {
-    return state.copyWith(
+    // Cannot use copyWith because it doesn't support setting nullable fields to null
+    // (copyWith uses ?? operator which keeps old value if new value is null)
+    return InteractionState(
       isTooltipVisible: false,
       hoveredPoint: null,
-      selectedPoints: [],
+      selectedPoints: const [],
       focusedPointIndex: -1,
+      zoomPanState: state.zoomPanState, // Preserve zoom/pan state
     );
   }
 
