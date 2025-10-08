@@ -8,6 +8,10 @@ import 'dart:math' show cos, sin;
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
+// Layer 7: Interaction
+import 'package:braven_charts/src/interaction/event_handler.dart' hide KeyEventResult;
+import 'package:braven_charts/src/interaction/models/interaction_config.dart';
+import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
@@ -91,6 +95,7 @@ class BravenChart extends StatefulWidget {
     this.onSeriesSelected,
     this.onAnnotationTap,
     this.onAnnotationDragged,
+    this.interactionConfig,
   })  : assert(
           series.isNotEmpty || dataStream != null,
           'At least one series or dataStream is required',
@@ -146,6 +151,7 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
   }) {
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
@@ -191,6 +197,7 @@ class BravenChart extends StatefulWidget {
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
     );
   }
 
@@ -236,6 +243,7 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
   }) {
     // Convert map to data points
     final points = data.entries.map((entry) {
@@ -281,6 +289,7 @@ class BravenChart extends StatefulWidget {
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
     );
   }
 
@@ -323,6 +332,7 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
   }) {
     // Parse JSON
     final dynamic decoded = jsonDecode(json);
@@ -377,6 +387,7 @@ class BravenChart extends StatefulWidget {
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
     );
   }
   // ==================== CORE CONFIGURATION ====================
@@ -503,6 +514,26 @@ class BravenChart extends StatefulWidget {
   /// Called when an annotation is dragged to a new position.
   final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
 
+  // ==================== INTERACTION SYSTEM ====================
+
+  /// Configuration for interactive features (crosshair, tooltip, gestures, keyboard navigation).
+  ///
+  /// If null, interaction features are disabled. Use [InteractionConfig.defaultConfig()]
+  /// for standard interaction behavior, or customize specific features:
+  ///
+  /// ```dart
+  /// BravenChart(
+  ///   interactionConfig: InteractionConfig(
+  ///     crosshair: CrosshairConfig(enabled: true, snapToDataPoint: true),
+  ///     tooltip: TooltipConfig(enabled: true),
+  ///     enableZoom: true,
+  ///     enablePan: true,
+  ///   ),
+  ///   // ... other parameters
+  /// )
+  /// ```
+  final InteractionConfig? interactionConfig;
+
   // ==================== STATE ====================
 
   @override
@@ -533,6 +564,12 @@ class _BravenChartState extends State<BravenChart> {
   /// Flag to track if we're currently throttling.
   bool _isThrottling = false;
 
+  /// Event handler for interaction system (Layer 7).
+  EventHandler? _eventHandler;
+
+  /// Current interaction state.
+  InteractionState _interactionState = InteractionState.initial();
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
@@ -550,6 +587,11 @@ class _BravenChartState extends State<BravenChart> {
     // Subscribe to dataStream if provided
     if (widget.dataStream != null) {
       _subscribeToStream(widget.dataStream!);
+    }
+
+    // Initialize interaction system if enabled
+    if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
+      _eventHandler = EventHandler();
     }
   }
 
@@ -612,6 +654,10 @@ class _BravenChartState extends State<BravenChart> {
     // Dispose internal controller
     _internalController?.dispose();
     _internalController = null;
+
+    // Dispose interaction system
+    _eventHandler?.dispose();
+    _eventHandler = null;
 
     super.dispose();
   }
@@ -787,7 +833,63 @@ class _BravenChartState extends State<BravenChart> {
       );
     }
 
+    // Wrap with interaction system if enabled
+    if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
+      chartWidget = _wrapWithInteractionSystem(chartWidget);
+    }
+
     return chartWidget;
+  }
+
+  /// Wraps the chart widget with interaction system components.
+  ///
+  /// Adds GestureDetector, Focus, and Semantics widgets for
+  /// gesture recognition, keyboard navigation, and accessibility.
+  Widget _wrapWithInteractionSystem(Widget child) {
+    final config = widget.interactionConfig!;
+
+    // Wrap with GestureDetector for gesture recognition
+    Widget interactiveWidget = GestureDetector(
+      onTapDown: config.enableSelection ? (details) {
+        // Handle tap - update interaction state
+        // TODO: Convert screen position to data point using EventHandler
+        setState(() {
+          _interactionState = _interactionState.copyWith(
+            crosshairPosition: details.localPosition,
+          );
+        });
+      } : null,
+      onPanUpdate: config.enablePan ? (details) {
+        // Handle pan gesture
+        // TODO: Update zoom/pan state using ZoomPanController
+        setState(() {
+          // Placeholder for pan handling
+        });
+      } : null,
+      child: child,
+    );
+
+    // Wrap with Focus for keyboard navigation
+    if (config.keyboard.enabled) {
+      interactiveWidget = Focus(
+        autofocus: false,
+        canRequestFocus: true,
+        onKeyEvent: (node, event) {
+          // TODO: Use KeyboardHandler to process keyboard events
+          return KeyEventResult.ignored;
+        },
+        child: interactiveWidget,
+      );
+    }
+
+    // Wrap with Semantics for accessibility
+    interactiveWidget = Semantics(
+      label: 'Interactive chart',
+      hint: 'Use arrow keys to navigate data points',
+      child: interactiveWidget,
+    );
+
+    return interactiveWidget;
   }
 
   // ==================== HELPER METHODS (continued) ====================
