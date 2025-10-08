@@ -31,7 +31,7 @@ class CrosshairStyle {
   const CrosshairStyle({
     this.lineColor = const Color(0xFF666666),
     this.lineWidth = 1.0,
-    this.dashPattern = const [5, 3],  // Default dashed pattern per spec
+    this.dashPattern = const [5, 3], // Default dashed pattern per spec
     this.strokeCap = StrokeCap.round,
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
@@ -143,7 +143,7 @@ class CrosshairConfig {
   const CrosshairConfig({
     this.enabled = true,
     this.mode = CrosshairMode.both,
-    this.snapToDataPoint = true,  // Changed to true to match spec
+    this.snapToDataPoint = true, // Changed to true to match spec
     this.snapRadius = 20.0,
     this.showCoordinateLabels = true,
     this.coordinateLabelStyle,
