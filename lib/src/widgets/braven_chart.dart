@@ -1311,9 +1311,7 @@ class _BravenChartState extends State<BravenChart> {
 
               // If selection changed, invoke callback
               if (_interactionState.selectedPoints != newState.selectedPoints) {
-                final selectedPointsList = _interactionState.selectedPoints
-                    .map((data) => _mapToDataPoint(data))
-                    .toList();
+                final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
                 config.onSelectionChanged?.call(selectedPointsList);
               }
             });
@@ -1782,19 +1780,19 @@ class _BravenChartPainter extends CustomPainter {
       final zoomY = zoomPanState!.zoomLevelY;
       final panX = zoomPanState!.panOffset.dx;
       final panY = zoomPanState!.panOffset.dy;
-      
+
       // Calculate the center of the data range
       final centerX = (minX + maxX) / 2;
       final centerY = (minY + maxY) / 2;
-      
+
       // Calculate the new range based on zoom
       final rangeX = (maxX - minX) / zoomX;
       final rangeY = (maxY - minY) / zoomY;
-      
+
       // Apply pan offset (normalized to data range)
       final dataRangeX = maxX - minX;
       final dataRangeY = maxY - minY;
-      
+
       // Calculate visible bounds
       minX = centerX - rangeX / 2 - panX * dataRangeX;
       maxX = centerX + rangeX / 2 - panX * dataRangeX;
@@ -1847,11 +1845,10 @@ class _BravenChartPainter extends CustomPainter {
 
       for (final point in s.points) {
         // Viewport culling: only render points within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX ||
-            point.y < bounds.minY || point.y > bounds.maxY) {
+        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
           continue;
         }
-        
+
         final offset = _dataToPixel(point, chartRect, bounds);
         if (first) {
           path.moveTo(offset.dx, offset.dy);
@@ -1870,11 +1867,10 @@ class _BravenChartPainter extends CustomPainter {
 
       for (final point in s.points) {
         // Viewport culling: only render markers within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX ||
-            point.y < bounds.minY || point.y > bounds.maxY) {
+        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
           continue;
         }
-        
+
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 4, markerPaint);
       }
@@ -1889,11 +1885,9 @@ class _BravenChartPainter extends CustomPainter {
       if (s.points.isEmpty) continue;
 
       // Filter points within visible bounds for area fill
-      final visiblePoints = s.points.where((point) =>
-        point.x >= bounds.minX && point.x <= bounds.maxX &&
-        point.y >= bounds.minY && point.y <= bounds.maxY
-      ).toList();
-      
+      final visiblePoints =
+          s.points.where((point) => point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY).toList();
+
       if (visiblePoints.isEmpty) continue;
 
       final color = colors[i % colors.length];
@@ -1959,13 +1953,12 @@ class _BravenChartPainter extends CustomPainter {
 
       for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
         final point = s.points[pointIndex];
-        
+
         // Viewport culling: only render bars within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX ||
-            point.y < bounds.minY || point.y > bounds.maxY) {
+        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
           continue;
         }
-        
+
         final baseX = chartRect.left + (barGroupWidth * pointIndex);
         final barX = baseX + (barWidth * seriesIndex) + (barWidth / 2);
 
@@ -1990,11 +1983,10 @@ class _BravenChartPainter extends CustomPainter {
 
       for (final point in s.points) {
         // Viewport culling: only render scatter points within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX ||
-            point.y < bounds.minY || point.y > bounds.maxY) {
+        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
           continue;
         }
-        
+
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 5, paint);
       }

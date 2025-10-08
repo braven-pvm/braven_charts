@@ -703,6 +703,7 @@ ThresholdAnnotation(
                   label: 'Moving Avg',
                   seriesId: 'sales',
                   trendType: TrendType.movingAverage,
+                  windowSize: 5, // Required for moving average
                   style: const AnnotationStyle(
                     borderColor: Colors.orange,
                     borderWidth: 2,

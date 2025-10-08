@@ -23,6 +23,33 @@ The example app is organized into three main sections:
 
 Comprehensive demonstrations of specific chart capabilities:
 
+#### **Interaction System Showcase** 🆕
+- **All Interaction Features** in one comprehensive demo
+  - `Crosshair`: Vertical, horizontal, or both modes with snap-to-point
+  - `Tooltip`: Default or custom builder with smart positioning
+  - `Zoom`: CTRL+Scroll, pinch gestures, configurable limits
+  - `Pan`: Middle-mouse drag, SHIFT+Scroll, touch gestures
+  - `Keyboard Navigation`: Arrow keys, +/-, Home/End
+- **10 Interaction Callbacks**: Real-time event logging
+  - onDataPointTap, onDataPointHover, onDataPointLongPress
+  - onZoomChanged, onPanChanged, onViewportChanged
+  - onCrosshairChanged, onTooltipChanged, onSelectionChanged, onKeyboardAction
+- **Live Configuration Panel**: Toggle features on/off
+- **Factory Constructors**: Test `.all()`, `.none()`, and custom configs
+- **Event Log**: See every interaction in real-time
+
+#### **Interaction Examples** 🆕
+- **9 Focused Examples** demonstrating specific interaction patterns
+  1. Basic Crosshair (5-line setup)
+  2. Custom Crosshair Style (color, width, dash pattern)
+  3. Default Tooltip (hover/tap triggers)
+  4. Custom Tooltip Builder (rich content, custom styling)
+  5. Zoom & Pan Configuration (limits, bounds, step sizes)
+  6. Gesture Callbacks (tap, long-press, hover)
+  7. Keyboard Navigation (configurable key bindings)
+  8. Multi-Series Crosshair (snap across multiple series)
+  9. Complete Interaction (all features working together)
+
 #### **Annotations Showcase**
 - **All 5 Annotation Types** with live examples
   - `TextAnnotation`: Free-form labels with custom positioning
@@ -81,6 +108,21 @@ Individual screens for each chart type:
 
 ## 🎯 Key Features Demonstrated
 
+### Interaction System (Layer 7) 🆕
+- ✅ **Crosshair**: Vertical, horizontal, both modes
+- ✅ **Snap-to-Point**: Configurable snap radius (default: 30px)
+- ✅ **Tooltip**: Default and custom builders
+- ✅ **Smart Positioning**: Auto-flip tooltip when near edges
+- ✅ **Zoom Controls**: CTRL+Scroll, pinch gestures
+- ✅ **Pan Controls**: Middle-mouse drag (PRIMARY), SHIFT+Scroll, touch drag
+- ✅ **Keyboard Navigation**: Arrow keys (pan), +/- (zoom), Home/End (jump)
+- ✅ **Viewport Transformation**: Zoom/pan applied to rendering
+- ✅ **Viewport Culling**: Optimized rendering for large datasets
+- ✅ **10 Interaction Callbacks**: Full event system
+- ✅ **Factory Constructors**: `.all()`, `.none()`, `.defaultConfig()`
+- ✅ **GestureDetector Integration**: Tap, long-press, hover, pan, pinch
+- ✅ **Focus Management**: Keyboard events with proper focus handling
+
 ### Annotations
 - ✅ 5 annotation types (Text, Point, Range, Threshold, Trend)
 - ✅ 7 marker shapes for point annotations
@@ -124,6 +166,18 @@ example/
 │   ├── screens/
 │   │   ├── home_screen.dart                   # Main navigation
 │   │   ├── quickstart_screen.dart             # All 6 quickstart scenarios
+│   │   ├── interaction_showcase_screen.dart   # Full interaction demo 🆕
+│   │   ├── interaction_examples_screen.dart   # 9 interaction examples 🆕
+│   │   ├── interaction_examples/              # Individual example files 🆕
+│   │   │   ├── basic_crosshair.dart
+│   │   │   ├── custom_crosshair_style.dart
+│   │   │   ├── default_tooltip.dart
+│   │   │   ├── custom_tooltip_builder.dart
+│   │   │   ├── zoom_pan_config.dart
+│   │   │   ├── gesture_callbacks.dart
+│   │   │   ├── keyboard_navigation.dart
+│   │   │   ├── multi_series_crosshair.dart
+│   │   │   └── complete_interaction.dart
 │   │   ├── annotations_showcase_screen.dart   # 5 annotation types
 │   │   ├── advanced_features_screen.dart      # Streaming & controller
 │   │   ├── axis_theming_screen.dart           # Axis configs & themes
@@ -135,7 +189,8 @@ example/
 │   │   └── chart_data_generator.dart          # Sample data utilities
 │   └── widgets/
 │       └── chart_container.dart               # Reusable chart wrapper
-└── README.md                                   # This file
+├── README.md                                   # This file
+└── INTERACTION_FEATURES_TEST.md               # Manual testing guide 🆕
 ```
 
 ## 💡 Usage Examples
@@ -290,6 +345,156 @@ BravenChart(
 )
 ```
 
+### Interaction System 🆕
+
+#### Basic Crosshair
+```dart
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig(
+    crosshair: CrosshairConfig(
+      enabled: true,
+      mode: CrosshairMode.both,      // Vertical + horizontal lines
+      snapToDataPoint: true,          // Snap to nearest point
+      snapRadius: 30.0,               // Within 30 pixels
+    ),
+  ),
+)
+```
+
+#### Custom Tooltip
+```dart
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig(
+    tooltip: TooltipConfig(
+      enabled: true,
+      triggerMode: TooltipTriggerMode.both,  // Hover + tap
+      customBuilder: (context, dataPoint) {
+        return Column(
+          children: [
+            Text('X: ${dataPoint['x']}'),
+            Text('Y: ${dataPoint['y']}'),
+            Text('Custom content here!'),
+          ],
+        );
+      },
+    ),
+  ),
+)
+```
+
+#### Zoom & Pan
+```dart
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig(
+    enableZoom: true,   // CTRL+Scroll, pinch gestures
+    enablePan: true,    // Middle-mouse drag, SHIFT+Scroll
+    onZoomChanged: (zoomX, zoomY) {
+      print('Zoom: ${zoomX * 100}% x ${zoomY * 100}%');
+    },
+    onPanChanged: (offset) {
+      print('Pan: dx=${offset.dx}, dy=${offset.dy}');
+    },
+  ),
+)
+```
+
+#### Keyboard Navigation
+```dart
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig(
+    keyboard: KeyboardConfig(
+      enabled: true,
+      panStep: 15.0,          // Pixels per arrow key press
+      zoomStep: 0.15,         // 15% zoom per +/- key
+      enableArrowKeys: true,   // Up/Down/Left/Right
+      enablePlusMinusKeys: true,  // +/- for zoom
+      enableHomeEndKeys: true,    // Jump to start/end
+    ),
+  ),
+)
+```
+
+#### All Interaction Callbacks
+```dart
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig(
+    // Visual features
+    crosshair: CrosshairConfig(enabled: true),
+    tooltip: TooltipConfig(enabled: true),
+    enableZoom: true,
+    enablePan: true,
+    
+    // All 10 callbacks
+    onDataPointTap: (point, position) {
+      print('Tapped: X=${point.x}, Y=${point.y}');
+    },
+    onDataPointHover: (point, position) {
+      if (point != null) {
+        print('Hovering: X=${point.x}, Y=${point.y}');
+      }
+    },
+    onDataPointLongPress: (point, position) {
+      print('Long-pressed: X=${point.x}, Y=${point.y}');
+    },
+    onSelectionChanged: (points) {
+      print('Selected ${points.length} points');
+    },
+    onZoomChanged: (zoomX, zoomY) {
+      print('Zoom: ${zoomX * 100}%');
+    },
+    onPanChanged: (offset) {
+      print('Pan: ${offset.dx}, ${offset.dy}');
+    },
+    onViewportChanged: (bounds) {
+      print('Viewport: ${bounds['minX']} to ${bounds['maxX']}');
+    },
+    onCrosshairChanged: (position, snapPoints) {
+      print('Crosshair at: $position, snapped to ${snapPoints.length} points');
+    },
+    onTooltipChanged: (visible, data) {
+      print('Tooltip ${visible ? "shown" : "hidden"}');
+    },
+    onKeyboardAction: (action, targetPoint) {
+      print('Keyboard action: $action');
+    },
+  ),
+)
+```
+
+#### Factory Constructors
+```dart
+// All features enabled
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig.all(),
+)
+
+// All features disabled (static chart)
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig.none(),
+)
+
+// Default settings
+BravenChart(
+  chartType: ChartType.line,
+  series: [data],
+  interactionConfig: InteractionConfig.defaultConfig(),
+)
+```
+
 ## 🧪 Testing
 
 The example app serves as both a showcase and a testing platform. Each screen can be used to:
@@ -321,15 +526,17 @@ The example app demonstrates these customization patterns:
 ```
 Home Screen
 ├── Feature Showcases
-│   ├── Annotations           → annotations_showcase_screen.dart
-│   ├── Advanced Features     → advanced_features_screen.dart
-│   └── Axis & Theming        → axis_theming_screen.dart
+│   ├── Interaction Showcase   → interaction_showcase_screen.dart 🆕
+│   ├── Interaction Examples   → interaction_examples_screen.dart 🆕
+│   ├── Annotations            → annotations_showcase_screen.dart
+│   ├── Advanced Features      → advanced_features_screen.dart
+│   └── Axis & Theming         → axis_theming_screen.dart
 └── Chart Types
-    ├── Quickstart Guide      → quickstart_screen.dart
-    ├── Line Charts           → line_chart_screen.dart
-    ├── Area Charts           → area_chart_screen.dart
-    ├── Bar Charts            → bar_chart_screen.dart
-    └── Scatter Plots         → scatter_chart_screen.dart
+    ├── Quickstart Guide       → quickstart_screen.dart
+    ├── Line Charts            → line_chart_screen.dart
+    ├── Area Charts            → area_chart_screen.dart
+    ├── Bar Charts             → bar_chart_screen.dart
+    └── Scatter Plots          → scatter_chart_screen.dart
 ```
 
 ## 📝 Notes
@@ -349,6 +556,31 @@ Home Screen
 4. **Leverage Streaming**: Use `dataStream` for real-time data (auto-throttled)
 5. **Controller Pattern**: Use `ChartController` for dynamic, user-driven updates
 6. **Annotation Layering**: Use `zIndex` to control annotation stacking order
+7. **Interaction Factories**: Start with `InteractionConfig.all()` then customize 🆕
+8. **Keyboard Focus**: Charts need focus for keyboard navigation (click to focus) 🆕
+9. **Middle-Mouse Pan**: Primary pan method for desktop (SHIFT+Scroll as fallback) 🆕
+10. **Viewport Optimization**: Enable zoom/pan for large datasets (viewport culling) 🆕
+
+## 🧪 Testing & Verification
+
+### Automated Testing
+```bash
+# Run all tests
+flutter test
+
+# Interaction widget tests (12 tests)
+flutter test test/interaction/widgets/interaction_widget_test.dart
+```
+
+### Manual Testing
+See **[INTERACTION_FEATURES_TEST.md](INTERACTION_FEATURES_TEST.md)** for comprehensive manual testing guide covering:
+- All 15 core interaction features
+- All 10 interaction callbacks
+- Factory constructors (.all(), .none(), .defaultConfig())
+- Platform-specific behaviors
+- Performance verification
+
+The guide includes step-by-step test procedures for every interaction feature.
 
 ---
 
