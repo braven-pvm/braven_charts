@@ -10,12 +10,11 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter/gestures.dart' show PointerEvent, PointerMoveEvent, PointerDownEvent, PointerUpEvent, PointerHoverEvent;
-import 'package:flutter/services.dart' show RawKeyEvent;
-
 import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/interaction/models/gesture_details.dart';
+import 'package:flutter/gestures.dart' show PointerEvent, PointerMoveEvent, PointerDownEvent, PointerUpEvent, PointerHoverEvent;
+import 'package:flutter/services.dart' show RawKeyEvent;
 
 /// Result of processing a keyboard event.
 ///
