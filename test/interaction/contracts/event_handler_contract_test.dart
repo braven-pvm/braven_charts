@@ -8,7 +8,7 @@ import 'dart:ui' show Rect, Offset;
 import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
 import 'package:braven_charts/src/interaction/event_handler.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart' show RawKeyDownEvent, RawKeyEventDataWeb;
+import 'package:flutter/services.dart' show PhysicalKeyboardKey, LogicalKeyboardKey, KeyDownEvent;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -57,8 +57,10 @@ void main() {
     });
 
     test('processKeyEvent() returns KeyEventResult', () {
-      final keyEvent = const RawKeyDownEvent(
-        data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
+      const keyEvent = KeyDownEvent(
+        physicalKey: PhysicalKeyboardKey.arrowRight,
+        logicalKey: LogicalKeyboardKey.arrowRight,
+        timeStamp: Duration.zero,
       );
 
       final result = eventHandler.processKeyEvent(keyEvent);

@@ -86,8 +86,10 @@ void main() {
 
     group('Keyboard Event Processing', () {
       test('processKeyEvent() handles arrow right key', () {
-        final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
+        const keyEvent = KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.arrowRight,
+          logicalKey: LogicalKeyboardKey.arrowRight,
+          timeStamp: Duration.zero,
         );
 
         final result = eventHandler.processKeyEvent(keyEvent);
@@ -96,8 +98,10 @@ void main() {
       });
 
       test('processKeyEvent() handles arrow left key', () {
-        final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(key: 'ArrowLeft', code: 'ArrowLeft'),
+        const keyEvent = KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.arrowLeft,
+          logicalKey: LogicalKeyboardKey.arrowLeft,
+          timeStamp: Duration.zero,
         );
 
         final result = eventHandler.processKeyEvent(keyEvent);
@@ -106,8 +110,10 @@ void main() {
       });
 
       test('processKeyEvent() handles zoom keys (+/-)', () {
-        final zoomInEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(key: '+', code: 'Equal'),
+        const zoomInEvent = KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.equal,
+          logicalKey: LogicalKeyboardKey.equal,
+          timeStamp: Duration.zero,
         );
 
         final result = eventHandler.processKeyEvent(zoomInEvent);
@@ -118,8 +124,10 @@ void main() {
       test('processKeyEvent() completes in <50ms', () {
         final stopwatch = Stopwatch()..start();
 
-        final keyEvent = const RawKeyDownEvent(
-          data: RawKeyEventDataWeb(key: 'ArrowRight', code: 'ArrowRight'),
+        const keyEvent = KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.arrowRight,
+          logicalKey: LogicalKeyboardKey.arrowRight,
+          timeStamp: Duration.zero,
         );
 
         eventHandler.processKeyEvent(keyEvent);
