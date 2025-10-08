@@ -365,20 +365,20 @@ Single Flutter library project:
   - **Dependencies**: T013, T017 (InteractionState, TooltipConfig models)
   - **Reference**: FR-003 in plan.md
 
-- [ ] **T021** Unit tests for ZoomPanController component (22 tests)
+- [x] **T021** Unit tests for ZoomPanController component (22 tests) ✅ COMPLETE
   - **Type**: Unit Test
   - **Files**: `test/interaction/unit/zoom_pan_controller_test.dart`
   - **Acceptance Criteria**:
-    - [ ] Test zoom in/out operations
-    - [ ] Test pan operations (drag to move viewport)
-    - [ ] Test zoom level constraints (min/max)
-    - [ ] Test visible data bounds calculation
-    - [ ] Test reset to original view
-    - [ ] Test zoom to fit data
-    - [ ] Test zoom to selection
-    - [ ] Test coordinate transformation during zoom/pan
-    - [ ] Performance: Zoom/pan operations <16ms (60 FPS)
-    - [ ] All tests FAIL (implementation not yet created)
+    - [x] Test zoom in/out operations
+    - [x] Test pan operations (drag to move viewport)
+    - [x] Test zoom level constraints (min/max)
+    - [x] Test visible data bounds calculation
+    - [x] Test reset to original view
+    - [x] Test zoom to fit data
+    - [x] Test zoom to selection
+    - [x] Test coordinate transformation during zoom/pan
+    - [x] Performance: Zoom/pan operations <16ms (60 FPS)
+    - [x] All tests FAIL (implementation not yet created) ✅ Verified
   - **Dependencies**: T013, T014 (InteractionState, ZoomPanState models)
   - **Reference**: FR-004 in plan.md
 
