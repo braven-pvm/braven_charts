@@ -1179,64 +1179,61 @@ class _BravenChartState extends State<BravenChart> {
         }
       },
 
-      // Pan handling (for drag interactions)
-      onPanStart: config.enablePan
+      // Use scale gestures if zoom is enabled (scale is superset of pan)
+      // Otherwise use pan gestures if only pan is enabled
+      onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
           ? (details) {
-              // TODO R-T007: Actual pan logic will be added with ZoomPanController
-              // For now just track that we're panning
+              // Track initial state for gestures
             }
           : null,
 
-      onPanUpdate: config.enablePan
+      onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
           ? (details) {
-              // TODO R-T007: Actual pan logic will be added with ZoomPanController
-            }
-          : null,
+              setState(() {
+                ZoomPanState newZoomPanState = _interactionState.zoomPanState;
 
-      onPanEnd: config.enablePan
-          ? (details) {
-              // TODO R-T007: Cleanup will be added with ZoomPanController
-            }
-          : null,
-
-      // Pinch/scale handling (for zoom)
-      onScaleStart: config.enableZoom && _zoomPanController != null
-          ? (details) {
-              // Track initial scale for pinch gestures
-            }
-          : null,
-
-      onScaleUpdate: config.enableZoom && _zoomPanController != null
-          ? (details) {
-              // Pinch-to-zoom gesture
-              if (details.scale != 1.0) {
-                setState(() {
-                  final newZoomPanState = _zoomPanController!.zoom(
-                    _interactionState.zoomPanState,
+                // Handle pinch-to-zoom (when scale changes)
+                if (config.enableZoom && details.scale != 1.0) {
+                  newZoomPanState = _zoomPanController!.zoom(
+                    newZoomPanState,
                     zoomFactor: details.scale,
                     focalPoint: details.focalPoint,
                   );
 
+                  // Invoke zoom callback
+                  config.onZoomChanged?.call(
+                    newZoomPanState.zoomLevelX,
+                    newZoomPanState.zoomLevelY,
+                  );
+                }
+
+                // Handle pan (when delta changes but scale is 1.0)
+                if (config.enablePan && details.focalPointDelta != Offset.zero) {
+                  newZoomPanState = _zoomPanController!.pan(
+                    newZoomPanState,
+                    details.focalPointDelta,
+                  );
+
+                  // Invoke pan callback
+                  config.onPanChanged?.call(newZoomPanState.panOffset);
+                }
+
+                // Update state if anything changed
+                if (newZoomPanState != _interactionState.zoomPanState) {
                   _interactionState = _interactionState.copyWith(
                     zoomPanState: newZoomPanState,
                   );
-                });
 
-                // Invoke zoom callback
-                config.onZoomChanged?.call(
-                  _interactionState.zoomPanState.zoomLevelX,
-                  _interactionState.zoomPanState.zoomLevelY,
-                );
-
-                // Invoke viewport callback
-                _invokeViewportCallback();
-              }
+                  // Invoke viewport callback
+                  _invokeViewportCallback();
+                }
+              });
             }
           : null,
 
-      onScaleEnd: config.enableZoom && _zoomPanController != null
+      onScaleEnd: (config.enableZoom || config.enablePan) && _zoomPanController != null
           ? (details) {
-              // Pinch gesture ended - no cleanup needed
+              // Gesture ended - no cleanup needed
             }
           : null,
 
