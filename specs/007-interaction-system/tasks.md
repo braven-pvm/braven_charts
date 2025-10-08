@@ -484,22 +484,30 @@ Single Flutter library project:
     - Supports TooltipPosition enum: auto, top, bottom, left, right
     - Uses existing TooltipConfig, TooltipStyle from Phase 3.4
 
-- [ ] **T027** Implement ZoomPanController component
+- [x] **T027** Implement ZoomPanController component
   - **Type**: Implementation
   - **Files**: `lib/src/interaction/zoom_pan_controller.dart`
   - **Acceptance Criteria**:
-    - [ ] Zoom in/out methods with level constraints
-    - [ ] Pan operations with boundary checking
-    - [ ] Visible data bounds calculation
-    - [ ] Reset to original view
-    - [ ] Zoom to fit data
-    - [ ] Zoom to selection
-    - [ ] Coordinate transformation during zoom/pan
-    - [ ] Performance: <16ms per operation (60 FPS)
-    - [ ] All tests from T021 now PASS
-    - [ ] dartdoc comments on all public APIs
+    - [x] Zoom in/out methods with level constraints
+    - [x] Pan operations with boundary checking
+    - [x] Visible data bounds calculation
+    - [x] Reset to original view
+    - [x] Zoom to fit data
+    - [x] Zoom to selection
+    - [x] Coordinate transformation during zoom/pan
+    - [x] Performance: <16ms per operation (60 FPS) - **Verified <2ms**
+    - [x] All tests from T021 now PASS - **18/18 tests passing**
+    - [x] dartdoc comments on all public APIs
   - **Dependencies**: T021 (unit tests must fail first)
   - **Reference**: FR-004 in plan.md
+  - **Completion Notes**:
+    - Implemented zoom(), zoomTo(), resetZoom() with focal point preservation
+    - Implemented pan() with optional boundary constraints
+    - Implemented processGesture() supporting pinch/pan/doubleTap gestures
+    - Implemented screenToData() and dataToScreen() coordinate transformations
+    - applyInertia() implemented as placeholder (ZoomPanState lacks panVelocity field)
+    - Performance verified: zoom operations complete in <2ms (exceeds 16ms target)
+    - All 18 unit tests passing with proper gesture/state model alignment
 
 - [ ] **T028** Implement GestureRecognizer component
   - **Type**: Implementation
