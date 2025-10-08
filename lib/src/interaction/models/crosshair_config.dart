@@ -6,7 +6,9 @@
 /// This model is immutable and uses copyWith for updates.
 library;
 
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, StrokeCap;
+
+import 'package:flutter/widgets.dart' show TextStyle;
 
 /// The mode of crosshair display.
 enum CrosshairMode {
@@ -29,12 +31,13 @@ class CrosshairStyle {
   const CrosshairStyle({
     this.lineColor = const Color(0xFF666666),
     this.lineWidth = 1.0,
-    this.dashPattern = const [5.0, 5.0],
+    this.dashPattern,
+    this.strokeCap = StrokeCap.round,
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
     this.labelPadding = 4.0,
-  }) : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
-       assert(labelPadding >= 0, 'labelPadding must be non-negative');
+  })  : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
+        assert(labelPadding >= 0, 'labelPadding must be non-negative');
 
   /// The color of the crosshair lines.
   final Color lineColor;
@@ -46,9 +49,12 @@ class CrosshairStyle {
 
   /// The dash pattern for the crosshair lines.
   ///
-  /// Empty list means solid line. Pattern values are in pixels:
+  /// Null or empty list means solid line. Pattern values are in pixels:
   /// [dash length, gap length, dash length, gap length, ...]
-  final List<double> dashPattern;
+  final List<double>? dashPattern;
+
+  /// The stroke cap style for crosshair lines.
+  final StrokeCap strokeCap;
 
   /// The background color of coordinate labels.
   final Color labelBackgroundColor;
@@ -66,6 +72,7 @@ class CrosshairStyle {
     Color? lineColor,
     double? lineWidth,
     List<double>? dashPattern,
+    StrokeCap? strokeCap,
     Color? labelBackgroundColor,
     Color? labelTextColor,
     double? labelPadding,
@@ -74,6 +81,7 @@ class CrosshairStyle {
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
+      strokeCap: strokeCap ?? this.strokeCap,
       labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
       labelTextColor: labelTextColor ?? this.labelTextColor,
       labelPadding: labelPadding ?? this.labelPadding,
@@ -88,6 +96,7 @@ class CrosshairStyle {
         other.lineColor == lineColor &&
         other.lineWidth == lineWidth &&
         _listEquals(other.dashPattern, dashPattern) &&
+        other.strokeCap == strokeCap &&
         other.labelBackgroundColor == labelBackgroundColor &&
         other.labelTextColor == labelTextColor &&
         other.labelPadding == labelPadding;
@@ -98,7 +107,8 @@ class CrosshairStyle {
     return Object.hash(
       lineColor,
       lineWidth,
-      Object.hashAll(dashPattern),
+      dashPattern == null ? null : Object.hashAll(dashPattern!),
+      strokeCap,
       labelBackgroundColor,
       labelTextColor,
       labelPadding,
@@ -125,7 +135,7 @@ class CrosshairStyle {
 /// final config = CrosshairConfig.defaultConfig();
 /// final custom = config.copyWith(
 ///   mode: CrosshairMode.both,
-///   snapToDataPoints: true,
+///   snapToDataPoint: true,
 /// );
 /// ```
 class CrosshairConfig {
@@ -133,9 +143,10 @@ class CrosshairConfig {
   const CrosshairConfig({
     this.enabled = true,
     this.mode = CrosshairMode.both,
-    this.snapToDataPoints = false,
+    this.snapToDataPoint = false,
     this.snapRadius = 20.0,
     this.showCoordinateLabels = true,
+    this.coordinateLabelStyle,
     this.style = const CrosshairStyle(),
   }) : assert(snapRadius >= 0, 'snapRadius must be non-negative');
 
@@ -154,15 +165,18 @@ class CrosshairConfig {
   final CrosshairMode mode;
 
   /// Whether to snap the crosshair to nearby data points.
-  final bool snapToDataPoints;
+  final bool snapToDataPoint;
 
   /// The radius in pixels within which to snap to data points.
   ///
-  /// Only used when [snapToDataPoints] is true. Must be non-negative.
+  /// Only used when [snapToDataPoint] is true. Must be non-negative.
   final double snapRadius;
 
   /// Whether to show coordinate labels on the crosshair lines.
   final bool showCoordinateLabels;
+
+  /// The text style for coordinate labels.
+  final TextStyle? coordinateLabelStyle;
 
   /// The visual style of the crosshair.
   final CrosshairStyle style;
@@ -173,18 +187,19 @@ class CrosshairConfig {
   CrosshairConfig copyWith({
     bool? enabled,
     CrosshairMode? mode,
-    bool? snapToDataPoints,
+    bool? snapToDataPoint,
     double? snapRadius,
     bool? showCoordinateLabels,
+    TextStyle? coordinateLabelStyle,
     CrosshairStyle? style,
   }) {
     return CrosshairConfig(
       enabled: enabled ?? this.enabled,
       mode: mode ?? this.mode,
-      snapToDataPoints: snapToDataPoints ?? this.snapToDataPoints,
+      snapToDataPoint: snapToDataPoint ?? this.snapToDataPoint,
       snapRadius: snapRadius ?? this.snapRadius,
-      showCoordinateLabels:
-          showCoordinateLabels ?? this.showCoordinateLabels,
+      showCoordinateLabels: showCoordinateLabels ?? this.showCoordinateLabels,
+      coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
       style: style ?? this.style,
     );
   }
@@ -196,9 +211,10 @@ class CrosshairConfig {
     return other is CrosshairConfig &&
         other.enabled == enabled &&
         other.mode == mode &&
-        other.snapToDataPoints == snapToDataPoints &&
+        other.snapToDataPoint == snapToDataPoint &&
         other.snapRadius == snapRadius &&
         other.showCoordinateLabels == showCoordinateLabels &&
+        other.coordinateLabelStyle == coordinateLabelStyle &&
         other.style == style;
   }
 
@@ -207,9 +223,10 @@ class CrosshairConfig {
     return Object.hash(
       enabled,
       mode,
-      snapToDataPoints,
+      snapToDataPoint,
       snapRadius,
       showCoordinateLabels,
+      coordinateLabelStyle,
       style,
     );
   }

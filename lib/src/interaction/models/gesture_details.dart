@@ -6,21 +6,24 @@
 /// This model is immutable.
 library;
 
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, PointerDeviceKind;
 
 /// Types of gestures that can be recognized.
 enum GestureType {
   /// A single tap or click.
   tap,
 
+  /// A double tap or double click.
+  doubleTap,
+
+  /// A long press gesture.
+  longPress,
+
   /// A pan or drag gesture.
   pan,
 
   /// A pinch or zoom gesture (multi-touch).
   pinch,
-
-  /// A long press gesture.
-  longPress,
 }
 
 /// Represents the details of a user gesture.
@@ -43,33 +46,96 @@ enum GestureType {
 /// );
 /// ```
 class GestureDetails {
+  /// Creates gesture details from a JSON map.
+  factory GestureDetails.fromJson(Map<String, dynamic> json) {
+    return GestureDetails(
+      type: GestureType.values.firstWhere(
+        (e) => e.name == json['type'],
+      ),
+      startPosition: Offset(
+        (json['startPosition']['dx'] as num).toDouble(),
+        (json['startPosition']['dy'] as num).toDouble(),
+      ),
+      currentPosition: Offset(
+        (json['currentPosition']['dx'] as num).toDouble(),
+        (json['currentPosition']['dy'] as num).toDouble(),
+      ),
+      endPosition: json['endPosition'] != null
+          ? Offset(
+              (json['endPosition']['dx'] as num).toDouble(),
+              (json['endPosition']['dy'] as num).toDouble(),
+            )
+          : null,
+      initialScale: (json['initialScale'] as num?)?.toDouble(),
+      currentScale: (json['currentScale'] as num?)?.toDouble(),
+      panDelta: json['panDelta'] != null
+          ? Offset(
+              (json['panDelta']['dx'] as num).toDouble(),
+              (json['panDelta']['dy'] as num).toDouble(),
+            )
+          : null,
+      totalPanDelta: json['totalPanDelta'] != null
+          ? Offset(
+              (json['totalPanDelta']['dx'] as num).toDouble(),
+              (json['totalPanDelta']['dy'] as num).toDouble(),
+            )
+          : null,
+      pointerCount: json['pointerCount'] as int? ?? 1,
+      deviceKind: PointerDeviceKind.values.firstWhere(
+        (e) => e.name == json['deviceKind'],
+        orElse: () => PointerDeviceKind.mouse,
+      ),
+      startTime: DateTime.parse(json['startTime'] as String),
+      endTime: json['endTime'] != null ? DateTime.parse(json['endTime'] as String) : null,
+    );
+  }
+
   /// Creates gesture details with the specified properties.
   const GestureDetails({
     required this.type,
     required this.startPosition,
     required this.currentPosition,
-    this.delta = Offset.zero,
-    this.scale = 1.0,
-    this.pointerCount = 1,
+    this.endPosition,
+    this.initialScale,
+    this.currentScale,
+    this.panDelta,
+    this.totalPanDelta,
     required this.startTime,
     this.endTime,
-  }) : assert(pointerCount > 0, 'pointerCount must be greater than 0'),
-       assert(
-         type != GestureType.pinch || pointerCount >= 2,
-         'Pinch gesture requires at least 2 pointers',
-       );
+    this.pointerCount = 1,
+    this.deviceKind = PointerDeviceKind.mouse,
+  })  : assert(pointerCount > 0, 'pointerCount must be greater than 0'),
+        assert(
+          type != GestureType.pinch || pointerCount >= 2,
+          'Pinch gesture requires at least 2 pointers',
+        ),
+        assert(
+          type != GestureType.pinch || (initialScale != null && currentScale != null),
+          'Pinch gesture requires initialScale and currentScale',
+        ),
+        assert(
+          type != GestureType.pan || (panDelta != null && totalPanDelta != null),
+          'Pan gesture requires panDelta and totalPanDelta',
+        ),
+        assert(
+          endPosition == null || endTime != null,
+          'endPosition requires endTime (completed gesture)',
+        );
 
   /// Creates gesture details for a tap gesture.
   factory GestureDetails.tap({
     required Offset position,
     required DateTime timestamp,
+    PointerDeviceKind deviceKind = PointerDeviceKind.mouse,
   }) {
     return GestureDetails(
       type: GestureType.tap,
       startPosition: position,
       currentPosition: position,
+      endPosition: position,
       startTime: timestamp,
       endTime: timestamp,
+      deviceKind: deviceKind,
     );
   }
 
@@ -78,16 +144,22 @@ class GestureDetails {
     required Offset startPosition,
     required Offset currentPosition,
     required Offset delta,
+    required Offset totalDelta,
     required DateTime startTime,
     DateTime? endTime,
+    Offset? endPosition,
+    PointerDeviceKind deviceKind = PointerDeviceKind.mouse,
   }) {
     return GestureDetails(
       type: GestureType.pan,
       startPosition: startPosition,
       currentPosition: currentPosition,
-      delta: delta,
+      endPosition: endPosition,
+      panDelta: delta,
+      totalPanDelta: totalDelta,
       startTime: startTime,
       endTime: endTime,
+      deviceKind: deviceKind,
     );
   }
 
@@ -95,19 +167,25 @@ class GestureDetails {
   factory GestureDetails.pinch({
     required Offset startPosition,
     required Offset currentPosition,
-    required double scale,
+    required double initialScale,
+    required double currentScale,
     required int pointerCount,
     required DateTime startTime,
     DateTime? endTime,
+    Offset? endPosition,
+    PointerDeviceKind deviceKind = PointerDeviceKind.touch,
   }) {
     return GestureDetails(
       type: GestureType.pinch,
       startPosition: startPosition,
       currentPosition: currentPosition,
-      scale: scale,
+      endPosition: endPosition,
+      initialScale: initialScale,
+      currentScale: currentScale,
       pointerCount: pointerCount,
       startTime: startTime,
       endTime: endTime,
+      deviceKind: deviceKind,
     );
   }
 
@@ -116,42 +194,55 @@ class GestureDetails {
     required Offset position,
     required DateTime startTime,
     DateTime? endTime,
+    PointerDeviceKind deviceKind = PointerDeviceKind.mouse,
   }) {
     return GestureDetails(
       type: GestureType.longPress,
       startPosition: position,
       currentPosition: position,
+      endPosition: endTime != null ? position : null,
       startTime: startTime,
       endTime: endTime,
+      deviceKind: deviceKind,
     );
   }
 
   /// The type of gesture.
   final GestureType type;
 
-  /// The starting position of the gesture.
+  /// The starting position of the gesture in screen coordinates.
   final Offset startPosition;
 
-  /// The current position of the gesture.
+  /// The current position of the gesture in screen coordinates.
   ///
   /// For completed gestures, this is the final position.
   final Offset currentPosition;
 
-  /// The delta (change) in position for pan gestures.
+  /// The ending position of the gesture in screen coordinates.
   ///
-  /// Zero for non-pan gestures.
-  final Offset delta;
+  /// Null for ongoing gestures.
+  final Offset? endPosition;
 
-  /// The scale factor for pinch gestures.
+  /// The initial scale/distance for pinch gestures.
   ///
-  /// 1.0 for non-pinch gestures. Values > 1.0 indicate zoom in,
+  /// Null for non-pinch gestures.
+  final double? initialScale;
+
+  /// The current scale for pinch gestures (currentDistance / initialDistance).
+  ///
+  /// Null for non-pinch gestures. Values > 1.0 indicate zoom in,
   /// values < 1.0 indicate zoom out.
-  final double scale;
+  final double? currentScale;
 
-  /// The number of pointers (fingers/touches) involved in the gesture.
+  /// The delta (change) from the last pan update.
   ///
-  /// Must be >= 2 for pinch gestures, typically 1 for others.
-  final int pointerCount;
+  /// Null for non-pan gestures.
+  final Offset? panDelta;
+
+  /// The total delta from the start of the pan gesture.
+  ///
+  /// Null for non-pan gestures.
+  final Offset? totalPanDelta;
 
   /// The time when the gesture started.
   final DateTime startTime;
@@ -160,6 +251,14 @@ class GestureDetails {
   ///
   /// Null for ongoing gestures.
   final DateTime? endTime;
+
+  /// The number of pointers (fingers/touches) involved in the gesture.
+  ///
+  /// Must be >= 2 for pinch gestures, typically 1 for others.
+  final int pointerCount;
+
+  /// The type of pointer device (mouse, touch, stylus, trackpad).
+  final PointerDeviceKind deviceKind;
 
   /// The distance traveled from start to current position.
   ///
@@ -202,42 +301,31 @@ class GestureDetails {
         'dx': currentPosition.dx,
         'dy': currentPosition.dy,
       },
-      'delta': {
-        'dx': delta.dx,
-        'dy': delta.dy,
-      },
-      'scale': scale,
+      'endPosition': endPosition != null
+          ? {
+              'dx': endPosition!.dx,
+              'dy': endPosition!.dy,
+            }
+          : null,
+      'initialScale': initialScale,
+      'currentScale': currentScale,
+      'panDelta': panDelta != null
+          ? {
+              'dx': panDelta!.dx,
+              'dy': panDelta!.dy,
+            }
+          : null,
+      'totalPanDelta': totalPanDelta != null
+          ? {
+              'dx': totalPanDelta!.dx,
+              'dy': totalPanDelta!.dy,
+            }
+          : null,
       'pointerCount': pointerCount,
+      'deviceKind': deviceKind.name,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
     };
-  }
-
-  /// Creates gesture details from a JSON map.
-  factory GestureDetails.fromJson(Map<String, dynamic> json) {
-    return GestureDetails(
-      type: GestureType.values.firstWhere(
-        (e) => e.name == json['type'],
-      ),
-      startPosition: Offset(
-        (json['startPosition']['dx'] as num).toDouble(),
-        (json['startPosition']['dy'] as num).toDouble(),
-      ),
-      currentPosition: Offset(
-        (json['currentPosition']['dx'] as num).toDouble(),
-        (json['currentPosition']['dy'] as num).toDouble(),
-      ),
-      delta: Offset(
-        (json['delta']['dx'] as num).toDouble(),
-        (json['delta']['dy'] as num).toDouble(),
-      ),
-      scale: (json['scale'] as num).toDouble(),
-      pointerCount: json['pointerCount'] as int,
-      startTime: DateTime.parse(json['startTime'] as String),
-      endTime: json['endTime'] != null
-          ? DateTime.parse(json['endTime'] as String)
-          : null,
-    );
   }
 
   @override
@@ -248,9 +336,13 @@ class GestureDetails {
         other.type == type &&
         other.startPosition == startPosition &&
         other.currentPosition == currentPosition &&
-        other.delta == delta &&
-        other.scale == scale &&
+        other.endPosition == endPosition &&
+        other.initialScale == initialScale &&
+        other.currentScale == currentScale &&
+        other.panDelta == panDelta &&
+        other.totalPanDelta == totalPanDelta &&
         other.pointerCount == pointerCount &&
+        other.deviceKind == deviceKind &&
         other.startTime == startTime &&
         other.endTime == endTime;
   }
@@ -261,9 +353,13 @@ class GestureDetails {
       type,
       startPosition,
       currentPosition,
-      delta,
-      scale,
+      endPosition,
+      initialScale,
+      currentScale,
+      panDelta,
+      totalPanDelta,
       pointerCount,
+      deviceKind,
       startTime,
       endTime,
     );

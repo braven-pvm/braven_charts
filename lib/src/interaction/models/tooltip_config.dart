@@ -7,6 +7,7 @@
 library;
 
 import 'dart:ui' show Color;
+
 import 'package:flutter/widgets.dart' show Widget, BuildContext;
 
 /// The trigger mode for showing tooltips.
@@ -26,11 +27,11 @@ enum TooltipPosition {
   /// Automatically position the tooltip to avoid chart edges.
   auto,
 
-  /// Position the tooltip above the data point.
-  above,
+  /// Position the tooltip above/on top of the data point.
+  top,
 
-  /// Position the tooltip below the data point.
-  below,
+  /// Position the tooltip below/at bottom of the data point.
+  bottom,
 
   /// Position the tooltip to the left of the data point.
   left,
@@ -52,11 +53,11 @@ class TooltipStyle {
     this.padding = 8.0,
     this.textColor = const Color(0xFF333333),
     this.fontSize = 12.0,
-  }) : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
-       assert(borderRadius >= 0, 'borderRadius must be non-negative'),
-       assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
-       assert(padding >= 0, 'padding must be non-negative'),
-       assert(fontSize > 0, 'fontSize must be greater than 0');
+  })  : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
+        assert(borderRadius >= 0, 'borderRadius must be non-negative'),
+        assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
+        assert(padding >= 0, 'padding must be non-negative'),
+        assert(fontSize > 0, 'fontSize must be greater than 0');
 
   /// The background color of the tooltip.
   final Color backgroundColor;
@@ -179,7 +180,7 @@ class TooltipConfig {
   const TooltipConfig({
     this.enabled = true,
     this.triggerMode = TooltipTriggerMode.hover,
-    this.position = TooltipPosition.auto,
+    this.preferredPosition = TooltipPosition.auto,
     this.showDelay = const Duration(milliseconds: 100),
     this.hideDelay = const Duration(milliseconds: 200),
     this.followCursor = false,
@@ -202,8 +203,8 @@ class TooltipConfig {
   /// The trigger mode for showing tooltips.
   final TooltipTriggerMode triggerMode;
 
-  /// The position of the tooltip relative to the data point.
-  final TooltipPosition position;
+  /// The preferred position of the tooltip relative to the data point.
+  final TooltipPosition preferredPosition;
 
   /// The delay before showing the tooltip.
   ///
@@ -241,7 +242,7 @@ class TooltipConfig {
   TooltipConfig copyWith({
     bool? enabled,
     TooltipTriggerMode? triggerMode,
-    TooltipPosition? position,
+    TooltipPosition? preferredPosition,
     Duration? showDelay,
     Duration? hideDelay,
     bool? followCursor,
@@ -252,7 +253,7 @@ class TooltipConfig {
     return TooltipConfig(
       enabled: enabled ?? this.enabled,
       triggerMode: triggerMode ?? this.triggerMode,
-      position: position ?? this.position,
+      preferredPosition: preferredPosition ?? this.preferredPosition,
       showDelay: showDelay ?? this.showDelay,
       hideDelay: hideDelay ?? this.hideDelay,
       followCursor: followCursor ?? this.followCursor,
@@ -269,7 +270,7 @@ class TooltipConfig {
     return other is TooltipConfig &&
         other.enabled == enabled &&
         other.triggerMode == triggerMode &&
-        other.position == position &&
+        other.preferredPosition == preferredPosition &&
         other.showDelay == showDelay &&
         other.hideDelay == hideDelay &&
         other.followCursor == followCursor &&
@@ -283,7 +284,7 @@ class TooltipConfig {
     return Object.hash(
       enabled,
       triggerMode,
-      position,
+      preferredPosition,
       showDelay,
       hideDelay,
       followCursor,
