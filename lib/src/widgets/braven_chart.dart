@@ -3,13 +3,14 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' show cos, sin;
+import 'dart:math' show cos, sin, sqrt;
 
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 // Layer 7: Interaction
 import 'package:braven_charts/src/interaction/event_handler.dart' hide KeyEventResult;
+import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 // Layer 3: Theming
@@ -1596,5 +1597,182 @@ class _TrendPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrendPainter oldDelegate) {
     return trendType != oldDelegate.trendType || color != oldDelegate.color || width != oldDelegate.width;
+  }
+}
+
+/// Custom painter for crosshair rendering.
+class _CrosshairPainter extends CustomPainter {
+  _CrosshairPainter({
+    required this.position,
+    required this.config,
+    this.nearestPoint,
+    required this.chartSize,
+  });
+
+  final Offset position;
+  final CrosshairConfig config;
+  final Offset? nearestPoint;
+  final Size chartSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!config.enabled) return;
+
+    final paint = Paint()
+      ..color = config.style.lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = config.style.lineWidth
+      ..strokeCap = config.style.strokeCap;
+
+    // Draw vertical line for vertical and both modes
+    if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+      if (config.style.dashPattern != null && config.style.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(position.dx, 0), Offset(position.dx, size.height), paint, config.style.dashPattern!);
+      } else {
+        canvas.drawLine(
+          Offset(position.dx, 0),
+          Offset(position.dx, size.height),
+          paint,
+        );
+      }
+    }
+
+    // Draw horizontal line for horizontal and both modes
+    if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+      if (config.style.dashPattern != null && config.style.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(0, position.dy), Offset(size.width, position.dy), paint, config.style.dashPattern!);
+      } else {
+        canvas.drawLine(
+          Offset(0, position.dy),
+          Offset(size.width, position.dy),
+          paint,
+        );
+      }
+    }
+
+    // Draw snap point highlight if snap is enabled and near a point
+    if (config.snapToDataPoint && nearestPoint != null) {
+      final highlightPaint = Paint()
+        ..color = config.style.lineColor.withOpacity(0.3)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(nearestPoint!, 6.0, highlightPaint);
+
+      final borderPaint = Paint()
+        ..color = config.style.lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      canvas.drawCircle(nearestPoint!, 6.0, borderPaint);
+    }
+
+    // Draw coordinate labels if enabled
+    if (config.showCoordinateLabels) {
+      _drawCoordinateLabels(canvas, size);
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
+    final path = Path();
+    final dx = end.dx - start.dx;
+    final dy = end.dy - start.dy;
+    final distance = sqrt(dx * dx + dy * dy);
+    
+    var currentDistance = 0.0;
+    var patternIndex = 0;
+    var isDash = true;
+    
+    while (currentDistance < distance) {
+      final dashLength = dashPattern[patternIndex % dashPattern.length];
+      final nextDistance = (currentDistance + dashLength).clamp(0.0, distance);
+      
+      if (isDash) {
+        final startRatio = currentDistance / distance;
+        final endRatio = nextDistance / distance;
+        path.moveTo(
+          start.dx + dx * startRatio,
+          start.dy + dy * startRatio,
+        );
+        path.lineTo(
+          start.dx + dx * endRatio,
+          start.dy + dy * endRatio,
+        );
+      }
+      
+      currentDistance = nextDistance;
+      patternIndex++;
+      isDash = !isDash;
+    }
+    
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawCoordinateLabels(Canvas canvas, Size size) {
+    final textStyle = config.coordinateLabelStyle ?? TextStyle(
+      color: config.style.labelTextColor,
+      fontSize: 10,
+      backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
+    );
+
+    // X coordinate label (bottom of vertical line)
+    if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+      final xTextPainter = TextPainter(
+        text: TextSpan(
+          text: 'X: ${position.dx.toStringAsFixed(0)}',
+          style: textStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final xLabelOffset = Offset(
+        position.dx - xTextPainter.width / 2,
+        size.height - xTextPainter.height - 4,
+      );
+      
+      // Draw background
+      final xBgRect = Rect.fromLTWH(
+        xLabelOffset.dx - config.style.labelPadding,
+        xLabelOffset.dy - config.style.labelPadding,
+        xTextPainter.width + config.style.labelPadding * 2,
+        xTextPainter.height + config.style.labelPadding * 2,
+      );
+      canvas.drawRect(xBgRect, Paint()..color = config.style.labelBackgroundColor);
+      
+      xTextPainter.paint(canvas, xLabelOffset);
+    }
+
+    // Y coordinate label (left of horizontal line)
+    if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+      final yTextPainter = TextPainter(
+        text: TextSpan(
+          text: 'Y: ${position.dy.toStringAsFixed(0)}',
+          style: textStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final yLabelOffset = Offset(
+        4,
+        position.dy - yTextPainter.height / 2,
+      );
+      
+      // Draw background
+      final yBgRect = Rect.fromLTWH(
+        yLabelOffset.dx - config.style.labelPadding,
+        yLabelOffset.dy - config.style.labelPadding,
+        yTextPainter.width + config.style.labelPadding * 2,
+        yTextPainter.height + config.style.labelPadding * 2,
+      );
+      canvas.drawRect(yBgRect, Paint()..color = config.style.labelBackgroundColor);
+      
+      yTextPainter.paint(canvas, yLabelOffset);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CrosshairPainter oldDelegate) {
+    return position != oldDelegate.position ||
+        config != oldDelegate.config ||
+        nearestPoint != oldDelegate.nearestPoint;
   }
 }
