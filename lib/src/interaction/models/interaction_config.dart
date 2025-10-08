@@ -3,6 +3,7 @@ library;
 
 import 'crosshair_config.dart';
 import 'tooltip_config.dart';
+import '../interaction_callbacks.dart';
 
 class GestureConfig {
   const GestureConfig({
@@ -106,6 +107,17 @@ class InteractionConfig {
     this.enableZoom = true,
     this.enablePan = true,
     this.enableSelection = true,
+    // Callback functions for user interaction events (FR-007)
+    this.onDataPointTap,
+    this.onDataPointHover,
+    this.onDataPointLongPress,
+    this.onSelectionChanged,
+    this.onZoomChanged,
+    this.onPanChanged,
+    this.onViewportChanged,
+    this.onCrosshairChanged,
+    this.onTooltipChanged,
+    this.onKeyboardAction,
   });
 
   factory InteractionConfig.defaultConfig() => const InteractionConfig();
@@ -119,6 +131,37 @@ class InteractionConfig {
   final bool enablePan;
   final bool enableSelection;
 
+  // Callback functions for user interaction events (FR-007)
+  /// Called when a user taps/clicks on a data point.
+  final DataPointCallback? onDataPointTap;
+
+  /// Called when the cursor hovers over a data point.
+  final DataPointHoverCallback? onDataPointHover;
+
+  /// Called when a user performs a long-press gesture on a data point.
+  final DataPointLongPressCallback? onDataPointLongPress;
+
+  /// Called when the selected data points change.
+  final SelectionCallback? onSelectionChanged;
+
+  /// Called when the zoom level changes.
+  final ZoomCallback? onZoomChanged;
+
+  /// Called when the pan offset changes.
+  final PanCallback? onPanChanged;
+
+  /// Called when the visible data range changes.
+  final ViewportCallback? onViewportChanged;
+
+  /// Called when the crosshair position changes.
+  final CrosshairChangeCallback? onCrosshairChanged;
+
+  /// Called when a tooltip is shown or hidden.
+  final TooltipChangeCallback? onTooltipChanged;
+
+  /// Called when a keyboard action is performed.
+  final KeyboardActionCallback? onKeyboardAction;
+
   InteractionConfig copyWith({
     bool? enabled,
     CrosshairConfig? crosshair,
@@ -128,6 +171,16 @@ class InteractionConfig {
     bool? enableZoom,
     bool? enablePan,
     bool? enableSelection,
+    DataPointCallback? onDataPointTap,
+    DataPointHoverCallback? onDataPointHover,
+    DataPointLongPressCallback? onDataPointLongPress,
+    SelectionCallback? onSelectionChanged,
+    ZoomCallback? onZoomChanged,
+    PanCallback? onPanChanged,
+    ViewportCallback? onViewportChanged,
+    CrosshairChangeCallback? onCrosshairChanged,
+    TooltipChangeCallback? onTooltipChanged,
+    KeyboardActionCallback? onKeyboardAction,
   }) {
     return InteractionConfig(
       enabled: enabled ?? this.enabled,
@@ -138,6 +191,16 @@ class InteractionConfig {
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
+      onDataPointTap: onDataPointTap ?? this.onDataPointTap,
+      onDataPointHover: onDataPointHover ?? this.onDataPointHover,
+      onDataPointLongPress: onDataPointLongPress ?? this.onDataPointLongPress,
+      onSelectionChanged: onSelectionChanged ?? this.onSelectionChanged,
+      onZoomChanged: onZoomChanged ?? this.onZoomChanged,
+      onPanChanged: onPanChanged ?? this.onPanChanged,
+      onViewportChanged: onViewportChanged ?? this.onViewportChanged,
+      onCrosshairChanged: onCrosshairChanged ?? this.onCrosshairChanged,
+      onTooltipChanged: onTooltipChanged ?? this.onTooltipChanged,
+      onKeyboardAction: onKeyboardAction ?? this.onKeyboardAction,
     );
   }
 
