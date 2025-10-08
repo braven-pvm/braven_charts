@@ -7,13 +7,14 @@
 
 ## Entity Overview
 
-The Interaction System consists of 5 key entities:
+The Interaction System consists of 6 key entities:
 
 1. **InteractionState** - Central state for all user interactions
 2. **ZoomPanState** - Zoom/pan viewport state
 3. **GestureDetails** - Information about gestures
 4. **CrosshairConfig** - Crosshair configuration
 5. **TooltipConfig** - Tooltip configuration
+6. **InteractionConfig** - Main wrapper configuration for all interaction features
 
 ---
 
@@ -513,9 +514,178 @@ factory TooltipConfig.defaultConfig() {
 
 ---
 
+### 6. InteractionConfig
+
+**Purpose**: Main wrapper configuration class that aggregates all interaction feature configurations and callbacks. Supports both simple (boolean flags) and advanced (detailed sub-configs) configuration modes.
+
+**Attributes**:
+```dart
+class InteractionConfig {
+  // Advanced sub-configurations (nullable - if null, simple flags used)
+  final CrosshairConfig? crosshair;
+  final TooltipConfig? tooltip;
+  final ZoomPanConfig? zoomPan;
+  final KeyboardConfig? keyboard;
+  
+  // Simple boolean flags (fallback if sub-configs are null)
+  final bool enableCrosshair;
+  final bool enableTooltip;
+  final bool enableZoom;
+  final bool enablePan;
+  
+  // Callback functions for user interaction events
+  final DataPointCallback? onDataPointTap;
+  final DataPointCallback? onDataPointDoubleTap;
+  final SelectionCallback? onSelectionChanged;
+  final ZoomCallback? onZoomChanged;
+  final PanCallback? onPanChanged;
+  final CrosshairChangeCallback? onCrosshairChanged;
+  final TooltipChangeCallback? onTooltipChanged;
+  final KeyboardActionCallback? onKeyboardAction;
+  
+  // Interaction mode (determines which features are active)
+  final InteractionMode mode;  // explore, analyze, present
+  final InteractionModeChangeCallback? onModeChanged;
+}
+
+// Callback type definitions
+typedef DataPointCallback = void Function(ChartDataPoint point, Offset position);
+typedef SelectionCallback = void Function(List<ChartDataPoint> selectedPoints);
+typedef ZoomCallback = void Function(double zoomLevelX, double zoomLevelY);
+typedef PanCallback = void Function(Offset panOffset);
+typedef CrosshairChangeCallback = void Function(Offset? position, List<ChartDataPoint> snapPoints);
+typedef TooltipChangeCallback = void Function(bool visible, ChartDataPoint? dataPoint);
+typedef KeyboardActionCallback = void Function(String action, ChartDataPoint? targetPoint);
+typedef InteractionModeChangeCallback = void Function(InteractionMode newMode);
+
+// Interaction mode enumeration
+enum InteractionMode {
+  /// Full exploration mode - all interactions enabled (crosshair, tooltip, zoom, pan, keyboard)
+  explore,
+  
+  /// Analysis mode - focus on data inspection (crosshair, tooltip, selection, keyboard)
+  /// Zoom/pan may be limited to prevent accidental viewport changes
+  analyze,
+  
+  /// Presentation mode - minimal interactions (tooltip on tap only)
+  /// Designed for presentations where viewport should remain fixed
+  present,
+}
+```
+
+**Relationships**:
+- **Contains zero or one** `CrosshairConfig` (advanced crosshair settings)
+- **Contains zero or one** `TooltipConfig` (advanced tooltip settings)
+- **Contains zero or one** `ZoomPanConfig` (advanced zoom/pan settings)
+- **Contains zero or one** `KeyboardConfig` (keyboard navigation settings)
+- **Used by** `InteractiveChart` widget (configuration source)
+- **Provides callbacks to** Developer (event notifications)
+
+**Validation Rules**:
+- If `crosshair != null`, then `enableCrosshair` is ignored (advanced mode)
+- If `tooltip != null`, then `enableTooltip` is ignored (advanced mode)
+- If `zoomPan != null`, then `enableZoom` and `enablePan` are ignored (advanced mode)
+- Cannot have conflicting zoom/pan settings (e.g., `enableZoom=false` but `zoomPan.allowZoom=true`)
+- `mode` determines which features are active regardless of individual flags
+
+**Configuration Modes**:
+
+**Simple Mode** (boolean flags):
+```dart
+InteractionConfig(
+  enableCrosshair: true,
+  enableTooltip: true,
+  enableZoom: false,
+  enablePan: false,
+  onDataPointTap: (point, position) => print('Tapped: $point'),
+);
+```
+
+**Advanced Mode** (detailed sub-configs):
+```dart
+InteractionConfig(
+  crosshair: CrosshairConfig(
+    mode: CrosshairMode.both,
+    snapToPoint: true,
+    snapRadius: 20.0,
+  ),
+  tooltip: TooltipConfig(
+    triggerMode: TooltipTriggerMode.hover,
+    customBuilder: (context, point) => CustomTooltip(point),
+  ),
+  zoomPan: ZoomPanConfig(
+    allowZoom: true,
+    allowPan: true,
+    minZoom: 0.5,
+    maxZoom: 10.0,
+  ),
+  keyboard: KeyboardConfig(
+    enableNavigation: true,
+    enableZoomShortcuts: true,
+  ),
+  onZoomChanged: (x, y) => print('Zoom: $x, $y'),
+);
+```
+
+**Factory Constructors**:
+```dart
+// Enable all interaction features
+InteractionConfig.all()
+
+// Disable all interaction features
+InteractionConfig.none()
+```
+
+**Default Values**:
+```dart
+InteractionConfig._({
+  this.crosshair,
+  this.tooltip,
+  this.zoomPan,
+  this.keyboard,
+  this.enableCrosshair = false,
+  this.enableTooltip = false,
+  this.enableZoom = false,
+  this.enablePan = false,
+  this.onDataPointTap,
+  this.onDataPointDoubleTap,
+  this.onSelectionChanged,
+  this.onZoomChanged,
+  this.onPanChanged,
+  this.onCrosshairChanged,
+  this.onTooltipChanged,
+  this.onKeyboardAction,
+  this.mode = InteractionMode.explore,
+  this.onModeChanged,
+});
+```
+
+**Effective Configuration Getters**:
+```dart
+// Returns actual crosshair config, merging simple/advanced modes
+CrosshairConfig get effectiveCrosshairConfig {
+  if (crosshair != null) return crosshair!;
+  return enableCrosshair 
+    ? CrosshairConfig.defaultConfig() 
+    : CrosshairConfig(mode: CrosshairMode.none);
+}
+
+// Similar getters for tooltip, zoomPan, keyboard
+```
+
+---
+
 ## Entity Relationships Diagram
 
 ```
+InteractionConfig (main wrapper)
+├── Contains: CrosshairConfig? (optional)
+├── Contains: TooltipConfig? (optional)
+├── Contains: ZoomPanConfig? (optional)
+├── Contains: KeyboardConfig? (optional)
+├── Provides: 8 callback functions
+└── Used by: InteractiveChart widget
+
 InteractionState (central state)
 ├── Contains: ZoomPanState (viewport)
 ├── References: ChartDataPoint* (hovered, focused, selected, tooltip)
@@ -523,10 +693,12 @@ InteractionState (central state)
 
 CrosshairConfig ───used by──→ CrosshairRenderer
 TooltipConfig ───used by──→ TooltipProvider
+InteractionConfig ───configures──→ All interaction components
 
 Developer
-├── Provides: CrosshairConfig
-├── Provides: TooltipConfig
+├── Provides: InteractionConfig (main entry point)
+├── Provides: CrosshairConfig (optional advanced)
+├── Provides: TooltipConfig (optional advanced)
 └── Observes: InteractionState (via callbacks)
 ```
 
@@ -651,14 +823,15 @@ class InteractionStatePool {
 
 ## Conclusion
 
-Five entities model all interaction state and configuration:
+Six entities model all interaction state and configuration:
 
 1. ✅ **InteractionState** - Central reactive state
 2. ✅ **ZoomPanState** - Viewport zoom/pan tracking
 3. ✅ **GestureDetails** - Gesture information
 4. ✅ **CrosshairConfig** - Crosshair customization
 5. ✅ **TooltipConfig** - Tooltip customization
+6. ✅ **InteractionConfig** - Main wrapper configuration (added 2025-01-07)
 
 All entities follow immutable data patterns (copyWith), validated constraints, and minimal memory footprint. Ready for contract generation (Phase 1).
 
-**Status**: ✅ Data Model Complete (2025-01-07)
+**Status**: ✅ Data Model Complete (Updated 2025-01-07 - Added InteractionConfig)

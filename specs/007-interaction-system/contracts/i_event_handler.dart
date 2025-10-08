@@ -80,6 +80,15 @@ abstract class IEventHandler {
 ///
 /// All screen coordinates are translated to chart data space.
 class ChartEvent {
+  ChartEvent({
+    required this.type,
+    required this.screenPosition,
+    required this.dataPosition,
+    this.nearestPoint,
+    this.gesture,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
   /// Type of event (hover, tap, pan, zoom, key, etc.)
   final ChartEventType type;
 
@@ -97,15 +106,6 @@ class ChartEvent {
 
   /// Timestamp
   final DateTime timestamp;
-
-  ChartEvent({
-    required this.type,
-    required this.screenPosition,
-    required this.dataPosition,
-    this.nearestPoint,
-    this.gesture,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
 }
 
 enum ChartEventType {

@@ -186,8 +186,7 @@ enum PanDirection {
 /// - LogicalKeyboardKey.equal (Plus key)
 /// - LogicalKeyboardKey.minus
 class LogicalKeyboardKey {
+  const LogicalKeyboardKey(this.keyLabel);
   // This is a placeholder - actual implementation from Flutter
   final String keyLabel;
-
-  const LogicalKeyboardKey(this.keyLabel);
 }

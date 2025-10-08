@@ -15,14 +15,14 @@
    → Data: Chart data points, coordinates, viewport state
    → Constraints: <100ms response, 60 FPS, WCAG 2.1 AA
 3. For each unclear aspect:
-   → All aspects clearly defined from existing Layer 6 spec
+   → All aspects clearly defined from existing Layer 7 spec
 4. Fill User Scenarios & Testing section
    → User flows for crosshair, tooltip, zoom, pan, gestures, keyboard
 5. Generate Functional Requirements
    → 7 functional requirements (FR-001 to FR-007)
    → All requirements testable with acceptance criteria
 6. Identify Key Entities
-   → InteractionState, ZoomPanState, GestureDetails, CrosshairConfig, TooltipConfig
+   → InteractionState, ZoomPanState, GestureDetails, CrosshairConfig, TooltipConfig, InteractionConfig
 7. Run Review Checklist
    → No implementation details in user-facing spec
    → All requirements clear and testable
@@ -183,7 +183,7 @@ System MUST provide unified event processing that:
 - Prevents memory leaks through event object pooling
 
 **Testable Criteria:**
-- Event processing measured at <5ms per event in 99th percentile
+- Event processing measured at <5ms per event in 99th percentile (baseline: Chrome 120+ on Intel i5-8250U, Flutter 3.37.0-1.0.pre-216)
 - Zero memory growth after 10,000 event cycles
 - All three input methods (mouse/touch/keyboard) work simultaneously without conflicts
 
@@ -198,8 +198,8 @@ System MUST display precision targeting crosshair that:
 - Supports customizable styles (color, width, dash pattern)
 
 **Testable Criteria:**
-- Crosshair render time <2ms measured across 1000 frames
-- Snap-to-point calculation <1ms for 10,000 visible points
+- Crosshair render time <2ms measured across 1000 frames (baseline: Chrome 120+ on Intel i5-8250U, Flutter 3.37.0-1.0.pre-216, 1920x1080 viewport)
+- Snap-to-point calculation <1ms for 10,000 visible points (baseline: same environment)
 - Visual guides extend fully across chart area without clipping
 
 #### FR-003: Tooltip System
@@ -384,6 +384,22 @@ System MUST provide developer event hooks:
 - Provided by developer in InteractionConfig
 - Used by tooltip rendering system
 
+#### InteractionConfig
+**Represents**: Main wrapper configuration class aggregating all interaction features and callbacks
+**Key Attributes**:
+- Sub-configurations (CrosshairConfig, TooltipConfig, ZoomPanConfig, KeyboardConfig)
+- Simple boolean flags (enableCrosshair, enableTooltip, enableZoom, enablePan)
+- Callback functions (onDataPointTap, onHover, onZoomChange, onPanChange, etc.)
+- Interaction mode (explore, analyze, present)
+
+**Relationships**:
+- Contains zero or one CrosshairConfig (advanced crosshair settings)
+- Contains zero or one TooltipConfig (advanced tooltip settings)
+- Contains zero or one ZoomPanConfig (advanced zoom/pan settings)
+- Contains zero or one KeyboardConfig (keyboard navigation settings)
+- Used by InteractiveChart widget as configuration source
+- Provides callbacks to developer for event notifications
+
 ---
 
 ## Review & Acceptance Checklist
@@ -417,7 +433,7 @@ System MUST provide developer event hooks:
 - [x] Ambiguities marked (none - all requirements clear)
 - [x] User scenarios defined (4 primary scenarios + edge cases)
 - [x] Requirements generated (7 functional + 17 non-functional)
-- [x] Entities identified (5 key entities with relationships)
+- [x] Entities identified (6 key entities with relationships)
 - [x] Review checklist passed
 
 ---
@@ -506,6 +522,21 @@ System MUST provide developer event hooks:
 3. **Task Breakdown**: Create `tasks.md` with granular implementation tasks
 4. **Define Contracts**: Create `contracts/` folder with interface definitions
 5. **Begin Implementation**: Start Phase 1 (Event System + Crosshair)
+
+---
+
+## Constitution Compliance
+
+This specification adheres to **Constitution v1.1.0** requirements:
+
+- ✅ **Testing Excellence**: All requirements have explicit test scenarios and success metrics
+- ✅ **Requirements Compliance**: Clear functional (FR-001 to FR-007) and non-functional (NFR-001 to NFR-017) requirements
+- ✅ **Performance First**: <100ms response times, 60 FPS animation, benchmarks defined
+- ✅ **Accessibility**: WCAG 2.1 AA compliance (NFR-012 to NFR-015), keyboard navigation, screen reader support
+- ✅ **API Consistency**: Flutter conventions, backward compatibility (NFR-016, NFR-017)
+- ✅ **Documentation Discipline**: User scenarios, acceptance criteria, integration points documented
+
+**Reference**: `docs/memory/constitution.md`
 
 ---
 

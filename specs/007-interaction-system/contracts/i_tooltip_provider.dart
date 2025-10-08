@@ -120,15 +120,6 @@ abstract class ITooltipProvider {
 
 /// Configuration for tooltip behavior and appearance.
 class TooltipConfig {
-  final bool enabled;
-  final TooltipTriggerMode triggerMode;
-  final Duration showDelay;
-  final Duration hideDelay;
-  final TooltipPosition preferredPosition;
-  final double offsetFromPoint;
-  final TooltipStyle style;
-  final Widget Function(BuildContext, ChartDataPoint, String)? customBuilder;
-
   TooltipConfig({
     required this.enabled,
     required this.triggerMode,
@@ -139,18 +130,18 @@ class TooltipConfig {
     required this.style,
     this.customBuilder,
   });
+  final bool enabled;
+  final TooltipTriggerMode triggerMode;
+  final Duration showDelay;
+  final Duration hideDelay;
+  final TooltipPosition preferredPosition;
+  final double offsetFromPoint;
+  final TooltipStyle style;
+  final Widget Function(BuildContext, ChartDataPoint, String)? customBuilder;
 }
 
 /// Visual style for tooltip.
 class TooltipStyle {
-  final Color backgroundColor;
-  final Color borderColor;
-  final double borderWidth;
-  final double borderRadius;
-  final EdgeInsets padding;
-  final TextStyle textStyle;
-  final BoxShadow? shadow;
-
   TooltipStyle({
     required this.backgroundColor,
     required this.borderColor,
@@ -160,18 +151,25 @@ class TooltipStyle {
     required this.textStyle,
     this.shadow,
   });
+  final Color backgroundColor;
+  final Color borderColor;
+  final double borderWidth;
+  final double borderRadius;
+  final EdgeInsets padding;
+  final TextStyle textStyle;
+  final BoxShadow? shadow;
 }
 
 /// Tooltip trigger mode.
 enum TooltipTriggerMode {
-  hover,  // Desktop: mouse hover
-  tap,    // Mobile: tap to show
-  both,   // Both hover and tap
+  hover, // Desktop: mouse hover
+  tap, // Mobile: tap to show
+  both, // Both hover and tap
 }
 
 /// Tooltip position preference.
 enum TooltipPosition {
-  auto,   // Smart positioning (avoid clipping)
+  auto, // Smart positioning (avoid clipping)
   top,
   bottom,
   left,

@@ -107,15 +107,6 @@ abstract class IGestureRecognizer {
 
 /// Current state of gesture recognition.
 class GestureRecognitionState {
-  final Offset startPosition;
-  final Offset currentPosition;
-  final DateTime startTime;
-  final int pointerCount;
-  final PointerDeviceKind deviceKind;
-  final List<GestureType> candidateGestures;
-  final bool isComplete;
-  final bool isCancelled;
-
   GestureRecognitionState({
     required this.startPosition,
     required this.currentPosition,
@@ -126,6 +117,14 @@ class GestureRecognitionState {
     this.isComplete = false,
     this.isCancelled = false,
   });
+  final Offset startPosition;
+  final Offset currentPosition;
+  final DateTime startTime;
+  final int pointerCount;
+  final PointerDeviceKind deviceKind;
+  final List<GestureType> candidateGestures;
+  final bool isComplete;
+  final bool isCancelled;
 
   /// Distance moved from start position
   double get distance => (currentPosition - startPosition).distance;
@@ -155,15 +154,6 @@ enum PointerDeviceKind {
 
 /// Complete gesture information.
 class GestureDetails {
-  final GestureType type;
-  final Offset startPosition;
-  final Offset endPosition;
-  final double? scale;        // For pinch gestures
-  final Offset? delta;         // For pan gestures
-  final Duration duration;
-  final int pointerCount;
-  final PointerDeviceKind deviceKind;
-
   GestureDetails({
     required this.type,
     required this.startPosition,
@@ -174,4 +164,12 @@ class GestureDetails {
     required this.pointerCount,
     required this.deviceKind,
   });
+  final GestureType type;
+  final Offset startPosition;
+  final Offset endPosition;
+  final double? scale; // For pinch gestures
+  final Offset? delta; // For pan gestures
+  final Duration duration;
+  final int pointerCount;
+  final PointerDeviceKind deviceKind;
 }

@@ -113,38 +113,36 @@ abstract class ICrosshairRenderer {
 
 /// Visual style for crosshair lines.
 class CrosshairStyle {
-  final Color lineColor;
-  final double lineWidth;
-  final List<double>? dashPattern;
-  final StrokeCap strokeCap;
-
   CrosshairStyle({
     required this.lineColor,
     required this.lineWidth,
     this.dashPattern,
     this.strokeCap = StrokeCap.round,
   });
+  final Color lineColor;
+  final double lineWidth;
+  final List<double>? dashPattern;
+  final StrokeCap strokeCap;
 }
 
 /// Crosshair rendering mode.
 enum CrosshairMode {
-  none,       // No crosshair
-  vertical,   // Vertical line only
+  none, // No crosshair
+  vertical, // Vertical line only
   horizontal, // Horizontal line only
-  both,       // Both lines
+  both, // Both lines
 }
 
 /// Visual style for snap point highlights.
 class HighlightStyle {
-  final Color color;
-  final double radius;
-  final double strokeWidth;
-  final bool filled;
-
   HighlightStyle({
     required this.color,
     this.radius = 5.0,
     this.strokeWidth = 2.0,
     this.filled = false,
   });
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final bool filled;
 }
