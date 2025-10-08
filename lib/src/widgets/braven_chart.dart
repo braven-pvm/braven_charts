@@ -10,6 +10,7 @@ import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 // Layer 7: Interaction
 import 'package:braven_charts/src/interaction/event_handler.dart' hide KeyEventResult;
+import 'package:braven_charts/src/interaction/keyboard_handler.dart';
 import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
@@ -573,6 +574,9 @@ class _BravenChartState extends State<BravenChart> {
   /// Event handler for interaction system (Layer 7).
   EventHandler? _eventHandler;
 
+  /// Keyboard handler for keyboard navigation.
+  KeyboardHandler? _keyboardHandler;
+
   /// Zoom/pan controller for viewport transformation.
   ZoomPanController? _zoomPanController;
 
@@ -612,6 +616,11 @@ class _BravenChartState extends State<BravenChart> {
       // Initialize ZoomPanController if zoom or pan is enabled
       if (widget.interactionConfig!.enableZoom || widget.interactionConfig!.enablePan) {
         _zoomPanController = ZoomPanController();
+      }
+
+      // Initialize KeyboardHandler if keyboard navigation is enabled
+      if (widget.interactionConfig!.keyboard.enabled) {
+        _keyboardHandler = KeyboardHandler();
       }
     }
   }
@@ -1261,8 +1270,60 @@ class _BravenChartState extends State<BravenChart> {
         autofocus: false,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
-          // TODO R-T010: KeyboardHandler integration will be added
-          // For now just ignore
+          if (_keyboardHandler == null) return KeyEventResult.ignored;
+
+          // Get all data points from series
+          final allDataPoints = <Map<String, dynamic>>[];
+          for (final series in widget.series) {
+            for (final point in series.points) {
+              allDataPoints.add({
+                'x': point.x,
+                'y': point.y,
+                'label': point.label,
+                'metadata': point.metadata,
+                'seriesId': series.id,
+              });
+            }
+          }
+
+          // Process key event through keyboard handler
+          final newState = _keyboardHandler!.handleKeyEvent(
+            event,
+            _interactionState,
+            dataPoints: allDataPoints,
+          );
+
+          if (newState != null && newState != _interactionState) {
+            setState(() {
+              _interactionState = newState;
+
+              // If focused point changed, invoke callback
+              if (_interactionState.focusedPoint != null) {
+                final point = _mapToDataPoint(_interactionState.focusedPoint!);
+                config.onDataPointHover?.call(point, _interactionState.crosshairPosition ?? Offset.zero);
+              }
+
+              // If zoom/pan state changed, invoke callbacks
+              if (_interactionState.zoomPanState != newState.zoomPanState) {
+                config.onZoomChanged?.call(
+                  _interactionState.zoomPanState.zoomLevelX,
+                  _interactionState.zoomPanState.zoomLevelY,
+                );
+                _invokeViewportCallback();
+              }
+
+              // If selection changed, invoke callback
+              if (_interactionState.selectedPoints != newState.selectedPoints) {
+                final selectedPointsList = _interactionState.selectedPoints
+                    .map((data) => _mapToDataPoint(data))
+                    .toList();
+                config.onSelectionChanged?.call(selectedPointsList);
+              }
+            });
+
+            return KeyEventResult.handled;
+          }
+
           return KeyEventResult.ignored;
         },
         child: interactiveWidget,
