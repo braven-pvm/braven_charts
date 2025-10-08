@@ -149,9 +149,9 @@ class ZoomPanController {
 
       // Calculate max pan that keeps data visible
       // Pan is negative when scrolling right/down (showing left/top data)
-      final maxPanX = 0.0; // Can't pan right beyond origin
+      const maxPanX = 0.0; // Can't pan right beyond origin
       final minPanX = -(bounds.width - visibleDataWidth);
-      final maxPanY = 0.0; // Can't pan down beyond origin
+      const maxPanY = 0.0; // Can't pan down beyond origin
       final minPanY = -(bounds.height - visibleDataHeight);
 
       newPan = Offset(

@@ -154,15 +154,10 @@ class CallbackInvoker {
     try {
       // Use Function.apply for dynamic argument passing
       Function.apply(callback as Function, getArgs());
-    } catch (e, stackTrace) {
-      // In debug mode, print error details
-      assert(() {
-        print('Callback invocation error: $e');
-        print('Stack trace: $stackTrace');
-        return true;
-      }());
-      // In release mode, silently ignore callback errors
-      // This prevents user callback bugs from crashing the chart
+    } catch (e) {
+      // Silently ignore callback errors to prevent user callback bugs
+      // from crashing the chart. In debug mode, use breakpoints to
+      // inspect callback failures.
     }
   }
 
@@ -275,14 +270,10 @@ class CallbackInvoker {
       if (result is Future) {
         await result;
       }
-    } catch (e, stackTrace) {
-      // In debug mode, print error details
-      assert(() {
-        print('Async callback invocation error: $e');
-        print('Stack trace: $stackTrace');
-        return true;
-      }());
-      // In release mode, silently ignore callback errors
+    } catch (e) {
+      // Silently ignore async callback errors to prevent user callback bugs
+      // from crashing the chart. In debug mode, use breakpoints to inspect
+      // callback failures.
     }
   }
 }

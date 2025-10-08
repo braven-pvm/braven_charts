@@ -14,7 +14,7 @@ import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/interaction/models/gesture_details.dart';
 import 'package:flutter/gestures.dart' show PointerEvent, PointerMoveEvent, PointerDownEvent, PointerUpEvent, PointerHoverEvent;
-import 'package:flutter/services.dart' show RawKeyEvent;
+import 'package:flutter/services.dart' show KeyEvent;
 
 /// Result of processing a keyboard event.
 ///
@@ -32,7 +32,7 @@ enum KeyEventResult {
 ///
 /// Responsibilities:
 /// - Capture PointerEvents (mouse/touch) from Flutter's event system
-/// - Capture RawKeyEvents when chart has focus
+/// - Capture KeyEvents when chart has focus
 /// - Translate screen coordinates to chart data coordinates
 /// - Route events to appropriate interaction handlers by priority
 /// - Process all events within <5ms overhead
@@ -64,7 +64,7 @@ abstract class IEventHandler {
   /// Returns: KeyEventResult.handled if processed, .ignored otherwise
   ///
   /// Performance: Must complete in <50ms (keyboard response time)
-  KeyEventResult processKeyEvent(RawKeyEvent event);
+  KeyEventResult processKeyEvent(KeyEvent event);
 
   /// Routes a chart event to registered handlers based on priority.
   ///
@@ -265,7 +265,7 @@ class EventHandler implements IEventHandler {
   }
 
   @override
-  KeyEventResult processKeyEvent(RawKeyEvent event) {
+  KeyEventResult processKeyEvent(KeyEvent event) {
     if (_disposed) {
       throw StateError('EventHandler has been disposed');
     }
