@@ -14,6 +14,7 @@ import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
+import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
 import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
@@ -607,7 +608,7 @@ class _BravenChartState extends State<BravenChart> {
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
       _eventHandler = EventHandler();
       _registerInteractionCallbacks();
-      
+
       // Initialize ZoomPanController if zoom or pan is enabled
       if (widget.interactionConfig!.enableZoom || widget.interactionConfig!.enablePan) {
         _zoomPanController = ZoomPanController();
@@ -633,7 +634,7 @@ class _BravenChartState extends State<BravenChart> {
       // EventHandler will call this when long press is detected
     }
     if (config.onSelectionChanged != null) {
-      // EventHandler will call this when selection changes  
+      // EventHandler will call this when selection changes
     }
     if (config.onZoomChanged != null) {
       // EventHandler will call this when zoom changes
@@ -843,6 +844,7 @@ class _BravenChartState extends State<BravenChart> {
           xAxis: effectiveXAxis,
           yAxis: effectiveYAxis,
           annotations: [], // Chart painter doesn't render annotations
+          zoomPanState: _interactionState.zoomPanState,
         ),
         size: Size(widget.width ?? double.infinity, widget.height ?? double.infinity),
       ),
@@ -931,7 +933,7 @@ class _BravenChartState extends State<BravenChart> {
       children: [
         // Base chart
         child,
-        
+
         // Crosshair overlay (if enabled and visible)
         if (config.crosshair.enabled && _interactionState.isCrosshairVisible)
           Positioned.fill(
@@ -973,7 +975,7 @@ class _BravenChartState extends State<BravenChart> {
         });
 
         // Invoke hover callback with null (exited)
-        final exitPosition = Offset.zero; // Position doesn't matter for exit
+        const exitPosition = Offset.zero; // Position doesn't matter for exit
         config.onDataPointHover?.call(null, exitPosition);
       },
       onHover: (event) {
@@ -1010,9 +1012,7 @@ class _BravenChartState extends State<BravenChart> {
         });
 
         // Invoke crosshair changed callback
-        final snapPointsList = _interactionState.snapPoints
-            .map((data) => _mapToDataPoint(data))
-            .toList();
+        final snapPointsList = _interactionState.snapPoints.map((data) => _mapToDataPoint(data)).toList();
         config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
       },
       child: interactiveWidget,
@@ -1025,8 +1025,7 @@ class _BravenChartState extends State<BravenChart> {
         if (signal is PointerScrollEvent && config.enableZoom && _zoomPanController != null) {
           // Platform-aware modifier key detection
           // Windows/Linux: CTRL, macOS: CMD (Meta)
-          final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
-              HardwareKeyboard.instance.isMetaPressed;
+          final isCtrlPressed = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
           final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
 
           if (isCtrlPressed) {
@@ -1034,48 +1033,47 @@ class _BravenChartState extends State<BravenChart> {
             final scrollDelta = signal.scrollDelta.dy;
             // Zoom in when scrolling up (negative delta), zoom out when scrolling down
             final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
-            
+
             setState(() {
               final newZoomPanState = _zoomPanController!.zoom(
                 _interactionState.zoomPanState,
                 zoomFactor: zoomFactor,
                 focalPoint: signal.localPosition,
               );
-              
+
               _interactionState = _interactionState.copyWith(
                 zoomPanState: newZoomPanState,
               );
             });
-            
+
             // Invoke zoom callback
             config.onZoomChanged?.call(
               _interactionState.zoomPanState.zoomLevelX,
               _interactionState.zoomPanState.zoomLevelY,
             );
-            
+
             // Invoke viewport callback (visible bounds changed due to zoom)
             _invokeViewportCallback();
-            
           } else if (isShiftPressed && config.enablePan) {
             // SHIFT + Scroll → Pan horizontally
             final scrollDelta = signal.scrollDelta.dy;
             // Pan amount proportional to scroll
             final panDelta = Offset(scrollDelta, 0);
-            
+
             setState(() {
               final newZoomPanState = _zoomPanController!.pan(
                 _interactionState.zoomPanState,
                 panDelta,
               );
-              
+
               _interactionState = _interactionState.copyWith(
                 zoomPanState: newZoomPanState,
               );
             });
-            
+
             // Invoke pan callback
             config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-            
+
             // Invoke viewport callback
             _invokeViewportCallback();
           }
@@ -1097,23 +1095,23 @@ class _BravenChartState extends State<BravenChart> {
       onPointerMove: (event) {
         if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
           final delta = event.localPosition - _panStartPosition!;
-          
+
           setState(() {
             final newZoomPanState = _zoomPanController!.pan(
               _interactionState.zoomPanState,
               delta,
             );
-            
+
             _interactionState = _interactionState.copyWith(
               zoomPanState: newZoomPanState,
             );
-            
+
             _panStartPosition = event.localPosition;
           });
-          
+
           // Invoke pan callback
           config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-          
+
           // Invoke viewport callback
           _invokeViewportCallback();
         }
@@ -1134,34 +1132,34 @@ class _BravenChartState extends State<BravenChart> {
     // Wrap with GestureDetector for tap/long-press/pan/pinch
     interactiveWidget = GestureDetector(
       // Tap handling
-      onTapDown: config.enableSelection ? (details) {
-        final nearestPointData = _findNearestDataPoint(details.localPosition);
-        if (nearestPointData != null) {
-          final point = _mapToDataPoint(nearestPointData);
-          
-          setState(() {
-            // Add to selected points
-            final updatedSelection = List<Map<String, dynamic>>.from(
-              _interactionState.selectedPoints,
-            );
-            updatedSelection.add(nearestPointData);
-            
-            _interactionState = _interactionState.copyWith(
-              selectedPoints: updatedSelection,
-              focusedPoint: nearestPointData,
-            );
-          });
+      onTapDown: config.enableSelection
+          ? (details) {
+              final nearestPointData = _findNearestDataPoint(details.localPosition);
+              if (nearestPointData != null) {
+                final point = _mapToDataPoint(nearestPointData);
 
-          // Invoke tap callback
-          config.onDataPointTap?.call(point, details.localPosition);
-          
-          // Invoke selection callback
-          final selectedPointsList = _interactionState.selectedPoints
-              .map((data) => _mapToDataPoint(data))
-              .toList();
-          config.onSelectionChanged?.call(selectedPointsList);
-        }
-      } : null,
+                setState(() {
+                  // Add to selected points
+                  final updatedSelection = List<Map<String, dynamic>>.from(
+                    _interactionState.selectedPoints,
+                  );
+                  updatedSelection.add(nearestPointData);
+
+                  _interactionState = _interactionState.copyWith(
+                    selectedPoints: updatedSelection,
+                    focusedPoint: nearestPointData,
+                  );
+                });
+
+                // Invoke tap callback
+                config.onDataPointTap?.call(point, details.localPosition);
+
+                // Invoke selection callback
+                final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
+                config.onSelectionChanged?.call(selectedPointsList);
+              }
+            }
+          : null,
 
       // Long press handling
       onLongPressStart: (details) {
@@ -1173,72 +1171,86 @@ class _BravenChartState extends State<BravenChart> {
       },
 
       // Pan handling (for drag interactions)
-      onPanStart: config.enablePan ? (details) {
-        // TODO R-T007: Actual pan logic will be added with ZoomPanController
-        // For now just track that we're panning
-      } : null,
-      
-      onPanUpdate: config.enablePan ? (details) {
-        // TODO R-T007: Actual pan logic will be added with ZoomPanController
-      } : null,
+      onPanStart: config.enablePan
+          ? (details) {
+              // TODO R-T007: Actual pan logic will be added with ZoomPanController
+              // For now just track that we're panning
+            }
+          : null,
 
-      onPanEnd: config.enablePan ? (details) {
-        // TODO R-T007: Cleanup will be added with ZoomPanController
-      } : null,
+      onPanUpdate: config.enablePan
+          ? (details) {
+              // TODO R-T007: Actual pan logic will be added with ZoomPanController
+            }
+          : null,
+
+      onPanEnd: config.enablePan
+          ? (details) {
+              // TODO R-T007: Cleanup will be added with ZoomPanController
+            }
+          : null,
 
       // Pinch/scale handling (for zoom)
-      onScaleStart: config.enableZoom && _zoomPanController != null ? (details) {
-        // Track initial scale for pinch gestures
-      } : null,
+      onScaleStart: config.enableZoom && _zoomPanController != null
+          ? (details) {
+              // Track initial scale for pinch gestures
+            }
+          : null,
 
-      onScaleUpdate: config.enableZoom && _zoomPanController != null ? (details) {
-        // Pinch-to-zoom gesture
-        if (details.scale != 1.0) {
-          setState(() {
-            final newZoomPanState = _zoomPanController!.zoom(
-              _interactionState.zoomPanState,
-              zoomFactor: details.scale,
-              focalPoint: details.focalPoint,
-            );
-            
-            _interactionState = _interactionState.copyWith(
-              zoomPanState: newZoomPanState,
-            );
-          });
-          
-          // Invoke zoom callback
-          config.onZoomChanged?.call(
-            _interactionState.zoomPanState.zoomLevelX,
-            _interactionState.zoomPanState.zoomLevelY,
-          );
-          
-          // Invoke viewport callback
-          _invokeViewportCallback();
-        }
-      } : null,
+      onScaleUpdate: config.enableZoom && _zoomPanController != null
+          ? (details) {
+              // Pinch-to-zoom gesture
+              if (details.scale != 1.0) {
+                setState(() {
+                  final newZoomPanState = _zoomPanController!.zoom(
+                    _interactionState.zoomPanState,
+                    zoomFactor: details.scale,
+                    focalPoint: details.focalPoint,
+                  );
 
-      onScaleEnd: config.enableZoom && _zoomPanController != null ? (details) {
-        // Pinch gesture ended - no cleanup needed
-      } : null,
+                  _interactionState = _interactionState.copyWith(
+                    zoomPanState: newZoomPanState,
+                  );
+                });
+
+                // Invoke zoom callback
+                config.onZoomChanged?.call(
+                  _interactionState.zoomPanState.zoomLevelX,
+                  _interactionState.zoomPanState.zoomLevelY,
+                );
+
+                // Invoke viewport callback
+                _invokeViewportCallback();
+              }
+            }
+          : null,
+
+      onScaleEnd: config.enableZoom && _zoomPanController != null
+          ? (details) {
+              // Pinch gesture ended - no cleanup needed
+            }
+          : null,
 
       // Double-tap to reset zoom
-      onDoubleTap: config.enableZoom && _zoomPanController != null ? () {
-        setState(() {
-          final newZoomPanState = _zoomPanController!.resetZoom(
-            _interactionState.zoomPanState,
-          );
-          
-          _interactionState = _interactionState.copyWith(
-            zoomPanState: newZoomPanState,
-          );
-        });
-        
-        // Invoke zoom callback (reset to 1.0, 1.0)
-        config.onZoomChanged?.call(1.0, 1.0);
-        
-        // Invoke viewport callback
-        _invokeViewportCallback();
-      } : null,
+      onDoubleTap: config.enableZoom && _zoomPanController != null
+          ? () {
+              setState(() {
+                final newZoomPanState = _zoomPanController!.resetZoom(
+                  _interactionState.zoomPanState,
+                );
+
+                _interactionState = _interactionState.copyWith(
+                  zoomPanState: newZoomPanState,
+                );
+              });
+
+              // Invoke zoom callback (reset to 1.0, 1.0)
+              config.onZoomChanged?.call(1.0, 1.0);
+
+              // Invoke viewport callback
+              _invokeViewportCallback();
+            }
+          : null,
 
       child: interactiveWidget,
     );
@@ -1294,14 +1306,14 @@ class _BravenChartState extends State<BravenChart> {
     }
 
     final snapRadius = widget.interactionConfig!.crosshair.snapRadius;
-    
+
     // Calculate data bounds and chart rect for coordinate transformation
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) return null;
-    
+
     final bounds = _calculateDataBounds(allSeries);
     final chartRect = _calculateChartRect(context.size!);
-    
+
     Map<String, dynamic>? nearestPoint;
     double minDistance = snapRadius;
 
@@ -1310,7 +1322,7 @@ class _BravenChartState extends State<BravenChart> {
       for (final point in series.points) {
         // Transform data coordinates to screen coordinates
         final screenPoint = _dataToScreenPoint(point, chartRect, bounds);
-        
+
         // Calculate Euclidean distance
         final dx = screenPosition.dx - screenPoint.dx;
         final dy = screenPosition.dy - screenPoint.dy;
@@ -1406,7 +1418,7 @@ class _BravenChartState extends State<BravenChart> {
 
     final tooltipPosition = _interactionState.tooltipPosition;
     final dataPoint = _interactionState.tooltipDataPoint;
-    
+
     if (tooltipPosition == null || dataPoint == null) {
       return null;
     }
@@ -1449,7 +1461,7 @@ class _BravenChartState extends State<BravenChart> {
 
     final chartSize = renderBox.size;
     const tooltipSize = Size(200, 80); // Estimate, will be measured
-    
+
     // Smart positioning: flip to opposite side if clipping
     double left = tooltipPosition.dx + config.offsetFromPoint;
     double top = tooltipPosition.dy + config.offsetFromPoint;
@@ -1511,15 +1523,13 @@ class _BravenChartState extends State<BravenChart> {
           style: textStyle,
         ),
         // Show additional properties if present
-        ...dataPoint.entries
-            .where((e) => e.key != 'x' && e.key != 'y')
-            .map((e) => Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '${e.key}: ${e.value}',
-                    style: textStyle.copyWith(fontSize: config.style.fontSize * 0.83),
-                  ),
-                )),
+        ...dataPoint.entries.where((e) => e.key != 'x' && e.key != 'y').map((e) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${e.key}: ${e.value}',
+                style: textStyle.copyWith(fontSize: config.style.fontSize * 0.83),
+              ),
+            )),
       ],
     );
   }
@@ -1586,17 +1596,17 @@ class _BravenChartState extends State<BravenChart> {
 
     // Get the original data bounds
     final dataBounds = _calculateDataBounds(allSeries);
-    
+
     // Calculate visible range accounting for zoom and pan
     // Visible width = original width / zoom level
     final visibleWidth = (dataBounds.maxX - dataBounds.minX) / zoomPanState.zoomLevelX;
     final visibleHeight = (dataBounds.maxY - dataBounds.minY) / zoomPanState.zoomLevelY;
-    
+
     // Pan offset shifts the visible region
     // Negative pan = showing right/bottom data (shifted left/up visually)
     final panOffsetX = -zoomPanState.panOffset.dx / zoomPanState.zoomLevelX;
     final panOffsetY = -zoomPanState.panOffset.dy / zoomPanState.zoomLevelY;
-    
+
     final visibleBounds = {
       'minX': dataBounds.minX + panOffsetX,
       'maxX': dataBounds.minX + panOffsetX + visibleWidth,
@@ -1622,6 +1632,7 @@ class _BravenChartPainter extends CustomPainter {
     required this.xAxis,
     required this.yAxis,
     required this.annotations,
+    this.zoomPanState,
   });
 
   final ChartType chartType;
@@ -1630,6 +1641,7 @@ class _BravenChartPainter extends CustomPainter {
   final AxisConfig xAxis;
   final AxisConfig yAxis;
   final List<ChartAnnotation> annotations;
+  final ZoomPanState? zoomPanState;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1706,6 +1718,32 @@ class _BravenChartPainter extends CustomPainter {
     minY -= yRange * 0.1;
     maxY += yRange * 0.1;
 
+    // Apply zoom/pan transformation if enabled
+    if (zoomPanState != null) {
+      final zoomX = zoomPanState!.zoomLevelX;
+      final zoomY = zoomPanState!.zoomLevelY;
+      final panX = zoomPanState!.panOffset.dx;
+      final panY = zoomPanState!.panOffset.dy;
+      
+      // Calculate the center of the data range
+      final centerX = (minX + maxX) / 2;
+      final centerY = (minY + maxY) / 2;
+      
+      // Calculate the new range based on zoom
+      final rangeX = (maxX - minX) / zoomX;
+      final rangeY = (maxY - minY) / zoomY;
+      
+      // Apply pan offset (normalized to data range)
+      final dataRangeX = maxX - minX;
+      final dataRangeY = maxY - minY;
+      
+      // Calculate visible bounds
+      minX = centerX - rangeX / 2 - panX * dataRangeX;
+      maxX = centerX + rangeX / 2 - panX * dataRangeX;
+      minY = centerY - rangeY / 2 + panY * dataRangeY; // Invert Y for screen coordinates
+      maxY = centerY + rangeY / 2 + panY * dataRangeY;
+    }
+
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
 
@@ -1750,6 +1788,12 @@ class _BravenChartPainter extends CustomPainter {
       bool first = true;
 
       for (final point in s.points) {
+        // Viewport culling: only render points within visible bounds
+        if (point.x < bounds.minX || point.x > bounds.maxX ||
+            point.y < bounds.minY || point.y > bounds.maxY) {
+          continue;
+        }
+        
         final offset = _dataToPixel(point, chartRect, bounds);
         if (first) {
           path.moveTo(offset.dx, offset.dy);
@@ -1767,6 +1811,12 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       for (final point in s.points) {
+        // Viewport culling: only render markers within visible bounds
+        if (point.x < bounds.minX || point.x > bounds.maxX ||
+            point.y < bounds.minY || point.y > bounds.maxY) {
+          continue;
+        }
+        
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 4, markerPaint);
       }
@@ -1780,22 +1830,30 @@ class _BravenChartPainter extends CustomPainter {
       final s = series[i];
       if (s.points.isEmpty) continue;
 
+      // Filter points within visible bounds for area fill
+      final visiblePoints = s.points.where((point) =>
+        point.x >= bounds.minX && point.x <= bounds.maxX &&
+        point.y >= bounds.minY && point.y <= bounds.maxY
+      ).toList();
+      
+      if (visiblePoints.isEmpty) continue;
+
       final color = colors[i % colors.length];
       final fillPaint = Paint()
         ..color = color.withValues(alpha: 0.3)
         ..style = PaintingStyle.fill;
 
       final path = Path();
-      final firstPoint = _dataToPixel(s.points.first, chartRect, bounds);
+      final firstPoint = _dataToPixel(visiblePoints.first, chartRect, bounds);
       path.moveTo(firstPoint.dx, chartRect.bottom);
       path.lineTo(firstPoint.dx, firstPoint.dy);
 
-      for (final point in s.points) {
+      for (final point in visiblePoints) {
         final offset = _dataToPixel(point, chartRect, bounds);
         path.lineTo(offset.dx, offset.dy);
       }
 
-      final lastPoint = _dataToPixel(s.points.last, chartRect, bounds);
+      final lastPoint = _dataToPixel(visiblePoints.last, chartRect, bounds);
       path.lineTo(lastPoint.dx, chartRect.bottom);
       path.close();
 
@@ -1810,7 +1868,7 @@ class _BravenChartPainter extends CustomPainter {
       final linePath = Path();
       bool first = true;
 
-      for (final point in s.points) {
+      for (final point in visiblePoints) {
         final offset = _dataToPixel(point, chartRect, bounds);
         if (first) {
           linePath.moveTo(offset.dx, offset.dy);
@@ -1843,6 +1901,13 @@ class _BravenChartPainter extends CustomPainter {
 
       for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
         final point = s.points[pointIndex];
+        
+        // Viewport culling: only render bars within visible bounds
+        if (point.x < bounds.minX || point.x > bounds.maxX ||
+            point.y < bounds.minY || point.y > bounds.maxY) {
+          continue;
+        }
+        
         final baseX = chartRect.left + (barGroupWidth * pointIndex);
         final barX = baseX + (barWidth * seriesIndex) + (barWidth / 2);
 
@@ -1866,6 +1931,12 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       for (final point in s.points) {
+        // Viewport culling: only render scatter points within visible bounds
+        if (point.x < bounds.minX || point.x > bounds.maxX ||
+            point.y < bounds.minY || point.y > bounds.maxY) {
+          continue;
+        }
+        
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 5, paint);
       }
@@ -2343,15 +2414,15 @@ class _CrosshairPainter extends CustomPainter {
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final distance = sqrt(dx * dx + dy * dy);
-    
+
     var currentDistance = 0.0;
     var patternIndex = 0;
     var isDash = true;
-    
+
     while (currentDistance < distance) {
       final dashLength = dashPattern[patternIndex % dashPattern.length];
       final nextDistance = (currentDistance + dashLength).clamp(0.0, distance);
-      
+
       if (isDash) {
         final startRatio = currentDistance / distance;
         final endRatio = nextDistance / distance;
@@ -2364,21 +2435,22 @@ class _CrosshairPainter extends CustomPainter {
           start.dy + dy * endRatio,
         );
       }
-      
+
       currentDistance = nextDistance;
       patternIndex++;
       isDash = !isDash;
     }
-    
+
     canvas.drawPath(path, paint);
   }
 
   void _drawCoordinateLabels(Canvas canvas, Size size) {
-    final textStyle = config.coordinateLabelStyle ?? TextStyle(
-      color: config.style.labelTextColor,
-      fontSize: 10,
-      backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
-    );
+    final textStyle = config.coordinateLabelStyle ??
+        TextStyle(
+          color: config.style.labelTextColor,
+          fontSize: 10,
+          backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
+        );
 
     // X coordinate label (bottom of vertical line)
     if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
@@ -2394,7 +2466,7 @@ class _CrosshairPainter extends CustomPainter {
         position.dx - xTextPainter.width / 2,
         size.height - xTextPainter.height - 4,
       );
-      
+
       // Draw background
       final xBgRect = Rect.fromLTWH(
         xLabelOffset.dx - config.style.labelPadding,
@@ -2403,7 +2475,7 @@ class _CrosshairPainter extends CustomPainter {
         xTextPainter.height + config.style.labelPadding * 2,
       );
       canvas.drawRect(xBgRect, Paint()..color = config.style.labelBackgroundColor);
-      
+
       xTextPainter.paint(canvas, xLabelOffset);
     }
 
@@ -2421,7 +2493,7 @@ class _CrosshairPainter extends CustomPainter {
         4,
         position.dy - yTextPainter.height / 2,
       );
-      
+
       // Draw background
       final yBgRect = Rect.fromLTWH(
         yLabelOffset.dx - config.style.labelPadding,
@@ -2430,15 +2502,13 @@ class _CrosshairPainter extends CustomPainter {
         yTextPainter.height + config.style.labelPadding * 2,
       );
       canvas.drawRect(yBgRect, Paint()..color = config.style.labelBackgroundColor);
-      
+
       yTextPainter.paint(canvas, yLabelOffset);
     }
   }
 
   @override
   bool shouldRepaint(_CrosshairPainter oldDelegate) {
-    return position != oldDelegate.position ||
-        config != oldDelegate.config ||
-        nearestPoint != oldDelegate.nearestPoint;
+    return position != oldDelegate.position || config != oldDelegate.config || nearestPoint != oldDelegate.nearestPoint;
   }
 }
