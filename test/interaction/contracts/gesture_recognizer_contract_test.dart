@@ -8,16 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 // These imports will fail until implementation exists
 // ignore: unused_import
-import 'package:braven_charts/src/interaction/gesture_recognizer.dart';
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/src/interaction/gesture_recognizer.dart'
+    as braven;
 
 void main() {
   group('IGestureRecognizer Contract Tests', () {
-    late dynamic gestureRecognizer; // Will be concrete type when implemented
+    late braven.GestureRecognizer gestureRecognizer;
 
     setUp(() {
-      // This will fail - implementation doesn't exist yet
-      // gestureRecognizer = GestureRecognizer();
+      gestureRecognizer = braven.GestureRecognizer();
     });
 
     test('recognizeGesture() detects gestures from pointer events', () {

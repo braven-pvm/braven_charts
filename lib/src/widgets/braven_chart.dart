@@ -672,7 +672,7 @@ class _BravenChartState extends State<BravenChart> {
   void _processStreamData() {
     if (_pendingDataPoint == null) return;
 
-    final point = _pendingDataPoint!;
+    // Clear the pending data point
     _pendingDataPoint = null;
 
     // Add point to the first series (or create a default series)
