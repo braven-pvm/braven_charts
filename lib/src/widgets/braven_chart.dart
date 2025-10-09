@@ -1104,550 +1104,558 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   Widget _wrapWithInteractionSystem(Widget child) {
     final config = widget.interactionConfig!;
 
-    // Build the full interaction stack
-    Widget interactiveWidget = Stack(
-      children: [
-        // Base chart
-        child,
+    // Use LayoutBuilder to get size safely during build
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final chartRect = _calculateChartRect(size);
 
-        // Crosshair overlay (if enabled and visible)
-        if (config.crosshair.enabled &&
-            _interactionState.isCrosshairVisible &&
-            _interactionState.crosshairPosition != null &&
-            _interactionState.crosshairPosition!.dx.isFinite &&
-            _interactionState.crosshairPosition!.dy.isFinite)
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _CrosshairPainter(
-                position: _interactionState.crosshairPosition!,
-                config: config.crosshair,
-                nearestPoint: _interactionState.hoveredPoint != null &&
-                        _interactionState.hoveredPoint!.containsKey('screenX') &&
-                        _interactionState.hoveredPoint!.containsKey('screenY')
-                    ? () {
-                        final screenX = (_interactionState.hoveredPoint!['screenX'] as num?)?.toDouble() ?? 0;
-                        final screenY = (_interactionState.hoveredPoint!['screenY'] as num?)?.toDouble() ?? 0;
-                        // Validate coordinates are finite and within reasonable bounds
-                        if (screenX.isFinite && screenY.isFinite) {
-                          return Offset(screenX, screenY);
-                        }
-                        return null;
-                      }()
-                    : null,
-                chartSize: Size.infinite,
-                dataBounds: () {
-                  final allSeries = _getAllSeries();
-                  if (allSeries.isEmpty) return null;
-                  return _calculateDataBounds(allSeries);
-                }(),
-                chartRect: context.size != null ? _calculateChartRect(context.size!) : null,
+        // Build the full interaction stack
+        Widget interactiveWidget = Stack(
+          children: [
+            // Base chart
+            child,
+
+            // Crosshair overlay (if enabled and visible)
+            if (config.crosshair.enabled &&
+                _interactionState.isCrosshairVisible &&
+                _interactionState.crosshairPosition != null &&
+                _interactionState.crosshairPosition!.dx.isFinite &&
+                _interactionState.crosshairPosition!.dy.isFinite)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CrosshairPainter(
+                    position: _interactionState.crosshairPosition!,
+                    config: config.crosshair,
+                    nearestPoint: _interactionState.hoveredPoint != null &&
+                            _interactionState.hoveredPoint!.containsKey('screenX') &&
+                            _interactionState.hoveredPoint!.containsKey('screenY')
+                        ? () {
+                            final screenX = (_interactionState.hoveredPoint!['screenX'] as num?)?.toDouble() ?? 0;
+                            final screenY = (_interactionState.hoveredPoint!['screenY'] as num?)?.toDouble() ?? 0;
+                            // Validate coordinates are finite and within reasonable bounds
+                            if (screenX.isFinite && screenY.isFinite) {
+                              return Offset(screenX, screenY);
+                            }
+                            return null;
+                          }()
+                        : null,
+                    chartSize: Size.infinite,
+                    dataBounds: () {
+                      final allSeries = _getAllSeries();
+                      if (allSeries.isEmpty) return null;
+                      return _calculateDataBounds(allSeries);
+                    }(),
+                    chartRect: chartRect,
+                  ),
+                ),
               ),
-            ),
-          ),
 
-        // Tooltip overlay (if enabled and visible)
-        if (_buildTooltipOverlay() != null) _buildTooltipOverlay()!,
-      ],
-    );
+            // Tooltip overlay (if enabled and visible)
+            if (_buildTooltipOverlay() != null) _buildTooltipOverlay()!,
+          ],
+        );
 
-    // Wrap in MouseRegion for hover detection
-    interactiveWidget = MouseRegion(
-      onEnter: (_) {
-        // Mouse entered chart area - don't change state yet, wait for actual hover
-      },
-      onExit: (_) {
-        setState(() {
-          _interactionState = _interactionState.copyWith(
-            isCrosshairVisible: false,
-            isTooltipVisible: false,
-            crosshairPosition: null,
-            tooltipPosition: null,
-            hoveredPoint: null,
-            hoveredSeriesId: null,
-          );
-        });
-
-        // Invoke hover callback with null (exited)
-        const exitPosition = Offset.zero; // Position doesn't matter for exit
-        config.onDataPointHover?.call(null, exitPosition);
-      },
-      onHover: (event) {
-        List<Map<String, dynamic>> snapPointsData = const [];
-
-        setState(() {
-          // Update crosshair position
-          _interactionState = _interactionState.copyWith(
-            crosshairPosition: event.localPosition,
-            isCrosshairVisible: config.crosshair.enabled,
-          );
-
-          // Find nearest data point for snap and tooltip
-          final nearestPointData = _findNearestDataPoint(event.localPosition);
-          if (nearestPointData != null) {
-            snapPointsData = [nearestPointData]; // Capture for callback
-            _interactionState = _interactionState.copyWith(
-              hoveredPoint: nearestPointData,
-              hoveredSeriesId: nearestPointData['seriesId'] as String?,
-              tooltipPosition: event.localPosition,
-              tooltipDataPoint: nearestPointData,
-              isTooltipVisible: config.tooltip.enabled,
-              snapPoints: snapPointsData, // Populate snapPoints with the nearest point
-            );
-
-            // Convert Map to ChartDataPoint for callback
-            final point = _mapToDataPoint(nearestPointData);
-            config.onDataPointHover?.call(point, event.localPosition);
-          } else {
-            // No point nearby, clear tooltip
-            snapPointsData = const [];
-            _interactionState = _interactionState.copyWith(
-              isTooltipVisible: false,
-              hoveredPoint: null,
-              hoveredSeriesId: null,
-              tooltipDataPoint: null,
-              snapPoints: snapPointsData, // Clear snapPoints when no point is nearby
-            );
-          }
-        });
-
-        // Invoke crosshair changed callback with the updated snap points
-        final snapPointsList = snapPointsData.map((data) => _mapToDataPoint(data)).toList();
-        config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
-      },
-      child: interactiveWidget,
-    );
-
-    // Wrap with Listener for scroll/middle-mouse events
-    interactiveWidget = Listener(
-      // Handle scroll events with modifier keys
-      onPointerSignal: (signal) {
-        print('🎯🎯🎯 CHART LISTENER RECEIVED SIGNAL! 🎯🎯🎯');
-        if (signal is PointerScrollEvent) {
-          print('🎯🎯🎯 IT IS A SCROLL EVENT! 🎯🎯🎯');
-          // Use manual state tracking for modifiers (web-compatible)
-          // HardwareKeyboard.instance doesn't work reliably in Flutter Web
-          final isShiftPressed = _isShiftPressed;
-
-          // Debug: Print state
-          print('📊 SCROLL EVENT: enableZoom=${config.enableZoom}, hasController=${_zoomPanController != null}, SHIFT=$isShiftPressed');
-
-          if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
-            // SHIFT + Scroll → Zoom at cursor position
-            final scrollDelta = signal.scrollDelta.dy;
-            // Zoom in when scrolling up (negative delta), zoom out when scrolling down
-            final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
-
-            print('🔍 ZOOMING: delta=$scrollDelta, factor=$zoomFactor');
-
+        // Wrap in MouseRegion for hover detection
+        interactiveWidget = MouseRegion(
+          onEnter: (_) {
+            // Mouse entered chart area - don't change state yet, wait for actual hover
+          },
+          onExit: (_) {
             setState(() {
-              final newZoomPanState = _zoomPanController!.zoom(
-                _interactionState.zoomPanState,
-                zoomFactor: zoomFactor,
-                focalPoint: signal.localPosition,
-              );
-
               _interactionState = _interactionState.copyWith(
-                zoomPanState: newZoomPanState,
+                isCrosshairVisible: false,
+                isTooltipVisible: false,
+                crosshairPosition: null,
+                tooltipPosition: null,
+                hoveredPoint: null,
+                hoveredSeriesId: null,
               );
             });
 
-            // Invoke zoom callback
-            config.onZoomChanged?.call(
-              _interactionState.zoomPanState.zoomLevelX,
-              _interactionState.zoomPanState.zoomLevelY,
-            );
-
-            // Invoke viewport callback (visible bounds changed due to zoom)
-            _invokeViewportCallback();
-          }
-          // If no SHIFT modifier, don't handle - allows default page scroll
-          // This is CRITICAL for web UX - page must scroll normally without modifier
-        }
-      },
-
-      // Handle middle-mouse button pan (PRIMARY pan method)
-      onPointerDown: (event) {
-        if (event.buttons == kMiddleMouseButton && config.enablePan) {
-          setState(() {
-            _isPanningWithMiddleMouse = true;
-            _panStartPosition = event.localPosition;
-          });
-        }
-      },
-
-      onPointerMove: (event) {
-        if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
-          final delta = event.localPosition - _panStartPosition!;
-
-          setState(() {
-            final newZoomPanState = _zoomPanController!.pan(
-              _interactionState.zoomPanState,
-              delta,
-            );
-
-            _interactionState = _interactionState.copyWith(
-              zoomPanState: newZoomPanState,
-            );
-
-            _panStartPosition = event.localPosition;
-          });
-
-          // Invoke pan callback
-          config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-
-          // Invoke viewport callback
-          _invokeViewportCallback();
-        }
-      },
-
-      onPointerUp: (event) {
-        if (_isPanningWithMiddleMouse) {
-          setState(() {
-            _isPanningWithMiddleMouse = false;
-            _panStartPosition = null;
-          });
-        }
-      },
-
-      child: interactiveWidget,
-    );
-
-    // Wrap with GestureDetector for tap/long-press/pan/pinch
-    interactiveWidget = GestureDetector(
-      // Always handle tap down to request focus for keyboard events
-      onTapDown: (details) {
-        // Request focus for keyboard events
-        if (config.keyboard.enabled && !_focusNode.hasFocus) {
-          _focusNode.requestFocus();
-          print('🎯🎯🎯 CHART FOCUS REQUESTED ON TAP! 🎯🎯🎯');
-        }
-
-        // Handle selection if enabled
-        if (config.enableSelection) {
-          final nearestPointData = _findNearestDataPoint(details.localPosition);
-          if (nearestPointData != null) {
-            final point = _mapToDataPoint(nearestPointData);
+            // Invoke hover callback with null (exited)
+            const exitPosition = Offset.zero; // Position doesn't matter for exit
+            config.onDataPointHover?.call(null, exitPosition);
+          },
+          onHover: (event) {
+            List<Map<String, dynamic>> snapPointsData = const [];
 
             setState(() {
-              // Add to selected points
-              final updatedSelection = List<Map<String, dynamic>>.from(
-                _interactionState.selectedPoints,
-              );
-              updatedSelection.add(nearestPointData);
-
+              // Update crosshair position
               _interactionState = _interactionState.copyWith(
-                selectedPoints: updatedSelection,
-                focusedPoint: nearestPointData,
+                crosshairPosition: event.localPosition,
+                isCrosshairVisible: config.crosshair.enabled,
               );
+
+              // Find nearest data point for snap and tooltip
+              final nearestPointData = _findNearestDataPoint(event.localPosition);
+              if (nearestPointData != null) {
+                snapPointsData = [nearestPointData]; // Capture for callback
+                _interactionState = _interactionState.copyWith(
+                  hoveredPoint: nearestPointData,
+                  hoveredSeriesId: nearestPointData['seriesId'] as String?,
+                  tooltipPosition: event.localPosition,
+                  tooltipDataPoint: nearestPointData,
+                  isTooltipVisible: config.tooltip.enabled,
+                  snapPoints: snapPointsData, // Populate snapPoints with the nearest point
+                );
+
+                // Convert Map to ChartDataPoint for callback
+                final point = _mapToDataPoint(nearestPointData);
+                config.onDataPointHover?.call(point, event.localPosition);
+              } else {
+                // No point nearby, clear tooltip
+                snapPointsData = const [];
+                _interactionState = _interactionState.copyWith(
+                  isTooltipVisible: false,
+                  hoveredPoint: null,
+                  hoveredSeriesId: null,
+                  tooltipDataPoint: null,
+                  snapPoints: snapPointsData, // Clear snapPoints when no point is nearby
+                );
+              }
             });
 
-            // Invoke tap callback
-            config.onDataPointTap?.call(point, details.localPosition);
+            // Invoke crosshair changed callback with the updated snap points
+            final snapPointsList = snapPointsData.map((data) => _mapToDataPoint(data)).toList();
+            config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
+          },
+          child: interactiveWidget,
+        );
 
-            // Invoke selection callback
-            final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
-            config.onSelectionChanged?.call(selectedPointsList);
-          }
-        }
-      },
+        // Wrap with Listener for scroll/middle-mouse events
+        interactiveWidget = Listener(
+          // Handle scroll events with modifier keys
+          onPointerSignal: (signal) {
+            print('🎯🎯🎯 CHART LISTENER RECEIVED SIGNAL! 🎯🎯🎯');
+            if (signal is PointerScrollEvent) {
+              print('🎯🎯🎯 IT IS A SCROLL EVENT! 🎯🎯🎯');
+              // Use manual state tracking for modifiers (web-compatible)
+              // HardwareKeyboard.instance doesn't work reliably in Flutter Web
+              final isShiftPressed = _isShiftPressed;
 
-      // Long press handling
-      onLongPressStart: (details) {
-        final nearestPointData = _findNearestDataPoint(details.localPosition);
-        if (nearestPointData != null) {
-          final point = _mapToDataPoint(nearestPointData);
-          config.onDataPointLongPress?.call(point, details.localPosition);
-        }
-      },
+              // Debug: Print state
+              print('📊 SCROLL EVENT: enableZoom=${config.enableZoom}, hasController=${_zoomPanController != null}, SHIFT=$isShiftPressed');
 
-      // Use scale gestures if zoom is enabled (scale is superset of pan)
-      // Otherwise use pan gestures if only pan is enabled
-      onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
-          ? (details) {
-              // Track initial state for gestures
-            }
-          : null,
+              if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
+                // SHIFT + Scroll → Zoom at cursor position
+                final scrollDelta = signal.scrollDelta.dy;
+                // Zoom in when scrolling up (negative delta), zoom out when scrolling down
+                final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
 
-      onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
-          ? (details) {
-              setState(() {
-                ZoomPanState newZoomPanState = _interactionState.zoomPanState;
+                print('🔍 ZOOMING: delta=$scrollDelta, factor=$zoomFactor');
 
-                // Handle pinch-to-zoom (when scale changes)
-                if (config.enableZoom && details.scale != 1.0) {
-                  newZoomPanState = _zoomPanController!.zoom(
-                    newZoomPanState,
-                    zoomFactor: details.scale,
-                    focalPoint: details.focalPoint,
+                setState(() {
+                  final newZoomPanState = _zoomPanController!.zoom(
+                    _interactionState.zoomPanState,
+                    zoomFactor: zoomFactor,
+                    focalPoint: signal.localPosition,
                   );
 
-                  // Invoke zoom callback
-                  config.onZoomChanged?.call(
-                    newZoomPanState.zoomLevelX,
-                    newZoomPanState.zoomLevelY,
-                  );
-                }
-
-                // Handle pan (when delta changes but scale is 1.0)
-                if (config.enablePan && details.focalPointDelta != Offset.zero) {
-                  newZoomPanState = _zoomPanController!.pan(
-                    newZoomPanState,
-                    details.focalPointDelta,
-                  );
-
-                  // Invoke pan callback
-                  config.onPanChanged?.call(newZoomPanState.panOffset);
-                }
-
-                // Update state if anything changed
-                if (newZoomPanState != _interactionState.zoomPanState) {
                   _interactionState = _interactionState.copyWith(
                     zoomPanState: newZoomPanState,
                   );
+                });
 
-                  // Invoke viewport callback
-                  _invokeViewportCallback();
-                }
+                // Invoke zoom callback
+                config.onZoomChanged?.call(
+                  _interactionState.zoomPanState.zoomLevelX,
+                  _interactionState.zoomPanState.zoomLevelY,
+                );
+
+                // Invoke viewport callback (visible bounds changed due to zoom)
+                _invokeViewportCallback();
+              }
+              // If no SHIFT modifier, don't handle - allows default page scroll
+              // This is CRITICAL for web UX - page must scroll normally without modifier
+            }
+          },
+
+          // Handle middle-mouse button pan (PRIMARY pan method)
+          onPointerDown: (event) {
+            if (event.buttons == kMiddleMouseButton && config.enablePan) {
+              setState(() {
+                _isPanningWithMiddleMouse = true;
+                _panStartPosition = event.localPosition;
               });
             }
-          : null,
+          },
 
-      onScaleEnd: (config.enableZoom || config.enablePan) && _zoomPanController != null
-          ? (details) {
-              // Gesture ended - no cleanup needed
-            }
-          : null,
+          onPointerMove: (event) {
+            if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
+              final delta = event.localPosition - _panStartPosition!;
 
-      // Double-tap to reset zoom
-      onDoubleTap: config.enableZoom && _zoomPanController != null
-          ? () {
               setState(() {
-                final newZoomPanState = _zoomPanController!.resetZoom(
+                final newZoomPanState = _zoomPanController!.pan(
                   _interactionState.zoomPanState,
+                  delta,
                 );
 
                 _interactionState = _interactionState.copyWith(
                   zoomPanState: newZoomPanState,
                 );
+
+                _panStartPosition = event.localPosition;
               });
 
-              // Invoke zoom callback (reset to 1.0, 1.0)
-              config.onZoomChanged?.call(1.0, 1.0);
+              // Invoke pan callback
+              config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
 
               // Invoke viewport callback
               _invokeViewportCallback();
             }
-          : null,
+          },
 
-      child: interactiveWidget,
-    );
-
-    // Wrap with Focus for keyboard navigation
-    if (config.keyboard.enabled) {
-      print('🎯🎯🎯 CHART FOCUS WIDGET CREATED - keyboard enabled! 🎯🎯🎯');
-      interactiveWidget = Focus(
-        focusNode: _focusNode,
-        autofocus: false,
-        canRequestFocus: true,
-        onKeyEvent: (node, event) {
-          print('🎯🎯🎯 CHART RECEIVED KEY EVENT: ${event.logicalKey.keyLabel} 🎯🎯🎯');
-          if (_keyboardHandler == null) return KeyEventResult.ignored;
-
-          // Manual modifier key state tracking for web compatibility
-          // HardwareKeyboard.instance doesn't work reliably in Flutter Web
-          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-            setState(() {
-              _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-            });
-            // Return ignored to allow scroll events to propagate
-            return KeyEventResult.ignored;
-          }
-          if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
-            setState(() {
-              _isAltPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-            });
-            // Return ignored to allow events to propagate
-            return KeyEventResult.ignored;
-          }
-
-          // Debug: Print key event
-          print('⌨️  KEY EVENT: ${event.logicalKey.keyLabel}, hasHandler=${_keyboardHandler != null}');
-
-          // Get all data points from series
-          final allDataPoints = <Map<String, dynamic>>[];
-          for (final series in widget.series) {
-            for (final point in series.points) {
-              allDataPoints.add({
-                'x': point.x,
-                'y': point.y,
-                'label': point.label,
-                'metadata': point.metadata,
-                'seriesId': series.id,
+          onPointerUp: (event) {
+            if (_isPanningWithMiddleMouse) {
+              setState(() {
+                _isPanningWithMiddleMouse = false;
+                _panStartPosition = null;
               });
             }
-          }
+          },
 
-          // CRITICAL FIX #5: INTERCEPT ZOOM KEYS - Zoom without pan offset (centered on data)
-          // Keyboard zoom should zoom centered on the data center, NOT create pan offset like mouse zoom
-          final key = event.logicalKey;
-          if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
-            if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
-              // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
-              print('🔍 KEYBOARD ZOOM IN centered on data (ANIMATED)');
-              final currentZoomState = _interactionState.zoomPanState;
-              final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-              final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+          child: interactiveWidget,
+        );
 
-              _animateZoom(
-                newZoomX: newZoomX,
-                newZoomY: newZoomY,
-                onComplete: () {
-                  widget.interactionConfig!.onZoomChanged?.call(
-                    _interactionState.zoomPanState.zoomLevelX,
-                    _interactionState.zoomPanState.zoomLevelY,
-                  );
-                  _invokeViewportCallback();
-                },
-              );
-
-              return KeyEventResult.handled;
-            } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
-              // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
-              print('🔍 KEYBOARD ZOOM OUT centered on data (ANIMATED)');
-              final currentZoomState = _interactionState.zoomPanState;
-              final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-              final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-
-              _animateZoom(
-                newZoomX: newZoomX,
-                newZoomY: newZoomY,
-                onComplete: () {
-                  widget.interactionConfig!.onZoomChanged?.call(
-                    _interactionState.zoomPanState.zoomLevelX,
-                    _interactionState.zoomPanState.zoomLevelY,
-                  );
-                  _invokeViewportCallback();
-                },
-              );
-
-              return KeyEventResult.handled;
+        // Wrap with GestureDetector for tap/long-press/pan/pinch
+        interactiveWidget = GestureDetector(
+          // Always handle tap down to request focus for keyboard events
+          onTapDown: (details) {
+            // Request focus for keyboard events
+            if (config.keyboard.enabled && !_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+              print('🎯🎯🎯 CHART FOCUS REQUESTED ON TAP! 🎯🎯🎯');
             }
-          }
 
-          // INTERCEPT ARROW KEYS for animated panning
-          // CRITICAL: Distinguish KeyDownEvent (first press) from KeyRepeatEvent (held down)
-          if (widget.interactionConfig != null && widget.interactionConfig!.enablePan) {
-            if (key == LogicalKeyboardKey.arrowLeft ||
-                key == LogicalKeyboardKey.arrowRight ||
-                key == LogicalKeyboardKey.arrowUp ||
-                key == LogicalKeyboardKey.arrowDown) {
-              // Calculate new pan offset based on arrow direction
-              final currentPanOffset = _interactionState.zoomPanState.panOffset;
-              const panAmount = 50.0; // Same as KeyboardHandler default
-
-              Offset newPanOffset;
-              if (key == LogicalKeyboardKey.arrowLeft) {
-                newPanOffset = Offset(currentPanOffset.dx - panAmount, currentPanOffset.dy);
-              } else if (key == LogicalKeyboardKey.arrowRight) {
-                newPanOffset = Offset(currentPanOffset.dx + panAmount, currentPanOffset.dy);
-              } else if (key == LogicalKeyboardKey.arrowUp) {
-                newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy - panAmount);
-              } else {
-                // arrowDown
-                newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy + panAmount);
-              }
-
-              // DIFFERENTIATE: First press (smooth animation) vs held down (instant pan)
-              if (event is KeyDownEvent) {
-                // First press: Trigger smooth 250ms animation
-                print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED - FIRST PRESS): $currentPanOffset → $newPanOffset');
-
-                _animatePan(
-                  newPanOffset: newPanOffset,
-                  onComplete: () {
-                    widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-                    _invokeViewportCallback();
-                  },
-                );
-              } else if (event is KeyRepeatEvent) {
-                // Key held down: Apply pan offset directly for smooth continuous movement
-                // This prevents animation stuttering from rapid repeat events (~30ms intervals)
-                print('🔄 KEYBOARD PAN ${key.keyLabel} (INSTANT - KEY HELD): $currentPanOffset → $newPanOffset');
+            // Handle selection if enabled
+            if (config.enableSelection) {
+              final nearestPointData = _findNearestDataPoint(details.localPosition);
+              if (nearestPointData != null) {
+                final point = _mapToDataPoint(nearestPointData);
 
                 setState(() {
+                  // Add to selected points
+                  final updatedSelection = List<Map<String, dynamic>>.from(
+                    _interactionState.selectedPoints,
+                  );
+                  updatedSelection.add(nearestPointData);
+
                   _interactionState = _interactionState.copyWith(
-                    zoomPanState: _interactionState.zoomPanState.copyWith(
-                      panOffset: newPanOffset,
-                    ),
+                    selectedPoints: updatedSelection,
+                    focusedPoint: nearestPointData,
                   );
                 });
 
-                // Invoke callbacks immediately
-                widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-                _invokeViewportCallback();
-              }
+                // Invoke tap callback
+                config.onDataPointTap?.call(point, details.localPosition);
 
-              return KeyEventResult.handled;
-            }
-          }
-
-          // Process key event through keyboard handler
-          final newState = _keyboardHandler!.handleKeyEvent(
-            event,
-            _interactionState,
-            dataPoints: allDataPoints,
-          );
-
-          if (newState != null && newState != _interactionState) {
-            print('🔄 STATE CHANGED! Updating InteractionState via setState...');
-            print('   Old zoom: X=${_interactionState.zoomPanState.zoomLevelX}, Y=${_interactionState.zoomPanState.zoomLevelY}');
-            print('   New zoom: X=${newState.zoomPanState.zoomLevelX}, Y=${newState.zoomPanState.zoomLevelY}');
-
-            setState(() {
-              _interactionState = newState;
-
-              // If focused point changed, invoke callback
-              if (_interactionState.focusedPoint != null) {
-                final point = _mapToDataPoint(_interactionState.focusedPoint!);
-                config.onDataPointHover?.call(point, _interactionState.crosshairPosition ?? Offset.zero);
-              }
-
-              // If zoom/pan state changed, invoke callbacks
-              if (_interactionState.zoomPanState != newState.zoomPanState) {
-                print('✅ Zoom/Pan state changed! Calling callbacks...');
-                config.onZoomChanged?.call(
-                  _interactionState.zoomPanState.zoomLevelX,
-                  _interactionState.zoomPanState.zoomLevelY,
-                );
-                _invokeViewportCallback();
-              }
-
-              // If selection changed, invoke callback
-              if (_interactionState.selectedPoints != newState.selectedPoints) {
+                // Invoke selection callback
                 final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
                 config.onSelectionChanged?.call(selectedPointsList);
               }
-            });
+            }
+          },
 
-            print('✅ setState complete! Widget should rebuild now.');
-            return KeyEventResult.handled;
-          }
+          // Long press handling
+          onLongPressStart: (details) {
+            final nearestPointData = _findNearestDataPoint(details.localPosition);
+            if (nearestPointData != null) {
+              final point = _mapToDataPoint(nearestPointData);
+              config.onDataPointLongPress?.call(point, details.localPosition);
+            }
+          },
 
-          return KeyEventResult.ignored;
-        },
-        child: interactiveWidget,
-      );
-    }
+          // Use scale gestures if zoom is enabled (scale is superset of pan)
+          // Otherwise use pan gestures if only pan is enabled
+          onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
+              ? (details) {
+                  // Track initial state for gestures
+                }
+              : null,
 
-    // Wrap with Semantics for accessibility
-    interactiveWidget = Semantics(
-      label: 'Interactive chart',
-      hint: 'Use arrow keys to navigate data points, +/- to zoom',
-      enabled: true,
-      child: interactiveWidget,
+          onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
+              ? (details) {
+                  setState(() {
+                    ZoomPanState newZoomPanState = _interactionState.zoomPanState;
+
+                    // Handle pinch-to-zoom (when scale changes)
+                    if (config.enableZoom && details.scale != 1.0) {
+                      newZoomPanState = _zoomPanController!.zoom(
+                        newZoomPanState,
+                        zoomFactor: details.scale,
+                        focalPoint: details.focalPoint,
+                      );
+
+                      // Invoke zoom callback
+                      config.onZoomChanged?.call(
+                        newZoomPanState.zoomLevelX,
+                        newZoomPanState.zoomLevelY,
+                      );
+                    }
+
+                    // Handle pan (when delta changes but scale is 1.0)
+                    if (config.enablePan && details.focalPointDelta != Offset.zero) {
+                      newZoomPanState = _zoomPanController!.pan(
+                        newZoomPanState,
+                        details.focalPointDelta,
+                      );
+
+                      // Invoke pan callback
+                      config.onPanChanged?.call(newZoomPanState.panOffset);
+                    }
+
+                    // Update state if anything changed
+                    if (newZoomPanState != _interactionState.zoomPanState) {
+                      _interactionState = _interactionState.copyWith(
+                        zoomPanState: newZoomPanState,
+                      );
+
+                      // Invoke viewport callback
+                      _invokeViewportCallback();
+                    }
+                  });
+                }
+              : null,
+
+          onScaleEnd: (config.enableZoom || config.enablePan) && _zoomPanController != null
+              ? (details) {
+                  // Gesture ended - no cleanup needed
+                }
+              : null,
+
+          // Double-tap to reset zoom
+          onDoubleTap: config.enableZoom && _zoomPanController != null
+              ? () {
+                  setState(() {
+                    final newZoomPanState = _zoomPanController!.resetZoom(
+                      _interactionState.zoomPanState,
+                    );
+
+                    _interactionState = _interactionState.copyWith(
+                      zoomPanState: newZoomPanState,
+                    );
+                  });
+
+                  // Invoke zoom callback (reset to 1.0, 1.0)
+                  config.onZoomChanged?.call(1.0, 1.0);
+
+                  // Invoke viewport callback
+                  _invokeViewportCallback();
+                }
+              : null,
+
+          child: interactiveWidget,
+        );
+
+        // Wrap with Focus for keyboard navigation
+        if (config.keyboard.enabled) {
+          print('🎯🎯🎯 CHART FOCUS WIDGET CREATED - keyboard enabled! 🎯🎯🎯');
+          interactiveWidget = Focus(
+            focusNode: _focusNode,
+            autofocus: false,
+            canRequestFocus: true,
+            onKeyEvent: (node, event) {
+              print('🎯🎯🎯 CHART RECEIVED KEY EVENT: ${event.logicalKey.keyLabel} 🎯🎯🎯');
+              if (_keyboardHandler == null) return KeyEventResult.ignored;
+
+              // Manual modifier key state tracking for web compatibility
+              // HardwareKeyboard.instance doesn't work reliably in Flutter Web
+              if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+                setState(() {
+                  _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
+                });
+                // Return ignored to allow scroll events to propagate
+                return KeyEventResult.ignored;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
+                setState(() {
+                  _isAltPressed = event is KeyDownEvent || event is KeyRepeatEvent;
+                });
+                // Return ignored to allow events to propagate
+                return KeyEventResult.ignored;
+              }
+
+              // Debug: Print key event
+              print('⌨️  KEY EVENT: ${event.logicalKey.keyLabel}, hasHandler=${_keyboardHandler != null}');
+
+              // Get all data points from series
+              final allDataPoints = <Map<String, dynamic>>[];
+              for (final series in widget.series) {
+                for (final point in series.points) {
+                  allDataPoints.add({
+                    'x': point.x,
+                    'y': point.y,
+                    'label': point.label,
+                    'metadata': point.metadata,
+                    'seriesId': series.id,
+                  });
+                }
+              }
+
+              // CRITICAL FIX #5: INTERCEPT ZOOM KEYS - Zoom without pan offset (centered on data)
+              // Keyboard zoom should zoom centered on the data center, NOT create pan offset like mouse zoom
+              final key = event.logicalKey;
+              if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
+                if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
+                  // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
+                  print('🔍 KEYBOARD ZOOM IN centered on data (ANIMATED)');
+                  final currentZoomState = _interactionState.zoomPanState;
+                  final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+                  final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+                  _animateZoom(
+                    newZoomX: newZoomX,
+                    newZoomY: newZoomY,
+                    onComplete: () {
+                      widget.interactionConfig!.onZoomChanged?.call(
+                        _interactionState.zoomPanState.zoomLevelX,
+                        _interactionState.zoomPanState.zoomLevelY,
+                      );
+                      _invokeViewportCallback();
+                    },
+                  );
+
+                  return KeyEventResult.handled;
+                } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+                  // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
+                  print('🔍 KEYBOARD ZOOM OUT centered on data (ANIMATED)');
+                  final currentZoomState = _interactionState.zoomPanState;
+                  final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+                  final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+                  _animateZoom(
+                    newZoomX: newZoomX,
+                    newZoomY: newZoomY,
+                    onComplete: () {
+                      widget.interactionConfig!.onZoomChanged?.call(
+                        _interactionState.zoomPanState.zoomLevelX,
+                        _interactionState.zoomPanState.zoomLevelY,
+                      );
+                      _invokeViewportCallback();
+                    },
+                  );
+
+                  return KeyEventResult.handled;
+                }
+              }
+
+              // INTERCEPT ARROW KEYS for animated panning
+              // CRITICAL: Distinguish KeyDownEvent (first press) from KeyRepeatEvent (held down)
+              if (widget.interactionConfig != null && widget.interactionConfig!.enablePan) {
+                if (key == LogicalKeyboardKey.arrowLeft ||
+                    key == LogicalKeyboardKey.arrowRight ||
+                    key == LogicalKeyboardKey.arrowUp ||
+                    key == LogicalKeyboardKey.arrowDown) {
+                  // Calculate new pan offset based on arrow direction
+                  final currentPanOffset = _interactionState.zoomPanState.panOffset;
+                  const panAmount = 50.0; // Same as KeyboardHandler default
+
+                  Offset newPanOffset;
+                  if (key == LogicalKeyboardKey.arrowLeft) {
+                    newPanOffset = Offset(currentPanOffset.dx - panAmount, currentPanOffset.dy);
+                  } else if (key == LogicalKeyboardKey.arrowRight) {
+                    newPanOffset = Offset(currentPanOffset.dx + panAmount, currentPanOffset.dy);
+                  } else if (key == LogicalKeyboardKey.arrowUp) {
+                    newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy - panAmount);
+                  } else {
+                    // arrowDown
+                    newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy + panAmount);
+                  }
+
+                  // DIFFERENTIATE: First press (smooth animation) vs held down (instant pan)
+                  if (event is KeyDownEvent) {
+                    // First press: Trigger smooth 250ms animation
+                    print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED - FIRST PRESS): $currentPanOffset → $newPanOffset');
+
+                    _animatePan(
+                      newPanOffset: newPanOffset,
+                      onComplete: () {
+                        widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                        _invokeViewportCallback();
+                      },
+                    );
+                  } else if (event is KeyRepeatEvent) {
+                    // Key held down: Apply pan offset directly for smooth continuous movement
+                    // This prevents animation stuttering from rapid repeat events (~30ms intervals)
+                    print('🔄 KEYBOARD PAN ${key.keyLabel} (INSTANT - KEY HELD): $currentPanOffset → $newPanOffset');
+
+                    setState(() {
+                      _interactionState = _interactionState.copyWith(
+                        zoomPanState: _interactionState.zoomPanState.copyWith(
+                          panOffset: newPanOffset,
+                        ),
+                      );
+                    });
+
+                    // Invoke callbacks immediately
+                    widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                    _invokeViewportCallback();
+                  }
+
+                  return KeyEventResult.handled;
+                }
+              }
+
+              // Process key event through keyboard handler
+              final newState = _keyboardHandler!.handleKeyEvent(
+                event,
+                _interactionState,
+                dataPoints: allDataPoints,
+              );
+
+              if (newState != null && newState != _interactionState) {
+                print('🔄 STATE CHANGED! Updating InteractionState via setState...');
+                print('   Old zoom: X=${_interactionState.zoomPanState.zoomLevelX}, Y=${_interactionState.zoomPanState.zoomLevelY}');
+                print('   New zoom: X=${newState.zoomPanState.zoomLevelX}, Y=${newState.zoomPanState.zoomLevelY}');
+
+                setState(() {
+                  _interactionState = newState;
+
+                  // If focused point changed, invoke callback
+                  if (_interactionState.focusedPoint != null) {
+                    final point = _mapToDataPoint(_interactionState.focusedPoint!);
+                    config.onDataPointHover?.call(point, _interactionState.crosshairPosition ?? Offset.zero);
+                  }
+
+                  // If zoom/pan state changed, invoke callbacks
+                  if (_interactionState.zoomPanState != newState.zoomPanState) {
+                    print('✅ Zoom/Pan state changed! Calling callbacks...');
+                    config.onZoomChanged?.call(
+                      _interactionState.zoomPanState.zoomLevelX,
+                      _interactionState.zoomPanState.zoomLevelY,
+                    );
+                    _invokeViewportCallback();
+                  }
+
+                  // If selection changed, invoke callback
+                  if (_interactionState.selectedPoints != newState.selectedPoints) {
+                    final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
+                    config.onSelectionChanged?.call(selectedPointsList);
+                  }
+                });
+
+                print('✅ setState complete! Widget should rebuild now.');
+                return KeyEventResult.handled;
+              }
+
+              return KeyEventResult.ignored;
+            },
+            child: interactiveWidget,
+          );
+        }
+
+        // Wrap with Semantics for accessibility
+        interactiveWidget = Semantics(
+          label: 'Interactive chart',
+          hint: 'Use arrow keys to navigate data points, +/- to zoom',
+          enabled: true,
+          child: interactiveWidget,
+        );
+
+        return interactiveWidget;
+      },
     );
-
-    return interactiveWidget;
   }
 
   /// Converts a Map<String, dynamic> to a ChartDataPoint.
