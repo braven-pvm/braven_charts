@@ -1012,6 +1012,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Build the chart widget
     Widget chartWidget = RepaintBoundary(
+      key: ValueKey('chart_${_interactionState.zoomPanState.zoomLevelX}_${_interactionState.zoomPanState.zoomLevelY}_${_interactionState.zoomPanState.panOffset}'),
       child: CustomPaint(
         painter: _BravenChartPainter(
           chartType: widget.chartType,
@@ -2323,7 +2324,7 @@ class _BravenChartPainter extends CustomPainter {
     // Canvas clipping handles viewport culling automatically
     canvas.save();
     canvas.clipRect(chartRect);
-    
+
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       final markerPaint = Paint()
@@ -2335,7 +2336,7 @@ class _BravenChartPainter extends CustomPainter {
         canvas.drawCircle(offset, 4, markerPaint);
       }
     }
-    
+
     canvas.restore(); // Remove clipping
   }
 
@@ -2435,7 +2436,7 @@ class _BravenChartPainter extends CustomPainter {
         canvas.drawRect(rect, paint);
       }
     }
-    
+
     canvas.restore(); // Remove clipping
   }
 
@@ -2457,7 +2458,7 @@ class _BravenChartPainter extends CustomPainter {
         canvas.drawCircle(offset, 5, paint);
       }
     }
-    
+
     canvas.restore(); // Remove clipping
   }
 
