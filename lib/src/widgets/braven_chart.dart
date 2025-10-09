@@ -553,7 +553,7 @@ class BravenChart extends StatefulWidget {
 ///
 /// Manages lifecycle, controller subscriptions, stream subscriptions,
 /// and rendering logic.
-class _BravenChartState extends State<BravenChart> {
+class _BravenChartState extends State<BravenChart> with SingleTickerProviderStateMixin {
   // ==================== INTERNAL STATE ====================
 
   /// Subscription to the dataStream for real-time updates.
@@ -599,11 +599,38 @@ class _BravenChartState extends State<BravenChart> {
   /// Focus node for keyboard event handling.
   final FocusNode _focusNode = FocusNode();
 
+  /// Animation controller for smooth zoom transitions.
+  AnimationController? _zoomAnimationController;
+
+  /// Animation for zoom level X.
+  Animation<double>? _zoomAnimationX;
+
+  /// Animation for zoom level Y.
+  Animation<double>? _zoomAnimationY;
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize zoom animation controller (250ms for smooth transitions)
+    _zoomAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    )..addListener(() {
+        // Update zoom state during animation
+        if (_zoomAnimationX != null && _zoomAnimationY != null) {
+          setState(() {
+            final currentZoomState = _interactionState.zoomPanState;
+            final newZoomState = currentZoomState.copyWith(
+              zoomLevelX: _zoomAnimationX!.value,
+              zoomLevelY: _zoomAnimationY!.value,
+            );
+            _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+          });
+        }
+      });
 
     // Create internal controller if not provided
     if (widget.controller == null) {
@@ -746,6 +773,10 @@ class _BravenChartState extends State<BravenChart> {
     _throttleTimer?.cancel();
     _throttleTimer = null;
 
+    // Dispose zoom animation controller
+    _zoomAnimationController?.dispose();
+    _zoomAnimationController = null;
+
     // Unsubscribe from controller
     _getController()?.removeListener(_onControllerUpdate);
 
@@ -836,6 +867,60 @@ class _BravenChartState extends State<BravenChart> {
     // Rebuild widget when controller data changes
     setState(() {
       // Controller has updated its internal state
+    });
+  }
+
+  /// Animates zoom level changes for smooth transitions.
+  ///
+  /// Parameters:
+  /// - [newZoomX]: Target zoom level for X axis
+  /// - [newZoomY]: Target zoom level for Y axis
+  /// - [onComplete]: Optional callback when animation completes
+  void _animateZoom({
+    required double newZoomX,
+    required double newZoomY,
+    VoidCallback? onComplete,
+  }) {
+    if (_zoomAnimationController == null) {
+      // Fallback: instant zoom if no animation controller
+      setState(() {
+        final currentZoomState = _interactionState.zoomPanState;
+        final newZoomState = currentZoomState.copyWith(
+          zoomLevelX: newZoomX,
+          zoomLevelY: newZoomY,
+        );
+        _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+      });
+      onComplete?.call();
+      return;
+    }
+
+    // Get current zoom levels
+    final currentZoomState = _interactionState.zoomPanState;
+    final currentZoomX = currentZoomState.zoomLevelX;
+    final currentZoomY = currentZoomState.zoomLevelY;
+
+    // Create tween animations
+    _zoomAnimationX = Tween<double>(
+      begin: currentZoomX,
+      end: newZoomX,
+    ).animate(CurvedAnimation(
+      parent: _zoomAnimationController!,
+      curve: Curves.easeOut,
+    ));
+
+    _zoomAnimationY = Tween<double>(
+      begin: currentZoomY,
+      end: newZoomY,
+    ).animate(CurvedAnimation(
+      parent: _zoomAnimationController!,
+      curve: Curves.easeOut,
+    ));
+
+    // Reset and start animation
+    _zoomAnimationController!.reset();
+    _zoomAnimationController!.forward().then((_) {
+      onComplete?.call();
     });
   }
 
@@ -1332,48 +1417,44 @@ class _BravenChartState extends State<BravenChart> {
           final key = event.logicalKey;
           if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
             if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
-              // Zoom IN centered on data (no pan offset change)
-              print('🔍 KEYBOARD ZOOM IN centered on data');
+              // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
+              print('🔍 KEYBOARD ZOOM IN centered on data (ANIMATED)');
               final currentZoomState = _interactionState.zoomPanState;
               final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
               final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
-              setState(() {
-                final newZoomState = currentZoomState.copyWith(
-                  zoomLevelX: newZoomX,
-                  zoomLevelY: newZoomY,
-                  // NO pan offset change - keep it at current value
-                );
-                _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-              });
-
-              widget.interactionConfig!.onZoomChanged?.call(
-                _interactionState.zoomPanState.zoomLevelX,
-                _interactionState.zoomPanState.zoomLevelY,
+              _animateZoom(
+                newZoomX: newZoomX,
+                newZoomY: newZoomY,
+                onComplete: () {
+                  widget.interactionConfig!.onZoomChanged?.call(
+                    _interactionState.zoomPanState.zoomLevelX,
+                    _interactionState.zoomPanState.zoomLevelY,
+                  );
+                  _invokeViewportCallback();
+                },
               );
-              _invokeViewportCallback();
+
               return KeyEventResult.handled;
             } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
-              // Zoom OUT centered on data (no pan offset change)
-              print('🔍 KEYBOARD ZOOM OUT centered on data');
+              // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
+              print('🔍 KEYBOARD ZOOM OUT centered on data (ANIMATED)');
               final currentZoomState = _interactionState.zoomPanState;
               final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
               final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
-              setState(() {
-                final newZoomState = currentZoomState.copyWith(
-                  zoomLevelX: newZoomX,
-                  zoomLevelY: newZoomY,
-                  // NO pan offset change - keep it at current value
-                );
-                _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-              });
-
-              widget.interactionConfig!.onZoomChanged?.call(
-                _interactionState.zoomPanState.zoomLevelX,
-                _interactionState.zoomPanState.zoomLevelY,
+              _animateZoom(
+                newZoomX: newZoomX,
+                newZoomY: newZoomY,
+                onComplete: () {
+                  widget.interactionConfig!.onZoomChanged?.call(
+                    _interactionState.zoomPanState.zoomLevelX,
+                    _interactionState.zoomPanState.zoomLevelY,
+                  );
+                  _invokeViewportCallback();
+                },
               );
-              _invokeViewportCallback();
+
               return KeyEventResult.handled;
             }
           }
@@ -1539,7 +1620,7 @@ class _BravenChartState extends State<BravenChart> {
 
   /// Calculates data bounds for all series.
   ///
-  /// Same logic as _BravenChartPainter._computeDataBounds.
+  /// Same logic as _BravenChartPainter._calculateDataBounds - MUST include zoom/pan!
   _DataBounds _calculateDataBounds(List<ChartSeries> series) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
@@ -1561,15 +1642,53 @@ class _BravenChartState extends State<BravenChart> {
     if (minY == double.infinity) minY = 0;
     if (maxY == double.negativeInfinity) maxY = 1;
 
-    // Add 10% padding to bounds for better visualization
-    final xPadding = (maxX - minX) * 0.1;
-    final yPadding = (maxY - minY) * 0.1;
+    // CRITICAL: Store data range BEFORE padding for zoom center calculation
+    final dataMinX = minX;
+    final dataMaxX = maxX;
+    final dataMinY = minY;
+    final dataMaxY = maxY;
+
+    // Add padding to Y range (for visual spacing, but NOT for zoom center)
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
+
+    // Apply zoom/pan transformation if enabled
+    final zoomPanState = _interactionState.zoomPanState;
+    final zoomX = zoomPanState.zoomLevelX;
+    final zoomY = zoomPanState.zoomLevelY;
+    final panX = zoomPanState.panOffset.dx;
+    final panY = zoomPanState.panOffset.dy;
+
+    // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
+    if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
+      // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
+      final centerX = (dataMinX + dataMaxX) / 2;
+      final centerY = (dataMinY + dataMaxY) / 2;
+
+      // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
+      final dataRangeX = dataMaxX - dataMinX;
+      final dataRangeY = dataMaxY - dataMinY;
+      final rangeX = dataRangeX / zoomX;
+      final rangeY = dataRangeY / zoomY;
+
+      // CRITICAL FIX: Convert pan offset from pixel units to data units
+      final chartRect = _calculateChartRect(context.size!);
+      final panDataX = -panX * (dataRangeX / chartRect.width);
+      final panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
+
+      // Calculate visible bounds (zoom is applied to data range, pan in data units)
+      minX = centerX - rangeX / 2 + panDataX;
+      maxX = centerX + rangeX / 2 + panDataX;
+      minY = centerY - rangeY / 2 + panDataY;
+      maxY = centerY + rangeY / 2 + panDataY;
+    }
 
     return _DataBounds(
-      minX: minX - xPadding,
-      maxX: maxX + xPadding,
-      minY: minY - yPadding,
-      maxY: maxY + yPadding,
+      minX: minX,
+      maxX: maxX,
+      minY: minY,
+      maxY: maxY,
     );
   }
 
@@ -1895,33 +2014,36 @@ class _BravenChartPainter extends CustomPainter {
       final panX = zoomPanState!.panOffset.dx;
       final panY = zoomPanState!.panOffset.dy;
 
-      // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
-      // This ensures zoom centers on actual data, not the padded viewport
-      final centerX = (dataMinX + dataMaxX) / 2;
-      final centerY = (dataMinY + dataMaxY) / 2;
+      // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
+      if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
+        // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
+        // This ensures zoom centers on actual data, not the padded viewport
+        final centerX = (dataMinX + dataMaxX) / 2;
+        final centerY = (dataMinY + dataMaxY) / 2;
 
-      // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
-      // This ensures zoom is relative to actual data, keeping it centered and visible
-      final dataRangeX = dataMaxX - dataMinX;
-      final dataRangeY = dataMaxY - dataMinY;
-      final rangeX = dataRangeX / zoomX;
-      final rangeY = dataRangeY / zoomY;
+        // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
+        // This ensures zoom is relative to actual data, keeping it centered and visible
+        final dataRangeX = dataMaxX - dataMinX;
+        final dataRangeY = dataMaxY - dataMinY;
+        final rangeX = dataRangeX / zoomX;
+        final rangeY = dataRangeY / zoomY;
 
-      // CRITICAL FIX #4: Convert pan offset from pixel units to data units
-      // panOffset is in screen pixels, we need to convert to data coordinates
-      // Conversion: panData = panPixels * (dataRange / screenSize)
-      double panDataX = 0.0;
-      double panDataY = 0.0;
-      if (chartRect != null) {
-        panDataX = -panX * (dataRangeX / chartRect.width);
-        panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
+        // CRITICAL FIX #4: Convert pan offset from pixel units to data units
+        // panOffset is in screen pixels, we need to convert to data coordinates
+        // Conversion: panData = panPixels * (dataRange / screenSize)
+        double panDataX = 0.0;
+        double panDataY = 0.0;
+        if (chartRect != null) {
+          panDataX = -panX * (dataRangeX / chartRect.width);
+          panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
+        }
+
+        // Calculate visible bounds (zoom is applied to data range, pan in data units)
+        minX = centerX - rangeX / 2 + panDataX;
+        maxX = centerX + rangeX / 2 + panDataX;
+        minY = centerY - rangeY / 2 + panDataY;
+        maxY = centerY + rangeY / 2 + panDataY;
       }
-
-      // Calculate visible bounds (zoom is applied to data range, pan in data units)
-      minX = centerX - rangeX / 2 + panDataX;
-      maxX = centerX + rangeX / 2 + panDataX;
-      minY = centerY - rangeY / 2 + panDataY;
-      maxY = centerY + rangeY / 2 + panDataY;
     }
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
