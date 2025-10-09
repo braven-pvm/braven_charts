@@ -1144,7 +1144,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     dataBounds: () {
                       final allSeries = _getAllSeries();
                       if (allSeries.isEmpty) return null;
-                      return _calculateDataBounds(allSeries);
+                      return _calculateDataBounds(allSeries, chartRect: chartRect);
                     }(),
                     chartRect: chartRect,
                   ),
@@ -1761,7 +1761,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Calculates data bounds for all series.
   ///
   /// Same logic as _BravenChartPainter._calculateDataBounds - MUST include zoom/pan!
-  _DataBounds _calculateDataBounds(List<ChartSeries> series) {
+  _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect}) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
@@ -1813,9 +1813,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       final rangeY = dataRangeY / zoomY;
 
       // CRITICAL FIX: Convert pan offset from pixel units to data units
-      final chartRect = _calculateChartRect(context.size!);
-      final panDataX = -panX * (dataRangeX / chartRect.width);
-      final panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
+      // Use provided chartRect if available, otherwise calculate it (fallback for compatibility)
+      final rect = chartRect ?? _calculateChartRect(context.size!);
+      final panDataX = -panX * (dataRangeX / rect.width);
+      final panDataY = panY * (dataRangeY / rect.height); // Invert Y for screen coordinates
 
       // Calculate visible bounds (zoom is applied to data range, pan in data units)
       minX = centerX - rangeX / 2 + panDataX;
@@ -2208,19 +2209,19 @@ class _BravenChartPainter extends CustomPainter {
     if (yAxis.showGrid) {
       // Find the first grid line position (round down to nearest interval)
       final firstY = (bounds.minY / yInterval).floor() * yInterval;
-      
+
       // Draw horizontal grid lines at data value intervals
       var currentY = firstY;
       while (currentY <= bounds.maxY) {
         // Convert data value to pixel position
         final yPercent = (currentY - bounds.minY) / yRange;
         final y = chartRect.bottom - (yPercent * chartRect.height);
-        
+
         // Only draw if within chart bounds
         if (y >= chartRect.top && y <= chartRect.bottom) {
           canvas.drawLine(Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
         }
-        
+
         currentY += yInterval;
       }
     }
@@ -2228,40 +2229,40 @@ class _BravenChartPainter extends CustomPainter {
     if (xAxis.showGrid) {
       // Find the first grid line position (round down to nearest interval)
       final firstX = (bounds.minX / xInterval).floor() * xInterval;
-      
+
       // Draw vertical grid lines at data value intervals
       var currentX = firstX;
       while (currentX <= bounds.maxX) {
         // Convert data value to pixel position
         final xPercent = (currentX - bounds.minX) / xRange;
         final x = chartRect.left + (xPercent * chartRect.width);
-        
+
         // Only draw if within chart bounds
         if (x >= chartRect.left && x <= chartRect.right) {
           canvas.drawLine(Offset(x, chartRect.top), Offset(x, chartRect.bottom), gridPaint);
         }
-        
+
         currentX += xInterval;
       }
     }
   }
 
   /// Calculates a "nice" interval for grid lines based on the data range.
-  /// 
+  ///
   /// This uses a simple algorithm to find intervals like 1, 2, 5, 10, 20, 50, 100, etc.
   /// that result in approximately 5-10 grid lines.
   double _calculateNiceInterval(double range) {
     if (range == 0) return 1.0;
-    
+
     // Target approximately 5-10 grid lines
     final roughInterval = range / 7;
-    
+
     // Find the magnitude (power of 10)
     final magnitude = pow(10, (log(roughInterval) / ln10).floor()).toDouble();
-    
+
     // Normalize to range [1, 10)
     final normalized = roughInterval / magnitude;
-    
+
     // Round to nice numbers: 1, 2, 5, or 10
     double niceNormalized;
     if (normalized < 1.5) {
@@ -2273,7 +2274,7 @@ class _BravenChartPainter extends CustomPainter {
     } else {
       niceNormalized = 10.0;
     }
-    
+
     return niceNormalized * magnitude;
   }
 
@@ -2472,37 +2473,37 @@ class _BravenChartPainter extends CustomPainter {
     if (xAxis.showAxis) {
       // Draw X-axis line
       canvas.drawLine(Offset(chartRect.left, chartRect.bottom), Offset(chartRect.right, chartRect.bottom), axisPaint);
-      
+
       // Draw X-axis labels at grid intervals
       if (xAxis.showLabels) {
         final firstX = (bounds.minX / xInterval).floor() * xInterval;
         var currentX = firstX;
-        
+
         while (currentX <= bounds.maxX) {
           final xPercent = (currentX - bounds.minX) / xRange;
           final x = chartRect.left + (xPercent * chartRect.width);
-          
+
           if (x >= chartRect.left && x <= chartRect.right) {
             // Format label (remove unnecessary decimals)
             final label = _formatAxisLabel(currentX);
-            
+
             final textSpan = TextSpan(
               text: label,
               style: theme.axisStyle.labelStyle,
             );
-            
+
             final textPainter = TextPainter(
               text: textSpan,
               textDirection: TextDirection.ltr,
             );
-            
+
             textPainter.layout();
             textPainter.paint(
               canvas,
               Offset(x - textPainter.width / 2, chartRect.bottom + 5),
             );
           }
-          
+
           currentX += xInterval;
         }
       }
@@ -2511,37 +2512,37 @@ class _BravenChartPainter extends CustomPainter {
     if (yAxis.showAxis) {
       // Draw Y-axis line
       canvas.drawLine(Offset(chartRect.left, chartRect.top), Offset(chartRect.left, chartRect.bottom), axisPaint);
-      
+
       // Draw Y-axis labels at grid intervals
       if (yAxis.showLabels) {
         final firstY = (bounds.minY / yInterval).floor() * yInterval;
         var currentY = firstY;
-        
+
         while (currentY <= bounds.maxY) {
           final yPercent = (currentY - bounds.minY) / yRange;
           final y = chartRect.bottom - (yPercent * chartRect.height);
-          
+
           if (y >= chartRect.top && y <= chartRect.bottom) {
             // Format label (remove unnecessary decimals)
             final label = _formatAxisLabel(currentY);
-            
+
             final textSpan = TextSpan(
               text: label,
               style: theme.axisStyle.labelStyle,
             );
-            
+
             final textPainter = TextPainter(
               text: textSpan,
               textDirection: TextDirection.ltr,
             );
-            
+
             textPainter.layout();
             textPainter.paint(
               canvas,
               Offset(chartRect.left - textPainter.width - 5, y - textPainter.height / 2),
             );
           }
-          
+
           currentY += yInterval;
         }
       }
@@ -2554,7 +2555,7 @@ class _BravenChartPainter extends CustomPainter {
     if ((value - value.round()).abs() < 0.0001) {
       return value.round().toString();
     }
-    
+
     // Otherwise, show with appropriate decimal places
     if (value.abs() < 0.01) {
       return value.toStringAsExponential(1);
@@ -2606,17 +2607,13 @@ class _DataBounds {
   final double maxX;
   final double minY;
   final double maxY;
-  
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is _DataBounds &&
-        other.minX == minX &&
-        other.maxX == maxX &&
-        other.minY == minY &&
-        other.maxY == maxY;
+    return other is _DataBounds && other.minX == minX && other.maxX == maxX && other.minY == minY && other.maxY == maxY;
   }
-  
+
   @override
   int get hashCode => Object.hash(minX, maxX, minY, maxY);
 }
@@ -3085,16 +3082,16 @@ class _CrosshairPainter extends CustomPainter {
       // Convert screen coordinates to data coordinates
       double? dataX;
       double? dataY;
-      
+
       if (dataBounds != null && chartRect != null) {
         // Screen to data transformation (inverse of _dataToPixel)
         final xRange = dataBounds!.maxX - dataBounds!.minX;
         final yRange = dataBounds!.maxY - dataBounds!.minY;
-        
+
         // Calculate percentage from screen position
         final xPercent = (position.dx - chartRect!.left) / chartRect!.width;
         final yPercent = 1.0 - ((position.dy - chartRect!.top) / chartRect!.height);
-        
+
         // Convert to data coordinates
         dataX = dataBounds!.minX + (xPercent * xRange);
         dataY = dataBounds!.minY + (yPercent * yRange);
@@ -3111,7 +3108,7 @@ class _CrosshairPainter extends CustomPainter {
       if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
         // Use data X value if available, otherwise fall back to screen position
         final displayValue = dataX != null ? _formatDataValue(dataX) : position.dx.toStringAsFixed(0);
-        
+
         final xTextPainter = TextPainter(
           text: TextSpan(
             text: 'X: $displayValue',
@@ -3150,7 +3147,7 @@ class _CrosshairPainter extends CustomPainter {
       if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
         // Use data Y value if available, otherwise fall back to screen position
         final displayValue = dataY != null ? _formatDataValue(dataY) : position.dy.toStringAsFixed(0);
-        
+
         final yTextPainter = TextPainter(
           text: TextSpan(
             text: 'Y: $displayValue',
@@ -3197,7 +3194,7 @@ class _CrosshairPainter extends CustomPainter {
     if ((value - value.round()).abs() < 0.0001) {
       return value.round().toString();
     }
-    
+
     // Otherwise, show with appropriate decimal places
     if (value.abs() < 0.01) {
       return value.toStringAsExponential(1);
@@ -3212,10 +3209,10 @@ class _CrosshairPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CrosshairPainter oldDelegate) {
-    return position != oldDelegate.position || 
-           config != oldDelegate.config || 
-           nearestPoint != oldDelegate.nearestPoint ||
-           dataBounds != oldDelegate.dataBounds ||
-           chartRect != oldDelegate.chartRect;
+    return position != oldDelegate.position ||
+        config != oldDelegate.config ||
+        nearestPoint != oldDelegate.nearestPoint ||
+        dataBounds != oldDelegate.dataBounds ||
+        chartRect != oldDelegate.chartRect;
   }
 }
