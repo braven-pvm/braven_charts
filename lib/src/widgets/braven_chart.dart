@@ -1012,7 +1012,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Build the chart widget
     Widget chartWidget = RepaintBoundary(
-      key: ValueKey('chart_${_interactionState.zoomPanState.zoomLevelX}_${_interactionState.zoomPanState.zoomLevelY}_${_interactionState.zoomPanState.panOffset}'),
+      key: ValueKey(
+          'chart_${_interactionState.zoomPanState.zoomLevelX}_${_interactionState.zoomPanState.zoomLevelY}_${_interactionState.zoomPanState.panOffset}'),
       child: CustomPaint(
         painter: _BravenChartPainter(
           chartType: widget.chartType,
@@ -1023,7 +1024,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           annotations: [], // Chart painter doesn't render annotations
           zoomPanState: _interactionState.zoomPanState,
         ),
-        size: Size(widget.width ?? double.infinity, widget.height ?? double.infinity),
+        child: Container(), // Force size from parent instead of using size parameter
       ),
     );
 
