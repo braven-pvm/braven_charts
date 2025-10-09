@@ -2070,8 +2070,6 @@ class _BravenChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (series.isEmpty) return;
 
-    print('🎨 PAINT CALLED: size=$size, zoomX=${zoomPanState?.zoomLevelX ?? 1.0}, zoomY=${zoomPanState?.zoomLevelY ?? 1.0}, pan=${zoomPanState?.panOffset ?? Offset.zero}');
-
     // Draw background
     final backgroundPaint = Paint()
       ..color = theme.backgroundColor
@@ -2097,7 +2095,6 @@ class _BravenChartPainter extends CustomPainter {
     // Calculate data bounds
     final bounds = _calculateDataBounds(chartRect: chartRect);
     if (bounds == null) return;
-    print('📊 BOUNDS: minX=${bounds.minX}, maxX=${bounds.maxX}, minY=${bounds.minY}, maxY=${bounds.maxY}');
 
     // Draw grid
     _drawGrid(canvas, chartRect, bounds);
@@ -2326,23 +2323,15 @@ class _BravenChartPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(chartRect);
 
-    print('🔵 DRAWING MARKERS: series.length=${series.length}');
-
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       final markerPaint = Paint()
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.fill;
 
-      print('  Series $i: ${s.points.length} points');
-      int pointCount = 0;
       for (final point in s.points) {
         final offset = _dataToPixel(point, chartRect, bounds);
-        if (pointCount < 3) { // Only log first 3 points to avoid spam
-          print('    Point $pointCount: data=(${point.x}, ${point.y}) -> pixel=$offset');
-        }
         canvas.drawCircle(offset, 4, markerPaint);
-        pointCount++;
       }
     }
 
