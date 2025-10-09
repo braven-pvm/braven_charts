@@ -34,7 +34,7 @@ import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
 import 'package:flutter/gestures.dart' show PointerScrollEvent, kMiddleMouseButton;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HardwareKeyboard;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyDownEvent, KeyRepeatEvent;
 
 /// Primary user-facing widget for rendering interactive charts.
 ///
@@ -589,6 +589,16 @@ class _BravenChartState extends State<BravenChart> {
   /// Start position for middle-mouse pan drag.
   Offset? _panStartPosition;
 
+  /// Manual SHIFT key state tracking for web compatibility.
+  /// HardwareKeyboard.instance doesn't work reliably in Flutter Web.
+  bool _isShiftPressed = false;
+
+  /// Manual ALT key state tracking for web compatibility.
+  bool _isAltPressed = false;
+
+  /// Focus node for keyboard event handling.
+  final FocusNode _focusNode = FocusNode();
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
@@ -746,6 +756,9 @@ class _BravenChartState extends State<BravenChart> {
     // Dispose interaction system
     _eventHandler?.dispose();
     _eventHandler = null;
+
+    // Dispose focus node
+    _focusNode.dispose();
 
     super.dispose();
   }
@@ -944,17 +957,28 @@ class _BravenChartState extends State<BravenChart> {
         child,
 
         // Crosshair overlay (if enabled and visible)
-        if (config.crosshair.enabled && _interactionState.isCrosshairVisible)
+        if (config.crosshair.enabled &&
+            _interactionState.isCrosshairVisible &&
+            _interactionState.crosshairPosition != null &&
+            _interactionState.crosshairPosition!.dx.isFinite &&
+            _interactionState.crosshairPosition!.dy.isFinite)
           Positioned.fill(
             child: CustomPaint(
               painter: _CrosshairPainter(
                 position: _interactionState.crosshairPosition!,
                 config: config.crosshair,
-                nearestPoint: _interactionState.hoveredPoint != null
-                    ? Offset(
-                        (_interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0,
-                        (_interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0,
-                      )
+                nearestPoint: _interactionState.hoveredPoint != null &&
+                        _interactionState.hoveredPoint!.containsKey('screenX') &&
+                        _interactionState.hoveredPoint!.containsKey('screenY')
+                    ? () {
+                        final screenX = (_interactionState.hoveredPoint!['screenX'] as num?)?.toDouble() ?? 0;
+                        final screenY = (_interactionState.hoveredPoint!['screenY'] as num?)?.toDouble() ?? 0;
+                        // Validate coordinates are finite and within reasonable bounds
+                        if (screenX.isFinite && screenY.isFinite) {
+                          return Offset(screenX, screenY);
+                        }
+                        return null;
+                      }()
                     : null,
                 chartSize: Size.infinite,
               ),
@@ -988,6 +1012,8 @@ class _BravenChartState extends State<BravenChart> {
         config.onDataPointHover?.call(null, exitPosition);
       },
       onHover: (event) {
+        List<Map<String, dynamic>> snapPointsData = const [];
+
         setState(() {
           // Update crosshair position
           _interactionState = _interactionState.copyWith(
@@ -998,12 +1024,14 @@ class _BravenChartState extends State<BravenChart> {
           // Find nearest data point for snap and tooltip
           final nearestPointData = _findNearestDataPoint(event.localPosition);
           if (nearestPointData != null) {
+            snapPointsData = [nearestPointData]; // Capture for callback
             _interactionState = _interactionState.copyWith(
               hoveredPoint: nearestPointData,
               hoveredSeriesId: nearestPointData['seriesId'] as String?,
               tooltipPosition: event.localPosition,
               tooltipDataPoint: nearestPointData,
               isTooltipVisible: config.tooltip.enabled,
+              snapPoints: snapPointsData, // Populate snapPoints with the nearest point
             );
 
             // Convert Map to ChartDataPoint for callback
@@ -1011,17 +1039,19 @@ class _BravenChartState extends State<BravenChart> {
             config.onDataPointHover?.call(point, event.localPosition);
           } else {
             // No point nearby, clear tooltip
+            snapPointsData = const [];
             _interactionState = _interactionState.copyWith(
               isTooltipVisible: false,
               hoveredPoint: null,
               hoveredSeriesId: null,
               tooltipDataPoint: null,
+              snapPoints: snapPointsData, // Clear snapPoints when no point is nearby
             );
           }
         });
 
-        // Invoke crosshair changed callback
-        final snapPointsList = _interactionState.snapPoints.map((data) => _mapToDataPoint(data)).toList();
+        // Invoke crosshair changed callback with the updated snap points
+        final snapPointsList = snapPointsData.map((data) => _mapToDataPoint(data)).toList();
         config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
       },
       child: interactiveWidget,
@@ -1031,17 +1061,23 @@ class _BravenChartState extends State<BravenChart> {
     interactiveWidget = Listener(
       // Handle scroll events with modifier keys
       onPointerSignal: (signal) {
-        if (signal is PointerScrollEvent && config.enableZoom && _zoomPanController != null) {
-          // Platform-aware modifier key detection
-          // Windows/Linux: CTRL, macOS: CMD (Meta)
-          final isCtrlPressed = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
-          final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+        print('🎯🎯🎯 CHART LISTENER RECEIVED SIGNAL! 🎯🎯🎯');
+        if (signal is PointerScrollEvent) {
+          print('🎯🎯🎯 IT IS A SCROLL EVENT! 🎯🎯🎯');
+          // Use manual state tracking for modifiers (web-compatible)
+          // HardwareKeyboard.instance doesn't work reliably in Flutter Web
+          final isShiftPressed = _isShiftPressed;
 
-          if (isCtrlPressed) {
-            // CTRL/CMD + Scroll → Zoom at cursor position
+          // Debug: Print state
+          print('📊 SCROLL EVENT: enableZoom=${config.enableZoom}, hasController=${_zoomPanController != null}, SHIFT=$isShiftPressed');
+
+          if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
+            // SHIFT + Scroll → Zoom at cursor position
             final scrollDelta = signal.scrollDelta.dy;
             // Zoom in when scrolling up (negative delta), zoom out when scrolling down
             final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
+
+            print('🔍 ZOOMING: delta=$scrollDelta, factor=$zoomFactor');
 
             setState(() {
               final newZoomPanState = _zoomPanController!.zoom(
@@ -1063,31 +1099,9 @@ class _BravenChartState extends State<BravenChart> {
 
             // Invoke viewport callback (visible bounds changed due to zoom)
             _invokeViewportCallback();
-          } else if (isShiftPressed && config.enablePan) {
-            // SHIFT + Scroll → Pan horizontally
-            final scrollDelta = signal.scrollDelta.dy;
-            // Pan amount proportional to scroll
-            final panDelta = Offset(scrollDelta, 0);
-
-            setState(() {
-              final newZoomPanState = _zoomPanController!.pan(
-                _interactionState.zoomPanState,
-                panDelta,
-              );
-
-              _interactionState = _interactionState.copyWith(
-                zoomPanState: newZoomPanState,
-              );
-            });
-
-            // Invoke pan callback
-            config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-
-            // Invoke viewport callback
-            _invokeViewportCallback();
           }
-          // If no modifier, don't handle - allows default page scroll
-          // This is CRITICAL for web UX - page must scroll normally
+          // If no SHIFT modifier, don't handle - allows default page scroll
+          // This is CRITICAL for web UX - page must scroll normally without modifier
         }
       },
 
@@ -1140,35 +1154,42 @@ class _BravenChartState extends State<BravenChart> {
 
     // Wrap with GestureDetector for tap/long-press/pan/pinch
     interactiveWidget = GestureDetector(
-      // Tap handling
-      onTapDown: config.enableSelection
-          ? (details) {
-              final nearestPointData = _findNearestDataPoint(details.localPosition);
-              if (nearestPointData != null) {
-                final point = _mapToDataPoint(nearestPointData);
+      // Always handle tap down to request focus for keyboard events
+      onTapDown: (details) {
+        // Request focus for keyboard events
+        if (config.keyboard.enabled && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+          print('🎯🎯🎯 CHART FOCUS REQUESTED ON TAP! 🎯🎯🎯');
+        }
 
-                setState(() {
-                  // Add to selected points
-                  final updatedSelection = List<Map<String, dynamic>>.from(
-                    _interactionState.selectedPoints,
-                  );
-                  updatedSelection.add(nearestPointData);
+        // Handle selection if enabled
+        if (config.enableSelection) {
+          final nearestPointData = _findNearestDataPoint(details.localPosition);
+          if (nearestPointData != null) {
+            final point = _mapToDataPoint(nearestPointData);
 
-                  _interactionState = _interactionState.copyWith(
-                    selectedPoints: updatedSelection,
-                    focusedPoint: nearestPointData,
-                  );
-                });
+            setState(() {
+              // Add to selected points
+              final updatedSelection = List<Map<String, dynamic>>.from(
+                _interactionState.selectedPoints,
+              );
+              updatedSelection.add(nearestPointData);
 
-                // Invoke tap callback
-                config.onDataPointTap?.call(point, details.localPosition);
+              _interactionState = _interactionState.copyWith(
+                selectedPoints: updatedSelection,
+                focusedPoint: nearestPointData,
+              );
+            });
 
-                // Invoke selection callback
-                final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
-                config.onSelectionChanged?.call(selectedPointsList);
-              }
-            }
-          : null,
+            // Invoke tap callback
+            config.onDataPointTap?.call(point, details.localPosition);
+
+            // Invoke selection callback
+            final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
+            config.onSelectionChanged?.call(selectedPointsList);
+          }
+        }
+      },
 
       // Long press handling
       onLongPressStart: (details) {
@@ -1263,11 +1284,34 @@ class _BravenChartState extends State<BravenChart> {
 
     // Wrap with Focus for keyboard navigation
     if (config.keyboard.enabled) {
+      print('🎯🎯🎯 CHART FOCUS WIDGET CREATED - keyboard enabled! 🎯🎯🎯');
       interactiveWidget = Focus(
+        focusNode: _focusNode,
         autofocus: false,
         canRequestFocus: true,
         onKeyEvent: (node, event) {
+          print('🎯🎯🎯 CHART RECEIVED KEY EVENT: ${event.logicalKey.keyLabel} 🎯🎯🎯');
           if (_keyboardHandler == null) return KeyEventResult.ignored;
+
+          // Manual modifier key state tracking for web compatibility
+          // HardwareKeyboard.instance doesn't work reliably in Flutter Web
+          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+            setState(() {
+              _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
+            });
+            // Return ignored to allow scroll events to propagate
+            return KeyEventResult.ignored;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
+            setState(() {
+              _isAltPressed = event is KeyDownEvent || event is KeyRepeatEvent;
+            });
+            // Return ignored to allow events to propagate
+            return KeyEventResult.ignored;
+          }
+
+          // Debug: Print key event
+          print('⌨️  KEY EVENT: ${event.logicalKey.keyLabel}, hasHandler=${_keyboardHandler != null}');
 
           // Get all data points from series
           final allDataPoints = <Map<String, dynamic>>[];
@@ -1283,6 +1327,57 @@ class _BravenChartState extends State<BravenChart> {
             }
           }
 
+          // CRITICAL FIX #5: INTERCEPT ZOOM KEYS - Zoom without pan offset (centered on data)
+          // Keyboard zoom should zoom centered on the data center, NOT create pan offset like mouse zoom
+          final key = event.logicalKey;
+          if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
+            if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
+              // Zoom IN centered on data (no pan offset change)
+              print('🔍 KEYBOARD ZOOM IN centered on data');
+              final currentZoomState = _interactionState.zoomPanState;
+              final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+              final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+              setState(() {
+                final newZoomState = currentZoomState.copyWith(
+                  zoomLevelX: newZoomX,
+                  zoomLevelY: newZoomY,
+                  // NO pan offset change - keep it at current value
+                );
+                _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+              });
+
+              widget.interactionConfig!.onZoomChanged?.call(
+                _interactionState.zoomPanState.zoomLevelX,
+                _interactionState.zoomPanState.zoomLevelY,
+              );
+              _invokeViewportCallback();
+              return KeyEventResult.handled;
+            } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+              // Zoom OUT centered on data (no pan offset change)
+              print('🔍 KEYBOARD ZOOM OUT centered on data');
+              final currentZoomState = _interactionState.zoomPanState;
+              final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+              final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+              setState(() {
+                final newZoomState = currentZoomState.copyWith(
+                  zoomLevelX: newZoomX,
+                  zoomLevelY: newZoomY,
+                  // NO pan offset change - keep it at current value
+                );
+                _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+              });
+
+              widget.interactionConfig!.onZoomChanged?.call(
+                _interactionState.zoomPanState.zoomLevelX,
+                _interactionState.zoomPanState.zoomLevelY,
+              );
+              _invokeViewportCallback();
+              return KeyEventResult.handled;
+            }
+          }
+
           // Process key event through keyboard handler
           final newState = _keyboardHandler!.handleKeyEvent(
             event,
@@ -1291,6 +1386,10 @@ class _BravenChartState extends State<BravenChart> {
           );
 
           if (newState != null && newState != _interactionState) {
+            print('🔄 STATE CHANGED! Updating InteractionState via setState...');
+            print('   Old zoom: X=${_interactionState.zoomPanState.zoomLevelX}, Y=${_interactionState.zoomPanState.zoomLevelY}');
+            print('   New zoom: X=${newState.zoomPanState.zoomLevelX}, Y=${newState.zoomPanState.zoomLevelY}');
+
             setState(() {
               _interactionState = newState;
 
@@ -1302,6 +1401,7 @@ class _BravenChartState extends State<BravenChart> {
 
               // If zoom/pan state changed, invoke callbacks
               if (_interactionState.zoomPanState != newState.zoomPanState) {
+                print('✅ Zoom/Pan state changed! Calling callbacks...');
                 config.onZoomChanged?.call(
                   _interactionState.zoomPanState.zoomLevelX,
                   _interactionState.zoomPanState.zoomLevelY,
@@ -1316,6 +1416,7 @@ class _BravenChartState extends State<BravenChart> {
               }
             });
 
+            print('✅ setState complete! Widget should rebuild now.');
             return KeyEventResult.handled;
           }
 
@@ -1379,6 +1480,11 @@ class _BravenChartState extends State<BravenChart> {
         // Transform data coordinates to screen coordinates
         final screenPoint = _dataToScreenPoint(point, chartRect, bounds);
 
+        // Skip points with invalid screen coordinates
+        if (!screenPoint.dx.isFinite || !screenPoint.dy.isFinite) {
+          continue;
+        }
+
         // Calculate Euclidean distance
         final dx = screenPosition.dx - screenPoint.dx;
         final dy = screenPosition.dy - screenPoint.dy;
@@ -1390,6 +1496,8 @@ class _BravenChartState extends State<BravenChart> {
             'seriesId': series.id,
             'x': point.x,
             'y': point.y,
+            'screenX': screenPoint.dx, // Store screen coordinates for crosshair rendering
+            'screenY': screenPoint.dy,
             if (point.metadata != null) ...point.metadata!,
           };
         }
@@ -1721,13 +1829,13 @@ class _BravenChartPainter extends CustomPainter {
       );
     }
 
-    // Calculate data bounds
-    final bounds = _calculateDataBounds();
-    if (bounds == null) return;
-
     // Calculate chart area (leave room for axes)
     const padding = 40.0;
     final chartRect = Rect.fromLTWH(padding, padding, size.width - padding * 2, size.height - padding * 2);
+
+    // Calculate data bounds
+    final bounds = _calculateDataBounds(chartRect: chartRect);
+    if (bounds == null) return;
 
     // Draw grid
     _drawGrid(canvas, chartRect);
@@ -1752,7 +1860,7 @@ class _BravenChartPainter extends CustomPainter {
     _drawAxes(canvas, size, chartRect, bounds);
   }
 
-  _DataBounds? _calculateDataBounds() {
+  _DataBounds? _calculateDataBounds({Rect? chartRect}) {
     if (series.isEmpty) return null;
 
     double minX = double.infinity;
@@ -1769,7 +1877,13 @@ class _BravenChartPainter extends CustomPainter {
       }
     }
 
-    // Add padding to Y range
+    // CRITICAL: Store data range BEFORE padding for zoom center calculation
+    final dataMinX = minX;
+    final dataMaxX = maxX;
+    final dataMinY = minY;
+    final dataMaxY = maxY;
+
+    // Add padding to Y range (for visual spacing, but NOT for zoom center)
     final yRange = maxY - minY;
     minY -= yRange * 0.1;
     maxY += yRange * 0.1;
@@ -1781,23 +1895,33 @@ class _BravenChartPainter extends CustomPainter {
       final panX = zoomPanState!.panOffset.dx;
       final panY = zoomPanState!.panOffset.dy;
 
-      // Calculate the center of the data range
-      final centerX = (minX + maxX) / 2;
-      final centerY = (minY + maxY) / 2;
+      // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
+      // This ensures zoom centers on actual data, not the padded viewport
+      final centerX = (dataMinX + dataMaxX) / 2;
+      final centerY = (dataMinY + dataMaxY) / 2;
 
-      // Calculate the new range based on zoom
-      final rangeX = (maxX - minX) / zoomX;
-      final rangeY = (maxY - minY) / zoomY;
+      // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
+      // This ensures zoom is relative to actual data, keeping it centered and visible
+      final dataRangeX = dataMaxX - dataMinX;
+      final dataRangeY = dataMaxY - dataMinY;
+      final rangeX = dataRangeX / zoomX;
+      final rangeY = dataRangeY / zoomY;
 
-      // Apply pan offset (normalized to data range)
-      final dataRangeX = maxX - minX;
-      final dataRangeY = maxY - minY;
+      // CRITICAL FIX #4: Convert pan offset from pixel units to data units
+      // panOffset is in screen pixels, we need to convert to data coordinates
+      // Conversion: panData = panPixels * (dataRange / screenSize)
+      double panDataX = 0.0;
+      double panDataY = 0.0;
+      if (chartRect != null) {
+        panDataX = -panX * (dataRangeX / chartRect.width);
+        panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
+      }
 
-      // Calculate visible bounds
-      minX = centerX - rangeX / 2 - panX * dataRangeX;
-      maxX = centerX + rangeX / 2 - panX * dataRangeX;
-      minY = centerY - rangeY / 2 + panY * dataRangeY; // Invert Y for screen coordinates
-      maxY = centerY + rangeY / 2 + panY * dataRangeY;
+      // Calculate visible bounds (zoom is applied to data range, pan in data units)
+      minX = centerX - rangeX / 2 + panDataX;
+      maxX = centerX + rangeX / 2 + panDataX;
+      minY = centerY - rangeY / 2 + panDataY;
+      maxY = centerY + rangeY / 2 + panDataY;
     }
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
@@ -1829,6 +1953,12 @@ class _BravenChartPainter extends CustomPainter {
   void _drawLineSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
     final colors = theme.seriesTheme.colors;
 
+    // CRITICAL FIX: Use Canvas clipping instead of point culling to maintain line continuity
+    // Clipping preserves the line shape by rendering ALL segments, but only displaying
+    // what's inside the viewport. Point culling would skip segments, distorting the curve.
+    canvas.save();
+    canvas.clipRect(chartRect);
+
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       if (s.points.isEmpty) continue;
@@ -1843,12 +1973,10 @@ class _BravenChartPainter extends CustomPainter {
       final path = Path();
       bool first = true;
 
+      // CRITICAL FIX: Render ALL points to maintain line continuity
+      // Canvas clipping will automatically crop the visible region
+      // This ensures line segments entering/exiting the viewport are drawn correctly
       for (final point in s.points) {
-        // Viewport culling: only render points within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
-          continue;
-        }
-
         final offset = _dataToPixel(point, chartRect, bounds);
         if (first) {
           path.moveTo(offset.dx, offset.dy);
@@ -1859,8 +1987,13 @@ class _BravenChartPainter extends CustomPainter {
       }
 
       canvas.drawPath(path, paint);
+    }
 
-      // Draw markers
+    canvas.restore(); // Remove clipping
+
+    // Draw markers (culling is OK for discrete markers - they don't have continuity issues)
+    for (var i = 0; i < series.length; i++) {
+      final s = series[i];
       final markerPaint = Paint()
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.fill;
@@ -1880,15 +2013,13 @@ class _BravenChartPainter extends CustomPainter {
   void _drawAreaSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
     final colors = theme.seriesTheme.colors;
 
+    // CRITICAL FIX: Use Canvas clipping instead of point filtering to maintain area continuity
+    canvas.save();
+    canvas.clipRect(chartRect);
+
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       if (s.points.isEmpty) continue;
-
-      // Filter points within visible bounds for area fill
-      final visiblePoints =
-          s.points.where((point) => point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY).toList();
-
-      if (visiblePoints.isEmpty) continue;
 
       final color = colors[i % colors.length];
       final fillPaint = Paint()
@@ -1896,16 +2027,19 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       final path = Path();
-      final firstPoint = _dataToPixel(visiblePoints.first, chartRect, bounds);
+
+      // CRITICAL FIX: Process ALL points to maintain area shape
+      // Canvas clipping will automatically crop the visible region
+      final firstPoint = _dataToPixel(s.points.first, chartRect, bounds);
       path.moveTo(firstPoint.dx, chartRect.bottom);
       path.lineTo(firstPoint.dx, firstPoint.dy);
 
-      for (final point in visiblePoints) {
+      for (final point in s.points) {
         final offset = _dataToPixel(point, chartRect, bounds);
         path.lineTo(offset.dx, offset.dy);
       }
 
-      final lastPoint = _dataToPixel(visiblePoints.last, chartRect, bounds);
+      final lastPoint = _dataToPixel(s.points.last, chartRect, bounds);
       path.lineTo(lastPoint.dx, chartRect.bottom);
       path.close();
 
@@ -1920,7 +2054,8 @@ class _BravenChartPainter extends CustomPainter {
       final linePath = Path();
       bool first = true;
 
-      for (final point in visiblePoints) {
+      // CRITICAL FIX: Process ALL points for the outline too
+      for (final point in s.points) {
         final offset = _dataToPixel(point, chartRect, bounds);
         if (first) {
           linePath.moveTo(offset.dx, offset.dy);
@@ -1932,6 +2067,8 @@ class _BravenChartPainter extends CustomPainter {
 
       canvas.drawPath(linePath, linePaint);
     }
+
+    canvas.restore(); // Remove clipping
   }
 
   void _drawBarSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
@@ -2028,7 +2165,8 @@ class _BravenChartPainter extends CustomPainter {
         theme != oldDelegate.theme ||
         xAxis != oldDelegate.xAxis ||
         yAxis != oldDelegate.yAxis ||
-        annotations != oldDelegate.annotations;
+        annotations != oldDelegate.annotations ||
+        zoomPanState != oldDelegate.zoomPanState; // CRITICAL: Repaint on zoom/pan changes
   }
 }
 
@@ -2439,18 +2577,21 @@ class _CrosshairPainter extends CustomPainter {
 
     // Draw snap point highlight if snap is enabled and near a point
     if (config.snapToDataPoint && nearestPoint != null) {
-      final highlightPaint = Paint()
-        ..color = config.style.lineColor.withOpacity(0.3)
-        ..style = PaintingStyle.fill;
+      // Validate nearestPoint coordinates are finite (not NaN or infinity)
+      if (nearestPoint!.dx.isFinite && nearestPoint!.dy.isFinite) {
+        final highlightPaint = Paint()
+          ..color = config.style.lineColor.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
 
-      canvas.drawCircle(nearestPoint!, 6.0, highlightPaint);
+        canvas.drawCircle(nearestPoint!, 6.0, highlightPaint);
 
-      final borderPaint = Paint()
-        ..color = config.style.lineColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
+        final borderPaint = Paint()
+          ..color = config.style.lineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
 
-      canvas.drawCircle(nearestPoint!, 6.0, borderPaint);
+        canvas.drawCircle(nearestPoint!, 6.0, borderPaint);
+      }
     }
 
     // Draw coordinate labels if enabled
@@ -2495,65 +2636,95 @@ class _CrosshairPainter extends CustomPainter {
   }
 
   void _drawCoordinateLabels(Canvas canvas, Size size) {
-    final textStyle = config.coordinateLabelStyle ??
-        TextStyle(
-          color: config.style.labelTextColor,
-          fontSize: 10,
-          backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
-        );
+    // Wrap in try-catch to prevent ANY label rendering issues from breaking the entire crosshair
+    try {
+      // Validate that position coordinates are finite
+      if (!position.dx.isFinite || !position.dy.isFinite) {
+        return; // Skip label rendering if position is invalid
+      }
 
-    // X coordinate label (bottom of vertical line)
-    if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
-      final xTextPainter = TextPainter(
-        text: TextSpan(
-          text: 'X: ${position.dx.toStringAsFixed(0)}',
-          style: textStyle,
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final textStyle = config.coordinateLabelStyle ??
+          TextStyle(
+            color: config.style.labelTextColor,
+            fontSize: 10,
+            backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
+          );
 
-      final xLabelOffset = Offset(
-        position.dx - xTextPainter.width / 2,
-        size.height - xTextPainter.height - 4,
-      );
+      // X coordinate label (bottom of vertical line)
+      if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+        final xTextPainter = TextPainter(
+          text: TextSpan(
+            text: 'X: ${position.dx.toStringAsFixed(0)}',
+            style: textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
 
-      // Draw background
-      final xBgRect = Rect.fromLTWH(
-        xLabelOffset.dx - config.style.labelPadding,
-        xLabelOffset.dy - config.style.labelPadding,
-        xTextPainter.width + config.style.labelPadding * 2,
-        xTextPainter.height + config.style.labelPadding * 2,
-      );
-      canvas.drawRect(xBgRect, Paint()..color = config.style.labelBackgroundColor);
+        // Calculate label position with bounds checking
+        var xLabelX = position.dx - xTextPainter.width / 2;
+        final xLabelY = size.height - xTextPainter.height - 4;
 
-      xTextPainter.paint(canvas, xLabelOffset);
-    }
+        // Clamp X position to keep label within canvas bounds
+        xLabelX = xLabelX.clamp(config.style.labelPadding, size.width - xTextPainter.width - config.style.labelPadding);
 
-    // Y coordinate label (left of horizontal line)
-    if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
-      final yTextPainter = TextPainter(
-        text: TextSpan(
-          text: 'Y: ${position.dy.toStringAsFixed(0)}',
-          style: textStyle,
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+        // Only draw if Y position is valid and all values are finite
+        if (xLabelY >= 0 && xLabelY + xTextPainter.height <= size.height && xLabelX.isFinite && xLabelY.isFinite) {
+          final xLabelOffset = Offset(xLabelX, xLabelY);
 
-      final yLabelOffset = Offset(
-        4,
-        position.dy - yTextPainter.height / 2,
-      );
+          // Draw background with validated dimensions
+          final bgLeft = xLabelOffset.dx - config.style.labelPadding;
+          final bgTop = xLabelOffset.dy - config.style.labelPadding;
+          final bgWidth = xTextPainter.width + config.style.labelPadding * 2;
+          final bgHeight = xTextPainter.height + config.style.labelPadding * 2;
 
-      // Draw background
-      final yBgRect = Rect.fromLTWH(
-        yLabelOffset.dx - config.style.labelPadding,
-        yLabelOffset.dy - config.style.labelPadding,
-        yTextPainter.width + config.style.labelPadding * 2,
-        yTextPainter.height + config.style.labelPadding * 2,
-      );
-      canvas.drawRect(yBgRect, Paint()..color = config.style.labelBackgroundColor);
+          // Additional validation for rect dimensions
+          if (bgLeft.isFinite && bgTop.isFinite && bgWidth.isFinite && bgHeight.isFinite && bgWidth > 0 && bgHeight > 0) {
+            final xBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
+            canvas.drawRect(xBgRect, Paint()..color = config.style.labelBackgroundColor);
+            xTextPainter.paint(canvas, xLabelOffset);
+          }
+        }
+      }
 
-      yTextPainter.paint(canvas, yLabelOffset);
+      // Y coordinate label (left of horizontal line)
+      if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+        final yTextPainter = TextPainter(
+          text: TextSpan(
+            text: 'Y: ${position.dy.toStringAsFixed(0)}',
+            style: textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        // Calculate label position with bounds checking
+        const yLabelX = 4.0;
+        var yLabelY = position.dy - yTextPainter.height / 2;
+
+        // Clamp Y position to keep label within canvas bounds
+        yLabelY = yLabelY.clamp(config.style.labelPadding, size.height - yTextPainter.height - config.style.labelPadding);
+
+        // Only draw if X position is valid and all values are finite
+        if (yLabelX >= 0 && yLabelX + yTextPainter.width <= size.width && yLabelX.isFinite && yLabelY.isFinite) {
+          final yLabelOffset = Offset(yLabelX, yLabelY);
+
+          // Draw background with validated dimensions
+          final bgLeft = yLabelOffset.dx - config.style.labelPadding;
+          final bgTop = yLabelOffset.dy - config.style.labelPadding;
+          final bgWidth = yTextPainter.width + config.style.labelPadding * 2;
+          final bgHeight = yTextPainter.height + config.style.labelPadding * 2;
+
+          // Additional validation for rect dimensions
+          if (bgLeft.isFinite && bgTop.isFinite && bgWidth.isFinite && bgHeight.isFinite && bgWidth > 0 && bgHeight > 0) {
+            final yBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
+            canvas.drawRect(yBgRect, Paint()..color = config.style.labelBackgroundColor);
+            yTextPainter.paint(canvas, yLabelOffset);
+          }
+        }
+      }
+    } catch (e) {
+      // Silently fail label rendering - don't break the entire crosshair
+      // The crosshair lines will still render even if labels fail
+      return;
     }
   }
 
