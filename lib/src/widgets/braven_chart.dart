@@ -553,7 +553,7 @@ class BravenChart extends StatefulWidget {
 ///
 /// Manages lifecycle, controller subscriptions, stream subscriptions,
 /// and rendering logic.
-class _BravenChartState extends State<BravenChart> with SingleTickerProviderStateMixin {
+class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin {
   // ==================== INTERNAL STATE ====================
 
   /// Subscription to the dataStream for real-time updates.
@@ -608,6 +608,12 @@ class _BravenChartState extends State<BravenChart> with SingleTickerProviderStat
   /// Animation for zoom level Y.
   Animation<double>? _zoomAnimationY;
 
+  /// Animation controller for smooth pan transitions.
+  AnimationController? _panAnimationController;
+
+  /// Animation for pan offset.
+  Animation<Offset>? _panAnimation;
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
@@ -626,6 +632,23 @@ class _BravenChartState extends State<BravenChart> with SingleTickerProviderStat
             final newZoomState = currentZoomState.copyWith(
               zoomLevelX: _zoomAnimationX!.value,
               zoomLevelY: _zoomAnimationY!.value,
+            );
+            _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+          });
+        }
+      });
+
+    // Initialize pan animation controller (250ms for smooth transitions)
+    _panAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    )..addListener(() {
+        // Update pan state during animation
+        if (_panAnimation != null) {
+          setState(() {
+            final currentZoomState = _interactionState.zoomPanState;
+            final newZoomState = currentZoomState.copyWith(
+              panOffset: _panAnimation!.value,
             );
             _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
           });
@@ -777,6 +800,10 @@ class _BravenChartState extends State<BravenChart> with SingleTickerProviderStat
     _zoomAnimationController?.dispose();
     _zoomAnimationController = null;
 
+    // Dispose pan animation controller
+    _panAnimationController?.dispose();
+    _panAnimationController = null;
+
     // Unsubscribe from controller
     _getController()?.removeListener(_onControllerUpdate);
 
@@ -920,6 +947,48 @@ class _BravenChartState extends State<BravenChart> with SingleTickerProviderStat
     // Reset and start animation
     _zoomAnimationController!.reset();
     _zoomAnimationController!.forward().then((_) {
+      onComplete?.call();
+    });
+  }
+
+  /// Animates pan offset changes for smooth transitions.
+  ///
+  /// Parameters:
+  /// - [newPanOffset]: Target pan offset
+  /// - [onComplete]: Optional callback when animation completes
+  void _animatePan({
+    required Offset newPanOffset,
+    VoidCallback? onComplete,
+  }) {
+    if (_panAnimationController == null) {
+      // Fallback: instant pan if no animation controller
+      setState(() {
+        final currentZoomState = _interactionState.zoomPanState;
+        final newZoomState = currentZoomState.copyWith(
+          panOffset: newPanOffset,
+        );
+        _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+      });
+      onComplete?.call();
+      return;
+    }
+
+    // Get current pan offset
+    final currentZoomState = _interactionState.zoomPanState;
+    final currentPanOffset = currentZoomState.panOffset;
+
+    // Create tween animation
+    _panAnimation = Tween<Offset>(
+      begin: currentPanOffset,
+      end: newPanOffset,
+    ).animate(CurvedAnimation(
+      parent: _panAnimationController!,
+      curve: Curves.easeOut,
+    ));
+
+    // Reset and start animation
+    _panAnimationController!.reset();
+    _panAnimationController!.forward().then((_) {
       onComplete?.call();
     });
   }
@@ -1451,6 +1520,40 @@ class _BravenChartState extends State<BravenChart> with SingleTickerProviderStat
                     _interactionState.zoomPanState.zoomLevelX,
                     _interactionState.zoomPanState.zoomLevelY,
                   );
+                  _invokeViewportCallback();
+                },
+              );
+
+              return KeyEventResult.handled;
+            }
+          }
+
+          // INTERCEPT ARROW KEYS for animated panning
+          if (widget.interactionConfig != null && widget.interactionConfig!.enablePan) {
+            if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight ||
+                key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
+              
+              // Calculate new pan offset based on arrow direction
+              final currentPanOffset = _interactionState.zoomPanState.panOffset;
+              const panAmount = 50.0; // Same as KeyboardHandler default
+              
+              Offset newPanOffset;
+              if (key == LogicalKeyboardKey.arrowLeft) {
+                newPanOffset = Offset(currentPanOffset.dx - panAmount, currentPanOffset.dy);
+              } else if (key == LogicalKeyboardKey.arrowRight) {
+                newPanOffset = Offset(currentPanOffset.dx + panAmount, currentPanOffset.dy);
+              } else if (key == LogicalKeyboardKey.arrowUp) {
+                newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy - panAmount);
+              } else { // arrowDown
+                newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy + panAmount);
+              }
+
+              print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED): $currentPanOffset → $newPanOffset');
+
+              _animatePan(
+                newPanOffset: newPanOffset,
+                onComplete: () {
+                  widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
                   _invokeViewportCallback();
                 },
               );
