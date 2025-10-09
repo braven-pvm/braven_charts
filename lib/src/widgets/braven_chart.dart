@@ -2319,7 +2319,11 @@ class _BravenChartPainter extends CustomPainter {
 
     canvas.restore(); // Remove clipping
 
-    // Draw markers (culling is OK for discrete markers - they don't have continuity issues)
+    // Draw markers (using same clipping as lines for consistency with zoom/pan)
+    // Canvas clipping handles viewport culling automatically
+    canvas.save();
+    canvas.clipRect(chartRect);
+    
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       final markerPaint = Paint()
@@ -2327,15 +2331,12 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       for (final point in s.points) {
-        // Viewport culling: only render markers within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
-          continue;
-        }
-
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 4, markerPaint);
       }
     }
+    
+    canvas.restore(); // Remove clipping
   }
 
   void _drawAreaSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
@@ -2409,6 +2410,10 @@ class _BravenChartPainter extends CustomPainter {
     final barGroupWidth = chartRect.width / barCount;
     final barWidth = barGroupWidth / (seriesCount + 1);
 
+    // Use canvas clipping to handle viewport bounds automatically with zoom/pan
+    canvas.save();
+    canvas.clipRect(chartRect);
+
     for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
       final s = series[seriesIndex];
       final color = colors[seriesIndex % colors.length];
@@ -2418,11 +2423,6 @@ class _BravenChartPainter extends CustomPainter {
 
       for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
         final point = s.points[pointIndex];
-
-        // Viewport culling: only render bars within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
-          continue;
-        }
 
         final baseX = chartRect.left + (barGroupWidth * pointIndex);
         final barX = baseX + (barWidth * seriesIndex) + (barWidth / 2);
@@ -2435,10 +2435,16 @@ class _BravenChartPainter extends CustomPainter {
         canvas.drawRect(rect, paint);
       }
     }
+    
+    canvas.restore(); // Remove clipping
   }
 
   void _drawScatterSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
     final colors = theme.seriesTheme.colors;
+
+    // Use canvas clipping to handle viewport bounds automatically with zoom/pan
+    canvas.save();
+    canvas.clipRect(chartRect);
 
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
@@ -2447,15 +2453,12 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       for (final point in s.points) {
-        // Viewport culling: only render scatter points within visible bounds
-        if (point.x < bounds.minX || point.x > bounds.maxX || point.y < bounds.minY || point.y > bounds.maxY) {
-          continue;
-        }
-
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 5, paint);
       }
     }
+    
+    canvas.restore(); // Remove clipping
   }
 
   void _drawAxes(Canvas canvas, Size size, Rect chartRect, _DataBounds bounds) {
