@@ -1135,6 +1135,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                       }()
                     : null,
                 chartSize: Size.infinite,
+                dataBounds: () {
+                  final allSeries = _getAllSeries();
+                  if (allSeries.isEmpty) return null;
+                  return _calculateDataBounds(allSeries);
+                }(),
+                chartRect: context.size != null ? _calculateChartRect(context.size!) : null,
               ),
             ),
           ),
@@ -2592,6 +2598,19 @@ class _DataBounds {
   final double maxX;
   final double minY;
   final double maxY;
+  
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _DataBounds &&
+        other.minX == minX &&
+        other.maxX == maxX &&
+        other.minY == minY &&
+        other.maxY == maxY;
+  }
+  
+  @override
+  int get hashCode => Object.hash(minX, maxX, minY, maxY);
 }
 
 // ==================== ANNOTATION OVERLAY ====================
@@ -2940,12 +2959,16 @@ class _CrosshairPainter extends CustomPainter {
     required this.config,
     this.nearestPoint,
     required this.chartSize,
+    this.dataBounds,
+    this.chartRect,
   });
 
   final Offset position;
   final CrosshairConfig config;
   final Offset? nearestPoint;
   final Size chartSize;
+  final _DataBounds? dataBounds;
+  final Rect? chartRect;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -3051,6 +3074,24 @@ class _CrosshairPainter extends CustomPainter {
         return; // Skip label rendering if position is invalid
       }
 
+      // Convert screen coordinates to data coordinates
+      double? dataX;
+      double? dataY;
+      
+      if (dataBounds != null && chartRect != null) {
+        // Screen to data transformation (inverse of _dataToPixel)
+        final xRange = dataBounds!.maxX - dataBounds!.minX;
+        final yRange = dataBounds!.maxY - dataBounds!.minY;
+        
+        // Calculate percentage from screen position
+        final xPercent = (position.dx - chartRect!.left) / chartRect!.width;
+        final yPercent = 1.0 - ((position.dy - chartRect!.top) / chartRect!.height);
+        
+        // Convert to data coordinates
+        dataX = dataBounds!.minX + (xPercent * xRange);
+        dataY = dataBounds!.minY + (yPercent * yRange);
+      }
+
       final textStyle = config.coordinateLabelStyle ??
           TextStyle(
             color: config.style.labelTextColor,
@@ -3060,9 +3101,12 @@ class _CrosshairPainter extends CustomPainter {
 
       // X coordinate label (bottom of vertical line)
       if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+        // Use data X value if available, otherwise fall back to screen position
+        final displayValue = dataX != null ? _formatDataValue(dataX) : position.dx.toStringAsFixed(0);
+        
         final xTextPainter = TextPainter(
           text: TextSpan(
-            text: 'X: ${position.dx.toStringAsFixed(0)}',
+            text: 'X: $displayValue',
             style: textStyle,
           ),
           textDirection: TextDirection.ltr,
@@ -3096,9 +3140,12 @@ class _CrosshairPainter extends CustomPainter {
 
       // Y coordinate label (left of horizontal line)
       if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+        // Use data Y value if available, otherwise fall back to screen position
+        final displayValue = dataY != null ? _formatDataValue(dataY) : position.dy.toStringAsFixed(0);
+        
         final yTextPainter = TextPainter(
           text: TextSpan(
-            text: 'Y: ${position.dy.toStringAsFixed(0)}',
+            text: 'Y: $displayValue',
             style: textStyle,
           ),
           textDirection: TextDirection.ltr,
@@ -3136,8 +3183,31 @@ class _CrosshairPainter extends CustomPainter {
     }
   }
 
+  /// Formats data values for display (same logic as axis labels).
+  String _formatDataValue(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+    
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
+  }
+
   @override
   bool shouldRepaint(_CrosshairPainter oldDelegate) {
-    return position != oldDelegate.position || config != oldDelegate.config || nearestPoint != oldDelegate.nearestPoint;
+    return position != oldDelegate.position || 
+           config != oldDelegate.config || 
+           nearestPoint != oldDelegate.nearestPoint ||
+           dataBounds != oldDelegate.dataBounds ||
+           chartRect != oldDelegate.chartRect;
   }
 }
