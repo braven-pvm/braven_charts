@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' show cos, sin, sqrt;
+import 'dart:math' show cos, sin, sqrt, log, pow, ln10;
 
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
@@ -1531,13 +1531,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // INTERCEPT ARROW KEYS for animated panning
           // CRITICAL: Distinguish KeyDownEvent (first press) from KeyRepeatEvent (held down)
           if (widget.interactionConfig != null && widget.interactionConfig!.enablePan) {
-            if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight ||
-                key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
-              
+            if (key == LogicalKeyboardKey.arrowLeft ||
+                key == LogicalKeyboardKey.arrowRight ||
+                key == LogicalKeyboardKey.arrowUp ||
+                key == LogicalKeyboardKey.arrowDown) {
               // Calculate new pan offset based on arrow direction
               final currentPanOffset = _interactionState.zoomPanState.panOffset;
               const panAmount = 50.0; // Same as KeyboardHandler default
-              
+
               Offset newPanOffset;
               if (key == LogicalKeyboardKey.arrowLeft) {
                 newPanOffset = Offset(currentPanOffset.dx - panAmount, currentPanOffset.dy);
@@ -1545,7 +1546,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 newPanOffset = Offset(currentPanOffset.dx + panAmount, currentPanOffset.dy);
               } else if (key == LogicalKeyboardKey.arrowUp) {
                 newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy - panAmount);
-              } else { // arrowDown
+              } else {
+                // arrowDown
                 newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy + panAmount);
               }
 
@@ -1553,7 +1555,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               if (event is KeyDownEvent) {
                 // First press: Trigger smooth 250ms animation
                 print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED - FIRST PRESS): $currentPanOffset → $newPanOffset');
-                
+
                 _animatePan(
                   newPanOffset: newPanOffset,
                   onComplete: () {
@@ -1565,7 +1567,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 // Key held down: Apply pan offset directly for smooth continuous movement
                 // This prevents animation stuttering from rapid repeat events (~30ms intervals)
                 print('🔄 KEYBOARD PAN ${key.keyLabel} (INSTANT - KEY HELD): $currentPanOffset → $newPanOffset');
-                
+
                 setState(() {
                   _interactionState = _interactionState.copyWith(
                     zoomPanState: _interactionState.zoomPanState.copyWith(
@@ -1573,7 +1575,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     ),
                   );
                 });
-                
+
                 // Invoke callbacks immediately
                 widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
                 _invokeViewportCallback();
@@ -2081,7 +2083,7 @@ class _BravenChartPainter extends CustomPainter {
     if (bounds == null) return;
 
     // Draw grid
-    _drawGrid(canvas, chartRect);
+    _drawGrid(canvas, chartRect, bounds);
 
     // Draw series based on chart type
     switch (chartType) {
@@ -2173,7 +2175,7 @@ class _BravenChartPainter extends CustomPainter {
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
 
-  void _drawGrid(Canvas canvas, Rect chartRect) {
+  void _drawGrid(Canvas canvas, Rect chartRect, _DataBounds bounds) {
     if (!xAxis.showGrid && !yAxis.showGrid) return;
 
     final gridPaint = Paint()
@@ -2181,19 +2183,84 @@ class _BravenChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = theme.gridStyle.majorWidth;
 
+    // Calculate nice round intervals for grid lines based on visible data range
+    final xRange = bounds.maxX - bounds.minX;
+    final yRange = bounds.maxY - bounds.minY;
+
+    // Use a simple algorithm to get nice intervals (can be enhanced with smarter tick generation)
+    final xInterval = _calculateNiceInterval(xRange);
+    final yInterval = _calculateNiceInterval(yRange);
+
     if (yAxis.showGrid) {
-      for (var i = 0; i <= 5; i++) {
-        final y = chartRect.top + (chartRect.height * i / 5);
-        canvas.drawLine(Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
+      // Find the first grid line position (round down to nearest interval)
+      final firstY = (bounds.minY / yInterval).floor() * yInterval;
+      
+      // Draw horizontal grid lines at data value intervals
+      var currentY = firstY;
+      while (currentY <= bounds.maxY) {
+        // Convert data value to pixel position
+        final yPercent = (currentY - bounds.minY) / yRange;
+        final y = chartRect.bottom - (yPercent * chartRect.height);
+        
+        // Only draw if within chart bounds
+        if (y >= chartRect.top && y <= chartRect.bottom) {
+          canvas.drawLine(Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
+        }
+        
+        currentY += yInterval;
       }
     }
 
     if (xAxis.showGrid) {
-      for (var i = 0; i <= 5; i++) {
-        final x = chartRect.left + (chartRect.width * i / 5);
-        canvas.drawLine(Offset(x, chartRect.top), Offset(x, chartRect.bottom), gridPaint);
+      // Find the first grid line position (round down to nearest interval)
+      final firstX = (bounds.minX / xInterval).floor() * xInterval;
+      
+      // Draw vertical grid lines at data value intervals
+      var currentX = firstX;
+      while (currentX <= bounds.maxX) {
+        // Convert data value to pixel position
+        final xPercent = (currentX - bounds.minX) / xRange;
+        final x = chartRect.left + (xPercent * chartRect.width);
+        
+        // Only draw if within chart bounds
+        if (x >= chartRect.left && x <= chartRect.right) {
+          canvas.drawLine(Offset(x, chartRect.top), Offset(x, chartRect.bottom), gridPaint);
+        }
+        
+        currentX += xInterval;
       }
     }
+  }
+
+  /// Calculates a "nice" interval for grid lines based on the data range.
+  /// 
+  /// This uses a simple algorithm to find intervals like 1, 2, 5, 10, 20, 50, 100, etc.
+  /// that result in approximately 5-10 grid lines.
+  double _calculateNiceInterval(double range) {
+    if (range == 0) return 1.0;
+    
+    // Target approximately 5-10 grid lines
+    final roughInterval = range / 7;
+    
+    // Find the magnitude (power of 10)
+    final magnitude = pow(10, (log(roughInterval) / ln10).floor()).toDouble();
+    
+    // Normalize to range [1, 10)
+    final normalized = roughInterval / magnitude;
+    
+    // Round to nice numbers: 1, 2, 5, or 10
+    double niceNormalized;
+    if (normalized < 1.5) {
+      niceNormalized = 1.0;
+    } else if (normalized < 3.5) {
+      niceNormalized = 2.0;
+    } else if (normalized < 7.5) {
+      niceNormalized = 5.0;
+    } else {
+      niceNormalized = 10.0;
+    }
+    
+    return niceNormalized * magnitude;
   }
 
   void _drawLineSeries(Canvas canvas, Rect chartRect, _DataBounds bounds) {
@@ -2382,12 +2449,107 @@ class _BravenChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = theme.axisStyle.lineWidth;
 
+    // Calculate nice intervals for axis labels (same as grid)
+    final xRange = bounds.maxX - bounds.minX;
+    final yRange = bounds.maxY - bounds.minY;
+    final xInterval = _calculateNiceInterval(xRange);
+    final yInterval = _calculateNiceInterval(yRange);
+
     if (xAxis.showAxis) {
+      // Draw X-axis line
       canvas.drawLine(Offset(chartRect.left, chartRect.bottom), Offset(chartRect.right, chartRect.bottom), axisPaint);
+      
+      // Draw X-axis labels at grid intervals
+      if (xAxis.showLabels) {
+        final firstX = (bounds.minX / xInterval).floor() * xInterval;
+        var currentX = firstX;
+        
+        while (currentX <= bounds.maxX) {
+          final xPercent = (currentX - bounds.minX) / xRange;
+          final x = chartRect.left + (xPercent * chartRect.width);
+          
+          if (x >= chartRect.left && x <= chartRect.right) {
+            // Format label (remove unnecessary decimals)
+            final label = _formatAxisLabel(currentX);
+            
+            final textSpan = TextSpan(
+              text: label,
+              style: theme.axisStyle.labelStyle,
+            );
+            
+            final textPainter = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+            );
+            
+            textPainter.layout();
+            textPainter.paint(
+              canvas,
+              Offset(x - textPainter.width / 2, chartRect.bottom + 5),
+            );
+          }
+          
+          currentX += xInterval;
+        }
+      }
     }
 
     if (yAxis.showAxis) {
+      // Draw Y-axis line
       canvas.drawLine(Offset(chartRect.left, chartRect.top), Offset(chartRect.left, chartRect.bottom), axisPaint);
+      
+      // Draw Y-axis labels at grid intervals
+      if (yAxis.showLabels) {
+        final firstY = (bounds.minY / yInterval).floor() * yInterval;
+        var currentY = firstY;
+        
+        while (currentY <= bounds.maxY) {
+          final yPercent = (currentY - bounds.minY) / yRange;
+          final y = chartRect.bottom - (yPercent * chartRect.height);
+          
+          if (y >= chartRect.top && y <= chartRect.bottom) {
+            // Format label (remove unnecessary decimals)
+            final label = _formatAxisLabel(currentY);
+            
+            final textSpan = TextSpan(
+              text: label,
+              style: theme.axisStyle.labelStyle,
+            );
+            
+            final textPainter = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+            );
+            
+            textPainter.layout();
+            textPainter.paint(
+              canvas,
+              Offset(chartRect.left - textPainter.width - 5, y - textPainter.height / 2),
+            );
+          }
+          
+          currentY += yInterval;
+        }
+      }
+    }
+  }
+
+  /// Formats axis labels to remove unnecessary decimal places.
+  String _formatAxisLabel(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+    
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
     }
   }
 
