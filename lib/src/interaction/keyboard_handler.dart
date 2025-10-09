@@ -7,8 +7,8 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent;
 import 'package:flutter/semantics.dart' show SemanticsService, TextDirection;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent;
 
 import 'models/interaction_state.dart';
 import 'models/zoom_pan_state.dart';
@@ -42,7 +42,7 @@ enum PanDirection {
 /// Example:
 /// ```dart
 /// final handler = KeyboardHandler();
-/// 
+///
 /// // Handle key event
 /// final newState = handler.handleKeyEvent(
 ///   keyEvent,
@@ -68,8 +68,7 @@ class KeyboardHandler {
   final double panAmount;
 
   // Custom key bindings registry
-  final Map<LogicalKeyboardKey, void Function(InteractionState state)>
-      _customBindings = {};
+  final Map<LogicalKeyboardKey, void Function(InteractionState state)> _customBindings = {};
 
   /// Processes a keyboard event when chart has focus.
   ///
@@ -100,39 +99,41 @@ class KeyboardHandler {
       // Navigation keys
       case LogicalKeyboardKey.arrowRight:
         return _handleArrowRight(state, dataPoints);
-      
+
       case LogicalKeyboardKey.arrowLeft:
         return _handleArrowLeft(state, dataPoints);
-      
+
       case LogicalKeyboardKey.arrowUp:
         return _handleArrowUp(state);
-      
+
       case LogicalKeyboardKey.arrowDown:
         return _handleArrowDown(state);
-      
+
       case LogicalKeyboardKey.home:
         return _handleHome(state, dataPoints);
-      
+
       case LogicalKeyboardKey.end:
         return _handleEnd(state, dataPoints);
-      
+
       // Zoom keys
-      case LogicalKeyboardKey.equal: // Plus key
-      case LogicalKeyboardKey.add:
+      case LogicalKeyboardKey.equal: // Plus key (Shift + =)
+      case LogicalKeyboardKey.add: // Numpad plus (not the same as numpadAdd!)
+      case LogicalKeyboardKey.numpadAdd: // Numpad + key
         return _handleZoomIn(state);
-      
-      case LogicalKeyboardKey.minus:
+
+      case LogicalKeyboardKey.minus: // Minus key
+      case LogicalKeyboardKey.numpadSubtract: // Numpad - key
         return _handleZoomOut(state);
-      
+
       // Activation keys
       case LogicalKeyboardKey.enter:
       case LogicalKeyboardKey.space:
         return _handleActivate(state, dataPoints);
-      
+
       // Close/clear key
       case LogicalKeyboardKey.escape:
         return closeTooltipOrClearSelection(state);
-      
+
       default:
         return null; // Key not handled
     }
@@ -146,7 +147,7 @@ class KeyboardHandler {
     List<Map<String, dynamic>> points,
   ) {
     if (points.isEmpty) return null;
-    
+
     if (currentPoint == null) {
       return points.first;
     }
@@ -167,7 +168,7 @@ class KeyboardHandler {
     List<Map<String, dynamic>> points,
   ) {
     if (points.isEmpty) return null;
-    
+
     if (currentPoint == null) {
       return points.last;
     }
@@ -229,11 +230,9 @@ class KeyboardHandler {
     double zoomFactor,
   ) {
     final factor = zoomIn ? zoomFactor : (1.0 / zoomFactor);
-    
-    final newZoomX = (currentState.zoomLevelX * factor)
-        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
-    final newZoomY = (currentState.zoomLevelY * factor)
-        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
+
+    final newZoomX = (currentState.zoomLevelX * factor).clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
+    final newZoomY = (currentState.zoomLevelY * factor).clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
 
     return currentState.copyWith(
       zoomLevelX: newZoomX,
@@ -281,9 +280,9 @@ class KeyboardHandler {
     try {
       final xValue = point['x'] ?? 'unknown';
       final yValue = point['y'] ?? 'unknown';
-      
+
       final announcement = 'Data point: $seriesName, X: $xValue, Y: $yValue';
-      
+
       SemanticsService.announce(announcement, TextDirection.ltr);
     } catch (e) {
       // Silently fail if binding not initialized (e.g., in unit tests)
@@ -407,17 +406,31 @@ class KeyboardHandler {
   }
 
   InteractionState _handleZoomIn(InteractionState state) {
-    // Zoom functionality should be handled by the ZoomPanController
-    // Return state unchanged; calling code should check for zoom key events
-    // and call zoomViewport() method directly
-    return state;
+    // Apply zoom to current zoom/pan state
+    final currentZoomState = state.zoomPanState;
+    final newZoomX = (currentZoomState.zoomLevelX * zoomInFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomY = (currentZoomState.zoomLevelY * zoomInFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+    final newZoomState = currentZoomState.copyWith(
+      zoomLevelX: newZoomX,
+      zoomLevelY: newZoomY,
+    );
+
+    return state.copyWith(zoomPanState: newZoomState);
   }
 
   InteractionState _handleZoomOut(InteractionState state) {
-    // Zoom functionality should be handled by the ZoomPanController
-    // Return state unchanged; calling code should check for zoom key events
-    // and call zoomViewport() method directly
-    return state;
+    // Apply zoom to current zoom/pan state
+    final currentZoomState = state.zoomPanState;
+    final newZoomX = (currentZoomState.zoomLevelX * zoomOutFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomY = (currentZoomState.zoomLevelY * zoomOutFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+
+    final newZoomState = currentZoomState.copyWith(
+      zoomLevelX: newZoomX,
+      zoomLevelY: newZoomY,
+    );
+
+    return state.copyWith(zoomPanState: newZoomState);
   }
 
   InteractionState _handleActivate(

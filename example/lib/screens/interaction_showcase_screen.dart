@@ -86,7 +86,7 @@ class _InteractionShowcaseScreenState extends State<InteractionShowcaseScreen> {
         enabled: useTooltip,
         triggerMode: TooltipTriggerMode.both,
         showDelay: const Duration(milliseconds: 200),
-        preferredPosition: TooltipPosition.top,
+        preferredPosition: TooltipPosition.auto,
         style: const TooltipStyle(
           backgroundColor: Color(0xFFE3F2FD),
           borderColor: Color(0xFF2196F3),
@@ -177,14 +177,17 @@ class _InteractionShowcaseScreenState extends State<InteractionShowcaseScreen> {
       },
       onDataPointHover: (point, position) {
         if (point != null) {
-          _logEvent('HOVER: X=${point.x.toStringAsFixed(1)}, Y=${point.y.toStringAsFixed(1)}');
-          setState(() {
-            hoveredPoint = {'x': point.x, 'y': point.y};
-          });
+          // DON'T call setState during hover - it causes the entire widget to rebuild
+          // which recreates the InteractionConfig and resets the crosshair state
+          // _logEvent('HOVER: X=${point.x.toStringAsFixed(1)}, Y=${point.y.toStringAsFixed(1)}');
+          // setState(() {
+          //   hoveredPoint = {'x': point.x, 'y': point.y};
+          // });
+
+          // Just update the state without triggering a rebuild
+          hoveredPoint = {'x': point.x, 'y': point.y};
         } else {
-          setState(() {
-            hoveredPoint = null;
-          });
+          hoveredPoint = null;
         }
       },
       onDataPointLongPress: (point, position) {
@@ -225,18 +228,20 @@ class _InteractionShowcaseScreenState extends State<InteractionShowcaseScreen> {
         final maxX = dataBounds['maxX'] ?? 0.0;
         _logEvent('VIEWPORT: X=${minX.toStringAsFixed(1)} to ${maxX.toStringAsFixed(1)}');
       },
-      onCrosshairChanged: (position, snapPoints) {
-        if (snapPoints.isNotEmpty) {
-          _logEvent('CROSSHAIR: Snapped to ${snapPoints.length} points');
-        }
-      },
-      onTooltipChanged: (visible, data) {
-        if (visible && data != null) {
-          _logEvent('TOOLTIP: Shown at (${data.x}, ${data.y})');
-        } else {
-          _logEvent('TOOLTIP: Hidden');
-        }
-      },
+      // DISABLED: Causes crosshair flickering due to rapid setState during hover
+      // onCrosshairChanged: (position, snapPoints) {
+      //   if (snapPoints.isNotEmpty) {
+      //     _logEvent('CROSSHAIR: Snapped to ${snapPoints.length} points');
+      //   }
+      // },
+      // DISABLED: Causes crosshair flickering due to rapid setState during hover
+      // onTooltipChanged: (visible, data) {
+      //   if (visible && data != null) {
+      //     _logEvent('TOOLTIP: Shown at (${data.x}, ${data.y})');
+      //   } else {
+      //     _logEvent('TOOLTIP: Hidden');
+      //   }
+      // },
       onKeyboardAction: (action, targetPoint) {
         if (targetPoint != null) {
           _logEvent('KEYBOARD: $action -> (${targetPoint.x}, ${targetPoint.y})');
@@ -285,16 +290,15 @@ class _InteractionShowcaseScreenState extends State<InteractionShowcaseScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text('Zoom: ${(zoomLevelX * 100).toInt()}% | Events: $eventCount'),
-                      if (selectedPoint != null)
-                        Text('Selected: X=${selectedPoint!['x']}, Y=${selectedPoint!['y']}'),
-                      if (hoveredPoint != null)
-                        Text('Hovered: X=${hoveredPoint!['x']}, Y=${hoveredPoint!['y']}'),
+                      if (selectedPoint != null) Text('Selected: X=${selectedPoint!['x']}, Y=${selectedPoint!['y']}'),
+                      if (hoveredPoint != null) Text('Hovered: X=${hoveredPoint!['x']}, Y=${hoveredPoint!['y']}'),
                     ],
                   ),
                 ),
                 // Chart
                 Expanded(
                   child: BravenChart(
+                    key: const ValueKey('interaction_showcase_chart'),
                     chartType: ChartType.line,
                     series: [
                       ChartSeries(
@@ -399,41 +403,31 @@ class _InteractionShowcaseScreenState extends State<InteractionShowcaseScreen> {
                           title: const Text('Crosshair'),
                           value: useCrosshair,
                           dense: true,
-                          onChanged: (!useAllFactory && !useNoneFactory)
-                              ? (value) => setState(() => useCrosshair = value)
-                              : null,
+                          onChanged: (!useAllFactory && !useNoneFactory) ? (value) => setState(() => useCrosshair = value) : null,
                         ),
                         SwitchListTile(
                           title: const Text('Tooltip'),
                           value: useTooltip,
                           dense: true,
-                          onChanged: (!useAllFactory && !useNoneFactory)
-                              ? (value) => setState(() => useTooltip = value)
-                              : null,
+                          onChanged: (!useAllFactory && !useNoneFactory) ? (value) => setState(() => useTooltip = value) : null,
                         ),
                         SwitchListTile(
                           title: const Text('Zoom'),
                           value: useZoom,
                           dense: true,
-                          onChanged: (!useAllFactory && !useNoneFactory)
-                              ? (value) => setState(() => useZoom = value)
-                              : null,
+                          onChanged: (!useAllFactory && !useNoneFactory) ? (value) => setState(() => useZoom = value) : null,
                         ),
                         SwitchListTile(
                           title: const Text('Pan'),
                           value: usePan,
                           dense: true,
-                          onChanged: (!useAllFactory && !useNoneFactory)
-                              ? (value) => setState(() => usePan = value)
-                              : null,
+                          onChanged: (!useAllFactory && !useNoneFactory) ? (value) => setState(() => usePan = value) : null,
                         ),
                         SwitchListTile(
                           title: const Text('Keyboard'),
                           value: useKeyboard,
                           dense: true,
-                          onChanged: (!useAllFactory && !useNoneFactory)
-                              ? (value) => setState(() => useKeyboard = value)
-                              : null,
+                          onChanged: (!useAllFactory && !useNoneFactory) ? (value) => setState(() => useKeyboard = value) : null,
                         ),
                       ],
                     ),

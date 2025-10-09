@@ -1,4 +1,8 @@
 ﻿# Start ChromeDriver and run web integration tests
+param(
+    [string]$TestFile = "proof_test.dart"
+)
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "`n Starting ChromeDriver for Web Testing" -ForegroundColor Cyan
@@ -32,14 +36,20 @@ if ($chromedriverProcess.HasExited) {
 Write-Host " ChromeDriver started (PID: $($chromedriverProcess.Id))" -ForegroundColor Green
 
 try {
-    Write-Host "`n Running integration tests..." -ForegroundColor Yellow
+    Write-Host "`n Running Test: $TestFile" -ForegroundColor Yellow
+    Write-Host " Watch the terminal output to see each step being performed!" -ForegroundColor Cyan
+    
+    # Change to example directory
+    Push-Location (Join-Path (Get-Item $PSScriptRoot).Parent.Parent.FullName "example")
     
     flutter drive `
-        --driver=test/test_driver/integration_test.dart `
-        --target=test/integration_test/web_app_test.dart `
+        --driver=test_driver/integration_test.dart `
+        --target=integration_test/$TestFile `
         -d chrome
     
     $exitCode = $LASTEXITCODE
+    
+    Pop-Location
     
     if ($exitCode -eq 0) {
         Write-Host "`n All tests passed!" -ForegroundColor Green

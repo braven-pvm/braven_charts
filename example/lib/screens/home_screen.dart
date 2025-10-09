@@ -5,11 +5,13 @@ import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
 import 'axis_theming_screen.dart';
 import 'bar_chart_screen.dart';
+import 'event_debug_screen.dart';
 import 'interaction_examples_screen.dart';
 import 'interaction_showcase_screen.dart';
 import 'line_chart_screen.dart';
 import 'quickstart_screen.dart';
 import 'scatter_chart_screen.dart';
+import 'simple_zoom_test_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -181,6 +183,30 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const InteractionExamplesScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🎯 Simple Zoom Test',
+          subtitle: 'Minimal zoom test: Tap chart, then use +/- or SHIFT+scroll',
+          icon: Icons.zoom_in,
+          color: Colors.teal,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SimpleZoomTestScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🐛 Event Debug Tool',
+          subtitle: 'See all events in real-time (keyboard, mouse, gestures)',
+          icon: Icons.bug_report,
+          color: Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EventDebugScreen()),
           ),
         ),
       ],
