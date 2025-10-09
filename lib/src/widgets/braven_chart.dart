@@ -1529,6 +1529,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           }
 
           // INTERCEPT ARROW KEYS for animated panning
+          // CRITICAL: Distinguish KeyDownEvent (first press) from KeyRepeatEvent (held down)
           if (widget.interactionConfig != null && widget.interactionConfig!.enablePan) {
             if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight ||
                 key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
@@ -1548,15 +1549,35 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 newPanOffset = Offset(currentPanOffset.dx, currentPanOffset.dy + panAmount);
               }
 
-              print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED): $currentPanOffset → $newPanOffset');
-
-              _animatePan(
-                newPanOffset: newPanOffset,
-                onComplete: () {
-                  widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
-                  _invokeViewportCallback();
-                },
-              );
+              // DIFFERENTIATE: First press (smooth animation) vs held down (instant pan)
+              if (event is KeyDownEvent) {
+                // First press: Trigger smooth 250ms animation
+                print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED - FIRST PRESS): $currentPanOffset → $newPanOffset');
+                
+                _animatePan(
+                  newPanOffset: newPanOffset,
+                  onComplete: () {
+                    widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                    _invokeViewportCallback();
+                  },
+                );
+              } else if (event is KeyRepeatEvent) {
+                // Key held down: Apply pan offset directly for smooth continuous movement
+                // This prevents animation stuttering from rapid repeat events (~30ms intervals)
+                print('🔄 KEYBOARD PAN ${key.keyLabel} (INSTANT - KEY HELD): $currentPanOffset → $newPanOffset');
+                
+                setState(() {
+                  _interactionState = _interactionState.copyWith(
+                    zoomPanState: _interactionState.zoomPanState.copyWith(
+                      panOffset: newPanOffset,
+                    ),
+                  );
+                });
+                
+                // Invoke callbacks immediately
+                widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                _invokeViewportCallback();
+              }
 
               return KeyEventResult.handled;
             }
