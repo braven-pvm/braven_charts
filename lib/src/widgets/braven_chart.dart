@@ -1158,7 +1158,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Wrap in MouseRegion for hover detection
         interactiveWidget = MouseRegion(
           onEnter: (_) {
-            // Mouse entered chart area - don't change state yet, wait for actual hover
+            // Mouse entered chart area - request focus for keyboard interaction
+            if (config.keyboard.enabled && !_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+            }
           },
           onExit: (_) {
             setState(() {
@@ -1226,23 +1229,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         interactiveWidget = Listener(
           // Handle scroll events with modifier keys
           onPointerSignal: (signal) {
-            print('🎯🎯🎯 CHART LISTENER RECEIVED SIGNAL! 🎯🎯🎯');
             if (signal is PointerScrollEvent) {
-              print('🎯🎯🎯 IT IS A SCROLL EVENT! 🎯🎯🎯');
               // Use manual state tracking for modifiers (web-compatible)
               // HardwareKeyboard.instance doesn't work reliably in Flutter Web
               final isShiftPressed = _isShiftPressed;
-
-              // Debug: Print state
-              print('📊 SCROLL EVENT: enableZoom=${config.enableZoom}, hasController=${_zoomPanController != null}, SHIFT=$isShiftPressed');
 
               if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
                 // SHIFT + Scroll → Zoom at cursor position
                 final scrollDelta = signal.scrollDelta.dy;
                 // Zoom in when scrolling up (negative delta), zoom out when scrolling down
                 final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
-
-                print('🔍 ZOOMING: delta=$scrollDelta, factor=$zoomFactor');
 
                 setState(() {
                   final newZoomPanState = _zoomPanController!.zoom(
@@ -1337,14 +1333,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         // Wrap with GestureDetector for tap/long-press/pan/pinch
         interactiveWidget = GestureDetector(
-          // Always handle tap down to request focus for keyboard events
+          // Handle tap for selection
           onTapDown: (details) {
-            // Request focus for keyboard events
-            if (config.keyboard.enabled && !_focusNode.hasFocus) {
-              _focusNode.requestFocus();
-              print('🎯🎯🎯 CHART FOCUS REQUESTED ON TAP! 🎯🎯🎯');
-            }
-
             // Handle selection if enabled
             if (config.enableSelection) {
               final nearestPointData = _findNearestDataPoint(details.localPosition);
@@ -1485,13 +1475,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         // Wrap with Focus for keyboard navigation
         if (config.keyboard.enabled) {
-          print('🎯🎯🎯 CHART FOCUS WIDGET CREATED - keyboard enabled! 🎯🎯🎯');
           interactiveWidget = Focus(
             focusNode: _focusNode,
             autofocus: false,
             canRequestFocus: true,
             onKeyEvent: (node, event) {
-              print('🎯🎯🎯 CHART RECEIVED KEY EVENT: ${event.logicalKey.keyLabel} 🎯🎯🎯');
               if (_keyboardHandler == null) return KeyEventResult.ignored;
 
               // Manual modifier key state tracking for web compatibility
@@ -1510,9 +1498,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 // Return ignored to allow events to propagate
                 return KeyEventResult.ignored;
               }
-
-              // Debug: Print key event
-              print('⌨️  KEY EVENT: ${event.logicalKey.keyLabel}, hasHandler=${_keyboardHandler != null}');
 
               // Get all data points from series
               final allDataPoints = <Map<String, dynamic>>[];
@@ -1534,7 +1519,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
                 if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
                   // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
-                  print('🔍 KEYBOARD ZOOM IN centered on data (ANIMATED)');
                   final currentZoomState = _interactionState.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
                   final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -1568,7 +1552,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   return KeyEventResult.handled;
                 } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
                   // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
-                  print('🔍 KEYBOARD ZOOM OUT centered on data (ANIMATED)');
                   final currentZoomState = _interactionState.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
                   final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -1629,8 +1612,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   // DIFFERENTIATE: First press (smooth animation) vs held down (instant pan)
                   if (event is KeyDownEvent) {
                     // First press: Trigger smooth 250ms animation
-                    print('🔄 KEYBOARD PAN ${key.keyLabel} (ANIMATED - FIRST PRESS): $currentPanOffset → $newPanOffset');
-
                     _animatePan(
                       newPanOffset: newPanOffset,
                       onComplete: () {
@@ -1655,8 +1636,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   } else if (event is KeyRepeatEvent) {
                     // Key held down: Apply pan offset directly for smooth continuous movement
                     // This prevents animation stuttering from rapid repeat events (~30ms intervals)
-                    print('🔄 KEYBOARD PAN ${key.keyLabel} (INSTANT - KEY HELD): $currentPanOffset → $newPanOffset');
-
                     setState(() {
                       _interactionState = _interactionState.copyWith(
                         zoomPanState: _interactionState.zoomPanState.copyWith(
