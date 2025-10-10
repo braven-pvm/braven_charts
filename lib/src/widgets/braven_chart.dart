@@ -1253,6 +1253,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                   _interactionState = _interactionState.copyWith(
                     zoomPanState: newZoomPanState,
+                    // Clear crosshair/tooltip when zooming - user must hover again
+                    isCrosshairVisible: false,
+                    isTooltipVisible: false,
+                    crosshairPosition: null,
+                    tooltipPosition: null,
+                    hoveredPoint: null,
+                    hoveredSeriesId: null,
+                    tooltipDataPoint: null,
+                    snapPoints: const [],
                   );
                 });
 
@@ -1292,6 +1301,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                 _interactionState = _interactionState.copyWith(
                   zoomPanState: newZoomPanState,
+                  // Clear crosshair/tooltip when panning - user must hover again
+                  isCrosshairVisible: false,
+                  isTooltipVisible: false,
+                  crosshairPosition: null,
+                  tooltipPosition: null,
+                  hoveredPoint: null,
+                  hoveredSeriesId: null,
+                  tooltipDataPoint: null,
+                  snapPoints: const [],
                 );
 
                 _panStartPosition = event.localPosition;
@@ -1408,6 +1426,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     if (newZoomPanState != _interactionState.zoomPanState) {
                       _interactionState = _interactionState.copyWith(
                         zoomPanState: newZoomPanState,
+                        // Clear crosshair/tooltip when zoom/pan changes - user must hover again
+                        isCrosshairVisible: false,
+                        isTooltipVisible: false,
+                        crosshairPosition: null,
+                        tooltipPosition: null,
+                        hoveredPoint: null,
+                        hoveredSeriesId: null,
+                        tooltipDataPoint: null,
+                        snapPoints: const [],
                       );
 
                       // Invoke viewport callback
@@ -1433,6 +1460,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                     _interactionState = _interactionState.copyWith(
                       zoomPanState: newZoomPanState,
+                      // Clear crosshair/tooltip when resetting zoom
+                      isCrosshairVisible: false,
+                      isTooltipVisible: false,
+                      crosshairPosition: null,
+                      tooltipPosition: null,
+                      hoveredPoint: null,
+                      hoveredSeriesId: null,
+                      tooltipDataPoint: null,
+                      snapPoints: const [],
                     );
                   });
 
@@ -1507,6 +1543,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     newZoomX: newZoomX,
                     newZoomY: newZoomY,
                     onComplete: () {
+                      // Clear crosshair/tooltip after zoom animation completes
+                      setState(() {
+                        _interactionState = _interactionState.copyWith(
+                          isCrosshairVisible: false,
+                          isTooltipVisible: false,
+                          crosshairPosition: null,
+                          tooltipPosition: null,
+                          hoveredPoint: null,
+                          hoveredSeriesId: null,
+                          tooltipDataPoint: null,
+                          snapPoints: const [],
+                        );
+                      });
+
                       widget.interactionConfig!.onZoomChanged?.call(
                         _interactionState.zoomPanState.zoomLevelX,
                         _interactionState.zoomPanState.zoomLevelY,
@@ -1527,6 +1577,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     newZoomX: newZoomX,
                     newZoomY: newZoomY,
                     onComplete: () {
+                      // Clear crosshair/tooltip after zoom animation completes
+                      setState(() {
+                        _interactionState = _interactionState.copyWith(
+                          isCrosshairVisible: false,
+                          isTooltipVisible: false,
+                          crosshairPosition: null,
+                          tooltipPosition: null,
+                          hoveredPoint: null,
+                          hoveredSeriesId: null,
+                          tooltipDataPoint: null,
+                          snapPoints: const [],
+                        );
+                      });
+
                       widget.interactionConfig!.onZoomChanged?.call(
                         _interactionState.zoomPanState.zoomLevelX,
                         _interactionState.zoomPanState.zoomLevelY,
@@ -1570,6 +1634,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     _animatePan(
                       newPanOffset: newPanOffset,
                       onComplete: () {
+                        // Clear crosshair/tooltip after pan animation completes
+                        setState(() {
+                          _interactionState = _interactionState.copyWith(
+                            isCrosshairVisible: false,
+                            isTooltipVisible: false,
+                            crosshairPosition: null,
+                            tooltipPosition: null,
+                            hoveredPoint: null,
+                            hoveredSeriesId: null,
+                            tooltipDataPoint: null,
+                            snapPoints: const [],
+                          );
+                        });
+
                         widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
                         _invokeViewportCallback();
                       },
@@ -1584,6 +1662,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                         zoomPanState: _interactionState.zoomPanState.copyWith(
                           panOffset: newPanOffset,
                         ),
+                        // Clear crosshair/tooltip when panning
+                        isCrosshairVisible: false,
+                        isTooltipVisible: false,
+                        crosshairPosition: null,
+                        tooltipPosition: null,
+                        hoveredPoint: null,
+                        hoveredSeriesId: null,
+                        tooltipDataPoint: null,
+                        snapPoints: const [],
                       );
                     });
 
@@ -2329,7 +2416,8 @@ class _BravenChartPainter extends CustomPainter {
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.fill;
 
-      for (final point in s.points) {
+      for (var j = 0; j < s.points.length; j++) {
+        final point = s.points[j];
         final offset = _dataToPixel(point, chartRect, bounds);
         canvas.drawCircle(offset, 4, markerPaint);
       }
