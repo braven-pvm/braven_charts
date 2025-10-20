@@ -1966,7 +1966,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
 
     // Wrap in container with style
-    tooltipContent = Container(
+    final tooltipBox = Container(
       padding: EdgeInsets.all(config.style.padding),
       decoration: BoxDecoration(
         color: config.style.backgroundColor,
@@ -2005,6 +2005,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     print(
         '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, tooltipPos=$tooltipPosition, offset=${config.offsetFromPoint}');
 
+    // Build tooltip with arrow pointer
+    final tooltipWithArrow = _buildTooltipWithArrow(
+      tooltipBox,
+      config,
+      config.preferredPosition,
+    );
+
     return Positioned(
       left: tooltipPosition.dx,
       top: tooltipPosition.dy,
@@ -2012,7 +2019,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         child: AnimatedOpacity(
           opacity: _interactionState.isTooltipVisible ? 1.0 : 0.0,
           duration: config.showDelay,
-          child: tooltipContent,
+          child: tooltipWithArrow,
         ),
       ),
     );
@@ -2020,11 +2027,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Calculates the optimal position for a tooltip based on preferredPosition.
   ///
-  /// Uses arrow/pointer model where arrow tip touches the marker:
-  /// - TOP: pointer points down at marker
-  /// - BOTTOM: pointer points up at marker
-  /// - LEFT: pointer points right at marker
-  /// - RIGHT: pointer points left at marker
+  /// Uses arrow/pointer model where arrow tip connects to the marker:
+  /// - TOP: arrow below tooltip pointing down to marker
+  /// - BOTTOM: arrow above tooltip pointing up to marker
+  /// - LEFT: arrow right-side of tooltip pointing right to marker
+  /// - RIGHT: arrow left-side of tooltip pointing left to marker
+  /// - AUTO: intelligently chooses based on available space
   Offset _calculateTooltipPosition(
     Offset markerPos,
     TooltipPosition preferredPosition,
@@ -2035,8 +2043,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ) {
     // Define minimum margin to chart edges
     const edgeMargin = 8.0;
+    const arrowSize = 10.0; // Account for arrow in space calculations
 
-    // Available space calculations
+    // Available space calculations (accounting for arrow)
+    final totalHeight = tooltipHeight + arrowSize;
+    final totalWidth = tooltipWidth + arrowSize;
+
     final spaceAbove = markerPos.dy - chartRect.top - edgeMargin;
     final spaceBelow = chartRect.bottom - markerPos.dy - edgeMargin;
     final spaceLeft = markerPos.dx - chartRect.left - edgeMargin;
@@ -2049,34 +2061,34 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       case TooltipPosition.auto:
         // Auto-position: try preferred order, fall back to best fit
         // Preferred order: top > bottom > right > left
-        if (spaceAbove >= tooltipHeight) {
-          // TOP: centered horizontally, offset above marker
+        if (spaceAbove >= totalHeight) {
+          // TOP: centered horizontally, offset above marker, arrow below
           final result = Offset(
             markerPos.dx - tooltipWidth / 2,
-            markerPos.dy - tooltipHeight - offset,
+            markerPos.dy - totalHeight - offset,
           );
           print('✓ AUTO: chose TOP, result=$result');
           return result;
-        } else if (spaceBelow >= tooltipHeight) {
-          // BOTTOM: centered horizontally, offset below marker
+        } else if (spaceBelow >= totalHeight) {
+          // BOTTOM: centered horizontally, offset below marker, arrow above
           final result = Offset(
             markerPos.dx - tooltipWidth / 2,
             markerPos.dy + offset,
           );
           print('✓ AUTO: chose BOTTOM, result=$result');
           return result;
-        } else if (spaceRight >= tooltipWidth) {
-          // RIGHT: centered vertically, offset right of marker
+        } else if (spaceRight >= totalWidth) {
+          // RIGHT: centered vertically, offset right of marker, arrow left
           final result = Offset(
             markerPos.dx + offset,
             markerPos.dy - tooltipHeight / 2,
           );
           print('✓ AUTO: chose RIGHT, result=$result');
           return result;
-        } else if (spaceLeft >= tooltipWidth) {
-          // LEFT: centered vertically, offset left of marker
+        } else if (spaceLeft >= totalWidth) {
+          // LEFT: centered vertically, offset left of marker, arrow right
           final result = Offset(
-            markerPos.dx - tooltipWidth - offset,
+            markerPos.dx - totalWidth - offset,
             markerPos.dy - tooltipHeight / 2,
           );
           print('✓ AUTO: chose LEFT, result=$result');
@@ -2092,16 +2104,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         }
 
       case TooltipPosition.top:
-        // Position above marker, centered horizontally
+        // Position above marker with arrow below pointing down
         final result = Offset(
           markerPos.dx - tooltipWidth / 2,
-          markerPos.dy - tooltipHeight - offset,
+          markerPos.dy - totalHeight - offset,
         );
         print('✓ TOP: result=$result');
         return result;
 
       case TooltipPosition.bottom:
-        // Position below marker, centered horizontally
+        // Position below marker with arrow above pointing up
         final result = Offset(
           markerPos.dx - tooltipWidth / 2,
           markerPos.dy + offset,
@@ -2110,22 +2122,128 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         return result;
 
       case TooltipPosition.left:
-        // Position left of marker, centered vertically
+        // Position left of marker with arrow right pointing right
         final result = Offset(
-          markerPos.dx - tooltipWidth - offset,
+          markerPos.dx - totalWidth - offset,
           markerPos.dy - tooltipHeight / 2,
         );
         print('✓ LEFT: result=$result');
         return result;
 
       case TooltipPosition.right:
-        // Position right of marker, centered vertically
+        // Position right of marker with arrow left pointing left
         final result = Offset(
           markerPos.dx + offset,
           markerPos.dy - tooltipHeight / 2,
         );
         print('✓ RIGHT: result=$result');
         return result;
+    }
+  }
+
+  /// Builds tooltip with elegant arrow pointer indicating marker connection.
+  ///
+  /// Arrow position based on preferredPosition:
+  /// - TOP: arrow below tooltip pointing down
+  /// - BOTTOM: arrow above tooltip pointing up
+  /// - LEFT: arrow right-side of tooltip pointing right
+  /// - RIGHT: arrow left-side of tooltip pointing left
+  /// - AUTO: arrow positioned based on chosen direction
+  Widget _buildTooltipWithArrow(
+    Widget tooltipBox,
+    TooltipConfig config,
+    TooltipPosition position,
+  ) {
+    const arrowSize = 10.0;
+
+    switch (position) {
+      case TooltipPosition.top:
+        // Arrow points downward (below tooltip)
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            tooltipBox,
+            SizedBox(
+              width: arrowSize * 2,
+              height: arrowSize,
+              child: CustomPaint(
+                painter: _TooltipArrowPainter(
+                  direction: _ArrowDirection.down,
+                  color: config.style.backgroundColor,
+                  borderColor: config.style.borderColor,
+                  borderWidth: config.style.borderWidth,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case TooltipPosition.bottom:
+        // Arrow points upward (above tooltip)
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: arrowSize * 2,
+              height: arrowSize,
+              child: CustomPaint(
+                painter: _TooltipArrowPainter(
+                  direction: _ArrowDirection.up,
+                  color: config.style.backgroundColor,
+                  borderColor: config.style.borderColor,
+                  borderWidth: config.style.borderWidth,
+                ),
+              ),
+            ),
+            tooltipBox,
+          ],
+        );
+
+      case TooltipPosition.left:
+        // Arrow points rightward (right-side of tooltip)
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            tooltipBox,
+            SizedBox(
+              width: arrowSize,
+              height: arrowSize * 2,
+              child: CustomPaint(
+                painter: _TooltipArrowPainter(
+                  direction: _ArrowDirection.right,
+                  color: config.style.backgroundColor,
+                  borderColor: config.style.borderColor,
+                  borderWidth: config.style.borderWidth,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case TooltipPosition.right:
+        // Arrow points leftward (left-side of tooltip)
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: arrowSize,
+              height: arrowSize * 2,
+              child: CustomPaint(
+                painter: _TooltipArrowPainter(
+                  direction: _ArrowDirection.left,
+                  color: config.style.backgroundColor,
+                  borderColor: config.style.borderColor,
+                  borderWidth: config.style.borderWidth,
+                ),
+              ),
+            ),
+            tooltipBox,
+          ],
+        );
+
+      case TooltipPosition.auto:
+        // For auto, default to no arrow or use bottom arrow
+        return tooltipBox;
     }
   }
 
@@ -3424,5 +3542,91 @@ class _CrosshairPainter extends CustomPainter {
         nearestPoint != oldDelegate.nearestPoint ||
         dataBounds != oldDelegate.dataBounds ||
         chartRect != oldDelegate.chartRect;
+  }
+}
+
+// ============================================================================
+// TOOLTIP ARROW SUPPORT
+// ============================================================================
+
+/// Direction that the tooltip arrow should point.
+enum _ArrowDirection { up, down, left, right }
+
+/// Custom painter for rendering elegant tooltip arrow pointers.
+class _TooltipArrowPainter extends CustomPainter {
+  _TooltipArrowPainter({
+    required this.direction,
+    required this.color,
+    required this.borderColor,
+    required this.borderWidth,
+  });
+
+  final _ArrowDirection direction;
+  final Color color;
+  final Color borderColor;
+  final double borderWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+
+    switch (direction) {
+      case _ArrowDirection.up:
+        // Triangle pointing up: base at bottom, point at top
+        path.moveTo(size.width / 2, 0); // Top point
+        path.lineTo(0, size.height); // Bottom-left
+        path.lineTo(size.width, size.height); // Bottom-right
+        path.close();
+        break;
+
+      case _ArrowDirection.down:
+        // Triangle pointing down: point at bottom, base at top
+        path.moveTo(size.width / 2, size.height); // Bottom point
+        path.lineTo(0, 0); // Top-left
+        path.lineTo(size.width, 0); // Top-right
+        path.close();
+        break;
+
+      case _ArrowDirection.left:
+        // Triangle pointing left: point at left, base at right
+        path.moveTo(0, size.height / 2); // Left point
+        path.lineTo(size.width, 0); // Top-right
+        path.lineTo(size.width, size.height); // Bottom-right
+        path.close();
+        break;
+
+      case _ArrowDirection.right:
+        // Triangle pointing right: point at right, base at left
+        path.moveTo(size.width, size.height / 2); // Right point
+        path.lineTo(0, 0); // Top-left
+        path.lineTo(0, size.height); // Bottom-left
+        path.close();
+        break;
+    }
+
+    // Fill with background color
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill);
+
+    // Draw border if needed
+    if (borderWidth > 0) {
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = borderColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = borderWidth);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TooltipArrowPainter oldDelegate) {
+    return direction != oldDelegate.direction ||
+        color != oldDelegate.color ||
+        borderColor != oldDelegate.borderColor ||
+        borderWidth != oldDelegate.borderWidth;
   }
 }
