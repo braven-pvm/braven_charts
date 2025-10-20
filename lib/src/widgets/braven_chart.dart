@@ -2016,12 +2016,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Calculates the optimal position for a tooltip based on preferredPosition.
   ///
-  /// Uses arrow/pointer model where arrow tip connects to the marker:
-  /// - TOP: arrow below tooltip pointing down to marker
-  /// - BOTTOM: arrow above tooltip pointing up to marker
-  /// - LEFT: arrow right-side of tooltip pointing right to marker
-  /// - RIGHT: arrow left-side of tooltip pointing left to marker
-  /// - AUTO: intelligently chooses based on available space
+  /// Uses arrow positioning with fixed offset from corner:
+  /// - Arrow is positioned at a predictable offset from the Positioned corner
+  /// - This offset is then aligned with the marker for perfect arrow-to-marker connection
+  /// - TOP: arrow is at arrowOffsetX from left, positioned above marker
+  /// - BOTTOM: arrow is at arrowOffsetX from left, positioned below marker
+  /// - LEFT: arrow is at arrowOffsetY from top, positioned left of marker
+  /// - RIGHT: arrow is at arrowOffsetY from top, positioned right of marker
   Offset _calculateTooltipPosition(
     Offset markerPos,
     TooltipPosition preferredPosition,
@@ -2032,9 +2033,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ) {
     // Define minimum margin to chart edges
     const edgeMargin = 8.0;
-    const arrowSize = 10.0; // Account for arrow in space calculations
+    const arrowSize = 10.0;
 
-    // Available space calculations (accounting for arrow)
+    // Arrow offset from the Positioned corner (for good UX spacing)
+    // This is where the arrow will appear relative to the top-left corner
+    const arrowOffsetX = 20.0; // Horizontal offset from left edge
+    const arrowOffsetY = 20.0; // Vertical offset from top edge
+
+    // Available space calculations
     final totalHeight = tooltipHeight + arrowSize;
     final totalWidth = tooltipWidth + arrowSize;
 
@@ -2049,43 +2055,42 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     switch (preferredPosition) {
       case TooltipPosition.auto:
         // Auto-position: try preferred order, fall back to best fit
-        // Preferred order: top > bottom > right > left
         if (spaceAbove >= totalHeight) {
-          // TOP: centered horizontally, offset above marker, arrow below
+          // TOP: arrow offset X from left, positioned above marker
           final result = Offset(
-            markerPos.dx - tooltipWidth / 2,
+            markerPos.dx - arrowOffsetX,
             markerPos.dy - totalHeight - offset,
           );
-          print('✓ AUTO: chose TOP, result=$result');
+          print('✓ AUTO: chose TOP, result=$result, arrowAt=${markerPos.dx}');
           return result;
         } else if (spaceBelow >= totalHeight) {
-          // BOTTOM: centered horizontally, offset below marker, arrow above
+          // BOTTOM: arrow offset X from left, positioned below marker
           final result = Offset(
-            markerPos.dx - tooltipWidth / 2,
+            markerPos.dx - arrowOffsetX,
             markerPos.dy + offset,
           );
-          print('✓ AUTO: chose BOTTOM, result=$result');
+          print('✓ AUTO: chose BOTTOM, result=$result, arrowAt=${markerPos.dx}');
           return result;
         } else if (spaceRight >= totalWidth) {
-          // RIGHT: centered vertically, offset right of marker, arrow left
+          // RIGHT: arrow offset Y from top, positioned right of marker
           final result = Offset(
             markerPos.dx + offset,
-            markerPos.dy - tooltipHeight / 2,
+            markerPos.dy - arrowOffsetY,
           );
-          print('✓ AUTO: chose RIGHT, result=$result');
+          print('✓ AUTO: chose RIGHT, result=$result, arrowAt=${markerPos.dy}');
           return result;
         } else if (spaceLeft >= totalWidth) {
-          // LEFT: centered vertically, offset left of marker, arrow right
+          // LEFT: arrow offset Y from top, positioned left of marker
           final result = Offset(
             markerPos.dx - totalWidth - offset,
-            markerPos.dy - tooltipHeight / 2,
+            markerPos.dy - arrowOffsetY,
           );
-          print('✓ AUTO: chose LEFT, result=$result');
+          print('✓ AUTO: chose LEFT, result=$result, arrowAt=${markerPos.dy}');
           return result;
         } else {
-          // Fallback: position to the bottom-right
+          // Fallback: position to the bottom-right with arrow offset
           final result = Offset(
-            markerPos.dx + offset,
+            markerPos.dx - arrowOffsetX,
             markerPos.dy + offset,
           );
           print('✓ AUTO: FALLBACK, result=$result');
@@ -2093,39 +2098,41 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         }
 
       case TooltipPosition.top:
-        // Position above marker with arrow below pointing down
+        // Arrow is at arrowOffsetX from left, tooltip positioned above marker
+        // So: Positioned.left = markerPos.dx - arrowOffsetX
+        // This makes arrow tip align with marker
         final result = Offset(
-          markerPos.dx - tooltipWidth / 2,
+          markerPos.dx - arrowOffsetX,
           markerPos.dy - totalHeight - offset,
         );
-        print('✓ TOP: result=$result');
+        print('✓ TOP: result=$result, arrowAt=${markerPos.dx}');
         return result;
 
       case TooltipPosition.bottom:
-        // Position below marker with arrow above pointing up
+        // Arrow is at arrowOffsetX from left, tooltip positioned below marker
         final result = Offset(
-          markerPos.dx - tooltipWidth / 2,
+          markerPos.dx - arrowOffsetX,
           markerPos.dy + offset,
         );
-        print('✓ BOTTOM: result=$result');
+        print('✓ BOTTOM: result=$result, arrowAt=${markerPos.dx}');
         return result;
 
       case TooltipPosition.left:
-        // Position left of marker with arrow right pointing right
+        // Arrow is at arrowOffsetY from top, tooltip positioned left of marker
         final result = Offset(
           markerPos.dx - totalWidth - offset,
-          markerPos.dy - tooltipHeight / 2,
+          markerPos.dy - arrowOffsetY,
         );
-        print('✓ LEFT: result=$result');
+        print('✓ LEFT: result=$result, arrowAt=${markerPos.dy}');
         return result;
 
       case TooltipPosition.right:
-        // Position right of marker with arrow left pointing left
+        // Arrow is at arrowOffsetY from top, tooltip positioned right of marker
         final result = Offset(
           markerPos.dx + offset,
-          markerPos.dy - tooltipHeight / 2,
+          markerPos.dy - arrowOffsetY,
         );
-        print('✓ RIGHT: result=$result');
+        print('✓ RIGHT: result=$result, arrowAt=${markerPos.dy}');
         return result;
     }
   }
