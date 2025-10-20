@@ -2164,31 +2164,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     switch (position) {
       case TooltipPosition.top:
-        // Arrow notch on top pointing down
-        return Container(
-          decoration: ShapeDecoration(
-            color: Colors.transparent,
-            shape: _TooltipShapeBorder(
-              arrowPosition: _ArrowPosition.top,
-              backgroundColor: tooltipStyle.backgroundColor,
-              borderColor: tooltipStyle.borderColor,
-              borderWidth: tooltipStyle.borderWidth,
-              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
-              arrowSize: 10.0,
-              boxShadow: boxShadow,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 12.0),
-            child: Padding(
-              padding: EdgeInsets.all(tooltipStyle.padding),
-              child: tooltipContent,
-            ),
-          ),
-        );
-
-      case TooltipPosition.bottom:
-        // Arrow notch on bottom pointing up
+        // Tooltip is ABOVE marker, so arrow should be on BOTTOM pointing DOWN
         return Container(
           decoration: ShapeDecoration(
             color: Colors.transparent,
@@ -2211,13 +2187,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           ),
         );
 
-      case TooltipPosition.left:
-        // Arrow notch on left pointing right
+      case TooltipPosition.bottom:
+        // Tooltip is BELOW marker, so arrow should be on TOP pointing UP
         return Container(
           decoration: ShapeDecoration(
             color: Colors.transparent,
             shape: _TooltipShapeBorder(
-              arrowPosition: _ArrowPosition.left,
+              arrowPosition: _ArrowPosition.top,
               backgroundColor: tooltipStyle.backgroundColor,
               borderColor: tooltipStyle.borderColor,
               borderWidth: tooltipStyle.borderWidth,
@@ -2227,7 +2203,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.only(left: 12.0),
+            padding: const EdgeInsets.only(top: 12.0),
             child: Padding(
               padding: EdgeInsets.all(tooltipStyle.padding),
               child: tooltipContent,
@@ -2235,8 +2211,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           ),
         );
 
-      case TooltipPosition.right:
-        // Arrow notch on right pointing left
+      case TooltipPosition.left:
+        // Tooltip is LEFT of marker, so arrow should be on RIGHT pointing RIGHT
         return Container(
           decoration: ShapeDecoration(
             color: Colors.transparent,
@@ -2252,6 +2228,30 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           ),
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
+            child: Padding(
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
+            ),
+          ),
+        );
+
+      case TooltipPosition.right:
+        // Tooltip is RIGHT of marker, so arrow should be on LEFT pointing LEFT
+        return Container(
+          decoration: ShapeDecoration(
+            color: Colors.transparent,
+            shape: _TooltipShapeBorder(
+              arrowPosition: _ArrowPosition.left,
+              backgroundColor: tooltipStyle.backgroundColor,
+              borderColor: tooltipStyle.borderColor,
+              borderWidth: tooltipStyle.borderWidth,
+              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
+              arrowSize: 10.0,
+              boxShadow: boxShadow,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12.0),
             child: Padding(
               padding: EdgeInsets.all(tooltipStyle.padding),
               child: tooltipContent,
