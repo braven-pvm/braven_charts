@@ -614,6 +614,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Animation for pan offset.
   Animation<Offset>? _panAnimation;
 
+  /// Cached chart rectangle for use in interaction callbacks.
+  ///
+  /// Stores the calculated chart area (with padding) so that onHover,
+  /// onTap, and other interaction callbacks can access it without
+  /// needing to recalculate from render box (which may not be accurate).
+  Rect? _cachedChartRect;
+
+  /// Timer for hiding tooltip after a delay.
+  ///
+  /// The tooltip persists even after the mouse leaves the marker.
+  /// It only hides after this timeout or when a new marker is hovered.
+  Timer? _tooltipHideTimer;
+
   // ==================== LIFECYCLE METHODS ====================
 
   @override
@@ -795,6 +808,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Cancel throttle timer
     _throttleTimer?.cancel();
     _throttleTimer = null;
+
+    // Cancel tooltip hide timer
+    _tooltipHideTimer?.cancel();
+    _tooltipHideTimer = null;
 
     // Dispose zoom animation controller
     _zoomAnimationController?.dispose();
@@ -993,6 +1010,34 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     });
   }
 
+  /// Starts or restarts the tooltip hide timer.
+  ///
+  /// Cancels any existing timer and starts a new one with the configured timeout.
+  /// When the timer fires, the tooltip is hidden.
+  void _startTooltipHideTimer() {
+    final config = widget.interactionConfig?.tooltip;
+    if (config == null) return;
+
+    // Cancel existing timer
+    _tooltipHideTimer?.cancel();
+
+    // Start new timer with the configured hide delay
+    // hideDelay is shown duration, we want persistence after hover ends
+    // Using a longer timeout for the tooltip to persist (5 seconds by default)
+    const persistDelay = Duration(seconds: 5);
+    _tooltipHideTimer = Timer(persistDelay, () {
+      if (mounted) {
+        setState(() {
+          _interactionState = _interactionState.copyWith(
+            isTooltipVisible: false,
+            tooltipPosition: null,
+            tooltipDataPoint: null,
+          );
+        });
+      }
+    });
+  }
+
   // ==================== BUILD METHOD ====================
 
   @override
@@ -1109,6 +1154,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final chartRect = _calculateChartRect(size);
 
+        // Cache the chartRect for use in interaction callbacks
+        _cachedChartRect = chartRect;
+        print('🗂️ CACHED chartRect: left=${chartRect.left}, top=${chartRect.top}, width=${chartRect.width}, height=${chartRect.height}');
+
         // Build the full interaction stack
         Widget interactiveWidget = Stack(
           children: [
@@ -1133,14 +1182,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                             // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
                             final dataX = (_interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
                             final dataY = (_interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
-                            
+
                             final allSeries = _getAllSeries();
                             if (allSeries.isEmpty) return null;
-                            
+
                             final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
                             final point = ChartDataPoint(x: dataX, y: dataY);
                             final screenPos = _dataToScreenPoint(point, chartRect, bounds);
-                            
+
                             // Validate coordinates are finite and within reasonable bounds
                             if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
                               return screenPos;
@@ -1160,7 +1209,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               ),
 
             // Tooltip overlay (if enabled and visible)
-            if (_buildTooltipOverlay() != null) _buildTooltipOverlay()!,
+            ..._buildTooltipOverlay() != null ? [_buildTooltipOverlay()!] : [],
           ],
         );
 
@@ -1174,13 +1223,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           },
           onExit: (_) {
             setState(() {
+              // Only hide crosshair, NOT tooltip
+              // Tooltip persists after mouse exits and hides via timer
               _interactionState = _interactionState.copyWith(
                 isCrosshairVisible: false,
-                isTooltipVisible: false,
                 crosshairPosition: null,
-                tooltipPosition: null,
-                hoveredPoint: null,
-                hoveredSeriesId: null,
               );
             });
 
@@ -1202,28 +1249,71 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final nearestPointData = _findNearestDataPoint(event.localPosition);
               if (nearestPointData != null) {
                 snapPointsData = [nearestPointData]; // Capture for callback
+
+                // Calculate the marker's screen position with current zoom/pan transforms
+                final allSeries = _getAllSeries();
+
+                // CRITICAL: The marker position MUST use the screenX/screenY already calculated in _findNearestDataPoint
+                // This ensures the tooltip position exactly matches the marker on screen.
+                // Using event.localPosition as fallback would tie tooltip to cursor!
+                final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
+                final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
+
+                final Offset markerPosition;
+                if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
+                  // Use the cached screen coordinates from nearest point detection
+                  // These are already in Stack-local coordinates (relative to chart area origin)
+                  markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
+                  print(
+                      '📍 TOOLTIP MARKER: Using cached screenPos! markerX=$markerScreenX, markerY=$markerScreenY, final=(${markerPosition.dx}, ${markerPosition.dy})');
+                } else {
+                  // Fallback: Calculate from data point (should not happen if _findNearestDataPoint worked)
+                  final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
+                  final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
+
+                  if (_cachedChartRect != null) {
+                    final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+                    final point = ChartDataPoint(x: dataX, y: dataY);
+                    final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
+
+                    if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
+                      markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
+                      print(
+                          '📍 TOOLTIP MARKER: Calculated from data! dataX=$dataX, dataY=$dataY, final=(${markerPosition.dx}, ${markerPosition.dy})');
+                    } else {
+                      // Last resort: Use cursor (should almost never happen)
+                      markerPosition = event.localPosition;
+                      print('❌ TOOLTIP MARKER: ERROR! Using cursor as fallback! event=${event.localPosition}');
+                    }
+                  } else {
+                    // No chartRect available yet - use cursor
+                    markerPosition = event.localPosition;
+                    print('⚠️ TOOLTIP MARKER: chartRect not cached yet! Using cursor. This should only happen on first hover.');
+                  }
+                }
+
                 _interactionState = _interactionState.copyWith(
                   hoveredPoint: nearestPointData,
                   hoveredSeriesId: nearestPointData['seriesId'] as String?,
-                  tooltipPosition: event.localPosition,
+                  tooltipPosition: markerPosition,
                   tooltipDataPoint: nearestPointData,
                   isTooltipVisible: config.tooltip.enabled,
                   snapPoints: snapPointsData, // Populate snapPoints with the nearest point
                 );
 
+                // Start tooltip hide timer - tooltip persists even after mouse exits
+                if (config.tooltip.enabled) {
+                  _startTooltipHideTimer();
+                }
+
                 // Convert Map to ChartDataPoint for callback
                 final point = _mapToDataPoint(nearestPointData);
                 config.onDataPointHover?.call(point, event.localPosition);
               } else {
-                // No point nearby, clear tooltip
+                // No point nearby, don't clear tooltip immediately
+                // Tooltip will hide via timer or when hovering a different marker
                 snapPointsData = const [];
-                _interactionState = _interactionState.copyWith(
-                  isTooltipVisible: false,
-                  hoveredPoint: null,
-                  hoveredSeriesId: null,
-                  tooltipDataPoint: null,
-                  snapPoints: snapPointsData, // Clear snapPoints when no point is nearby
-                );
+                // Don't update interaction state - let timer handle tooltip clearing
               }
             });
 
@@ -1821,18 +1911,50 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   }
 
   /// Builds the tooltip overlay widget with smart positioning.
+  ///
+  /// CRITICAL: Recalculates the tooltip position on EVERY BUILD to track marker through zoom/pan.
+  /// Uses _cachedChartRect which is set in LayoutBuilder during render, so size is always available.
+  /// The marker's screen position changes when zoom/pan state changes, so we must recalculate
+  /// the tooltip position on every build using:
+  /// 1. Marker's data coordinates (from tooltipDataPoint)
+  /// 2. Current zoom/pan state (which affects coordinate transformation)
+  /// 3. Transform to screen coordinates using _dataToScreenPoint()
+  /// 4. Apply offset to keep tooltip visible near marker
   Widget? _buildTooltipOverlay() {
     final config = widget.interactionConfig?.tooltip;
     if (config == null || !config.enabled || !_interactionState.isTooltipVisible) {
       return null;
     }
 
-    final tooltipPosition = _interactionState.tooltipPosition;
     final dataPoint = _interactionState.tooltipDataPoint;
-
-    if (tooltipPosition == null || dataPoint == null) {
+    if (dataPoint == null) {
       return null;
     }
+
+    // Use the cached chart rect (set in LayoutBuilder during render)
+    if (_cachedChartRect == null) {
+      return null; // Chart rect not available yet
+    }
+
+    // CRITICAL: Recalculate marker screen position on every build to track zoom/pan
+    // Get marker data coordinates
+    final markerX = dataPoint['x'] as double?;
+    final markerY = dataPoint['y'] as double?;
+
+    if (markerX == null || markerY == null) {
+      return null;
+    }
+
+    // Calculate current data bounds (includes zoom/pan transforms)
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) return null;
+
+    final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+
+    // Transform marker from data coordinates to screen coordinates
+    // _dataToScreenPoint already returns Stack-local coordinates (it adds chartRect.left/bottom internally)
+    final markerDataPoint = ChartDataPoint(x: markerX, y: markerY);
+    final markerScreenPos = _dataToScreenPoint(markerDataPoint, _cachedChartRect!, bounds);
 
     // Use custom builder if provided, otherwise default builder
     Widget tooltipContent;
@@ -1866,40 +1988,26 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       child: tooltipContent,
     );
 
-    // Calculate smart positioning
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return null;
+    // Calculate tooltip position based on preferredPosition
+    // Estimate tooltip size for positioning
+    const estimatedWidth = 150.0;
+    const estimatedHeight = 80.0;
 
-    final chartSize = renderBox.size;
-    const tooltipSize = Size(200, 80); // Estimate, will be measured
+    final tooltipPosition = _calculateTooltipPosition(
+      markerScreenPos,
+      config.preferredPosition,
+      config.offsetFromPoint,
+      estimatedWidth,
+      estimatedHeight,
+      _cachedChartRect!,
+    );
 
-    // Smart positioning: flip to opposite side if clipping
-    double left = tooltipPosition.dx + config.offsetFromPoint;
-    double top = tooltipPosition.dy + config.offsetFromPoint;
-
-    // Check right boundary
-    if (left + tooltipSize.width > chartSize.width) {
-      left = tooltipPosition.dx - tooltipSize.width - config.offsetFromPoint;
-    }
-
-    // Check bottom boundary
-    if (top + tooltipSize.height > chartSize.height) {
-      top = tooltipPosition.dy - tooltipSize.height - config.offsetFromPoint;
-    }
-
-    // Ensure not off left edge
-    if (left < 0) {
-      left = 10;
-    }
-
-    // Ensure not off top edge
-    if (top < 0) {
-      top = 10;
-    }
+    print(
+        '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, tooltipPos=$tooltipPosition, offset=${config.offsetFromPoint}');
 
     return Positioned(
-      left: left,
-      top: top,
+      left: tooltipPosition.dx,
+      top: tooltipPosition.dy,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: _interactionState.isTooltipVisible ? 1.0 : 0.0,
@@ -1908,6 +2016,117 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         ),
       ),
     );
+  }
+
+  /// Calculates the optimal position for a tooltip based on preferredPosition.
+  ///
+  /// Uses arrow/pointer model where arrow tip touches the marker:
+  /// - TOP: pointer points down at marker
+  /// - BOTTOM: pointer points up at marker
+  /// - LEFT: pointer points right at marker
+  /// - RIGHT: pointer points left at marker
+  Offset _calculateTooltipPosition(
+    Offset markerPos,
+    TooltipPosition preferredPosition,
+    double offset,
+    double tooltipWidth,
+    double tooltipHeight,
+    Rect chartRect,
+  ) {
+    // Define minimum margin to chart edges
+    const edgeMargin = 8.0;
+
+    // Available space calculations
+    final spaceAbove = markerPos.dy - chartRect.top - edgeMargin;
+    final spaceBelow = chartRect.bottom - markerPos.dy - edgeMargin;
+    final spaceLeft = markerPos.dx - chartRect.left - edgeMargin;
+    final spaceRight = chartRect.right - markerPos.dx - edgeMargin;
+
+    print('📏 POSITIONING DEBUG: position=$preferredPosition, marker=$markerPos, offset=$offset');
+    print('📏 SPACE: above=$spaceAbove, below=$spaceBelow, left=$spaceLeft, right=$spaceRight');
+
+    switch (preferredPosition) {
+      case TooltipPosition.auto:
+        // Auto-position: try preferred order, fall back to best fit
+        // Preferred order: top > bottom > right > left
+        if (spaceAbove >= tooltipHeight) {
+          // TOP: centered horizontally, offset above marker
+          final result = Offset(
+            markerPos.dx - tooltipWidth / 2,
+            markerPos.dy - tooltipHeight - offset,
+          );
+          print('✓ AUTO: chose TOP, result=$result');
+          return result;
+        } else if (spaceBelow >= tooltipHeight) {
+          // BOTTOM: centered horizontally, offset below marker
+          final result = Offset(
+            markerPos.dx - tooltipWidth / 2,
+            markerPos.dy + offset,
+          );
+          print('✓ AUTO: chose BOTTOM, result=$result');
+          return result;
+        } else if (spaceRight >= tooltipWidth) {
+          // RIGHT: centered vertically, offset right of marker
+          final result = Offset(
+            markerPos.dx + offset,
+            markerPos.dy - tooltipHeight / 2,
+          );
+          print('✓ AUTO: chose RIGHT, result=$result');
+          return result;
+        } else if (spaceLeft >= tooltipWidth) {
+          // LEFT: centered vertically, offset left of marker
+          final result = Offset(
+            markerPos.dx - tooltipWidth - offset,
+            markerPos.dy - tooltipHeight / 2,
+          );
+          print('✓ AUTO: chose LEFT, result=$result');
+          return result;
+        } else {
+          // Fallback: position to the bottom-right
+          final result = Offset(
+            markerPos.dx + offset,
+            markerPos.dy + offset,
+          );
+          print('✓ AUTO: FALLBACK, result=$result');
+          return result;
+        }
+
+      case TooltipPosition.top:
+        // Position above marker, centered horizontally
+        final result = Offset(
+          markerPos.dx - tooltipWidth / 2,
+          markerPos.dy - tooltipHeight - offset,
+        );
+        print('✓ TOP: result=$result');
+        return result;
+
+      case TooltipPosition.bottom:
+        // Position below marker, centered horizontally
+        final result = Offset(
+          markerPos.dx - tooltipWidth / 2,
+          markerPos.dy + offset,
+        );
+        print('✓ BOTTOM: result=$result');
+        return result;
+
+      case TooltipPosition.left:
+        // Position left of marker, centered vertically
+        final result = Offset(
+          markerPos.dx - tooltipWidth - offset,
+          markerPos.dy - tooltipHeight / 2,
+        );
+        print('✓ LEFT: result=$result');
+        return result;
+
+      case TooltipPosition.right:
+        // Position right of marker, centered vertically
+        final result = Offset(
+          markerPos.dx + offset,
+          markerPos.dy - tooltipHeight / 2,
+        );
+        print('✓ RIGHT: result=$result');
+        return result;
+    }
   }
 
   /// Builds the default tooltip content.

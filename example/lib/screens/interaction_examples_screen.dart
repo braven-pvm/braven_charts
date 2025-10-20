@@ -3,12 +3,17 @@
 
 /// Interaction Examples Index Screen
 ///
-/// Navigation hub for all 9 interaction system examples demonstrating:
-/// - Crosshair interactions
-/// - Tooltip configuration
-/// - Zoom and pan
-/// - Gesture handling
-/// - Keyboard navigation
+/// Navigation hub for all 13 interaction system examples demonstrating:
+/// - Crosshair interactions (Examples 1-2)
+/// - Tooltip configuration (Examples 3-4)
+/// - Tooltip styling variants (Example 10)
+/// - Tooltip trigger modes (Example 11)
+/// - Tooltip positioning (Example 12)
+/// - Theme-aware tooltips (Example 13)
+/// - Zoom and pan (Example 5)
+/// - Gesture handling (Example 6)
+/// - Keyboard navigation (Example 7)
+/// - Advanced interactions (Examples 8-9)
 library;
 
 import 'package:flutter/material.dart';
@@ -21,6 +26,10 @@ import 'interaction_examples/default_tooltip.dart';
 import 'interaction_examples/gesture_callbacks.dart';
 import 'interaction_examples/keyboard_navigation.dart';
 import 'interaction_examples/multi_series_crosshair.dart';
+import 'interaction_examples/theme_aware_tooltip.dart';
+import 'interaction_examples/tooltip_positioning_demo.dart';
+import 'interaction_examples/tooltip_styling_variants.dart';
+import 'interaction_examples/tooltip_trigger_modes.dart';
 import 'interaction_examples/zoom_pan_config.dart';
 
 class InteractionExamplesScreen extends StatelessWidget {
@@ -162,6 +171,54 @@ class InteractionExamplesScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const CustomTooltipBuilderExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 10: Tooltip Styling Variants',
+          subtitle: 'Light, dark, accent, minimal, and material styles',
+          icon: Icons.palette,
+          color: Colors.cyan,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TooltipStylingVariantsExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 11: Tooltip Trigger Modes',
+          subtitle: 'Hover, tap, and both trigger modes with timing',
+          icon: Icons.touch_app,
+          color: Colors.teal,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TooltipTriggerModesExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 12: Tooltip Positioning',
+          subtitle: 'Auto, top, bottom, left, right positioning strategies',
+          icon: Icons.move_up,
+          color: Colors.lime,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TooltipPositioningDemoExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildExampleCard(
+          context,
+          title: 'Example 13: Theme-Aware Tooltips',
+          subtitle: 'Light/dark theme support with high contrast mode',
+          icon: Icons.dark_mode,
+          color: Colors.indigo,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ThemeAwareTooltipExample()),
           ),
         ),
       ],
