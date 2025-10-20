@@ -2037,8 +2037,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Arrow offset from the Positioned corner (for good UX spacing)
     // This is where the arrow will appear relative to the top-left corner
-    const arrowOffsetX = 20.0; // Horizontal offset from left edge
-    const arrowOffsetY = 20.0; // Vertical offset from top edge
+    const arrowOffsetX = 6.0; // Horizontal offset from left edge
+    const arrowOffsetY = 6.0; // Vertical offset from top edge
 
     // Available space calculations
     final totalHeight = tooltipHeight + arrowSize;
@@ -3640,7 +3640,7 @@ class _TooltipShapeBorder extends ShapeBorder {
     switch (arrowPosition) {
       case _ArrowPosition.top:
         // Arrow notch on top edge at FIXED offset from left (not centered)
-        const arrowOffsetX = 20.0;
+        const arrowOffsetX = 6.0;
         final arrowLeft = arrowOffsetX - arrowSize / 2;
         final arrowRight = arrowOffsetX + arrowSize / 2;
         final arrowTop = rect.top - arrowSize;
@@ -3668,7 +3668,7 @@ class _TooltipShapeBorder extends ShapeBorder {
 
       case _ArrowPosition.bottom:
         // Arrow notch on bottom edge at FIXED offset from left (not centered)
-        const arrowOffsetX = 20.0;
+        const arrowOffsetX = 6.0;
         final arrowLeft = arrowOffsetX - arrowSize / 2;
         final arrowRight = arrowOffsetX + arrowSize / 2;
         final arrowBottom = rect.bottom + arrowSize;
@@ -3696,7 +3696,7 @@ class _TooltipShapeBorder extends ShapeBorder {
 
       case _ArrowPosition.left:
         // Arrow notch on left edge at FIXED offset from top (not centered)
-        const arrowOffsetY = 20.0;
+        const arrowOffsetY = 6.0;
         final arrowTop = arrowOffsetY - arrowSize / 2;
         final arrowBottom = arrowOffsetY + arrowSize / 2;
         final arrowLeft = rect.left - arrowSize;
@@ -3724,7 +3724,7 @@ class _TooltipShapeBorder extends ShapeBorder {
 
       case _ArrowPosition.right:
         // Arrow notch on right edge at FIXED offset from top (not centered)
-        const arrowOffsetY = 20.0;
+        const arrowOffsetY = 6.0;
         final arrowTop = arrowOffsetY - arrowSize / 2;
         final arrowBottom = arrowOffsetY + arrowSize / 2;
         final arrowRight = rect.right + arrowSize;
