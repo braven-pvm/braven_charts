@@ -2141,108 +2141,115 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
   }
 
-  /// Builds tooltip with elegant arrow pointer indicating marker connection.
+  /// Builds tooltip with integrated arrow as part of continuous border.
   ///
+  /// The arrow is cut INTO the tooltip border, not added as a separate element.
   /// Arrow position based on preferredPosition:
-  /// - TOP: arrow below tooltip pointing down
-  /// - BOTTOM: arrow above tooltip pointing up
-  /// - LEFT: arrow right-side of tooltip pointing right
-  /// - RIGHT: arrow left-side of tooltip pointing left
-  /// - AUTO: arrow positioned based on chosen direction
+  /// - TOP: arrow notch on top edge pointing down to marker
+  /// - BOTTOM: arrow notch on bottom edge pointing up to marker
+  /// - LEFT: arrow notch on left edge pointing right to marker
+  /// - RIGHT: arrow notch on right edge pointing left to marker
+  /// - AUTO: returns tooltip without arrow
   Widget _buildTooltipWithArrow(
     Widget tooltipBox,
     TooltipConfig config,
     TooltipPosition position,
   ) {
-    const arrowSize = 10.0;
-
     switch (position) {
       case TooltipPosition.top:
-        // Arrow points downward (below tooltip)
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            tooltipBox,
-            SizedBox(
-              width: arrowSize * 2,
-              height: arrowSize,
-              child: CustomPaint(
-                painter: _TooltipArrowPainter(
-                  direction: _ArrowDirection.down,
-                  color: config.style.backgroundColor,
-                  borderColor: config.style.borderColor,
-                  borderWidth: config.style.borderWidth,
-                ),
-              ),
+        // Arrow notch on top pointing down
+        return Container(
+          decoration: ShapeDecoration(
+            color: Colors.transparent,
+            shape: _TooltipShapeBorder(
+              arrowPosition: _ArrowPosition.top,
+              backgroundColor: config.style.backgroundColor,
+              borderColor: config.style.borderColor,
+              borderWidth: config.style.borderWidth,
+              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              arrowSize: 10.0,
             ),
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Padding(
+              padding: EdgeInsets.all(config.style.padding),
+              child: tooltipBox,
+            ),
+          ),
         );
 
       case TooltipPosition.bottom:
-        // Arrow points upward (above tooltip)
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: arrowSize * 2,
-              height: arrowSize,
-              child: CustomPaint(
-                painter: _TooltipArrowPainter(
-                  direction: _ArrowDirection.up,
-                  color: config.style.backgroundColor,
-                  borderColor: config.style.borderColor,
-                  borderWidth: config.style.borderWidth,
-                ),
-              ),
+        // Arrow notch on bottom pointing up
+        return Container(
+          decoration: ShapeDecoration(
+            color: Colors.transparent,
+            shape: _TooltipShapeBorder(
+              arrowPosition: _ArrowPosition.bottom,
+              backgroundColor: config.style.backgroundColor,
+              borderColor: config.style.borderColor,
+              borderWidth: config.style.borderWidth,
+              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              arrowSize: 10.0,
             ),
-            tooltipBox,
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Padding(
+              padding: EdgeInsets.all(config.style.padding),
+              child: tooltipBox,
+            ),
+          ),
         );
 
       case TooltipPosition.left:
-        // Arrow points rightward (right-side of tooltip)
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            tooltipBox,
-            SizedBox(
-              width: arrowSize,
-              height: arrowSize * 2,
-              child: CustomPaint(
-                painter: _TooltipArrowPainter(
-                  direction: _ArrowDirection.right,
-                  color: config.style.backgroundColor,
-                  borderColor: config.style.borderColor,
-                  borderWidth: config.style.borderWidth,
-                ),
-              ),
+        // Arrow notch on left pointing right
+        return Container(
+          decoration: ShapeDecoration(
+            color: Colors.transparent,
+            shape: _TooltipShapeBorder(
+              arrowPosition: _ArrowPosition.left,
+              backgroundColor: config.style.backgroundColor,
+              borderColor: config.style.borderColor,
+              borderWidth: config.style.borderWidth,
+              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              arrowSize: 10.0,
             ),
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12.0),
+            child: Padding(
+              padding: EdgeInsets.all(config.style.padding),
+              child: tooltipBox,
+            ),
+          ),
         );
 
       case TooltipPosition.right:
-        // Arrow points leftward (left-side of tooltip)
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: arrowSize,
-              height: arrowSize * 2,
-              child: CustomPaint(
-                painter: _TooltipArrowPainter(
-                  direction: _ArrowDirection.left,
-                  color: config.style.backgroundColor,
-                  borderColor: config.style.borderColor,
-                  borderWidth: config.style.borderWidth,
-                ),
-              ),
+        // Arrow notch on right pointing left
+        return Container(
+          decoration: ShapeDecoration(
+            color: Colors.transparent,
+            shape: _TooltipShapeBorder(
+              arrowPosition: _ArrowPosition.right,
+              backgroundColor: config.style.backgroundColor,
+              borderColor: config.style.borderColor,
+              borderWidth: config.style.borderWidth,
+              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              arrowSize: 10.0,
             ),
-            tooltipBox,
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: Padding(
+              padding: EdgeInsets.all(config.style.padding),
+              child: tooltipBox,
+            ),
+          ),
         );
 
       case TooltipPosition.auto:
-        // For auto, default to no arrow or use bottom arrow
+        // For auto, no arrow
         return tooltipBox;
     }
   }
@@ -3550,83 +3557,205 @@ class _CrosshairPainter extends CustomPainter {
 // ============================================================================
 
 /// Direction that the tooltip arrow should point.
-enum _ArrowDirection { up, down, left, right }
+/// Arrow position for integrated tooltip border
+enum _ArrowPosition {
+  top,
+  bottom,
+  left,
+  right,
+}
 
-/// Custom painter for rendering elegant tooltip arrow pointers.
-class _TooltipArrowPainter extends CustomPainter {
-  _TooltipArrowPainter({
-    required this.direction,
-    required this.color,
-    required this.borderColor,
-    required this.borderWidth,
-  });
-
-  final _ArrowDirection direction;
-  final Color color;
+/// Custom shape border that integrates arrow notch into tooltip border.
+///
+/// Creates a continuous path with an arrow notch that is part of the border,
+/// not a separate element. This produces the visual effect of the arrow being
+/// cut into the tooltip edge.
+class _TooltipShapeBorder extends ShapeBorder {
+  final _ArrowPosition arrowPosition;
+  final Color backgroundColor;
   final Color borderColor;
   final double borderWidth;
+  final BorderRadius borderRadius;
+  final double arrowSize;
+
+  const _TooltipShapeBorder({
+    required this.arrowPosition,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.borderRadius,
+    required this.arrowSize,
+  });
 
   @override
-  void paint(Canvas canvas, Size size) {
+  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
+    return Path()..addRect(rect);
+  }
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    return _createTooltipPath(rect);
+  }
+
+  Path _createTooltipPath(Rect rect) {
     final path = Path();
+    final radius = borderRadius.topLeft.x;
 
-    switch (direction) {
-      case _ArrowDirection.up:
-        // Triangle pointing up: base at bottom, point at top
-        path.moveTo(size.width / 2, 0); // Top point
-        path.lineTo(0, size.height); // Bottom-left
-        path.lineTo(size.width, size.height); // Bottom-right
-        path.close();
+    switch (arrowPosition) {
+      case _ArrowPosition.top:
+        // Arrow notch on top edge
+        final arrowLeft = rect.center.dx - arrowSize / 2;
+        final arrowRight = rect.center.dx + arrowSize / 2;
+        final arrowTop = rect.top - arrowSize;
+
+        path.moveTo(rect.left + radius, rect.top);
+        // Top-left to arrow start
+        path.lineTo(arrowLeft, rect.top);
+        // Arrow notch down
+        path.lineTo(rect.center.dx, arrowTop);
+        // Arrow notch back to right
+        path.lineTo(arrowRight, rect.top);
+        // Top-right corner
+        path.lineTo(rect.right - radius, rect.top);
+        path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
+        // Right side
+        path.lineTo(rect.right, rect.bottom - radius);
+        path.quadraticBezierTo(
+            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        // Bottom-right to bottom-left
+        path.lineTo(rect.left + radius, rect.bottom);
+        path.quadraticBezierTo(
+            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        // Left side back to start
+        path.lineTo(rect.left, rect.top + radius);
+        path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
         break;
 
-      case _ArrowDirection.down:
-        // Triangle pointing down: point at bottom, base at top
-        path.moveTo(size.width / 2, size.height); // Bottom point
-        path.lineTo(0, 0); // Top-left
-        path.lineTo(size.width, 0); // Top-right
-        path.close();
+      case _ArrowPosition.bottom:
+        // Arrow notch on bottom edge
+        final arrowLeft = rect.center.dx - arrowSize / 2;
+        final arrowRight = rect.center.dx + arrowSize / 2;
+        final arrowBottom = rect.bottom + arrowSize;
+
+        path.moveTo(rect.left + radius, rect.top);
+        // Top side
+        path.lineTo(rect.right - radius, rect.top);
+        path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
+        // Right side
+        path.lineTo(rect.right, rect.bottom - radius);
+        path.quadraticBezierTo(
+            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        // Bottom-right to arrow start
+        path.lineTo(arrowRight, rect.bottom);
+        // Arrow notch down
+        path.lineTo(rect.center.dx, arrowBottom);
+        // Arrow notch back to left
+        path.lineTo(arrowLeft, rect.bottom);
+        // Bottom-left corner
+        path.lineTo(rect.left + radius, rect.bottom);
+        path.quadraticBezierTo(
+            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        // Left side
+        path.lineTo(rect.left, rect.top + radius);
+        path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
         break;
 
-      case _ArrowDirection.left:
-        // Triangle pointing left: point at left, base at right
-        path.moveTo(0, size.height / 2); // Left point
-        path.lineTo(size.width, 0); // Top-right
-        path.lineTo(size.width, size.height); // Bottom-right
-        path.close();
+      case _ArrowPosition.left:
+        // Arrow notch on left edge
+        final arrowTop = rect.center.dy - arrowSize / 2;
+        final arrowBottom = rect.center.dy + arrowSize / 2;
+        final arrowLeft = rect.left - arrowSize;
+
+        path.moveTo(rect.left, rect.top + radius);
+        // Top-left to arrow start
+        path.lineTo(rect.left, arrowTop);
+        // Arrow notch left
+        path.lineTo(arrowLeft, rect.center.dy);
+        // Arrow notch back to bottom
+        path.lineTo(rect.left, arrowBottom);
+        // Left side continues down
+        path.lineTo(rect.left, rect.bottom - radius);
+        path.quadraticBezierTo(
+            rect.left, rect.bottom, rect.left + radius, rect.bottom);
+        // Bottom side
+        path.lineTo(rect.right - radius, rect.bottom);
+        path.quadraticBezierTo(
+            rect.right, rect.bottom, rect.right, rect.bottom - radius);
+        // Right side
+        path.lineTo(rect.right, rect.top + radius);
+        path.quadraticBezierTo(
+            rect.right, rect.top, rect.right - radius, rect.top);
+        // Top side back to start
+        path.lineTo(rect.left + radius, rect.top);
+        path.quadraticBezierTo(rect.left, rect.top, rect.left, rect.top + radius);
         break;
 
-      case _ArrowDirection.right:
-        // Triangle pointing right: point at right, base at left
-        path.moveTo(size.width, size.height / 2); // Right point
-        path.lineTo(0, 0); // Top-left
-        path.lineTo(0, size.height); // Bottom-left
-        path.close();
+      case _ArrowPosition.right:
+        // Arrow notch on right edge
+        final arrowTop = rect.center.dy - arrowSize / 2;
+        final arrowBottom = rect.center.dy + arrowSize / 2;
+        final arrowRight = rect.right + arrowSize;
+
+        path.moveTo(rect.left + radius, rect.top);
+        // Top side
+        path.lineTo(rect.right - radius, rect.top);
+        path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
+        // Right side to arrow start
+        path.lineTo(rect.right, arrowTop);
+        // Arrow notch right
+        path.lineTo(arrowRight, rect.center.dy);
+        // Arrow notch back to bottom
+        path.lineTo(rect.right, arrowBottom);
+        // Right side continues down
+        path.lineTo(rect.right, rect.bottom - radius);
+        path.quadraticBezierTo(
+            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        // Bottom side
+        path.lineTo(rect.left + radius, rect.bottom);
+        path.quadraticBezierTo(
+            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        // Left side back to start
+        path.lineTo(rect.left, rect.top + radius);
+        path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
         break;
     }
 
-    // Fill with background color
-    canvas.drawPath(
-        path,
-        Paint()
-          ..color = color
-          ..style = PaintingStyle.fill);
+    path.close();
+    return path;
+  }
 
-    // Draw border if needed
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    final path = _createTooltipPath(rect);
+
+    // Fill background
+    final fillPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    // Draw border
     if (borderWidth > 0) {
-      canvas.drawPath(
-          path,
-          Paint()
-            ..color = borderColor
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = borderWidth);
+      final borderPaint = Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = borderWidth;
+      canvas.drawPath(path, borderPaint);
     }
   }
 
   @override
-  bool shouldRepaint(_TooltipArrowPainter oldDelegate) {
-    return direction != oldDelegate.direction ||
-        color != oldDelegate.color ||
-        borderColor != oldDelegate.borderColor ||
-        borderWidth != oldDelegate.borderWidth;
+  ShapeBorder scale(double t) {
+    return _TooltipShapeBorder(
+      arrowPosition: arrowPosition,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth * t,
+      borderRadius: borderRadius * t,
+      arrowSize: arrowSize * t,
+    );
   }
 }
