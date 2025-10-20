@@ -1977,9 +1977,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     );
 
     // Calculate tooltip position based on preferredPosition
-    // Estimate tooltip size for positioning
-    const estimatedWidth = 150.0;
-    const estimatedHeight = 80.0;
+    // Estimate tooltip size for positioning (these are used for centering calculations)
+    // The actual widget size may differ, but these estimates help with initial positioning
+    const estimatedWidth = 220.0; // ~280px with content padding
+    const estimatedHeight = 120.0;
 
     final tooltipPosition = _calculateTooltipPosition(
       markerScreenPos,
