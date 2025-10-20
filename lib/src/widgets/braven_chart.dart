@@ -1965,27 +1965,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       tooltipContent = _buildDefaultTooltip(dataPoint, config);
     }
 
-    // Wrap in container with style
-    final tooltipBox = Container(
-      padding: EdgeInsets.all(config.style.padding),
-      decoration: BoxDecoration(
-        color: config.style.backgroundColor,
-        border: Border.all(
-          color: config.style.borderColor,
-          width: config.style.borderWidth,
-        ),
-        borderRadius: BorderRadius.circular(config.style.borderRadius),
-        boxShadow: config.style.shadowBlurRadius > 0
-            ? [
-                BoxShadow(
-                  color: config.style.shadowColor,
-                  blurRadius: config.style.shadowBlurRadius,
-                  offset: Offset(0, config.style.shadowBlurRadius / 2),
-                ),
-              ]
-            : null,
-      ),
-      child: tooltipContent,
+    // Store tooltip style info for use in arrow builder
+    final tooltipStyle = (
+      backgroundColor: config.style.backgroundColor,
+      borderColor: config.style.borderColor,
+      borderWidth: config.style.borderWidth,
+      borderRadius: config.style.borderRadius,
+      padding: config.style.padding,
+      shadowColor: config.style.shadowColor,
+      shadowBlurRadius: config.style.shadowBlurRadius,
     );
 
     // Calculate tooltip position based on preferredPosition
@@ -2005,10 +1993,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     print(
         '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, tooltipPos=$tooltipPosition, offset=${config.offsetFromPoint}');
 
-    // Build tooltip with arrow pointer
+    // Build tooltip with arrow pointer (integrated into border)
     final tooltipWithArrow = _buildTooltipWithArrow(
-      tooltipBox,
-      config,
+      tooltipContent,
+      tooltipStyle,
       config.preferredPosition,
     );
 
@@ -2151,10 +2139,29 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// - RIGHT: arrow notch on right edge pointing left to marker
   /// - AUTO: returns tooltip without arrow
   Widget _buildTooltipWithArrow(
-    Widget tooltipBox,
-    TooltipConfig config,
+    Widget tooltipContent,
+    ({
+      Color backgroundColor,
+      Color borderColor,
+      double borderWidth,
+      double borderRadius,
+      double padding,
+      double shadowBlurRadius,
+      Color shadowColor,
+    }) tooltipStyle,
     TooltipPosition position,
   ) {
+    // Build shadow if needed
+    final boxShadow = tooltipStyle.shadowBlurRadius > 0
+        ? [
+            BoxShadow(
+              color: tooltipStyle.shadowColor,
+              blurRadius: tooltipStyle.shadowBlurRadius,
+              offset: Offset(0, tooltipStyle.shadowBlurRadius / 2),
+            ),
+          ]
+        : null;
+
     switch (position) {
       case TooltipPosition.top:
         // Arrow notch on top pointing down
@@ -2163,18 +2170,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             color: Colors.transparent,
             shape: _TooltipShapeBorder(
               arrowPosition: _ArrowPosition.top,
-              backgroundColor: config.style.backgroundColor,
-              borderColor: config.style.borderColor,
-              borderWidth: config.style.borderWidth,
-              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              backgroundColor: tooltipStyle.backgroundColor,
+              borderColor: tooltipStyle.borderColor,
+              borderWidth: tooltipStyle.borderWidth,
+              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
               arrowSize: 10.0,
+              boxShadow: boxShadow,
             ),
           ),
           child: Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: Padding(
-              padding: EdgeInsets.all(config.style.padding),
-              child: tooltipBox,
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
             ),
           ),
         );
@@ -2186,18 +2194,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             color: Colors.transparent,
             shape: _TooltipShapeBorder(
               arrowPosition: _ArrowPosition.bottom,
-              backgroundColor: config.style.backgroundColor,
-              borderColor: config.style.borderColor,
-              borderWidth: config.style.borderWidth,
-              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              backgroundColor: tooltipStyle.backgroundColor,
+              borderColor: tooltipStyle.borderColor,
+              borderWidth: tooltipStyle.borderWidth,
+              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
               arrowSize: 10.0,
+              boxShadow: boxShadow,
             ),
           ),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: Padding(
-              padding: EdgeInsets.all(config.style.padding),
-              child: tooltipBox,
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
             ),
           ),
         );
@@ -2209,18 +2218,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             color: Colors.transparent,
             shape: _TooltipShapeBorder(
               arrowPosition: _ArrowPosition.left,
-              backgroundColor: config.style.backgroundColor,
-              borderColor: config.style.borderColor,
-              borderWidth: config.style.borderWidth,
-              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              backgroundColor: tooltipStyle.backgroundColor,
+              borderColor: tooltipStyle.borderColor,
+              borderWidth: tooltipStyle.borderWidth,
+              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
               arrowSize: 10.0,
+              boxShadow: boxShadow,
             ),
           ),
           child: Padding(
             padding: const EdgeInsets.only(left: 12.0),
             child: Padding(
-              padding: EdgeInsets.all(config.style.padding),
-              child: tooltipBox,
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
             ),
           ),
         );
@@ -2232,25 +2242,38 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             color: Colors.transparent,
             shape: _TooltipShapeBorder(
               arrowPosition: _ArrowPosition.right,
-              backgroundColor: config.style.backgroundColor,
-              borderColor: config.style.borderColor,
-              borderWidth: config.style.borderWidth,
-              borderRadius: BorderRadius.circular(config.style.borderRadius),
+              backgroundColor: tooltipStyle.backgroundColor,
+              borderColor: tooltipStyle.borderColor,
+              borderWidth: tooltipStyle.borderWidth,
+              borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
               arrowSize: 10.0,
+              boxShadow: boxShadow,
             ),
           ),
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Padding(
-              padding: EdgeInsets.all(config.style.padding),
-              child: tooltipBox,
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
             ),
           ),
         );
 
       case TooltipPosition.auto:
-        // For auto, no arrow
-        return tooltipBox;
+        // For auto, no arrow - just return content with default styling
+        return Container(
+          padding: EdgeInsets.all(tooltipStyle.padding),
+          decoration: BoxDecoration(
+            color: tooltipStyle.backgroundColor,
+            border: Border.all(
+              color: tooltipStyle.borderColor,
+              width: tooltipStyle.borderWidth,
+            ),
+            borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
+            boxShadow: boxShadow,
+          ),
+          child: tooltipContent,
+        );
     }
   }
 
@@ -3571,13 +3594,6 @@ enum _ArrowPosition {
 /// not a separate element. This produces the visual effect of the arrow being
 /// cut into the tooltip edge.
 class _TooltipShapeBorder extends ShapeBorder {
-  final _ArrowPosition arrowPosition;
-  final Color backgroundColor;
-  final Color borderColor;
-  final double borderWidth;
-  final BorderRadius borderRadius;
-  final double arrowSize;
-
   const _TooltipShapeBorder({
     required this.arrowPosition,
     required this.backgroundColor,
@@ -3585,7 +3601,16 @@ class _TooltipShapeBorder extends ShapeBorder {
     required this.borderWidth,
     required this.borderRadius,
     required this.arrowSize,
+    this.boxShadow,
   });
+
+  final _ArrowPosition arrowPosition;
+  final Color backgroundColor;
+  final Color borderColor;
+  final double borderWidth;
+  final BorderRadius borderRadius;
+  final double arrowSize;
+  final List<BoxShadow>? boxShadow;
 
   @override
   EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
@@ -3623,12 +3648,10 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
         // Right side
         path.lineTo(rect.right, rect.bottom - radius);
-        path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        path.quadraticBezierTo(rect.right, rect.bottom, rect.right - radius, rect.bottom);
         // Bottom-right to bottom-left
         path.lineTo(rect.left + radius, rect.bottom);
-        path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        path.quadraticBezierTo(rect.left, rect.bottom, rect.left, rect.bottom - radius);
         // Left side back to start
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
@@ -3646,8 +3669,7 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
         // Right side
         path.lineTo(rect.right, rect.bottom - radius);
-        path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        path.quadraticBezierTo(rect.right, rect.bottom, rect.right - radius, rect.bottom);
         // Bottom-right to arrow start
         path.lineTo(arrowRight, rect.bottom);
         // Arrow notch down
@@ -3656,8 +3678,7 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.lineTo(arrowLeft, rect.bottom);
         // Bottom-left corner
         path.lineTo(rect.left + radius, rect.bottom);
-        path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        path.quadraticBezierTo(rect.left, rect.bottom, rect.left, rect.bottom - radius);
         // Left side
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
@@ -3678,16 +3699,13 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.lineTo(rect.left, arrowBottom);
         // Left side continues down
         path.lineTo(rect.left, rect.bottom - radius);
-        path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left + radius, rect.bottom);
+        path.quadraticBezierTo(rect.left, rect.bottom, rect.left + radius, rect.bottom);
         // Bottom side
         path.lineTo(rect.right - radius, rect.bottom);
-        path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right, rect.bottom - radius);
+        path.quadraticBezierTo(rect.right, rect.bottom, rect.right, rect.bottom - radius);
         // Right side
         path.lineTo(rect.right, rect.top + radius);
-        path.quadraticBezierTo(
-            rect.right, rect.top, rect.right - radius, rect.top);
+        path.quadraticBezierTo(rect.right, rect.top, rect.right - radius, rect.top);
         // Top side back to start
         path.lineTo(rect.left + radius, rect.top);
         path.quadraticBezierTo(rect.left, rect.top, rect.left, rect.top + radius);
@@ -3711,12 +3729,10 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.lineTo(rect.right, arrowBottom);
         // Right side continues down
         path.lineTo(rect.right, rect.bottom - radius);
-        path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+        path.quadraticBezierTo(rect.right, rect.bottom, rect.right - radius, rect.bottom);
         // Bottom side
         path.lineTo(rect.left + radius, rect.bottom);
-        path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+        path.quadraticBezierTo(rect.left, rect.bottom, rect.left, rect.bottom - radius);
         // Left side back to start
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top);
@@ -3730,6 +3746,19 @@ class _TooltipShapeBorder extends ShapeBorder {
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
     final path = _createTooltipPath(rect);
+
+    // Draw shadows if provided
+    if (boxShadow != null && boxShadow!.isNotEmpty) {
+      for (final shadow in boxShadow!) {
+        final shadowPath = path.shift(shadow.offset);
+        canvas.drawPath(
+          shadowPath,
+          Paint()
+            ..color = shadow.color.withOpacity(shadow.color.opacity)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadow.blurRadius),
+        );
+      }
+    }
 
     // Fill background
     final fillPaint = Paint()
@@ -3756,6 +3785,7 @@ class _TooltipShapeBorder extends ShapeBorder {
       borderWidth: borderWidth * t,
       borderRadius: borderRadius * t,
       arrowSize: arrowSize * t,
+      boxShadow: boxShadow?.map((s) => s.scale(t)).toList(),
     );
   }
 }
