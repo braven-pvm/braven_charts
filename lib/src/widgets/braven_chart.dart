@@ -3639,18 +3639,19 @@ class _TooltipShapeBorder extends ShapeBorder {
 
     switch (arrowPosition) {
       case _ArrowPosition.top:
-        // Arrow notch on top edge
-        final arrowLeft = rect.center.dx - arrowSize / 2;
-        final arrowRight = rect.center.dx + arrowSize / 2;
+        // Arrow notch on top edge at FIXED offset from left (not centered)
+        const arrowOffsetX = 20.0;
+        final arrowLeft = arrowOffsetX - arrowSize / 2;
+        final arrowRight = arrowOffsetX + arrowSize / 2;
         final arrowTop = rect.top - arrowSize;
 
         path.moveTo(rect.left + radius, rect.top);
         // Top-left to arrow start
-        path.lineTo(arrowLeft, rect.top);
+        path.lineTo(rect.left + arrowLeft, rect.top);
         // Arrow notch down
-        path.lineTo(rect.center.dx, arrowTop);
+        path.lineTo(rect.left + arrowOffsetX, arrowTop);
         // Arrow notch back to right
-        path.lineTo(arrowRight, rect.top);
+        path.lineTo(rect.left + arrowRight, rect.top);
         // Top-right corner
         path.lineTo(rect.right - radius, rect.top);
         path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
@@ -3666,9 +3667,10 @@ class _TooltipShapeBorder extends ShapeBorder {
         break;
 
       case _ArrowPosition.bottom:
-        // Arrow notch on bottom edge
-        final arrowLeft = rect.center.dx - arrowSize / 2;
-        final arrowRight = rect.center.dx + arrowSize / 2;
+        // Arrow notch on bottom edge at FIXED offset from left (not centered)
+        const arrowOffsetX = 20.0;
+        final arrowLeft = arrowOffsetX - arrowSize / 2;
+        final arrowRight = arrowOffsetX + arrowSize / 2;
         final arrowBottom = rect.bottom + arrowSize;
 
         path.moveTo(rect.left + radius, rect.top);
@@ -3679,11 +3681,11 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.lineTo(rect.right, rect.bottom - radius);
         path.quadraticBezierTo(rect.right, rect.bottom, rect.right - radius, rect.bottom);
         // Bottom-right to arrow start
-        path.lineTo(arrowRight, rect.bottom);
+        path.lineTo(rect.left + arrowRight, rect.bottom);
         // Arrow notch down
-        path.lineTo(rect.center.dx, arrowBottom);
+        path.lineTo(rect.left + arrowOffsetX, arrowBottom);
         // Arrow notch back to left
-        path.lineTo(arrowLeft, rect.bottom);
+        path.lineTo(rect.left + arrowLeft, rect.bottom);
         // Bottom-left corner
         path.lineTo(rect.left + radius, rect.bottom);
         path.quadraticBezierTo(rect.left, rect.bottom, rect.left, rect.bottom - radius);
@@ -3693,18 +3695,19 @@ class _TooltipShapeBorder extends ShapeBorder {
         break;
 
       case _ArrowPosition.left:
-        // Arrow notch on left edge
-        final arrowTop = rect.center.dy - arrowSize / 2;
-        final arrowBottom = rect.center.dy + arrowSize / 2;
+        // Arrow notch on left edge at FIXED offset from top (not centered)
+        const arrowOffsetY = 20.0;
+        final arrowTop = arrowOffsetY - arrowSize / 2;
+        final arrowBottom = arrowOffsetY + arrowSize / 2;
         final arrowLeft = rect.left - arrowSize;
 
         path.moveTo(rect.left, rect.top + radius);
         // Top-left to arrow start
-        path.lineTo(rect.left, arrowTop);
+        path.lineTo(rect.left, rect.top + arrowTop);
         // Arrow notch left
-        path.lineTo(arrowLeft, rect.center.dy);
+        path.lineTo(arrowLeft, rect.top + arrowOffsetY);
         // Arrow notch back to bottom
-        path.lineTo(rect.left, arrowBottom);
+        path.lineTo(rect.left, rect.top + arrowBottom);
         // Left side continues down
         path.lineTo(rect.left, rect.bottom - radius);
         path.quadraticBezierTo(rect.left, rect.bottom, rect.left + radius, rect.bottom);
@@ -3720,9 +3723,10 @@ class _TooltipShapeBorder extends ShapeBorder {
         break;
 
       case _ArrowPosition.right:
-        // Arrow notch on right edge
-        final arrowTop = rect.center.dy - arrowSize / 2;
-        final arrowBottom = rect.center.dy + arrowSize / 2;
+        // Arrow notch on right edge at FIXED offset from top (not centered)
+        const arrowOffsetY = 20.0;
+        final arrowTop = arrowOffsetY - arrowSize / 2;
+        final arrowBottom = arrowOffsetY + arrowSize / 2;
         final arrowRight = rect.right + arrowSize;
 
         path.moveTo(rect.left + radius, rect.top);
@@ -3730,11 +3734,11 @@ class _TooltipShapeBorder extends ShapeBorder {
         path.lineTo(rect.right - radius, rect.top);
         path.quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius);
         // Right side to arrow start
-        path.lineTo(rect.right, arrowTop);
+        path.lineTo(rect.right, rect.top + arrowTop);
         // Arrow notch right
-        path.lineTo(arrowRight, rect.center.dy);
+        path.lineTo(arrowRight, rect.top + arrowOffsetY);
         // Arrow notch back to bottom
-        path.lineTo(rect.right, arrowBottom);
+        path.lineTo(rect.right, rect.top + arrowBottom);
         // Right side continues down
         path.lineTo(rect.right, rect.bottom - radius);
         path.quadraticBezierTo(rect.right, rect.bottom, rect.right - radius, rect.bottom);
