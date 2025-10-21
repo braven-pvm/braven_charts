@@ -22,6 +22,8 @@ class AdvancedFeaturesScreen extends StatefulWidget {
 class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
   // Controllers and streams
   final _controllerDemo = ChartController();
+  final _streamingDemo = ChartController();
+  final _multiStreamDemo = ChartController();
   final _streamController = StreamController<ChartDataPoint>();
   final _multiStreamController1 = StreamController<ChartDataPoint>();
   final _multiStreamController2 = StreamController<ChartDataPoint>();
@@ -40,8 +42,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
   bool _isStream1Active = false;
   bool _isStream2Active = false;
   int _streamSpeed = 200; // milliseconds
-  int _stream1Speed = 500; // milliseconds
-  int _stream2Speed = 300; // milliseconds
+  final int _stream1Speed = 500; // milliseconds
+  final int _stream2Speed = 300; // milliseconds
 
   final Random _random = Random();
 
@@ -60,6 +62,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
     _multiStreamController1.close();
     _multiStreamController2.close();
     _controllerDemo.dispose();
+    _streamingDemo.dispose();
+    _multiStreamDemo.dispose();
     super.dispose();
   }
 
@@ -73,7 +77,9 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
     _sensorTimer = Timer.periodic(Duration(milliseconds: _streamSpeed), (timer) {
       if (mounted && _isStreamingActive) {
         final value = 50 + _random.nextDouble() * 50;
-        _streamController.add(
+        // Add to controller instead of stream
+        _streamingDemo.addPoint(
+          'sensor',
           ChartDataPoint(x: _sensorDataCount.toDouble(), y: value),
         );
         setState(() {
@@ -93,6 +99,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
 
   void _resetSensorData() {
     _stopSensorSimulation();
+    _streamingDemo.clearSeries('sensor');
     setState(() {
       _sensorDataCount = 0;
     });
@@ -114,7 +121,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
     _multiTimer1 = Timer.periodic(Duration(milliseconds: _stream1Speed), (timer) {
       if (mounted && _isStream1Active) {
         final temp = 20 + _random.nextDouble() * 10;
-        _multiStreamController1.add(
+        _multiStreamDemo.addPoint(
+          'temperature',
           ChartDataPoint(x: timer.tick.toDouble(), y: temp),
         );
       }
@@ -140,7 +148,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
     _multiTimer2 = Timer.periodic(Duration(milliseconds: _stream2Speed), (timer) {
       if (mounted && _isStream2Active) {
         final humidity = 40 + _random.nextDouble() * 40;
-        _multiStreamController2.add(
+        _multiStreamDemo.addPoint(
+          'humidity',
           ChartDataPoint(x: timer.tick.toDouble(), y: humidity),
         );
       }
@@ -484,10 +493,17 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.area,
-              series: const [],
-              dataStream: _streamController.stream,
+              series: [
+                ChartSeries(
+                  id: 'sensor',
+                  points: const [],
+                  color: Colors.green,
+                  name: 'Sensor Value',
+                ),
+              ],
+              controller: _streamingDemo,
               title: 'Sensor Data Stream',
-              subtitle: 'Updates every ${_streamSpeed}ms, throttled to 60 FPS',
+              subtitle: 'Updates every ${_streamSpeed}ms',
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
@@ -622,6 +638,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
                   name: 'Humidity',
                 ),
               ],
+              controller: _multiStreamDemo,
               title: 'Multi-Sensor Dashboard',
               subtitle: 'Independent stream controls',
               width: 400,
