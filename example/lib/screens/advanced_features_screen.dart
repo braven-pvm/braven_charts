@@ -502,8 +502,15 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
                 ),
               ],
               controller: _streamingDemo,
+              autoScrollConfig: const AutoScrollConfig(
+                enabled: true,
+                maxVisiblePoints: 50, // Show last 50 data points
+                resumeOnNewData: true,
+                animateScroll: true,
+                scrollAnimationDuration: Duration(milliseconds: 200),
+              ),
               title: 'Sensor Data Stream',
-              subtitle: 'Updates every ${_streamSpeed}ms',
+              subtitle: 'Updates every ${_streamSpeed}ms • Auto-scrolls after 50 points',
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
@@ -639,8 +646,15 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
                 ),
               ],
               controller: _multiStreamDemo,
+              autoScrollConfig: const AutoScrollConfig(
+                enabled: true,
+                maxVisiblePoints: 30, // Show last 30 data points for each series
+                resumeOnNewData: true,
+                animateScroll: true,
+                scrollAnimationDuration: Duration(milliseconds: 300),
+              ),
               title: 'Multi-Sensor Dashboard',
-              subtitle: 'Independent stream controls',
+              subtitle: 'Independent stream controls • Auto-scrolls after 30 points',
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,

@@ -25,6 +25,7 @@ import 'package:braven_charts/src/widgets/annotations/range_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/text_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/threshold_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
+import 'package:braven_charts/src/widgets/auto_scroll_config.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
@@ -90,6 +91,7 @@ class BravenChart extends StatefulWidget {
     this.annotations = const [],
     this.controller,
     this.dataStream,
+    this.autoScrollConfig,
     this.title,
     this.subtitle,
     this.showLegend = true,
@@ -146,6 +148,7 @@ class BravenChart extends StatefulWidget {
     AxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
     String? title,
     String? subtitle,
     bool showLegend = true,
@@ -192,6 +195,7 @@ class BravenChart extends StatefulWidget {
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
+      autoScrollConfig: autoScrollConfig,
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
@@ -238,6 +242,7 @@ class BravenChart extends StatefulWidget {
     AxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
     String? title,
     String? subtitle,
     bool showLegend = true,
@@ -284,6 +289,7 @@ class BravenChart extends StatefulWidget {
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
+      autoScrollConfig: autoScrollConfig,
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
@@ -327,6 +333,7 @@ class BravenChart extends StatefulWidget {
     AxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
     String? title,
     String? subtitle,
     bool showLegend = true,
@@ -382,6 +389,7 @@ class BravenChart extends StatefulWidget {
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
+      autoScrollConfig: autoScrollConfig,
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
@@ -463,6 +471,27 @@ class BravenChart extends StatefulWidget {
   /// When provided, the widget subscribes and adds incoming points
   /// to the chart with automatic throttling (16ms for 60 FPS).
   final Stream<ChartDataPoint>? dataStream;
+
+  /// Configuration for automatic scrolling in streaming scenarios.
+  ///
+  /// When enabled, the chart automatically pans to keep the most recent
+  /// [AutoScrollConfig.maxVisiblePoints] points visible as new data arrives.
+  ///
+  /// Useful for real-time monitoring where you want to see the latest data
+  /// without manual panning.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChart(
+  ///   autoScrollConfig: AutoScrollConfig(
+  ///     enabled: true,
+  ///     maxVisiblePoints: 50,  // Show last 50 points
+  ///     resumeOnNewData: true,
+  ///   ),
+  ///   // ... other parameters
+  /// )
+  /// ```
+  final AutoScrollConfig? autoScrollConfig;
 
   // ==================== UI ELEMENTS ====================
 
@@ -910,10 +939,96 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Called when the controller notifies of changes.
   void _onControllerUpdate() {
+    // Check if auto-scroll should be applied
+    _applyAutoScrollIfNeeded();
+
     // Rebuild widget when controller data changes
     setState(() {
       // Controller has updated its internal state
     });
+  }
+
+  /// Applies automatic scrolling based on autoScrollConfig.
+  ///
+  /// Automatically pans the chart to keep the most recent data points visible
+  /// when the total data count exceeds [AutoScrollConfig.maxVisiblePoints].
+  void _applyAutoScrollIfNeeded() {
+    final config = widget.autoScrollConfig;
+    if (config == null || !config.enabled) {
+      return;
+    }
+
+    // Get all series to count total points
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) return;
+
+    // Find the series with the most points (typically the streaming series)
+    int maxPointCount = 0;
+    for (final series in allSeries) {
+      if (series.points.length > maxPointCount) {
+        maxPointCount = series.points.length;
+      }
+    }
+
+    // Only apply auto-scroll if we exceed the threshold
+    if (maxPointCount <= config.maxVisiblePoints) {
+      return;
+    }
+
+    // Calculate data bounds to determine scroll offset
+    final bounds = _calculateDataBounds(allSeries);
+    final dataRangeX = bounds.maxX - bounds.minX;
+
+    // Calculate what portion of data should be visible
+    final visibleRatio = config.maxVisiblePoints / maxPointCount;
+
+    // Calculate new zoom level to show only maxVisiblePoints
+    // Zoom = 1.0 shows all data, higher zoom shows less
+    final newZoomX = 1.0 / visibleRatio;
+
+    // Calculate pan offset to show the rightmost (latest) data
+    // Pan offset is in pixel units, but we calculate based on data range
+    final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
+    if (chartRect.width <= 0) return; // Invalid size
+
+    // Calculate how much data is hidden on the left
+    // With newZoomX, we're showing (dataRangeX / newZoomX) of data
+    // We want to show the rightmost portion, so we need to pan left
+    final visibleDataRange = dataRangeX / newZoomX;
+    final hiddenLeftData = dataRangeX - visibleDataRange;
+
+    // Convert data offset to pixel offset
+    final panOffsetX = -(hiddenLeftData / dataRangeX) * chartRect.width * newZoomX;
+
+    // Apply the new zoom and pan
+    final currentZoomState = _interactionState.zoomPanState;
+
+    if (config.animateScroll && _panAnimationController != null) {
+      // Animate the scroll
+      _animatePan(
+        newPanOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
+        onComplete: () {
+          // Also update zoom if needed
+          if ((currentZoomState.zoomLevelX - newZoomX).abs() > 0.01) {
+            setState(() {
+              final newZoomState = _interactionState.zoomPanState.copyWith(
+                zoomLevelX: newZoomX,
+              );
+              _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+            });
+          }
+        },
+      );
+    } else {
+      // Instant scroll
+      setState(() {
+        final newZoomState = currentZoomState.copyWith(
+          zoomLevelX: newZoomX,
+          panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
+        );
+        _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
+      });
+    }
   }
 
   /// Animates zoom level changes for smooth transitions.
@@ -1884,7 +1999,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Calculate the data range
     final range = isXAxis ? (bounds.maxX - bounds.minX) : (bounds.maxY - bounds.minY);
-    
+
     // If range is invalid (NaN, infinite, or zero), return default padding
     if (range.isNaN || range.isInfinite || range <= 0) {
       // Return a reasonable default: typical label height/width + gap + tick

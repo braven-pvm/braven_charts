@@ -12,6 +12,8 @@ export 'annotations/range_annotation.dart';
 export 'annotations/text_annotation.dart';
 export 'annotations/threshold_annotation.dart';
 export 'annotations/trend_annotation.dart';
+// Auto-scroll configuration
+export 'auto_scroll_config.dart';
 // Axis
 export 'axis/axis_config.dart';
 // Main widget
