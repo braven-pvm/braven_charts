@@ -1,10 +1,33 @@
-# Axis Padding Optimization
+# Axis Padding Optimization - SUPERSEDED
 
 **Date**: October 21, 2025  
 **Branch**: `007-interaction-system`  
-**Status**: ✅ Complete
+**Status**: ⚠️ SUPERSEDED by AXIS_POSITION_IMPLEMENTATION.md
 
-## Problem
+---
+
+## ⚠️ IMPORTANT NOTICE
+
+**This document is SUPERSEDED by the full axis positioning implementation.**
+
+Please refer to **`AXIS_POSITION_IMPLEMENTATION.md`** for the complete, current implementation.
+
+**What Changed**:
+- Initial optimization (Phase 18) had a bug - incorrectly assumed axisPosition was used
+- Bug fix (Phase 19) simplified but disabled the positioning feature
+- Full implementation (Phase 20) made axisPosition fully functional
+- Axes now render at the positions specified by axisPosition property
+
+**See**: `AXIS_POSITION_IMPLEMENTATION.md` for comprehensive documentation.
+
+---
+
+## Historical Record (Original Document Below)
+
+This document describes the initial optimization attempt (Phase 18) which had a bug
+that was later fixed by implementing full axis positioning functionality.
+
+### Problem (Historical)
 
 The chart was reserving 40px of padding on **all four sides** (top, right, bottom, left) regardless of whether axes were actually positioned there. This resulted in:
 
