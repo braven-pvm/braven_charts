@@ -579,9 +579,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Zoom/pan controller for viewport transformation.
   ZoomPanController? _zoomPanController;
 
-  /// Current interaction state.
-  InteractionState _interactionState = InteractionState.initial();
-
   /// ValueNotifier for interaction state (replaces setState pattern).
   ///
   /// This notifier allows interactive overlays (crosshair, tooltip) to rebuild
@@ -802,7 +799,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         _registerInteractionCallbacks();
 
         // Reset interaction state
-        _interactionState = InteractionState.initial();
+        _interactionStateNotifier.value = InteractionState.initial();
       }
     }
   }
@@ -1020,7 +1017,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (panOffsetX.abs() > maxReasonablePan) return null;
 
     // Calculate the new zoom/pan state
-    final currentZoomState = _interactionState.zoomPanState;
+    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
 
     // SAFETY: Validate current zoom state before applying changes
     if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
@@ -1209,7 +1206,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         xAxis: effectiveXAxis,
         yAxis: effectiveYAxis,
         annotations: [], // Chart painter doesn't render annotations
-        zoomPanState: _interactionState.zoomPanState,
+        zoomPanState: _interactionStateNotifier.value.zoomPanState,
       ),
       child: Container(), // Force size from parent instead of using size parameter
     );
@@ -1295,22 +1292,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
             // Crosshair overlay (if enabled and visible)
             if (config.crosshair.enabled &&
-                _interactionState.isCrosshairVisible &&
-                _interactionState.crosshairPosition != null &&
-                _interactionState.crosshairPosition!.dx.isFinite &&
-                _interactionState.crosshairPosition!.dy.isFinite)
+                _interactionStateNotifier.value.isCrosshairVisible &&
+                _interactionStateNotifier.value.crosshairPosition != null &&
+                _interactionStateNotifier.value.crosshairPosition!.dx.isFinite &&
+                _interactionStateNotifier.value.crosshairPosition!.dy.isFinite)
               Positioned.fill(
                 child: CustomPaint(
                   painter: _CrosshairPainter(
-                    position: _interactionState.crosshairPosition!,
+                    position: _interactionStateNotifier.value.crosshairPosition!,
                     config: config.crosshair,
-                    nearestPoint: _interactionState.hoveredPoint != null &&
-                            _interactionState.hoveredPoint!.containsKey('x') &&
-                            _interactionState.hoveredPoint!.containsKey('y')
+                    nearestPoint: _interactionStateNotifier.value.hoveredPoint != null &&
+                            _interactionStateNotifier.value.hoveredPoint!.containsKey('x') &&
+                            _interactionStateNotifier.value.hoveredPoint!.containsKey('y')
                         ? () {
                             // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
-                            final dataX = (_interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
-                            final dataY = (_interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
+                            final dataX = (_interactionStateNotifier.value.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
+                            final dataY = (_interactionStateNotifier.value.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
 
                             final allSeries = _getAllSeries();
                             if (allSeries.isEmpty) return null;
@@ -1664,7 +1661,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
                 if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
                   // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
-                  final currentZoomState = _interactionState.zoomPanState;
+                  final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
                   final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
@@ -1673,8 +1670,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     newZoomY: newZoomY,
                     onComplete: () {
                       widget.interactionConfig!.onZoomChanged?.call(
-                        _interactionState.zoomPanState.zoomLevelX,
-                        _interactionState.zoomPanState.zoomLevelY,
+                        _interactionStateNotifier.value.zoomPanState.zoomLevelX,
+                        _interactionStateNotifier.value.zoomPanState.zoomLevelY,
                       );
                       _invokeViewportCallback();
                     },
@@ -1683,7 +1680,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   return KeyEventResult.handled;
                 } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
                   // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
-                  final currentZoomState = _interactionState.zoomPanState;
+                  final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
                   final newZoomY = (currentZoomState.zoomLevelY * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
@@ -1692,8 +1689,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     newZoomY: newZoomY,
                     onComplete: () {
                       widget.interactionConfig!.onZoomChanged?.call(
-                        _interactionState.zoomPanState.zoomLevelX,
-                        _interactionState.zoomPanState.zoomLevelY,
+                        _interactionStateNotifier.value.zoomPanState.zoomLevelX,
+                        _interactionStateNotifier.value.zoomPanState.zoomLevelY,
                       );
                       _invokeViewportCallback();
                     },
@@ -1711,7 +1708,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     key == LogicalKeyboardKey.arrowUp ||
                     key == LogicalKeyboardKey.arrowDown) {
                   // Calculate new pan offset based on arrow direction
-                  final currentPanOffset = _interactionState.zoomPanState.panOffset;
+                  final currentPanOffset = _interactionStateNotifier.value.zoomPanState.panOffset;
                   const panAmount = 50.0; // Same as KeyboardHandler default
 
                   Offset newPanOffset;
@@ -1732,7 +1729,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     _animatePan(
                       newPanOffset: newPanOffset,
                       onComplete: () {
-                        widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                        widget.interactionConfig!.onPanChanged?.call(_interactionStateNotifier.value.zoomPanState.panOffset);
                         _invokeViewportCallback();
                       },
                     );
@@ -1768,7 +1765,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                 // If zoom/pan state changed, invoke callbacks
                 if (_interactionStateNotifier.value.zoomPanState != newState.zoomPanState) {
-                  config.onZoomChanged?.call(_interactionStateNotifier.value.zoomPanState.zoomLevelX, _interactionStateNotifier.value.zoomPanState.zoomLevelY);
+                  config.onZoomChanged
+                      ?.call(_interactionStateNotifier.value.zoomPanState.zoomLevelX, _interactionStateNotifier.value.zoomPanState.zoomLevelY);
                   _invokeViewportCallback();
                 }
 
@@ -2074,7 +2072,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     maxY += yRange * 0.1;
 
     // Apply zoom/pan transformation if enabled
-    final zoomPanState = _interactionState.zoomPanState;
+    final zoomPanState = _interactionStateNotifier.value.zoomPanState;
     final zoomX = zoomPanState.zoomLevelX;
     final zoomY = zoomPanState.zoomLevelY;
     final panX = zoomPanState.panOffset.dx;
@@ -2120,11 +2118,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// 4. Apply offset to keep tooltip visible near marker
   Widget? _buildTooltipOverlay() {
     final config = widget.interactionConfig?.tooltip;
-    if (config == null || !config.enabled || !_interactionState.isTooltipVisible) {
+    if (config == null || !config.enabled || !_interactionStateNotifier.value.isTooltipVisible) {
       return null;
     }
 
-    final dataPoint = _interactionState.tooltipDataPoint;
+    final dataPoint = _interactionStateNotifier.value.tooltipDataPoint;
     if (dataPoint == null) {
       return null;
     }
@@ -2189,7 +2187,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       top: tooltipPosition.top,
       bottom: tooltipPosition.bottom,
       child: IgnorePointer(
-        child: AnimatedOpacity(opacity: _interactionState.isTooltipVisible ? 1.0 : 0.0, duration: config.showDelay, child: tooltipWithArrow),
+        child: AnimatedOpacity(
+            opacity: _interactionStateNotifier.value.isTooltipVisible ? 1.0 : 0.0, duration: config.showDelay, child: tooltipWithArrow),
       ),
     );
   }
@@ -2473,7 +2472,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (widget.interactionConfig?.onViewportChanged == null) return;
 
     // Calculate visible data bounds from zoom/pan state
-    final zoomPanState = _interactionState.zoomPanState;
+    final zoomPanState = _interactionStateNotifier.value.zoomPanState;
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) return;
 
