@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../enums/axis_position.dart';
 
 /// Typedef for custom axis label formatters.

@@ -1048,8 +1048,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final effectiveTheme = widget.theme ?? ChartTheme.defaultLight;
 
     // Get effective axis configurations
+    // NOTE: Y-axis should default to left position for standard charts
     final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
-    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults();
+    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left);
 
     // Get all series (widget series + controller series)
     final allSeries = _getAllSeries();
@@ -1807,8 +1808,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Same logic as _BravenChartPainter.paint, accounting for margins.
   Rect _calculateChartRect(Size size) {
     // Get effective axis configurations
+    // NOTE: Y-axis should default to left position for standard charts
     final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
-    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults();
+    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left);
 
     // Calculate padding based on actual axis positions
     const axisPadding = 40.0;
