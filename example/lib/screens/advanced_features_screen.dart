@@ -347,6 +347,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
+              interactionConfig: InteractionConfig.defaultConfig(),
             ),
             const SizedBox(height: 16),
             Wrap(
