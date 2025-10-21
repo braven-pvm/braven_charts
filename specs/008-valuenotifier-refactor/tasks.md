@@ -119,10 +119,10 @@ Flutter package structure:
 
 ### Tests for User Story 2 (TDD - Write FIRST, ensure they FAIL) ⚠️
 
-- [ ] T038 [P] [US2] Create test/performance/interaction_performance_test.dart with frame time measurement test (verifies SC-002: <16ms frames)
-- [ ] T039 [P] [US2] Add widget rebuild count test to test/performance/interaction_performance_test.dart (verifies SC-003: zero rebuilds)
-- [ ] T040 [P] [US2] Add CustomPainter repaint isolation test to test/performance/interaction_performance_test.dart (verifies SC-004)
-- [ ] T041 [P] [US2] Add 1000+ consecutive mouse movements test to test/performance/interaction_performance_test.dart (verifies SC-005)
+- [X] T038 [P] [US2] Create test/performance/interaction_performance_test.dart with frame time measurement test (verifies SC-002: <16ms frames)
+- [X] T039 [P] [US2] Add widget rebuild count test to test/performance/interaction_performance_test.dart (verifies SC-003: zero rebuilds)
+- [X] T040 [P] [US2] Add CustomPainter repaint isolation test to test/performance/interaction_performance_test.dart (verifies SC-004)
+- [X] T041 [P] [US2] Add 1000+ consecutive mouse movements test to test/performance/interaction_performance_test.dart (verifies SC-005)
 
 **Run tests - ALL SHOULD FAIL at this point** ✅
 
