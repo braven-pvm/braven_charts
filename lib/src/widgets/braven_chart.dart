@@ -1290,52 +1290,68 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // Base chart
             child,
 
-            // Crosshair overlay (if enabled and visible)
-            if (config.crosshair.enabled &&
-                _interactionStateNotifier.value.isCrosshairVisible &&
-                _interactionStateNotifier.value.crosshairPosition != null &&
-                _interactionStateNotifier.value.crosshairPosition!.dx.isFinite &&
-                _interactionStateNotifier.value.crosshairPosition!.dy.isFinite)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _CrosshairPainter(
-                    position: _interactionStateNotifier.value.crosshairPosition!,
-                    config: config.crosshair,
-                    nearestPoint: _interactionStateNotifier.value.hoveredPoint != null &&
-                            _interactionStateNotifier.value.hoveredPoint!.containsKey('x') &&
-                            _interactionStateNotifier.value.hoveredPoint!.containsKey('y')
-                        ? () {
-                            // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
-                            final dataX = (_interactionStateNotifier.value.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
-                            final dataY = (_interactionStateNotifier.value.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
+            // Crosshair overlay (ValueListenableBuilder for independent rebuilds)
+            if (config.crosshair.enabled)
+              ValueListenableBuilder<InteractionState>(
+                valueListenable: _interactionStateNotifier,
+                builder: (context, interactionState, child) {
+                  if (!interactionState.isCrosshairVisible ||
+                      interactionState.crosshairPosition == null ||
+                      !interactionState.crosshairPosition!.dx.isFinite ||
+                      !interactionState.crosshairPosition!.dy.isFinite) {
+                    return const SizedBox.shrink();
+                  }
 
+                  return RepaintBoundary(
+                    child: Positioned.fill(
+                      child: CustomPaint(
+                        painter: _CrosshairPainter(
+                          position: interactionState.crosshairPosition!,
+                          config: config.crosshair,
+                          nearestPoint: interactionState.hoveredPoint != null &&
+                                  interactionState.hoveredPoint!.containsKey('x') &&
+                                  interactionState.hoveredPoint!.containsKey('y')
+                              ? () {
+                                  // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
+                                  final dataX = (interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
+                                  final dataY = (interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
+
+                                  final allSeries = _getAllSeries();
+                                  if (allSeries.isEmpty) return null;
+
+                                  final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
+                                  final point = ChartDataPoint(x: dataX, y: dataY);
+                                  final screenPos = _dataToScreenPoint(point, chartRect, bounds);
+
+                                  // Validate coordinates are finite and within reasonable bounds
+                                  if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
+                                    return screenPos;
+                                  }
+                                  return null;
+                                }()
+                              : null,
+                          chartSize: Size.infinite,
+                          dataBounds: () {
                             final allSeries = _getAllSeries();
                             if (allSeries.isEmpty) return null;
-
-                            final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
-                            final point = ChartDataPoint(x: dataX, y: dataY);
-                            final screenPos = _dataToScreenPoint(point, chartRect, bounds);
-
-                            // Validate coordinates are finite and within reasonable bounds
-                            if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-                              return screenPos;
-                            }
-                            return null;
-                          }()
-                        : null,
-                    chartSize: Size.infinite,
-                    dataBounds: () {
-                      final allSeries = _getAllSeries();
-                      if (allSeries.isEmpty) return null;
-                      return _calculateDataBounds(allSeries, chartRect: chartRect);
-                    }(),
-                    chartRect: chartRect,
-                  ),
-                ),
+                            return _calculateDataBounds(allSeries, chartRect: chartRect);
+                          }(),
+                          chartRect: chartRect,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
 
-            // Tooltip overlay (if enabled and visible)
-            ..._buildTooltipOverlay() != null ? [_buildTooltipOverlay()!] : [],
+            // Tooltip overlay (ValueListenableBuilder for independent rebuilds)
+            ValueListenableBuilder<InteractionState>(
+              valueListenable: _interactionStateNotifier,
+              builder: (context, interactionState, child) {
+                final tooltip = _buildTooltipOverlay();
+                return tooltip ?? const SizedBox.shrink();
+              },
+            ),
           ],
         );
 

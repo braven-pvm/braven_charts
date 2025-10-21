@@ -92,9 +92,9 @@ Flutter package structure:
 
 #### Rendering Layer Integration
 
-- [ ] T030 [US1] Wrap crosshair rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
-- [ ] T031 [US1] Wrap tooltip rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
-- [ ] T032 [US1] Ensure base chart rendering (axes, grid, series) does NOT depend on _interactionStateNotifier in lib/src/widgets/braven_chart.dart
+- [X] T030 [US1] Wrap crosshair rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
+- [X] T031 [US1] Wrap tooltip rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
+- [X] T032 [US1] Ensure base chart rendering (axes, grid, series) does NOT depend on _interactionStateNotifier in lib/src/widgets/braven_chart.dart - VERIFIED: Only zoomPanState passed to painter
 
 #### Cleanup
 
