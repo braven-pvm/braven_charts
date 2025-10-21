@@ -1460,18 +1460,21 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 // Zoom in when scrolling up (negative delta), zoom out when scrolling down
                 final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
 
-                _safeSetState(() {
-                  final newZoomPanState = _zoomPanController!.zoom(
-                    _interactionState.zoomPanState,
-                    zoomFactor: zoomFactor,
-                    focalPoint: signal.localPosition,
-                  );
+                final newZoomPanState = _zoomPanController!.zoom(
+                  _interactionStateNotifier.value.zoomPanState,
+                  zoomFactor: zoomFactor,
+                  focalPoint: signal.localPosition,
+                );
 
-                  _interactionState = _interactionState.copyWith(zoomPanState: newZoomPanState);
-                });
+                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                  zoomPanState: newZoomPanState,
+                );
 
                 // Invoke zoom callback
-                config.onZoomChanged?.call(_interactionState.zoomPanState.zoomLevelX, _interactionState.zoomPanState.zoomLevelY);
+                config.onZoomChanged?.call(
+                  _interactionStateNotifier.value.zoomPanState.zoomLevelX,
+                  _interactionStateNotifier.value.zoomPanState.zoomLevelY,
+                );
 
                 // Invoke viewport callback (visible bounds changed due to zoom)
                 _invokeViewportCallback();
@@ -1484,10 +1487,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Handle middle-mouse button pan (PRIMARY pan method)
           onPointerDown: (event) {
             if (event.buttons == kMiddleMouseButton && config.enablePan) {
-              _safeSetState(() {
-                _isPanningWithMiddleMouse = true;
-                _panStartPosition = event.localPosition;
-              });
+              _isPanningWithMiddleMouse = true;
+              _panStartPosition = event.localPosition;
             }
           },
 
@@ -1495,16 +1496,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
               final delta = event.localPosition - _panStartPosition!;
 
-              _safeSetState(() {
-                final newZoomPanState = _zoomPanController!.pan(_interactionState.zoomPanState, delta);
+              final newZoomPanState = _zoomPanController!.pan(
+                _interactionStateNotifier.value.zoomPanState,
+                delta,
+              );
 
-                _interactionState = _interactionState.copyWith(zoomPanState: newZoomPanState);
+              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                zoomPanState: newZoomPanState,
+              );
 
-                _panStartPosition = event.localPosition;
-              });
+              _panStartPosition = event.localPosition;
 
               // Invoke pan callback
-              config.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+              config.onPanChanged?.call(_interactionStateNotifier.value.zoomPanState.panOffset);
 
               // Invoke viewport callback
               _invokeViewportCallback();
@@ -1513,10 +1517,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
           onPointerUp: (event) {
             if (_isPanningWithMiddleMouse) {
-              _safeSetState(() {
-                _isPanningWithMiddleMouse = false;
-                _panStartPosition = null;
-              });
+              _isPanningWithMiddleMouse = false;
+              _panStartPosition = null;
             }
           },
 
@@ -1533,19 +1535,24 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               if (nearestPointData != null) {
                 final point = _mapToDataPoint(nearestPointData);
 
-                _safeSetState(() {
-                  // Add to selected points
-                  final updatedSelection = List<Map<String, dynamic>>.from(_interactionState.selectedPoints);
-                  updatedSelection.add(nearestPointData);
+                // Add to selected points
+                final updatedSelection = List<Map<String, dynamic>>.from(
+                  _interactionStateNotifier.value.selectedPoints,
+                );
+                updatedSelection.add(nearestPointData);
 
-                  _interactionState = _interactionState.copyWith(selectedPoints: updatedSelection, focusedPoint: nearestPointData);
-                });
+                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                  selectedPoints: updatedSelection,
+                  focusedPoint: nearestPointData,
+                );
 
                 // Invoke tap callback
                 config.onDataPointTap?.call(point, details.localPosition);
 
                 // Invoke selection callback
-                final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
+                final selectedPointsList = _interactionStateNotifier.value.selectedPoints
+                    .map((data) => _mapToDataPoint(data))
+                    .toList();
                 config.onSelectionChanged?.call(selectedPointsList);
               }
             }
@@ -1570,33 +1577,37 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
           onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
               ? (details) {
-                  _safeSetState(() {
-                    ZoomPanState newZoomPanState = _interactionState.zoomPanState;
+                  ZoomPanState newZoomPanState = _interactionStateNotifier.value.zoomPanState;
 
-                    // Handle pinch-to-zoom (when scale changes)
-                    if (config.enableZoom && details.scale != 1.0) {
-                      newZoomPanState = _zoomPanController!.zoom(newZoomPanState, zoomFactor: details.scale, focalPoint: details.focalPoint);
+                  // Handle pinch-to-zoom (when scale changes)
+                  if (config.enableZoom && details.scale != 1.0) {
+                    newZoomPanState = _zoomPanController!.zoom(
+                      newZoomPanState,
+                      zoomFactor: details.scale,
+                      focalPoint: details.focalPoint,
+                    );
 
-                      // Invoke zoom callback
-                      config.onZoomChanged?.call(newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
-                    }
+                    // Invoke zoom callback
+                    config.onZoomChanged?.call(newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
+                  }
 
-                    // Handle pan (when delta changes but scale is 1.0)
-                    if (config.enablePan && details.focalPointDelta != Offset.zero) {
-                      newZoomPanState = _zoomPanController!.pan(newZoomPanState, details.focalPointDelta);
+                  // Handle pan (when delta changes but scale is 1.0)
+                  if (config.enablePan && details.focalPointDelta != Offset.zero) {
+                    newZoomPanState = _zoomPanController!.pan(newZoomPanState, details.focalPointDelta);
 
-                      // Invoke pan callback
-                      config.onPanChanged?.call(newZoomPanState.panOffset);
-                    }
+                    // Invoke pan callback
+                    config.onPanChanged?.call(newZoomPanState.panOffset);
+                  }
 
-                    // Update state if anything changed
-                    if (newZoomPanState != _interactionState.zoomPanState) {
-                      _interactionState = _interactionState.copyWith(zoomPanState: newZoomPanState);
+                  // Update state if anything changed
+                  if (newZoomPanState != _interactionStateNotifier.value.zoomPanState) {
+                    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                      zoomPanState: newZoomPanState,
+                    );
 
-                      // Invoke viewport callback
-                      _invokeViewportCallback();
-                    }
-                  });
+                    // Invoke viewport callback
+                    _invokeViewportCallback();
+                  }
                 }
               : null,
 
@@ -1609,11 +1620,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Double-tap to reset zoom
           onDoubleTap: config.enableZoom && _zoomPanController != null
               ? () {
-                  _safeSetState(() {
-                    final newZoomPanState = _zoomPanController!.resetZoom(_interactionState.zoomPanState);
+                  final newZoomPanState = _zoomPanController!.resetZoom(
+                    _interactionStateNotifier.value.zoomPanState,
+                  );
 
-                    _interactionState = _interactionState.copyWith(zoomPanState: newZoomPanState);
-                  });
+                  _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                    zoomPanState: newZoomPanState,
+                  );
 
                   // Invoke zoom callback (reset to 1.0, 1.0)
                   config.onZoomChanged?.call(1.0, 1.0);
@@ -1638,9 +1651,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               // Manual modifier key state tracking for web compatibility
               // HardwareKeyboard.instance doesn't work reliably in Flutter Web
               if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-                _safeSetState(() {
-                  _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-                });
+                _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
                 return KeyEventResult.ignored;
               }
 

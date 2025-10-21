@@ -80,15 +80,15 @@ Flutter package structure:
 
 - [X] T019 [P] [US1] Refactor onHover (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1358)
 - [X] T020 [P] [US1] Refactor onExit (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1340)
-- [ ] T021 [P] [US1] Refactor onPointerDown (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1468)
-- [ ] T022 [P] [US1] Refactor onPointerUp (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1497)
-- [ ] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)
-- [ ] T024 [P] [US1] Refactor onPointerSignal (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1434)
-- [ ] T025 [P] [US1] Refactor onTapDown (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1512)
+- [X] T021 [P] [US1] Refactor onPointerDown (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1468)
+- [X] T022 [P] [US1] Refactor onPointerUp (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1497)
+- [X] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)
+- [X] T024 [P] [US1] Refactor onPointerSignal (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1434)
+- [X] T025 [P] [US1] Refactor onTapDown (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1512)
 - [ ] T026 [P] [US1] Refactor onScaleStart (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1548)
-- [ ] T027 [P] [US1] Refactor onScaleUpdate (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1554)
+- [X] T027 [P] [US1] Refactor onScaleUpdate (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1554)
 - [ ] T028 [P] [US1] Refactor onScaleEnd (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1586)
-- [ ] T029 [P] [US1] Refactor onKeyEvent (KeyboardListener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1618)
+- [X] T029 [P] [US1] Refactor onKeyEvent (KeyboardListener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1618)
 
 #### Rendering Layer Integration
 
