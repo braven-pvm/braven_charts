@@ -85,9 +85,9 @@ Flutter package structure:
 - [X] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)
 - [X] T024 [P] [US1] Refactor onPointerSignal (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1434)
 - [X] T025 [P] [US1] Refactor onTapDown (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1512)
-- [ ] T026 [P] [US1] Refactor onScaleStart (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1548)
+- [X] T026 [P] [US1] Refactor onScaleStart (GestureDetector callback) - NO-OP (handler is empty, no setState)
 - [X] T027 [P] [US1] Refactor onScaleUpdate (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1554)
-- [ ] T028 [P] [US1] Refactor onScaleEnd (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1586)
+- [X] T028 [P] [US1] Refactor onScaleEnd (GestureDetector callback) - NO-OP (handler is empty, no setState)
 - [X] T029 [P] [US1] Refactor onKeyEvent (KeyboardListener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1618)
 
 #### Rendering Layer Integration
@@ -130,18 +130,18 @@ Flutter package structure:
 
 #### Animation Controller Integration
 
-- [ ] T042 [P] [US2] Refactor zoom animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~645)
-- [ ] T043 [P] [US2] Refactor pan animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~658)
+- [X] T042 [P] [US2] Refactor zoom animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~645)
+- [X] T043 [P] [US2] Refactor pan animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~658)
 - [ ] T044 [US2] Update dispose() to dispose animation controllers BEFORE notifier in lib/src/widgets/braven_chart.dart (enforce disposal order)
 
 #### Controller Callbacks Integration
 
-- [ ] T045 [P] [US2] Refactor _onControllerUpdate callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
-- [ ] T046 [P] [US2] Refactor _onDataStreamPoint callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
+- [X] T045 [P] [US2] Refactor _onControllerUpdate callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
+- [X] T046 [P] [US2] Refactor _onDataStreamPoint callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
 
 #### Timer Callbacks Integration
 
-- [ ] T047 [US2] Refactor tooltip hide timer callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
+- [X] T047 [US2] Refactor tooltip hide timer callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
 - [ ] T048 [US2] Update dispose() to cancel timers BEFORE disposing controllers in lib/src/widgets/braven_chart.dart (enforce disposal order)
 
 #### Throttling Implementation

@@ -583,11 +583,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   InteractionState _interactionState = InteractionState.initial();
 
   /// ValueNotifier for interaction state (replaces setState pattern).
-  /// 
+  ///
   /// This notifier allows interactive overlays (crosshair, tooltip) to rebuild
   /// independently without triggering full widget rebuilds. Updates are made
   /// directly via `_interactionStateNotifier.value = ...` instead of setState().
-  /// 
+  ///
   /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
   late final ValueNotifier<InteractionState> _interactionStateNotifier;
 
@@ -650,26 +650,29 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Initialize zoom animation controller (250ms for smooth transitions)
     _zoomAnimationController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this)
       ..addListener(() {
-        // Update zoom state during animation
+        // Update zoom state during animation via notifier (NOT setState)
         if (_zoomAnimationX != null && _zoomAnimationY != null) {
-          _safeSetState(() {
-            final currentZoomState = _interactionState.zoomPanState;
-            final newZoomState = currentZoomState.copyWith(zoomLevelX: _zoomAnimationX!.value, zoomLevelY: _zoomAnimationY!.value);
-            _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-          });
+          final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+          final newZoomState = currentZoomState.copyWith(
+            zoomLevelX: _zoomAnimationX!.value,
+            zoomLevelY: _zoomAnimationY!.value,
+          );
+          _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+            zoomPanState: newZoomState,
+          );
         }
       });
 
     // Initialize pan animation controller (250ms for smooth transitions)
     _panAnimationController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this)
       ..addListener(() {
-        // Update pan state during animation
+        // Update pan state during animation via notifier (NOT setState)
         if (_panAnimation != null) {
-          _safeSetState(() {
-            final currentZoomState = _interactionState.zoomPanState;
-            final newZoomState = currentZoomState.copyWith(panOffset: _panAnimation!.value);
-            _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-          });
+          final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+          final newZoomState = currentZoomState.copyWith(panOffset: _panAnimation!.value);
+          _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+            zoomPanState: newZoomState,
+          );
         }
       });
 
@@ -906,10 +909,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Add point to the first series (or create a default series)
     // This is a simplified approach - real implementation would need
     // to determine which series to add the point to
-    _safeSetState(() {
-      // Target series determined from dataStream metadata
-      // Enhanced in T023
-    });
+    // NOTE: No interaction state update needed here - this updates chart data, not interaction state
   }
 
   /// Called when the controller notifies of changes.
@@ -917,14 +917,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (!mounted) return;
 
     // Rebuild with new data
-    // NOTE: Using direct setState here is SAFE because controller updates
-    // are triggered by user actions (button clicks, etc.) that happen
-    // OUTSIDE the rendering pipeline's hit testing phase.
-    // Using _safeSetState here would actually CAUSE problems by delaying
-    // the setState to happen during subsequent pointer events!
-    setState(() {
-      // Controller has updated its internal state
-    });
+    // NOTE: Controller updates don't affect interaction state (crosshair, tooltip, etc.)
+    // They update chart data/annotations which triggers rebuild via widget updates
+    // No interaction state changes needed here
 
     // TODO: Auto-scroll feature temporarily disabled due to Flutter rendering pipeline conflicts
     // The post-frame callback approach still triggers setState during hit testing, causing crashes.
@@ -1049,17 +1044,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _animateZoom({required double newZoomX, required double newZoomY, VoidCallback? onComplete}) {
     if (_zoomAnimationController == null) {
       // Fallback: instant zoom if no animation controller
-      _safeSetState(() {
-        final currentZoomState = _interactionState.zoomPanState;
-        final newZoomState = currentZoomState.copyWith(zoomLevelX: newZoomX, zoomLevelY: newZoomY);
-        _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-      });
+      final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+      final newZoomState = currentZoomState.copyWith(zoomLevelX: newZoomX, zoomLevelY: newZoomY);
+      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+        zoomPanState: newZoomState,
+      );
       onComplete?.call();
       return;
     }
 
     // Get current zoom levels
-    final currentZoomState = _interactionState.zoomPanState;
+    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
     final currentZoomX = currentZoomState.zoomLevelX;
     final currentZoomY = currentZoomState.zoomLevelY;
 
@@ -1089,17 +1084,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _animatePan({required Offset newPanOffset, VoidCallback? onComplete}) {
     if (_panAnimationController == null) {
       // Fallback: instant pan if no animation controller
-      _safeSetState(() {
-        final currentZoomState = _interactionState.zoomPanState;
-        final newZoomState = currentZoomState.copyWith(panOffset: newPanOffset);
-        _interactionState = _interactionState.copyWith(zoomPanState: newZoomState);
-      });
+      final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+      final newZoomState = currentZoomState.copyWith(panOffset: newPanOffset);
+      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+        zoomPanState: newZoomState,
+      );
       onComplete?.call();
       return;
     }
 
     // Get current pan offset
-    final currentZoomState = _interactionState.zoomPanState;
+    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
     final currentPanOffset = currentZoomState.panOffset;
 
     // Create tween animation
@@ -1132,9 +1127,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     const persistDelay = Duration(seconds: 5);
     _tooltipHideTimer = Timer(persistDelay, () {
       if (mounted) {
-        _safeSetState(() {
-          _interactionState = _interactionState.copyWith(isTooltipVisible: false, tooltipPosition: null, tooltipDataPoint: null);
-        });
+        _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+          isTooltipVisible: false,
+          tooltipPosition: null,
+          tooltipDataPoint: null,
+        );
       }
     });
   }
@@ -1550,9 +1547,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 config.onDataPointTap?.call(point, details.localPosition);
 
                 // Invoke selection callback
-                final selectedPointsList = _interactionStateNotifier.value.selectedPoints
-                    .map((data) => _mapToDataPoint(data))
-                    .toList();
+                final selectedPointsList = _interactionStateNotifier.value.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
                 config.onSelectionChanged?.call(selectedPointsList);
               }
             }
@@ -1744,12 +1739,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   } else if (event is KeyRepeatEvent) {
                     // Key held down: Apply pan offset directly for smooth continuous movement
                     // This prevents animation stuttering from rapid repeat events (~30ms intervals)
-                    _safeSetState(() {
-                      _interactionState = _interactionState.copyWith(zoomPanState: _interactionState.zoomPanState.copyWith(panOffset: newPanOffset));
-                    });
+                    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+                    final newZoomState = currentZoomState.copyWith(panOffset: newPanOffset);
+                    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                      zoomPanState: newZoomState,
+                    );
 
                     // Invoke callbacks immediately
-                    widget.interactionConfig!.onPanChanged?.call(_interactionState.zoomPanState.panOffset);
+                    widget.interactionConfig!.onPanChanged?.call(_interactionStateNotifier.value.zoomPanState.panOffset);
                     _invokeViewportCallback();
                   }
 
@@ -1758,30 +1755,28 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               }
 
               // Process key event through keyboard handler
-              final newState = _keyboardHandler!.handleKeyEvent(event, _interactionState, dataPoints: allDataPoints);
+              final newState = _keyboardHandler!.handleKeyEvent(event, _interactionStateNotifier.value, dataPoints: allDataPoints);
 
-              if (newState != null && newState != _interactionState) {
-                _safeSetState(() {
-                  _interactionState = newState;
+              if (newState != null && newState != _interactionStateNotifier.value) {
+                _interactionStateNotifier.value = newState;
 
-                  // If focused point changed, invoke callback
-                  if (_interactionState.focusedPoint != null) {
-                    final point = _mapToDataPoint(_interactionState.focusedPoint!);
-                    config.onDataPointHover?.call(point, _interactionState.crosshairPosition ?? Offset.zero);
-                  }
+                // If focused point changed, invoke callback
+                if (_interactionStateNotifier.value.focusedPoint != null) {
+                  final point = _mapToDataPoint(_interactionStateNotifier.value.focusedPoint!);
+                  config.onDataPointHover?.call(point, _interactionStateNotifier.value.crosshairPosition ?? Offset.zero);
+                }
 
-                  // If zoom/pan state changed, invoke callbacks
-                  if (_interactionState.zoomPanState != newState.zoomPanState) {
-                    config.onZoomChanged?.call(_interactionState.zoomPanState.zoomLevelX, _interactionState.zoomPanState.zoomLevelY);
-                    _invokeViewportCallback();
-                  }
+                // If zoom/pan state changed, invoke callbacks
+                if (_interactionStateNotifier.value.zoomPanState != newState.zoomPanState) {
+                  config.onZoomChanged?.call(_interactionStateNotifier.value.zoomPanState.zoomLevelX, _interactionStateNotifier.value.zoomPanState.zoomLevelY);
+                  _invokeViewportCallback();
+                }
 
-                  // If selection changed, invoke callback
-                  if (_interactionState.selectedPoints != newState.selectedPoints) {
-                    final selectedPointsList = _interactionState.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
-                    config.onSelectionChanged?.call(selectedPointsList);
-                  }
-                });
+                // If selection changed, invoke callback
+                if (_interactionStateNotifier.value.selectedPoints != newState.selectedPoints) {
+                  final selectedPointsList = _interactionStateNotifier.value.selectedPoints.map((data) => _mapToDataPoint(data)).toList();
+                  config.onSelectionChanged?.call(selectedPointsList);
+                }
 
                 return KeyEventResult.handled;
               }
