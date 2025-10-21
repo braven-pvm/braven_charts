@@ -939,12 +939,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Called when the controller notifies of changes.
   void _onControllerUpdate() {
-    // Check if auto-scroll should be applied
-    _applyAutoScrollIfNeeded();
-
     // Rebuild widget when controller data changes
     setState(() {
       // Controller has updated its internal state
+    });
+
+    // CRITICAL: Defer auto-scroll to post-frame callback to avoid setState during build
+    // This prevents the catastrophic rendering failure caused by recursive updates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _applyAutoScrollIfNeeded();
+      }
     });
   }
 
@@ -952,7 +957,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Automatically pans the chart to keep the most recent data points visible
   /// when the total data count exceeds [AutoScrollConfig.maxVisiblePoints].
+  ///
+  /// CRITICAL: This method must ONLY be called from post-frame callbacks to
+  /// avoid setState during build, which causes catastrophic rendering failures.
   void _applyAutoScrollIfNeeded() {
+    // SAFETY: Prevent execution if widget is unmounted or during build
+    if (!mounted) return;
+
     final config = widget.autoScrollConfig;
     if (config == null || !config.enabled) {
       return;
@@ -971,10 +982,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
 
     // SAFETY: Validate point count
-    if (maxPointCount <= 0) return;
-
-    // Only apply auto-scroll if we exceed the threshold
-    if (maxPointCount <= config.maxVisiblePoints) {
+    if (maxPointCount <= 0 || maxPointCount <= config.maxVisiblePoints) {
       return;
     }
 
@@ -982,23 +990,32 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final bounds = _calculateDataBounds(allSeries);
     final dataRangeX = bounds.maxX - bounds.minX;
 
-    // SAFETY: Validate data range (prevent division by zero)
+    // SAFETY: Validate data range (prevent division by zero and NaN)
     if (dataRangeX <= 0 || !dataRangeX.isFinite) return;
+
+    // SAFETY: Validate bounds are reasonable
+    if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return;
 
     // Calculate what portion of data should be visible
     final visibleRatio = config.maxVisiblePoints / maxPointCount;
+
+    // SAFETY: Validate visible ratio
+    if (!visibleRatio.isFinite || visibleRatio <= 0 || visibleRatio > 1.0) return;
 
     // Calculate new zoom level to show only maxVisiblePoints
     // Zoom = 1.0 shows all data, higher zoom shows less
     final newZoomX = 1.0 / visibleRatio;
 
-    // SAFETY: Validate zoom level
-    if (!newZoomX.isFinite || newZoomX <= 0) return;
+    // SAFETY: Validate zoom level (must be finite, positive, and reasonable)
+    if (!newZoomX.isFinite || newZoomX <= 0 || newZoomX > 100.0) return;
 
     // Calculate pan offset to show the rightmost (latest) data
     // Pan offset is in pixel units, but we calculate based on data range
     final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
-    if (chartRect.width <= 0) return; // Invalid size
+    
+    // SAFETY: Validate chart dimensions
+    if (chartRect.width <= 0 || !chartRect.width.isFinite) return;
+    if (chartRect.height <= 0 || !chartRect.height.isFinite) return;
 
     // Calculate how much of the data range will be visible after zoom
     final visibleDataRange = dataRangeX / newZoomX;
@@ -1012,7 +1029,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final dataShiftNeeded = dataRangeX - visibleDataRange;
 
     // SAFETY: Validate shift amount
-    if (!dataShiftNeeded.isFinite) return;
+    if (!dataShiftNeeded.isFinite || dataShiftNeeded < 0) return;
 
     // Convert data shift to pixel offset
     // CRITICAL: In _calculateDataBounds, pan conversion is:
@@ -1021,17 +1038,29 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     //   We need NEGATIVE panX in pixel space
     final panOffsetX = -(dataShiftNeeded / dataRangeX) * chartRect.width * newZoomX;
 
-    // SAFETY: Validate final pan offset
+    // SAFETY: Validate final pan offset (must be finite and reasonable)
     if (!panOffsetX.isFinite) return;
+    
+    // SAFETY: Prevent extreme pan values that could cause rendering issues
+    final maxReasonablePan = chartRect.width * 10.0; // Max 10x chart width
+    if (panOffsetX.abs() > maxReasonablePan) return;
 
     // Apply the new zoom and pan
     final currentZoomState = _interactionState.zoomPanState;
+
+    // SAFETY: Validate current zoom state before applying changes
+    if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
+      return;
+    }
 
     if (config.animateScroll && _panAnimationController != null) {
       // Animate the scroll
       _animatePan(
         newPanOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
         onComplete: () {
+          // SAFETY: Check if still mounted before setState
+          if (!mounted) return;
+          
           // Also update zoom if needed
           if ((currentZoomState.zoomLevelX - newZoomX).abs() > 0.01) {
             setState(() {
@@ -1045,6 +1074,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       );
     } else {
       // Instant scroll
+      // SAFETY: Double-check mounted state before setState
+      if (!mounted) return;
+      
       setState(() {
         final newZoomState = currentZoomState.copyWith(
           zoomLevelX: newZoomX,
