@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "We are in dire need of an architectural refactor. Detail is in this document: ARCHITECTURE_REFACTOR_PLAN.md"
 
+## Clarifications
+
+### Session 2025-01-21
+
+- Q: What minimum unit test coverage is required for the ValueNotifier refactor to ensure reliability? → A: 90% coverage
+- Q: When updates occur faster than 60Hz (>60 updates/second), how should the system handle them? → A: Throttle updates to 60Hz maximum using frame-based coalescing
+- Q: How should existing chart instances handle the migration from setState to ValueNotifier pattern? → A: Automatic migration - no user action required (internal refactor only)
+- Q: How should the system handle simultaneous multiple interaction types (zoom + pan + hover)? → A: Allow non-conflicting interactions simultaneously with proper state isolation
+- Q: How should memory leaks be prevented when disposing ValueNotifier instances? → A: Dispose ValueNotifier, remove all listeners, cancel timers, dispose animation controllers
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Smooth Mouse Interactions Without Crashes (Priority: P1)
@@ -57,10 +67,10 @@ Users can programmatically update chart data via ChartController while simultane
 
 ### Edge Cases
 
-- What happens when user performs extremely rapid mouse movements (1000+ pixels/second) over complex charts?
+- What happens when user performs extremely rapid mouse movements (1000+ pixels/second) over complex charts? System throttles updates to 60Hz using frame-based coalescing to prevent excessive repaints while maintaining responsiveness.
 - How does system handle mouse interactions during intensive operations (large dataset rendering, multiple animations)?
-- What happens when multiple interaction types occur simultaneously (zoom + pan + hover)?
-- How does system behave when interaction state updates occur faster than frame rate (>60 updates/second)?
+- What happens when multiple interaction types occur simultaneously (zoom + pan + hover)? Non-conflicting interactions are allowed simultaneously with proper state isolation - each interaction type updates its own portion of InteractionState, and ValueNotifier coalesces them into a single update.
+- How does system behave when interaction state updates occur faster than frame rate (>60 updates/second)? Updates are throttled to 60Hz maximum, with ValueNotifier coalescing multiple updates within a single frame.
 - What happens during rapid enable/disable cycles of interactionConfig?
 
 ## Requirements *(mandatory)*
@@ -71,7 +81,7 @@ Users can programmatically update chart data via ChartController while simultane
 - **FR-002**: System MUST use ValueNotifier pattern for managing interaction state (InteractionState)
 - **FR-003**: System MUST wrap interactive overlays (crosshair, tooltip) in ValueListenableBuilder
 - **FR-004**: System MUST isolate interactive overlays using RepaintBoundary to prevent cascade repaints
-- **FR-005**: System MUST properly dispose of ValueNotifier instances in widget dispose() method
+- **FR-005**: System MUST properly dispose of ValueNotifier instances in widget dispose() method, including removing all listeners, canceling timers, and disposing animation controllers to prevent memory leaks
 - **FR-006**: System MUST update all event handlers (hover, exit, pointer signals, tap, scale, keyboard) to update notifier value directly without setState
 - **FR-007**: System MUST update animation controller listeners (zoom, pan) to use notifier instead of setState
 - **FR-008**: System MUST update controller callbacks (_onControllerUpdate, _onDataStreamPoint) to use notifier
@@ -79,6 +89,9 @@ Users can programmatically update chart data via ChartController while simultane
 - **FR-010**: System MUST delete deprecated _safeSetState() method and all its usages
 - **FR-011**: System MUST ensure base chart rendering never depends on interaction state (separation of concerns)
 - **FR-012**: System MUST maintain backward compatibility with existing public APIs (no breaking changes to BravenChart widget interface)
+- **FR-013**: System MUST throttle interaction state updates to 60Hz maximum using frame-based coalescing when updates occur faster than the frame rate
+- **FR-014**: Migration MUST be automatic and transparent to users - existing chart instances work without code changes (internal refactor only)
+- **FR-015**: System MUST support simultaneous non-conflicting interactions (zoom + pan + hover) with proper state isolation, where each interaction type updates its own portion of InteractionState
 
 ### Key Entities
 
@@ -99,6 +112,7 @@ Users can programmatically update chart data via ChartController while simultane
 - **SC-005**: Users can perform 1000+ consecutive mouse movements over chart without any performance degradation or memory leaks
 - **SC-006**: Concurrent operations work correctly - users can add data via controller while hovering mouse with zero conflicts or errors (100% success rate in stress tests)
 - **SC-007**: All existing integration tests pass - zero regressions in functionality, all acceptance scenarios from user stories verified
+- **SC-008**: Unit test coverage reaches minimum 90% for all refactored code including event handlers, animation listeners, controller callbacks, timer callbacks, and disposal logic
 
 ### Assumptions
 
