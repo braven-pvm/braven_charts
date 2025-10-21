@@ -34,6 +34,7 @@ migrate_working_dir/
 chromedriver.log
 chromedriver.error.log
 *.log
+logs/
 
 # Temporary files
 hash.txt
