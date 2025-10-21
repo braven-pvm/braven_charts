@@ -1976,23 +1976,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       shadowBlurRadius: config.style.shadowBlurRadius,
     );
 
-    // Calculate tooltip position based on preferredPosition
-    // Estimate tooltip size for positioning (these are used for centering calculations)
-    // The actual widget size may differ, but these estimates help with initial positioning
-    const estimatedWidth = 220.0; // ~280px with content padding
-    const estimatedHeight = 120.0;
-
+    // Calculate tooltip position using directional Positioned properties
+    // No need for size estimates - Flutter handles sizing automatically
     final tooltipPosition = _calculateTooltipPosition(
       markerScreenPos,
       config.preferredPosition,
-      config.offsetFromPoint,
-      estimatedWidth,
-      estimatedHeight,
       _cachedChartRect!,
     );
 
     print(
-        '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, tooltipPos=$tooltipPosition, offset=${config.offsetFromPoint}');
+        '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, left=${tooltipPosition.left}, right=${tooltipPosition.right}, top=${tooltipPosition.top}, bottom=${tooltipPosition.bottom}');
 
     // Build tooltip with arrow pointer (integrated into border)
     final tooltipWithArrow = _buildTooltipWithArrow(
@@ -2002,8 +1995,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     );
 
     return Positioned(
-      left: tooltipPosition.dx,
-      top: tooltipPosition.dy,
+      left: tooltipPosition.left,
+      right: tooltipPosition.right,
+      top: tooltipPosition.top,
+      bottom: tooltipPosition.bottom,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: _interactionState.isTooltipVisible ? 1.0 : 0.0,
@@ -2016,130 +2011,94 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Calculates the optimal position for a tooltip based on preferredPosition.
   ///
-  /// Uses arrow positioning with fixed offset from corner:
-  /// - Arrow is positioned at a predictable offset from the Positioned corner
-  /// - This offset is then aligned with the marker for perfect arrow-to-marker connection
-  /// - TOP: arrow is at arrowOffsetX from left, positioned above marker
-  /// - BOTTOM: arrow is at arrowOffsetX from left, positioned below marker
-  /// - LEFT: arrow is at arrowOffsetY from top, positioned left of marker
-  /// - RIGHT: arrow is at arrowOffsetY from top, positioned right of marker
-  Offset _calculateTooltipPosition(
+  /// Returns directional positioning properties for the Positioned widget.
+  /// Uses the appropriate edge (left/right/top/bottom) to avoid needing tooltip dimensions.
+  ///
+  /// - TOP: Uses `bottom` property (distance from screen bottom)
+  /// - BOTTOM: Uses `top` property (distance from screen top)
+  /// - LEFT: Uses `right` property (distance from screen right)
+  /// - RIGHT: Uses `left` property (distance from screen left)
+  ///
+  /// Arrow is positioned at fixed offset from corner (arrowOffsetX/Y) and
+  /// aligned with marker edge by adding marker radius to marker center position.
+  ({double? left, double? right, double? top, double? bottom}) _calculateTooltipPosition(
     Offset markerPos,
     TooltipPosition preferredPosition,
-    double offset,
-    double tooltipWidth,
-    double tooltipHeight,
     Rect chartRect,
   ) {
-    // Define minimum margin to chart edges
-    const edgeMargin = 8.0;
+    // Constants for positioning
     const arrowSize = 10.0;
+    const markerRadius = 6.0; // Marker is drawn with 6.0 radius
+    const arrowOffsetX = 20.0; // Horizontal offset from left/right edge for arrow
+    const arrowOffsetY = 20.0; // Vertical offset from top/bottom edge for arrow
 
-    // Arrow offset from the Positioned corner (for good UX spacing)
-    // This is where the arrow will appear relative to the top-left corner
-    const arrowOffsetX = 20.0; // Horizontal offset from left edge
-    const arrowOffsetY = 20.0; // Vertical offset from top edge
+    // Screen dimensions from chartRect
+    final screenWidth = chartRect.right;
+    final screenHeight = chartRect.bottom;
 
-    // Available space calculations
-    final totalHeight = tooltipHeight + arrowSize;
-    final totalWidth = tooltipWidth + arrowSize;
+    print('📏 POSITIONING: position=$preferredPosition, markerCenter=$markerPos');
+    print('📏 SCREEN: width=$screenWidth, height=$screenHeight');
 
-    final spaceAbove = markerPos.dy - chartRect.top - edgeMargin;
-    final spaceBelow = chartRect.bottom - markerPos.dy - edgeMargin;
-    final spaceLeft = markerPos.dx - chartRect.left - edgeMargin;
-    final spaceRight = chartRect.right - markerPos.dx - edgeMargin;
-
-    print('📏 POSITIONING DEBUG: position=$preferredPosition, marker=$markerPos, offset=$offset');
-    print('📏 SPACE: above=$spaceAbove, below=$spaceBelow, left=$spaceLeft, right=$spaceRight');
+    // Calculate marker edge positions (marker center + radius)
+    final markerEdgeTop = markerPos.dy - markerRadius;
+    final markerEdgeBottom = markerPos.dy + markerRadius;
+    final markerEdgeLeft = markerPos.dx - markerRadius;
+    final markerEdgeRight = markerPos.dx + markerRadius;
 
     switch (preferredPosition) {
       case TooltipPosition.auto:
-        // Auto-position: try preferred order, fall back to best fit
-        if (spaceAbove >= totalHeight) {
-          // TOP: arrow offset X from left, positioned above marker
-          // Arrow tip should touch the marker, so we only subtract tooltip height
-          final result = Offset(
-            markerPos.dx - arrowOffsetX,
-            markerPos.dy - tooltipHeight - arrowSize,
-          );
-          print('✓ AUTO: chose TOP, result=$result, arrowAt=${markerPos.dx}');
-          return result;
-        } else if (spaceBelow >= totalHeight) {
-          // BOTTOM: arrow offset X from left, positioned below marker
-          // Arrow tip should touch marker, so position starts AT marker
-          final result = Offset(
-            markerPos.dx - arrowOffsetX,
-            markerPos.dy,
-          );
-          print('✓ AUTO: chose BOTTOM, result=$result, arrowAt=${markerPos.dx}');
-          return result;
-        } else if (spaceRight >= totalWidth) {
-          // RIGHT: arrow offset Y from top, positioned right of marker
-          // Arrow tip should touch marker, so position starts AT marker
-          final result = Offset(
-            markerPos.dx,
-            markerPos.dy - arrowOffsetY,
-          );
-          print('✓ AUTO: chose RIGHT, result=$result, arrowAt=${markerPos.dy}');
-          return result;
-        } else if (spaceLeft >= totalWidth) {
-          // LEFT: arrow offset Y from top, positioned left of marker
-          // Arrow tip should touch marker
-          final result = Offset(
-            markerPos.dx - tooltipWidth - arrowSize,
-            markerPos.dy - arrowOffsetY,
-          );
-          print('✓ AUTO: chose LEFT, result=$result, arrowAt=${markerPos.dy}');
-          return result;
-        } else {
-          // Fallback: position below marker with arrow touching
-          final result = Offset(
-            markerPos.dx - arrowOffsetX,
-            markerPos.dy,
-          );
-          print('✓ AUTO: FALLBACK, result=$result');
-          return result;
-        }
+        // TODO: Auto-position requires actual tooltip size to determine best fit
+        // For now, default to TOP position
+        return (
+          left: markerPos.dx - arrowOffsetX,
+          bottom: screenHeight - markerEdgeTop + arrowSize,
+          top: null,
+          right: null,
+        );
 
       case TooltipPosition.top:
-        // Arrow is at arrowOffsetX from left, tooltip positioned above marker
-        // Arrow tip should touch the marker, so we only subtract tooltip height + arrow
-        final result = Offset(
-          markerPos.dx - arrowOffsetX,
-          markerPos.dy - tooltipHeight - arrowSize,
+        // Tooltip ABOVE marker
+        // Use `bottom` property: distance from screen bottom to marker's top edge
+        // Arrow is arrowOffsetX from left edge, points down to marker
+        return (
+          left: markerPos.dx - arrowOffsetX,
+          bottom: screenHeight - markerEdgeTop + arrowSize,
+          top: null,
+          right: null,
         );
-        print('✓ TOP: result=$result, arrowAt=${markerPos.dx}');
-        return result;
 
       case TooltipPosition.bottom:
-        // Arrow is at arrowOffsetX from left, positioned below marker
-        // Arrow tip should touch marker
-        final result = Offset(
-          markerPos.dx - arrowOffsetX,
-          markerPos.dy,
+        // Tooltip BELOW marker
+        // Use `top` property: distance from screen top to marker's bottom edge
+        // Arrow is arrowOffsetX from left edge, points up to marker
+        return (
+          left: markerPos.dx - arrowOffsetX,
+          top: markerEdgeBottom + arrowSize,
+          bottom: null,
+          right: null,
         );
-        print('✓ BOTTOM: result=$result, arrowAt=${markerPos.dx}');
-        return result;
 
       case TooltipPosition.left:
-        // Arrow is at arrowOffsetY from top, positioned left of marker
-        // Arrow tip should touch marker
-        final result = Offset(
-          markerPos.dx - tooltipWidth - arrowSize,
-          markerPos.dy - arrowOffsetY,
+        // Tooltip LEFT of marker
+        // Use `right` property: distance from screen right to marker's left edge
+        // Arrow is arrowOffsetY from top edge, points right to marker
+        return (
+          right: screenWidth - markerEdgeLeft + arrowSize,
+          top: markerPos.dy - arrowOffsetY,
+          left: null,
+          bottom: null,
         );
-        print('✓ LEFT: result=$result, arrowAt=${markerPos.dy}');
-        return result;
 
       case TooltipPosition.right:
-        // Arrow is at arrowOffsetY from top, positioned right of marker
-        // Arrow tip should touch marker
-        final result = Offset(
-          markerPos.dx,
-          markerPos.dy - arrowOffsetY,
+        // Tooltip RIGHT of marker
+        // Use `left` property: distance from screen left to marker's right edge
+        // Arrow is arrowOffsetY from top edge, points left to marker
+        return (
+          left: markerEdgeRight + arrowSize,
+          top: markerPos.dy - arrowOffsetY,
+          right: null,
+          bottom: null,
         );
-        print('✓ RIGHT: result=$result, arrowAt=${markerPos.dy}');
-        return result;
     }
   }
 
