@@ -184,7 +184,7 @@ class TooltipConfig {
     this.showDelay = const Duration(milliseconds: 100),
     this.hideDelay = const Duration(milliseconds: 200),
     this.followCursor = false,
-    this.offsetFromPoint = 10.0,
+    this.offsetFromPoint = 2.0,
     this.style = const TooltipStyle(),
     this.customBuilder,
   });
