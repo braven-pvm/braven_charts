@@ -82,7 +82,11 @@ Users can programmatically update chart data via ChartController while simultane
 - **FR-003**: System MUST wrap interactive overlays (crosshair, tooltip) in ValueListenableBuilder
 - **FR-004**: System MUST isolate interactive overlays using RepaintBoundary to prevent cascade repaints
 - **FR-005**: System MUST properly dispose of ValueNotifier instances in widget dispose() method, including removing all listeners, canceling timers, and disposing animation controllers to prevent memory leaks
-- **FR-006**: System MUST update all event handlers (hover, exit, pointer signals, tap, scale, keyboard) to update notifier value directly without setState
+- **FR-006**: System MUST update all event handlers to update notifier value directly without setState. Specific handlers to refactor:
+  - **Mouse/Pointer Handlers**: onHover (MouseRegion), onExit (MouseRegion), onPointerSignal (Listener - zoom/scroll), onPointerDown (Listener - pan start), onPointerMove (Listener - pan drag), onPointerUp (Listener - pan end)
+  - **Gesture Handlers**: onTapDown (GestureDetector), onScaleStart (GestureDetector - pinch zoom/pan), onScaleUpdate (GestureDetector), onScaleEnd (GestureDetector)
+  - **Keyboard Handler**: onKeyEvent (KeyboardListener - modifier keys)
+  - **Total**: 11 interaction handlers
 - **FR-007**: System MUST update animation controller listeners (zoom, pan) to use notifier instead of setState
 - **FR-008**: System MUST update controller callbacks (_onControllerUpdate, _onDataStreamPoint) to use notifier
 - **FR-009**: System MUST update timer callbacks (tooltip hide timer) to use notifier
@@ -98,7 +102,10 @@ Users can programmatically update chart data via ChartController while simultane
 - **InteractionState**: Represents current interaction state including crosshair visibility/position, tooltip data, hover information, zoom/pan state, and keyboard modifier states. Currently stored as plain field, will be wrapped in ValueNotifier.
 - **ValueNotifier<InteractionState>**: Reactive state container that notifies listeners when interaction state changes, enabling granular UI updates without widget rebuilds.
 - **Interactive Overlays**: Visual elements (crosshair, tooltip) that render on top of base chart and update frequently based on mouse position. Will be isolated in RepaintBoundary with ValueListenableBuilder.
-- **Event Handlers**: 11+ handler methods (_onHover, _onExit, _onPointerSignal, etc.) that currently trigger setState, will be refactored to update notifier value.
+- **Event Handlers**: 11 handler methods that respond to user interactions and currently trigger setState, will be refactored to update notifier value:
+  - Mouse/Pointer: onHover, onExit, onPointerSignal, onPointerDown, onPointerMove, onPointerUp (6 handlers)
+  - Gesture: onTapDown, onScaleStart, onScaleUpdate, onScaleEnd (4 handlers)
+  - Keyboard: onKeyEvent (1 handler)
 - **Base Chart**: The chart rendering layer (axes, grid, data series) that should remain stable and never rebuild during mouse interactions.
 
 ## Success Criteria *(mandatory)*
