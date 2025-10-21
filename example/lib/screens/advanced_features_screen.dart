@@ -35,13 +35,20 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
   int _sensorDataCount = 0;
   int _controlledDataCount = 0;
 
+  // Stream control state
+  bool _isStreamingActive = false;
+  bool _isStream1Active = false;
+  bool _isStream2Active = false;
+  int _streamSpeed = 200; // milliseconds
+  int _stream1Speed = 500; // milliseconds
+  int _stream2Speed = 300; // milliseconds
+
   final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
-    _startSensorSimulation();
-    _startMultiStreamSimulation();
+    // Don't auto-start - let user control when to begin streaming
   }
 
   @override
@@ -57,41 +64,95 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
   }
 
   void _startSensorSimulation() {
-    _sensorTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      if (mounted && _sensorDataCount < 50) {
+    if (_isStreamingActive) return;
+
+    setState(() {
+      _isStreamingActive = true;
+    });
+
+    _sensorTimer = Timer.periodic(Duration(milliseconds: _streamSpeed), (timer) {
+      if (mounted && _isStreamingActive) {
         final value = 50 + _random.nextDouble() * 50;
         _streamController.add(
           ChartDataPoint(x: _sensorDataCount.toDouble(), y: value),
         );
-        _sensorDataCount++;
-      } else {
-        timer.cancel();
+        setState(() {
+          _sensorDataCount++;
+        });
       }
     });
   }
 
+  void _stopSensorSimulation() {
+    setState(() {
+      _isStreamingActive = false;
+    });
+    _sensorTimer?.cancel();
+    _sensorTimer = null;
+  }
+
+  void _resetSensorData() {
+    _stopSensorSimulation();
+    setState(() {
+      _sensorDataCount = 0;
+    });
+  }
+
   void _startMultiStreamSimulation() {
-    // Stream 1: Temperature (slower, 500ms)
-    _multiTimer1 = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (mounted) {
+    _startStream1();
+    _startStream2();
+  }
+
+  void _startStream1() {
+    if (_isStream1Active) return;
+
+    setState(() {
+      _isStream1Active = true;
+    });
+
+    // Stream 1: Temperature
+    _multiTimer1 = Timer.periodic(Duration(milliseconds: _stream1Speed), (timer) {
+      if (mounted && _isStream1Active) {
         final temp = 20 + _random.nextDouble() * 10;
         _multiStreamController1.add(
           ChartDataPoint(x: timer.tick.toDouble(), y: temp),
         );
-        if (timer.tick > 40) timer.cancel();
       }
     });
+  }
 
-    // Stream 2: Humidity (faster, 300ms)
-    _multiTimer2 = Timer.periodic(const Duration(milliseconds: 300), (timer) {
-      if (mounted) {
+  void _stopStream1() {
+    setState(() {
+      _isStream1Active = false;
+    });
+    _multiTimer1?.cancel();
+    _multiTimer1 = null;
+  }
+
+  void _startStream2() {
+    if (_isStream2Active) return;
+
+    setState(() {
+      _isStream2Active = true;
+    });
+
+    // Stream 2: Humidity
+    _multiTimer2 = Timer.periodic(Duration(milliseconds: _stream2Speed), (timer) {
+      if (mounted && _isStream2Active) {
         final humidity = 40 + _random.nextDouble() * 40;
         _multiStreamController2.add(
           ChartDataPoint(x: timer.tick.toDouble(), y: humidity),
         );
-        if (timer.tick > 60) timer.cancel();
       }
     });
+  }
+
+  void _stopStream2() {
+    setState(() {
+      _isStream2Active = false;
+    });
+    _multiTimer2?.cancel();
+    _multiTimer2 = null;
   }
 
   void _addRandomPoint() {
@@ -104,6 +165,35 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
         ),
       );
       _controlledDataCount++;
+    });
+  }
+
+  void _addMultiplePoints({int count = 10}) {
+    setState(() {
+      for (int i = 0; i < count; i++) {
+        _controllerDemo.addPoint(
+          'controlled',
+          ChartDataPoint(
+            x: _controlledDataCount.toDouble(),
+            y: _random.nextDouble() * 100,
+          ),
+        );
+        _controlledDataCount++;
+      }
+    });
+  }
+
+  void _addSineWave({int points = 20}) {
+    setState(() {
+      for (int i = 0; i < points; i++) {
+        final x = _controlledDataCount.toDouble();
+        final y = 50 + 30 * sin(x * 0.3); // Sine wave centered at 50
+        _controllerDemo.addPoint(
+          'controlled',
+          ChartDataPoint(x: x, y: y),
+        );
+        _controlledDataCount++;
+      }
     });
   }
 
@@ -256,37 +346,85 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               children: [
                 ElevatedButton.icon(
                   onPressed: _addRandomPoint,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Point'),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add 1 Point'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _addMultiplePoints(count: 10),
+                  icon: const Icon(Icons.add_circle_outline, size: 18),
+                  label: const Text('Add 10 Points'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _addSineWave(points: 20),
+                  icon: const Icon(Icons.waves, size: 18),
+                  label: const Text('Add Sine Wave'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _removeOldestPoint,
-                  icon: const Icon(Icons.remove),
+                  icon: const Icon(Icons.remove, size: 18),
                   label: const Text('Remove Oldest'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _clearAllData,
-                  icon: const Icon(Icons.clear_all),
-                  label: const Text('Clear All'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _addPeakAnnotation,
-                  icon: const Icon(Icons.star),
+                  icon: const Icon(Icons.star, size: 18),
                   label: const Text('Mark Peak'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _clearAllData,
+                  icon: const Icon(Icons.clear_all, size: 18),
+                  label: const Text('Clear All'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Total data points: $_controlledDataCount',
+                      style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -340,7 +478,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Automatic 60 FPS throttling. Data points: $_sensorDataCount/50',
+              'Automatic 60 FPS throttling. ${_isStreamingActive ? "Streaming..." : "Paused"} ($_sensorDataCount points)',
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -348,8 +486,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               chartType: ChartType.area,
               series: const [],
               dataStream: _streamController.stream,
-              title: 'Sensor Data (200ms intervals)',
-              subtitle: 'Auto-throttled to 60 FPS',
+              title: 'Sensor Data Stream',
+              subtitle: 'Updates every ${_streamSpeed}ms, throttled to 60 FPS',
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
@@ -357,29 +495,64 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
                 label: 'Value',
               ),
             ),
-            const SizedBox(height: 12),
-            if (_sensorDataCount >= 50)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _isStreamingActive ? null : _startSensorSimulation,
+                  icon: const Icon(Icons.play_arrow, size: 18),
+                  label: const Text('Start'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade700),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Streaming complete! Chart automatically throttled '
-                        '200ms updates to 60 FPS (16ms intervals).',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
+                ElevatedButton.icon(
+                  onPressed: _isStreamingActive ? _stopSensorSimulation : null,
+                  icon: const Icon(Icons.pause, size: 18),
+                  label: const Text('Stop'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _resetSensorData,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Reset'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                DropdownButton<int>(
+                  value: _streamSpeed,
+                  items: const [
+                    DropdownMenuItem(value: 50, child: Text('50ms (Fast)')),
+                    DropdownMenuItem(value: 100, child: Text('100ms')),
+                    DropdownMenuItem(value: 200, child: Text('200ms')),
+                    DropdownMenuItem(value: 500, child: Text('500ms')),
+                    DropdownMenuItem(value: 1000, child: Text('1s (Slow)')),
                   ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      final wasActive = _isStreamingActive;
+                      if (wasActive) _stopSensorSimulation();
+                      setState(() {
+                        _streamSpeed = value;
+                      });
+                      if (wasActive) _startSensorSimulation();
+                    }
+                  },
                 ),
-              ),
+              ],
+            ),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -428,9 +601,9 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Each series can have its own stream with different update rates.',
-              style: TextStyle(color: Colors.grey),
+            Text(
+              'Each series can have its own stream with different update rates. ${(_isStream1Active ? "Stream 1 active" : "")}${_isStream1Active && _isStream2Active ? ", " : ""}${(_isStream2Active ? "Stream 2 active" : "")}${!_isStream1Active && !_isStream2Active ? "Paused" : ""}',
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
             BravenChart(
@@ -450,57 +623,132 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
                 ),
               ],
               title: 'Multi-Sensor Dashboard',
-              subtitle: 'Temperature (500ms) & Humidity (300ms)',
+              subtitle: 'Independent stream controls',
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Temperature (${_stream1Speed}ms)',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Temperature: Updates every 500ms',
-                        style: TextStyle(fontSize: 12),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _isStream1Active ? null : _startStream1,
+                            icon: const Icon(Icons.play_arrow, size: 16),
+                            label: const Text('Start'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: const Size(80, 32),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isStream1Active ? _stopStream1 : null,
+                            icon: const Icon(Icons.pause, size: 16),
+                            label: const Text('Stop'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: const Size(80, 32),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Humidity (${_stream2Speed}ms)',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Humidity: Updates every 300ms',
-                        style: TextStyle(fontSize: 12),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _isStream2Active ? null : _startStream2,
+                            icon: const Icon(Icons.play_arrow, size: 16),
+                            label: const Text('Start'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: const Size(80, 32),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isStream2Active ? _stopStream2 : null,
+                            icon: const Icon(Icons.pause, size: 16),
+                            label: const Text('Stop'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: const Size(80, 32),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _startMultiStreamSimulation,
+              icon: const Icon(Icons.play_circle_filled, size: 18),
+              label: const Text('Start Both Streams'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 12),
