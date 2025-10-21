@@ -2686,6 +2686,12 @@ class _BravenChartPainter extends CustomPainter {
     final xRange = bounds.maxX - bounds.minX;
     final yRange = bounds.maxY - bounds.minY;
 
+    // If ranges are invalid (NaN, infinite, or zero), skip grid drawing
+    // This happens when there's no data or invalid bounds
+    if (xRange.isNaN || xRange.isInfinite || xRange <= 0 || yRange.isNaN || yRange.isInfinite || yRange <= 0) {
+      return;
+    }
+
     // Use a simple algorithm to get nice intervals (can be enhanced with smarter tick generation)
     final xInterval = _calculateNiceInterval(xRange);
     final yInterval = _calculateNiceInterval(yRange);
@@ -3026,8 +3032,12 @@ class _BravenChartPainter extends CustomPainter {
     // Calculate nice intervals for axis labels (same as grid)
     final xRange = bounds.maxX - bounds.minX;
     final yRange = bounds.maxY - bounds.minY;
-    final xInterval = _calculateNiceInterval(xRange);
-    final yInterval = _calculateNiceInterval(yRange);
+
+    // If ranges are invalid, we can still draw axis lines, but not labels
+    final bool validRanges = !xRange.isNaN && !xRange.isInfinite && xRange > 0 && !yRange.isNaN && !yRange.isInfinite && yRange > 0;
+
+    final xInterval = validRanges ? _calculateNiceInterval(xRange) : 1.0;
+    final yInterval = validRanges ? _calculateNiceInterval(yRange) : 1.0;
 
     if (xAxis.showAxis) {
       // Draw X-axis line at the position specified by axisPosition
@@ -3039,7 +3049,7 @@ class _BravenChartPainter extends CustomPainter {
       );
 
       // Draw X-axis labels at grid intervals
-      if (xAxis.showLabels) {
+      if (xAxis.showLabels && validRanges) {
         final firstX = (bounds.minX / xInterval).floor() * xInterval;
         var currentX = firstX;
 
@@ -3087,7 +3097,7 @@ class _BravenChartPainter extends CustomPainter {
       );
 
       // Draw Y-axis labels at grid intervals
-      if (yAxis.showLabels) {
+      if (yAxis.showLabels && validRanges) {
         final firstY = (bounds.minY / yInterval).floor() * yInterval;
         var currentY = firstY;
 
