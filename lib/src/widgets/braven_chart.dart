@@ -993,14 +993,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Calculate how much data is hidden on the left
     // With newZoomX, we're showing (dataRangeX / newZoomX) of data
-    // We want to show the rightmost portion, so we need to pan RIGHT (positive offset)
+    // We want to show the rightmost portion (latest data)
     final visibleDataRange = dataRangeX / newZoomX;
-    final hiddenLeftData = dataRangeX - visibleDataRange;
+    
+    // We need to shift the viewport to the right in data space
+    // The amount to shift is half the visible range (to move from center to right edge)
+    final dataShiftNeeded = visibleDataRange / 2;
 
-    // Convert data offset to pixel offset
-    // POSITIVE offset pans viewport RIGHT to show latest data
-    // The hidden data on the left needs to be "scrolled past" by panning right
-    final panOffsetX = (hiddenLeftData / dataRangeX) * chartRect.width * newZoomX;
+    // Convert data shift to pixel offset
+    // Formula: panDataX = -panX * (dataRangeX / rect.width)
+    // Solving for panX: panX = -panDataX * (rect.width / dataRangeX)
+    final panOffsetX = -dataShiftNeeded * (chartRect.width / dataRangeX);
 
     // Apply the new zoom and pan
     final currentZoomState = _interactionState.zoomPanState;
