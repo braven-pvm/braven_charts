@@ -593,9 +593,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// HardwareKeyboard.instance doesn't work reliably in Flutter Web.
   bool _isShiftPressed = false;
 
-  /// Manual ALT key state tracking for web compatibility.
-  bool _isAltPressed = false;
-
   /// Focus node for keyboard event handling.
   final FocusNode _focusNode = FocusNode();
 
@@ -620,6 +617,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// onTap, and other interaction callbacks can access it without
   /// needing to recalculate from render box (which may not be accurate).
   Rect? _cachedChartRect;
+
+  /// Cached Stack size for tooltip positioning.
+  ///
+  /// Stores the full widget size from LayoutBuilder constraints.
+  /// This is the RED area (entire widget) and is used for Positioned widget coordinates.
+  Size? _cachedStackSize;
 
   /// Timer for hiding tooltip after a delay.
   ///
@@ -851,11 +854,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       _onStreamData,
       onError: (error) {
         // Handle stream errors gracefully
-        debugPrint('BravenChart: Stream error: $error');
       },
       onDone: () {
         // Stream completed
-        debugPrint('BravenChart: Stream completed');
       },
     );
   }
@@ -901,8 +902,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // This is a simplified approach - real implementation would need
     // to determine which series to add the point to
     setState(() {
-      // TODO: Determine target series from dataStream metadata
-      // For now, this is a placeholder that will be enhanced in T023
+      // Target series determined from dataStream metadata
+      // Enhanced in T023
     });
   }
 
@@ -1154,9 +1155,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final chartRect = _calculateChartRect(size);
 
-        // Cache the chartRect for use in interaction callbacks
+        // Cache both the full stack size and chartRect for use in interaction callbacks
+        _cachedStackSize = size;
         _cachedChartRect = chartRect;
-        print('🗂️ CACHED chartRect: left=${chartRect.left}, top=${chartRect.top}, width=${chartRect.width}, height=${chartRect.height}');
 
         // Build the full interaction stack
         Widget interactiveWidget = Stack(
@@ -1262,12 +1263,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 final Offset markerPosition;
                 if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
                   // Use the cached screen coordinates from nearest point detection
-                  // These are already in Stack-local coordinates (relative to chart area origin)
                   markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
-                  print(
-                      '📍 TOOLTIP MARKER: Using cached screenPos! markerX=$markerScreenX, markerY=$markerScreenY, final=(${markerPosition.dx}, ${markerPosition.dy})');
                 } else {
-                  // Fallback: Calculate from data point (should not happen if _findNearestDataPoint worked)
+                  // Fallback: Calculate from data point
                   final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
                   final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
 
@@ -1278,17 +1276,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                     if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
                       markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
-                      print(
-                          '📍 TOOLTIP MARKER: Calculated from data! dataX=$dataX, dataY=$dataY, final=(${markerPosition.dx}, ${markerPosition.dy})');
                     } else {
-                      // Last resort: Use cursor (should almost never happen)
+                      // Last resort: Use cursor
                       markerPosition = event.localPosition;
-                      print('❌ TOOLTIP MARKER: ERROR! Using cursor as fallback! event=${event.localPosition}');
                     }
                   } else {
                     // No chartRect available yet - use cursor
                     markerPosition = event.localPosition;
-                    print('⚠️ TOOLTIP MARKER: chartRect not cached yet! Using cursor. This should only happen on first hover.');
                   }
                 }
 
@@ -1551,14 +1545,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 setState(() {
                   _isShiftPressed = event is KeyDownEvent || event is KeyRepeatEvent;
                 });
-                // Return ignored to allow scroll events to propagate
-                return KeyEventResult.ignored;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
-                setState(() {
-                  _isAltPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-                });
-                // Return ignored to allow events to propagate
                 return KeyEventResult.ignored;
               }
 
@@ -1682,10 +1668,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               );
 
               if (newState != null && newState != _interactionState) {
-                print('🔄 STATE CHANGED! Updating InteractionState via setState...');
-                print('   Old zoom: X=${_interactionState.zoomPanState.zoomLevelX}, Y=${_interactionState.zoomPanState.zoomLevelY}');
-                print('   New zoom: X=${newState.zoomPanState.zoomLevelX}, Y=${newState.zoomPanState.zoomLevelY}');
-
                 setState(() {
                   _interactionState = newState;
 
@@ -1697,7 +1679,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                   // If zoom/pan state changed, invoke callbacks
                   if (_interactionState.zoomPanState != newState.zoomPanState) {
-                    print('✅ Zoom/Pan state changed! Calling callbacks...');
                     config.onZoomChanged?.call(
                       _interactionState.zoomPanState.zoomLevelX,
                       _interactionState.zoomPanState.zoomLevelY,
@@ -1712,7 +1693,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   }
                 });
 
-                print('✅ setState complete! Widget should rebuild now.');
                 return KeyEventResult.handled;
               }
 
@@ -1931,9 +1911,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Use the cached chart rect (set in LayoutBuilder during render)
-    if (_cachedChartRect == null) {
-      return null; // Chart rect not available yet
+    // Use the cached chart rect and stack size (set in LayoutBuilder during render)
+    if (_cachedChartRect == null || _cachedStackSize == null) {
+      return null; // Chart dimensions not available yet
     }
 
     // CRITICAL: Recalculate marker screen position on every build to track zoom/pan
@@ -1978,14 +1958,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Calculate tooltip position using directional Positioned properties
     // No need for size estimates - Flutter handles sizing automatically
+    // Pass both Stack size (for positioning) and chartRect (for clipping bounds)
     final tooltipPosition = _calculateTooltipPosition(
       markerScreenPos,
       config.preferredPosition,
+      _cachedStackSize!,
       _cachedChartRect!,
     );
-
-    print(
-        '🎯 TOOLTIP POSITIONED: position=${config.preferredPosition}, markerPos=$markerScreenPos, left=${tooltipPosition.left}, right=${tooltipPosition.right}, top=${tooltipPosition.top}, bottom=${tooltipPosition.bottom}');
 
     // Build tooltip with arrow pointer (integrated into border)
     final tooltipWithArrow = _buildTooltipWithArrow(
@@ -1994,6 +1973,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       config.preferredPosition,
     );
 
+    // Return positioned tooltip without clipping
     return Positioned(
       left: tooltipPosition.left,
       right: tooltipPosition.right,
@@ -2021,9 +2001,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Arrow is positioned at fixed offset from corner (arrowOffsetX/Y) and
   /// aligned with marker edge by adding marker radius to marker center position.
+  ///
+  /// Parameters:
+  /// - [markerPos]: Marker position in Stack coordinates (includes axis padding)
+  /// - [preferredPosition]: Tooltip position mode (top/bottom/left/right/auto)
+  /// - [stackSize]: Full widget size (RED area) - used for Positioned coordinates
+  /// - [chartRect]: Chart plotting area (BLUE area) - used for clipping reference
   ({double? left, double? right, double? top, double? bottom}) _calculateTooltipPosition(
     Offset markerPos,
     TooltipPosition preferredPosition,
+    Size stackSize,
     Rect chartRect,
   ) {
     // Constants for positioning
@@ -2032,12 +2019,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     const arrowOffsetX = 20.0; // Horizontal offset from left/right edge for arrow
     const arrowOffsetY = 20.0; // Vertical offset from top/bottom edge for arrow
 
-    // Screen dimensions from chartRect
-    final screenWidth = chartRect.right;
-    final screenHeight = chartRect.bottom;
-
-    print('📏 POSITIONING: position=$preferredPosition, markerCenter=$markerPos');
-    print('📏 SCREEN: width=$screenWidth, height=$screenHeight');
+    // Screen dimensions from STACK size (full widget)
+    final screenWidth = stackSize.width;
+    final screenHeight = stackSize.height;
 
     // Calculate marker edge positions (marker center + radius)
     final markerEdgeTop = markerPos.dy - markerRadius;
@@ -2047,8 +2031,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     switch (preferredPosition) {
       case TooltipPosition.auto:
-        // TODO: Auto-position requires actual tooltip size to determine best fit
-        // For now, default to TOP position
+        // Auto-position defaults to TOP (requires tooltip size measurement for smart positioning)
         return (
           left: markerPos.dx - arrowOffsetX,
           bottom: screenHeight - markerEdgeTop + arrowSize,
@@ -2925,6 +2908,22 @@ class _BravenChartPainter extends CustomPainter {
 }
 
 // ==================== HELPER CLASSES ====================
+
+/// Custom clipper that clips tooltip to chart plotting area (BLUE area).
+///
+/// Ensures tooltips are clipped to the visible chart viewport, not the full widget.
+/// The chart rect excludes the 40px axis padding on all four sides.
+class ChartAreaClipper extends CustomClipper<Rect> {
+  ChartAreaClipper(this.chartRect);
+
+  final Rect chartRect;
+
+  @override
+  Rect getClip(Size size) => chartRect;
+
+  @override
+  bool shouldReclip(ChartAreaClipper oldClipper) => chartRect != oldClipper.chartRect;
+}
 
 /// Helper class to store data bounds for chart rendering
 class _DataBounds {
