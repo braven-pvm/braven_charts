@@ -38,6 +38,7 @@ class BasicCrosshairExample extends StatelessWidget {
               Expanded(
                 child: BravenChart(
                   chartType: ChartType.line,
+
                   series: [
                     ChartSeries(
                       id: 'sales',
@@ -53,6 +54,13 @@ class BasicCrosshairExample extends StatelessWidget {
                   // Enable crosshair with one line
                   interactionConfig: InteractionConfig(
                     crosshair: CrosshairConfig.defaultConfig(),
+                    tooltip: TooltipConfig.defaultConfig().copyWith(
+                      preferredPosition: TooltipPosition.top,
+                      style: TooltipStyle(
+                        backgroundColor: Colors.red.shade300.withAlpha(50),
+                        borderColor: Colors.red.shade700,
+                      ),
+                    ),
                   ),
                 ),
               ),

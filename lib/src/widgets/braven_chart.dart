@@ -28,6 +28,7 @@ import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
+import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 // Layer 5: Widgets
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
@@ -1805,13 +1806,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Same logic as _BravenChartPainter.paint, accounting for margins.
   Rect _calculateChartRect(Size size) {
-    // Use same padding as painter (40.0 for axes)
-    const padding = 40.0;
+    // Get effective axis configurations
+    final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
+    final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults();
+    
+    // Calculate padding based on actual axis positions
+    const axisPadding = 40.0;
+    final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left) ? axisPadding : 0.0;
+    final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
+    final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
+    final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
+    
     return Rect.fromLTWH(
-      padding,
-      padding,
-      size.width - padding * 2,
-      size.height - padding * 2,
+      leftPadding,
+      topPadding,
+      size.width - leftPadding - rightPadding,
+      size.height - topPadding - bottomPadding,
     );
   }
 
@@ -2399,9 +2409,19 @@ class _BravenChartPainter extends CustomPainter {
       );
     }
 
-    // Calculate chart area (leave room for axes)
-    const padding = 40.0;
-    final chartRect = Rect.fromLTWH(padding, padding, size.width - padding * 2, size.height - padding * 2);
+    // Calculate chart area (leave room for axes based on their positions)
+    const axisPadding = 40.0;
+    final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? axisPadding : 0.0;
+    final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
+    final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
+    final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
+    
+    final chartRect = Rect.fromLTWH(
+      leftPadding,
+      topPadding,
+      size.width - leftPadding - rightPadding,
+      size.height - topPadding - bottomPadding,
+    );
 
     // Calculate data bounds
     final bounds = _calculateDataBounds(chartRect: chartRect);

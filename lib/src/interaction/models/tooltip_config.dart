@@ -6,9 +6,7 @@
 /// This model is immutable and uses copyWith for updates.
 library;
 
-import 'dart:ui' show Color;
-
-import 'package:flutter/widgets.dart' show Widget, BuildContext;
+import 'package:flutter/material.dart';
 
 /// The trigger mode for showing tooltips.
 enum TooltipTriggerMode {
@@ -48,7 +46,7 @@ class TooltipStyle {
     this.borderColor = const Color(0xFF999999),
     this.borderWidth = 1.0,
     this.borderRadius = 4.0,
-    this.shadowColor = const Color(0x40000000),
+    this.shadowColor = Colors.transparent,
     this.shadowBlurRadius = 4.0,
     this.padding = 8.0,
     this.textColor = const Color(0xFF333333),
