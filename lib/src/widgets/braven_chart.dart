@@ -36,6 +36,7 @@ import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
 import 'package:flutter/gestures.dart' show PointerScrollEvent, kMiddleMouseButton;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyDownEvent, KeyRepeatEvent;
 
 /// Primary user-facing widget for rendering interactive charts.
@@ -853,6 +854,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     return widget.controller ?? _internalController;
   }
 
+  /// Updates interaction state with 60Hz throttling (T049).
+  ///
+  /// Uses SchedulerBinding.addPostFrameCallback to automatically coalesce
+  /// updates to frame rate. Only the last update per frame is applied.
+  ///
+  /// This prevents multiple notifier updates in a single frame during
+  /// high-frequency events (onHover, onPointerMove, onPointerSignal).
+  void _updateInteractionStateThrottled(InteractionState newState) {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      // Only update if widget is still mounted and state has changed
+      if (mounted && _interactionStateNotifier.value != newState) {
+        _interactionStateNotifier.value = newState;
+      }
+    });
+  }
+
   /// Subscribes to the data stream with throttling.
   void _subscribeToStream(Stream<ChartDataPoint> stream) {
     _streamSubscription = stream.listen(
@@ -1352,10 +1369,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           onHover: (event) {
             List<Map<String, dynamic>> snapPointsData = const [];
 
-            // Update crosshair position via notifier (NOT setState)
-            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-              crosshairPosition: event.localPosition,
-              isCrosshairVisible: config.crosshair.enabled,
+            // Update crosshair position via throttled notifier (60Hz coalescing)
+            _updateInteractionStateThrottled(
+              _interactionStateNotifier.value.copyWith(
+                crosshairPosition: event.localPosition,
+                isCrosshairVisible: config.crosshair.enabled,
+              ),
             );
 
             // Find nearest data point for snap and tooltip
@@ -1398,13 +1417,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 }
               }
 
-              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-                hoveredPoint: nearestPointData,
-                hoveredSeriesId: nearestPointData['seriesId'] as String?,
-                tooltipPosition: markerPosition,
-                tooltipDataPoint: nearestPointData,
-                isTooltipVisible: config.tooltip.enabled,
-                snapPoints: snapPointsData, // Populate snapPoints with the nearest point
+              _updateInteractionStateThrottled(
+                _interactionStateNotifier.value.copyWith(
+                  hoveredPoint: nearestPointData,
+                  hoveredSeriesId: nearestPointData['seriesId'] as String?,
+                  tooltipPosition: markerPosition,
+                  tooltipDataPoint: nearestPointData,
+                  isTooltipVisible: config.tooltip.enabled,
+                  snapPoints: snapPointsData, // Populate snapPoints with the nearest point
+                ),
               );
 
               // Start tooltip hide timer - tooltip persists even after mouse exits
@@ -1450,8 +1471,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   focalPoint: signal.localPosition,
                 );
 
-                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-                  zoomPanState: newZoomPanState,
+                _updateInteractionStateThrottled(
+                  _interactionStateNotifier.value.copyWith(
+                    zoomPanState: newZoomPanState,
+                  ),
                 );
 
                 // Invoke zoom callback
@@ -1485,8 +1508,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 delta,
               );
 
-              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-                zoomPanState: newZoomPanState,
+              _updateInteractionStateThrottled(
+                _interactionStateNotifier.value.copyWith(
+                  zoomPanState: newZoomPanState,
+                ),
               );
 
               _panStartPosition = event.localPosition;

@@ -146,8 +146,8 @@ Flutter package structure:
 
 #### Throttling Implementation
 
-- [ ] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart using one of two approaches: (A) Auto-throttling: Wrap notifier updates in `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)` which automatically coalesces updates to frame rate, OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field, check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16` before updating, use last-value-wins strategy (discard intermediate updates). Approach A recommended for simplicity.
-- [ ] T050 [US2] Apply throttling to high-frequency event handlers (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart - wrap existing `_interactionStateNotifier.value = ...` statements with chosen throttling approach from T049
+- [X] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart using one of two approaches: (A) Auto-throttling: Wrap notifier updates in `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)` which automatically coalesces updates to frame rate, OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field, check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16` before updating, use last-value-wins strategy (discard intermediate updates). Approach A recommended for simplicity. - IMPLEMENTED: Approach A (_updateInteractionStateThrottled helper method)
+- [X] T050 [US2] Apply throttling to high-frequency event handlers (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart - wrap existing `_interactionStateNotifier.value = ...` statements with chosen throttling approach from T049 - APPLIED: All 3 handlers now use _updateInteractionStateThrottled()
 
 **Verify tests now PASS** ✅
 
