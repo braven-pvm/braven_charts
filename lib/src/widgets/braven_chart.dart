@@ -970,6 +970,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       }
     }
 
+    // SAFETY: Validate point count
+    if (maxPointCount <= 0) return;
+
     // Only apply auto-scroll if we exceed the threshold
     if (maxPointCount <= config.maxVisiblePoints) {
       return;
@@ -979,6 +982,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final bounds = _calculateDataBounds(allSeries);
     final dataRangeX = bounds.maxX - bounds.minX;
 
+    // SAFETY: Validate data range (prevent division by zero)
+    if (dataRangeX <= 0 || !dataRangeX.isFinite) return;
+
     // Calculate what portion of data should be visible
     final visibleRatio = config.maxVisiblePoints / maxPointCount;
 
@@ -986,24 +992,37 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Zoom = 1.0 shows all data, higher zoom shows less
     final newZoomX = 1.0 / visibleRatio;
 
+    // SAFETY: Validate zoom level
+    if (!newZoomX.isFinite || newZoomX <= 0) return;
+
     // Calculate pan offset to show the rightmost (latest) data
     // Pan offset is in pixel units, but we calculate based on data range
     final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
     if (chartRect.width <= 0) return; // Invalid size
 
-    // Calculate how much data is hidden on the left
-    // With newZoomX, we're showing (dataRangeX / newZoomX) of data
-    // We want to show the rightmost portion (latest data)
+    // Calculate how much of the data range will be visible after zoom
     final visibleDataRange = dataRangeX / newZoomX;
-    
-    // We need to shift the viewport to the right in data space
-    // The amount to shift is half the visible range (to move from center to right edge)
-    final dataShiftNeeded = visibleDataRange / 2;
+
+    // SAFETY: Validate visible range
+    if (!visibleDataRange.isFinite || visibleDataRange <= 0) return;
+
+    // Calculate how much data is hidden on the left (to show rightmost data)
+    // CRITICAL FIX: This should be (dataRangeX - visibleDataRange), NOT / 2!
+    // We want to shift LEFT by the amount of hidden data to reveal the RIGHT side
+    final dataShiftNeeded = dataRangeX - visibleDataRange;
+
+    // SAFETY: Validate shift amount
+    if (!dataShiftNeeded.isFinite) return;
 
     // Convert data shift to pixel offset
-    // Formula: panDataX = -panX * (dataRangeX / rect.width)
-    // Solving for panX: panX = -panDataX * (rect.width / dataRangeX)
-    final panOffsetX = -dataShiftNeeded * (chartRect.width / dataRangeX);
+    // CRITICAL: In _calculateDataBounds, pan conversion is:
+    //   panDataX = -panX * (dataRangeX / rect.width)
+    // So to get positive panDataX (shift right in data space to show right side):
+    //   We need NEGATIVE panX in pixel space
+    final panOffsetX = -(dataShiftNeeded / dataRangeX) * chartRect.width * newZoomX;
+
+    // SAFETY: Validate final pan offset
+    if (!panOffsetX.isFinite) return;
 
     // Apply the new zoom and pan
     final currentZoomState = _interactionState.zoomPanState;

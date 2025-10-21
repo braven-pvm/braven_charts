@@ -128,22 +128,27 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
             ChartSeries(
               id: 'series1',
               name: 'Series 1',
-              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 10, minY: 20, maxY: 50).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'series2',
               name: 'Series 2',
-              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 15, maxY: 40).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 10, minY: 15, maxY: 40).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
             ChartSeries(
               id: 'series3',
               name: 'Series 3',
-              points: ChartDataGenerator.generateRandomData(pointCount: 10, minY: 10, maxY: 30).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points:
+                  ChartDataGenerator.generateRandomData(pointCount: 10, minY: 10, maxY: 30).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
           title: 'Stacked Areas',
           width: constraints.maxWidth,
           height: 350,
+          interactionConfig: InteractionConfig.defaultConfig()
+              .copyWith(enableZoom: true, enablePan: true, enableSelection: true, crosshair: CrosshairConfig.defaultConfig()),
         ),
       ),
     );
@@ -162,8 +167,9 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
             ChartSeries(
               id: 'baseline_data',
               name: 'Data',
-              points:
-                  ChartDataGenerator.generateLinearData(pointCount: 10, startY: 40, slope: 0.8).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
+              points: ChartDataGenerator.generateLinearData(pointCount: 10, startY: 40, slope: 0.8)
+                  .map((dp) => ChartDataPoint(x: dp.x, y: dp.y))
+                  .toList(),
             ),
           ],
           width: constraints.maxWidth,

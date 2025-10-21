@@ -517,6 +517,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               yAxis: AxisConfig.defaults().copyWith(
                 label: 'Value',
               ),
+              interactionConfig: InteractionConfig.defaultConfig(),
             ),
             const SizedBox(height: 16),
             Wrap(
