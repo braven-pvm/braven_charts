@@ -40,9 +40,9 @@ Flutter package structure:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Add ValueNotifier<InteractionState> field declaration in lib/src/widgets/braven_chart.dart (line ~583)
-- [ ] T007 Initialize _interactionStateNotifier in initState() with InteractionState.initial() in lib/src/widgets/braven_chart.dart
-- [ ] T008 Add _interactionStateNotifier.dispose() to dispose() method in lib/src/widgets/braven_chart.dart (before super.dispose())
+- [X] T006 Add ValueNotifier<InteractionState> field declaration in lib/src/widgets/braven_chart.dart (line ~583)
+- [X] T007 Initialize _interactionStateNotifier in initState() with InteractionState.initial() in lib/src/widgets/braven_chart.dart
+- [X] T008 Add _interactionStateNotifier.dispose() to dispose() method in lib/src/widgets/braven_chart.dart (before super.dispose())
 - [ ] T009 Remove old InteractionState _interactionState field declaration from lib/src/widgets/braven_chart.dart
 
 **Checkpoint**: Foundation ready - ValueNotifier infrastructure in place, user story implementation can now begin in parallel

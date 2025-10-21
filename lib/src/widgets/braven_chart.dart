@@ -582,6 +582,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Current interaction state.
   InteractionState _interactionState = InteractionState.initial();
 
+  /// ValueNotifier for interaction state (replaces setState pattern).
+  /// 
+  /// This notifier allows interactive overlays (crosshair, tooltip) to rebuild
+  /// independently without triggering full widget rebuilds. Updates are made
+  /// directly via `_interactionStateNotifier.value = ...` instead of setState().
+  /// 
+  /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
+  late final ValueNotifier<InteractionState> _interactionStateNotifier;
+
   /// Tracks if currently panning with middle-mouse button.
   bool _isPanningWithMiddleMouse = false;
 
@@ -634,6 +643,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+
+    // Initialize ValueNotifier for interaction state
+    _interactionStateNotifier = ValueNotifier<InteractionState>(InteractionState.initial());
 
     // Initialize zoom animation controller (250ms for smooth transitions)
     _zoomAnimationController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this)
@@ -827,6 +839,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Dispose focus node
     _focusNode.dispose();
+
+    // Dispose ValueNotifier (after all timers and controllers)
+    _interactionStateNotifier.dispose();
 
     super.dispose();
   }
