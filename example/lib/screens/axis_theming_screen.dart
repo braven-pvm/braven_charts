@@ -55,6 +55,8 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
         children: [
           _buildInfoCard(),
           const SizedBox(height: 24),
+          _buildAxisPositionsSection(),
+          const SizedBox(height: 24),
           _buildAxisPresetsSection(),
           const SizedBox(height: 24),
           _buildCustomAxisSection(),
@@ -100,6 +102,157 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAxisPositionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            'Axis Positioning',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+        Card(
+          color: _isDarkMode ? Colors.green.shade900 : Colors.green.shade50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: _isDarkMode ? Colors.green.shade200 : Colors.green.shade700,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Axis positions are now FULLY FUNCTIONAL! The axisPosition property '
+                    'now controls where axes are actually rendered (top/bottom for X-axis, '
+                    'left/right for Y-axis).',
+                    style: TextStyle(
+                      color: _isDarkMode ? Colors.green.shade100 : Colors.green.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAxisPositionCard(
+          'Default (Bottom + Left)',
+          'Standard positioning - X-axis at bottom, Y-axis on left',
+          AxisConfig.defaults(), // Bottom position (default)
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left),
+          Icons.south_west,
+          Colors.blue,
+        ),
+        const SizedBox(height: 16),
+        _buildAxisPositionCard(
+          'Top + Left',
+          'X-axis at top, Y-axis on left',
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.top),
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left),
+          Icons.north_west,
+          Colors.purple,
+        ),
+        const SizedBox(height: 16),
+        _buildAxisPositionCard(
+          'Bottom + Right',
+          'X-axis at bottom, Y-axis on right',
+          AxisConfig.defaults(), // Bottom position (default)
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.right),
+          Icons.south_east,
+          Colors.orange,
+        ),
+        const SizedBox(height: 16),
+        _buildAxisPositionCard(
+          'Top + Right',
+          'X-axis at top, Y-axis on right',
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.top),
+          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.right),
+          Icons.north_east,
+          Colors.green,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAxisPositionCard(
+    String title,
+    String description,
+    AxisConfig xAxis,
+    AxisConfig yAxis,
+    IconData icon,
+    Color color,
+  ) {
+    return Card(
+      color: _isDarkMode ? Colors.grey.shade800 : null,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: TextStyle(
+                color: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            BravenChart(
+              chartType: ChartType.line,
+              series: _series,
+              xAxis: xAxis,
+              yAxis: yAxis,
+              width: 400,
+              height: 250,
+              theme: _isDarkMode ? ChartTheme.defaultDark : ChartTheme.defaultLight,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'xAxis: AxisConfig.defaults()${xAxis.axisPosition == AxisPosition.top ? '.copyWith(\n  axisPosition: AxisPosition.top,\n)' : ''},\n'
+                'yAxis: AxisConfig.defaults()${yAxis.axisPosition == AxisPosition.right ? '.copyWith(\n  axisPosition: AxisPosition.right,\n)' : '.copyWith(\n  axisPosition: AxisPosition.left,\n)'},',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
               ),
             ),
           ],

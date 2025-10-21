@@ -1809,14 +1809,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Get effective axis configurations
     final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
     final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults();
-    
+
     // Calculate padding based on actual axis positions
     const axisPadding = 40.0;
     final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left) ? axisPadding : 0.0;
     final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
     final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
     final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
-    
+
     return Rect.fromLTWH(
       leftPadding,
       topPadding,
@@ -2415,15 +2415,13 @@ class _BravenChartPainter extends CustomPainter {
     final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
     final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
     final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
-    
+
     final chartRect = Rect.fromLTWH(
       leftPadding,
       topPadding,
       size.width - leftPadding - rightPadding,
       size.height - topPadding - bottomPadding,
-    );
-
-    // Calculate data bounds
+    ); // Calculate data bounds
     final bounds = _calculateDataBounds(chartRect: chartRect);
     if (bounds == null) return;
 
@@ -2805,8 +2803,13 @@ class _BravenChartPainter extends CustomPainter {
     final yInterval = _calculateNiceInterval(yRange);
 
     if (xAxis.showAxis) {
-      // Draw X-axis line
-      canvas.drawLine(Offset(chartRect.left, chartRect.bottom), Offset(chartRect.right, chartRect.bottom), axisPaint);
+      // Draw X-axis line at the position specified by axisPosition
+      final double axisY = xAxis.axisPosition == AxisPosition.top ? chartRect.top : chartRect.bottom;
+      canvas.drawLine(
+        Offset(chartRect.left, axisY),
+        Offset(chartRect.right, axisY),
+        axisPaint,
+      );
 
       // Draw X-axis labels at grid intervals
       if (xAxis.showLabels) {
@@ -2832,9 +2835,13 @@ class _BravenChartPainter extends CustomPainter {
             );
 
             textPainter.layout();
+
+            // Position labels based on axis position
+            final double labelY = xAxis.axisPosition == AxisPosition.top ? chartRect.top - textPainter.height - 5 : chartRect.bottom + 5;
+
             textPainter.paint(
               canvas,
-              Offset(x - textPainter.width / 2, chartRect.bottom + 5),
+              Offset(x - textPainter.width / 2, labelY),
             );
           }
 
@@ -2844,8 +2851,13 @@ class _BravenChartPainter extends CustomPainter {
     }
 
     if (yAxis.showAxis) {
-      // Draw Y-axis line
-      canvas.drawLine(Offset(chartRect.left, chartRect.top), Offset(chartRect.left, chartRect.bottom), axisPaint);
+      // Draw Y-axis line at the position specified by axisPosition
+      final double axisX = yAxis.axisPosition == AxisPosition.right ? chartRect.right : chartRect.left;
+      canvas.drawLine(
+        Offset(axisX, chartRect.top),
+        Offset(axisX, chartRect.bottom),
+        axisPaint,
+      );
 
       // Draw Y-axis labels at grid intervals
       if (yAxis.showLabels) {
@@ -2871,9 +2883,13 @@ class _BravenChartPainter extends CustomPainter {
             );
 
             textPainter.layout();
+
+            // Position labels based on axis position
+            final double labelX = yAxis.axisPosition == AxisPosition.right ? chartRect.right + 5 : chartRect.left - textPainter.width - 5;
+
             textPainter.paint(
               canvas,
-              Offset(chartRect.left - textPainter.width - 5, y - textPainter.height / 2),
+              Offset(labelX, y - textPainter.height / 2),
             );
           }
 
