@@ -1276,8 +1276,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     return const SizedBox.shrink();
                   }
 
-                  return RepaintBoundary(
-                    child: Positioned.fill(
+                  return Positioned.fill(
+                    child: RepaintBoundary(
                       child: CustomPaint(
                         painter: _CrosshairPainter(
                           position: interactionState.crosshairPosition!,
