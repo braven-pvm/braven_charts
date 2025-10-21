@@ -1152,32 +1152,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// 1. Current frame completes entirely (build → layout → paint → post-frame)
   /// 2. Mouse tracking updates finish cleanly
   /// 3. Next frame begins and completes
-  /// 4. setState happens in a fresh frame, well after any hit testing
-  ///
-  /// Usage:
-  /// ```dart
-  /// onHover: (event) {
-  ///   _safeSetState(() {
-  ///     _interactionState = _interactionState.copyWith(...);
-  ///   });
-  /// }
-  /// ```
-  void _safeSetState(VoidCallback fn) {
-    if (!mounted) return;
-
-    // First post-frame callback: Exit current frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      // Second post-frame callback: Wait for next frame to complete
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(fn);
-        }
-      });
-    });
-  }
-
   // ==================== BUILD METHOD ====================
 
   @override
