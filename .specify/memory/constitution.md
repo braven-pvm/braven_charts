@@ -1,21 +1,24 @@
 <!--
 Sync Impact Report - Constitution Update
 ========================================
-Version change: Template → 1.0.0
-Modified principles: N/A (initial version from template)
+Version change: 1.0.0 → 1.1.0
+Modified principles:
+- Performance First (EXPANDED): Added critical Flutter pattern guidance for high-frequency state updates
+  * ADDED: setState prohibition for >10Hz updates
+  * ADDED: ValueNotifier + ValueListenableBuilder pattern requirement
+  * ADDED: RepaintBoundary isolation mandate
+  * ADDED: Architecture pattern justification requirement
 Added sections:
-- Core Principles (7 principles): Test-First Development, Performance First, Architectural Integrity, Requirements Compliance, API Consistency & Stability, Documentation Discipline, Simplicity & Pragmatism
-- Code Quality Standards
-- Development Environment
-- Quality Gates
-- Development Workflow
-- Governance
-Removed sections: N/A (initial version)
+- Performance First principle expansion with reactive patterns guidance
+Removed sections: N/A
 Templates requiring updates:
-✅ plan-template.md - Constitution Check section ready for integration
-✅ spec-template.md - Scope alignment verified with requirements compliance
-✅ tasks-template.md - Task categorization aligns with TDD and testing requirements
+✅ plan-template.md - Constitution Check includes performance patterns
+✅ spec-template.md - Architecture sections verify state management patterns
+✅ tasks-template.md - Task types include architecture validation
 Follow-up TODOs: None
+Rationale for MINOR version bump: Material expansion of Performance First principle
+with new mandatory patterns. No backward-incompatible changes to governance, but
+adds testable requirements that affect architecture decisions going forward.
 -->
 
 # Braven Charts Constitution
@@ -32,7 +35,14 @@ TDD methodology MUST be strictly enforced: Tests written → Requirements approv
 
 All rendering operations MUST achieve 60 FPS with frame times under 16ms for large datasets. Memory management requires aggressive virtualization and object pooling. Performance-critical code MUST be profiled and benchmarked before merging. Viewport-based optimization mandatory for web-first deployment. Use clipping, animation, and opacity sparingly due to performance impact. Memory leaks are blocking issues. All performance regressions require justification and approval.
 
-**Rationale**: As a web-first charting library, performance directly impacts user experience. Charts rendering thousands of data points must remain fluid and responsive. The 60fps/16ms standard ensures professional-grade performance on all target platforms.
+**State Management for High-Frequency Updates (CRITICAL):**
+- **setState MUST NOT be used** for updates occurring at >10Hz (e.g., mouse tracking, pointer events, continuous animations)
+- **MUST use ValueNotifier + ValueListenableBuilder** pattern for high-frequency state changes
+- **MUST isolate repainting layers** with RepaintBoundary to prevent cascade rebuilds
+- **MUST justify architecture patterns** that trigger widget rebuilds during interaction loops
+- **MouseTracker conflicts**: Any setState during pointer event handling WILL cause box.dart:3345 and mouse_tracker.dart:199 assertion failures
+
+**Rationale**: As a web-first charting library, performance directly impacts user experience. Charts rendering thousands of data points must remain fluid and responsive. The 60fps/16ms standard ensures professional-grade performance on all target platforms. Flutter's setState rebuilds entire widget trees and is fundamentally incompatible with continuous pointer events (100+ updates/second). MouseTracker requires stable render trees during hit testing; setState invalidates coordinates mid-calculation causing catastrophic crashes. ValueNotifier provides granular reactivity without rebuild overhead, achieving smooth 60fps interactions even with complex charts.
 
 ### III. Architectural Integrity (Pure Flutter)
 
@@ -134,4 +144,4 @@ Constitution authority and amendment process:
 
 ---
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-04
+**Version**: 1.1.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-21
