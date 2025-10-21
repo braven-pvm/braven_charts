@@ -2057,41 +2057,45 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Auto-position: try preferred order, fall back to best fit
         if (spaceAbove >= totalHeight) {
           // TOP: arrow offset X from left, positioned above marker
+          // Arrow tip should touch the marker, so we only subtract tooltip height
           final result = Offset(
             markerPos.dx - arrowOffsetX,
-            markerPos.dy - totalHeight - offset,
+            markerPos.dy - tooltipHeight - arrowSize,
           );
           print('✓ AUTO: chose TOP, result=$result, arrowAt=${markerPos.dx}');
           return result;
         } else if (spaceBelow >= totalHeight) {
           // BOTTOM: arrow offset X from left, positioned below marker
+          // Arrow tip should touch marker, so position starts AT marker
           final result = Offset(
             markerPos.dx - arrowOffsetX,
-            markerPos.dy + offset,
+            markerPos.dy,
           );
           print('✓ AUTO: chose BOTTOM, result=$result, arrowAt=${markerPos.dx}');
           return result;
         } else if (spaceRight >= totalWidth) {
           // RIGHT: arrow offset Y from top, positioned right of marker
+          // Arrow tip should touch marker, so position starts AT marker
           final result = Offset(
-            markerPos.dx + offset,
+            markerPos.dx,
             markerPos.dy - arrowOffsetY,
           );
           print('✓ AUTO: chose RIGHT, result=$result, arrowAt=${markerPos.dy}');
           return result;
         } else if (spaceLeft >= totalWidth) {
           // LEFT: arrow offset Y from top, positioned left of marker
+          // Arrow tip should touch marker
           final result = Offset(
-            markerPos.dx - totalWidth - offset,
+            markerPos.dx - tooltipWidth - arrowSize,
             markerPos.dy - arrowOffsetY,
           );
           print('✓ AUTO: chose LEFT, result=$result, arrowAt=${markerPos.dy}');
           return result;
         } else {
-          // Fallback: position to the bottom-right with arrow offset
+          // Fallback: position below marker with arrow touching
           final result = Offset(
             markerPos.dx - arrowOffsetX,
-            markerPos.dy + offset,
+            markerPos.dy,
           );
           print('✓ AUTO: FALLBACK, result=$result');
           return result;
@@ -2099,37 +2103,39 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
       case TooltipPosition.top:
         // Arrow is at arrowOffsetX from left, tooltip positioned above marker
-        // So: Positioned.left = markerPos.dx - arrowOffsetX
-        // This makes arrow tip align with marker
+        // Arrow tip should touch the marker, so we only subtract tooltip height + arrow
         final result = Offset(
           markerPos.dx - arrowOffsetX,
-          markerPos.dy - totalHeight - offset,
+          markerPos.dy - tooltipHeight - arrowSize,
         );
         print('✓ TOP: result=$result, arrowAt=${markerPos.dx}');
         return result;
 
       case TooltipPosition.bottom:
-        // Arrow is at arrowOffsetX from left, tooltip positioned below marker
+        // Arrow is at arrowOffsetX from left, positioned below marker
+        // Arrow tip should touch marker
         final result = Offset(
           markerPos.dx - arrowOffsetX,
-          markerPos.dy + offset,
+          markerPos.dy,
         );
         print('✓ BOTTOM: result=$result, arrowAt=${markerPos.dx}');
         return result;
 
       case TooltipPosition.left:
-        // Arrow is at arrowOffsetY from top, tooltip positioned left of marker
+        // Arrow is at arrowOffsetY from top, positioned left of marker
+        // Arrow tip should touch marker
         final result = Offset(
-          markerPos.dx - totalWidth - offset,
+          markerPos.dx - tooltipWidth - arrowSize,
           markerPos.dy - arrowOffsetY,
         );
         print('✓ LEFT: result=$result, arrowAt=${markerPos.dy}');
         return result;
 
       case TooltipPosition.right:
-        // Arrow is at arrowOffsetY from top, tooltip positioned right of marker
+        // Arrow is at arrowOffsetY from top, positioned right of marker
+        // Arrow tip should touch marker
         final result = Offset(
-          markerPos.dx + offset,
+          markerPos.dx,
           markerPos.dy - arrowOffsetY,
         );
         print('✓ RIGHT: result=$result, arrowAt=${markerPos.dy}');
