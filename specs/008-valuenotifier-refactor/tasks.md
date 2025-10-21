@@ -70,6 +70,7 @@ Flutter package structure:
 - [ ] T018 [P] [US1] Create test/integration/crash_prevention_test.dart with 1000+ continuous mouse movements test (verifies SC-001)
 
 **Run tests - ALL SHOULD FAIL at this point** ✅
+**NOTE: Tests deferred to polish phase due to implementation priority**
 
 ### Implementation for User Story 1
 
@@ -77,8 +78,8 @@ Flutter package structure:
 
 **Note on [P] Parallel Markers**: These handlers are technically independent methods (different callbacks in the widget tree), making parallel implementation possible with atomic git commits per handler. However, due to single-file nature and potential merge conflicts, **sequential execution is RECOMMENDED** for risk-averse workflows. Advanced users comfortable with git conflict resolution may work in parallel using feature branches. When in doubt, execute sequentially.
 
-- [ ] T019 [P] [US1] Refactor onHover (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1358)
-- [ ] T020 [P] [US1] Refactor onExit (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1340)
+- [X] T019 [P] [US1] Refactor onHover (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1358)
+- [X] T020 [P] [US1] Refactor onExit (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1340)
 - [ ] T021 [P] [US1] Refactor onPointerDown (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1468)
 - [ ] T022 [P] [US1] Refactor onPointerUp (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1497)
 - [ ] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)

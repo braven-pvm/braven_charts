@@ -1354,11 +1354,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             }
           },
           onExit: (_) {
-            _safeSetState(() {
-              // Only hide crosshair, NOT tooltip
-              // Tooltip persists after mouse exits and hides via timer
-              _interactionState = _interactionState.copyWith(isCrosshairVisible: false, crosshairPosition: null);
-            });
+            // Only hide crosshair, NOT tooltip
+            // Tooltip persists after mouse exits and hides via timer
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              isCrosshairVisible: false,
+              crosshairPosition: null,
+            );
 
             // Invoke hover callback with null (exited)
             const exitPosition = Offset.zero; // Position doesn't matter for exit
@@ -1367,74 +1368,75 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           onHover: (event) {
             List<Map<String, dynamic>> snapPointsData = const [];
 
-            _safeSetState(() {
-              // Update crosshair position
-              _interactionState = _interactionState.copyWith(crosshairPosition: event.localPosition, isCrosshairVisible: config.crosshair.enabled);
+            // Update crosshair position via notifier (NOT setState)
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              crosshairPosition: event.localPosition,
+              isCrosshairVisible: config.crosshair.enabled,
+            );
 
-              // Find nearest data point for snap and tooltip
-              final nearestPointData = _findNearestDataPoint(event.localPosition);
-              if (nearestPointData != null) {
-                snapPointsData = [nearestPointData]; // Capture for callback
+            // Find nearest data point for snap and tooltip
+            final nearestPointData = _findNearestDataPoint(event.localPosition);
+            if (nearestPointData != null) {
+              snapPointsData = [nearestPointData]; // Capture for callback
 
-                // Calculate the marker's screen position with current zoom/pan transforms
-                final allSeries = _getAllSeries();
+              // Calculate the marker's screen position with current zoom/pan transforms
+              final allSeries = _getAllSeries();
 
-                // CRITICAL: The marker position MUST use the screenX/screenY already calculated in _findNearestDataPoint
-                // This ensures the tooltip position exactly matches the marker on screen.
-                // Using event.localPosition as fallback would tie tooltip to cursor!
-                final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
-                final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
+              // CRITICAL: The marker position MUST use the screenX/screenY already calculated in _findNearestDataPoint
+              // This ensures the tooltip position exactly matches the marker on screen.
+              // Using event.localPosition as fallback would tie tooltip to cursor!
+              final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
+              final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
 
-                final Offset markerPosition;
-                if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
-                  // Use the cached screen coordinates from nearest point detection
-                  markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
-                } else {
-                  // Fallback: Calculate from data point
-                  final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
-                  final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
+              final Offset markerPosition;
+              if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
+                // Use the cached screen coordinates from nearest point detection
+                markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
+              } else {
+                // Fallback: Calculate from data point
+                final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
+                final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
 
-                  if (_cachedChartRect != null) {
-                    final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
-                    final point = ChartDataPoint(x: dataX, y: dataY);
-                    final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
+                if (_cachedChartRect != null) {
+                  final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+                  final point = ChartDataPoint(x: dataX, y: dataY);
+                  final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
 
-                    if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-                      markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
-                    } else {
-                      // Last resort: Use cursor
-                      markerPosition = event.localPosition;
-                    }
+                  if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
+                    markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
                   } else {
-                    // No chartRect available yet - use cursor
+                    // Last resort: Use cursor
                     markerPosition = event.localPosition;
                   }
+                } else {
+                  // No chartRect available yet - use cursor
+                  markerPosition = event.localPosition;
                 }
-
-                _interactionState = _interactionState.copyWith(
-                  hoveredPoint: nearestPointData,
-                  hoveredSeriesId: nearestPointData['seriesId'] as String?,
-                  tooltipPosition: markerPosition,
-                  tooltipDataPoint: nearestPointData,
-                  isTooltipVisible: config.tooltip.enabled,
-                  snapPoints: snapPointsData, // Populate snapPoints with the nearest point
-                );
-
-                // Start tooltip hide timer - tooltip persists even after mouse exits
-                if (config.tooltip.enabled) {
-                  _startTooltipHideTimer();
-                }
-
-                // Convert Map to ChartDataPoint for callback
-                final point = _mapToDataPoint(nearestPointData);
-                config.onDataPointHover?.call(point, event.localPosition);
-              } else {
-                // No point nearby, don't clear tooltip immediately
-                // Tooltip will hide via timer or when hovering a different marker
-                snapPointsData = const [];
-                // Don't update interaction state - let timer handle tooltip clearing
               }
-            });
+
+              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                hoveredPoint: nearestPointData,
+                hoveredSeriesId: nearestPointData['seriesId'] as String?,
+                tooltipPosition: markerPosition,
+                tooltipDataPoint: nearestPointData,
+                isTooltipVisible: config.tooltip.enabled,
+                snapPoints: snapPointsData, // Populate snapPoints with the nearest point
+              );
+
+              // Start tooltip hide timer - tooltip persists even after mouse exits
+              if (config.tooltip.enabled) {
+                _startTooltipHideTimer();
+              }
+
+              // Convert Map to ChartDataPoint for callback
+              final point = _mapToDataPoint(nearestPointData);
+              config.onDataPointHover?.call(point, event.localPosition);
+            } else {
+              // No point nearby, don't clear tooltip immediately
+              // Tooltip will hide via timer or when hovering a different marker
+              snapPointsData = const [];
+              // Don't update interaction state - let timer handle tooltip clearing
+            }
 
             // Invoke crosshair changed callback with the updated snap points
             final snapPointsList = snapPointsData.map((data) => _mapToDataPoint(data)).toList();
