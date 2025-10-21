@@ -1822,10 +1822,18 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final preliminaryBounds = _calculatePreliminaryBounds(allSeries);
 
     // Calculate padding based on dynamic axis sizing or user-provided reservedSize
-    final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left) ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false) : 0.0;
-    final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right) ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false) : 0.0;
-    final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top) ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true) : 0.0;
-    final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true) : 0.0;
+    final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left)
+        ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false)
+        : 0.0;
+    final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right)
+        ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false)
+        : 0.0;
+    final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top)
+        ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true)
+        : 0.0;
+    final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom)
+        ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true)
+        : 0.0;
 
     return Rect.fromLTWH(
       leftPadding,
@@ -1874,8 +1882,19 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Get effective theme
     final effectiveTheme = widget.theme ?? ChartTheme.defaultLight;
 
+    // Calculate the data range
+    final range = isXAxis ? (bounds.maxX - bounds.minX) : (bounds.maxY - bounds.minY);
+    
+    // If range is invalid (NaN, infinite, or zero), return default padding
+    if (range.isNaN || range.isInfinite || range <= 0) {
+      // Return a reasonable default: typical label height/width + gap + tick
+      const labelGap = 5.0;
+      final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
+      return (isXAxis ? 20.0 : 40.0) + labelGap + tickSpace;
+    }
+
     // Calculate based on actual label sizes
-    final interval = isXAxis ? _calculateNiceInterval(bounds.maxX - bounds.minX) : _calculateNiceInterval(bounds.maxY - bounds.minY);
+    final interval = _calculateNiceInterval(range);
     final first = isXAxis ? (bounds.minX / interval).floor() * interval : (bounds.minY / interval).floor() * interval;
     final last = isXAxis ? bounds.maxX : bounds.maxY;
 
@@ -1913,7 +1932,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Add buffer: 5px for gap between label and axis + tick length if needed
     const labelGap = 5.0;
     final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
-    
+
     return maxSize + labelGap + tickSpace;
   }
 
@@ -2543,10 +2562,13 @@ class _BravenChartPainter extends CustomPainter {
 
     // Calculate chart area (leave room for axes based on their positions)
     // Use dynamic calculation or user-provided reservedSize
-    final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
-    final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
+    final leftPadding =
+        (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
+    final rightPadding =
+        (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
     final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
-    final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
+    final bottomPadding =
+        (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
 
     final chartRect = Rect.fromLTWH(
       leftPadding,
@@ -2554,7 +2576,7 @@ class _BravenChartPainter extends CustomPainter {
       size.width - leftPadding - rightPadding,
       size.height - topPadding - bottomPadding,
     );
-    
+
     // Recalculate bounds with correct chart rect for zoom/pan
     final bounds = _calculateDataBounds(chartRect: chartRect);
     if (bounds == null) return;
@@ -2725,8 +2747,19 @@ class _BravenChartPainter extends CustomPainter {
       return 0.0;
     }
 
+    // Calculate the data range
+    final range = isXAxis ? (bounds.maxX - bounds.minX) : (bounds.maxY - bounds.minY);
+
+    // If range is invalid (NaN, infinite, or zero), return default padding
+    if (range.isNaN || range.isInfinite || range <= 0) {
+      // Return a reasonable default: typical label height/width + gap + tick
+      const labelGap = 5.0;
+      final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
+      return (isXAxis ? 20.0 : 40.0) + labelGap + tickSpace;
+    }
+
     // Calculate based on actual label sizes
-    final interval = isXAxis ? _calculateNiceInterval(bounds.maxX - bounds.minX) : _calculateNiceInterval(bounds.maxY - bounds.minY);
+    final interval = _calculateNiceInterval(range);
     final first = isXAxis ? (bounds.minX / interval).floor() * interval : (bounds.minY / interval).floor() * interval;
     final last = isXAxis ? bounds.maxX : bounds.maxY;
 
@@ -2764,7 +2797,7 @@ class _BravenChartPainter extends CustomPainter {
     // Add buffer: 5px for gap between label and axis + tick length if needed
     const labelGap = 5.0;
     final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
-    
+
     return maxSize + labelGap + tickSpace;
   }
 
@@ -2773,7 +2806,8 @@ class _BravenChartPainter extends CustomPainter {
   /// This uses a simple algorithm to find intervals like 1, 2, 5, 10, 20, 50, 100, etc.
   /// that result in approximately 5-10 grid lines.
   double _calculateNiceInterval(double range) {
-    if (range == 0) return 1.0;
+    // Guard against invalid ranges
+    if (range.isNaN || range.isInfinite || range <= 0) return 1.0;
 
     // Target approximately 5-10 grid lines
     final roughInterval = range / 7;
