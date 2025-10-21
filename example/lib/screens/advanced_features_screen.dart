@@ -236,7 +236,13 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: const [],
+              series: [
+                ChartSeries(
+                  id: 'controlled',
+                  points: const [],
+                  color: Colors.blue,
+                ),
+              ],
               controller: _controllerDemo,
               title: 'Controlled Chart',
               width: 400,
@@ -429,7 +435,20 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: const [],
+              series: [
+                ChartSeries(
+                  id: 'temperature',
+                  points: const [],
+                  color: Colors.blue,
+                  name: 'Temperature',
+                ),
+                ChartSeries(
+                  id: 'humidity',
+                  points: const [],
+                  color: Colors.orange,
+                  name: 'Humidity',
+                ),
+              ],
               title: 'Multi-Sensor Dashboard',
               subtitle: 'Temperature (500ms) & Humidity (300ms)',
               width: 400,
