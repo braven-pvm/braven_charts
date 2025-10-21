@@ -571,6 +571,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Flag to track if we're currently throttling.
   bool _isThrottling = false;
 
+  /// Pending interaction state for throttled update.
+  InteractionState? _pendingInteractionState;
+
+  /// Flag to track if we have a pending frame callback scheduled.
+  bool _hasPendingFrameCallback = false;
+
+  /// Pending hover position for throttled processing.
+  Offset? _pendingHoverPosition;
+
   /// Event handler for interaction system (Layer 7).
   EventHandler? _eventHandler;
 
@@ -856,18 +865,129 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Updates interaction state with 60Hz throttling (T049).
   ///
-  /// Uses SchedulerBinding.addPostFrameCallback to automatically coalesce
-  /// updates to frame rate. Only the last update per frame is applied.
+  /// Coalesces multiple updates within the same frame. Only applies the LAST
+  /// state update after the current frame completes. This prevents multiple
+  /// notifier updates during high-frequency events (onHover, onPointerMove, onPointerSignal).
   ///
-  /// This prevents multiple notifier updates in a single frame during
-  /// high-frequency events (onHover, onPointerMove, onPointerSignal).
+  /// CRITICAL: Does NOT delay updates - applies immediately if no pending callback.
+  /// Only coalesces when multiple updates arrive in the same frame.
   void _updateInteractionStateThrottled(InteractionState newState) {
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      // Only update if widget is still mounted and state has changed
-      if (mounted && _interactionStateNotifier.value != newState) {
-        _interactionStateNotifier.value = newState;
+    // Store the latest state
+    _pendingInteractionState = newState;
+
+    // If we don't have a pending callback, schedule one
+    if (!_hasPendingFrameCallback) {
+      _hasPendingFrameCallback = true;
+
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _hasPendingFrameCallback = false;
+
+        // Apply the latest pending state (coalesced)
+        if (mounted && _pendingInteractionState != null) {
+          _interactionStateNotifier.value = _pendingInteractionState!;
+          _pendingInteractionState = null;
+        }
+      });
+    }
+    // If callback already scheduled, the new state just replaces the pending one (coalescing)
+  }
+
+  /// Processes hover events with 60Hz throttling.
+  ///
+  /// Stores the pending hover position and schedules processing after the current frame.
+  /// This throttles the ENTIRE hover calculation, not just the state update.
+  void _processHoverThrottled(Offset position, InteractionConfig config) {
+    // Store the latest hover position
+    _pendingHoverPosition = position;
+
+    // If we don't have a pending callback, schedule one
+    if (!_hasPendingFrameCallback) {
+      _hasPendingFrameCallback = true;
+
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _hasPendingFrameCallback = false;
+
+        // Process the latest pending hover position
+        if (mounted && _pendingHoverPosition != null) {
+          _processHoverImmediate(_pendingHoverPosition!, config);
+          _pendingHoverPosition = null;
+        }
+      });
+    }
+    // If callback already scheduled, the new position just replaces the pending one (coalescing)
+  }
+
+  /// Processes a hover event immediately (called by throttled handler).
+  void _processHoverImmediate(Offset position, InteractionConfig config) {
+    List<Map<String, dynamic>> snapPointsData = const [];
+
+    // Update crosshair position
+    final newState = _interactionStateNotifier.value.copyWith(
+      crosshairPosition: position,
+      isCrosshairVisible: config.crosshair.enabled,
+    );
+
+    // Find nearest data point for snap and tooltip
+    final nearestPointData = _findNearestDataPoint(position);
+    if (nearestPointData != null) {
+      snapPointsData = [nearestPointData];
+
+      // Calculate the marker's screen position
+      final allSeries = _getAllSeries();
+
+      final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
+      final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
+
+      final Offset markerPosition;
+      if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
+        markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
+      } else {
+        final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
+        final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
+
+        if (_cachedChartRect != null) {
+          final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+          final point = ChartDataPoint(x: dataX, y: dataY);
+          final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
+
+          if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
+            markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
+          } else {
+            markerPosition = position;
+          }
+        } else {
+          markerPosition = position;
+        }
       }
-    });
+
+      // Update with hoverepoint and tooltip
+      _interactionStateNotifier.value = newState.copyWith(
+        hoveredPoint: nearestPointData,
+        hoveredSeriesId: nearestPointData['seriesId'] as String?,
+        tooltipPosition: markerPosition,
+        tooltipDataPoint: nearestPointData,
+        isTooltipVisible: config.tooltip.enabled,
+        snapPoints: snapPointsData,
+      );
+
+      // Start tooltip hide timer
+      if (config.tooltip.enabled) {
+        _startTooltipHideTimer();
+      }
+
+      // Invoke hover callback
+      final point = _mapToDataPoint(nearestPointData);
+      config.onDataPointHover?.call(point, position);
+
+      // Invoke crosshair changed callback
+      config.onCrosshairChanged?.call(position, [point]);
+    } else {
+      // No point nearby - just update crosshair
+      _interactionStateNotifier.value = newState;
+
+      // Invoke crosshair changed callback with empty list
+      config.onCrosshairChanged?.call(position, []);
+    }
   }
 
   /// Subscribes to the data stream with throttling.
@@ -1367,85 +1487,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             config.onDataPointHover?.call(null, exitPosition);
           },
           onHover: (event) {
-            List<Map<String, dynamic>> snapPointsData = const [];
-
-            // Update crosshair position via throttled notifier (60Hz coalescing)
-            _updateInteractionStateThrottled(
-              _interactionStateNotifier.value.copyWith(
-                crosshairPosition: event.localPosition,
-                isCrosshairVisible: config.crosshair.enabled,
-              ),
-            );
-
-            // Find nearest data point for snap and tooltip
-            final nearestPointData = _findNearestDataPoint(event.localPosition);
-            if (nearestPointData != null) {
-              snapPointsData = [nearestPointData]; // Capture for callback
-
-              // Calculate the marker's screen position with current zoom/pan transforms
-              final allSeries = _getAllSeries();
-
-              // CRITICAL: The marker position MUST use the screenX/screenY already calculated in _findNearestDataPoint
-              // This ensures the tooltip position exactly matches the marker on screen.
-              // Using event.localPosition as fallback would tie tooltip to cursor!
-              final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
-              final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
-
-              final Offset markerPosition;
-              if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
-                // Use the cached screen coordinates from nearest point detection
-                markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
-              } else {
-                // Fallback: Calculate from data point
-                final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
-                final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
-
-                if (_cachedChartRect != null) {
-                  final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
-                  final point = ChartDataPoint(x: dataX, y: dataY);
-                  final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
-
-                  if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-                    markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
-                  } else {
-                    // Last resort: Use cursor
-                    markerPosition = event.localPosition;
-                  }
-                } else {
-                  // No chartRect available yet - use cursor
-                  markerPosition = event.localPosition;
-                }
-              }
-
-              _updateInteractionStateThrottled(
-                _interactionStateNotifier.value.copyWith(
-                  hoveredPoint: nearestPointData,
-                  hoveredSeriesId: nearestPointData['seriesId'] as String?,
-                  tooltipPosition: markerPosition,
-                  tooltipDataPoint: nearestPointData,
-                  isTooltipVisible: config.tooltip.enabled,
-                  snapPoints: snapPointsData, // Populate snapPoints with the nearest point
-                ),
-              );
-
-              // Start tooltip hide timer - tooltip persists even after mouse exits
-              if (config.tooltip.enabled) {
-                _startTooltipHideTimer();
-              }
-
-              // Convert Map to ChartDataPoint for callback
-              final point = _mapToDataPoint(nearestPointData);
-              config.onDataPointHover?.call(point, event.localPosition);
-            } else {
-              // No point nearby, don't clear tooltip immediately
-              // Tooltip will hide via timer or when hovering a different marker
-              snapPointsData = const [];
-              // Don't update interaction state - let timer handle tooltip clearing
-            }
-
-            // Invoke crosshair changed callback with the updated snap points
-            final snapPointsList = snapPointsData.map((data) => _mapToDataPoint(data)).toList();
-            config.onCrosshairChanged?.call(event.localPosition, snapPointsList);
+            // Throttle the ENTIRE hover processing (calculations + state update)
+            _processHoverThrottled(event.localPosition, config);
           },
           child: interactiveWidget,
         );

@@ -9,21 +9,23 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Performance Tests (User Story 2)', () {
     late bc.BravenChart chart;
-    
+
     setUp(() {
       chart = bc.BravenChart(
         chartType: bc.ChartType.line,
         series: [
           bc.ChartSeries(
             id: 'test-series',
-            points: List.generate(1000, (i) => bc.ChartDataPoint(
-              x: i.toDouble(),
-              y: (i % 100).toDouble(),
-            )),
+            points: List.generate(
+                1000,
+                (i) => bc.ChartDataPoint(
+                      x: i.toDouble(),
+                      y: (i % 100).toDouble(),
+                    )),
             color: Colors.blue,
           ),
         ],
-        interactionConfig: bc.InteractionConfig(
+        interactionConfig: const bc.InteractionConfig(
           crosshair: bc.CrosshairConfig(enabled: true),
           tooltip: bc.TooltipConfig(
             enabled: true,
@@ -44,16 +46,16 @@ void main() {
       // Measure frame times during 100 mouse movements
       final List<Duration> frameTimes = [];
       final stopwatch = Stopwatch()..start();
-      
+
       for (int i = 0; i < 100; i++) {
         final frameStart = stopwatch.elapsed;
-        
+
         // Simulate mouse hover
         await tester.sendEventToBinding(PointerHoverEvent(
           position: Offset(chartCenter.dx + i, chartCenter.dy),
         ));
         await tester.pump();
-        
+
         final frameEnd = stopwatch.elapsed;
         frameTimes.add(frameEnd - frameStart);
       }
@@ -69,10 +71,14 @@ void main() {
       );
 
       // Calculate average frame time
-      final avgFrameTime = frameTimes.fold<Duration>(
-        Duration.zero,
-        (sum, duration) => sum + duration,
-      ).inMicroseconds / frameTimes.length / 1000;
+      final avgFrameTime = frameTimes
+              .fold<Duration>(
+                Duration.zero,
+                (sum, duration) => sum + duration,
+              )
+              .inMicroseconds /
+          frameTimes.length /
+          1000;
 
       print('Performance Metrics (SC-002):');
       print('  Max frame time: ${maxFrameTime.inMilliseconds}ms');
@@ -133,7 +139,7 @@ void main() {
 
       // Note: Without access to internal painter state, we verify indirectly
       // by confirming base chart uses zoomPanState (stable) while overlays use interactionState (changes frequently)
-      
+
       // Perform 20 mouse movements (triggers crosshair repaints)
       for (int i = 0; i < 20; i++) {
         await tester.sendEventToBinding(PointerHoverEvent(
@@ -184,15 +190,23 @@ void main() {
       stopwatch.stop();
 
       // Verify NO performance degradation over time
-      final firstHalfAvg = frameTimes.sublist(0, 600).fold<Duration>(
-        Duration.zero,
-        (sum, d) => sum + d,
-      ).inMicroseconds / 600;
+      final firstHalfAvg = frameTimes
+              .sublist(0, 600)
+              .fold<Duration>(
+                Duration.zero,
+                (sum, d) => sum + d,
+              )
+              .inMicroseconds /
+          600;
 
-      final secondHalfAvg = frameTimes.sublist(600).fold<Duration>(
-        Duration.zero,
-        (sum, d) => sum + d,
-      ).inMicroseconds / 600;
+      final secondHalfAvg = frameTimes
+              .sublist(600)
+              .fold<Duration>(
+                Duration.zero,
+                (sum, d) => sum + d,
+              )
+              .inMicroseconds /
+          600;
 
       // Second half should NOT be significantly slower than first half
       final degradationRatio = secondHalfAvg / firstHalfAvg;
