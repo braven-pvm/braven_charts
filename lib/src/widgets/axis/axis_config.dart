@@ -145,6 +145,7 @@ class AxisConfig {
     this.labelRotation = 0.0,
     this.labelOffset = Offset.zero,
     this.labelStyle,
+    this.reservedSize,
     // Advanced
     this.highlightZeroLine = false,
     this.zeroLineColor,
@@ -156,6 +157,10 @@ class AxisConfig {
         assert(tickLength >= 0.0, 'tickLength must be non-negative'),
         assert(tickWidth >= 0.0, 'tickWidth must be non-negative'),
         assert(zeroLineWidth >= 0.0, 'zeroLineWidth must be non-negative'),
+        assert(
+          reservedSize == null || reservedSize >= 0.0,
+          'reservedSize must be non-negative if specified',
+        ),
         assert(
           labelRotation >= -180.0 && labelRotation <= 180.0,
           'labelRotation must be between -180° and 180°',
@@ -258,6 +263,22 @@ class AxisConfig {
   /// Text style for labels. If null, uses theme default.
   final TextStyle? labelStyle;
 
+  /// Reserved space for axis labels and ticks in logical pixels.
+  ///
+  /// If null, space is calculated dynamically based on actual label sizes.
+  /// If provided, this exact amount of space is reserved regardless of label content.
+  ///
+  /// For Y-axis: This is the width reserved on left or right.
+  /// For X-axis: This is the height reserved on top or bottom.
+  ///
+  /// Example:
+  /// ```dart
+  /// AxisConfig(
+  ///   reservedSize: 60.0,  // Reserve 60px for labels
+  /// )
+  /// ```
+  final double? reservedSize;
+
   // ========== Advanced ==========
 
   /// Whether to highlight the zero line with special styling.
@@ -310,6 +331,7 @@ class AxisConfig {
     double? labelRotation,
     Offset? labelOffset,
     TextStyle? labelStyle,
+    double? reservedSize,
     // Advanced
     bool? highlightZeroLine,
     Color? zeroLineColor,
@@ -349,6 +371,7 @@ class AxisConfig {
       labelRotation: labelRotation ?? this.labelRotation,
       labelOffset: labelOffset ?? this.labelOffset,
       labelStyle: labelStyle ?? this.labelStyle,
+      reservedSize: reservedSize ?? this.reservedSize,
       // Advanced
       highlightZeroLine: highlightZeroLine ?? this.highlightZeroLine,
       zeroLineColor: zeroLineColor ?? this.zeroLineColor,
@@ -387,6 +410,7 @@ class AxisConfig {
         other.labelRotation == labelRotation &&
         other.labelOffset == labelOffset &&
         other.labelStyle == labelStyle &&
+        other.reservedSize == reservedSize &&
         other.highlightZeroLine == highlightZeroLine &&
         other.zeroLineColor == zeroLineColor &&
         other.zeroLineWidth == zeroLineWidth &&
@@ -421,6 +445,7 @@ class AxisConfig {
         labelRotation,
         labelOffset,
         labelStyle,
+        reservedSize,
         highlightZeroLine,
         zeroLineColor,
         zeroLineWidth,

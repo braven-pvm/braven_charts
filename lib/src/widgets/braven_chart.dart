@@ -1812,12 +1812,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final effectiveXAxis = widget.xAxis ?? AxisConfig.defaults();
     final effectiveYAxis = widget.yAxis ?? AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left);
 
-    // Calculate padding based on actual axis positions
-    const axisPadding = 40.0;
-    final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left) ? axisPadding : 0.0;
-    final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
-    final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
-    final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
+    // Get all series for bounds calculation
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) {
+      return Rect.fromLTWH(0, 0, size.width, size.height);
+    }
+
+    // Calculate preliminary bounds for axis sizing
+    final preliminaryBounds = _calculatePreliminaryBounds(allSeries);
+
+    // Calculate padding based on dynamic axis sizing or user-provided reservedSize
+    final leftPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.left) ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false) : 0.0;
+    final rightPadding = (effectiveYAxis.showAxis && effectiveYAxis.axisPosition == AxisPosition.right) ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false) : 0.0;
+    final topPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.top) ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true) : 0.0;
+    final bottomPadding = (effectiveXAxis.showAxis && effectiveXAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true) : 0.0;
 
     return Rect.fromLTWH(
       leftPadding,
@@ -1825,6 +1833,124 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       size.width - leftPadding - rightPadding,
       size.height - topPadding - bottomPadding,
     );
+  }
+
+  /// Calculates preliminary data bounds from series (for axis sizing).
+  _DataBounds _calculatePreliminaryBounds(List<ChartSeries> series) {
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final s in series) {
+      for (final point in s.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    // Add Y padding for visual spacing
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
+
+    return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+
+  /// Calculates axis padding (same logic as _BravenChartPainter._calculateAxisReservedSize).
+  double _calculateAxisPadding(AxisConfig axis, _DataBounds bounds, bool isXAxis) {
+    // If user provided explicit size, use it
+    if (axis.reservedSize != null) {
+      return axis.reservedSize!;
+    }
+
+    // If axis and labels are hidden, no space needed
+    if (!axis.showAxis || !axis.showLabels) {
+      return 0.0;
+    }
+
+    // Get effective theme
+    final effectiveTheme = widget.theme ?? ChartTheme.defaultLight;
+
+    // Calculate based on actual label sizes
+    final interval = isXAxis ? _calculateNiceInterval(bounds.maxX - bounds.minX) : _calculateNiceInterval(bounds.maxY - bounds.minY);
+    final first = isXAxis ? (bounds.minX / interval).floor() * interval : (bounds.minY / interval).floor() * interval;
+    final last = isXAxis ? bounds.maxX : bounds.maxY;
+
+    double maxSize = 0.0;
+    var current = first;
+
+    // Measure all labels to find the maximum size
+    while (current <= last) {
+      final label = _formatAxisLabel(current);
+      final textSpan = TextSpan(
+        text: label,
+        style: effectiveTheme.axisStyle.labelStyle,
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      if (isXAxis) {
+        // For X-axis, we need height + buffer for spacing
+        if (textPainter.height > maxSize) {
+          maxSize = textPainter.height;
+        }
+      } else {
+        // For Y-axis, we need width + buffer for spacing
+        if (textPainter.width > maxSize) {
+          maxSize = textPainter.width;
+        }
+      }
+
+      current += interval;
+    }
+
+    // Add buffer: 5px for gap between label and axis + tick length if needed
+    const labelGap = 5.0;
+    final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
+    
+    return maxSize + labelGap + tickSpace;
+  }
+
+  /// Calculates a "nice" interval (shared with painter).
+  double _calculateNiceInterval(double range) {
+    if (range == 0) return 1.0;
+    final roughInterval = range / 7;
+    final magnitude = (log(roughInterval) / ln10).floor();
+    final pow10 = pow(10.0, magnitude).toDouble();
+    final normalized = roughInterval / pow10;
+    double niceNormalized;
+    if (normalized < 1.5) {
+      niceNormalized = 1.0;
+    } else if (normalized < 3) {
+      niceNormalized = 2.0;
+    } else if (normalized < 7) {
+      niceNormalized = 5.0;
+    } else {
+      niceNormalized = 10.0;
+    }
+    return niceNormalized * pow10;
+  }
+
+  /// Formats axis labels (shared with painter).
+  String _formatAxisLabel(double value) {
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
   }
 
   /// Calculates data bounds for all series.
@@ -2411,19 +2537,25 @@ class _BravenChartPainter extends CustomPainter {
       );
     }
 
+    // Calculate data bounds first (needed for dynamic axis sizing)
+    final preliminaryBounds = _calculateDataBounds(chartRect: null);
+    if (preliminaryBounds == null) return;
+
     // Calculate chart area (leave room for axes based on their positions)
-    const axisPadding = 40.0;
-    final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? axisPadding : 0.0;
-    final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? axisPadding : 0.0;
-    final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? axisPadding : 0.0;
-    final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? axisPadding : 0.0;
+    // Use dynamic calculation or user-provided reservedSize
+    final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
+    final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
+    final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
+    final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
 
     final chartRect = Rect.fromLTWH(
       leftPadding,
       topPadding,
       size.width - leftPadding - rightPadding,
       size.height - topPadding - bottomPadding,
-    ); // Calculate data bounds
+    );
+    
+    // Recalculate bounds with correct chart rect for zoom/pan
     final bounds = _calculateDataBounds(chartRect: chartRect);
     if (bounds == null) return;
 
@@ -2575,6 +2707,65 @@ class _BravenChartPainter extends CustomPainter {
         currentX += xInterval;
       }
     }
+  }
+
+  /// Calculates the required space for axis labels dynamically.
+  ///
+  /// Returns the width (for Y-axis) or height (for X-axis) needed to display labels.
+  /// If [axis.reservedSize] is provided, returns that value.
+  /// Otherwise, calculates based on actual label sizes with a buffer.
+  double _calculateAxisReservedSize(AxisConfig axis, _DataBounds bounds, bool isXAxis) {
+    // If user provided explicit size, use it
+    if (axis.reservedSize != null) {
+      return axis.reservedSize!;
+    }
+
+    // If axis and labels are hidden, no space needed
+    if (!axis.showAxis || !axis.showLabels) {
+      return 0.0;
+    }
+
+    // Calculate based on actual label sizes
+    final interval = isXAxis ? _calculateNiceInterval(bounds.maxX - bounds.minX) : _calculateNiceInterval(bounds.maxY - bounds.minY);
+    final first = isXAxis ? (bounds.minX / interval).floor() * interval : (bounds.minY / interval).floor() * interval;
+    final last = isXAxis ? bounds.maxX : bounds.maxY;
+
+    double maxSize = 0.0;
+    var current = first;
+
+    // Measure all labels to find the maximum size
+    while (current <= last) {
+      final label = _formatAxisLabel(current);
+      final textSpan = TextSpan(
+        text: label,
+        style: theme.axisStyle.labelStyle,
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      if (isXAxis) {
+        // For X-axis, we need height + buffer for spacing
+        if (textPainter.height > maxSize) {
+          maxSize = textPainter.height;
+        }
+      } else {
+        // For Y-axis, we need width + buffer for spacing
+        if (textPainter.width > maxSize) {
+          maxSize = textPainter.width;
+        }
+      }
+
+      current += interval;
+    }
+
+    // Add buffer: 5px for gap between label and axis + tick length if needed
+    const labelGap = 5.0;
+    final tickSpace = axis.showTicks ? axis.tickLength : 0.0;
+    
+    return maxSize + labelGap + tickSpace;
   }
 
   /// Calculates a "nice" interval for grid lines based on the data range.
