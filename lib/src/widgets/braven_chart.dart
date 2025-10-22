@@ -577,8 +577,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Flag to track if we have a pending frame callback scheduled.
   bool _hasPendingFrameCallback = false;
 
-  /// Pending hover position for throttled processing.
-  Offset? _pendingHoverPosition;
+  /// Last time hover was processed (for simple timestamp throttling).
+  int _lastHoverProcessTime = 0;
 
   /// Event handler for interaction system (Layer 7).
   EventHandler? _eventHandler;
@@ -894,27 +894,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Processes hover events with 60Hz throttling.
   ///
-  /// Stores the pending hover position and schedules processing after the current frame.
-  /// This throttles the ENTIRE hover calculation, not just the state update.
+  /// Uses simple timestamp-based throttling (16ms = 60Hz).
+  /// This avoids the post-frame callback deadlock where ValueListenableBuilder
+  /// triggers a new frame before the callback fires.
   void _processHoverThrottled(Offset position, InteractionConfig config) {
-    // Store the latest hover position
-    _pendingHoverPosition = position;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final timeSinceLastProcess = now - _lastHoverProcessTime;
 
-    // If we don't have a pending callback, schedule one
-    if (!_hasPendingFrameCallback) {
-      _hasPendingFrameCallback = true;
-
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        _hasPendingFrameCallback = false;
-
-        // Process the latest pending hover position
-        if (mounted && _pendingHoverPosition != null) {
-          _processHoverImmediate(_pendingHoverPosition!, config);
-          _pendingHoverPosition = null;
-        }
-      });
+    // Throttle: only process if 16ms have passed (60Hz)
+    if (timeSinceLastProcess >= 16) {
+      _lastHoverProcessTime = now;
+      _processHoverImmediate(position, config);
     }
-    // If callback already scheduled, the new position just replaces the pending one (coalescing)
+    // else: Event is too soon - ignore it (last-wins strategy)
+    // The next event that comes after 16ms will be processed
   }
 
   /// Processes a hover event immediately (called by throttled handler).
@@ -929,6 +922,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Find nearest data point for snap and tooltip
     final nearestPointData = _findNearestDataPoint(position);
+
     if (nearestPointData != null) {
       snapPointsData = [nearestPointData];
 
@@ -947,6 +941,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         if (_cachedChartRect != null) {
           final bounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+
           final point = ChartDataPoint(x: dataX, y: dataY);
           final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
 
@@ -1100,8 +1095,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Calculate data bounds to determine scroll offset
-    final bounds = _calculateDataBounds(allSeries);
+    // Calculate pan offset to show the rightmost (latest) data
+    // Pan offset is in pixel units, but we calculate based on data range
+    final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
+    
+    // Calculate data bounds to determine scroll offset (pass chartRect for accurate zoom/pan)
+    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
     final dataRangeX = bounds.maxX - bounds.minX;
 
     // SAFETY: Validate data range (prevent division by zero and NaN)
@@ -1122,10 +1121,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // SAFETY: Validate zoom level (must be finite, positive, and reasonable)
     if (!newZoomX.isFinite || newZoomX <= 0 || newZoomX > 100.0) return null;
-
-    // Calculate pan offset to show the rightmost (latest) data
-    // Pan offset is in pixel units, but we calculate based on data range
-    final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
 
     // SAFETY: Validate chart dimensions
     if (chartRect.width <= 0 || !chartRect.width.isFinite) return null;
@@ -1308,18 +1303,32 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final allAnnotations = _getAllAnnotations();
 
     // Build the chart widget
-    // NOTE: RepaintBoundary removed - it was caching the painted content and preventing repaints
-    Widget chartWidget = CustomPaint(
-      painter: _BravenChartPainter(
-        chartType: widget.chartType,
-        series: allSeries,
-        theme: effectiveTheme,
-        xAxis: effectiveXAxis,
-        yAxis: effectiveYAxis,
-        annotations: [], // Chart painter doesn't render annotations
-        zoomPanState: _interactionStateNotifier.value.zoomPanState,
-      ),
-      child: Container(), // Force size from parent instead of using size parameter
+    // CRITICAL: Wrap CustomPaint with ValueListenableBuilder so it rebuilds when zoom/pan changes
+    // Compute original data bounds once (preliminary) to avoid scanning series
+    final preliminaryBounds = _calculatePreliminaryBounds(allSeries);
+
+    Widget chartWidget = ValueListenableBuilder<InteractionState>(
+      valueListenable: _interactionStateNotifier,
+      builder: (context, interactionState, child) {
+        // RepaintBoundary reduces the area that needs to be composited
+        // when the chart repaints (helpful during zoom/pan animations).
+        return RepaintBoundary(
+          child: CustomPaint(
+            painter: _BravenChartPainter(
+              chartType: widget.chartType,
+              series: allSeries,
+              theme: effectiveTheme,
+              xAxis: effectiveXAxis,
+              yAxis: effectiveYAxis,
+              annotations: [], // Chart painter doesn't render annotations
+              zoomPanState: interactionState.zoomPanState,
+              // Pass preliminary/original data bounds so painter can avoid O(n) scans
+              originalDataBounds: preliminaryBounds,
+            ),
+            child: Container(), // Force size from parent instead of using size parameter
+          ),
+        );
+      },
     );
 
     // Add annotation overlay if annotations exist
@@ -1508,22 +1517,23 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 // Zoom in when scrolling up (negative delta), zoom out when scrolling down
                 final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
 
+                final oldState = _interactionStateNotifier.value.zoomPanState;
                 final newZoomPanState = _zoomPanController!.zoom(
-                  _interactionStateNotifier.value.zoomPanState,
+                  oldState,
                   zoomFactor: zoomFactor,
                   focalPoint: signal.localPosition,
                 );
 
-                _updateInteractionStateThrottled(
-                  _interactionStateNotifier.value.copyWith(
-                    zoomPanState: newZoomPanState,
-                  ),
+                // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
+                // Throttling these makes interactions feel broken
+                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                  zoomPanState: newZoomPanState,
                 );
 
-                // Invoke zoom callback
+                // Invoke zoom callback with NEW state
                 config.onZoomChanged?.call(
-                  _interactionStateNotifier.value.zoomPanState.zoomLevelX,
-                  _interactionStateNotifier.value.zoomPanState.zoomLevelY,
+                  newZoomPanState.zoomLevelX,
+                  newZoomPanState.zoomLevelY,
                 );
 
                 // Invoke viewport callback (visible bounds changed due to zoom)
@@ -1551,16 +1561,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 delta,
               );
 
-              _updateInteractionStateThrottled(
-                _interactionStateNotifier.value.copyWith(
-                  zoomPanState: newZoomPanState,
-                ),
+              // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
+              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+                zoomPanState: newZoomPanState,
               );
 
               _panStartPosition = event.localPosition;
 
-              // Invoke pan callback
-              config.onPanChanged?.call(_interactionStateNotifier.value.zoomPanState.panOffset);
+              // Invoke pan callback with NEW state
+              config.onPanChanged?.call(newZoomPanState.panOffset);
 
               // Invoke viewport callback
               _invokeViewportCallback();
@@ -1881,8 +1890,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) return null;
 
-    final bounds = _calculateDataBounds(allSeries);
     final chartRect = _calculateChartRect(context.size!);
+    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
 
     Map<String, dynamic>? nearestPoint;
     double minDistance = snapRadius;
@@ -1972,6 +1981,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   }
 
   /// Calculates preliminary data bounds from series (for axis sizing).
+  ///
+  /// CRITICAL: Returns UNPADDED original data bounds.
+  /// Padding should be applied AFTER zoom/pan transformation to avoid coordinate misalignment.
   _DataBounds _calculatePreliminaryBounds(List<ChartSeries> series) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
@@ -1987,10 +1999,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       }
     }
 
-    // Add Y padding for visual spacing
-    final yRange = maxY - minY;
-    minY -= yRange * 0.1;
-    maxY += yRange * 0.1;
+    // CRITICAL FIX: DO NOT add padding here!
+    // This method returns ORIGINAL data bounds for zoom/pan calculations.
+    // Padding is applied in _calculateDataBounds and painter AFTER zoom/pan transformation.
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
@@ -2118,18 +2129,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (minY == double.infinity) minY = 0;
     if (maxY == double.negativeInfinity) maxY = 1;
 
-    // CRITICAL: Store data range BEFORE padding for zoom center calculation
+    // CRITICAL: Store ORIGINAL data range for zoom center calculation
     final dataMinX = minX;
     final dataMaxX = maxX;
     final dataMinY = minY;
     final dataMaxY = maxY;
 
-    // Add padding to Y range (for visual spacing, but NOT for zoom center)
-    final yRange = maxY - minY;
-    minY -= yRange * 0.1;
-    maxY += yRange * 0.1;
-
-    // Apply zoom/pan transformation if enabled
+    // Apply zoom/pan transformation FIRST (before padding)
     final zoomPanState = _interactionStateNotifier.value.zoomPanState;
     final zoomX = zoomPanState.zoomLevelX;
     final zoomY = zoomPanState.zoomLevelY;
@@ -2138,28 +2144,33 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
     if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
-      // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
+      // Calculate center from ORIGINAL data range
       final centerX = (dataMinX + dataMaxX) / 2;
       final centerY = (dataMinY + dataMaxY) / 2;
 
-      // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
+      // Calculate new range based on ORIGINAL data range
       final dataRangeX = dataMaxX - dataMinX;
       final dataRangeY = dataMaxY - dataMinY;
       final rangeX = dataRangeX / zoomX;
       final rangeY = dataRangeY / zoomY;
 
-      // CRITICAL FIX: Convert pan offset from pixel units to data units
-      // Use provided chartRect if available, otherwise calculate it (fallback for compatibility)
+      // Convert pan offset from pixel units to data units
       final rect = chartRect ?? _calculateChartRect(context.size!);
       final panDataX = -panX * (dataRangeX / rect.width);
       final panDataY = panY * (dataRangeY / rect.height); // Invert Y for screen coordinates
 
-      // Calculate visible bounds (zoom is applied to data range, pan in data units)
+      // Calculate visible bounds after zoom/pan (BEFORE padding)
       minX = centerX - rangeX / 2 + panDataX;
       maxX = centerX + rangeX / 2 + panDataX;
       minY = centerY - rangeY / 2 + panDataY;
       maxY = centerY + rangeY / 2 + panDataY;
     }
+
+    // CRITICAL: Add padding AFTER zoom/pan transformation
+    // This ensures padding is applied to the visible viewport, not the original data
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
@@ -2573,7 +2584,11 @@ class _BravenChartPainter extends CustomPainter {
     required this.yAxis,
     required this.annotations,
     this.zoomPanState,
+    this.originalDataBounds,
   });
+  // Toggle this at runtime to enable simple paint-stage profiling logs.
+  // Keep false by default; set to true in a debug session to get timing output.
+  static bool enablePaintProfiling = false;
 
   final ChartType chartType;
   final List<ChartSeries> series;
@@ -2582,9 +2597,22 @@ class _BravenChartPainter extends CustomPainter {
   final AxisConfig yAxis;
   final List<ChartAnnotation> annotations;
   final ZoomPanState? zoomPanState;
+  // Optional precomputed bounds to avoid scanning series on every paint
+  final _DataBounds? originalDataBounds;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Toggle profiling here for quick debugging. Flip the static flag
+    // `_BravenChartPainter.enablePaintProfiling` to true during a debug run
+    // to emit timing logs. It's non-const to avoid dead-code elimination.
+    final bool enablePaintProfiling = _BravenChartPainter.enablePaintProfiling;
+    Stopwatch? totalStopwatch;
+    Stopwatch? stageStopwatch;
+    if (enablePaintProfiling) {
+      totalStopwatch = Stopwatch()..start();
+      // Measure background + border stage
+      stageStopwatch = Stopwatch()..start();
+    }
     if (series.isEmpty) return;
 
     // Draw background
@@ -2604,6 +2632,13 @@ class _BravenChartPainter extends CustomPainter {
 
     // Calculate data bounds first (needed for dynamic axis sizing)
     final preliminaryBounds = _calculateDataBounds(chartRect: null);
+    if (enablePaintProfiling) {
+      stageStopwatch!.stop();
+      print('[PAINT] background/bounds: ${stageStopwatch.elapsedMilliseconds}ms');
+      stageStopwatch
+        ..reset()
+        ..start();
+    }
     if (preliminaryBounds == null) return;
 
     // Calculate chart area (leave room for axes based on their positions)
@@ -2624,6 +2659,13 @@ class _BravenChartPainter extends CustomPainter {
 
     // Draw grid
     _drawGrid(canvas, chartRect, bounds);
+    if (enablePaintProfiling) {
+      stageStopwatch!.stop();
+      print('[PAINT] grid: ${stageStopwatch.elapsedMilliseconds}ms');
+      stageStopwatch
+        ..reset()
+        ..start();
+    }
 
     // Draw series based on chart type
     switch (chartType) {
@@ -2640,25 +2682,51 @@ class _BravenChartPainter extends CustomPainter {
         _drawScatterSeries(canvas, chartRect, bounds);
         break;
     }
+    if (enablePaintProfiling) {
+      stageStopwatch!.stop();
+      print('[PAINT] series: ${stageStopwatch.elapsedMilliseconds}ms');
+      stageStopwatch
+        ..reset()
+        ..start();
+    }
 
     // Draw axes
     _drawAxes(canvas, size, chartRect, bounds);
+    if (enablePaintProfiling) {
+      stageStopwatch!.stop();
+      print('[PAINT] axes: ${stageStopwatch.elapsedMilliseconds}ms');
+      totalStopwatch!.stop();
+      print('[PAINT] total: ${totalStopwatch.elapsedMilliseconds}ms');
+    }
   }
 
   _DataBounds? _calculateDataBounds({Rect? chartRect}) {
     if (series.isEmpty) return null;
 
-    double minX = double.infinity;
-    double maxX = double.negativeInfinity;
-    double minY = double.infinity;
-    double maxY = double.negativeInfinity;
+    // Use precomputed original bounds if available to avoid O(n) scans each frame
+    double minX;
+    double maxX;
+    double minY;
+    double maxY;
 
-    for (final s in series) {
-      for (final point in s.points) {
-        if (point.x < minX) minX = point.x;
-        if (point.x > maxX) maxX = point.x;
-        if (point.y < minY) minY = point.y;
-        if (point.y > maxY) maxY = point.y;
+    if (originalDataBounds != null) {
+      minX = originalDataBounds!.minX;
+      maxX = originalDataBounds!.maxX;
+      minY = originalDataBounds!.minY;
+      maxY = originalDataBounds!.maxY;
+    } else {
+      minX = double.infinity;
+      maxX = double.negativeInfinity;
+      minY = double.infinity;
+      maxY = double.negativeInfinity;
+
+      for (final s in series) {
+        for (final point in s.points) {
+          if (point.x < minX) minX = point.x;
+          if (point.x > maxX) maxX = point.x;
+          if (point.y < minY) minY = point.y;
+          if (point.y > maxY) maxY = point.y;
+        }
       }
     }
 
@@ -2668,12 +2736,7 @@ class _BravenChartPainter extends CustomPainter {
     final dataMinY = minY;
     final dataMaxY = maxY;
 
-    // Add padding to Y range (for visual spacing, but NOT for zoom center)
-    final yRange = maxY - minY;
-    minY -= yRange * 0.1;
-    maxY += yRange * 0.1;
-
-    // Apply zoom/pan transformation if enabled
+    // Apply zoom/pan transformation FIRST (before padding)
     if (zoomPanState != null) {
       final zoomX = zoomPanState!.zoomLevelX;
       final zoomY = zoomPanState!.zoomLevelY;
@@ -2682,21 +2745,17 @@ class _BravenChartPainter extends CustomPainter {
 
       // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
       if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
-        // CRITICAL FIX: Calculate center from ORIGINAL data range, NOT padded range
-        // This ensures zoom centers on actual data, not the padded viewport
+        // Calculate center from ORIGINAL data range
         final centerX = (dataMinX + dataMaxX) / 2;
         final centerY = (dataMinY + dataMaxY) / 2;
 
-        // CRITICAL FIX: Calculate new range based on ORIGINAL data range (not padded)
-        // This ensures zoom is relative to actual data, keeping it centered and visible
+        // Calculate new range based on ORIGINAL data range
         final dataRangeX = dataMaxX - dataMinX;
         final dataRangeY = dataMaxY - dataMinY;
         final rangeX = dataRangeX / zoomX;
         final rangeY = dataRangeY / zoomY;
 
-        // CRITICAL FIX #4: Convert pan offset from pixel units to data units
-        // panOffset is in screen pixels, we need to convert to data coordinates
-        // Conversion: panData = panPixels * (dataRange / screenSize)
+        // Convert pan offset from pixel units to data units
         double panDataX = 0.0;
         double panDataY = 0.0;
         if (chartRect != null) {
@@ -2704,13 +2763,19 @@ class _BravenChartPainter extends CustomPainter {
           panDataY = panY * (dataRangeY / chartRect.height); // Invert Y for screen coordinates
         }
 
-        // Calculate visible bounds (zoom is applied to data range, pan in data units)
+        // Calculate visible bounds after zoom/pan (BEFORE padding)
         minX = centerX - rangeX / 2 + panDataX;
         maxX = centerX + rangeX / 2 + panDataX;
         minY = centerY - rangeY / 2 + panDataY;
         maxY = centerY + rangeY / 2 + panDataY;
       }
     }
+
+    // CRITICAL: Add padding AFTER zoom/pan transformation
+    // This ensures padding is applied to the visible viewport, not the original data
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
@@ -3179,13 +3244,32 @@ class _BravenChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BravenChartPainter oldDelegate) {
-    return chartType != oldDelegate.chartType ||
-        series != oldDelegate.series ||
-        theme != oldDelegate.theme ||
-        xAxis != oldDelegate.xAxis ||
-        yAxis != oldDelegate.yAxis ||
-        annotations != oldDelegate.annotations ||
-        zoomPanState != oldDelegate.zoomPanState; // CRITICAL: Repaint on zoom/pan changes
+    // Cheap checks first
+    if (chartType != oldDelegate.chartType) return true;
+    if (theme != oldDelegate.theme) return true;
+    if (xAxis != oldDelegate.xAxis || yAxis != oldDelegate.yAxis) return true;
+
+    // Series: if list length differs or any series object identity changed, repaint
+    if (series.length != oldDelegate.series.length) return true;
+    for (var i = 0; i < series.length; i++) {
+      if (!identical(series[i], oldDelegate.series[i])) return true;
+    }
+
+    // Annotations: compare lengths and identities
+    if (annotations.length != oldDelegate.annotations.length) return true;
+    for (var i = 0; i < annotations.length; i++) {
+      if (!identical(annotations[i], oldDelegate.annotations[i])) return true;
+    }
+
+    // Zoom/pan: compare primitive fields for quick decision
+    final a = zoomPanState;
+    final b = oldDelegate.zoomPanState;
+    if (a == null && b == null) return false;
+    if (a == null || b == null) return true;
+    if (a.zoomLevelX != b.zoomLevelX || a.zoomLevelY != b.zoomLevelY) return true;
+    if (a.panOffset != b.panOffset) return true;
+
+    return false;
   }
 }
 
