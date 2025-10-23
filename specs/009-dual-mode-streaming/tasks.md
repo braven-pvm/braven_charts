@@ -71,10 +71,10 @@
 
 - [X] T017 [US1] Implement _updateData method in lib/src/widgets/braven_chart.dart to check mode: if streaming apply data immediately, if interactive buffer silently (FR-006)
 - [X] T018 [US1] Implement _updateAutoScrollViewport method integration in lib/src/widgets/braven_chart.dart to enable auto-scroll only in streaming mode (FR-002)
-- [ ] T019 [US1] Implement conditional widget wrapping in BravenChart.build() to remove ALL interaction handlers (GestureDetector, MouseRegion) when mode == ChartMode.streaming (FR-005)
-- [ ] T020 [US1] Add RepaintBoundary wrapper around chart CustomPaint in lib/src/widgets/braven_chart.dart for rendering isolation per Constitution II
-- [ ] T021 [US1] Implement ValueListenableBuilder<ChartMode> in BravenChart.build() to rebuild only mode-dependent widgets on transitions (Constitution II: no setState during interactions)
-- [ ] T022 [US1] Add assertion in BravenChart.initState() to throw ArgumentError if data is Stream but streamingConfig is null (FR-002)
+- [X] T019 [US1] Implement conditional widget wrapping in BravenChart.build() to remove ALL interaction handlers (GestureDetector, MouseRegion) when mode == ChartMode.streaming (FR-005)
+- [X] T020 [US1] Add RepaintBoundary wrapper around chart CustomPaint in lib/src/widgets/braven_chart.dart for rendering isolation per Constitution II
+- [X] T021 [US1] Implement ValueListenableBuilder<ChartMode> in BravenChart.build() to rebuild only mode-dependent widgets on transitions (Constitution II: no setState during interactions)
+- [X] T022 [US1] Add assertion in BravenChart.initState() to throw ArgumentError if data is Stream but streamingConfig is null (FR-002)
 - [ ] T023 [US1] Validate no rendering errors (box.dart:3345, mouse_tracker.dart:199) during streaming with integration test (FR-020, SC-003)
 - [ ] T024 [US1] Verify 60fps sustained rendering with performance benchmark (SC-001, FR-018)
 
