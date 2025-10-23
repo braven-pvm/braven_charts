@@ -7,8 +7,8 @@ import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_mode.dart';
 import 'package:braven_charts/src/models/streaming_config.dart';
-import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/braven_chart.dart';
+import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,7 +33,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
         dataStream: streamController.stream,
@@ -48,7 +48,7 @@ void main() {
 
       // Then: Should start in streaming mode
       expect(capturedMode, isNull); // No mode change yet (started in streaming)
-      
+
       // Verify chart renders without error
       expect(find.byType(BravenChart), findsOneWidget);
 
@@ -65,7 +65,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
         dataStream: streamController.stream,
@@ -96,7 +96,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
         dataStream: streamController.stream,
@@ -130,7 +130,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
       );
@@ -150,7 +150,7 @@ void main() {
 
       final chart = BravenChart(
         chartType: ChartType.line,
-        series: [],
+        series: const [],
         dataStream: streamController.stream,
         streamingConfig: StreamingConfig(),
       );
@@ -177,7 +177,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
         dataStream: streamController.stream,
@@ -207,7 +207,7 @@ void main() {
         series: [
           ChartSeries(
             id: 'test',
-            points: [ChartDataPoint(x: 0, y: 0)],
+            points: [const ChartDataPoint(x: 0, y: 0)],
           ),
         ],
         dataStream: streamController.stream,
@@ -219,11 +219,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Stream multiple points
-      streamController.add(ChartDataPoint(x: 1, y: 10));
+      streamController.add(const ChartDataPoint(x: 1, y: 10));
       await tester.pump();
-      streamController.add(ChartDataPoint(x: 2, y: 20));
+      streamController.add(const ChartDataPoint(x: 2, y: 20));
       await tester.pump();
-      streamController.add(ChartDataPoint(x: 3, y: 15));
+      streamController.add(const ChartDataPoint(x: 3, y: 15));
       await tester.pump();
 
       await tester.pumpAndSettle();

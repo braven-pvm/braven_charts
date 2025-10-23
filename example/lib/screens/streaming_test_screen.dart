@@ -33,7 +33,7 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
   final ChartController _controller = ChartController();
   late StreamController<ChartDataPoint> _dataStreamController;
   Timer? _dataTimer;
-  
+
   double _currentX = 0;
   int _pointsGenerated = 0;
   int _pointsBuffered = 0;
@@ -66,9 +66,9 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
         // Generate sine wave data point
         final y = 50 + 30 * math.sin(_currentX * 0.1);
         final point = ChartDataPoint(x: _currentX, y: y);
-        
+
         _dataStreamController.add(point);
-        
+
         setState(() {
           _currentX++;
           _pointsGenerated++;
@@ -175,9 +175,7 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
                       onModeChanged: (mode) {
                         setState(() {
                           _currentMode = mode;
-                          _statusMessage = mode == ChartMode.streaming
-                              ? 'Switched to STREAMING mode'
-                              : 'Switched to INTERACTIVE mode';
+                          _statusMessage = mode == ChartMode.streaming ? 'Switched to STREAMING mode' : 'Switched to INTERACTIVE mode';
                         });
                       },
                       onBufferUpdated: (bufferCount) {
@@ -203,8 +201,8 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
                       enabled: true,
                       enableZoom: true,
                       enablePan: true,
-                      crosshair: CrosshairConfig(enabled: true),
-                      tooltip: TooltipConfig(enabled: true),
+                      crosshair: const CrosshairConfig(enabled: true),
+                      tooltip: const TooltipConfig(enabled: true),
                       onDataPointTap: (point, position) {
                         setState(() {
                           _statusMessage = 'Tapped: x=${point.x.toStringAsFixed(1)}, y=${point.y.toStringAsFixed(1)}';

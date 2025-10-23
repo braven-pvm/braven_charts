@@ -738,7 +738,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Stores the calculated chart area (with padding) so that onHover,
   /// onTap, and other interaction callbacks can access it without
   /// needing to recalculate from render box (which may not be accurate).
+  /// 
+  /// CRITICAL: This chartRect is in CustomPaint coordinate space (0,0 = top-left of CustomPaint).
+  /// When using in Stack coordinate space (which includes title), add _titleOffset.dy to Y coordinates.
   Rect? _cachedChartRect;
+  
+  /// Offset of the chart canvas relative to the Stack (includes title height).
+  /// 
+  /// When a title/subtitle is present, the CustomPaint canvas is positioned BELOW the title.
+  /// This offset tracks the Y distance from Stack's top (0,0) to CustomPaint's top.
+  /// Must be added to chartRect Y coordinates when positioning overlays in Stack space.
+  Offset _titleOffset = Offset.zero;
 
   /// Cached Stack size for tooltip positioning.
   ///
@@ -1060,14 +1070,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       snapPointsData = [nearestPointData];
 
       // Calculate the marker's screen position
+      // CRITICAL FIX: _dataToScreenPoint already returns absolute screen coordinates
+      // (includes chartRect.left/top offset). DO NOT add the offset again!
       final allSeries = _getAllSeries();
 
       final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
       final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
 
       final Offset markerPosition;
-      if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
-        markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
+      if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite) {
+        // screenX/screenY from _findNearestDataPoint already include chartRect offset
+        markerPosition = Offset(markerScreenX, markerScreenY);
       } else {
         final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
         final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
@@ -1079,7 +1092,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
 
           if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-            markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
+            // _dataToScreenPoint already returns absolute screen coordinates
+            markerPosition = screenPos;
           } else {
             markerPosition = position;
           }
@@ -1519,6 +1533,26 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               zoomPanState: interactionState.zoomPanState,
               // Pass preliminary/original data bounds so painter can avoid O(n) scans
               originalDataBounds: preliminaryBounds,
+              // CRITICAL FIX: Pass callback to receive chartRect calculated with ACTUAL render size
+              onChartRectCalculated: (Rect chartRect, Size size) {
+                // Calculate title offset: difference between Stack size and CustomPaint size
+                // CustomPaint is positioned BELOW the title in Stack coordinate space
+                final titleHeight = _cachedStackSize != null ? (_cachedStackSize!.height - size.height) : 0.0;
+                final newTitleOffset = Offset(0, titleHeight);
+                
+                // Update cached values if changed
+                if (_cachedChartRect != chartRect || _titleOffset != newTitleOffset) {
+                  // Use post-frame callback to avoid setState during build
+                  SchedulerBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _cachedChartRect = chartRect;
+                        _titleOffset = newTitleOffset;
+                      });
+                    }
+                  });
+                }
+              },
             ),
             child: Container(), // Force size from parent instead of using size parameter
           ),
@@ -1607,11 +1641,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final chartRect = _calculateChartRect(size);
 
-        // Cache both the full stack size and chartRect for use in interaction callbacks
+        // CRITICAL FIX: Do NOT calculate chartRect here with LayoutBuilder size.
+        // LayoutBuilder sees the full widget size including title/subtitle (537px height),
+        // but CustomPaint renders with a smaller size (493px, excluding title).
+        // This size mismatch causes proportional coordinate transformation errors.
+        // Cache only the Stack size - chartRect will be calculated with actual render size.
         _cachedStackSize = size;
-        _cachedChartRect = chartRect;
+        // chartRect will be set by painter callback with the CORRECT size
+
+        // Use cached chartRect if available (set by previous paint), otherwise return child without interaction
+        final chartRect = _cachedChartRect;
+        if (chartRect == null) {
+          // First build before painter has run - return child without interaction overlays
+          // Painter will set _cachedChartRect and trigger rebuild
+          return child;
+        }
 
         // Build the full interaction stack
         Widget interactiveWidget = Stack(
@@ -1630,6 +1675,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                       !interactionState.crosshairPosition!.dy.isFinite) {
                     return const SizedBox.shrink();
                   }
+
+                  // Translate chartRect from CustomPaint space to Stack space
+                  final stackChartRect = chartRect.translate(_titleOffset.dx, _titleOffset.dy);
 
                   return Positioned.fill(
                     child: RepaintBoundary(
@@ -1665,7 +1713,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                             if (allSeries.isEmpty) return null;
                             return _calculateDataBounds(allSeries, chartRect: chartRect);
                           }(),
-                          chartRect: chartRect,
+                          chartRect: stackChartRect,
                         ),
                       ),
                     ),
@@ -2099,7 +2147,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) return null;
 
-    final chartRect = _calculateChartRect(context.size!);
+    // CRITICAL FIX: Use cached size from LayoutBuilder, not context.size
+    // context.size can be incorrect during interaction system initialization
+    if (_cachedStackSize == null || _cachedChartRect == null) {
+      return null; // Not yet initialized
+    }
+
+    final chartRect = _cachedChartRect!;
     final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
 
     Map<String, dynamic>? nearestPoint;
@@ -2141,6 +2195,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Transforms a data point to screen coordinates.
   ///
   /// Uses the same transformation logic as _BravenChartPainter._dataToPixel.
+  /// Returns coordinates in STACK space (includes title offset if present).
   Offset _dataToScreenPoint(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
     final xRange = bounds.maxX - bounds.minX;
     final yRange = bounds.maxY - bounds.minY;
@@ -2148,10 +2203,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
     final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
 
+    // Calculate position in CustomPaint coordinate space
     final pixelX = chartRect.left + (xPercent * chartRect.width);
     final pixelY = chartRect.bottom - (yPercent * chartRect.height);
 
-    return Offset(pixelX, pixelY);
+    // Add title offset to translate from CustomPaint space to Stack space
+    return Offset(pixelX + _titleOffset.dx, pixelY + _titleOffset.dy);
   }
 
   /// Calculates the chart rectangle within the widget.
@@ -2794,6 +2851,7 @@ class _BravenChartPainter extends CustomPainter {
     required this.annotations,
     this.zoomPanState,
     this.originalDataBounds,
+    this.onChartRectCalculated,
   });
   // Toggle this at runtime to enable simple paint-stage profiling logs.
   // Keep false by default; set to true in a debug session to get timing output.
@@ -2808,6 +2866,8 @@ class _BravenChartPainter extends CustomPainter {
   final ZoomPanState? zoomPanState;
   // Optional precomputed bounds to avoid scanning series on every paint
   final _DataBounds? originalDataBounds;
+  // Callback to notify State of the calculated chartRect with actual render size
+  final void Function(Rect chartRect, Size size)? onChartRectCalculated;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2861,6 +2921,10 @@ class _BravenChartPainter extends CustomPainter {
         (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
 
     final chartRect = Rect.fromLTWH(leftPadding, topPadding, size.width - leftPadding - rightPadding, size.height - topPadding - bottomPadding);
+
+    // CRITICAL FIX: Notify State of the chartRect calculated with ACTUAL render size.
+    // This ensures cached chartRect matches the size CustomPaint uses for rendering.
+    onChartRectCalculated?.call(chartRect, size);
 
     // Recalculate bounds with correct chart rect for zoom/pan
     final bounds = _calculateDataBounds(chartRect: chartRect);

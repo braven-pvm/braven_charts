@@ -121,8 +121,8 @@ class _RegressionTestScreenState extends State<RegressionTestScreen> {
                       enabled: true,
                       enableZoom: true,
                       enablePan: true,
-                      crosshair: CrosshairConfig(enabled: true),
-                      tooltip: TooltipConfig(enabled: true),
+                      crosshair: const CrosshairConfig(enabled: true),
+                      tooltip: const TooltipConfig(enabled: true, preferredPosition: TooltipPosition.top),
                       onDataPointTap: (point, seriesId) {
                         setState(() {
                           _statusMessage = 'Tapped: x=${point.x}, y=${point.y}';

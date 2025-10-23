@@ -56,7 +56,7 @@ void main() {
 
       for (int i = 0; i < totalPoints; i++) {
         final frameStart = DateTime.now();
-        
+
         // Add point to stream
         streamController.add(ChartDataPoint(
           x: i.toDouble(),
@@ -65,7 +65,7 @@ void main() {
 
         // Pump frame (simulates 16.67ms frame at 60fps)
         await tester.pump(const Duration(milliseconds: 16));
-        
+
         final frameEnd = DateTime.now();
         frameTimes.add(frameEnd.difference(frameStart));
       }

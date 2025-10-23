@@ -28,7 +28,7 @@ void main() {
     testWidgets('should render streaming mode chart correctly', (WidgetTester tester) async {
       // Given: Chart configured for streaming mode
       final streamController = StreamController<ChartDataPoint>();
-      
+
       final chart = BravenChart(
         chartType: ChartType.line,
         series: [
@@ -71,7 +71,7 @@ void main() {
     testWidgets('should render streaming mode with data stream correctly', (WidgetTester tester) async {
       // Given: Chart with active data stream
       final streamController = StreamController<ChartDataPoint>();
-      
+
       final chart = BravenChart(
         chartType: ChartType.line,
         series: [
@@ -118,7 +118,7 @@ void main() {
     testWidgets('should render streaming mode with multiple series correctly', (WidgetTester tester) async {
       // Given: Chart with multiple series in streaming mode
       final streamController = StreamController<ChartDataPoint>();
-      
+
       final chart = BravenChart(
         chartType: ChartType.line,
         series: [
@@ -168,7 +168,7 @@ void main() {
     testWidgets('should render empty streaming chart correctly', (WidgetTester tester) async {
       // Given: Empty chart in streaming mode
       final streamController = StreamController<ChartDataPoint>();
-      
+
       final chart = BravenChart(
         chartType: ChartType.line,
         series: [
