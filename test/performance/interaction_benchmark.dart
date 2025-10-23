@@ -36,8 +36,9 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('Pause on hover completes within 16ms (SC-004)', (WidgetTester tester) async {
-      ChartMode? modeAfterHover;
+    testWidgets('Pause on click completes within 16ms (SC-004)', (WidgetTester tester) async {
+      // NOTE: Hover does NOT pause (per commit 2351a91), so testing click instead
+      ChartMode? modeAfterClick;
       final stopwatch = Stopwatch();
 
       await tester.pumpWidget(
@@ -50,13 +51,12 @@ void main() {
               streamingConfig: StreamingConfig(
                 onModeChanged: (mode) {
                   stopwatch.stop();
-                  modeAfterHover = mode;
+                  modeAfterClick = mode;
                 },
               ),
               controller: chartController,
               interactionConfig: const InteractionConfig(
                 enabled: true,
-                crosshair: CrosshairConfig(enabled: true),
               ),
             ),
           ),
@@ -72,21 +72,18 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      // Start timing just before hover
+      // Start timing just before click
       final chartFinder = find.byType(BravenChart);
-      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await gesture.addPointer(location: Offset.zero);
-      addTearDown(gesture.removePointer);
 
       stopwatch.start();
-      await gesture.moveTo(tester.getCenter(chartFinder));
-      await tester.pump(); // Process hover event
+      await tester.tap(chartFinder);
+      await tester.pump(); // Process tap event
 
       // Verify mode changed and timing
-      expect(modeAfterHover, ChartMode.interactive);
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on hover should complete within 16ms (SC-004)');
+      expect(modeAfterClick, ChartMode.interactive);
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on click should complete within 16ms (SC-004)');
 
-      print('⏱️ Hover response time: ${stopwatch.elapsedMilliseconds}ms');
+      print('⏱️ Click response time: ${stopwatch.elapsedMilliseconds}ms');
     });
 
     testWidgets('Pause on zoom completes within 16ms (SC-004)', (WidgetTester tester) async {
@@ -212,7 +209,6 @@ void main() {
               controller: chartController,
               interactionConfig: const InteractionConfig(
                 enabled: true,
-                enableZoom: true,
                 enablePan: true,
               ),
             ),
@@ -230,12 +226,9 @@ void main() {
 
       final chartFinder = find.byType(BravenChart);
 
-      // Measure mode transition time
+      // Measure mode transition time using click (not hover)
       stopwatch.start();
-      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await gesture.addPointer(location: Offset.zero);
-      addTearDown(gesture.removePointer);
-      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.tap(chartFinder);
       await tester.pump();
 
       // Verify transition was captured and fast
@@ -245,7 +238,10 @@ void main() {
       print('⏱️ Mode transition time: ${transitionTime}ms');
     });
 
-    testWidgets('Interaction response maintains 60fps with streaming data', (WidgetTester tester) async {
+    testWidgets('Crosshair response maintains 60fps with streaming data', (WidgetTester tester) async {
+      // NOTE: This test verifies crosshair rendering (not pause) maintains 60fps
+      // Hover doesn't pause per commit 2351a91, but crosshair should still be responsive
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -272,9 +268,13 @@ void main() {
       }
       await tester.pump();
 
-      // Measure hover response with data already present (simulates streaming scenario)
-      final stopwatch = Stopwatch();
+      // First pause the chart with a click so we're in interactive mode
       final chartFinder = find.byType(BravenChart);
+      await tester.tap(chartFinder);
+      await tester.pump();
+
+      // Measure hover response for crosshair rendering (in interactive mode)
+      final stopwatch = Stopwatch();
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
@@ -284,10 +284,10 @@ void main() {
       await tester.pump();
       stopwatch.stop();
 
-      // Response should still be fast even with streaming data
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Interaction response should be <16ms even during streaming');
+      // Crosshair rendering should still be fast
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Crosshair rendering should be <16ms');
 
-      print('⏱️ Hover response during streaming: ${stopwatch.elapsedMilliseconds}ms');
+      print('⏱️ Crosshair rendering response: ${stopwatch.elapsedMilliseconds}ms');
     });
   });
 }
