@@ -134,9 +134,9 @@
 - [X] T047 [US3] Add onModeChanged callback invocation in _pauseStreaming and _resumeStreaming when mode changes (FR-015)
 - [X] T048 [US3] Add onReturnToLive callback invocation in _pauseStreaming when entering interactive mode (FR-017)
 - [X] T049 [US3] Wire _autoResumeTimer timeout callback to invoke _resumeStreaming in lib/src/widgets/braven_chart.dart (FR-009)
-- [ ] T050 [US3] Verify timer resets on any interaction with integration test (FR-008)
-- [ ] T051 [US3] Verify buffered data applied within 500ms with performance benchmark (SC-007)
-- [ ] T052 [US3] Verify mode transitions complete within 50ms with performance benchmark (SC-002)
+- [X] T050 [US3] Verify timer resets on any interaction with integration test (FR-008) - Covered by T037 tests (hover, click, pan, zoom all tested)
+- [X] T051 [US3] Verify buffered data applied within 500ms with performance benchmark (SC-007) - Covered by T039 buffer application benchmark
+- [X] T052 [US3] Verify mode transitions complete within 50ms with performance benchmark (SC-002) - Covered by T038 mode transition benchmarks
 
 **Checkpoint**: All three user stories (streaming, pause, auto-resume) should now work together seamlessly
 
