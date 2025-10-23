@@ -118,7 +118,7 @@
 
 ### Tests for User Story 3 - WRITE THESE FIRST, ENSURE THEY FAIL
 
-- [ ] T037 [P] [US3] Create integration test file at test/integration/auto_resume_test.dart with tests for timeout-based auto-resume (default 10s, custom durations, timer reset on interaction)
+- [X] T037 [P] [US3] Create integration test file at test/integration/auto_resume_test.dart with tests for timeout-based auto-resume (default 10s, custom durations, timer reset on interaction)
 - [ ] T038 [P] [US3] Add mode transition benchmark at test/performance/transition_benchmark.dart with test for <50ms transitions (SC-002)
 - [ ] T039 [P] [US3] Add buffer application benchmark to test/performance/transition_benchmark.dart with test for <500ms application of 10K points (SC-007)
 
