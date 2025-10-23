@@ -62,7 +62,7 @@ class StreamingConfig {
   /// - [maxBufferSize] must be positive (> 0)
   ///
   /// Throws [AssertionError] if validation fails (fail-fast per FR-006a).
-  const StreamingConfig({
+  StreamingConfig({
     this.autoResumeTimeout = const Duration(seconds: 10),
     this.maxBufferSize = 10000,
     this.pauseOnFirstInteraction = true,
