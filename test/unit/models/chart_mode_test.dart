@@ -59,8 +59,8 @@ void main() {
     test('should be non-nullable', () {
       // Given: ChartMode values
       // When: Assigning to non-nullable variables
-      ChartMode mode1 = ChartMode.streaming;
-      ChartMode mode2 = ChartMode.interactive;
+      final ChartMode mode1 = ChartMode.streaming;
+      final ChartMode mode2 = ChartMode.interactive;
 
       // Then: Should compile and be non-null (compile-time check)
       expect(mode1, isNotNull);

@@ -32,7 +32,7 @@ void main() {
 
     test('should allow custom timeout', () {
       // Given/When: Creating config with custom timeout
-      final config = StreamingConfig(autoResumeTimeout: Duration(seconds: 15));
+      final config = StreamingConfig(autoResumeTimeout: const Duration(seconds: 15));
 
       // Then: Should use custom timeout
       expect(config.autoResumeTimeout, equals(const Duration(seconds: 15)));
@@ -69,7 +69,7 @@ void main() {
     test('should reject negative timeout', () {
       // Given/When/Then: Creating config with negative timeout should throw
       expect(
-        () => StreamingConfig(autoResumeTimeout: Duration(seconds: -1)),
+        () => StreamingConfig(autoResumeTimeout: const Duration(seconds: -1)),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -93,7 +93,7 @@ void main() {
     test('should accept minimum valid values', () {
       // Given/When: Creating config with minimum valid values
       final config = StreamingConfig(
-        autoResumeTimeout: Duration(milliseconds: 1),
+        autoResumeTimeout: const Duration(milliseconds: 1),
         maxBufferSize: 1,
       );
 
@@ -251,7 +251,7 @@ void main() {
     test('should be const with all parameters', () {
       // Given/When: Creating const instance with all parameters
       final config = StreamingConfig(
-        autoResumeTimeout: Duration(seconds: 20),
+        autoResumeTimeout: const Duration(seconds: 20),
         maxBufferSize: 5000,
         pauseOnFirstInteraction: false,
       );
