@@ -738,13 +738,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Stores the calculated chart area (with padding) so that onHover,
   /// onTap, and other interaction callbacks can access it without
   /// needing to recalculate from render box (which may not be accurate).
-  /// 
+  ///
   /// CRITICAL: This chartRect is in CustomPaint coordinate space (0,0 = top-left of CustomPaint).
   /// When using in Stack coordinate space (which includes title), add _titleOffset.dy to Y coordinates.
   Rect? _cachedChartRect;
-  
+
   /// Offset of the chart canvas relative to the Stack (includes title height).
-  /// 
+  ///
   /// When a title/subtitle is present, the CustomPaint canvas is positioned BELOW the title.
   /// This offset tracks the Y distance from Stack's top (0,0) to CustomPaint's top.
   /// Must be added to chartRect Y coordinates when positioning overlays in Stack space.
@@ -1201,23 +1201,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Related: FR-006 (mode-dependent behavior), T029 (_bufferDataPoint)
   void _updateData(ChartDataPoint point) {
+    final controller = _getController();
+    if (controller == null) return;
+
     // Check current mode
     if (_chartMode.value == ChartMode.streaming) {
-      // Streaming mode: Apply data immediately
-      // Add point to the first series (or create a default series)
-      // This is a simplified approach - real implementation would need
-      // to determine which series to add the point to
-      // NOTE: No interaction state update needed here - this updates chart data, not interaction state
-
-      // TODO: Implement actual data application logic
-      // For now, this is a placeholder that will be enhanced in future tasks
+      // Streaming mode: Apply data immediately to the chart
+      // Use 'stream' as the default series ID for streamed data
+      controller.addPoint('stream', point);
 
       // Update auto-scroll viewport if enabled (T018: FR-002)
       _updateAutoScrollViewport();
     } else {
       // Interactive mode: Buffer data silently (T029 will implement this)
-      // _bufferDataPoint(point); // Will be implemented in T029
-
+      // For now, we just don't apply the data (buffering will be added in Phase 4)
       // TODO: Call _bufferDataPoint when T029 is implemented
     }
   }
@@ -1539,7 +1536,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 // CustomPaint is positioned BELOW the title in Stack coordinate space
                 final titleHeight = _cachedStackSize != null ? (_cachedStackSize!.height - size.height) : 0.0;
                 final newTitleOffset = Offset(0, titleHeight);
-                
+
                 // Update cached values if changed
                 if (_cachedChartRect != chartRect || _titleOffset != newTitleOffset) {
                   // Use post-frame callback to avoid setState during build
