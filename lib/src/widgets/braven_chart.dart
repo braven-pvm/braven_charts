@@ -1157,13 +1157,45 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _processStreamData() {
     if (_pendingDataPoint == null) return;
 
+    final point = _pendingDataPoint!;
+    
     // Clear the pending data point
     _pendingDataPoint = null;
 
-    // Add point to the first series (or create a default series)
-    // This is a simplified approach - real implementation would need
-    // to determine which series to add the point to
-    // NOTE: No interaction state update needed here - this updates chart data, not interaction state
+    // Handle data based on current mode (T017: FR-006)
+    _updateData(point);
+  }
+
+  /// Updates chart data based on current mode (T017: FR-006).
+  ///
+  /// Behavior:
+  /// - **Streaming mode**: Applies data immediately to chart (triggers rebuild)
+  /// - **Interactive mode**: Buffers data silently (no visual update)
+  ///
+  /// This is the core of dual-mode streaming:
+  /// - In streaming mode, users see real-time updates with auto-scroll
+  /// - In interactive mode, users can explore historical data without distraction
+  /// - Buffered data is applied when returning to streaming mode
+  ///
+  /// Related: FR-006 (mode-dependent behavior), T029 (_bufferDataPoint)
+  void _updateData(ChartDataPoint point) {
+    // Check current mode
+    if (_chartMode.value == ChartMode.streaming) {
+      // Streaming mode: Apply data immediately
+      // Add point to the first series (or create a default series)
+      // This is a simplified approach - real implementation would need
+      // to determine which series to add the point to
+      // NOTE: No interaction state update needed here - this updates chart data, not interaction state
+      
+      // TODO: Implement actual data application logic
+      // For now, this is a placeholder that will be enhanced in future tasks
+      
+    } else {
+      // Interactive mode: Buffer data silently (T029 will implement this)
+      // _bufferDataPoint(point); // Will be implemented in T029
+      
+      // TODO: Call _bufferDataPoint when T029 is implemented
+    }
   }
 
   /// Called when the controller notifies of changes.
