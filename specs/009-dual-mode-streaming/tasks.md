@@ -65,7 +65,7 @@
 - [X] T013 [P] [US1] Create unit test file at test/unit/models/streaming_config_test.dart with tests for defaults, validation (positive timeout, positive buffer size)
 - [X] T014 [P] [US1] Create integration test file at test/integration/streaming_mode_test.dart with tests for streaming mode behavior (auto-scroll, no interaction handlers, smooth rendering)
 - [X] T015 [P] [US1] Create performance benchmark file at test/performance/streaming_benchmark.dart with test for 100 points/sec sustained 60fps (SC-001, FR-018)
-- [ ] T016 [P] [US1] Add golden test file at test/golden/streaming_mode_golden_test.dart for streaming mode visual regression
+- [X] T016 [P] [US1] Add golden test file at test/golden/streaming_mode_golden_test.dart for streaming mode visual regression
 
 ### Implementation for User Story 1
 
