@@ -41,13 +41,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement ChartMode enum (streaming, interactive) in lib/src/models/chart_mode.dart per contracts/streaming_api_contract.dart
-- [ ] T006 Implement StreamingConfig class (all properties, validation, defaults) in lib/src/models/streaming_config.dart per contracts/streaming_api_contract.dart
-- [ ] T007 Add ValueNotifier<ChartMode> _chartMode field to BravenChart state in lib/src/widgets/braven_chart.dart
-- [ ] T008 Add Queue<DataPoint> _bufferedPoints field to BravenChart state in lib/src/widgets/braven_chart.dart
-- [ ] T009 Add Timer? _autoResumeTimer field to BravenChart state in lib/src/widgets/braven_chart.dart
-- [ ] T010 Add StreamingConfig? streamingConfig parameter to BravenChart constructor in lib/src/widgets/braven_chart.dart
-- [ ] T011 Implement initial mode detection logic in BravenChart.initState() (streaming if streamingConfig provided, interactive otherwise) in lib/src/widgets/braven_chart.dart
+- [X] T005 Implement ChartMode enum (streaming, interactive) in lib/src/models/chart_mode.dart per contracts/streaming_api_contract.dart
+- [X] T006 Implement StreamingConfig class (all properties, validation, defaults) in lib/src/models/streaming_config.dart per contracts/streaming_api_contract.dart
+- [X] T007 Add ValueNotifier<ChartMode> _chartMode field to BravenChart state in lib/src/widgets/braven_chart.dart
+- [X] T008 Add Queue<DataPoint> _bufferedPoints field to BravenChart state in lib/src/widgets/braven_chart.dart
+- [X] T009 Add Timer? _autoResumeTimer field to BravenChart state in lib/src/widgets/braven_chart.dart
+- [X] T010 Add StreamingConfig? streamingConfig parameter to BravenChart constructor in lib/src/widgets/braven_chart.dart
+- [X] T011 Implement initial mode detection logic in BravenChart.initState() (streaming if streamingConfig provided, interactive otherwise) in lib/src/widgets/braven_chart.dart
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
