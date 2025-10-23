@@ -1,0 +1,307 @@
+// Copyright 2025 Braven Charts
+// SPDX-License-Identifier: MIT
+
+import 'dart:async';
+
+import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Performance benchmark for T027: Interaction Response Time (User Story 2).
+///
+/// Tests that mode transitions and interaction responses meet <16ms target (SC-004, FR-019).
+///
+/// **Performance Criteria** (from spec.md):
+/// - **SC-004**: Chart responds to interactions within <16ms (60fps)
+/// - **FR-019**: Smooth zoom/pan without dropped frames
+///
+/// **Test Scenarios**:
+/// 1. Pause on hover response time (<16ms)
+/// 2. Pause on zoom response time (<16ms)
+/// 3. Pause on pan response time (<16ms)
+/// 4. Mode transition overhead (<50ms per SC-006)
+void main() {
+  group('T027: Interaction Response Benchmark', () {
+    late StreamController<ChartDataPoint> streamController;
+    late ChartController chartController;
+
+    setUp(() {
+      streamController = StreamController<ChartDataPoint>.broadcast();
+      chartController = ChartController();
+    });
+
+    tearDown(() {
+      streamController.close();
+      chartController.dispose();
+    });
+
+    testWidgets('Pause on hover completes within 16ms (SC-004)', (WidgetTester tester) async {
+      ChartMode? modeAfterHover;
+      final stopwatch = Stopwatch();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onModeChanged: (mode) {
+                  stopwatch.stop();
+                  modeAfterHover = mode;
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                crosshair: CrosshairConfig(enabled: true),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add data to make chart interactive
+      for (int i = 0; i < 20; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Start timing just before hover
+      final chartFinder = find.byType(BravenChart);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      stopwatch.start();
+      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.pump(); // Process hover event
+
+      // Verify mode changed and timing
+      expect(modeAfterHover, ChartMode.interactive);
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on hover should complete within 16ms (SC-004)');
+
+      print('⏱️ Hover response time: ${stopwatch.elapsedMilliseconds}ms');
+    });
+
+    testWidgets('Pause on zoom completes within 16ms (SC-004)', (WidgetTester tester) async {
+      ChartMode? modeAfterZoom;
+      final stopwatch = Stopwatch();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onModeChanged: (mode) {
+                  stopwatch.stop();
+                  modeAfterZoom = mode;
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                enableZoom: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add data
+      for (int i = 0; i < 20; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final chartFinder = find.byType(BravenChart);
+
+      // Start timing just before zoom
+      stopwatch.start();
+      await tester.startGesture(tester.getCenter(chartFinder));
+      await tester.pump(); // Process zoom start
+
+      // Verify mode changed and timing
+      expect(modeAfterZoom, ChartMode.interactive);
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on zoom should complete within 16ms (SC-004)');
+
+      print('⏱️ Zoom response time: ${stopwatch.elapsedMilliseconds}ms');
+    });
+
+    testWidgets('Pause on pan completes within 16ms (SC-004)', (WidgetTester tester) async {
+      ChartMode? modeAfterPan;
+      final stopwatch = Stopwatch();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onModeChanged: (mode) {
+                  stopwatch.stop();
+                  modeAfterPan = mode;
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                enablePan: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add data
+      for (int i = 0; i < 20; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final chartFinder = find.byType(BravenChart);
+
+      // Start timing just before pan
+      stopwatch.start();
+      await tester.drag(chartFinder, const Offset(50, 0));
+      await tester.pump(); // Process pan event
+
+      // Verify mode changed and timing
+      expect(modeAfterPan, ChartMode.interactive);
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on pan should complete within 16ms (SC-004)');
+
+      print('⏱️ Pan response time: ${stopwatch.elapsedMilliseconds}ms');
+    });
+
+    testWidgets('Mode transition overhead is minimal (<50ms per SC-006)', (WidgetTester tester) async {
+      final transitionTimes = <int>[];
+      final stopwatch = Stopwatch();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onModeChanged: (mode) {
+                  stopwatch.stop();
+                  transitionTimes.add(stopwatch.elapsedMilliseconds);
+                  stopwatch.reset();
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                enableZoom: true,
+                enablePan: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add data
+      for (int i = 0; i < 20; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final chartFinder = find.byType(BravenChart);
+
+      // Measure multiple mode transitions
+      // Transition 1: streaming → interactive (hover)
+      stopwatch.start();
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.pump();
+
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // Verify all transitions were fast
+      for (final time in transitionTimes) {
+        expect(time, lessThan(50), reason: 'Mode transitions should complete within 50ms (SC-006)');
+      }
+
+      if (transitionTimes.isNotEmpty) {
+        final avgTime = transitionTimes.reduce((a, b) => a + b) / transitionTimes.length;
+        print('⏱️ Average transition time: ${avgTime.toStringAsFixed(1)}ms');
+        print('⏱️ Max transition time: ${transitionTimes.reduce((a, b) => a > b ? a : b)}ms');
+      }
+    });
+
+    testWidgets('Interaction response maintains 60fps with streaming data', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                crosshair: CrosshairConfig(enabled: true),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Simulate high-frequency streaming (60Hz) during interaction
+      final dataTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+        final x = timer.tick.toDouble();
+        streamController.add(ChartDataPoint(x: x, y: x * 10.0));
+      });
+      addTearDown(dataTimer.cancel);
+
+      // Wait for some data
+      await Future.delayed(const Duration(milliseconds: 100));
+      await tester.pump();
+
+      // Measure hover response during streaming
+      final stopwatch = Stopwatch();
+      final chartFinder = find.byType(BravenChart);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      stopwatch.start();
+      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.pump();
+      stopwatch.stop();
+
+      // Response should still be fast even with streaming data
+      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Interaction response should be <16ms even during streaming');
+
+      print('⏱️ Hover response during streaming: ${stopwatch.elapsedMilliseconds}ms');
+
+      dataTimer.cancel();
+    });
+  });
+}
