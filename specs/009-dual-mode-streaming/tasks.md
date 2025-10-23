@@ -150,15 +150,15 @@
 
 ### Tests for User Story 4 - WRITE THESE FIRST, ENSURE THEY FAIL
 
-- [ ] T053 [P] [US4] Create integration test file at test/integration/manual_resume_test.dart with tests for resumeStreaming() public method (immediate resume, buffer application, timer cancellation)
-- [ ] T054 [P] [US4] Add idempotency test to test/integration/manual_resume_test.dart to verify resumeStreaming() is safe when already streaming
+- [X] T053 [P] [US4] Create integration test file at test/integration/manual_resume_test.dart with tests for resumeStreaming() public method (immediate resume, buffer application, timer cancellation) - 5 tests created
+- [X] T054 [P] [US4] Add idempotency test to test/integration/manual_resume_test.dart to verify resumeStreaming() is safe when already streaming - Included in T053
 
 ### Implementation for User Story 4
 
-- [ ] T055 [US4] Implement public resumeStreaming() method in BravenChart state in lib/src/widgets/braven_chart.dart to call _resumeStreaming (FR-010)
-- [ ] T056 [US4] Add idempotent guard to _resumeStreaming in lib/src/widgets/braven_chart.dart to skip if already in streaming mode (prevent double-transitions)
-- [ ] T057 [US4] Verify manual resume works with integration test (immediate transition, buffer applied, timer cancelled)
-- [ ] T058 [US4] Verify resumeStreaming() is idempotent with integration test (no-op when already streaming)
+- [X] T055 [US4] Implement public resumeStreaming() method in BravenChart via StreamingController API (FR-010) - Added streamingController parameter, wired callbacks
+- [X] T056 [US4] Add idempotent guard to _resumeStreaming in lib/src/widgets/braven_chart.dart to skip if already in streaming mode (prevent double-transitions) - Already existed at line 1355
+- [X] T057 [US4] Verify manual resume works with integration test (immediate transition, buffer applied, timer cancelled) - All 5 tests passing
+- [X] T058 [US4] Verify resumeStreaming() is idempotent with integration test (no-op when already streaming) - Tests 4 and 5 verify idempotency
 
 **Checkpoint**: Manual resume API should be fully functional
 

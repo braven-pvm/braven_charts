@@ -31,6 +31,7 @@ import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
 import 'package:braven_charts/src/widgets/auto_scroll_config.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
+import 'package:braven_charts/src/widgets/controller/streaming_controller.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 // Layer 5: Widgets
@@ -94,6 +95,7 @@ class BravenChart extends StatefulWidget {
     this.yAxis,
     this.annotations = const [],
     this.controller,
+    this.streamingController,
     this.dataStream,
     this.autoScrollConfig,
     this.streamingConfig,
@@ -439,6 +441,27 @@ class BravenChart extends StatefulWidget {
   /// Provides methods to add/remove points and annotations dynamically.
   /// If null, widget creates an internal controller.
   final ChartController? controller;
+
+  /// Controller for programmatic streaming mode control (T055: FR-010).
+  ///
+  /// Provides methods to manually pause and resume streaming, enabling
+  /// custom UI controls for dual-mode streaming behavior.
+  ///
+  /// Example:
+  /// ```dart
+  /// final streamingController = StreamingController();
+  ///
+  /// ElevatedButton(
+  ///   onPressed: () => streamingController.resumeStreaming(),
+  ///   child: Text('Resume Live'),
+  /// ),
+  ///
+  /// BravenChart(
+  ///   streamingController: streamingController,
+  ///   // ...
+  /// )
+  /// ```
+  final StreamingController? streamingController;
 
   /// Stream for real-time data updates.
   ///
@@ -831,6 +854,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Subscribe to dataStream if provided
     if (widget.dataStream != null) {
       _subscribeToStream(widget.dataStream!);
+    }
+
+    // Register StreamingController callbacks if provided (T055: FR-010)
+    if (widget.streamingController != null) {
+      widget.streamingController!.registerResumeCallback(_resumeStreaming);
+      widget.streamingController!.registerPauseCallback(_pauseStreaming);
     }
 
     // Initialize interaction system if enabled
