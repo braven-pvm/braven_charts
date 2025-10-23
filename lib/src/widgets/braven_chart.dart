@@ -1654,8 +1654,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               yAxis: effectiveYAxis,
               annotations: [], // Chart painter doesn't render annotations
               zoomPanState: interactionState.zoomPanState,
-              // Pass preliminary/original data bounds so painter can avoid O(n) scans
-              originalDataBounds: preliminaryBounds,
+              // CRITICAL FIX: Don't use cached originalDataBounds when controller series exist
+              // because new points added via controller.addPoint() won't be in the cached bounds.
+              // This causes buffered streaming points to fall outside viewport after zoom/pan.
+              // For streaming scenarios, we must recalculate bounds on every paint.
+              // TODO: Optimize by tracking controller series changes and only invalidating when needed.
+              originalDataBounds: _getController() == null ? preliminaryBounds : null,
               // CRITICAL FIX: Pass callback to receive chartRect calculated with ACTUAL render size
               onChartRectCalculated: (Rect chartRect, Size size) {
                 // Calculate title offset: difference between Stack size and CustomPaint size
