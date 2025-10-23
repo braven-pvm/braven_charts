@@ -28,7 +28,7 @@
 
 - [X] T001 Create ChartMode enum file at lib/src/models/chart_mode.dart
 - [X] T002 Create StreamingConfig class file at lib/src/models/streaming_config.dart
-- [ ] T003 [P] Create buffer manager utility file at lib/src/utils/buffer_manager.dart
+- [X] T003 [P] Create buffer manager utility file at lib/src/utils/buffer_manager.dart
 - [ ] T004 [P] Export new models from lib/braven_charts.dart (ChartMode, StreamingConfig)
 
 **Checkpoint**: Basic file structure ready for implementation
