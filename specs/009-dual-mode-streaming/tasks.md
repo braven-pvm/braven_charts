@@ -124,16 +124,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T040 [P] [US3] Implement _startAutoResumeTimer method in lib/src/widgets/braven_chart.dart to create Timer with streamingConfig.autoResumeTimeout duration
-- [ ] T041 [P] [US3] Implement _resetAutoResumeTimer method in lib/src/widgets/braven_chart.dart to cancel existing timer and start new one (FR-008)
-- [ ] T042 [US3] Modify _pauseStreaming method in lib/src/widgets/braven_chart.dart to call _startAutoResumeTimer after mode change
-- [ ] T043 [US3] Modify _handleInteraction method in lib/src/widgets/braven_chart.dart to call _resetAutoResumeTimer when already in interactive mode (FR-008)
-- [ ] T044 [US3] Implement _applyBufferedData method in lib/src/widgets/braven_chart.dart to add all _bufferedPoints to chart data (FR-011)
+- [X] T040 [P] [US3] Implement _startAutoResumeTimer method in lib/src/widgets/braven_chart.dart to create Timer with streamingConfig.autoResumeTimeout duration
+- [X] T041 [P] [US3] Implement _resetAutoResumeTimer method in lib/src/widgets/braven_chart.dart to cancel existing timer and start new one (FR-008)
+- [X] T042 [US3] Modify _pauseStreaming method in lib/src/widgets/braven_chart.dart to call _startAutoResumeTimer after mode change
+- [X] T043 [US3] Modify _handleInteraction method in lib/src/widgets/braven_chart.dart to call _resetAutoResumeTimer when already in interactive mode (FR-008) - Added to onHover and onScaleUpdate handlers
+- [X] T044 [US3] Implement _applyBufferedData method in lib/src/widgets/braven_chart.dart to add all _bufferedPoints to chart data (FR-011) - Implemented inline in _resumeStreaming
 - [ ] T045 [US3] Implement _jumpToLatestData method in lib/src/widgets/braven_chart.dart to update viewport to show latest data points (FR-012)
-- [ ] T046 [US3] Implement _resumeStreaming method in lib/src/widgets/braven_chart.dart to transition interactive→streaming atomically: cancel timer, apply buffer, clear buffer, set mode, jump viewport (FR-009, FR-011, FR-012)
-- [ ] T047 [US3] Add onModeChanged callback invocation in _pauseStreaming and _resumeStreaming when mode changes (FR-015)
-- [ ] T048 [US3] Add onReturnToLive callback invocation in _pauseStreaming when entering interactive mode (FR-017)
-- [ ] T049 [US3] Wire _autoResumeTimer timeout callback to invoke _resumeStreaming in lib/src/widgets/braven_chart.dart (FR-009)
+- [X] T046 [US3] Implement _resumeStreaming method in lib/src/widgets/braven_chart.dart to transition interactive→streaming atomically: cancel timer, apply buffer, clear buffer, set mode, jump viewport (FR-009, FR-011, FR-012)
+- [X] T047 [US3] Add onModeChanged callback invocation in _pauseStreaming and _resumeStreaming when mode changes (FR-015)
+- [X] T048 [US3] Add onReturnToLive callback invocation in _pauseStreaming when entering interactive mode (FR-017)
+- [X] T049 [US3] Wire _autoResumeTimer timeout callback to invoke _resumeStreaming in lib/src/widgets/braven_chart.dart (FR-009)
 - [ ] T050 [US3] Verify timer resets on any interaction with integration test (FR-008)
 - [ ] T051 [US3] Verify buffered data applied within 500ms with performance benchmark (SC-007)
 - [ ] T052 [US3] Verify mode transitions complete within 50ms with performance benchmark (SC-002)

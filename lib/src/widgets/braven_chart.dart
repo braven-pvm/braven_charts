@@ -1888,6 +1888,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // NOTE: Hover does NOT pause streaming - only intentional interactions do
             // (click, zoom, pan, scroll). This prevents accidental stream pausing from
             // casual mouse movement over the chart.
+            //
+            // However, if already in interactive mode, hover DOES reset the timer (T043: FR-008)
+            // This keeps the chart paused while user is actively hovering/exploring
+            if (_chartMode.value == ChartMode.interactive) {
+              _resetAutoResumeTimer();
+            }
 
             // Throttle the ENTIRE hover processing (calculations + state update)
             _processHoverThrottled(event.localPosition, config);
@@ -2044,6 +2050,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
           onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
               ? (details) {
+                  // T043: Reset timer on continued zoom/pan gestures (FR-008)
+                  _resetAutoResumeTimer();
+
                   ZoomPanState newZoomPanState = _interactionStateNotifier.value.zoomPanState;
 
                   // Handle pinch-to-zoom (when scale changes)
