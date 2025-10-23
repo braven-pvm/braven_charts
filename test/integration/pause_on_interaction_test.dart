@@ -65,7 +65,12 @@ void main() {
       expect(modeChangeCount, 0);
     });
 
-    testWidgets('Hover triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
+    testWidgets('Hover does NOT trigger pause (intentional UX decision)', (WidgetTester tester) async {
+      // NOTE: Original spec FR-004 included hover, but during implementation this was
+      // found to be too aggressive (accidental pauses from casual mouse movement).
+      // Design decision: Only intentional interactions (click, zoom, pan) pause streaming.
+      // See commit 2351a91: "Removed overly aggressive hover pause trigger"
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -102,7 +107,7 @@ void main() {
       final chartFinder = find.byType(BravenChart);
       expect(chartFinder, findsOneWidget);
 
-      // Simulate hover (this should trigger pause)
+      // Simulate hover
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
@@ -111,9 +116,9 @@ void main() {
       await gesture.moveTo(chartRect.center);
       await tester.pumpAndSettle();
 
-      // Mode should change to interactive
-      expect(lastModeChanged, ChartMode.interactive);
-      expect(modeChangeCount, 1);
+      // Mode should NOT change (hover doesn't pause)
+      expect(lastModeChanged, isNull);
+      expect(modeChangeCount, 0);
     });
 
     testWidgets('Click triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
@@ -297,6 +302,155 @@ void main() {
       await tester.tap(chartFinder);
       await tester.pumpAndSettle();
       expect(modeChangeCount, 1); // Still 1, already in interactive mode
+    });
+
+    testWidgets('T035: Data buffers silently without visual updates in interactive mode', (WidgetTester tester) async {
+      int bufferUpdateCount = 0;
+      int lastBufferCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onModeChanged: (mode) {
+                  lastModeChanged = mode;
+                  modeChangeCount++;
+                },
+                onBufferUpdated: (count) {
+                  bufferUpdateCount++;
+                  lastBufferCount = count;
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add initial data in streaming mode
+      for (int i = 0; i < 5; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Verify initial state: streaming mode, no buffer updates
+      expect(bufferUpdateCount, 0);
+      expect(lastBufferCount, 0);
+
+      // Pause by tapping
+      final chartFinder = find.byType(BravenChart);
+      await tester.tap(chartFinder);
+      await tester.pumpAndSettle();
+
+      // Verify mode changed to interactive
+      expect(lastModeChanged, ChartMode.interactive);
+      expect(modeChangeCount, 1);
+
+      // Get initial series data count (from controller)
+      final allSeries = chartController.getAllSeries();
+      final initialPointCount = allSeries.values.isEmpty ? 0 : allSeries.values.first.length;
+
+      // Add data while in interactive mode (should buffer, not display)
+      for (int i = 5; i < 15; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+        await tester.pump(const Duration(milliseconds: 10)); // Small delay to process
+      }
+      await tester.pumpAndSettle();
+
+      // Verify buffer callback was invoked for each point
+      expect(bufferUpdateCount, greaterThan(0), reason: 'Buffer should have been updated at least once');
+      expect(lastBufferCount, greaterThan(0), reason: 'Buffer should contain at least 1 point');
+
+      // Verify NO visual updates (point count unchanged in controller)
+      final currentSeries = chartController.getAllSeries();
+      final currentPointCount = currentSeries.values.isEmpty ? 0 : currentSeries.values.first.length;
+      expect(currentPointCount, equals(initialPointCount), reason: 'Buffered points should NOT appear in controller during interactive mode');
+
+      // Verify buffer count is reasonable (may be less than 10 due to timing/throttling)
+      expect(lastBufferCount, greaterThanOrEqualTo(1));
+      expect(lastBufferCount, lessThanOrEqualTo(10));
+    });
+
+    testWidgets('T035: Buffering continues during zoom/pan interactions', (WidgetTester tester) async {
+      int bufferUpdateCount = 0;
+      int lastBufferCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BravenChart(
+              chartType: ChartType.line,
+              series: const [],
+              dataStream: streamController.stream,
+              streamingConfig: StreamingConfig(
+                onBufferUpdated: (count) {
+                  bufferUpdateCount++;
+                  lastBufferCount = count;
+                },
+              ),
+              controller: chartController,
+              interactionConfig: const InteractionConfig(
+                enabled: true,
+                enablePan: true,
+                enableZoom: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Add initial data
+      for (int i = 0; i < 5; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+      }
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final chartFinder = find.byType(BravenChart);
+
+      // Trigger interactive mode with pan
+      await tester.drag(chartFinder, const Offset(50, 0));
+      await tester.pumpAndSettle();
+
+      // Stream more data during interaction
+      for (int i = 5; i < 10; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await tester.pumpAndSettle();
+
+      // Verify buffer accumulated data
+      expect(bufferUpdateCount, greaterThan(0), reason: 'Buffer should have been updated');
+      expect(lastBufferCount, greaterThanOrEqualTo(1), reason: 'Buffer should contain at least 1 point');
+      expect(lastBufferCount, lessThanOrEqualTo(5), reason: 'Buffer should not exceed streamed point count');
+
+      // Continue interaction with another pan
+      await tester.drag(chartFinder, const Offset(-30, 0));
+      await tester.pumpAndSettle();
+
+      final bufferCountAfterFirstPan = lastBufferCount;
+
+      // Stream even more data
+      for (int i = 10; i < 13; i++) {
+        streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      await tester.pumpAndSettle();
+
+      // Verify buffer continues to accumulate (should be more than after first pan)
+      expect(lastBufferCount, greaterThan(bufferCountAfterFirstPan), reason: 'Buffer should continue accumulating during continued interactions');
     });
   });
 }

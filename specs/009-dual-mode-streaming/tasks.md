@@ -103,7 +103,7 @@
 - [X] T032 [US2] Add interaction handlers (onHover, onTapDown, onPanStart, onScaleStart) wrapped conditionally in BravenChart.build() to call _handleInteraction when mode == ChartMode.interactive [DONE: Created _wrapWithStreamingModeInteractionDetector() for streaming mode, ValueListenableBuilder switches between modes]
 - [X] T033 [US2] Implement crosshair and tooltip rendering in interactive mode without triggering box.dart/mouse_tracker.dart errors (FR-020, SC-003) [DONE: ValueListenableBuilder pattern prevents rendering errors, crosshair/tooltip only active in interactive mode]
 - [X] T034 [US2] Add onBufferUpdated callback invocation in _bufferDataPoint when new point buffered (FR-016) [DONE: Callback invoked in _bufferDataPoint() method line 1238]
-- [ ] T035 [US2] Verify buffering works silently (no visual updates) during interaction with integration test
+- [X] T035 [US2] Verify buffering works silently (no visual updates) during interaction with integration test
 - [ ] T036 [US2] Verify zoom/pan respond within 16ms with performance benchmark (SC-004, FR-019)
 
 **Checkpoint**: At this point, both streaming AND interactive modes should work independently
