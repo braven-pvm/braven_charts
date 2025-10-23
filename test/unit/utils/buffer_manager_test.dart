@@ -28,7 +28,7 @@ void main() {
 
     test('BufferManager adds items correctly', () {
       final buffer = BufferManager<int>(maxSize: 3);
-      
+
       buffer.add(1);
       expect(buffer.length, 1);
       expect(buffer.isEmpty, false);
@@ -43,7 +43,7 @@ void main() {
 
     test('BufferManager discards oldest item when full (FIFO - FR-014)', () {
       final buffer = BufferManager<int>(maxSize: 3);
-      
+
       // Fill buffer: [1, 2, 3]
       buffer.add(1);
       buffer.add(2);
@@ -63,12 +63,12 @@ void main() {
 
     test('BufferManager removeAll returns all items in FIFO order', () {
       final buffer = BufferManager<int>(maxSize: 10);
-      
+
       buffer.add(10);
       buffer.add(20);
       buffer.add(30);
       buffer.add(40);
-      
+
       final items = buffer.removeAll();
       expect(items, [10, 20, 30, 40]); // Same order as added
       expect(buffer.length, 0);
@@ -77,7 +77,7 @@ void main() {
 
     test('BufferManager clear empties the buffer', () {
       final buffer = BufferManager<int>(maxSize: 10);
-      
+
       buffer.add(1);
       buffer.add(2);
       buffer.add(3);
@@ -101,14 +101,14 @@ void main() {
       // Adding 2nd item should discard first
       buffer.add(2);
       expect(buffer.length, 1);
-      
+
       final items = buffer.removeAll();
       expect(items, [2]); // First item (1) was discarded
     });
 
     test('BufferManager handles single-item capacity', () {
       final buffer = BufferManager<int>(maxSize: 1);
-      
+
       buffer.add(100);
       expect(buffer.length, 1);
       expect(buffer.isFull, true);
@@ -123,7 +123,7 @@ void main() {
 
     test('BufferManager works with complex objects', () {
       final buffer = BufferManager<Map<String, dynamic>>(maxSize: 2);
-      
+
       buffer.add({'x': 1.0, 'y': 10.0});
       buffer.add({'x': 2.0, 'y': 20.0});
       expect(buffer.length, 2);
@@ -149,14 +149,14 @@ void main() {
 
     test('BufferManager stress test - repeated add/removeAll cycles', () {
       final buffer = BufferManager<int>(maxSize: 5);
-      
+
       // Cycle 1: Add 5, remove all
       for (int i = 0; i < 5; i++) {
         buffer.add(i);
       }
       expect(buffer.length, 5);
       expect(buffer.isFull, true);
-      
+
       var items = buffer.removeAll();
       expect(items, [0, 1, 2, 3, 4]);
       expect(buffer.isEmpty, true);
@@ -167,7 +167,7 @@ void main() {
       buffer.add(30);
       expect(buffer.length, 3);
       expect(buffer.isFull, false);
-      
+
       items = buffer.removeAll();
       expect(items, [10, 20, 30]);
       expect(buffer.isEmpty, true);
@@ -178,7 +178,7 @@ void main() {
       }
       expect(buffer.length, 5); // Capped at max size
       expect(buffer.isFull, true);
-      
+
       items = buffer.removeAll();
       expect(items, [102, 103, 104, 105, 106]); // First 2 (100, 101) discarded
       expect(buffer.isEmpty, true);
@@ -186,15 +186,15 @@ void main() {
 
     test('BufferManager stress test - large capacity (SC-005: 10K points)', () {
       final buffer = BufferManager<int>(maxSize: 10000);
-      
+
       // Add 15,000 items (exceeds capacity)
       for (int i = 0; i < 15000; i++) {
         buffer.add(i);
       }
-      
+
       expect(buffer.length, 10000); // Capped at max size
       expect(buffer.isFull, true);
-      
+
       final items = buffer.removeAll();
       expect(items.length, 10000);
       expect(items.first, 5000); // First 5000 (0-4999) discarded

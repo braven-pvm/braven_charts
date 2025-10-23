@@ -38,8 +38,7 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('Chart starts in streaming mode with streamingConfig',
-        (WidgetTester tester) async {
+    testWidgets('Chart starts in streaming mode with streamingConfig', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -66,8 +65,7 @@ void main() {
       expect(modeChangeCount, 0);
     });
 
-    testWidgets('Hover triggers pause to interactive mode (FR-004)',
-        (WidgetTester tester) async {
+    testWidgets('Hover triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -82,9 +80,9 @@ void main() {
                 },
               ),
               controller: chartController,
-              interactionConfig: InteractionConfig(
+              interactionConfig: const InteractionConfig(
                 enabled: true,
-                crosshair: const CrosshairConfig(enabled: true),
+                crosshair: CrosshairConfig(enabled: true),
               ),
             ),
           ),
@@ -118,8 +116,7 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Click triggers pause to interactive mode (FR-004)',
-        (WidgetTester tester) async {
+    testWidgets('Click triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -134,7 +131,7 @@ void main() {
                 },
               ),
               controller: chartController,
-              interactionConfig: InteractionConfig(
+              interactionConfig: const InteractionConfig(
                 enabled: true,
               ),
             ),
@@ -161,8 +158,7 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Zoom triggers pause to interactive mode (FR-004)',
-        (WidgetTester tester) async {
+    testWidgets('Zoom triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -177,7 +173,7 @@ void main() {
                 },
               ),
               controller: chartController,
-              interactionConfig: InteractionConfig(
+              interactionConfig: const InteractionConfig(
                 enabled: true,
                 enableZoom: true,
               ),
@@ -206,8 +202,7 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Pan triggers pause to interactive mode (FR-004)',
-        (WidgetTester tester) async {
+    testWidgets('Pan triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -222,7 +217,7 @@ void main() {
                 },
               ),
               controller: chartController,
-              interactionConfig: InteractionConfig(
+              interactionConfig: const InteractionConfig(
                 enabled: true,
                 enablePan: true,
               ),
@@ -251,8 +246,7 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Multiple interactions do not trigger multiple mode changes',
-        (WidgetTester tester) async {
+    testWidgets('Multiple interactions do not trigger multiple mode changes', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -267,7 +261,7 @@ void main() {
                 },
               ),
               controller: chartController,
-              interactionConfig: InteractionConfig(
+              interactionConfig: const InteractionConfig(
                 enabled: true,
                 enableZoom: true,
                 enablePan: true,

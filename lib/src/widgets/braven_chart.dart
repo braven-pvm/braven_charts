@@ -1213,10 +1213,110 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       // Update auto-scroll viewport if enabled (T018: FR-002)
       _updateAutoScrollViewport();
     } else {
-      // Interactive mode: Buffer data silently (T029 will implement this)
-      // For now, we just don't apply the data (buffering will be added in Phase 4)
-      // TODO: Call _bufferDataPoint when T029 is implemented
+      // Interactive mode: Buffer data silently (T029: FR-006)
+      _bufferDataPoint(point);
     }
+  }
+
+  /// Buffers a data point during interactive mode (T029: FR-006, FR-013, FR-014).
+  ///
+  /// When in interactive mode, incoming stream data is buffered instead of rendered.
+  /// This enables users to explore historical data without distraction from new updates.
+  ///
+  /// **Behavior**:
+  /// - Adds point to FIFO buffer (_bufferedPoints)
+  /// - Automatically discards oldest when buffer is full (FR-014)
+  /// - Invokes StreamingConfig.onBufferUpdated callback (FR-015)
+  ///
+  /// **Related**: FR-006 (buffer in interactive), FR-013 (size limit), FR-014 (FIFO)
+  void _bufferDataPoint(ChartDataPoint point) {
+    // Add to buffer (automatically handles overflow via FIFO)
+    _bufferedPoints.add(point);
+
+    // Invoke buffer update callback if provided (FR-015)
+    widget.streamingConfig?.onBufferUpdated?.call(_bufferedPoints.length);
+  }
+
+  /// Transitions from streaming mode to interactive mode (T030: FR-004, FR-005).
+  ///
+  /// Called when user initiates ANY interaction (hover, click, zoom, pan).
+  /// This method atomically switches modes and starts the auto-resume timer.
+  ///
+  /// **Behavior**:
+  /// - Guards against redundant transitions (already in interactive mode)
+  /// - Sets _chartMode to ChartMode.interactive (triggers rebuild via ValueNotifier)
+  /// - Invokes StreamingConfig.onModeChanged callback (FR-004)
+  /// - Starts auto-resume timer with configured timeout (FR-007)
+  ///
+  /// **Related**: FR-004 (pause on interaction), FR-005 (disable interactions in streaming),
+  ///              FR-007 (configurable timeout), FR-008 (reset timer on interaction)
+  void _pauseStreaming() {
+    // Guard: Only transition if currently in streaming mode
+    if (_chartMode.value != ChartMode.streaming) return;
+
+    // Guard: Only transition if streamingConfig is provided
+    if (widget.streamingConfig == null) return;
+
+    // Transition to interactive mode (atomic operation)
+    _chartMode.value = ChartMode.interactive;
+
+    // Invoke mode changed callback (FR-004)
+    widget.streamingConfig?.onModeChanged?.call(ChartMode.interactive);
+
+    // Start auto-resume timer (FR-007, FR-009)
+    _startAutoResumeTimer();
+  }
+
+  /// Starts the auto-resume timer for returning to streaming mode after inactivity (FR-007, FR-009).
+  ///
+  /// Timer is reset on ANY user interaction while in interactive mode (FR-008).
+  /// When timer expires, chart automatically resumes streaming mode (FR-009).
+  void _startAutoResumeTimer() {
+    // Cancel any existing timer
+    _autoResumeTimer?.cancel();
+
+    // Get timeout duration from config (default 10 seconds per FR-007)
+    final timeout = widget.streamingConfig?.autoResumeTimeout ?? const Duration(seconds: 10);
+
+    // Start new timer
+    _autoResumeTimer = Timer(timeout, () {
+      // Timer expired - resume streaming mode (FR-009)
+      _resumeStreaming();
+    });
+  }
+
+  /// Resumes streaming mode from interactive mode (FR-009, FR-011).
+  ///
+  /// Called automatically after auto-resume timeout, or manually via API.
+  ///
+  /// **Behavior**:
+  /// - Applies all buffered data to chart (FR-011)
+  /// - Clears buffer
+  /// - Transitions to streaming mode
+  /// - Invokes callbacks
+  void _resumeStreaming() {
+    // Guard: Only transition if currently in interactive mode
+    if (_chartMode.value != ChartMode.interactive) return;
+
+    final controller = _getController();
+    if (controller == null) return;
+
+    // Apply all buffered data (FR-011)
+    final bufferedData = _bufferedPoints.removeAll();
+    for (final point in bufferedData) {
+      controller.addPoint('stream', point);
+    }
+
+    // Transition to streaming mode
+    _chartMode.value = ChartMode.streaming;
+
+    // Cancel auto-resume timer
+    _autoResumeTimer?.cancel();
+    _autoResumeTimer = null;
+
+    // Invoke callbacks
+    widget.streamingConfig?.onModeChanged?.call(ChartMode.streaming);
+    widget.streamingConfig?.onReturnToLive?.call();
   }
 
   /// Updates viewport for auto-scroll in streaming mode (T018: FR-002).
@@ -1607,17 +1707,26 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Wrap with mode-dependent interaction system (T019, T021: FR-005, Constitution II)
     // Uses ValueListenableBuilder to rebuild only when mode changes (no setState needed)
-    // CRITICAL: In streaming mode, NO interaction handlers are added
-    // This prevents mouse tracking errors and ensures clean streaming visualization
+    // CRITICAL: Dual-mode interaction handling (T030: FR-004 + FR-005)
+    // FR-004: Detect first interaction to trigger pause
+    // FR-005: Disable full interaction system in streaming mode
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
       chartWidget = ValueListenableBuilder<ChartMode>(
         valueListenable: _chartMode,
         builder: (context, currentMode, child) {
-          // Only wrap with interaction system in interactive mode (T019: FR-005)
+          // Interactive mode: Full interaction system enabled
           if (currentMode == ChartMode.interactive) {
             return _wrapWithInteractionSystem(child!);
           }
-          // In streaming mode, return chart without interaction handlers
+
+          // Streaming mode: Minimal interaction detector for FR-004 (pause on first interaction)
+          // Wraps chart with lightweight listeners that ONLY trigger mode switch
+          // Full interaction system disabled per FR-005
+          if (widget.streamingConfig != null) {
+            return _wrapWithStreamingModeInteractionDetector(child!);
+          }
+
+          // No streaming config: return chart without handlers
           return child!;
         },
         child: chartWidget,
@@ -1750,6 +1859,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             config.onDataPointHover?.call(null, exitPosition);
           },
           onHover: (event) {
+            // T030: Pause streaming on hover (FR-004)
+            _pauseStreaming();
+
             // Throttle the ENTIRE hover processing (calculations + state update)
             _processHoverThrottled(event.localPosition, config);
           },
@@ -1766,6 +1878,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final isShiftPressed = _isShiftPressed;
 
               if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
+                // T030: Pause streaming on zoom (FR-004)
+                _pauseStreaming();
+
                 // SHIFT + Scroll → Zoom at cursor position
                 final scrollDelta = signal.scrollDelta.dy;
                 // Zoom in when scrolling up (negative delta), zoom out when scrolling down
@@ -1801,6 +1916,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Handle middle-mouse button pan (PRIMARY pan method)
           onPointerDown: (event) {
             if (event.buttons == kMiddleMouseButton && config.enablePan) {
+              // T030: Pause streaming on pan (FR-004)
+              _pauseStreaming();
+
               _isPanningWithMiddleMouse = true;
               _panStartPosition = event.localPosition;
             }
@@ -1844,6 +1962,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         interactiveWidget = GestureDetector(
           // Handle tap for selection
           onTapDown: (details) {
+            // T030: Pause streaming on tap (FR-004)
+            _pauseStreaming();
+
             // Handle selection if enabled
             if (config.enableSelection) {
               final nearestPointData = _findNearestDataPoint(details.localPosition);
@@ -1884,6 +2005,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Otherwise use pan gestures if only pan is enabled
           onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
               ? (details) {
+                  // T030: Pause streaming on scale gesture (FR-004)
+                  _pauseStreaming();
+
                   // Track initial state for gestures
                 }
               : null,
@@ -2116,6 +2240,33 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         return interactiveWidget;
       },
+    );
+  }
+
+  /// Wraps the chart with minimal interaction detection in streaming mode (T030: FR-004).
+  ///
+  /// This is a lightweight detector that exists ONLY to catch the first user interaction
+  /// and trigger the streaming → interactive mode transition. Unlike the full interaction
+  /// system, this ONLY listens for events and calls _pauseStreaming() - no crosshair,
+  /// no tooltip, no zoom/pan processing.
+  ///
+  /// **Purpose**: Resolves FR-004 vs FR-005 conflict:
+  /// - FR-004: Must detect first interaction to pause streaming
+  /// - FR-005: Must disable all interaction handlers in streaming mode
+  ///
+  /// **Design**: Minimal event detection without full interaction processing.
+  Widget _wrapWithStreamingModeInteractionDetector(Widget child) {
+    return MouseRegion(
+      onHover: (_) => _pauseStreaming(), // Hover triggers pause (FR-004)
+      child: GestureDetector(
+        onTapDown: (_) => _pauseStreaming(), // Tap triggers pause (FR-004)
+        onScaleStart: (_) => _pauseStreaming(), // Scale/pinch/pan triggers pause (FR-004) - scale is superset of pan
+        child: Listener(
+          onPointerSignal: (_) => _pauseStreaming(), // Scroll triggers pause (FR-004)
+          onPointerDown: (_) => _pauseStreaming(), // Any pointer down triggers pause (FR-004)
+          child: child,
+        ),
+      ),
     );
   }
 

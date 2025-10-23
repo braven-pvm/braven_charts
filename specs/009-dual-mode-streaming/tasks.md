@@ -93,7 +93,7 @@
 - [X] T025 [P] [US2] Create integration test file at test/integration/pause_on_interaction_test.dart with tests for automatic pause on hover/click/zoom/pan (FR-004)
 - [X] T026 [P] [US2] Add buffer management tests to test/unit/utils/buffer_manager_test.dart for FIFO Queue operations (addLast, removeFirst, clear, length checks)
 - [X] T027 [P] [US2] Create interaction response benchmark at test/performance/interaction_benchmark.dart with test for <16ms response time (SC-004, FR-019) [NOTE: Will run after implementation]
-- [ ] T028 [P] [US2] Add golden test at test/golden/interactive_mode_golden_test.dart for crosshair/tooltip rendering
+- [ ] T028 [P] [US2] Add golden test at test/golden/interactive_mode_golden_test.dart for crosshair/tooltip rendering [DEFERRED - will add after feature works]
 
 ### Implementation for User Story 2
 
