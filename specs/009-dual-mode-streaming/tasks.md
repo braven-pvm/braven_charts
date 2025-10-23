@@ -97,12 +97,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T029 [P] [US2] Implement _bufferDataPoint method in lib/src/widgets/braven_chart.dart to add point to _bufferedPoints Queue when in interactive mode (FR-006)
-- [ ] T030 [P] [US2] Implement _pauseStreaming method in lib/src/widgets/braven_chart.dart to transition streaming→interactive atomically (set _chartMode.value = ChartMode.interactive)
-- [ ] T031 [US2] Implement _handleInteraction method in lib/src/widgets/braven_chart.dart to call _pauseStreaming on first interaction when pauseOnFirstInteraction == true (FR-004)
-- [ ] T032 [US2] Add interaction handlers (onHover, onTapDown, onPanStart, onScaleStart) wrapped conditionally in BravenChart.build() to call _handleInteraction when mode == ChartMode.interactive
-- [ ] T033 [US2] Implement crosshair and tooltip rendering in interactive mode without triggering box.dart/mouse_tracker.dart errors (FR-020, SC-003)
-- [ ] T034 [US2] Add onBufferUpdated callback invocation in _bufferDataPoint when new point buffered (FR-016)
+- [X] T029 [P] [US2] Implement _bufferDataPoint method in lib/src/widgets/braven_chart.dart to add point to _bufferedPoints Queue when in interactive mode (FR-006)
+- [X] T030 [P] [US2] Implement _pauseStreaming method in lib/src/widgets/braven_chart.dart to transition streaming→interactive atomically (set _chartMode.value = ChartMode.interactive)
+- [X] T031 [US2] Implement _handleInteraction method in lib/src/widgets/braven_chart.dart to call _pauseStreaming on first interaction when pauseOnFirstInteraction == true (FR-004) [DONE: Integrated _pauseStreaming() calls directly into interaction handlers]
+- [X] T032 [US2] Add interaction handlers (onHover, onTapDown, onPanStart, onScaleStart) wrapped conditionally in BravenChart.build() to call _handleInteraction when mode == ChartMode.interactive [DONE: Created _wrapWithStreamingModeInteractionDetector() for streaming mode, ValueListenableBuilder switches between modes]
+- [X] T033 [US2] Implement crosshair and tooltip rendering in interactive mode without triggering box.dart/mouse_tracker.dart errors (FR-020, SC-003) [DONE: ValueListenableBuilder pattern prevents rendering errors, crosshair/tooltip only active in interactive mode]
+- [X] T034 [US2] Add onBufferUpdated callback invocation in _bufferDataPoint when new point buffered (FR-016) [DONE: Callback invoked in _bufferDataPoint() method line 1238]
 - [ ] T035 [US2] Verify buffering works silently (no visual updates) during interaction with integration test
 - [ ] T036 [US2] Verify zoom/pan respond within 16ms with performance benchmark (SC-004, FR-019)
 

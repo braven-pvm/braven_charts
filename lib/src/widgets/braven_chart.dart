@@ -1239,7 +1239,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Transitions from streaming mode to interactive mode (T030: FR-004, FR-005).
   ///
-  /// Called when user initiates ANY interaction (hover, click, zoom, pan).
+  /// Called when user initiates ANY intentional interaction (click, zoom, pan).
   /// This method atomically switches modes and starts the auto-resume timer.
   ///
   /// **Behavior**:
@@ -1251,11 +1251,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// **Related**: FR-004 (pause on interaction), FR-005 (disable interactions in streaming),
   ///              FR-007 (configurable timeout), FR-008 (reset timer on interaction)
   void _pauseStreaming() {
-    // Guard: Only transition if currently in streaming mode
-    if (_chartMode.value != ChartMode.streaming) return;
-
     // Guard: Only transition if streamingConfig is provided
     if (widget.streamingConfig == null) return;
+
+    final wasInStreamingMode = _chartMode.value == ChartMode.streaming;
+
+    // If already in interactive mode, just reset the timer (FR-008)
+    if (!wasInStreamingMode) {
+      _resetAutoResumeTimer();
+      return;
+    }
 
     // Transition to interactive mode (atomic operation)
     _chartMode.value = ChartMode.interactive;
@@ -1265,6 +1270,27 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Start auto-resume timer (FR-007, FR-009)
     _startAutoResumeTimer();
+  }
+
+  /// Resets the auto-resume timer on continued interactions (FR-008).
+  ///
+  /// Called when user continues interacting while already in interactive mode.
+  /// This ensures the timer only starts counting AFTER the last interaction.
+  void _resetAutoResumeTimer() {
+    // Only reset if already in interactive mode with an active timer
+    if (_chartMode.value != ChartMode.interactive) return;
+    if (widget.streamingConfig == null) return;
+
+    // Cancel existing timer and start fresh
+    _autoResumeTimer?.cancel();
+
+    // Get timeout duration from config
+    final timeout = widget.streamingConfig?.autoResumeTimeout ?? const Duration(seconds: 10);
+
+    // Start new timer from current moment
+    _autoResumeTimer = Timer(timeout, () {
+      _resumeStreaming();
+    });
   }
 
   /// Starts the auto-resume timer for returning to streaming mode after inactivity (FR-007, FR-009).
@@ -1859,8 +1885,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             config.onDataPointHover?.call(null, exitPosition);
           },
           onHover: (event) {
-            // T030: Pause streaming on hover (FR-004)
-            _pauseStreaming();
+            // NOTE: Hover does NOT pause streaming - only intentional interactions do
+            // (click, zoom, pan, scroll). This prevents accidental stream pausing from
+            // casual mouse movement over the chart.
 
             // Throttle the ENTIRE hover processing (calculations + state update)
             _processHoverThrottled(event.localPosition, config);
@@ -1878,7 +1905,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final isShiftPressed = _isShiftPressed;
 
               if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
-                // T030: Pause streaming on zoom (FR-004)
+                // T030: Pause streaming on zoom (FR-004) or reset timer if already paused (FR-008)
                 _pauseStreaming();
 
                 // SHIFT + Scroll → Zoom at cursor position
@@ -1916,7 +1943,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Handle middle-mouse button pan (PRIMARY pan method)
           onPointerDown: (event) {
             if (event.buttons == kMiddleMouseButton && config.enablePan) {
-              // T030: Pause streaming on pan (FR-004)
+              // T030: Pause streaming on pan start (FR-004) or reset timer if already paused (FR-008)
               _pauseStreaming();
 
               _isPanningWithMiddleMouse = true;
@@ -1926,6 +1953,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
           onPointerMove: (event) {
             if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
+              // Reset timer on continued panning (FR-008)
+              _resetAutoResumeTimer();
+
               final delta = event.localPosition - _panStartPosition!;
 
               final newZoomPanState = _zoomPanController!.pan(
@@ -1962,7 +1992,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         interactiveWidget = GestureDetector(
           // Handle tap for selection
           onTapDown: (details) {
-            // T030: Pause streaming on tap (FR-004)
+            // T030: Pause streaming on tap (FR-004) or reset timer if already paused (FR-008)
             _pauseStreaming();
 
             // Handle selection if enabled
@@ -2105,6 +2135,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final key = event.logicalKey;
               if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
                 if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
+                  // T030: Pause streaming on keyboard zoom (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
                   final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -2124,6 +2157,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                   return KeyEventResult.handled;
                 } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+                  // T030: Pause streaming on keyboard zoom (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
                   final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -2152,6 +2188,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     key == LogicalKeyboardKey.arrowRight ||
                     key == LogicalKeyboardKey.arrowUp ||
                     key == LogicalKeyboardKey.arrowDown) {
+                  // T030: Pause streaming on keyboard pan (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Calculate new pan offset based on arrow direction
                   final currentPanOffset = _interactionStateNotifier.value.zoomPanState.panOffset;
                   const panAmount = 50.0; // Same as KeyboardHandler default
@@ -2247,25 +2286,28 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// This is a lightweight detector that exists ONLY to catch the first user interaction
   /// and trigger the streaming → interactive mode transition. Unlike the full interaction
-  /// system, this ONLY listens for events and calls _pauseStreaming() - no crosshair,
-  /// no tooltip, no zoom/pan processing.
+  /// system, this ONLY listens for INTENTIONAL events (clicks, scrolls, gestures) and calls
+  /// _pauseStreaming() - no crosshair, no tooltip, no zoom/pan processing.
+  ///
+  /// **CRITICAL**: Does NOT trigger on hover/mouse movement - only on deliberate user actions:
+  /// - Mouse clicks (any button)
+  /// - Touch gestures (tap, pan, zoom)
+  /// - Scroll wheel events
+  /// - Keyboard interactions
   ///
   /// **Purpose**: Resolves FR-004 vs FR-005 conflict:
-  /// - FR-004: Must detect first interaction to pause streaming
+  /// - FR-004: Must detect first INTENTIONAL interaction to pause streaming
   /// - FR-005: Must disable all interaction handlers in streaming mode
   ///
   /// **Design**: Minimal event detection without full interaction processing.
   Widget _wrapWithStreamingModeInteractionDetector(Widget child) {
-    return MouseRegion(
-      onHover: (_) => _pauseStreaming(), // Hover triggers pause (FR-004)
-      child: GestureDetector(
-        onTapDown: (_) => _pauseStreaming(), // Tap triggers pause (FR-004)
-        onScaleStart: (_) => _pauseStreaming(), // Scale/pinch/pan triggers pause (FR-004) - scale is superset of pan
-        child: Listener(
-          onPointerSignal: (_) => _pauseStreaming(), // Scroll triggers pause (FR-004)
-          onPointerDown: (_) => _pauseStreaming(), // Any pointer down triggers pause (FR-004)
-          child: child,
-        ),
+    return GestureDetector(
+      onTapDown: (_) => _pauseStreaming(), // Click triggers pause (FR-004)
+      onScaleStart: (_) => _pauseStreaming(), // Touch pan/zoom triggers pause (FR-004)
+      child: Listener(
+        onPointerSignal: (_) => _pauseStreaming(), // Scroll triggers pause (FR-004)
+        onPointerDown: (_) => _pauseStreaming(), // Any pointer down triggers pause (FR-004)
+        child: child,
       ),
     );
   }
