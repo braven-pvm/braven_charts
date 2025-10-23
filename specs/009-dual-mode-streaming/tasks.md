@@ -69,7 +69,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement _updateData method in lib/src/widgets/braven_chart.dart to check mode: if streaming apply data immediately, if interactive buffer silently (FR-006)
+- [X] T017 [US1] Implement _updateData method in lib/src/widgets/braven_chart.dart to check mode: if streaming apply data immediately, if interactive buffer silently (FR-006)
 - [ ] T018 [US1] Implement _updateAutoScrollViewport method integration in lib/src/widgets/braven_chart.dart to enable auto-scroll only in streaming mode (FR-002)
 - [ ] T019 [US1] Implement conditional widget wrapping in BravenChart.build() to remove ALL interaction handlers (GestureDetector, MouseRegion) when mode == ChartMode.streaming (FR-005)
 - [ ] T020 [US1] Add RepaintBoundary wrapper around chart CustomPaint in lib/src/widgets/braven_chart.dart for rendering isolation per Constitution II
