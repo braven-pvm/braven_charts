@@ -17,8 +17,11 @@ import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
 import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
+import 'package:braven_charts/src/models/chart_mode.dart';
+import 'package:braven_charts/src/models/streaming_config.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
+import 'package:braven_charts/src/utils/buffer_manager.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/point_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/range_annotation.dart';
@@ -93,6 +96,7 @@ class BravenChart extends StatefulWidget {
     this.controller,
     this.dataStream,
     this.autoScrollConfig,
+    this.streamingConfig,
     this.title,
     this.subtitle,
     this.showLegend = true,
@@ -462,6 +466,45 @@ class BravenChart extends StatefulWidget {
   /// )
   /// ```
   final AutoScrollConfig? autoScrollConfig;
+
+  /// Configuration for dual-mode streaming behavior (T010: FR-001 through FR-020).
+  ///
+  /// When provided, enables automatic mode switching between streaming and interactive:
+  /// - **Streaming mode**: High-frequency updates (>10Hz), interactions disabled, auto-scroll
+  /// - **Interactive mode**: Full interaction enabled, stream data buffered, auto-resume timer
+  ///
+  /// **Key Features:**
+  /// - Auto-pause on interaction (hover, click, zoom, pan) → switches to interactive mode
+  /// - Configurable auto-resume timeout (default 10s) → returns to streaming mode
+  /// - FIFO buffer for incoming data during interactive mode (default 10K points)
+  /// - Callbacks for mode changes, buffer updates, and return-to-live events
+  ///
+  /// **Example:**
+  /// ```dart
+  /// BravenChart(
+  ///   dataStream: sensorDataStream,  // Stream of ChartDataPoint
+  ///   streamingConfig: StreamingConfig(
+  ///     autoResumeTimeout: Duration(seconds: 15),
+  ///     maxBufferSize: 5000,
+  ///     onModeChanged: (mode) => print('Mode: $mode'),
+  ///     onBufferUpdated: (size, isFull) => print('Buffer: $size'),
+  ///     onReturnToLive: () => print('Resumed streaming'),
+  ///     onStreamError: (error) => print('Error: $error'),
+  ///   ),
+  ///   // ... other parameters
+  /// )
+  /// ```
+  ///
+  /// **Requirements:**
+  /// - Must provide `dataStream` when using `streamingConfig`
+  /// - Constitution II: Uses ValueNotifier pattern for >10Hz updates
+  /// - Performance: 60fps streaming, <16ms interaction, <50ms mode transitions
+  ///
+  /// **Related:**
+  /// - FR-001 to FR-020: All functional requirements
+  /// - SC-001 to SC-010: All success criteria
+  /// - Constitution II: No setState during high-frequency updates
+  final StreamingConfig? streamingConfig;
 
   // ==================== UI ELEMENTS ====================
 
