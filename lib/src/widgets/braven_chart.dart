@@ -758,6 +758,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
+    // Validation: If dataStream provided, streamingConfig must also be provided (T022: FR-002)
+    if (widget.dataStream != null && widget.streamingConfig == null) {
+      throw ArgumentError(
+        'streamingConfig is required when dataStream is provided. '
+        'Provide StreamingConfig to enable dual-mode streaming behavior.',
+      );
+    }
+
     // Initialize ValueNotifier for interaction state
     _interactionStateNotifier = ValueNotifier<InteractionState>(InteractionState.initial());
 
@@ -1189,7 +1197,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
       // TODO: Implement actual data application logic
       // For now, this is a placeholder that will be enhanced in future tasks
-      
+
       // Update auto-scroll viewport if enabled (T018: FR-002)
       _updateAutoScrollViewport();
     } else {
@@ -1217,10 +1225,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _updateAutoScrollViewport() {
     // Guard: Only auto-scroll in streaming mode
     if (_chartMode.value != ChartMode.streaming) return;
-    
+
     // Guard: Only auto-scroll if config enabled
     if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) return;
-    
+
     // TODO: Implement actual auto-scroll logic
     // This will calculate and apply viewport pan to show latest data
     // Implementation deferred to avoid breaking existing functionality
@@ -1566,9 +1574,23 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       chartWidget = Column(mainAxisSize: MainAxisSize.min, children: children);
     }
 
-    // Wrap with interaction system if enabled
+    // Wrap with mode-dependent interaction system (T019, T021: FR-005, Constitution II)
+    // Uses ValueListenableBuilder to rebuild only when mode changes (no setState needed)
+    // CRITICAL: In streaming mode, NO interaction handlers are added
+    // This prevents mouse tracking errors and ensures clean streaming visualization
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
-      chartWidget = _wrapWithInteractionSystem(chartWidget);
+      chartWidget = ValueListenableBuilder<ChartMode>(
+        valueListenable: _chartMode,
+        builder: (context, currentMode, child) {
+          // Only wrap with interaction system in interactive mode (T019: FR-005)
+          if (currentMode == ChartMode.interactive) {
+            return _wrapWithInteractionSystem(child!);
+          }
+          // In streaming mode, return chart without interaction handlers
+          return child!;
+        },
+        child: chartWidget,
+      );
     }
 
     return chartWidget;
