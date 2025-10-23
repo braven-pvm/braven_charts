@@ -1377,17 +1377,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _onControllerUpdate() {
     if (!mounted) return;
 
-    // Rebuild with new data
-    // NOTE: Controller updates don't affect interaction state (crosshair, tooltip, etc.)
-    // They update chart data/annotations which triggers rebuild via widget updates
-    // No interaction state changes needed here
-
-    // TODO: Auto-scroll feature temporarily disabled due to Flutter rendering pipeline conflicts
-    // The post-frame callback approach still triggers setState during hit testing, causing crashes.
-    // Need to implement auto-scroll using a different mechanism (e.g., animation controller-based
-    // or trigger only on user interaction, not automatic updates).
-    //
-    // See commits cac0e72, 17da7ff for previous attempts and failure analysis.
+    // Rebuild with new data from controller
+    // Controller.addPoint() -> notifyListeners() -> this callback -> setState() -> rebuild
+    // This ensures buffered points appear immediately when _resumeStreaming() adds them
+    setState(() {
+      // Data is fetched from controller in build() via _getAllSeries()
+      // No state changes needed here - just trigger rebuild
+    });
   }
 
   /// AUTO-SCROLL FEATURE TEMPORARILY DISABLED
