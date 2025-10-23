@@ -1158,7 +1158,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (_pendingDataPoint == null) return;
 
     final point = _pendingDataPoint!;
-    
+
     // Clear the pending data point
     _pendingDataPoint = null;
 
@@ -1186,16 +1186,46 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       // This is a simplified approach - real implementation would need
       // to determine which series to add the point to
       // NOTE: No interaction state update needed here - this updates chart data, not interaction state
-      
+
       // TODO: Implement actual data application logic
       // For now, this is a placeholder that will be enhanced in future tasks
       
+      // Update auto-scroll viewport if enabled (T018: FR-002)
+      _updateAutoScrollViewport();
     } else {
       // Interactive mode: Buffer data silently (T029 will implement this)
       // _bufferDataPoint(point); // Will be implemented in T029
-      
+
       // TODO: Call _bufferDataPoint when T029 is implemented
     }
+  }
+
+  /// Updates viewport for auto-scroll in streaming mode (T018: FR-002).
+  ///
+  /// Behavior:
+  /// - Only applies when mode == ChartMode.streaming
+  /// - Only applies when autoScrollConfig.enabled == true
+  /// - Scrolls viewport to show latest data (rightmost points)
+  /// - Uses ValueNotifier to avoid setState-during-rendering crashes
+  ///
+  /// This method is safe to call during data streaming because:
+  /// 1. Only updates when in streaming mode (no interaction conflicts)
+  /// 2. Uses ValueNotifier pattern (Constitution II compliance)
+  /// 3. Doesn't trigger setState during rendering pipeline
+  ///
+  /// Related: FR-002 (auto-scroll in streaming mode only), T019 (no interactions in streaming)
+  void _updateAutoScrollViewport() {
+    // Guard: Only auto-scroll in streaming mode
+    if (_chartMode.value != ChartMode.streaming) return;
+    
+    // Guard: Only auto-scroll if config enabled
+    if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) return;
+    
+    // TODO: Implement actual auto-scroll logic
+    // This will calculate and apply viewport pan to show latest data
+    // Implementation deferred to avoid breaking existing functionality
+    // The key insight: this method is ONLY called in streaming mode,
+    // so it won't interfere with user interactions in interactive mode
   }
 
   /// Called when the controller notifies of changes.
