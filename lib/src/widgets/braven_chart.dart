@@ -641,6 +641,70 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
   late final ValueNotifier<InteractionState> _interactionStateNotifier;
 
+  /// ValueNotifier for tracking current chart operating mode (FR-001, FR-002 - T007).
+  ///
+  /// This notifier manages the mutually exclusive streaming vs. interactive modes:
+  /// - ChartMode.streaming: High-frequency updates (>10Hz), interactions disabled
+  /// - ChartMode.interactive: Full interaction enabled, streaming paused
+  ///
+  /// Mode changes trigger:
+  /// - Auto-resume timer reset (FR-003)
+  /// - StreamingConfig.onModeChanged callback (FR-004)
+  /// - Conditional rendering of interaction overlays
+  ///
+  /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
+  ///
+  /// Related: Constitution II (no setState for >10Hz updates), FR-001 performance targets.
+  late final ValueNotifier<ChartMode> _chartMode;
+
+  /// Buffer manager for incoming data points during interactive mode (FR-006, FR-013, FR-014 - T008).
+  ///
+  /// When chart transitions to interactive mode (user hovers, clicks, zooms), incoming
+  /// stream data is buffered instead of being rendered immediately. This enables:
+  /// - Pause for historical analysis without data loss
+  /// - FIFO buffering with configurable max size (default 10,000 points)
+  /// - Automatic oldest-data discard when buffer is full
+  /// - Bulk application of buffered data on auto-resume or manual resume
+  ///
+  /// Buffer operations:
+  /// - add(): Append new point (discards oldest if full)
+  /// - removeAll(): Get all buffered points for bulk application
+  /// - clear(): Discard all buffered data
+  /// - isFull: Check if buffer reached capacity
+  ///
+  /// Lifecycle:
+  /// - Created in initState() with StreamingConfig.maxBufferSize
+  /// - Active only in interactive mode (ChartMode.interactive)
+  /// - Cleared on resume to streaming mode
+  /// - No disposal needed (Queue auto-managed by Dart GC)
+  ///
+  /// Related: FR-006 (buffer in interactive), FR-013 (size limit), FR-014 (FIFO),
+  ///          FR-011 (apply on resume), SC-005 (10K points performance)
+  late final BufferManager<ChartDataPoint> _bufferedPoints;
+
+  /// Auto-resume timer for returning to streaming mode after inactivity (FR-007, FR-009 - T009).
+  ///
+  /// When chart transitions to interactive mode (user hovers, zooms, pans), this timer
+  /// starts counting down. If no user interactions occur before timeout, the chart
+  /// automatically resumes streaming mode:
+  /// - Timer duration: StreamingConfig.autoResumeTimeout (default 10 seconds)
+  /// - Timer reset: On ANY user interaction (hover, click, zoom, pan) per FR-008
+  /// - On timeout: Apply buffered data + switch to streaming mode + invoke callbacks
+  ///
+  /// Timer lifecycle:
+  /// - Created when transitioning FROM streaming TO interactive mode
+  /// - Canceled and restarted on each user interaction while in interactive mode
+  /// - Canceled when manually resuming or disposing widget
+  /// - Canceled in dispose() to prevent memory leaks
+  ///
+  /// Related callbacks invoked on timeout:
+  /// - StreamingConfig.onModeChanged(ChartMode.streaming)
+  /// - StreamingConfig.onReturnToLive()
+  ///
+  /// Related: FR-007 (configurable timeout), FR-008 (reset on interaction),
+  ///          FR-009 (auto-resume), FR-011 (apply buffered data), SC-006 (100ms resume)
+  Timer? _autoResumeTimer;
+
   /// Tracks if currently panning with middle-mouse button.
   bool _isPanningWithMiddleMouse = false;
 
@@ -696,6 +760,18 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Initialize ValueNotifier for interaction state
     _interactionStateNotifier = ValueNotifier<InteractionState>(InteractionState.initial());
+
+    // Initialize dual-mode streaming state (T011: FR-002, FR-003)
+    // Determine initial mode: streaming if streamingConfig provided, interactive otherwise
+    final initialMode = (widget.streamingConfig != null) ? ChartMode.streaming : ChartMode.interactive;
+    _chartMode = ValueNotifier<ChartMode>(initialMode);
+
+    // Initialize buffer manager with configured max size (default 10K points)
+    final bufferSize = widget.streamingConfig?.maxBufferSize ?? 10000;
+    _bufferedPoints = BufferManager<ChartDataPoint>(maxSize: bufferSize);
+
+    // Auto-resume timer initialized as null - created when transitioning to interactive mode
+    _autoResumeTimer = null;
 
     // Initialize zoom animation controller (250ms for smooth transitions)
     _zoomAnimationController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this)
@@ -895,6 +971,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Dispose ValueNotifier (after all timers and controllers)
     _interactionStateNotifier.dispose();
+
+    // Dispose dual-mode streaming resources
+    _autoResumeTimer?.cancel();
+    _autoResumeTimer = null;
+    _chartMode.dispose();
+    // Note: _bufferedPoints has no dispose method (Queue is GC-managed)
 
     super.dispose();
   }

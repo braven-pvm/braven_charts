@@ -15,9 +15,6 @@ export 'src/coordinates/universal_coordinate_transformer.dart';
 export 'src/coordinates/viewport_state.dart';
 // Foundation Layer - Core data structures and utilities
 export 'src/foundation/foundation.dart';
-// Models Layer - Chart configuration and state models
-export 'src/models/chart_mode.dart';
-export 'src/models/streaming_config.dart';
 // Interaction Layer - User interaction system (Layer 7)
 export 'src/interaction/interaction_callbacks.dart';
 export 'src/interaction/models/crosshair_config.dart';
@@ -26,6 +23,9 @@ export 'src/interaction/models/interaction_config.dart';
 export 'src/interaction/models/interaction_state.dart';
 export 'src/interaction/models/tooltip_config.dart';
 export 'src/interaction/models/zoom_pan_state.dart';
+// Models Layer - Chart configuration and state models
+export 'src/models/chart_mode.dart';
+export 'src/models/streaming_config.dart';
 // Theming Layer - Chart themes and styling
 export 'src/theming/chart_theme.dart';
 // Widgets Layer - User-facing chart widgets (Layer 5)
