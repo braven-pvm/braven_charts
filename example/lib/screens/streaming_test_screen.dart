@@ -61,7 +61,7 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
       _statusMessage = 'Streaming active - generating data...';
     });
 
-    _dataTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    _dataTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (!_dataStreamController.isClosed) {
         // Generate sine wave data point
         final y = 50 + 30 * math.sin(_currentX * 0.1);
@@ -170,7 +170,7 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
                     series: const [],
                     dataStream: _dataStreamController.stream,
                     streamingConfig: StreamingConfig(
-                      maxBufferSize: 100,
+                      maxBufferSize: 100, // Must be >= maxVisiblePoints (150), using 2x for buffering headroom
                       autoResumeTimeout: const Duration(seconds: 5),
                       onModeChanged: (mode) {
                         setState(() {

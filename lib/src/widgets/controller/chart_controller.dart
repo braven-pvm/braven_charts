@@ -52,7 +52,13 @@ class ChartController extends ChangeNotifier {
       'Cannot add point with NaN or infinity coordinates',
     );
 
-    _seriesData.putIfAbsent(seriesId, () => []).add(point);
+    final series = _seriesData.putIfAbsent(seriesId, () => []);
+    series.add(point);
+
+    // DEBUG: Log data additions
+    print(
+        '📊 [ChartController.addPoint] series="$seriesId" x=${point.x.toStringAsFixed(1)} y=${point.y.toStringAsFixed(1)} | Total points: ${series.length} | Range: ${series.first.x.toStringAsFixed(1)} to ${series.last.x.toStringAsFixed(1)}');
+
     notifyListeners();
   }
 
@@ -64,7 +70,12 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData[seriesId];
     if (series == null || series.isEmpty) return;
 
-    series.removeAt(0);
+    final removedPoint = series.removeAt(0);
+
+    // DEBUG: Log data deletion
+    print(
+        '🗑️  [ChartController.removeOldestPoint] series="$seriesId" DELETED x=${removedPoint.x.toStringAsFixed(1)} | Remaining: ${series.length} points');
+
     notifyListeners();
   }
 
@@ -76,7 +87,12 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData[seriesId];
     if (series == null) return;
 
+    final count = series.length;
     series.clear();
+
+    // DEBUG: Log series clearing
+    print('🧹 [ChartController.clearSeries] series="$seriesId" CLEARED $count points');
+
     notifyListeners();
   }
 
@@ -101,9 +117,7 @@ class ChartController extends ChangeNotifier {
   ///
   /// Notifies listeners after the annotation is added.
   String addAnnotation(ChartAnnotation annotation) {
-    final id = annotation.id.isEmpty
-        ? 'annotation_${_annotationIdCounter++}'
-        : annotation.id;
+    final id = annotation.id.isEmpty ? 'annotation_${_annotationIdCounter++}' : annotation.id;
 
     _annotations[id] = annotation;
     notifyListeners();

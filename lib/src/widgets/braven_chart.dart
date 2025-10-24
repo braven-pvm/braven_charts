@@ -1286,6 +1286,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       // Use 'stream' as the default series ID for streamed data
       controller.addPoint('stream', point);
 
+      // DO NOT delete historic data - user should be able to pan through all data
+      // The auto-scroll calculation will handle showing only the most recent points
+      // in the viewport, but all data remains available for manual exploration
+
       // Update auto-scroll viewport if enabled (T018: FR-002)
       _updateAutoScrollViewport();
     } else {
@@ -1490,10 +1494,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// scrolls out of view on the left edge, creating a smooth real-time monitoring experience.
   ///
   /// **Behavior:**
-  /// - Preserves user's current zoom level (only adjusts pan offset)
-  /// - Shows the most recent maxVisiblePoints at the right edge
+  /// - Adjusts BOTH zoom and pan to create sliding window effect
+  /// - Zoom level calculated to make maxVisiblePoints fill the viewport
+  /// - Pan offset calculated to show the most recent maxVisiblePoints at right edge
   /// - Older data scrolls off the left edge of viewport
-  /// - Creates a moving window effect for continuous data streams
+  /// - Creates a moving window where new data always fills the viewport
   ///
   /// Returns null if auto-scroll is not needed or calculations fail validation.
   /// This method performs extensive safety checks to prevent rendering issues.
@@ -1520,11 +1525,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Get current zoom/pan state (preserve user's zoom level)
+    // Get current zoom/pan state for Y-axis only (X will be recalculated)
     final currentZoomState = _interactionStateNotifier.value.zoomPanState;
 
     // SAFETY: Validate current zoom state
-    if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
+    if (!currentZoomState.zoomLevelY.isFinite) {
       return null;
     }
 
@@ -1535,8 +1540,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (chartRect.width <= 0 || !chartRect.width.isFinite) return null;
     if (chartRect.height <= 0 || !chartRect.height.isFinite) return null;
 
-    // Calculate data bounds (all data points)
-    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
+    // Calculate RAW data bounds (WITHOUT zoom/pan transformations)
+    // CRITICAL: We need the ACTUAL full data range to calculate zoom properly
+    // _calculateDataBounds() applies current zoom/pan state which gives wrong results
+    final bounds = _calculateRawDataBounds(allSeries);
     final dataRangeX = bounds.maxX - bounds.minX;
 
     // SAFETY: Validate data range (prevent division by zero and NaN)
@@ -1547,34 +1554,102 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // SAFETY: Validate bounds are reasonable
     if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return null;
 
-    // Calculate the data range that should be visible (in data coordinates)
-    // This is the "window size" in data units
-    // We want to show maxVisiblePoints worth of data at the current zoom level
+    // === SLIDING WINDOW - RIGHTMOST N POINTS ===
+    // Goal: Show exactly the rightmost maxVisiblePoints (e.g., 150 points) filling the viewport
+    // All historic data is preserved - user can pan back through entire dataset
+    //
+    // Approach:
+    // - Calculate zoom so that targetVisibleRangeX (150 X-units) fills the viewport
+    // - Pan to show the rightmost portion of the data
+    // - During initial fill (< 150 points), show entire buffer
+    // - Once buffer has >= 150 points, show rightmost 150
+    //
+    // Result:
+    // - Zoom is CONSTANT (based on targetVisibleRangeX, not buffer size)
+    // - Historic data is preserved for manual panning
+    // - Auto-scroll smoothly tracks newest data
+
     final dataPointsToShow = config.maxVisiblePoints.toDouble();
-    final totalDataPoints = maxPointCount.toDouble();
 
-    // Calculate the X-range per data point (assuming uniform spacing)
-    final xRangePerPoint = dataRangeX / totalDataPoints;
+    // Calculate X-spacing from actual data
+    double xRangePerPoint = 1.0;
+    if (allSeries.isNotEmpty && allSeries.first.points.length >= 2) {
+      final firstSeries = allSeries.first;
+      final sortedData = List<ChartDataPoint>.from(firstSeries.points)..sort((a, b) => a.x.compareTo(b.x));
 
-    // Calculate the visible data range (in data coordinates)
-    final visibleDataRangeX = xRangePerPoint * dataPointsToShow;
+      double totalSpacing = 0;
+      int spacingCount = 0;
+      for (int i = 1; i < sortedData.length && i < 10; i++) {
+        final spacing = (sortedData[i].x - sortedData[i - 1].x).abs();
+        if (spacing > 0 && spacing.isFinite) {
+          totalSpacing += spacing;
+          spacingCount++;
+        }
+      }
+      if (spacingCount > 0) {
+        xRangePerPoint = totalSpacing / spacingCount;
+      }
+    }
 
-    // SAFETY: Validate visible data range
-    if (!visibleDataRangeX.isFinite || visibleDataRangeX <= 0) return null;
+    // The DESIRED visible X-range (constant: 150 X-units)
+    final targetVisibleRangeX = xRangePerPoint * dataPointsToShow; // e.g., 150.0
+    if (!targetVisibleRangeX.isFinite || targetVisibleRangeX <= 0) return null;
 
-    // Calculate where the visible window should start (in data coordinates)
-    // We want to show the LAST N points, so window starts at (maxX - visibleDataRangeX)
-    final visibleWindowStartX = bounds.maxX - visibleDataRangeX;
+    // Calculate zoom: how much to zoom so targetVisibleRangeX fills the viewport
+    // At zoom=1.0, the entire dataRangeX would fill viewport
+    // We want targetVisibleRangeX (150 units) to fill viewport instead
+    //
+    // Formula: zoom = dataRangeX / targetVisibleRangeX
+    //
+    // Examples:
+    // - dataRangeX = 50 units, targetVisibleRangeX = 150 → zoom = 0.33x (show all data during initial fill)
+    // - dataRangeX = 150 units, targetVisibleRangeX = 150 → zoom = 1.0x (perfect fit)
+    // - dataRangeX = 450 units, targetVisibleRangeX = 150 → zoom = 3.0x (zoomed in, show rightmost 150 units)
+    //
+    // This zoom value, combined with pan, ensures exactly 150 units are visible
+    final calculatedZoom = dataRangeX / targetVisibleRangeX;
 
-    // Calculate how much we need to pan to show this window
-    // Pan offset shifts the coordinate system: negative pan = scroll left (show right data)
-    // The visible window starts at visibleWindowStartX, but we want it to start at bounds.minX
-    // So we need to shift by (visibleWindowStartX - bounds.minX) in data coordinates
+    if (!calculatedZoom.isFinite || calculatedZoom <= 0) return null;
+    final clampedZoomX = calculatedZoom.clamp(0.1, 100.0);
 
-    // Convert data shift to pixel offset at current zoom level
-    // Pixel offset = (data shift / data range) * chart width * zoom level
-    final dataShift = visibleWindowStartX - bounds.minX;
-    final panOffsetX = -(dataShift / dataRangeX) * chartRect.width * currentZoomState.zoomLevelX;
+    // Show the NEWEST targetVisibleRangeX (150 units) from the buffer
+    // Window end = rightmost point in buffer
+    // Window start = end - 150 units
+    final windowEnd = bounds.maxX;
+    final windowStart = windowEnd - targetVisibleRangeX;
+
+    // CRITICAL: Clamp window start to buffer bounds to prevent showing empty space
+    // If buffer is smaller than targetVisibleRangeX, show entire buffer
+    final clampedWindowStart = windowStart < bounds.minX ? bounds.minX : windowStart;
+
+    // === CRITICAL FIX: Pan offset calculation ===
+    // Pan offset is stored in PIXEL units and gets divided by zoom when applied (line 2832)
+    //
+    // The zoom/pan system (line 2822-2837):
+    // 1. centerX = (dataMinX + dataMaxX) / 2  -- center of FULL data range
+    // 2. rangeX = dataRangeX / zoom  -- visible range after zoom
+    // 3. panDataX = -panX * (dataRangeX / width)  -- pan in data units (NEGATED!)
+    // 4. minX = centerX - rangeX/2 + panDataX  -- visible window
+    //
+    // Natural center (pan=0): centerX = (0 + 291) / 2 = 145.5
+    // Desired center (rightmost): bounds.maxX - targetVisibleRangeX/2 = 291 - 75 = 216
+    // Shift needed: 216 - 145.5 = 70.5 = (dataRangeX - targetVisibleRangeX) / 2
+    //
+    // This shift should be CONSTANT once we have >150 points!
+    // Convert to pixels and negate (because panDataX = -panX):
+    final shiftInDataUnits = (dataRangeX - targetVisibleRangeX) / 2;
+    final panOffsetX = -(shiftInDataUnits / dataRangeX) * chartRect.width;
+
+    // DEBUG
+    debugPrint('\n🎯 [AutoScroll - Rightmost Window (No Data Deletion)]');
+    debugPrint('  Buffer: $maxPointCount points (all historic data preserved)');
+    debugPrint('  Buffer X-range: ${dataRangeX.toStringAsFixed(1)} units (${bounds.minX.toStringAsFixed(1)} to ${bounds.maxX.toStringAsFixed(1)})');
+    debugPrint('  Target visible: ${targetVisibleRangeX.toStringAsFixed(1)} X-units (${dataPointsToShow.toInt()} points)');
+    debugPrint(
+        '  Calculated zoom: ${calculatedZoom.toStringAsFixed(3)} (${dataRangeX.toStringAsFixed(1)} / ${targetVisibleRangeX.toStringAsFixed(1)})');
+    debugPrint('  Desired window: ${windowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+    debugPrint('  Clamped window: ${clampedWindowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+    debugPrint('  Pan offset: ${panOffsetX.toStringAsFixed(1)} px');
 
     // SAFETY: Validate final pan offset (must be finite and reasonable)
     if (!panOffsetX.isFinite) {
@@ -1585,8 +1660,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final maxReasonablePan = chartRect.width * 100.0; // Allow larger pans for streaming
     if (panOffsetX.abs() > maxReasonablePan) return null;
 
-    // Return the new zoom/pan state (KEEP current zoom level, only update pan)
+    // Return the new zoom/pan state with BOTH zoom and pan updated
     return currentZoomState.copyWith(
+      zoomLevelX: clampedZoomX,
       panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
     );
   }
@@ -2673,6 +2749,41 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Calculates data bounds for all series.
   ///
   /// Same logic as _BravenChartPainter._calculateDataBounds - MUST include zoom/pan!
+  /// Calculates RAW data bounds without any zoom/pan transformations.
+  ///
+  /// This method returns the actual min/max values from the dataset,
+  /// which is essential for auto-scroll to determine the full data range.
+  /// Use this instead of _calculateDataBounds() when you need the complete
+  /// data range regardless of current zoom/pan state.
+  _DataBounds _calculateRawDataBounds(List<ChartSeries> series) {
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final s in series) {
+      for (final point in s.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    // Ensure valid bounds even for empty or single-point datasets
+    if (minX == double.infinity) minX = 0;
+    if (maxX == double.negativeInfinity) maxX = 1;
+    if (minY == double.infinity) minY = 0;
+    if (maxY == double.negativeInfinity) maxY = 1;
+
+    // Add padding for Y-axis
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
+
+    return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+
   _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect}) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
