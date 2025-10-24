@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 ///
 /// **Key Features:**
 /// - Automatic streaming mode on chart load
-/// - Simple Stream<ChartDataPoint> configuration
+/// - Simple `Stream<ChartDataPoint>` configuration
 /// - Default StreamingConfig with 10-second timeout
 /// - No manual mode control needed
 ///
