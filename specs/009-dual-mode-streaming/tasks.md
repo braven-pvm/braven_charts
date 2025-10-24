@@ -172,8 +172,8 @@
 
 ### Tests for User Story 5 - WRITE THESE FIRST, ENSURE THEY FAIL
 
-- [ ] T059 [P] [US5] Create integration test file at test/integration/buffer_status_test.dart with tests for onBufferUpdated callback accuracy
-- [ ] T060 [P] [US5] Add buffer overflow test to test/integration/buffer_status_test.dart with test for forced auto-resume when reaching maxBufferSize (FR-014, SC-005)
+- [X] T059 [P] [US5] Create integration test file at test/integration/buffer_status_test.dart with tests for onBufferUpdated callback accuracy - 5 tests created, all failing as expected
+- [X] T060 [P] [US5] Add buffer overflow test to test/integration/buffer_status_test.dart with test for forced auto-resume when reaching maxBufferSize (FR-014, SC-005) - Included in T059
 - [ ] T061 [P] [US5] Add memory stability test to test/performance/streaming_benchmark.dart with test for no unbounded growth during 1-hour session (SC-009)
 
 ### Implementation for User Story 5
