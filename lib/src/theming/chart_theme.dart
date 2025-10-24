@@ -1,12 +1,13 @@
 // Copyright (c) 2025 Braven Charts
 // Licensed under the MIT License
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ScrollbarTheme;
 
 import 'components/animation_theme.dart';
 import 'components/axis_style.dart';
 import 'components/grid_style.dart';
 import 'components/interaction_theme.dart';
+import 'components/scrollbar_theme.dart';
 import 'components/series_theme.dart';
 import 'components/typography_theme.dart';
 
@@ -49,6 +50,7 @@ class ChartTheme {
     required this.interactionTheme,
     required this.typographyTheme,
     required this.animationTheme,
+    required this.scrollbarTheme,
   }) : assert(borderWidth >= 0, 'borderWidth must be >= 0');
 
   /// Creates a theme from a JSON map.
@@ -68,6 +70,8 @@ class ChartTheme {
           json['typographyTheme'] as Map<String, dynamic>),
       animationTheme: AnimationTheme.fromJson(
           json['animationTheme'] as Map<String, dynamic>),
+      scrollbarTheme: ScrollbarTheme.fromJson(
+          json['scrollbarTheme'] as Map<String, dynamic>),
     );
   }
   // ========== Chart-Level Properties ==========
@@ -105,6 +109,9 @@ class ChartTheme {
   /// Animation settings (durations, curves).
   final AnimationTheme animationTheme;
 
+  /// Styling for scrollbars.
+  final ScrollbarTheme scrollbarTheme;
+
   // ========== Predefined Themes ==========
 
   static final ChartTheme defaultLight = ChartTheme(
@@ -118,6 +125,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.defaultLight,
     typographyTheme: TypographyTheme.defaultLight,
     animationTheme: AnimationTheme.defaultLight,
+    scrollbarTheme: ScrollbarTheme.defaultLight,
   );
 
   static final ChartTheme defaultDark = ChartTheme(
@@ -131,6 +139,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.defaultDark,
     typographyTheme: TypographyTheme.defaultDark,
     animationTheme: AnimationTheme.defaultDark,
+    scrollbarTheme: ScrollbarTheme.defaultDark,
   );
 
   static final ChartTheme corporateBlue = ChartTheme(
@@ -144,6 +153,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.corporateBlue,
     typographyTheme: TypographyTheme.corporateBlue,
     animationTheme: AnimationTheme.corporateBlue,
+    scrollbarTheme: ScrollbarTheme.defaultLight,
   );
 
   static final ChartTheme vibrant = ChartTheme(
@@ -157,6 +167,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.vibrant,
     typographyTheme: TypographyTheme.vibrant,
     animationTheme: AnimationTheme.vibrant,
+    scrollbarTheme: ScrollbarTheme.defaultLight,
   );
 
   static final ChartTheme minimal = ChartTheme(
@@ -170,6 +181,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.minimal,
     typographyTheme: TypographyTheme.minimal,
     animationTheme: AnimationTheme.minimal,
+    scrollbarTheme: ScrollbarTheme.defaultLight,
   );
 
   static final ChartTheme highContrast = ChartTheme(
@@ -183,6 +195,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.highContrast,
     typographyTheme: TypographyTheme.highContrast,
     animationTheme: AnimationTheme.highContrast,
+    scrollbarTheme: ScrollbarTheme.highContrast,
   );
 
   static final ChartTheme colorblindFriendly = ChartTheme(
@@ -196,6 +209,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.colorblindFriendly,
     typographyTheme: TypographyTheme.colorblindFriendly,
     animationTheme: AnimationTheme.colorblindFriendly,
+    scrollbarTheme: ScrollbarTheme.defaultLight,
   );
 
   // ========== Methods ==========
@@ -212,6 +226,7 @@ class ChartTheme {
     InteractionTheme? interactionTheme,
     TypographyTheme? typographyTheme,
     AnimationTheme? animationTheme,
+    ScrollbarTheme? scrollbarTheme,
   }) {
     return ChartTheme(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -224,6 +239,7 @@ class ChartTheme {
       interactionTheme: interactionTheme ?? this.interactionTheme,
       typographyTheme: typographyTheme ?? this.typographyTheme,
       animationTheme: animationTheme ?? this.animationTheme,
+      scrollbarTheme: scrollbarTheme ?? this.scrollbarTheme,
     );
   }
 
@@ -246,6 +262,7 @@ class ChartTheme {
       'interactionTheme': interactionTheme.toJson(),
       'typographyTheme': typographyTheme.toJson(),
       'animationTheme': animationTheme.toJson(),
+      'scrollbarTheme': scrollbarTheme.toJson(),
     };
   }
 
@@ -265,7 +282,8 @@ class ChartTheme {
         seriesTheme == other.seriesTheme &&
         interactionTheme == other.interactionTheme &&
         typographyTheme == other.typographyTheme &&
-        animationTheme == other.animationTheme;
+        animationTheme == other.animationTheme &&
+        scrollbarTheme == other.scrollbarTheme;
   }
 
   @override
@@ -281,6 +299,7 @@ class ChartTheme {
       interactionTheme,
       typographyTheme,
       animationTheme,
+      scrollbarTheme,
     );
   }
 
