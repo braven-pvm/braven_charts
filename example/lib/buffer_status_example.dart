@@ -282,17 +282,18 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '// Track buffer count\n'
-                        'StreamingConfig(\n'
-                        '  onBufferUpdated: (count) {\n'
-                        '    setState(() => bufferCount = count);\n'
-                        '  },\n'
-                        ')\n\n'
-                        '// "Return to Live" button\n'
-                        'ElevatedButton(\n'
-                        '  onPressed: () => controller.resumeStreaming(),\n'
-                        '  child: Text("Return to Live (\\$bufferCount)"),\n'
-                        ')',
+                        r'''// Track buffer count
+StreamingConfig(
+  onBufferUpdated: (count) {
+    setState(() => bufferCount = count);
+  },
+)
+
+// "Return to Live" button
+ElevatedButton(
+  onPressed: () => controller.resumeStreaming(),
+  child: Text("Return to Live ($bufferCount)"),
+)''',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontFamily: 'monospace',
                             ),
