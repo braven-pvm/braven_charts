@@ -32,6 +32,8 @@ export 'src/models/streaming_config.dart';
 export 'src/theming/chart_theme.dart';
 // Controllers - Programmatic control
 export 'src/widgets/controller/streaming_controller.dart';
+// Scrollbar Layer - Dual-purpose scrollbars (Layer 10)
+export 'src/widgets/scrollbar/scrollbar_controller.dart';
 // Widgets Layer - User-facing chart widgets (Layer 5)
 export 'src/widgets/widgets.dart';
 

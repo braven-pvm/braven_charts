@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'scrollbar_config.dart';
 
 /// Theme for both X and Y axis scrollbars (7th component of ChartTheme).
@@ -8,6 +9,15 @@ import 'scrollbar_config.dart';
 /// AxisStyle, SeriesTheme, InteractionTheme, TypographyTheme, AnimationTheme).
 @immutable
 class ScrollbarTheme {
+  /// Deserialize from JSON.
+  factory ScrollbarTheme.fromJson(Map<String, dynamic> json) => ScrollbarTheme(
+        xAxisScrollbar: ScrollbarConfig.fromJson(
+          json['xAxisScrollbar'] as Map<String, dynamic>,
+        ),
+        yAxisScrollbar: ScrollbarConfig.fromJson(
+          json['yAxisScrollbar'] as Map<String, dynamic>,
+        ),
+      );
   const ScrollbarTheme({
     required this.xAxisScrollbar,
     required this.yAxisScrollbar,
@@ -63,22 +73,9 @@ class ScrollbarTheme {
         'yAxisScrollbar': yAxisScrollbar.toJson(),
       };
 
-  /// Deserialize from JSON.
-  factory ScrollbarTheme.fromJson(Map<String, dynamic> json) => ScrollbarTheme(
-        xAxisScrollbar: ScrollbarConfig.fromJson(
-          json['xAxisScrollbar'] as Map<String, dynamic>,
-        ),
-        yAxisScrollbar: ScrollbarConfig.fromJson(
-          json['yAxisScrollbar'] as Map<String, dynamic>,
-        ),
-      );
-
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ScrollbarTheme &&
-          xAxisScrollbar == other.xAxisScrollbar &&
-          yAxisScrollbar == other.yAxisScrollbar;
+      identical(this, other) || other is ScrollbarTheme && xAxisScrollbar == other.xAxisScrollbar && yAxisScrollbar == other.yAxisScrollbar;
 
   @override
   int get hashCode => Object.hash(xAxisScrollbar, yAxisScrollbar);
