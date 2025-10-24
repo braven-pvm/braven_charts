@@ -194,8 +194,8 @@
 
 **Purpose**: Handle stream errors, edge cases, and error conditions per clarifications
 
-- [ ] T069 [P] Create integration test file at test/integration/stream_error_test.dart with tests for onStreamError callback invocation
-- [ ] T070 [P] Create integration test file at test/integration/edge_cases_test.dart with tests for all edge cases from spec.md (no stream configured, buffer overflow, rapid mode switches, stream ends, hot reload)
+- [X] T069 [P] Create integration test file at test/integration/stream_error_test.dart with tests for onStreamError callback invocation - 6 tests created (5 failing, 1 passing)
+- [X] T070 [P] Create integration test file at test/integration/edge_cases_test.dart with tests for all edge cases from spec.md (no stream configured, buffer overflow, rapid mode switches, stream ends, hot reload) - 7 tests created
 - [ ] T071 Add stream error handling to data reception in lib/src/widgets/braven_chart.dart to catch errors and invoke onStreamError callback immediately (FR-017a, no retry per clarification Q2)
 - [ ] T072 Add validation to prevent data updates when stream not configured (default to interactive mode per FR-003)
 - [ ] T073 Add race condition prevention to mode transitions in lib/src/widgets/braven_chart.dart with idempotent guards on _pauseStreaming and _resumeStreaming
