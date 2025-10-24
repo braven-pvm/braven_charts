@@ -104,7 +104,7 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
   Handle is clamped to minHandleSize (default 20px). Position calculations compensate for this constraint - user can still pan through entire dataset, but handle won't shrink below minimum for usability.
 
 - **What happens when user rapidly drags scrollbar during active chart animation?**  
-  Viewport updates are throttled to 60 FPS maximum. Chart animation pauses during scrollbar interaction, resumes when drag ends. No competing animations to prevent visual conflict.
+  Viewport updates are throttled to 60 FPS maximum. Chart animation pauses during scrollbar interaction, resumes when drag ends. No competing animations to prevent visual conflict. If user initiates new scrollbar interaction while previous animation is running, the active animation cancels immediately (0ms) and new interaction takes precedence - no animation queueing or overlap.
 
 - **What happens when viewport is programmatically updated (not by scrollbar)?**  
   Scrollbar reactively updates handle position/size to reflect new ViewportState. System prevents infinite update loops by comparing old vs new viewport before triggering changes.
@@ -135,17 +135,17 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 
 - **FR-005**: Scrollbar handle position MUST represent viewport offset within data using formula: `handlePosition = (viewportMin - dataMin) / (dataMax - dataMin) * (trackLength - handleSize)` with clamping to [0, trackLength - handleSize]
 
-- **FR-006**: Users MUST be able to drag scrollbar handle center to pan viewport (scroll through data) while maintaining current zoom level
+- **FR-006**: Users MUST be able to drag scrollbar handle center to pan viewport (scroll through data) while maintaining current zoom level. Handle position updates immediately during drag (no animation) with sub-frame latency (<16ms) to maintain direct manipulation feel.
 
-- **FR-007**: Users MUST be able to click scrollbar track (outside handle) to jump viewport to that position, with handle animating to clicked position over 300ms with ease-out curve
+- **FR-007**: Users MUST be able to click scrollbar track (outside handle) to jump viewport to that position, with handle animating to clicked position over 300ms using ease-out curve (Curves.easeOut in Flutter). All scrollbar animations (hover transitions, focus transitions, active state transitions) MUST use ease-in-out curve (Curves.easeInOut) for smooth, natural motion.
 
-- **FR-008**: Users MUST be able to drag left/top edge of scrollbar handle to zoom by adjusting viewport minimum while keeping maximum fixed (anchor right/bottom)
+- **FR-008**: Users MUST be able to drag left/top edge of scrollbar handle to zoom by adjusting viewport minimum while keeping maximum fixed (anchor right/bottom). Edge interaction zone is defined as 8.0 logical pixels from handle boundary (per US3-AS4), with resize cursor (↔ or ↕) appearing when cursor enters this zone.
 
-- **FR-009**: Users MUST be able to drag right/bottom edge of scrollbar handle to zoom by adjusting viewport maximum while keeping minimum fixed (anchor left/top)
+- **FR-009**: Users MUST be able to drag right/bottom edge of scrollbar handle to zoom by adjusting viewport maximum while keeping minimum fixed (anchor left/top). Edge interaction zone is defined as 8.0 logical pixels from handle boundary (per US3-AS4), with resize cursor (↔ or ↕) appearing when cursor enters this zone.
 
-- **FR-010**: System MUST enforce minimum handle size (default 20px, configurable) to maintain usability, adjusting position calculations to compensate when theoretical handle size would be smaller
+- **FR-010**: System MUST enforce minimum handle size (default 20px, configurable) to maintain usability, adjusting position calculations to compensate when theoretical handle size would be smaller. Visual clipping/overflow behavior: handle is always rendered fully within scrollbar track bounds - no partial rendering or overflow outside track area.
 
-- **FR-011**: System MUST enforce maximum zoom ratio (default 100x, configurable) by preventing handle resize beyond minimum percentage of track length
+- **FR-011**: System MUST enforce maximum zoom ratio (default 100x, configurable) by preventing handle resize beyond minimum percentage of track length. When user attempts to resize handle beyond maximum zoom limit, handle size clamps at minimum and cursor changes to 'not-allowed', with handle flashing once (opacity 0.8 → 0.4 → 0.8 over 200ms) to indicate zoom limit reached.
 
 - **FR-012**: System MUST enforce minimum zoom ratio (default 0.1x, configurable) by preventing handle resize beyond maximum percentage of track length
 
@@ -153,7 +153,14 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 
 - **FR-014**: Scrollbar interactions MUST update ViewportState via onViewportChanged callback, using ViewportState.withRanges() method to create new immutable state
 
-- **FR-015**: Scrollbar rendering MUST NOT modify TransformContext.chartAreaBounds - scrollbar must render in separate layout region outside chart canvas
+- **FR-015**: Scrollbar rendering MUST NOT modify TransformContext.chartAreaBounds - scrollbar must render in separate layout region outside chart canvas. Scrollbar stacking order (z-index) MUST place scrollbar above chart canvas elements (data points, lines, axes) but below interactive overlays (tooltips, context menus) to prevent obscuring critical UI.
+
+- **FR-015A**: When both X-axis and Y-axis scrollbars are visible simultaneously, the bottom-right corner MUST handle overlap with the following specification:
+  - Corner area (12.0px × 12.0px square where scrollbars meet) renders as neutral background matching chart container
+  - X-axis scrollbar track extends to right edge of chart canvas (not shortened for Y-scrollbar)
+  - Y-axis scrollbar track extends to bottom edge of chart canvas (not shortened for X-scrollbar)
+  - Both scrollbar tracks render with 0.5 opacity in overlap area to show both tracks visually
+  - No gap between scrollbars - seamless corner appearance
 
 - **FR-016**: Scrollbar MUST work independently on X and Y axes - dragging one scrollbar only updates that axis dimension in ViewportState
 
@@ -165,15 +172,61 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 
 - **FR-020**: Scrollbar MUST fire InteractionConfig.onZoomChanged callback when handle resize completes (onDragEnd) with zoom ratio change
 
-- **FR-021**: Scrollbar MUST display cursor changes: resize arrows (↔ or ↕) for edges, grab hand for center, pointer for track
+- **FR-021**: Scrollbar MUST display cursor changes: resize arrows (↔ or ↕) for edges, grab hand for center, pointer for track, with cursor updates occurring immediately (<16ms) on hover zone changes
 
-- **FR-022**: Scrollbar MUST support keyboard navigation: Tab to focus, Arrow keys to pan (5% increments), Page Up/Down to jump (100% viewport), Home/End to jump to boundaries
+- **FR-021A**: Scrollbar handle MUST define visual states with the following specifications:
+  - **Default/Idle state**: Handle uses base color from FR-025 (opacity 0.6 for light theme), no border, corner radius 4.0px
+  - **Hover state**: Handle opacity increases to 0.7 (light theme) or 0.8 (dark theme), maintaining 4.5:1 contrast ratio vs track; transition occurs over 150ms with ease-in-out curve
+  - **Active/Dragging state**: Handle opacity increases to 0.8 (light theme) or 0.9 (dark theme), handle scales to 1.05x size with box-shadow (2px blur, opacity 0.3) for depth; transition occurs immediately (<16ms)
+  - **Disabled state** (when enablePan = false and enableZoom = false): Handle opacity reduces to 0.3, converted to greyscale filter, cursor changes to 'not-allowed'; no hover or active transitions occur
+
+- **FR-021B**: Scrollbar track MUST define hover state: Track opacity increases from 0.2 to 0.3 when cursor hovers over track area (not handle), transitioning over 150ms with ease-in-out curve, to indicate click-to-jump interactivity
+
+- **FR-021C**: Scrollbar interaction state transitions MUST be consistent across both horizontal (X-axis) and vertical (Y-axis) scrollbars - same opacity values, timing, easing curves, and visual effects apply to both orientations
+
+- **FR-021D**: Scrollbar touch interface requirements:
+  - Touch targets MUST meet 44x44 logical pixel minimum (see FR-024A for implementation)
+  - Cursor changes are not applicable on touch devices - visual states (hover, active) still apply on touch
+  - Touch hover is interpreted as press-and-hold for 300ms, then activates hover state visual feedback
+  - All drag interactions (pan, resize) work identically on touch as mouse - no separate touch gesture recognition required
+
+- **FR-022**: Scrollbar MUST support keyboard navigation with the following specifications:
+  - **Tab to focus**: First Tab focuses X-axis scrollbar (if visible), second Tab focuses Y-axis scrollbar (if visible)
+  - **Arrow keys to pan**: Left/Right (X-axis) or Up/Down (Y-axis) pan by 5% of current viewport range per key press
+  - **Page Up/Down to jump**: Pan by 100% of current viewport (one full screen) per key press
+  - **Home/End to boundaries**: Jump to start (0% position) or end (100% position) of data range
+  - **Visual feedback**: Handle position animates smoothly (300ms, ease-out curve) during keyboard pan/jump operations
+  - **Focus consistency**: Focus indicator appearance (2px outline, color, timing) is identical for both X and Y scrollbars
 
 - **FR-023**: Scrollbar MUST provide semantic labels for accessibility: "Chart [X/Y]-axis scrollbar" with dynamic state announcements (position, visible percentage)
 
-- **FR-024**: Scrollbar MUST display visible focus indicator (minimum 2px outline, high-contrast color with 4.5:1 contrast ratio vs background) when focused via keyboard navigation
+- **FR-024**: Scrollbar MUST display visible focus indicator (minimum 2px outline, high-contrast color with 4.5:1 contrast ratio vs background) when focused via keyboard navigation, with focus outline transitioning in over 150ms using ease-in-out curve
 
-- **FR-025**: Scrollbar appearance MUST adapt to ChartTheme via ScrollbarTheme configuration, including colors, thickness (default 12.0 logical pixels), padding, corner radius
+- **FR-024A**: Scrollbar handle MUST provide minimum 44x44 logical pixel touch target size for mobile/tablet devices (WCAG 2.5.5 compliance). When handle visual size is smaller than 44x44, invisible hit-test padding expands the interactive area to meet minimum size while maintaining visual appearance.
+
+- **FR-024B**: Scrollbar MUST support Windows High Contrast Mode by:
+  - Detecting forced colors via MediaQuery.platformBrightness and system accessibility settings
+  - Using system colors: SystemColors.buttonFace for track, SystemColors.buttonText for handle
+  - Adding 2px solid border (SystemColors.windowText) around handle for definition when background contrast is insufficient
+  - Disabling opacity/transparency effects - all colors rendered at 100% opacity
+
+- **FR-024C**: Scrollbar animations MUST respect reduced motion preferences (WCAG 2.3.3 compliance) by:
+  - Detecting prefers-reduced-motion via MediaQuery.disableAnimations
+  - Disabling all animation transitions (FR-007 click-to-jump, FR-021A hover/active states, FR-024 focus transitions) when preference is active
+  - Using immediate state changes (0ms duration) instead of animated transitions
+  - Maintaining all functionality - only animation timing changes, not behavior
+
+- **FR-025**: Scrollbar appearance MUST adapt to ChartTheme via ScrollbarTheme configuration with the following specifications:
+  - **Thickness**: Default 12.0 logical pixels (vertical scrollbar width, horizontal scrollbar height)
+  - **Track dimensions**: Horizontal scrollbar height = thickness, width = chart canvas width; Vertical scrollbar width = thickness, height = chart canvas height
+  - **Corner radius**: Default 4.0 logical pixels for both track and handle (Material Design standard)
+  - **Padding**: Default 4.0 logical pixels between scrollbar and chart canvas boundaries
+  - **Track visual**: Semi-transparent background (default opacity 0.2) with subtle border (1px, opacity 0.3) for definition
+  - **Handle visual**: Solid color (theme-dependent) with 4.5:1 minimum contrast ratio vs track background, 2px corner radius smaller than track for visual nesting
+  - **Color specifications**:
+    - Light theme: Track `Color(0x33000000)` (black at 20% opacity), Handle `Color(0x99000000)` (black at 60% opacity)
+    - Dark theme: Track `Color(0x33FFFFFF)` (white at 20% opacity), Handle `Color(0x99FFFFFF)` (white at 60% opacity)
+    - High-contrast theme: Track `Color(0xFF000000)` (solid black) or `Color(0xFFFFFFFF)` (solid white), Handle `Color(0xFFFFFF00)` (yellow) or `Color(0xFF00FFFF)` (cyan) with 7:1 contrast ratio
 
 - **FR-026**: Scrollbar MUST maintain 60 FPS performance during drag interactions (maximum 16.67ms frame time)
 
