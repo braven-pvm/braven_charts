@@ -41,10 +41,10 @@
 
 ### Foundational Entities (Data Model)
 
-- [ ] T005 [P] Create HitTestZone enum in lib/src/widgets/scrollbar/hit_test_zone.dart
-- [ ] T006 [P] Create ScrollbarState immutable data class in lib/src/widgets/scrollbar/scrollbar_state.dart
-- [ ] T007 [P] Create ScrollbarConfig data class with 16 properties in lib/src/theming/components/scrollbar_config.dart
-- [ ] T008 Create ScrollbarTheme component theme in lib/src/theming/components/scrollbar_theme.dart (depends on T007)
+- [X] T005 [P] Create HitTestZone enum in lib/src/widgets/scrollbar/hit_test_zone.dart
+- [X] T006 [P] Create ScrollbarState immutable data class in lib/src/widgets/scrollbar/scrollbar_state.dart
+- [X] T007 [P] Create ScrollbarConfig data class with 16 properties in lib/src/theming/components/scrollbar_config.dart
+- [X] T008 Create ScrollbarTheme component theme in lib/src/theming/components/scrollbar_theme.dart (depends on T007)
 
 ### Foundational Contract Tests (TDD - Write Tests FIRST) ⚠️
 
