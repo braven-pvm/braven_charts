@@ -92,7 +92,7 @@ void main() {
 
       // Assert: Verify callback invoked with accurate counts
       expect(bufferCounts.length, greaterThanOrEqualTo(10), reason: 'Callback should be invoked for each buffered point');
-      
+
       // Verify counts are sequential (1, 2, 3, ..., 10)
       for (int i = 0; i < 10; i++) {
         expect(bufferCounts[i], equals(i + 1), reason: 'Buffer count should increment sequentially');
@@ -229,7 +229,7 @@ void main() {
 
       expect(lastModeChanged, equals(ChartMode.interactive));
 
-      streamController.add(ChartDataPoint(x: 15.0, y: 150.0));
+      streamController.add(const ChartDataPoint(x: 15.0, y: 150.0));
       await tester.pump(const Duration(milliseconds: 20));
 
       // Verify buffer restarted from 1 (not continuing from previous count)
@@ -291,7 +291,7 @@ void main() {
 
       // Assert: Verify all counts are present and sequential
       expect(bufferCounts.length, equals(8), reason: 'Should have 8 buffer update callbacks (5 + 3)');
-      
+
       for (int i = 0; i < bufferCounts.length; i++) {
         expect(bufferCounts[i], equals(i + 1), reason: 'Buffer count at index $i should be ${i + 1}');
       }
@@ -329,7 +329,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Add initial data
-      streamController.add(ChartDataPoint(x: 0.0, y: 0.0));
+      streamController.add(const ChartDataPoint(x: 0.0, y: 0.0));
       await tester.pump(const Duration(milliseconds: 100));
 
       eventLog.clear();
@@ -339,13 +339,13 @@ void main() {
       await tester.tap(chartFinder);
       await tester.pump();
 
-      streamController.add(ChartDataPoint(x: 1.0, y: 10.0));
+      streamController.add(const ChartDataPoint(x: 1.0, y: 10.0));
       await tester.pump(const Duration(milliseconds: 20));
 
       // Assert: Verify callback was invoked synchronously
       expect(eventLog, contains('buffer:1'), reason: 'Buffer callback should be invoked after adding point');
-      expect(eventLog.indexOf('buffer:1'), greaterThan(eventLog.indexOf('mode:interactive')), 
-        reason: 'Buffer callback should occur after mode change to interactive');
+      expect(eventLog.indexOf('buffer:1'), greaterThan(eventLog.indexOf('mode:interactive')),
+          reason: 'Buffer callback should occur after mode change to interactive');
     });
   });
 }

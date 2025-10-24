@@ -1166,7 +1166,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     _streamSubscription = stream.listen(
       _onStreamData,
       onError: (error) {
-        // Handle stream errors gracefully
+        // T071: Handle stream errors gracefully (FR-017a)
+        // Invoke callback immediately (no retry per clarification Q2)
+        widget.streamingConfig?.onStreamError?.call(error);
       },
       onDone: () {
         // Stream completed
