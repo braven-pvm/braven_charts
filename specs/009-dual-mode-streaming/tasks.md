@@ -174,17 +174,17 @@
 
 - [X] T059 [P] [US5] Create integration test file at test/integration/buffer_status_test.dart with tests for onBufferUpdated callback accuracy - 5 tests created, all failing as expected
 - [X] T060 [P] [US5] Add buffer overflow test to test/integration/buffer_status_test.dart with test for forced auto-resume when reaching maxBufferSize (FR-014, SC-005) - Included in T059
-- [ ] T061 [P] [US5] Add memory stability test to test/performance/streaming_benchmark.dart with test for no unbounded growth during 1-hour session (SC-009)
+- [ ] T061 [P] [US5] Add memory stability test to test/performance/streaming_benchmark.dart with test for no unbounded growth during 1-hour session (SC-009) - DEFERRED (impractical for TDD)
 
 ### Implementation for User Story 5
 
-- [ ] T062 [US5] Add maxBufferSize enforcement to _bufferDataPoint in lib/src/widgets/braven_chart.dart: check if _bufferedPoints.length >= maxBufferSize, if yes call _resumeStreaming immediately (FR-014)
-- [ ] T063 [US5] Modify _bufferDataPoint in lib/src/widgets/braven_chart.dart to invoke onBufferUpdated callback after adding point with current buffer count (FR-016)
-- [ ] T064 [US5] Add buffer clear operation to _resumeStreaming in lib/src/widgets/braven_chart.dart after applying buffered data: _bufferedPoints.clear()
-- [ ] T065 [US5] Verify forced auto-resume when buffer reaches 10K points with integration test (FR-014, SC-005)
-- [ ] T066 [US5] Verify onBufferUpdated callback accuracy with integration test
-- [ ] T067 [US5] Verify buffer cleared after resume with integration test
-- [ ] T068 [US5] Verify memory remains stable during 1-hour session with repeated mode transitions using performance benchmark (SC-009)
+- [X] T062 [US5] Add maxBufferSize enforcement to _bufferDataPoint in lib/src/widgets/braven_chart.dart: check if _bufferedPoints.length >= maxBufferSize, if yes call _resumeStreaming immediately (FR-014) - Added at line 1269
+- [X] T063 [US5] Modify _bufferDataPoint in lib/src/widgets/braven_chart.dart to invoke onBufferUpdated callback after adding point with current buffer count (FR-016) - Already implemented at line 1266
+- [X] T064 [US5] Add buffer clear operation to _resumeStreaming in lib/src/widgets/braven_chart.dart after applying buffered data: _bufferedPoints.clear() - Already implemented via removeAll() at line 1367
+- [X] T065 [US5] Verify forced auto-resume when buffer reaches 10K points with integration test (FR-014, SC-005) - All 5 tests passing
+- [X] T066 [US5] Verify onBufferUpdated callback accuracy with integration test - All 5 tests passing
+- [X] T067 [US5] Verify buffer cleared after resume with integration test - All 5 tests passing
+- [ ] T068 [US5] Verify memory remains stable during 1-hour session with repeated mode transitions using performance benchmark (SC-009) - DEFERRED
 
 **Checkpoint**: All five user stories should be independently functional and tested
 

@@ -1264,6 +1264,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Invoke buffer update callback if provided (FR-015)
     widget.streamingConfig?.onBufferUpdated?.call(_bufferedPoints.length);
+
+    // T062: Enforce maxBufferSize - force auto-resume if buffer full (FR-014, SC-005)
+    final maxSize = widget.streamingConfig?.maxBufferSize ?? 10000;
+    if (_bufferedPoints.length >= maxSize) {
+      // Buffer full - immediately resume to prevent unbounded growth
+      _resumeStreaming();
+    }
   }
 
   /// Transitions from streaming mode to interactive mode (T030: FR-004, FR-005).
