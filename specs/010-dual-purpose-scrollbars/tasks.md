@@ -72,13 +72,13 @@
 
 ### Foundational Rendering
 
-- [ ] T021 Create ScrollbarPainter CustomPainter in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T022 Implement ScrollbarPainter.paint() method for track rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T023 Implement ScrollbarPainter handle rendering with border radius in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T024 Implement ScrollbarPainter grip indicator rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T024A Implement ScrollbarPainter interaction state rendering (default, hover, active, disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T024B Implement ScrollbarPainter track hover state rendering (opacity 0.2 → 0.3 per FR-021B) in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [ ] T024C Implement ScrollbarPainter corner overlap rendering for multi-axis (0.5 opacity blend per FR-015A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T021 Create ScrollbarPainter CustomPainter in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T022 Implement ScrollbarPainter.paint() method for track rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T023 Implement ScrollbarPainter handle rendering with border radius in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T024 Implement ScrollbarPainter grip indicator rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T024A Implement ScrollbarPainter interaction state rendering (default, hover, active, disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T024B Implement ScrollbarPainter track hover state rendering (opacity 0.2 → 0.3 per FR-021B) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [X] T024C Implement ScrollbarPainter corner overlap rendering for multi-axis (0.5 opacity blend per FR-015A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
 
 ### Foundational Widget Structure
 

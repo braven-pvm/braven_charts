@@ -34,6 +34,7 @@ export 'src/theming/chart_theme.dart';
 export 'src/widgets/controller/streaming_controller.dart';
 // Scrollbar Layer - Dual-purpose scrollbars (Layer 10)
 export 'src/widgets/scrollbar/scrollbar_controller.dart';
+export 'src/widgets/scrollbar/scrollbar_painter.dart';
 // Widgets Layer - User-facing chart widgets (Layer 5)
 export 'src/widgets/widgets.dart';
 
