@@ -12,6 +12,8 @@ import 'event_debug_screen.dart';
 import 'interaction_examples_screen.dart';
 import 'interaction_showcase_screen.dart';
 import 'line_chart_screen.dart';
+import 'line_style_comparison_screen.dart';
+import 'line_styles_streaming_screen.dart';
 import 'quickstart_screen.dart';
 import 'regression_test_screen.dart';
 import 'scatter_chart_screen.dart';
@@ -371,6 +373,30 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const LineChartScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🔬 Line Style Comparison Lab',
+          subtitle: 'Switch styles for SAME data - static & streaming modes',
+          icon: Icons.compare,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LineStyleComparisonScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🎨 Line Styles - Live Streaming',
+          subtitle: 'Cubic bezier curves with real-time data (10Hz)',
+          icon: Icons.show_chart,
+          color: Colors.lightBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LineStylesStreamingScreen()),
           ),
         ),
         const SizedBox(height: 12),

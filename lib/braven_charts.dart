@@ -8,6 +8,8 @@
 /// - Universal coordinate transformation
 library;
 
+// Chart Configuration - Line chart styles and configs
+export 'src/charts/line/line_chart_config.dart' show LineStyle;
 // Coordinate System Layer - Universal transformation system
 export 'src/coordinates/coordinate_system.dart';
 export 'src/coordinates/transform_context.dart';
