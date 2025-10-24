@@ -65,8 +65,10 @@
 - [ ] T016 [P] Implement ScrollbarController.calculateHandlePosition() in lib/src/widgets/scrollbar/scrollbar_controller.dart
 - [ ] T017 Implement ScrollbarController.handleToDataRange() in lib/src/widgets/scrollbar/scrollbar_controller.dart (depends on T015, T016)
 - [ ] T018 [P] Implement ScrollbarController.dataRangeToHandle() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T019 [P] Implement ScrollbarController.getHitTestZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [ ] T019 [P] Implement ScrollbarController.getHitTestZone() with 8.0px edge zones (FR-008/009 enhanced) in lib/src/widgets/scrollbar/scrollbar_controller.dart
 - [ ] T020 [P] Implement ScrollbarController.getCursorForZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [ ] T020A Implement ScrollbarController.getInteractionState() to determine current state (default/hover/active/disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [ ] T020B Implement ScrollbarController.calculateTouchHitTestPadding() for 44x44 minimum touch targets (FR-024A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
 
 ### Foundational Rendering
 
@@ -74,6 +76,9 @@
 - [ ] T022 Implement ScrollbarPainter.paint() method for track rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
 - [ ] T023 Implement ScrollbarPainter handle rendering with border radius in lib/src/widgets/scrollbar/scrollbar_painter.dart
 - [ ] T024 Implement ScrollbarPainter grip indicator rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [ ] T024A Implement ScrollbarPainter interaction state rendering (default, hover, active, disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [ ] T024B Implement ScrollbarPainter track hover state rendering (opacity 0.2 → 0.3 per FR-021B) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [ ] T024C Implement ScrollbarPainter corner overlap rendering for multi-axis (0.5 opacity blend per FR-015A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
 
 ### Foundational Widget Structure
 
@@ -87,9 +92,11 @@
 - [ ] T029 Modify ChartTheme to add scrollbarTheme field in lib/src/theming/chart_theme.dart
 - [ ] T030 Update ChartTheme.copyWith() to include scrollbarTheme in lib/src/theming/chart_theme.dart
 - [ ] T031 Update ChartTheme.toJson() and fromJson() to serialize scrollbarTheme in lib/src/theming/chart_theme.dart
-- [ ] T032 [P] Add ScrollbarTheme.defaultLight predefined theme in lib/src/theming/components/scrollbar_theme.dart
-- [ ] T033 [P] Add ScrollbarTheme.defaultDark predefined theme in lib/src/theming/components/scrollbar_theme.dart
-- [ ] T034 [P] Add ScrollbarTheme.highContrast predefined theme in lib/src/theming/components/scrollbar_theme.dart
+- [ ] T032 [P] Add ScrollbarTheme.defaultLight predefined theme with FR-025 colors (track 0x33000000, handle 0x99000000) in lib/src/theming/components/scrollbar_theme.dart
+- [ ] T033 [P] Add ScrollbarTheme.defaultDark predefined theme with FR-025 colors (track 0x33FFFFFF, handle 0x99FFFFFF) in lib/src/theming/components/scrollbar_theme.dart
+- [ ] T034 [P] Add ScrollbarTheme.highContrast predefined theme with FR-025 colors (track solid black/white, handle yellow/cyan, 7:1 contrast) in lib/src/theming/components/scrollbar_theme.dart
+- [ ] T034A Add ScrollbarConfig.forcedColorsMode support for Windows High Contrast (FR-024B) in lib/src/theming/components/scrollbar_config.dart
+- [ ] T034B Add ScrollbarConfig.prefersReducedMotion support (FR-024C - disables animations when true) in lib/src/theming/components/scrollbar_config.dart
 
 ### Foundational InteractionConfig Modifications
 
@@ -177,7 +184,9 @@
 - [ ] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
 - [ ] T071 [US2] Fire InteractionConfig.onPanChanged callback in _onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
 - [ ] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms animation in lib/src/widgets/chart_scrollbar.dart
+- [ ] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
+- [ ] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
+- [ ] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
 
 ### Integration Tests for User Story 2
 
@@ -224,6 +233,8 @@
 - [ ] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart
 - [ ] T090 [US3] Enforce minZoomRatio (1% minimum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
 - [ ] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
+- [ ] T091A [US3] Implement zoom limit feedback: flash animation (opacity 0.8 → 0.4 → 0.8 over 200ms per FR-011 enhanced) when zoom limit reached in lib/src/widgets/chart_scrollbar.dart
+- [ ] T091B [US3] Implement zoom limit feedback: cursor changes to 'not-allowed' when dragging beyond zoom limits (FR-011 enhanced) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize _onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
 - [ ] T093 [US3] Update cursor via MouseRegion based on hoverZone in lib/src/widgets/chart_scrollbar.dart
 - [ ] T094 [US3] Implement SystemMouseCursors.resizeColumn for horizontal scrollbar edges in lib/src/widgets/chart_scrollbar.dart
@@ -349,6 +360,10 @@
 - [ ] T151 [P] Implement Semantics.onIncrease (pan right/up) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T152 [P] Implement Semantics.onDecrease (pan left/down) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T153 Accessibility test: Screen reader announces state changes in test/integration/scrollbar_screen_reader_announcements_test.dart
+- [ ] T153A Accessibility test: Touch target minimum 44x44 pixels (FR-024A WCAG 2.5.5) in test/integration/scrollbar_touch_target_test.dart
+- [ ] T153B Accessibility test: High-contrast mode renders with system colors and borders (FR-024B) in test/integration/scrollbar_forced_colors_test.dart
+- [ ] T153C Accessibility test: Reduced motion disables all animations (FR-024C WCAG 2.3.3) in test/integration/scrollbar_reduced_motion_test.dart
+- [ ] T153D Accessibility test: Interaction state consistency between X/Y scrollbars (FR-021C) in test/integration/scrollbar_state_consistency_test.dart
 
 ---
 
