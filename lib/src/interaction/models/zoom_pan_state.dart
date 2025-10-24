@@ -54,8 +54,9 @@ class ZoomPanState {
       maxZoomLevel: (json['maxZoomLevel'] as num?)?.toDouble() ?? 10.0,
       allowOverscroll: json['allowOverscroll'] as bool? ?? false,
       isAnimating: json['isAnimating'] as bool? ?? false,
-      animationDuration:
-          json['animationDuration'] != null ? Duration(milliseconds: json['animationDuration'] as int) : const Duration(milliseconds: 300),
+      animationDuration: json['animationDuration'] != null
+          ? Duration(milliseconds: json['animationDuration'] as int)
+          : const Duration(milliseconds: 300),
     );
   }
 
@@ -72,7 +73,8 @@ class ZoomPanState {
     this.isAnimating = false,
     this.animationDuration = const Duration(milliseconds: 300),
   })  : assert(minZoomLevel > 0, 'minZoomLevel must be greater than 0'),
-        assert(maxZoomLevel > minZoomLevel, 'maxZoomLevel must be greater than minZoomLevel');
+        assert(maxZoomLevel > minZoomLevel,
+            'maxZoomLevel must be greater than minZoomLevel');
 
   /// Creates an initial zoom/pan state with default values.
   ///

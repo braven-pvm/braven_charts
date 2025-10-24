@@ -36,7 +36,8 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('Pause on click completes within 16ms (SC-004)', (WidgetTester tester) async {
+    testWidgets('Pause on click completes within 16ms (SC-004)',
+        (WidgetTester tester) async {
       // NOTE: Hover does NOT pause (per commit 2351a91), so testing click instead
       ChartMode? modeAfterClick;
       final stopwatch = Stopwatch();
@@ -81,12 +82,14 @@ void main() {
 
       // Verify mode changed and timing
       expect(modeAfterClick, ChartMode.interactive);
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on click should complete within 16ms (SC-004)');
+      expect(stopwatch.elapsedMilliseconds, lessThan(16),
+          reason: 'Pause on click should complete within 16ms (SC-004)');
 
       print('⏱️ Click response time: ${stopwatch.elapsedMilliseconds}ms');
     });
 
-    testWidgets('Pause on zoom completes within 16ms (SC-004)', (WidgetTester tester) async {
+    testWidgets('Pause on zoom completes within 16ms (SC-004)',
+        (WidgetTester tester) async {
       ChartMode? modeAfterZoom;
       final stopwatch = Stopwatch();
 
@@ -131,12 +134,14 @@ void main() {
 
       // Verify mode changed and timing
       expect(modeAfterZoom, ChartMode.interactive);
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on zoom should complete within 16ms (SC-004)');
+      expect(stopwatch.elapsedMilliseconds, lessThan(16),
+          reason: 'Pause on zoom should complete within 16ms (SC-004)');
 
       print('⏱️ Zoom response time: ${stopwatch.elapsedMilliseconds}ms');
     });
 
-    testWidgets('Pause on pan completes within 16ms (SC-004)', (WidgetTester tester) async {
+    testWidgets('Pause on pan completes within 16ms (SC-004)',
+        (WidgetTester tester) async {
       ChartMode? modeAfterPan;
       final stopwatch = Stopwatch();
 
@@ -181,12 +186,14 @@ void main() {
 
       // Verify mode changed and timing
       expect(modeAfterPan, ChartMode.interactive);
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Pause on pan should complete within 16ms (SC-004)');
+      expect(stopwatch.elapsedMilliseconds, lessThan(16),
+          reason: 'Pause on pan should complete within 16ms (SC-004)');
 
       print('⏱️ Pan response time: ${stopwatch.elapsedMilliseconds}ms');
     });
 
-    testWidgets('Mode transition overhead is minimal (<50ms per SC-006)', (WidgetTester tester) async {
+    testWidgets('Mode transition overhead is minimal (<50ms per SC-006)',
+        (WidgetTester tester) async {
       int? transitionTime;
       final stopwatch = Stopwatch();
 
@@ -232,13 +239,16 @@ void main() {
       await tester.pump();
 
       // Verify transition was captured and fast
-      expect(transitionTime, isNotNull, reason: 'Mode transition should have occurred');
-      expect(transitionTime!, lessThan(50), reason: 'Mode transition should complete within 50ms (SC-006)');
+      expect(transitionTime, isNotNull,
+          reason: 'Mode transition should have occurred');
+      expect(transitionTime!, lessThan(50),
+          reason: 'Mode transition should complete within 50ms (SC-006)');
 
       print('⏱️ Mode transition time: ${transitionTime}ms');
     });
 
-    testWidgets('Crosshair response maintains 60fps with streaming data', (WidgetTester tester) async {
+    testWidgets('Crosshair response maintains 60fps with streaming data',
+        (WidgetTester tester) async {
       // NOTE: This test verifies crosshair rendering (not pause) maintains 60fps
       // Hover doesn't pause per commit 2351a91, but crosshair should still be responsive
 
@@ -285,9 +295,11 @@ void main() {
       stopwatch.stop();
 
       // Crosshair rendering should still be fast
-      expect(stopwatch.elapsedMilliseconds, lessThan(16), reason: 'Crosshair rendering should be <16ms');
+      expect(stopwatch.elapsedMilliseconds, lessThan(16),
+          reason: 'Crosshair rendering should be <16ms');
 
-      print('⏱️ Crosshair rendering response: ${stopwatch.elapsedMilliseconds}ms');
+      print(
+          '⏱️ Crosshair rendering response: ${stopwatch.elapsedMilliseconds}ms');
     });
   });
 }

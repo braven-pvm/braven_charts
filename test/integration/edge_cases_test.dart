@@ -35,7 +35,9 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('T070: No stream configured defaults to interactive mode (FR-003)', (WidgetTester tester) async {
+    testWidgets(
+        'T070: No stream configured defaults to interactive mode (FR-003)',
+        (WidgetTester tester) async {
       // Arrange & Act: Create chart WITHOUT dataStream (static data only)
       ChartMode? initialMode;
 
@@ -75,10 +77,12 @@ void main() {
       // Assert: Chart should default to interactive mode
       // Note: This test verifies FR-003 behavior
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Chart should handle no stream gracefully');
+      expect(tester.takeException(), isNull,
+          reason: 'Chart should handle no stream gracefully');
     });
 
-    testWidgets('T070: Rapid mode switches handled safely', (WidgetTester tester) async {
+    testWidgets('T070: Rapid mode switches handled safely',
+        (WidgetTester tester) async {
       // Arrange: Create chart with very short auto-resume timeout
       final modeChanges = <ChartMode>[];
 
@@ -130,10 +134,12 @@ void main() {
 
       // Assert: No crashes, predictable mode changes
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Rapid mode switches should not crash');
+      expect(tester.takeException(), isNull,
+          reason: 'Rapid mode switches should not crash');
 
       // Mode changes should be: interactive, streaming (no duplicates)
-      expect(modeChanges.length, greaterThanOrEqualTo(2), reason: 'Should have at least 2 mode changes');
+      expect(modeChanges.length, greaterThanOrEqualTo(2),
+          reason: 'Should have at least 2 mode changes');
     });
 
     testWidgets('T070: Stream ends gracefully', (WidgetTester tester) async {
@@ -167,10 +173,12 @@ void main() {
 
       // Assert: Chart should handle stream end gracefully
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Chart should handle stream end gracefully');
+      expect(tester.takeException(), isNull,
+          reason: 'Chart should handle stream end gracefully');
     });
 
-    testWidgets('T070: Buffer overflow triggers forced auto-resume (FR-014)', (WidgetTester tester) async {
+    testWidgets('T070: Buffer overflow triggers forced auto-resume (FR-014)',
+        (WidgetTester tester) async {
       // Arrange: Create chart with very small buffer
       const maxBufferSize = 10;
       bool forcedResumeOccurred = false;
@@ -186,7 +194,8 @@ void main() {
               streamingConfig: StreamingConfig(
                 maxBufferSize: maxBufferSize,
                 onModeChanged: (mode) {
-                  if (mode == ChartMode.streaming && lastModeChanged == ChartMode.interactive) {
+                  if (mode == ChartMode.streaming &&
+                      lastModeChanged == ChartMode.interactive) {
                     forcedResumeOccurred = true;
                   }
                   lastModeChanged = mode;
@@ -219,11 +228,14 @@ void main() {
       }
 
       // Assert: Forced auto-resume should occur
-      expect(forcedResumeOccurred, isTrue, reason: 'Buffer overflow should trigger forced auto-resume');
-      expect(lastModeChanged, equals(ChartMode.streaming), reason: 'Should be back in streaming mode');
+      expect(forcedResumeOccurred, isTrue,
+          reason: 'Buffer overflow should trigger forced auto-resume');
+      expect(lastModeChanged, equals(ChartMode.streaming),
+          reason: 'Should be back in streaming mode');
     });
 
-    testWidgets('T070: Multiple rapid interactions handled safely', (WidgetTester tester) async {
+    testWidgets('T070: Multiple rapid interactions handled safely',
+        (WidgetTester tester) async {
       // Arrange: Create chart
       await tester.pumpWidget(
         MaterialApp(
@@ -276,15 +288,18 @@ void main() {
 
       // Assert: No crashes from rapid interactions
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Rapid interactions should not crash');
-      expect(lastModeChanged, equals(ChartMode.interactive), reason: 'Should be in interactive mode');
+      expect(tester.takeException(), isNull,
+          reason: 'Rapid interactions should not crash');
+      expect(lastModeChanged, equals(ChartMode.interactive),
+          reason: 'Should be in interactive mode');
 
       // Wait for any pending timers to complete
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
     });
 
-    testWidgets('T070: Data updates blocked when no stream configured', (WidgetTester tester) async {
+    testWidgets('T070: Data updates blocked when no stream configured',
+        (WidgetTester tester) async {
       // Arrange: Create chart with static data only (no stream)
       await tester.pumpWidget(
         MaterialApp(
@@ -318,7 +333,8 @@ void main() {
 
       // Assert: Chart should handle this gracefully
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Chart should handle non-streaming data updates');
+      expect(tester.takeException(), isNull,
+          reason: 'Chart should handle non-streaming data updates');
     });
   });
 }

@@ -6,7 +6,14 @@ library;
 
 import 'dart:ui' show Offset, PointerDeviceKind;
 
-import 'package:flutter/gestures.dart' show PointerEvent, PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerCancelEvent, PointerScrollEvent;
+import 'package:flutter/gestures.dart'
+    show
+        PointerEvent,
+        PointerDownEvent,
+        PointerMoveEvent,
+        PointerUpEvent,
+        PointerCancelEvent,
+        PointerScrollEvent;
 
 import 'models/gesture_details.dart';
 
@@ -113,7 +120,9 @@ class GestureRecognizer {
     );
 
     final delta = event.position - _currentState!.currentPosition;
-    final distance = (_currentState!.currentPosition - _currentState!.startPosition).distance;
+    final distance =
+        (_currentState!.currentPosition - _currentState!.startPosition)
+            .distance;
 
     // Update state
     _currentState = _currentState!.copyWith(
@@ -128,7 +137,8 @@ class GestureRecognizer {
       );
 
       // Return pan gesture in progress
-      final totalDelta = _currentState!.currentPosition - _currentState!.startPosition;
+      final totalDelta =
+          _currentState!.currentPosition - _currentState!.startPosition;
       return GestureDetails.pan(
         startPosition: _currentState!.startPosition,
         currentPosition: _currentState!.currentPosition,
@@ -143,7 +153,8 @@ class GestureRecognizer {
     if (_currentState!.pointerCount == 2) {
       final pointers = _activePointers.values.toList();
       if (pointers.length == 2) {
-        final distance1 = (pointers[0].position - pointers[1].position).distance;
+        final distance1 =
+            (pointers[0].position - pointers[1].position).distance;
         final initialDistance = _calculateInitialPinchDistance();
 
         if (initialDistance > 0) {
@@ -163,9 +174,12 @@ class GestureRecognizer {
     }
 
     // Cancel long press if moved too far
-    if (distance > tapSlop && _currentState!.candidateGestures.contains(GestureType.longPress)) {
+    if (distance > tapSlop &&
+        _currentState!.candidateGestures.contains(GestureType.longPress)) {
       _currentState = _currentState!.copyWith(
-        candidateGestures: _currentState!.candidateGestures.where((g) => g != GestureType.longPress).toList(),
+        candidateGestures: _currentState!.candidateGestures
+            .where((g) => g != GestureType.longPress)
+            .toList(),
       );
     }
 
@@ -271,8 +285,11 @@ class GestureRecognizer {
   GestureDetails? checkLongPress() {
     if (_currentState == null) return null;
 
-    if (_currentState!.candidateGestures.contains(GestureType.longPress) && _currentState!.duration >= longPressTimeout) {
-      final distance = (_currentState!.currentPosition - _currentState!.startPosition).distance;
+    if (_currentState!.candidateGestures.contains(GestureType.longPress) &&
+        _currentState!.duration >= longPressTimeout) {
+      final distance =
+          (_currentState!.currentPosition - _currentState!.startPosition)
+              .distance;
 
       if (distance <= tapSlop) {
         return GestureDetails.longPress(
@@ -396,7 +413,8 @@ class GestureRecognizer {
         endTime: now,
         deviceKind: state.deviceKind,
       );
-    } else if (finalType == GestureType.tap || finalType == GestureType.doubleTap) {
+    } else if (finalType == GestureType.tap ||
+        finalType == GestureType.doubleTap) {
       return GestureDetails(
         type: finalType,
         startPosition: position,
@@ -463,7 +481,9 @@ class GestureRecognizer {
     }
 
     // Long press has priority if duration threshold met
-    if (candidates.contains(GestureType.longPress) && state.duration >= longPressTimeout && state.distance <= tapSlop) {
+    if (candidates.contains(GestureType.longPress) &&
+        state.duration >= longPressTimeout &&
+        state.distance <= tapSlop) {
       return GestureType.longPress;
     }
 

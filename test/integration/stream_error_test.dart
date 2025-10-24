@@ -39,7 +39,9 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('T069: onStreamError callback invoked immediately on stream error (FR-017a)', (WidgetTester tester) async {
+    testWidgets(
+        'T069: onStreamError callback invoked immediately on stream error (FR-017a)',
+        (WidgetTester tester) async {
       // Arrange: Create chart with error callback
       await tester.pumpWidget(
         MaterialApp(
@@ -70,15 +72,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Assert: Verify error callback invoked
-      expect(capturedErrors.length, equals(1), reason: 'Error callback should be invoked once');
-      expect(capturedErrors.first, equals(testError), reason: 'Captured error should match thrown error');
+      expect(capturedErrors.length, equals(1),
+          reason: 'Error callback should be invoked once');
+      expect(capturedErrors.first, equals(testError),
+          reason: 'Captured error should match thrown error');
 
       // Verify chart still renders (no crash)
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Chart should not crash on stream error');
+      expect(tester.takeException(), isNull,
+          reason: 'Chart should not crash on stream error');
     });
 
-    testWidgets('T069: Chart continues functioning after stream error', (WidgetTester tester) async {
+    testWidgets('T069: Chart continues functioning after stream error',
+        (WidgetTester tester) async {
       // Arrange: Create chart with error callback
       await tester.pumpWidget(
         MaterialApp(
@@ -113,12 +119,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Assert: Error captured but chart still functioning
-      expect(capturedErrors.length, equals(1), reason: 'Error should be captured');
-      expect(find.byType(BravenChart), findsOneWidget, reason: 'Chart should still render');
-      expect(tester.takeException(), isNull, reason: 'No exceptions should propagate');
+      expect(capturedErrors.length, equals(1),
+          reason: 'Error should be captured');
+      expect(find.byType(BravenChart), findsOneWidget,
+          reason: 'Chart should still render');
+      expect(tester.takeException(), isNull,
+          reason: 'No exceptions should propagate');
     });
 
-    testWidgets('T069: Multiple stream errors handled correctly', (WidgetTester tester) async {
+    testWidgets('T069: Multiple stream errors handled correctly',
+        (WidgetTester tester) async {
       // Arrange: Create chart with error callback
       await tester.pumpWidget(
         MaterialApp(
@@ -159,14 +169,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Assert: All errors captured
-      expect(capturedErrors.length, equals(3), reason: 'All 3 errors should be captured');
+      expect(capturedErrors.length, equals(3),
+          reason: 'All 3 errors should be captured');
       expect(capturedErrors[0], equals(error1));
       expect(capturedErrors[1], equals(error2));
       expect(capturedErrors[2], equals(error3));
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T069: Stream error during streaming mode', (WidgetTester tester) async {
+    testWidgets('T069: Stream error during streaming mode',
+        (WidgetTester tester) async {
       // Arrange: Create chart in streaming mode
       await tester.pumpWidget(
         MaterialApp(
@@ -202,7 +214,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T069: Stream error during interactive mode', (WidgetTester tester) async {
+    testWidgets('T069: Stream error during interactive mode',
+        (WidgetTester tester) async {
       // Arrange: Create chart and switch to interactive mode
       await tester.pumpWidget(
         MaterialApp(
@@ -246,7 +259,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T069: No callback when onStreamError not provided', (WidgetTester tester) async {
+    testWidgets('T069: No callback when onStreamError not provided',
+        (WidgetTester tester) async {
       // Arrange: Create chart WITHOUT error callback
       await tester.pumpWidget(
         MaterialApp(
@@ -274,7 +288,8 @@ void main() {
 
       // Assert: Chart should handle error gracefully (no crash)
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Chart should handle missing callback gracefully');
+      expect(tester.takeException(), isNull,
+          reason: 'Chart should handle missing callback gracefully');
     });
   });
 }

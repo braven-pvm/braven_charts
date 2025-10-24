@@ -38,7 +38,8 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('Chart starts in streaming mode with streamingConfig', (WidgetTester tester) async {
+    testWidgets('Chart starts in streaming mode with streamingConfig',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -65,7 +66,8 @@ void main() {
       expect(modeChangeCount, 0);
     });
 
-    testWidgets('Hover does NOT trigger pause (intentional UX decision)', (WidgetTester tester) async {
+    testWidgets('Hover does NOT trigger pause (intentional UX decision)',
+        (WidgetTester tester) async {
       // NOTE: Original spec FR-004 included hover, but during implementation this was
       // found to be too aggressive (accidental pauses from casual mouse movement).
       // Design decision: Only intentional interactions (click, zoom, pan) pause streaming.
@@ -121,7 +123,8 @@ void main() {
       expect(modeChangeCount, 0);
     });
 
-    testWidgets('Click triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
+    testWidgets('Click triggers pause to interactive mode (FR-004)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -163,7 +166,8 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Zoom triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
+    testWidgets('Zoom triggers pause to interactive mode (FR-004)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -207,7 +211,8 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Pan triggers pause to interactive mode (FR-004)', (WidgetTester tester) async {
+    testWidgets('Pan triggers pause to interactive mode (FR-004)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -251,7 +256,8 @@ void main() {
       expect(modeChangeCount, 1);
     });
 
-    testWidgets('Multiple interactions do not trigger multiple mode changes', (WidgetTester tester) async {
+    testWidgets('Multiple interactions do not trigger multiple mode changes',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -304,7 +310,9 @@ void main() {
       expect(modeChangeCount, 1); // Still 1, already in interactive mode
     });
 
-    testWidgets('T035: Data buffers silently without visual updates in interactive mode', (WidgetTester tester) async {
+    testWidgets(
+        'T035: Data buffers silently without visual updates in interactive mode',
+        (WidgetTester tester) async {
       int bufferUpdateCount = 0;
       int lastBufferCount = 0;
 
@@ -358,30 +366,38 @@ void main() {
 
       // Get initial series data count (from controller)
       final allSeries = chartController.getAllSeries();
-      final initialPointCount = allSeries.values.isEmpty ? 0 : allSeries.values.first.length;
+      final initialPointCount =
+          allSeries.values.isEmpty ? 0 : allSeries.values.first.length;
 
       // Add data while in interactive mode (should buffer, not display)
       for (int i = 5; i < 15; i++) {
         streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
-        await tester.pump(const Duration(milliseconds: 10)); // Small delay to process
+        await tester
+            .pump(const Duration(milliseconds: 10)); // Small delay to process
       }
       await tester.pumpAndSettle();
 
       // Verify buffer callback was invoked for each point
-      expect(bufferUpdateCount, greaterThan(0), reason: 'Buffer should have been updated at least once');
-      expect(lastBufferCount, greaterThan(0), reason: 'Buffer should contain at least 1 point');
+      expect(bufferUpdateCount, greaterThan(0),
+          reason: 'Buffer should have been updated at least once');
+      expect(lastBufferCount, greaterThan(0),
+          reason: 'Buffer should contain at least 1 point');
 
       // Verify NO visual updates (point count unchanged in controller)
       final currentSeries = chartController.getAllSeries();
-      final currentPointCount = currentSeries.values.isEmpty ? 0 : currentSeries.values.first.length;
-      expect(currentPointCount, equals(initialPointCount), reason: 'Buffered points should NOT appear in controller during interactive mode');
+      final currentPointCount =
+          currentSeries.values.isEmpty ? 0 : currentSeries.values.first.length;
+      expect(currentPointCount, equals(initialPointCount),
+          reason:
+              'Buffered points should NOT appear in controller during interactive mode');
 
       // Verify buffer count is reasonable (may be less than 10 due to timing/throttling)
       expect(lastBufferCount, greaterThanOrEqualTo(1));
       expect(lastBufferCount, lessThanOrEqualTo(10));
     });
 
-    testWidgets('T035: Buffering continues during zoom/pan interactions', (WidgetTester tester) async {
+    testWidgets('T035: Buffering continues during zoom/pan interactions',
+        (WidgetTester tester) async {
       int bufferUpdateCount = 0;
       int lastBufferCount = 0;
 
@@ -432,9 +448,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify buffer accumulated data
-      expect(bufferUpdateCount, greaterThan(0), reason: 'Buffer should have been updated');
-      expect(lastBufferCount, greaterThanOrEqualTo(1), reason: 'Buffer should contain at least 1 point');
-      expect(lastBufferCount, lessThanOrEqualTo(5), reason: 'Buffer should not exceed streamed point count');
+      expect(bufferUpdateCount, greaterThan(0),
+          reason: 'Buffer should have been updated');
+      expect(lastBufferCount, greaterThanOrEqualTo(1),
+          reason: 'Buffer should contain at least 1 point');
+      expect(lastBufferCount, lessThanOrEqualTo(5),
+          reason: 'Buffer should not exceed streamed point count');
 
       // Continue interaction with another pan
       await tester.drag(chartFinder, const Offset(-30, 0));
@@ -450,7 +469,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify buffer continues to accumulate (should be more than after first pan)
-      expect(lastBufferCount, greaterThan(bufferCountAfterFirstPan), reason: 'Buffer should continue accumulating during continued interactions');
+      expect(lastBufferCount, greaterThan(bufferCountAfterFirstPan),
+          reason:
+              'Buffer should continue accumulating during continued interactions');
     });
   });
 }

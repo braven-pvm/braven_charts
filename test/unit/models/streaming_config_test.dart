@@ -32,7 +32,8 @@ void main() {
 
     test('should allow custom timeout', () {
       // Given/When: Creating config with custom timeout
-      final config = StreamingConfig(autoResumeTimeout: const Duration(seconds: 15));
+      final config =
+          StreamingConfig(autoResumeTimeout: const Duration(seconds: 15));
 
       // Then: Should use custom timeout
       expect(config.autoResumeTimeout, equals(const Duration(seconds: 15)));
@@ -45,7 +46,8 @@ void main() {
 
       // Then: Should use custom buffer size
       expect(config.maxBufferSize, equals(5000));
-      expect(config.autoResumeTimeout, equals(const Duration(seconds: 10))); // Other defaults unchanged
+      expect(config.autoResumeTimeout,
+          equals(const Duration(seconds: 10))); // Other defaults unchanged
     });
 
     test('should allow disabling pause on interaction', () {

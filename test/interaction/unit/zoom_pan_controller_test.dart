@@ -83,7 +83,8 @@ void main() {
       });
 
       test('resetZoom() returns to default zoom level', () {
-        final zoomedState = zoomPanState.copyWith(zoomLevelX: 5.0, zoomLevelY: 5.0);
+        final zoomedState =
+            zoomPanState.copyWith(zoomLevelX: 5.0, zoomLevelY: 5.0);
         final newState = zoomPanController.resetZoom(zoomedState);
 
         expect(newState.zoomLevelX, equals(1.0));
@@ -183,7 +184,8 @@ void main() {
     });
 
     group('Inertial Scrolling', () {
-      test('applyInertia() returns state unchanged (no panVelocity support)', () {
+      test('applyInertia() returns state unchanged (no panVelocity support)',
+          () {
         // Note: Inertia requires panVelocity field in ZoomPanState
         // Current implementation is a placeholder
         final newState = zoomPanController.applyInertia(
@@ -196,7 +198,8 @@ void main() {
     });
 
     group('Coordinate Transformations', () {
-      test('screenToData() converts screen coordinates to data coordinates', () {
+      test('screenToData() converts screen coordinates to data coordinates',
+          () {
         final zoomedState = zoomPanState.copyWith(
           zoomLevelX: 2.0,
           zoomLevelY: 2.0,
@@ -216,7 +219,8 @@ void main() {
         expect(dataPoint.dy, equals((300 - 50) / 2.0)); // = 125
       });
 
-      test('dataToScreen() converts data coordinates to screen coordinates', () {
+      test('dataToScreen() converts data coordinates to screen coordinates',
+          () {
         final zoomedState = zoomPanState.copyWith(
           zoomLevelX: 2.0,
           zoomLevelY: 2.0,
@@ -244,7 +248,8 @@ void main() {
         );
 
         const originalScreen = Offset(250, 175);
-        final data = zoomPanController.screenToData(originalScreen, zoomedState);
+        final data =
+            zoomPanController.screenToData(originalScreen, zoomedState);
         final backToScreen = zoomPanController.dataToScreen(data, zoomedState);
 
         expect(backToScreen.dx, closeTo(originalScreen.dx, 0.1));
@@ -273,7 +278,8 @@ void main() {
             zoomFactor: 1.1,
             focalPoint: Offset(i.toDouble(), 100),
           );
-          state = zoomPanController.pan(state, Offset(i.toDouble(), i.toDouble()));
+          state =
+              zoomPanController.pan(state, Offset(i.toDouble(), i.toDouble()));
         }
 
         // Should complete without error (memory check)

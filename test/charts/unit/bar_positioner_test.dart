@@ -4,7 +4,8 @@
 /// and stacked (cumulative) modes with proper spacing and negative value handling.
 library;
 
-import 'package:braven_charts/src/charts/bar/bar_chart_config.dart' show BarOrientation, BarGroupingMode;
+import 'package:braven_charts/src/charts/bar/bar_chart_config.dart'
+    show BarOrientation, BarGroupingMode;
 import 'package:braven_charts/src/charts/bar/bar_positioner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,10 +39,12 @@ void main() {
         final cat0Series1 = layout[1];
 
         // Bars should not overlap
-        expect(cat0Series0.bounds.right, lessThanOrEqualTo(cat0Series1.bounds.left));
+        expect(cat0Series0.bounds.right,
+            lessThanOrEqualTo(cat0Series1.bounds.left));
 
         // Spacing between bars
-        expect(cat0Series1.bounds.left - cat0Series0.bounds.right, closeTo(2.0, 0.1));
+        expect(cat0Series1.bounds.left - cat0Series0.bounds.right,
+            closeTo(2.0, 0.1));
       });
 
       test('calculates bar width correctly based on ratio', () {
@@ -94,8 +97,10 @@ void main() {
         expect(layout.length, equals(3));
 
         // All three bars should be in sequence
-        expect(layout[0].bounds.right, lessThanOrEqualTo(layout[1].bounds.left));
-        expect(layout[1].bounds.right, lessThanOrEqualTo(layout[2].bounds.left));
+        expect(
+            layout[0].bounds.right, lessThanOrEqualTo(layout[1].bounds.left));
+        expect(
+            layout[1].bounds.right, lessThanOrEqualTo(layout[2].bounds.left));
       });
 
       test('applies group spacing between categories', () {
@@ -305,13 +310,16 @@ void main() {
         expect(layout.length, equals(4));
 
         // Category 0: Positive stacking upward
-        expect(layout[0].bounds.bottom, equals(100.0)); // series1: baseline - 10
-        expect(layout[1].bounds.bottom, equals(90.0)); // series2: stacks on series1
+        expect(
+            layout[0].bounds.bottom, equals(100.0)); // series1: baseline - 10
+        expect(layout[1].bounds.bottom,
+            equals(90.0)); // series2: stacks on series1
 
         // Category 1: Negative stacking downward
         expect(layout[2].bounds.top, equals(100.0)); // series1: baseline
         expect(layout[2].isNegative, isTrue);
-        expect(layout[3].bounds.top, equals(110.0)); // series2: stacks below series1
+        expect(layout[3].bounds.top,
+            equals(110.0)); // series2: stacks below series1
         expect(layout[3].isNegative, isTrue);
       });
 

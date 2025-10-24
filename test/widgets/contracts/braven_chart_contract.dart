@@ -263,7 +263,8 @@ void main() {
               body: BravenChart(
                 chartType: ChartType.line,
                 series: [
-                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                  ChartSeries(
+                      id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
                 ],
                 width: 400,
                 height: 300,
@@ -287,7 +288,8 @@ void main() {
                 body: BravenChart(
                   chartType: chartType,
                   series: [
-                    ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)]),
+                    ChartSeries(
+                        id: 's1', points: [const ChartDataPoint(x: 0, y: 0)]),
                   ],
                 ),
               ),
@@ -327,7 +329,8 @@ void main() {
         expect(listenerCalled, isTrue);
       });
 
-      testWidgets('MUST unsubscribe from controller in dispose', (tester) async {
+      testWidgets('MUST unsubscribe from controller in dispose',
+          (tester) async {
         final controller = ChartController();
 
         await tester.pumpWidget(
@@ -346,7 +349,9 @@ void main() {
         await tester.pumpWidget(Container());
 
         // Controller should still work but widget shouldn't respond
-        expect(() => controller.addPoint('s1', const ChartDataPoint(x: 2, y: 2)), returnsNormally);
+        expect(
+            () => controller.addPoint('s1', const ChartDataPoint(x: 2, y: 2)),
+            returnsNormally);
       });
     });
 
@@ -393,7 +398,8 @@ void main() {
         await tester.pumpWidget(Container());
 
         // Stream should still work but widget shouldn't crash
-        expect(() => streamController.add(const ChartDataPoint(x: 2, y: 2)), returnsNormally);
+        expect(() => streamController.add(const ChartDataPoint(x: 2, y: 2)),
+            returnsNormally);
         streamController.close();
       });
     });
@@ -406,7 +412,8 @@ void main() {
               body: BravenChart(
                 chartType: ChartType.line,
                 series: [
-                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                  ChartSeries(
+                      id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
                 ],
                 annotations: [
                   TextAnnotation(
@@ -425,14 +432,16 @@ void main() {
     });
 
     group('Hot Reload Support', () {
-      testWidgets('MUST support configuration changes without leaks', (tester) async {
+      testWidgets('MUST support configuration changes without leaks',
+          (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: BravenChart(
                 chartType: ChartType.line,
                 series: [
-                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                  ChartSeries(
+                      id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
                 ],
                 xAxis: AxisConfig.defaults(),
               ),
@@ -447,7 +456,8 @@ void main() {
               body: BravenChart(
                 chartType: ChartType.line,
                 series: [
-                  ChartSeries(id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
+                  ChartSeries(
+                      id: 's1', points: [const ChartDataPoint(x: 0, y: 0)])
                 ],
                 xAxis: AxisConfig.hidden(), // Changed!
               ),

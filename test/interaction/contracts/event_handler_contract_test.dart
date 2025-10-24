@@ -8,7 +8,8 @@ import 'dart:ui' show Rect, Offset;
 import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
 import 'package:braven_charts/src/interaction/event_handler.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart' show PhysicalKeyboardKey, LogicalKeyboardKey, KeyDownEvent;
+import 'package:flutter/services.dart'
+    show PhysicalKeyboardKey, LogicalKeyboardKey, KeyDownEvent;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -66,7 +67,8 @@ void main() {
       final result = eventHandler.processKeyEvent(keyEvent);
 
       // Result should be a KeyEventResult (handled or ignored)
-      expect(result, equals(KeyEventResult.ignored)); // Currently returns ignored
+      expect(
+          result, equals(KeyEventResult.ignored)); // Currently returns ignored
     });
 
     test('routeEvent() delegates to handlers by priority', () {

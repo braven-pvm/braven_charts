@@ -27,7 +27,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Related: T017-T024 (streaming implementation), FR-018, SC-001
 void main() {
   group('Streaming performance benchmarks', () {
-    testWidgets('should maintain 60fps at 100 points/sec for 10 seconds', (WidgetTester tester) async {
+    testWidgets('should maintain 60fps at 100 points/sec for 10 seconds',
+        (WidgetTester tester) async {
       // Given: Chart configured for high-frequency streaming
       final streamController = StreamController<ChartDataPoint>();
       final frameTimes = <Duration>[];
@@ -73,7 +74,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Then: Calculate performance metrics
-      expect(frameTimes.isNotEmpty, true, reason: 'Should have captured frame times');
+      expect(frameTimes.isNotEmpty, true,
+          reason: 'Should have captured frame times');
 
       // Calculate average frame time
       final totalFrameTime = frameTimes.fold<Duration>(
@@ -97,12 +99,14 @@ void main() {
       print('  Total frames: ${frameTimes.length}');
       print('  Avg frame time: ${avgFrameTime.inMicroseconds / 1000}ms');
       print('  P99 frame time: ${p99FrameTime.inMicroseconds / 1000}ms');
-      print('  Target: <${targetFrameTime.inMilliseconds}ms avg, <${maxP99FrameTime.inMilliseconds}ms p99');
+      print(
+          '  Target: <${targetFrameTime.inMilliseconds}ms avg, <${maxP99FrameTime.inMilliseconds}ms p99');
 
       expect(
         avgFrameTime,
         lessThan(targetFrameTime),
-        reason: 'Average frame time should be reasonable for test environment (SC-001)',
+        reason:
+            'Average frame time should be reasonable for test environment (SC-001)',
       );
 
       expect(
@@ -118,7 +122,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should handle burst traffic without frame drops', (WidgetTester tester) async {
+    testWidgets('should handle burst traffic without frame drops',
+        (WidgetTester tester) async {
       // Given: Chart configured for streaming
       final streamController = StreamController<ChartDataPoint>();
 
@@ -170,7 +175,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should maintain performance with large datasets', (WidgetTester tester) async {
+    testWidgets('should maintain performance with large datasets',
+        (WidgetTester tester) async {
       // Given: Chart with large initial dataset
       final streamController = StreamController<ChartDataPoint>();
       final initialPoints = List.generate(
@@ -221,7 +227,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should handle stream errors gracefully', (WidgetTester tester) async {
+    testWidgets('should handle stream errors gracefully',
+        (WidgetTester tester) async {
       // Given: Chart with error callback
       final streamController = StreamController<ChartDataPoint>();
       final errors = <Object>[];

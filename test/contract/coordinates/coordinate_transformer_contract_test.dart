@@ -44,7 +44,8 @@ void main() {
 
       // Number of transformation paths = n × (n-1) = 8 × 7 = 56
       final pathCount = systems.length * (systems.length - 1);
-      expect(pathCount, equals(56), reason: 'Must support 56 bidirectional transformation paths');
+      expect(pathCount, equals(56),
+          reason: 'Must support 56 bidirectional transformation paths');
     });
 
     test('should compile exhaustive from→to transformation matrix', () {
@@ -64,7 +65,8 @@ void main() {
         return count;
       }
 
-      expect(countPaths(), equals(56), reason: 'All 56 transformation paths must be enumerable');
+      expect(countPaths(), equals(56),
+          reason: 'All 56 transformation paths must be enumerable');
     });
   });
 
@@ -98,17 +100,22 @@ void main() {
   group('ValidationErrorType enum contract', () {
     test('should have exactly 4 error types', () {
       // Contract: 4 error types defined
-      expect(ValidationErrorType.values.length, equals(4), reason: 'Must have exactly 4 validation error types');
+      expect(ValidationErrorType.values.length, equals(4),
+          reason: 'Must have exactly 4 validation error types');
     });
 
     test('should contain all required error types', () {
       // Contract: Specific named error types
       final types = ValidationErrorType.values;
 
-      expect(types, contains(ValidationErrorType.outOfRange), reason: 'outOfRange type required for bounds checking');
-      expect(types, contains(ValidationErrorType.invalidValue), reason: 'invalidValue type required for NaN/infinity detection');
-      expect(types, contains(ValidationErrorType.missingContext), reason: 'missingContext type required for null field detection');
-      expect(types, contains(ValidationErrorType.unsupportedPath), reason: 'unsupportedPath type required for unimplemented transforms');
+      expect(types, contains(ValidationErrorType.outOfRange),
+          reason: 'outOfRange type required for bounds checking');
+      expect(types, contains(ValidationErrorType.invalidValue),
+          reason: 'invalidValue type required for NaN/infinity detection');
+      expect(types, contains(ValidationErrorType.missingContext),
+          reason: 'missingContext type required for null field detection');
+      expect(types, contains(ValidationErrorType.unsupportedPath),
+          reason: 'unsupportedPath type required for unimplemented transforms');
     });
   });
 }

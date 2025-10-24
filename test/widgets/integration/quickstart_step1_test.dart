@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Run: flutter test test/widgets/integration/quickstart_step1_test.dart
 void main() {
   group('Quickstart Step 1: Basic Line Chart', () {
-    testWidgets('Creates line chart with sales data', (WidgetTester tester) async {
+    testWidgets('Creates line chart with sales data',
+        (WidgetTester tester) async {
       // Step 1 from quickstart.md
       await tester.pumpWidget(
         MaterialApp(
@@ -69,7 +70,8 @@ void main() {
       expect(chartWidget.series[0].points[5].y, equals(25000));
     });
 
-    testWidgets('Chart renders with default theme', (WidgetTester tester) async {
+    testWidgets('Chart renders with default theme',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -101,7 +103,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('Chart auto-calculates axes from data', (WidgetTester tester) async {
+    testWidgets('Chart auto-calculates axes from data',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -163,7 +166,8 @@ void main() {
       expect(chartWidget.showLegend, isTrue);
     });
 
-    testWidgets('Minimal required parameters work', (WidgetTester tester) async {
+    testWidgets('Minimal required parameters work',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

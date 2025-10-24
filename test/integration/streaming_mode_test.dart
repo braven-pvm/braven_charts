@@ -23,7 +23,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Related: FR-002 (streaming mode), FR-005 (disabled interactions), T017-T024 (implementation)
 void main() {
   group('Streaming mode integration tests', () {
-    testWidgets('should start in streaming mode when streamingConfig provided', (WidgetTester tester) async {
+    testWidgets('should start in streaming mode when streamingConfig provided',
+        (WidgetTester tester) async {
       // Given: Chart with streamingConfig and dataStream
       final streamController = StreamController<ChartDataPoint>();
       ChartMode? capturedMode;
@@ -56,7 +57,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should not have interaction handlers in streaming mode', (WidgetTester tester) async {
+    testWidgets('should not have interaction handlers in streaming mode',
+        (WidgetTester tester) async {
       // Given: Chart in streaming mode
       final streamController = StreamController<ChartDataPoint>();
 
@@ -87,7 +89,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should render without errors during streaming', (WidgetTester tester) async {
+    testWidgets('should render without errors during streaming',
+        (WidgetTester tester) async {
       // Given: Chart in streaming mode with data stream
       final streamController = StreamController<ChartDataPoint>();
 
@@ -123,7 +126,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should default to interactive mode when no streamingConfig', (WidgetTester tester) async {
+    testWidgets('should default to interactive mode when no streamingConfig',
+        (WidgetTester tester) async {
       // Given: Chart without streamingConfig
       final chart = BravenChart(
         chartType: ChartType.line,
@@ -144,7 +148,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('should handle empty series with streamingConfig', (WidgetTester tester) async {
+    testWidgets('should handle empty series with streamingConfig',
+        (WidgetTester tester) async {
       // Given: Chart with empty series but dataStream configured
       final streamController = StreamController<ChartDataPoint>();
 
@@ -167,7 +172,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should invoke onModeChanged callback when provided', (WidgetTester tester) async {
+    testWidgets('should invoke onModeChanged callback when provided',
+        (WidgetTester tester) async {
       // Given: Chart with mode change callback
       final streamController = StreamController<ChartDataPoint>();
       final modeChanges = <ChartMode>[];
@@ -198,7 +204,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should accept stream data updates', (WidgetTester tester) async {
+    testWidgets('should accept stream data updates',
+        (WidgetTester tester) async {
       // Given: Chart with data stream
       final streamController = StreamController<ChartDataPoint>();
 

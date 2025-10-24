@@ -258,7 +258,8 @@ class ScatterChartLayer extends ChartLayer {
     // In a real implementation, would use: dataPoint.size or dataPoint.z
     // For now, scale linearly between min and max
     final normalizedValue = (index % 10) / 10.0; // Placeholder
-    return config.minSize! + (normalizedValue * (config.maxSize! - config.minSize!));
+    return config.minSize! +
+        (normalizedValue * (config.maxSize! - config.minSize!));
   }
 
   @override

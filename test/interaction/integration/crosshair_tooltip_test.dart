@@ -46,7 +46,7 @@ void main() {
     test('T031.1: Crosshair appears on mouse enter', () {
       // Simulate mouse enter event at position (50, 50)
       final mousePosition = const Offset(50, 50);
-      
+
       // Update state with crosshair position
       final updatedState = initialState.copyWith(
         crosshairPosition: mousePosition,
@@ -85,7 +85,7 @@ void main() {
       // Mock screen-to-data coordinate mapping
       // Assume data points are at screen x = 0, 10, 20, ..., 90
       // with y coordinates mapped from data y values
-      
+
       final snapRadius = 20.0;
       final mousePosition = const Offset(15, 50); // Near point at x=10
 
@@ -98,7 +98,7 @@ void main() {
 
       // Verify that snap points are found
       expect(snapPoints, isNotEmpty);
-      
+
       // The nearest point should be at x=10 (index 1)
       // Note: This assumes simple coordinate mapping for test
       final nearestPoint = snapPoints.first;
@@ -107,7 +107,7 @@ void main() {
 
     test('T031.4: Tooltip appears on data point hover (after delay)', () async {
       // Simulate hover over a data point (point 5 at x=50, y=75)
-      
+
       // Initial state with focused point but tooltip not yet visible
       var state = initialState.copyWith(
         focusedPointIndex: 5,
@@ -130,13 +130,14 @@ void main() {
       expect(state.focusedPointIndex, equals(5));
     });
 
-    test('T031.5: Tooltip shows correct content (series name, X, Y values)', () {
+    test('T031.5: Tooltip shows correct content (series name, X, Y values)',
+        () {
       final dataPoint = testData[3]; // x=30, y=65, label='Point 3'
 
       // In integration tests, we verify that the state contains the correct
       // data point information that would be used to build the tooltip.
       // Actual widget rendering is tested in widget tests.
-      
+
       final state = initialState.copyWith(
         focusedPointIndex: 3,
         isTooltipVisible: true,
@@ -211,7 +212,8 @@ void main() {
       expect(state.isTooltipVisible, isFalse);
     });
 
-    test('T031.8: Performance - Full interaction cycle completes in <100ms', () {
+    test('T031.8: Performance - Full interaction cycle completes in <100ms',
+        () {
       final stopwatch = Stopwatch()..start();
 
       // Simulate complete interaction cycle

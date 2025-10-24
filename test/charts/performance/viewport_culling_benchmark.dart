@@ -51,10 +51,12 @@ void main() {
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
 
       // Verify some points were culled
-      expect(visible.length, lessThan(points.length), reason: 'Expected some points to be culled');
+      expect(visible.length, lessThan(points.length),
+          reason: 'Expected some points to be culled');
 
       // Constitutional requirement: <1ms
-      expect(elapsedMs, lessThan(1.0), reason: 'Ordered culling took ${elapsedMs}ms, exceeds 1ms budget');
+      expect(elapsedMs, lessThan(1.0),
+          reason: 'Ordered culling took ${elapsedMs}ms, exceeds 1ms budget');
     });
 
     test('Culls 10,000 unordered points in <1ms', () {
@@ -91,10 +93,12 @@ void main() {
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
 
       // Verify some points were culled
-      expect(visible.length, lessThan(points.length), reason: 'Expected some points to be culled');
+      expect(visible.length, lessThan(points.length),
+          reason: 'Expected some points to be culled');
 
       // Constitutional requirement: <1ms
-      expect(elapsedMs, lessThan(1.0), reason: 'Unordered culling took ${elapsedMs}ms, exceeds 1ms budget');
+      expect(elapsedMs, lessThan(1.0),
+          reason: 'Unordered culling took ${elapsedMs}ms, exceeds 1ms budget');
     });
 
     test('Culls with different viewport sizes efficiently', () {
@@ -108,7 +112,11 @@ void main() {
       final viewportSizes = [
         (100.0, '1%', 1.0), // <1ms for small viewport
         (1000.0, '10%', 1.0), // <1ms for medium viewport
-        (5000.0, '50%', 2.0), // <2ms for large viewport (more points to process)
+        (
+          5000.0,
+          '50%',
+          2.0
+        ), // <2ms for large viewport (more points to process)
       ];
 
       for (final (size, label, threshold) in viewportSizes) {
@@ -125,7 +133,9 @@ void main() {
         stopwatch.stop();
 
         final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-        expect(elapsedMs, lessThan(threshold), reason: 'Culling $label viewport took ${elapsedMs}ms, exceeds ${threshold}ms budget');
+        expect(elapsedMs, lessThan(threshold),
+            reason:
+                'Culling $label viewport took ${elapsedMs}ms, exceeds ${threshold}ms budget');
       }
     });
 
@@ -154,7 +164,9 @@ void main() {
         stopwatch.stop();
 
         final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-        expect(elapsedMs, lessThan(1.0), reason: 'Culling with margin=$marginValue took ${elapsedMs}ms, exceeds 1ms budget');
+        expect(elapsedMs, lessThan(1.0),
+            reason:
+                'Culling with margin=$marginValue took ${elapsedMs}ms, exceeds 1ms budget');
       }
     });
 
@@ -180,12 +192,16 @@ void main() {
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
 
       // Binary search should make this very fast (<0.1ms typically)
-      expect(elapsedMs, lessThan(1.0), reason: 'Binary search culling took ${elapsedMs}ms, exceeds 1ms budget');
+      expect(elapsedMs, lessThan(1.0),
+          reason:
+              'Binary search culling took ${elapsedMs}ms, exceeds 1ms budget');
 
       // Verify we got approximately the right number of visible points
       // With 10% margin on each side, should be roughly 120-140 points
-      expect(visible.length, greaterThan(100), reason: 'Expected at least 100 visible points');
-      expect(visible.length, lessThan(200), reason: 'Expected fewer than 200 visible points with margin');
+      expect(visible.length, greaterThan(100),
+          reason: 'Expected at least 100 visible points');
+      expect(visible.length, lessThan(200),
+          reason: 'Expected fewer than 200 visible points with margin');
     });
 
     test('Empty dataset has zero overhead', () {
@@ -205,7 +221,9 @@ void main() {
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
 
       expect(visible, isEmpty);
-      expect(elapsedMs, lessThan(0.1), reason: 'Empty dataset culling took ${elapsedMs}ms, should be near-zero');
+      expect(elapsedMs, lessThan(0.1),
+          reason:
+              'Empty dataset culling took ${elapsedMs}ms, should be near-zero');
     });
   });
 }

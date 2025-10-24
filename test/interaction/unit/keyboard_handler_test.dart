@@ -5,7 +5,8 @@
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent, KeyDownEvent, PhysicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, KeyEvent, KeyDownEvent, PhysicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/interaction/keyboard_handler.dart';
@@ -91,7 +92,9 @@ void main() {
         expect(newState.hoveredPoint, equals(dataPoints[0]));
       });
 
-      test('arrow up/down return state unchanged (for future series navigation)', () {
+      test(
+          'arrow up/down return state unchanged (for future series navigation)',
+          () {
         final eventUp = createKeyEvent(LogicalKeyboardKey.arrowUp);
         final newStateUp = keyboardHandler.handleKeyEvent(
           eventUp,
@@ -363,7 +366,8 @@ void main() {
 
       test('navigateToPrevious() wraps at start', () {
         final firstPoint = dataPoints[0];
-        final prevPoint = keyboardHandler.navigateToPrevious(firstPoint, dataPoints);
+        final prevPoint =
+            keyboardHandler.navigateToPrevious(firstPoint, dataPoints);
 
         expect(prevPoint, equals(dataPoints[9]));
       });

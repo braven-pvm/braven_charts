@@ -14,27 +14,32 @@ void main() {
     test('Chart layers use automatic color cycling from theme', () {
       // PLACEHOLDER: Will test theme.seriesTheme.colors usage
       // Currently using default hardcoded colors in each chart layer
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('LineChartLayer uses lineWidth from SeriesTheme', () {
       // PLACEHOLDER: Will test config.lineWidth vs theme.seriesTheme.lineWidth
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('Theme changes without chart layer recreation', () {
       // PLACEHOLDER: Will test ChartLayer.updateData() with new theme
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('Per-series style overrides work correctly', () {
       // PLACEHOLDER: Will test series-specific colors/styles override theme defaults
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('All chart types respect theme dark mode', () {
       // PLACEHOLDER: Will test ChartTheme.dark() variant
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
   });
 }

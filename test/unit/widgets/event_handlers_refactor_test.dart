@@ -32,7 +32,8 @@ void main() {
       );
     }
 
-    testWidgets('T012: onHover updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets('T012: onHover updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();
@@ -51,7 +52,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T013: onExit updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets('T013: onExit updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();
@@ -74,7 +76,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T014: onPointerDown updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets('T014: onPointerDown updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();
@@ -88,14 +91,16 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T015: onPointerUp updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets('T015: onPointerUp updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();
 
       // Act: Pointer down then up
       final chartFinder = find.byType(BravenChart);
-      final gesture = await tester.startGesture(tester.getCenter(chartFinder), buttons: kMiddleMouseButton);
+      final gesture = await tester.startGesture(tester.getCenter(chartFinder),
+          buttons: kMiddleMouseButton);
       await tester.pump();
       await gesture.up();
       await tester.pump();
@@ -104,7 +109,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T016: onPointerMove updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets('T016: onPointerMove updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();
@@ -113,14 +119,17 @@ void main() {
       final chartFinder = find.byType(BravenChart);
       final chartCenter = tester.getCenter(chartFinder);
 
-      await tester.drag(chartFinder, const Offset(50, 50), kind: PointerDeviceKind.mouse, buttons: kMiddleMouseButton);
+      await tester.drag(chartFinder, const Offset(50, 50),
+          kind: PointerDeviceKind.mouse, buttons: kMiddleMouseButton);
       await tester.pump();
 
       // Assert: No crashes
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('T017: onPointerSignal (zoom) updates notifier without crashing', (WidgetTester tester) async {
+    testWidgets(
+        'T017: onPointerSignal (zoom) updates notifier without crashing',
+        (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(buildTestChart());
       await tester.pumpAndSettle();

@@ -25,7 +25,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Related: T017-T024 (streaming implementation), FR-020 (zero errors)
 void main() {
   group('Streaming mode golden tests', () {
-    testWidgets('should render streaming mode chart correctly', (WidgetTester tester) async {
+    testWidgets('should render streaming mode chart correctly',
+        (WidgetTester tester) async {
       // Given: Chart configured for streaming mode
       final streamController = StreamController<ChartDataPoint>();
 
@@ -36,7 +37,8 @@ void main() {
             id: 'golden-test',
             points: List.generate(
               50,
-              (i) => ChartDataPoint(x: i.toDouble(), y: 50 + 20 * (i % 10 / 10)),
+              (i) =>
+                  ChartDataPoint(x: i.toDouble(), y: 50 + 20 * (i % 10 / 10)),
             ),
           ),
         ],
@@ -68,7 +70,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should render streaming mode with data stream correctly', (WidgetTester tester) async {
+    testWidgets('should render streaming mode with data stream correctly',
+        (WidgetTester tester) async {
       // Given: Chart with active data stream
       final streamController = StreamController<ChartDataPoint>();
 
@@ -100,7 +103,8 @@ void main() {
 
       // Add some streamed data
       for (int i = 1; i <= 20; i++) {
-        streamController.add(ChartDataPoint(x: i.toDouble(), y: 50 + 10 * (i % 5 / 5)));
+        streamController
+            .add(ChartDataPoint(x: i.toDouble(), y: 50 + 10 * (i % 5 / 5)));
         await tester.pump(const Duration(milliseconds: 16));
       }
       await tester.pumpAndSettle();
@@ -115,7 +119,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should render streaming mode with multiple series correctly', (WidgetTester tester) async {
+    testWidgets('should render streaming mode with multiple series correctly',
+        (WidgetTester tester) async {
       // Given: Chart with multiple series in streaming mode
       final streamController = StreamController<ChartDataPoint>();
 
@@ -165,7 +170,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('should render empty streaming chart correctly', (WidgetTester tester) async {
+    testWidgets('should render empty streaming chart correctly',
+        (WidgetTester tester) async {
       // Given: Empty chart in streaming mode
       final streamController = StreamController<ChartDataPoint>();
 

@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChart ValueNotifier Integration', () {
-    testWidgets('T010: _interactionStateNotifier exists and initializes correctly', (WidgetTester tester) async {
+    testWidgets(
+        'T010: _interactionStateNotifier exists and initializes correctly',
+        (WidgetTester tester) async {
       // Arrange: Create a basic chart
       final chart = BravenChart(
         chartType: ChartType.line,
@@ -31,7 +33,9 @@ void main() {
       // but the fact that chart renders without crashing verifies initialization
     });
 
-    testWidgets('T011: _interactionStateNotifier updates without triggering setState', (WidgetTester tester) async {
+    testWidgets(
+        'T011: _interactionStateNotifier updates without triggering setState',
+        (WidgetTester tester) async {
       int buildCount = 0;
 
       // Arrange: Create chart with interaction enabled

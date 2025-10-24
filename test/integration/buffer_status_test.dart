@@ -39,7 +39,9 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('T059: onBufferUpdated callback provides accurate count (FR-016)', (WidgetTester tester) async {
+    testWidgets(
+        'T059: onBufferUpdated callback provides accurate count (FR-016)',
+        (WidgetTester tester) async {
       // Arrange: Create chart with buffer update callback
       await tester.pumpWidget(
         MaterialApp(
@@ -79,7 +81,8 @@ void main() {
       await tester.pump();
 
       // Verify we're in interactive mode
-      expect(lastModeChanged, equals(ChartMode.interactive), reason: 'Chart should be in interactive mode after click');
+      expect(lastModeChanged, equals(ChartMode.interactive),
+          reason: 'Chart should be in interactive mode after click');
 
       // Clear buffer counts from any initial data
       bufferCounts.clear();
@@ -87,19 +90,24 @@ void main() {
       // Add 10 data points while in interactive mode
       for (int i = 5; i < 15; i++) {
         streamController.add(ChartDataPoint(x: i.toDouble(), y: i * 10.0));
-        await tester.pump(const Duration(milliseconds: 20)); // Allow stream throttle processing
+        await tester.pump(const Duration(
+            milliseconds: 20)); // Allow stream throttle processing
       }
 
       // Assert: Verify callback invoked with accurate counts
-      expect(bufferCounts.length, greaterThanOrEqualTo(10), reason: 'Callback should be invoked for each buffered point');
+      expect(bufferCounts.length, greaterThanOrEqualTo(10),
+          reason: 'Callback should be invoked for each buffered point');
 
       // Verify counts are sequential (1, 2, 3, ..., 10)
       for (int i = 0; i < 10; i++) {
-        expect(bufferCounts[i], equals(i + 1), reason: 'Buffer count should increment sequentially');
+        expect(bufferCounts[i], equals(i + 1),
+            reason: 'Buffer count should increment sequentially');
       }
     });
 
-    testWidgets('T060: Buffer full triggers forced auto-resume (FR-014, SC-005)', (WidgetTester tester) async {
+    testWidgets(
+        'T060: Buffer full triggers forced auto-resume (FR-014, SC-005)',
+        (WidgetTester tester) async {
       // Arrange: Create chart with small maxBufferSize for testing
       const maxBufferSize = 20;
       bool forcedResumeOccurred = false;
@@ -119,7 +127,9 @@ void main() {
                 },
                 onModeChanged: (mode) {
                   lastModeChanged = mode;
-                  if (mode == ChartMode.streaming && bufferCounts.isNotEmpty && bufferCounts.last >= maxBufferSize) {
+                  if (mode == ChartMode.streaming &&
+                      bufferCounts.isNotEmpty &&
+                      bufferCounts.last >= maxBufferSize) {
                     forcedResumeOccurred = true;
                   }
                 },
@@ -158,11 +168,15 @@ void main() {
       }
 
       // Assert: Verify forced auto-resume occurred
-      expect(forcedResumeOccurred, isTrue, reason: 'Chart should force auto-resume when buffer reaches maxBufferSize');
-      expect(lastModeChanged, equals(ChartMode.streaming), reason: 'Chart should be back in streaming mode after forced resume');
+      expect(forcedResumeOccurred, isTrue,
+          reason:
+              'Chart should force auto-resume when buffer reaches maxBufferSize');
+      expect(lastModeChanged, equals(ChartMode.streaming),
+          reason: 'Chart should be back in streaming mode after forced resume');
     });
 
-    testWidgets('T059: Buffer cleared after resume', (WidgetTester tester) async {
+    testWidgets('T059: Buffer cleared after resume',
+        (WidgetTester tester) async {
       // Arrange: Create chart with buffer update callback
       int? lastBufferCount;
 
@@ -213,14 +227,16 @@ void main() {
       }
 
       // Verify buffer has data
-      expect(lastBufferCount, greaterThan(0), reason: 'Buffer should contain data after adding points');
+      expect(lastBufferCount, greaterThan(0),
+          reason: 'Buffer should contain data after adding points');
 
       // Wait for auto-resume
       await tester.pump(const Duration(seconds: 2));
       await tester.pump();
 
       // Assert: Verify mode changed back to streaming
-      expect(lastModeChanged, equals(ChartMode.streaming), reason: 'Chart should auto-resume to streaming mode');
+      expect(lastModeChanged, equals(ChartMode.streaming),
+          reason: 'Chart should auto-resume to streaming mode');
 
       // Add more data after resume - buffer count should restart from 0 if we pause again
       lastBufferCount = null;
@@ -233,10 +249,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 20));
 
       // Verify buffer restarted from 1 (not continuing from previous count)
-      expect(lastBufferCount, equals(1), reason: 'Buffer should be cleared after resume, count should restart from 1');
+      expect(lastBufferCount, equals(1),
+          reason:
+              'Buffer should be cleared after resume, count should restart from 1');
     });
 
-    testWidgets('T059: Multiple buffer updates with accurate sequential counts', (WidgetTester tester) async {
+    testWidgets('T059: Multiple buffer updates with accurate sequential counts',
+        (WidgetTester tester) async {
       // Arrange: Create chart to test precise counting
       await tester.pumpWidget(
         MaterialApp(
@@ -290,14 +309,17 @@ void main() {
       }
 
       // Assert: Verify all counts are present and sequential
-      expect(bufferCounts.length, equals(8), reason: 'Should have 8 buffer update callbacks (5 + 3)');
+      expect(bufferCounts.length, equals(8),
+          reason: 'Should have 8 buffer update callbacks (5 + 3)');
 
       for (int i = 0; i < bufferCounts.length; i++) {
-        expect(bufferCounts[i], equals(i + 1), reason: 'Buffer count at index $i should be ${i + 1}');
+        expect(bufferCounts[i], equals(i + 1),
+            reason: 'Buffer count at index $i should be ${i + 1}');
       }
     });
 
-    testWidgets('T059: Buffer update callback timing is synchronous', (WidgetTester tester) async {
+    testWidgets('T059: Buffer update callback timing is synchronous',
+        (WidgetTester tester) async {
       // Arrange: Create chart to verify callback timing
       final List<String> eventLog = [];
 
@@ -343,9 +365,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 20));
 
       // Assert: Verify callback was invoked synchronously
-      expect(eventLog, contains('buffer:1'), reason: 'Buffer callback should be invoked after adding point');
-      expect(eventLog.indexOf('buffer:1'), greaterThan(eventLog.indexOf('mode:interactive')),
-          reason: 'Buffer callback should occur after mode change to interactive');
+      expect(eventLog, contains('buffer:1'),
+          reason: 'Buffer callback should be invoked after adding point');
+      expect(eventLog.indexOf('buffer:1'),
+          greaterThan(eventLog.indexOf('mode:interactive')),
+          reason:
+              'Buffer callback should occur after mode change to interactive');
     });
   });
 }

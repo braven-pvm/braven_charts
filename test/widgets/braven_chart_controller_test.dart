@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChart Controller Integration', () {
-    testWidgets('creates internal controller when none provided', (WidgetTester tester) async {
+    testWidgets('creates internal controller when none provided',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -33,7 +34,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('uses external controller when provided', (WidgetTester tester) async {
+    testWidgets('uses external controller when provided',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final series = ChartSeries(
@@ -92,7 +94,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('removeOldestPoint() triggers rebuild', (WidgetTester tester) async {
+    testWidgets('removeOldestPoint() triggers rebuild',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       controller.addPoint('test-series', const ChartDataPoint(x: 0, y: 10));
@@ -160,7 +163,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('addAnnotation() triggers rebuild', (WidgetTester tester) async {
+    testWidgets('addAnnotation() triggers rebuild',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final series = ChartSeries(
@@ -196,7 +200,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('removeAnnotation() triggers rebuild', (WidgetTester tester) async {
+    testWidgets('removeAnnotation() triggers rebuild',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final annotation = TextAnnotation(
@@ -237,7 +242,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('controller change updates widget correctly', (WidgetTester tester) async {
+    testWidgets('controller change updates widget correctly',
+        (WidgetTester tester) async {
       // Arrange
       final controller1 = ChartController();
       final controller2 = ChartController();
@@ -286,7 +292,8 @@ void main() {
       controller2.dispose();
     });
 
-    testWidgets('disposes internal controller on widget dispose', (WidgetTester tester) async {
+    testWidgets('disposes internal controller on widget dispose',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -317,7 +324,8 @@ void main() {
       expect(find.byType(BravenChart), findsNothing);
     });
 
-    testWidgets('external controller not disposed by widget', (WidgetTester tester) async {
+    testWidgets('external controller not disposed by widget',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final series = ChartSeries(
@@ -347,13 +355,16 @@ void main() {
       );
 
       // Assert - controller should still be usable
-      expect(() => controller.addPoint('test', const ChartDataPoint(x: 0, y: 0)), returnsNormally);
+      expect(
+          () => controller.addPoint('test', const ChartDataPoint(x: 0, y: 0)),
+          returnsNormally);
 
       // Cleanup
       controller.dispose();
     });
 
-    testWidgets('controller series override widget series', (WidgetTester tester) async {
+    testWidgets('controller series override widget series',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       controller.addPoint('shared-series', const ChartDataPoint(x: 0, y: 50));
@@ -384,7 +395,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('multiple controller updates batch correctly', (WidgetTester tester) async {
+    testWidgets('multiple controller updates batch correctly',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final series = ChartSeries(
@@ -406,7 +418,8 @@ void main() {
 
       // Act - multiple rapid updates
       for (var i = 0; i < 10; i++) {
-        controller.addPoint('test-series', ChartDataPoint(x: i.toDouble(), y: i * 10.0));
+        controller.addPoint(
+            'test-series', ChartDataPoint(x: i.toDouble(), y: i * 10.0));
       }
       await tester.pump();
 

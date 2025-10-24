@@ -1,4 +1,4 @@
-﻿/// Interaction configuration wrapper model.
+/// Interaction configuration wrapper model.
 ///
 /// This library provides configuration models for chart interaction features,
 /// including crosshair, tooltip, zoom/pan, gestures, and keyboard navigation.
@@ -68,7 +68,8 @@ class GestureConfig {
   }
 
   @override
-  int get hashCode => Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
+  int get hashCode =>
+      Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
 }
 
 /// Configuration for keyboard navigation.
@@ -147,7 +148,8 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys, enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys,
+      enablePlusMinusKeys, enableHomeEndKeys);
 }
 
 /// Comprehensive interaction configuration for charts.
@@ -529,5 +531,6 @@ class InteractionConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, crosshair, tooltip, gesture, keyboard, enableZoom, enablePan, enableSelection);
+  int get hashCode => Object.hash(enabled, crosshair, tooltip, gesture,
+      keyboard, enableZoom, enablePan, enableSelection);
 }

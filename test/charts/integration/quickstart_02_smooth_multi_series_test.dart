@@ -24,7 +24,8 @@ void main() {
 
     test('Series have distinct colors from theme', () {
       // PLACEHOLDER: Will verify theme.seriesTheme.colors cycling
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('Each series has 10 points', () {

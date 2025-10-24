@@ -4,7 +4,8 @@
 /// and stepped (horizontal-vertical segments).
 library;
 
-import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
+import 'package:braven_charts/src/charts/line/line_chart_config.dart'
+    show LineStyle;
 import 'package:braven_charts/src/charts/line/line_interpolator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -80,7 +81,8 @@ void main() {
 
         // Smooth curve should be longer than straight line distance
         final metric = metrics.first;
-        final straightDistance = (points[1] - points[0]).distance + (points[2] - points[1]).distance;
+        final straightDistance =
+            (points[1] - points[0]).distance + (points[2] - points[1]).distance;
         expect(metric.length, greaterThanOrEqualTo(straightDistance * 0.9));
       });
 
@@ -141,7 +143,8 @@ void main() {
 
         // Stepped path (horizontal then vertical) should be sum of dx + dy
         final metric = metrics.first;
-        final expectedLength = (points[1].dx - points[0].dx).abs() + (points[1].dy - points[0].dy).abs();
+        final expectedLength = (points[1].dx - points[0].dx).abs() +
+            (points[1].dy - points[0].dy).abs();
         expect(metric.length, closeTo(expectedLength, 0.1));
       });
 

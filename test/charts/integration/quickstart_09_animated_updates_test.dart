@@ -14,17 +14,20 @@ void main() {
 
     test('300ms transition between datasets', () {
       // PLACEHOLDER: Will verify ChartAnimationConfig(duration: 300ms)
-      expect(true, isTrue, reason: 'Placeholder - awaiting animation system integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting animation system integration');
     });
 
     test('Smooth lerp animation is visible', () {
       // PLACEHOLDER: Will verify intermediate frames show interpolated values
-      expect(true, isTrue, reason: 'Placeholder - awaiting animation system integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting animation system integration');
     });
 
     test('Animation completes successfully', () {
       // PLACEHOLDER: Will verify final frame matches new dataset
-      expect(true, isTrue, reason: 'Placeholder - awaiting animation system integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting animation system integration');
     });
   });
 }

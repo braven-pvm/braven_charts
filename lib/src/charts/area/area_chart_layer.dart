@@ -14,7 +14,8 @@ import 'package:braven_charts/src/charts/area/area_chart_config.dart';
 import 'package:braven_charts/src/charts/area/area_stacking.dart';
 import 'package:braven_charts/src/charts/base/chart_layer.dart';
 import 'package:braven_charts/src/charts/base/chart_renderer.dart';
-import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
+import 'package:braven_charts/src/charts/line/line_chart_config.dart'
+    show LineStyle;
 import 'package:braven_charts/src/charts/line/line_interpolator.dart';
 import 'package:braven_charts/src/rendering/render_context.dart';
 
@@ -58,7 +59,8 @@ class AreaChartLayer extends ChartLayer {
     required super.zIndex,
     super.isVisible,
   })  : _stacker = const AreaStacking(),
-        _interpolator = LineInterpolator(config.lineConfig?.lineStyle ?? LineStyle.straight),
+        _interpolator = LineInterpolator(
+            config.lineConfig?.lineStyle ?? LineStyle.straight),
         _renderer = ChartRenderer();
 
   /// Configuration for area rendering (stacking, fill opacity, etc.)
@@ -178,7 +180,8 @@ class AreaChartLayer extends ChartLayer {
   }
 
   /// Draws a line overlay on top of the area.
-  void _drawLineOverlay(RenderContext context, List<Offset> points, Color color, Paint paint) {
+  void _drawLineOverlay(
+      RenderContext context, List<Offset> points, Color color, Paint paint) {
     final lineConfig = config.lineConfig!;
 
     paint.style = PaintingStyle.stroke;
@@ -212,7 +215,8 @@ class AreaChartLayer extends ChartLayer {
   }
 
   @override
-  String toString() => 'AreaChartLayer(series: ${series.length}, stacked: ${config.stacked}, zIndex: $zIndex)';
+  String toString() =>
+      'AreaChartLayer(series: ${series.length}, stacked: ${config.stacked}, zIndex: $zIndex)';
 
   // Default color palette (will be replaced by theme colors)
   static final List<Color> _defaultColors = [

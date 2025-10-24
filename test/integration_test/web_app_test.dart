@@ -13,7 +13,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Real Browser Zoom Tests', () {
-    testWidgets('Test keyboard zoom in real Chrome browser', (WidgetTester tester) async {
+    testWidgets('Test keyboard zoom in real Chrome browser',
+        (WidgetTester tester) async {
       print('\n🧪 ========== REAL BROWSER KEYBOARD ZOOM TEST ==========');
 
       // Launch the actual example app
@@ -23,7 +24,8 @@ void main() {
 
       // Find and tap "Simple Zoom Test" card
       final simpleZoomTestFinder = find.text('🎯 Simple Zoom Test');
-      expect(simpleZoomTestFinder, findsOneWidget, reason: 'Simple Zoom Test card should be visible');
+      expect(simpleZoomTestFinder, findsOneWidget,
+          reason: 'Simple Zoom Test card should be visible');
       print('🧪 TEST: Found Simple Zoom Test card');
 
       await tester.tap(simpleZoomTestFinder);
@@ -59,7 +61,8 @@ void main() {
 
       // Verify chart is still visible
       final customPaintFinder = find.byType(CustomPaint);
-      expect(customPaintFinder, findsWidgets, reason: 'Chart should still be rendered after keyboard zoom');
+      expect(customPaintFinder, findsWidgets,
+          reason: 'Chart should still be rendered after keyboard zoom');
       print('🧪 TEST: ✅ Chart is still rendered after keyboard zoom');
 
       // Test Numpad Subtract (zoom out)
@@ -74,13 +77,15 @@ void main() {
       print('🧪 TEST: Keyboard zoom out completed');
 
       // Verify chart is still visible
-      expect(customPaintFinder, findsWidgets, reason: 'Chart should still be rendered after zoom out');
+      expect(customPaintFinder, findsWidgets,
+          reason: 'Chart should still be rendered after zoom out');
       print('🧪 TEST: ✅ Chart is still rendered after zoom out');
 
       print('🧪 ========== END KEYBOARD ZOOM TEST ==========\n');
     });
 
-    testWidgets('Test SHIFT+scroll zoom in real Chrome browser', (WidgetTester tester) async {
+    testWidgets('Test SHIFT+scroll zoom in real Chrome browser',
+        (WidgetTester tester) async {
       print('\n🧪 ========== REAL BROWSER SHIFT+SCROLL ZOOM TEST ==========');
 
       // Launch the app
@@ -155,12 +160,14 @@ void main() {
         print('🧪 TEST: ❌ Chart disappeared after SHIFT+scroll zoom!');
       }
 
-      expect(customPaintFinder, findsWidgets, reason: 'Chart should still be rendered after SHIFT+scroll zoom');
+      expect(customPaintFinder, findsWidgets,
+          reason: 'Chart should still be rendered after SHIFT+scroll zoom');
 
       print('🧪 ========== END SHIFT+SCROLL ZOOM TEST ==========\n');
     });
 
-    testWidgets('Test visual zoom behavior in real browser', (WidgetTester tester) async {
+    testWidgets('Test visual zoom behavior in real browser',
+        (WidgetTester tester) async {
       print('\n🧪 ========== REAL BROWSER VISUAL ZOOM TEST ==========');
 
       // Launch the app
@@ -195,10 +202,13 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final afterKeyboardZoomCount = tester.widgetList(customPaintFinder).length;
-      print('🧪 TEST: After keyboard zoom, CustomPaint widgets: $afterKeyboardZoomCount');
+      final afterKeyboardZoomCount =
+          tester.widgetList(customPaintFinder).length;
+      print(
+          '🧪 TEST: After keyboard zoom, CustomPaint widgets: $afterKeyboardZoomCount');
 
-      expect(afterKeyboardZoomCount, greaterThan(0), reason: 'Chart should still be rendered after keyboard zoom');
+      expect(afterKeyboardZoomCount, greaterThan(0),
+          reason: 'Chart should still be rendered after keyboard zoom');
 
       // SHIFT+scroll zoom test
       print('\n🧪 TEST: Testing SHIFT+scroll visual behavior...');
@@ -215,7 +225,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 150));
 
         final paintCount = tester.widgetList(customPaintFinder).length;
-        print('🧪 TEST: After scroll #${i + 1}, CustomPaint count: $paintCount');
+        print(
+            '🧪 TEST: After scroll #${i + 1}, CustomPaint count: $paintCount');
 
         if (paintCount == 0) {
           print('🧪 TEST: ⚠️ WARNING: Chart disappeared during scroll!');

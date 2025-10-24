@@ -101,7 +101,9 @@ class ChartController extends ChangeNotifier {
   ///
   /// Notifies listeners after the annotation is added.
   String addAnnotation(ChartAnnotation annotation) {
-    final id = annotation.id.isEmpty ? 'annotation_${_annotationIdCounter++}' : annotation.id;
+    final id = annotation.id.isEmpty
+        ? 'annotation_${_annotationIdCounter++}'
+        : annotation.id;
 
     _annotations[id] = annotation;
     notifyListeners();

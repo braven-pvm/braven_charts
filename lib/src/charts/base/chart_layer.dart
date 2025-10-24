@@ -221,5 +221,6 @@ abstract class ChartLayer extends RenderLayer {
   bool get isEmpty => series.isEmpty;
 
   @override
-  String toString() => 'ChartLayer(series: ${series.length}, zIndex: $zIndex, isVisible: $isVisible)';
+  String toString() =>
+      'ChartLayer(series: ${series.length}, zIndex: $zIndex, isVisible: $isVisible)';
 }

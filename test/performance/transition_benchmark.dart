@@ -38,7 +38,9 @@ void main() {
       chartController.dispose();
     });
 
-    testWidgets('T038: Streaming → Interactive transition completes within 50ms (SC-002)', (WidgetTester tester) async {
+    testWidgets(
+        'T038: Streaming → Interactive transition completes within 50ms (SC-002)',
+        (WidgetTester tester) async {
       // Arrange: Create chart with streaming data
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -78,12 +80,17 @@ void main() {
       stopwatch.stop();
 
       // Assert: Transition should complete within 50ms
-      print('⏱️ Streaming→Interactive transition time: ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(50), reason: 'Mode transition must complete within 50ms (SC-002)');
-      expect(lastMode, equals(ChartMode.interactive), reason: 'Mode should change to interactive');
+      print(
+          '⏱️ Streaming→Interactive transition time: ${stopwatch.elapsedMilliseconds}ms');
+      expect(stopwatch.elapsedMilliseconds, lessThan(50),
+          reason: 'Mode transition must complete within 50ms (SC-002)');
+      expect(lastMode, equals(ChartMode.interactive),
+          reason: 'Mode should change to interactive');
     });
 
-    testWidgets('T038: Interactive → Streaming transition completes within 50ms (SC-002)', (WidgetTester tester) async {
+    testWidgets(
+        'T038: Interactive → Streaming transition completes within 50ms (SC-002)',
+        (WidgetTester tester) async {
       // Arrange: Create chart and pause it
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -134,12 +141,17 @@ void main() {
       stopwatch.stop();
 
       // Assert: Transition should complete within 50ms
-      print('⏱️ Interactive→Streaming transition time: ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(50), reason: 'Mode transition must complete within 50ms (SC-002)');
-      expect(lastMode, equals(ChartMode.streaming), reason: 'Mode should change to streaming after auto-resume');
+      print(
+          '⏱️ Interactive→Streaming transition time: ${stopwatch.elapsedMilliseconds}ms');
+      expect(stopwatch.elapsedMilliseconds, lessThan(50),
+          reason: 'Mode transition must complete within 50ms (SC-002)');
+      expect(lastMode, equals(ChartMode.streaming),
+          reason: 'Mode should change to streaming after auto-resume');
     });
 
-    testWidgets('T038: Repeated transitions maintain <50ms performance (SC-002)', (WidgetTester tester) async {
+    testWidgets(
+        'T038: Repeated transitions maintain <50ms performance (SC-002)',
+        (WidgetTester tester) async {
       // Arrange: Create chart
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -198,12 +210,15 @@ void main() {
       // Assert: All transitions should be <50ms
       print('⏱️ Transition times across 10 transitions: $transitionTimes');
       for (int i = 0; i < transitionTimes.length; i++) {
-        expect(transitionTimes[i], lessThan(50), reason: 'Transition $i must complete within 50ms (SC-002)');
+        expect(transitionTimes[i], lessThan(50),
+            reason: 'Transition $i must complete within 50ms (SC-002)');
       }
 
-      final avgTime = transitionTimes.reduce((a, b) => a + b) / transitionTimes.length;
+      final avgTime =
+          transitionTimes.reduce((a, b) => a + b) / transitionTimes.length;
       print('⏱️ Average transition time: ${avgTime.toStringAsFixed(2)}ms');
-      expect(avgTime, lessThan(50), reason: 'Average transition time must be <50ms');
+      expect(avgTime, lessThan(50),
+          reason: 'Average transition time must be <50ms');
     });
   });
 
@@ -223,7 +238,9 @@ void main() {
       chartController.dispose();
     }
 
-    testWidgets('T039: Applying 10K buffered points completes within 500ms (SC-007)', (WidgetTester tester) async {
+    testWidgets(
+        'T039: Applying 10K buffered points completes within 500ms (SC-007)',
+        (WidgetTester tester) async {
       // Arrange: Create chart
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -263,12 +280,14 @@ void main() {
       await tester.pump();
       expect(lastMode, equals(ChartMode.interactive));
 
-      final pointCountBefore = chartController.getAllSeries()['line']?.length ?? 0;
+      final pointCountBefore =
+          chartController.getAllSeries()['line']?.length ?? 0;
 
       // Act: Buffer 10,000 points while paused
       print('📊 Buffering 10,000 points...');
       for (int i = 100; i < 10100; i++) {
-        streamController.add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
+        streamController
+            .add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
         if (i % 1000 == 0) {
           await tester.pump(Duration.zero); // Allow buffer to process
         }
@@ -276,8 +295,10 @@ void main() {
       await tester.pump();
 
       // Verify points buffered, not applied
-      final pointCountWhileBuffering = chartController.getAllSeries()['line']?.length ?? 0;
-      expect(pointCountWhileBuffering, equals(pointCountBefore), reason: 'Points should buffer without visual update');
+      final pointCountWhileBuffering =
+          chartController.getAllSeries()['line']?.length ?? 0;
+      expect(pointCountWhileBuffering, equals(pointCountBefore),
+          reason: 'Points should buffer without visual update');
 
       // Trigger auto-resume and measure buffer application time
       print('⏱️ Measuring buffer application time for 10K points...');
@@ -286,16 +307,24 @@ void main() {
       stopwatch.stop();
 
       // Assert: Buffer application should complete within 500ms
-      print('⏱️ Buffer application time (10K points): ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(500), reason: 'Applying 10K buffered points must complete within 500ms (SC-007)');
-      expect(lastMode, equals(ChartMode.streaming), reason: 'Should transition to streaming after auto-resume');
+      print(
+          '⏱️ Buffer application time (10K points): ${stopwatch.elapsedMilliseconds}ms');
+      expect(stopwatch.elapsedMilliseconds, lessThan(500),
+          reason:
+              'Applying 10K buffered points must complete within 500ms (SC-007)');
+      expect(lastMode, equals(ChartMode.streaming),
+          reason: 'Should transition to streaming after auto-resume');
 
       // Verify all buffered points were applied
-      final pointCountAfter = chartController.getAllSeries()['line']?.length ?? 0;
-      expect(pointCountAfter, greaterThan(pointCountBefore), reason: 'Buffered points should be applied after resume');
+      final pointCountAfter =
+          chartController.getAllSeries()['line']?.length ?? 0;
+      expect(pointCountAfter, greaterThan(pointCountBefore),
+          reason: 'Buffered points should be applied after resume');
     });
 
-    testWidgets('T039: Applying 5K buffered points completes well under limit (SC-007)', (WidgetTester tester) async {
+    testWidgets(
+        'T039: Applying 5K buffered points completes well under limit (SC-007)',
+        (WidgetTester tester) async {
       // Arrange: Create chart
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -338,7 +367,8 @@ void main() {
       // Buffer 5,000 points
       print('📊 Buffering 5,000 points...');
       for (int i = 100; i < 5100; i++) {
-        streamController.add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
+        streamController
+            .add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
         if (i % 1000 == 0) {
           await tester.pump(Duration.zero);
         }
@@ -352,12 +382,15 @@ void main() {
       stopwatch.stop();
 
       // Assert: Should be significantly faster than 500ms limit
-      print('⏱️ Buffer application time (5K points): ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(250), reason: 'Applying 5K points should be well under 500ms limit');
+      print(
+          '⏱️ Buffer application time (5K points): ${stopwatch.elapsedMilliseconds}ms');
+      expect(stopwatch.elapsedMilliseconds, lessThan(250),
+          reason: 'Applying 5K points should be well under 500ms limit');
       expect(lastMode, equals(ChartMode.streaming));
     });
 
-    testWidgets('T039: Buffer application scales linearly with point count', (WidgetTester tester) async {
+    testWidgets('T039: Buffer application scales linearly with point count',
+        (WidgetTester tester) async {
       // Arrange: Create chart
       ChartMode? lastMode;
       await tester.pumpWidget(
@@ -405,7 +438,8 @@ void main() {
 
         // Buffer points
         for (int i = 100; i < 100 + size; i++) {
-          streamController.add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
+          streamController
+              .add(ChartDataPoint(x: i.toDouble(), y: (i % 100) * 10.0));
           if (i % 1000 == 0) {
             await tester.pump(Duration.zero);
           }
@@ -419,7 +453,8 @@ void main() {
         stopwatch.stop();
 
         pointCountToTime[size] = stopwatch.elapsedMilliseconds;
-        print('⏱️ Buffer application time ($size points): ${stopwatch.elapsedMilliseconds}ms');
+        print(
+            '⏱️ Buffer application time ($size points): ${stopwatch.elapsedMilliseconds}ms');
 
         expect(lastMode, equals(ChartMode.streaming));
 
@@ -428,11 +463,16 @@ void main() {
       }
 
       // Assert: All buffer applications should meet their proportional limits
-      expect(pointCountToTime[1000]!, lessThan(50), reason: '1K points should be <50ms (~10% of 500ms limit)');
-      expect(pointCountToTime[2500]!, lessThan(125), reason: '2.5K points should be <125ms (~25% of 500ms limit)');
-      expect(pointCountToTime[5000]!, lessThan(250), reason: '5K points should be <250ms (~50% of 500ms limit)');
-      expect(pointCountToTime[7500]!, lessThan(375), reason: '7.5K points should be <375ms (~75% of 500ms limit)');
-      expect(pointCountToTime[10000]!, lessThan(500), reason: '10K points should be <500ms (100% limit, SC-007)');
+      expect(pointCountToTime[1000]!, lessThan(50),
+          reason: '1K points should be <50ms (~10% of 500ms limit)');
+      expect(pointCountToTime[2500]!, lessThan(125),
+          reason: '2.5K points should be <125ms (~25% of 500ms limit)');
+      expect(pointCountToTime[5000]!, lessThan(250),
+          reason: '5K points should be <250ms (~50% of 500ms limit)');
+      expect(pointCountToTime[7500]!, lessThan(375),
+          reason: '7.5K points should be <375ms (~75% of 500ms limit)');
+      expect(pointCountToTime[10000]!, lessThan(500),
+          reason: '10K points should be <500ms (100% limit, SC-007)');
 
       print('📊 Buffer application scaling results: $pointCountToTime');
     });
