@@ -82,10 +82,10 @@
 
 ### Foundational Widget Structure
 
-- [ ] T025 Create ChartScrollbar StatefulWidget skeleton in lib/src/widgets/chart_scrollbar.dart
-- [ ] T026 Create _ChartScrollbarState class with ValueNotifier<ScrollbarState> in lib/src/widgets/chart_scrollbar.dart
-- [ ] T027 Implement _ChartScrollbarState.initState() with ScrollbarState initialization in lib/src/widgets/chart_scrollbar.dart
-- [ ] T028 Implement _ChartScrollbarState.dispose() with ValueNotifier cleanup in lib/src/widgets/chart_scrollbar.dart
+- [X] T025 Create ChartScrollbar StatefulWidget skeleton in lib/src/widgets/chart_scrollbar.dart
+- [X] T026 Create _ChartScrollbarState class with ValueNotifier<ScrollbarState> in lib/src/widgets/chart_scrollbar.dart
+- [X] T027 Implement _ChartScrollbarState.initState() with ScrollbarState initialization in lib/src/widgets/chart_scrollbar.dart
+- [X] T028 Implement _ChartScrollbarState.dispose() with ValueNotifier cleanup in lib/src/widgets/chart_scrollbar.dart
 
 ### Foundational Theme Integration
 
