@@ -19,6 +19,7 @@ import 'regression_test_screen.dart';
 import 'scatter_chart_screen.dart';
 import 'simple_zoom_test_screen.dart';
 import 'streaming_test_screen.dart';
+import 'ultimate_showcase_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -236,6 +237,18 @@ class HomeScreen extends StatelessWidget {
                 ),
           ),
         ),
+        _buildChartCard(
+          context,
+          title: '🏆 Ultimate Showcase',
+          subtitle: 'ALL features: Multiple series, streaming, themes, types, interaction',
+          icon: Icons.stars,
+          color: Colors.amber,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UltimateShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         _buildChartCard(
           context,
           title: 'Annotations',

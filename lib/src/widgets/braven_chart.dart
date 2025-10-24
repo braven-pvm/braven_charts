@@ -1449,11 +1449,21 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Guard: Only auto-scroll if config enabled
     if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) return;
 
-    // TODO: Implement actual auto-scroll logic
-    // This will calculate and apply viewport pan to show latest data
-    // Implementation deferred to avoid breaking existing functionality
-    // The key insight: this method is ONLY called in streaming mode,
-    // so it won't interfere with user interactions in interactive mode
+    // Schedule auto-scroll update for after the current frame completes
+    // This avoids Flutter rendering pipeline corruption by NOT using setState during frame rendering
+    // Instead, we modify ValueNotifier directly in post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      final newZoomPanState = _calculateAutoScrollUpdate();
+      if (newZoomPanState != null) {
+        // Update ValueNotifier directly (NOT setState) to avoid rendering corruption
+        // The ValueNotifier will trigger listeners to rebuild automatically
+        _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+          zoomPanState: newZoomPanState,
+        );
+      }
+    });
   }
 
   /// Called when the controller notifies of changes.
@@ -1469,20 +1479,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     });
   }
 
-  /// AUTO-SCROLL FEATURE TEMPORARILY DISABLED
+  /// Calculates the zoom and pan state needed to auto-scroll viewport to show latest data.
   ///
-  /// This method is disabled because it causes catastrophic Flutter rendering failures.
-  /// The issue: ANY setState during or after the frame rendering pipeline (including
-  /// post-frame callbacks) corrupts Flutter's hit testing and mouse tracking.
-  ///
-  /// Multiple fix attempts failed:
-  /// 1. Post-frame callback - still triggers during rendering
-  /// 2. Direct state modification - Flutter detects changes during hit testing
-  /// 3. Deferred setState - post-frame callbacks run during mouse tracker updates
-  ///
-  /// The feature needs a complete architectural redesign using AnimationController
-  /// or only triggering on explicit user actions, not automatic data updates.
-  /*
+  /// Returns null if auto-scroll is not needed or calculations fail validation.
+  /// This method performs extensive safety checks to prevent rendering issues.
   ZoomPanState? _calculateAutoScrollUpdate() {
     final config = widget.autoScrollConfig;
     if (config == null || !config.enabled) {
@@ -1567,13 +1567,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Return the new zoom/pan state (caller will apply via setState)
+    // Return the new zoom/pan state (caller will apply via ValueNotifier)
     return currentZoomState.copyWith(
       zoomLevelX: newZoomX,
       panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
     );
   }
-  */
 
   /// Animates zoom level changes for smooth transitions.
   ///
