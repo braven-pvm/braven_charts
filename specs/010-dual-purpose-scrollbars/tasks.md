@@ -26,10 +26,10 @@
 
 **Purpose**: Project initialization and basic structure for scrollbar feature
 
-- [ ] T001 Verify Flutter SDK 3.37.0-1.0.pre-216 and Dart 3.10.0-227.0.dev installation
-- [ ] T002 [P] Create scrollbar directory structure in lib/src/widgets/
-- [ ] T003 [P] Create scrollbar theming directory structure in lib/src/theming/components/
-- [ ] T004 [P] Create test directory structure for scrollbar tests in test/
+- [X] T001 Verify Flutter SDK 3.37.0-1.0.pre-216 and Dart 3.10.0-227.0.dev installation
+- [X] T002 [P] Create scrollbar directory structure in lib/src/widgets/
+- [X] T003 [P] Create scrollbar theming directory structure in lib/src/theming/components/
+- [X] T004 [P] Create test directory structure for scrollbar tests in test/
 
 ---
 
