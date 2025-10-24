@@ -52,12 +52,12 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
   late StreamController<ChartDataPoint> _dataStream;
   final StreamingController _streamingController = StreamingController();
   Timer? _dataTimer;
-  
+
   double _currentX = 0;
   int _bufferCount = 0;
   ChartMode _currentMode = ChartMode.streaming;
   String _statusMessage = 'Initializing...';
-  List<String> _eventLog = [];
+  final List<String> _eventLog = [];
 
   @override
   void initState() {
@@ -82,7 +82,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
         final sine = math.sin(_currentX * 0.05);
         final noise = (math.Random().nextDouble() - 0.5) * 0.2;
         final y = 50 + 30 * (sine + noise);
-        
+
         _dataStream.add(ChartDataPoint(x: _currentX, y: y));
         _currentX++;
       }
@@ -121,9 +121,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
           children: [
             // Status Panel
             Card(
-              color: _currentMode == ChartMode.streaming
-                  ? Colors.green.shade50
-                  : Colors.orange.shade50,
+              color: _currentMode == ChartMode.streaming ? Colors.green.shade50 : Colors.orange.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -132,12 +130,8 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                     Row(
                       children: [
                         Icon(
-                          _currentMode == ChartMode.streaming
-                              ? Icons.play_circle
-                              : Icons.pause_circle,
-                          color: _currentMode == ChartMode.streaming
-                              ? Colors.green
-                              : Colors.orange,
+                          _currentMode == ChartMode.streaming ? Icons.play_circle : Icons.pause_circle,
+                          color: _currentMode == ChartMode.streaming ? Colors.green : Colors.orange,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -191,26 +185,24 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                     chartType: ChartType.line,
                     series: const [],
                     dataStream: _dataStream.stream,
-                    
+
                     // ADVANCED STREAMING CONFIGURATION
                     streamingConfig: StreamingConfig(
                       // Custom timeout - shorter than default 10 seconds
                       autoResumeTimeout: const Duration(seconds: 3),
-                      
+
                       // Smaller buffer for demo purposes
                       maxBufferSize: 500,
-                      
+
                       // Mode change callback
                       onModeChanged: (ChartMode mode) {
                         setState(() {
                           _currentMode = mode;
-                          _statusMessage = mode == ChartMode.streaming
-                              ? 'Streaming active'
-                              : 'Interactive mode - auto-resume in 3s';
+                          _statusMessage = mode == ChartMode.streaming ? 'Streaming active' : 'Interactive mode - auto-resume in 3s';
                         });
                         _addToLog('Mode changed to: ${mode.name.toUpperCase()}');
                       },
-                      
+
                       // Buffer update callback
                       onBufferUpdated: (int count) {
                         setState(() {
@@ -220,7 +212,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                           _addToLog('Buffer: $count points queued');
                         }
                       },
-                      
+
                       // Return-to-live callback
                       onReturnToLive: () {
                         _addToLog('Buffer applied - returned to live');
@@ -228,7 +220,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                           _statusMessage = 'Returned to live - buffer applied';
                         });
                       },
-                      
+
                       // Stream error callback
                       onStreamError: (Object error) {
                         _addToLog('ERROR: $error');
@@ -237,17 +229,17 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                         });
                       },
                     ),
-                    
+
                     // Manual control via StreamingController
                     streamingController: _streamingController,
-                    
+
                     title: 'Advanced Streaming with Callbacks',
-                    interactionConfig: InteractionConfig(
+                    interactionConfig: const InteractionConfig(
                       enabled: true,
                       enableZoom: true,
                       enablePan: true,
-                      crosshair: const CrosshairConfig(enabled: true),
-                      tooltip: const TooltipConfig(enabled: true),
+                      crosshair: CrosshairConfig(enabled: true),
+                      tooltip: TooltipConfig(enabled: true),
                     ),
                   ),
                 ),

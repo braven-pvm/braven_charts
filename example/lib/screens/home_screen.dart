@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../advanced_streaming_example.dart';
+import '../basic_streaming_example.dart';
+import '../buffer_status_example.dart';
 import 'advanced_features_screen.dart';
 import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
@@ -176,6 +179,42 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StreamingTestScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '📊 Basic Streaming Example',
+          subtitle: 'Minimal setup - just add dataStream and StreamingConfig()',
+          icon: Icons.play_circle,
+          color: Colors.lightBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BasicStreamingExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '⚙️ Advanced Streaming Example',
+          subtitle: 'All callbacks, manual control, custom timeout, event log',
+          icon: Icons.settings_applications,
+          color: Colors.indigo,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AdvancedStreamingExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '📈 Buffer Status Example',
+          subtitle: '"Return to Live" button with real-time buffer count tracking',
+          icon: Icons.queue,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BufferStatusExample()),
           ),
         ),
       ],

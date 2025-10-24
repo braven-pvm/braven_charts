@@ -119,21 +119,21 @@ class _BasicStreamingExampleState extends State<BasicStreamingExample> {
                     chartType: ChartType.line,
                     series: const [], // Data comes from stream
                     dataStream: _dataStream.stream,
-                    
+
                     // MINIMAL STREAMING CONFIGURATION
                     // Just pass StreamingConfig() with defaults:
                     // - 10-second auto-resume timeout
                     // - 10,000 point buffer
                     // - No callbacks needed for basic usage
                     streamingConfig: StreamingConfig(),
-                    
+
                     title: 'Live Sensor Data',
-                    interactionConfig: InteractionConfig(
+                    interactionConfig: const InteractionConfig(
                       enabled: true,
                       enableZoom: true,
                       enablePan: true,
-                      crosshair: const CrosshairConfig(enabled: true),
-                      tooltip: const TooltipConfig(enabled: true),
+                      crosshair: CrosshairConfig(enabled: true),
+                      tooltip: TooltipConfig(enabled: true),
                     ),
                   ),
                 ),

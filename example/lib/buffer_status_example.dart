@@ -52,7 +52,7 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
   late StreamController<ChartDataPoint> _dataStream;
   final StreamingController _streamingController = StreamingController();
   Timer? _dataTimer;
-  
+
   double _currentX = 0;
   int _bufferCount = 0;
   ChartMode _currentMode = ChartMode.streaming;
@@ -133,20 +133,14 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
 
             // Buffer Status Display
             Card(
-              color: _currentMode == ChartMode.interactive && _bufferCount > 0
-                  ? Colors.orange.shade50
-                  : Colors.green.shade50,
+              color: _currentMode == ChartMode.interactive && _bufferCount > 0 ? Colors.orange.shade50 : Colors.green.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
                     Icon(
-                      _currentMode == ChartMode.streaming
-                          ? Icons.rss_feed
-                          : Icons.pause_circle_filled,
-                      color: _currentMode == ChartMode.streaming
-                          ? Colors.green
-                          : Colors.orange,
+                      _currentMode == ChartMode.streaming ? Icons.rss_feed : Icons.pause_circle_filled,
+                      color: _currentMode == ChartMode.streaming ? Colors.green : Colors.orange,
                       size: 32,
                     ),
                     const SizedBox(width: 16),
@@ -155,9 +149,7 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _currentMode == ChartMode.streaming
-                                ? 'Streaming LIVE'
-                                : 'PAUSED - Buffering Data',
+                            _currentMode == ChartMode.streaming ? 'Streaming LIVE' : 'PAUSED - Buffering Data',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -201,16 +193,13 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                   ),
                   icon: const Icon(Icons.play_arrow, size: 32),
                   label: Text(
-                    _bufferCount > 0
-                        ? 'Return to Live ($_bufferCount buffered)'
-                        : 'Return to Live',
+                    _bufferCount > 0 ? 'Return to Live ($_bufferCount buffered)' : 'Return to Live',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
 
-            if (_showReturnToLiveButton && _currentMode == ChartMode.interactive)
-              const SizedBox(height: 16),
+            if (_showReturnToLiveButton && _currentMode == ChartMode.interactive) const SizedBox(height: 16),
 
             // Chart with buffer tracking
             Expanded(
@@ -221,15 +210,15 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                     chartType: ChartType.line,
                     series: const [],
                     dataStream: _dataStream.stream,
-                    
+
                     // BUFFER TRACKING CONFIGURATION
                     streamingConfig: StreamingConfig(
                       // Smaller buffer for demo - forces auto-resume sooner
                       maxBufferSize: 200,
-                      
+
                       // Shorter auto-resume timeout
                       autoResumeTimeout: const Duration(seconds: 5),
-                      
+
                       // Track mode changes to show/hide button
                       onModeChanged: (ChartMode mode) {
                         setState(() {
@@ -238,14 +227,14 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                           _showReturnToLiveButton = (mode == ChartMode.interactive);
                         });
                       },
-                      
+
                       // CRITICAL: Track buffer count in real-time
                       onBufferUpdated: (int count) {
                         setState(() {
                           _bufferCount = count;
                         });
                       },
-                      
+
                       // Hide button when returning to live
                       onReturnToLive: () {
                         setState(() {
@@ -253,17 +242,17 @@ class _BufferStatusExampleState extends State<BufferStatusExample> {
                         });
                       },
                     ),
-                    
+
                     // Enable manual control
                     streamingController: _streamingController,
-                    
+
                     title: 'Live Data with Buffer Tracking',
-                    interactionConfig: InteractionConfig(
+                    interactionConfig: const InteractionConfig(
                       enabled: true,
                       enableZoom: true,
                       enablePan: true,
-                      crosshair: const CrosshairConfig(enabled: true),
-                      tooltip: const TooltipConfig(enabled: true),
+                      crosshair: CrosshairConfig(enabled: true),
+                      tooltip: TooltipConfig(enabled: true),
                     ),
                   ),
                 ),

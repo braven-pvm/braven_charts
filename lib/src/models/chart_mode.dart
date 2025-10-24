@@ -11,7 +11,8 @@
 /// - Streaming → Interactive: Automatic on first user interaction (hover, tap, pan, zoom)
 /// - Interactive → Streaming: Automatic after timeout OR manual via resumeStreaming()
 ///
-/// Example:
+/// ## Basic Usage
+///
 /// ```dart
 /// // Chart automatically starts in streaming mode when dataStream provided
 /// BravenChart(
@@ -21,6 +22,57 @@
 ///       print('Mode: ${mode == ChartMode.streaming ? 'LIVE' : 'PAUSED'}');
 ///     },
 ///   ),
+/// )
+/// ```
+///
+/// ## Checking Current Mode
+///
+/// ```dart
+/// // Access current mode via ValueNotifier
+/// final chartMode = ValueNotifier<ChartMode>(ChartMode.streaming);
+///
+/// // Listen to mode changes
+/// chartMode.addListener(() {
+///   if (chartMode.value == ChartMode.streaming) {
+///     print('Now streaming live data');
+///   } else {
+///     print('Paused - user is exploring');
+///   }
+/// });
+/// ```
+///
+/// ## Manual Mode Control
+///
+/// ```dart
+/// final streamingController = StreamingController();
+///
+/// BravenChart(
+///   streamingController: streamingController,
+///   // ... other config
+/// )
+///
+/// // Manually pause streaming
+/// streamingController.pauseStreaming();  // Enter interactive mode
+///
+/// // Manually resume streaming
+/// streamingController.resumeStreaming();  // Return to streaming mode
+/// ```
+///
+/// ## Mode-Dependent UI
+///
+/// ```dart
+/// StreamingConfig(
+///   onModeChanged: (ChartMode mode) {
+///     setState(() {
+///       if (mode == ChartMode.interactive) {
+///         // Show "Return to Live" button
+///         showReturnButton = true;
+///       } else {
+///         // Hide button when back in streaming mode
+///         showReturnButton = false;
+///       }
+///     });
+///   },
 /// )
 /// ```
 ///
@@ -37,6 +89,12 @@ enum ChartMode {
   ///
   /// This mode prevents rendering pipeline errors (box.dart:3345,
   /// mouse_tracker.dart:199) by disabling all interactions at widget tree level.
+  ///
+  /// Use Case Examples:
+  /// - Live sensor monitoring dashboards
+  /// - Real-time financial data feeds
+  /// - System performance monitoring
+  /// - IoT device telemetry
   streaming,
 
   /// Interactive mode with paused streaming.
@@ -55,5 +113,11 @@ enum ChartMode {
   /// Exiting this mode:
   /// - Automatically: After autoResumeTimeout with no interactions (default 10s)
   /// - Manually: Via chartState.resumeStreaming() API call
+  ///
+  /// Use Case Examples:
+  /// - Investigating historical data spikes
+  /// - Measuring exact data point values
+  /// - Comparing multiple data ranges
+  /// - Zooming into specific time periods
   interactive,
 }
