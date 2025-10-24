@@ -236,6 +236,8 @@ class InteractionConfig {
     this.enableZoom = true,
     this.enablePan = true,
     this.enableSelection = true,
+    this.showXScrollbar = false,
+    this.showYScrollbar = false,
     // Callback functions for user interaction events (FR-007)
     this.onDataPointTap,
     this.onDataPointHover,
@@ -274,6 +276,8 @@ class InteractionConfig {
         enableZoom: true,
         enablePan: true,
         enableSelection: true,
+        showXScrollbar: true,
+        showYScrollbar: true,
       );
 
   /// Creates a configuration with all interaction features disabled.
@@ -297,6 +301,8 @@ class InteractionConfig {
         enableZoom: false,
         enablePan: false,
         enableSelection: false,
+        showXScrollbar: false,
+        showYScrollbar: false,
       );
 
   /// Creates a default configuration (same as unnamed constructor).
@@ -329,6 +335,12 @@ class InteractionConfig {
 
   /// Whether data point selection is enabled.
   final bool enableSelection;
+
+  /// Whether to show the X-axis scrollbar for horizontal scrolling.
+  final bool showXScrollbar;
+
+  /// Whether to show the Y-axis scrollbar for vertical scrolling.
+  final bool showYScrollbar;
 
   // Callback functions for user interaction events (FR-007)
 
@@ -483,6 +495,8 @@ class InteractionConfig {
     bool? enableZoom,
     bool? enablePan,
     bool? enableSelection,
+    bool? showXScrollbar,
+    bool? showYScrollbar,
     DataPointCallback? onDataPointTap,
     DataPointHoverCallback? onDataPointHover,
     DataPointLongPressCallback? onDataPointLongPress,
@@ -503,6 +517,8 @@ class InteractionConfig {
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
+      showXScrollbar: showXScrollbar ?? this.showXScrollbar,
+      showYScrollbar: showYScrollbar ?? this.showYScrollbar,
       onDataPointTap: onDataPointTap ?? this.onDataPointTap,
       onDataPointHover: onDataPointHover ?? this.onDataPointHover,
       onDataPointLongPress: onDataPointLongPress ?? this.onDataPointLongPress,
@@ -527,10 +543,12 @@ class InteractionConfig {
         other.keyboard == keyboard &&
         other.enableZoom == enableZoom &&
         other.enablePan == enablePan &&
-        other.enableSelection == enableSelection;
+        other.enableSelection == enableSelection &&
+        other.showXScrollbar == showXScrollbar &&
+        other.showYScrollbar == showYScrollbar;
   }
 
   @override
   int get hashCode => Object.hash(enabled, crosshair, tooltip, gesture,
-      keyboard, enableZoom, enablePan, enableSelection);
+      keyboard, enableZoom, enablePan, enableSelection, showXScrollbar, showYScrollbar);
 }

@@ -89,21 +89,21 @@
 
 ### Foundational Theme Integration
 
-- [ ] T029 Modify ChartTheme to add scrollbarTheme field in lib/src/theming/chart_theme.dart
-- [ ] T030 Update ChartTheme.copyWith() to include scrollbarTheme in lib/src/theming/chart_theme.dart
-- [ ] T031 Update ChartTheme.toJson() and fromJson() to serialize scrollbarTheme in lib/src/theming/chart_theme.dart
-- [ ] T032 [P] Add ScrollbarTheme.defaultLight predefined theme with FR-025 colors (track 0x33000000, handle 0x99000000) in lib/src/theming/components/scrollbar_theme.dart
-- [ ] T033 [P] Add ScrollbarTheme.defaultDark predefined theme with FR-025 colors (track 0x33FFFFFF, handle 0x99FFFFFF) in lib/src/theming/components/scrollbar_theme.dart
-- [ ] T034 [P] Add ScrollbarTheme.highContrast predefined theme with FR-025 colors (track solid black/white, handle yellow/cyan, 7:1 contrast) in lib/src/theming/components/scrollbar_theme.dart
-- [ ] T034A Add ScrollbarConfig.forcedColorsMode support for Windows High Contrast (FR-024B) in lib/src/theming/components/scrollbar_config.dart
-- [ ] T034B Add ScrollbarConfig.prefersReducedMotion support (FR-024C - disables animations when true) in lib/src/theming/components/scrollbar_config.dart
+- [X] T029 Modify ChartTheme to add scrollbarTheme field in lib/src/theming/chart_theme.dart
+- [X] T030 Update ChartTheme.copyWith() to include scrollbarTheme in lib/src/theming/chart_theme.dart
+- [X] T031 Update ChartTheme.toJson() and fromJson() to serialize scrollbarTheme in lib/src/theming/chart_theme.dart
+- [X] T032 [P] Add ScrollbarTheme.defaultLight predefined theme with FR-025 colors (track 0x33000000, handle 0x99000000) in lib/src/theming/components/scrollbar_theme.dart
+- [X] T033 [P] Add ScrollbarTheme.defaultDark predefined theme with FR-025 colors (track 0x33FFFFFF, handle 0x99FFFFFF) in lib/src/theming/components/scrollbar_theme.dart
+- [X] T034 [P] Add ScrollbarTheme.highContrast predefined theme with FR-025 colors (track solid black/white, handle yellow/cyan, 7:1 contrast) in lib/src/theming/components/scrollbar_theme.dart
+- [X] T034A Add ScrollbarConfig.forcedColorsMode support for Windows High Contrast (FR-024B) in lib/src/theming/components/scrollbar_config.dart
+- [X] T034B Add ScrollbarConfig.prefersReducedMotion support (FR-024C - disables animations when true) in lib/src/theming/components/scrollbar_config.dart
 
 ### Foundational InteractionConfig Modifications
 
-- [ ] T035 Add showXScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
-- [ ] T036 Add showYScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
-- [ ] T037 Update InteractionConfig.copyWith() to include scrollbar flags in lib/src/interaction/interaction_config.dart
-- [ ] T038 Update InteractionConfig.toJson() and fromJson() to serialize scrollbar flags in lib/src/interaction/interaction_config.dart
+- [X] T035 Add showXScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
+- [X] T036 Add showYScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
+- [X] T037 Update InteractionConfig.copyWith() to include scrollbar flags in lib/src/interaction/interaction_config.dart
+- [X] T038 Update InteractionConfig.toJson() and fromJson() to serialize scrollbar flags in lib/src/interaction/interaction_config.dart
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
