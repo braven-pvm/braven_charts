@@ -225,6 +225,88 @@ final scatterLayer = ScatterChartLayer(
 **[📖 Chart Types Guide](docs/guides/chart-types.md)** *(Coming Soon)* - Complete usage guide with examples  
 **[📖 Quickstart Examples](specs/005-chart-types/quickstart.md)** - 10 ready-to-run examples
 
+### Dual-Mode Streaming ✨ NEW
+The Dual-Mode Streaming system provides real-time data visualization with seamless mode transitions:
+
+- **Streaming Mode**: Continuous live data updates with auto-scroll, interactions disabled
+- **Interactive Mode**: Full zoom/pan/exploration with data buffering
+- **Auto-Resume**: Configurable timeout (default 10s) returns to live streaming
+- **Manual Control**: API for pause/resume via StreamingController
+- **Buffer Management**: FIFO buffer (default 10K points) with overflow protection
+- **Zero Configuration**: Just pass a Stream<ChartDataPoint> - streaming works out of the box
+
+**Performance**: Handles 60fps streaming with <16ms frame time, buffer overflow forces auto-resume to prevent memory issues.
+
+#### Quick Start - Minimal Configuration
+```dart
+import 'dart:async';
+import 'package:braven_charts/braven_charts.dart';
+
+// Create data stream
+final dataStream = StreamController<ChartDataPoint>.broadcast();
+
+// Add to chart - that's it!
+BravenChart(
+  chartType: ChartType.line,
+  dataStream: dataStream.stream,
+  streamingConfig: StreamingConfig(),  // Default 10s timeout
+)
+```
+
+#### Advanced Configuration
+```dart
+final streamingController = StreamingController();
+int bufferCount = 0;
+
+BravenChart(
+  dataStream: myDataStream,
+  streamingConfig: StreamingConfig(
+    autoResumeTimeout: Duration(seconds: 5),  // Custom timeout
+    maxBufferSize: 500,  // Smaller buffer
+    
+    // Track mode changes
+    onModeChanged: (mode) {
+      print('Mode: ${mode == ChartMode.streaming ? "LIVE" : "PAUSED"}');
+    },
+    
+    // Track buffer count (for "Return to Live" UI)
+    onBufferUpdated: (count) {
+      setState(() => bufferCount = count);
+    },
+    
+    // Notified when buffered data is applied
+    onReturnToLive: () {
+      print('Returned to live - $bufferCount points applied');
+    },
+    
+    // Handle stream errors gracefully
+    onStreamError: (error) {
+      print('Stream error: $error');
+    },
+  ),
+  
+  // Enable manual pause/resume
+  streamingController: streamingController,
+)
+
+// Manual control from your UI:
+ElevatedButton(
+  onPressed: () => streamingController.resumeStreaming(),
+  child: Text('Return to Live ($bufferCount buffered)'),
+)
+```
+
+#### Key Behaviors
+- **Automatic Pause**: Any interaction (click, zoom, pan) pauses streaming
+- **Data Buffering**: While paused, incoming data is buffered (not displayed)
+- **Auto-Resume**: After timeout, buffered data is applied and streaming resumes
+- **Manual Resume**: `StreamingController.resumeStreaming()` applies buffer immediately
+- **Buffer Overflow**: When buffer full, chart automatically resumes (prevents memory issues)
+- **Error Handling**: Stream errors invoke callback without retry (developer controls reconnection)
+
+**[📖 Streaming Examples](example/lib/)** - Basic, Advanced, and Buffer Status examples  
+**[📖 Streaming Specification](specs/009-dual-mode-streaming/)** - Complete technical specification
+
 ### For Users
 - [Getting Started Guide](docs/README.md) - Basic usage and examples
 - [Chart Types](docs/architecture/features/) - Available chart types
