@@ -6,6 +6,30 @@ import 'package:flutter/material.dart';
 /// Used by ScrollbarTheme to style both horizontal and vertical scrollbars.
 @immutable
 class ScrollbarConfig {
+  /// Deserialize from JSON.
+  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) => ScrollbarConfig(
+        thickness: json['thickness'] as double,
+        minHandleSize: json['minHandleSize'] as double,
+        trackColor: Color(json['trackColor'] as int),
+        handleColor: Color(json['handleColor'] as int),
+        handleHoverColor: Color(json['handleHoverColor'] as int),
+        handleActiveColor: Color(json['handleActiveColor'] as int),
+        handleDisabledColor: json['handleDisabledColor'] != null ? Color(json['handleDisabledColor'] as int) : const Color(0xFFEEEEEE),
+        trackHoverColor: json['trackHoverColor'] != null ? Color(json['trackHoverColor'] as int) : const Color(0xFFE0E0E0),
+        borderRadius: json['borderRadius'] as double,
+        edgeGripWidth: json['edgeGripWidth'] as double,
+        showGripIndicator: json['showGripIndicator'] as bool,
+        gripIndicatorColor: Color(json['gripIndicatorColor'] as int),
+        autoHide: json['autoHide'] as bool,
+        autoHideDelay: Duration(milliseconds: json['autoHideDelayMs'] as int),
+        fadeDuration: Duration(milliseconds: json['fadeDurationMs'] as int),
+        enableResizeHandles: json['enableResizeHandles'] as bool,
+        minZoomRatio: json['minZoomRatio'] as double,
+        maxZoomRatio: json['maxZoomRatio'] as double,
+        padding: json['padding'] as double? ?? 4.0,
+        forcedColorsMode: json['forcedColorsMode'] as bool? ?? false,
+        prefersReducedMotion: json['prefersReducedMotion'] as bool? ?? false,
+      );
   const ScrollbarConfig({
     this.thickness = 12.0,
     this.minHandleSize = 20.0,
@@ -257,36 +281,6 @@ class ScrollbarConfig {
         'forcedColorsMode': forcedColorsMode,
         'prefersReducedMotion': prefersReducedMotion,
       };
-
-  /// Deserialize from JSON.
-  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) =>
-      ScrollbarConfig(
-        thickness: json['thickness'] as double,
-        minHandleSize: json['minHandleSize'] as double,
-        trackColor: Color(json['trackColor'] as int),
-        handleColor: Color(json['handleColor'] as int),
-        handleHoverColor: Color(json['handleHoverColor'] as int),
-        handleActiveColor: Color(json['handleActiveColor'] as int),
-        handleDisabledColor: json['handleDisabledColor'] != null
-            ? Color(json['handleDisabledColor'] as int)
-            : const Color(0xFFEEEEEE),
-        trackHoverColor: json['trackHoverColor'] != null
-            ? Color(json['trackHoverColor'] as int)
-            : const Color(0xFFE0E0E0),
-        borderRadius: json['borderRadius'] as double,
-        edgeGripWidth: json['edgeGripWidth'] as double,
-        showGripIndicator: json['showGripIndicator'] as bool,
-        gripIndicatorColor: Color(json['gripIndicatorColor'] as int),
-        autoHide: json['autoHide'] as bool,
-        autoHideDelay: Duration(milliseconds: json['autoHideDelayMs'] as int),
-        fadeDuration: Duration(milliseconds: json['fadeDurationMs'] as int),
-        enableResizeHandles: json['enableResizeHandles'] as bool,
-        minZoomRatio: json['minZoomRatio'] as double,
-        maxZoomRatio: json['maxZoomRatio'] as double,
-        padding: json['padding'] as double? ?? 4.0,
-        forcedColorsMode: json['forcedColorsMode'] as bool? ?? false,
-        prefersReducedMotion: json['prefersReducedMotion'] as bool? ?? false,
-      );
 
   @override
   bool operator ==(Object other) =>

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-// import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
 
 /// Contract test for ScrollbarController.handleToDataRange() inverse transform
 ///
@@ -28,19 +27,16 @@ void main() {
       // ACT: Calculate scroll offset using inverse formula
       // maxScrollOffset = 100.0 - 50.0 = 50.0
       // scrollOffset = (0.0 / (200.0 - 100.0)) * 50.0 = (0.0 / 100.0) * 50.0 = 0.0
-      // final result = ScrollbarController.handleToDataRange(
-      //   handlePosition: handlePosition,
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   handleSize: handleSize,
-      // );
+      final result = ScrollbarController.handleToDataRange(
+        handlePosition,
+        totalRange,
+        viewportRange,
+        trackLength,
+        handleSize,
+      );
 
       // ASSERT: Should return 0.0 (scrolled to start of data range)
-      // expect(result, equals(0.0));
-
-      // TDD RED PHASE: Uncomment above lines after creating ScrollbarController.
-      fail('ScrollbarController.handleToDataRange() not implemented yet (T015)');
+      expect(result, equals(0.0));
     });
 
     test('MUST return maxScrollOffset when handle at end of track', () {

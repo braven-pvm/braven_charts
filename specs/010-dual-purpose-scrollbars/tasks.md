@@ -61,14 +61,14 @@
 
 **NOTE: Implement AFTER contract tests T009-T014 pass (TDD Red-Green-Refactor)**
 
-- [ ] T015 [P] Implement ScrollbarController.calculateHandleSize() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T016 [P] Implement ScrollbarController.calculateHandlePosition() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T017 Implement ScrollbarController.handleToDataRange() in lib/src/widgets/scrollbar/scrollbar_controller.dart (depends on T015, T016)
-- [ ] T018 [P] Implement ScrollbarController.dataRangeToHandle() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T019 [P] Implement ScrollbarController.getHitTestZone() with 8.0px edge zones (FR-008/009 enhanced) in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T020 [P] Implement ScrollbarController.getCursorForZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T020A Implement ScrollbarController.getInteractionState() to determine current state (default/hover/active/disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [ ] T020B Implement ScrollbarController.calculateTouchHitTestPadding() for 44x44 minimum touch targets (FR-024A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T015 [P] Implement ScrollbarController.calculateHandleSize() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T016 [P] Implement ScrollbarController.calculateHandlePosition() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T017 Implement ScrollbarController.handleToDataRange() in lib/src/widgets/scrollbar/scrollbar_controller.dart (depends on T015, T016)
+- [X] T018 [P] Implement ScrollbarController.dataRangeToHandle() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T019 [P] Implement ScrollbarController.getHitTestZone() with 8.0px edge zones (FR-008/009 enhanced) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T020 [P] Implement ScrollbarController.getCursorForZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T020A Implement ScrollbarController.getInteractionState() to determine current state (default/hover/active/disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [X] T020B Implement ScrollbarController.calculateTouchHitTestPadding() for 44x44 minimum touch targets (FR-024A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
 
 ### Foundational Rendering
 

@@ -1,5 +1,5 @@
+import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
-// import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
 
 /// Contract test for ScrollbarController.calculateHandleSize()
 ///
@@ -20,20 +20,16 @@ void main() {
       const minHandleSize = 20.0; // Minimum handle size (config)
 
       // ACT: Calculate handle size using O(1) ratio formula
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
-      // ASSERT: Should return minHandleSize (formula yields 200.0, clamped to 20.0)
+      // ASSERT: Should return trackLength (100% of track when viewport >= total)
       // Per FR-010: "Handle size proportional to viewport/total ratio, min 20px"
-      // expect(result, equals(20.0));
-
-      // TDD RED PHASE: Uncomment above lines after creating ScrollbarController.
-      // This test MUST FAIL until implementation exists.
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(trackLength));
     });
 
     test('MUST return proportional size when viewport < total range', () {
@@ -45,17 +41,15 @@ void main() {
 
       // ACT: Calculate using formula: trackLength * (viewportRange / totalRange)
       // Expected: 200.0 * (50.0 / 100.0) = 200.0 * 0.5 = 100.0
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
       // ASSERT: Should return 100.0 (half the track length)
-      // expect(result, equals(100.0));
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(100.0));
     });
 
     test('MUST clamp to minHandleSize when formula yields smaller value', () {
@@ -67,17 +61,15 @@ void main() {
 
       // ACT: Calculate using formula: 200.0 * (50.0 / 10000.0) = 1.0
       // Expected: Clamped to minHandleSize (20.0) per FR-010
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
       // ASSERT: Should return 20.0 (clamped from 1.0)
-      // expect(result, equals(20.0));
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(20.0));
     });
 
     test('MUST handle edge case: zero viewport range', () {
@@ -88,17 +80,15 @@ void main() {
       const minHandleSize = 20.0;
 
       // ACT: Should handle gracefully (clamp to minHandleSize)
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
       // ASSERT: Should return minHandleSize (defensive programming)
-      // expect(result, equals(20.0));
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(20.0));
     });
 
     test('MUST handle edge case: zero total range', () {
@@ -109,17 +99,15 @@ void main() {
       const minHandleSize = 20.0;
 
       // ACT: Should handle gracefully (clamp to minHandleSize)
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
       // ASSERT: Should return minHandleSize (defensive programming)
-      // expect(result, equals(20.0));
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(20.0));
     });
 
     test('MUST handle edge case: viewport > total range (invalid zoom)', () {
@@ -130,17 +118,15 @@ void main() {
       const minHandleSize = 20.0;
 
       // ACT: Should clamp to full track length or minHandleSize
-      // final result = ScrollbarController.calculateHandleSize(
-      //   totalRange: totalRange,
-      //   viewportRange: viewportRange,
-      //   trackLength: trackLength,
-      //   minHandleSize: minHandleSize,
-      // );
+      final result = ScrollbarController.calculateHandleSize(
+        totalRange,
+        viewportRange,
+        trackLength,
+        minHandleSize,
+      );
 
       // ASSERT: Should return trackLength (ratio > 1.0 means full handle)
-      // expect(result, equals(200.0));
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      expect(result, equals(200.0));
     });
 
     test('MUST maintain O(1) performance (< 0.1ms per call)', () {
@@ -153,21 +139,19 @@ void main() {
 
       // ACT: Measure execution time for 10,000 calls
       final stopwatch = Stopwatch()..start();
-      // for (int i = 0; i < iterations; i++) {
-      //   ScrollbarController.calculateHandleSize(
-      //     totalRange: totalRange,
-      //     viewportRange: viewportRange,
-      //     trackLength: trackLength,
-      //     minHandleSize: minHandleSize,
-      //   );
-      // }
+      for (int i = 0; i < iterations; i++) {
+        ScrollbarController.calculateHandleSize(
+          totalRange,
+          viewportRange,
+          trackLength,
+          minHandleSize,
+        );
+      }
       stopwatch.stop();
 
       // ASSERT: Average < 0.1ms per call (performance requirement from plan.md)
-      // final avgMicroseconds = stopwatch.elapsedMicroseconds / iterations;
-      // expect(avgMicroseconds, lessThan(100)); // 0.1ms = 100 microseconds
-
-      fail('ScrollbarController.calculateHandleSize() not implemented yet (T015)');
+      final avgMicroseconds = stopwatch.elapsedMicroseconds / iterations;
+      expect(avgMicroseconds, lessThan(100)); // 0.1ms = 100 microseconds
     });
   });
 }

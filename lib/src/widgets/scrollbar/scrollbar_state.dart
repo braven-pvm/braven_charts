@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'hit_test_zone.dart';
 
 /// Immutable state for scrollbar UI.
@@ -7,6 +8,15 @@ import 'hit_test_zone.dart';
 /// (Constitutional requirement: Performance First - ValueNotifier for >10Hz updates).
 @immutable
 class ScrollbarState {
+  /// Create initial state (no interaction, default geometry).
+  factory ScrollbarState.initial() => const ScrollbarState(
+        handlePosition: 0.0,
+        handleSize: 20.0, // Will be recalculated on first build
+        isDragging: false,
+        hoverZone: null,
+        isFocused: false,
+        isVisible: true,
+      );
   const ScrollbarState({
     required this.handlePosition,
     required this.handleSize,
@@ -54,16 +64,6 @@ class ScrollbarState {
   ///
   /// False after ScrollbarConfig.autoHideDelay expires with no interaction.
   final bool isVisible;
-
-  /// Create initial state (no interaction, default geometry).
-  factory ScrollbarState.initial() => const ScrollbarState(
-        handlePosition: 0.0,
-        handleSize: 20.0, // Will be recalculated on first build
-        isDragging: false,
-        hoverZone: null,
-        isFocused: false,
-        isVisible: true,
-      );
 
   /// Create copy with updated fields (for ValueNotifier updates).
   ScrollbarState copyWith({
