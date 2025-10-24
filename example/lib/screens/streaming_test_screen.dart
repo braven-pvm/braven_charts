@@ -196,6 +196,12 @@ class _StreamingTestScreenState extends State<StreamingTestScreen> {
                       },
                     ),
                     controller: _controller,
+                    autoScrollConfig: const AutoScrollConfig(
+                      enabled: true,
+                      maxVisiblePoints: 150,
+                      resumeOnNewData: true,
+                      animateScroll: false,
+                    ),
                     title: 'Live Data Stream - Sine Wave',
                     interactionConfig: InteractionConfig(
                       enabled: true,

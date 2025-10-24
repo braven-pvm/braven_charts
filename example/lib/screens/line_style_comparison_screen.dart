@@ -403,6 +403,12 @@ class _LineStyleComparisonScreenState extends State<LineStyleComparisonScreen> {
                 maxBufferSize: 100,
                 autoResumeTimeout: const Duration(seconds: 5),
               ),
+              autoScrollConfig: const AutoScrollConfig(
+                enabled: true,
+                maxVisiblePoints: 50,
+                resumeOnNewData: true,
+                animateScroll: false,
+              ),
               interactionConfig: const InteractionConfig(
                 enabled: true,
                 enableZoom: true,

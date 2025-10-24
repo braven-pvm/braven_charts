@@ -95,9 +95,11 @@ class _UltimateShowcaseScreenState extends State<UltimateShowcaseScreen> {
     _dataTimer = null;
     _liveStreamController?.close();
     _liveStreamController = null;
-    setState(() {
-      _isStreaming = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isStreaming = false;
+      });
+    }
   }
 
   void _toggleTheme() {

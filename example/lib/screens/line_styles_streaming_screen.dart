@@ -245,6 +245,12 @@ class _LineStylesStreamingScreenState extends State<LineStylesStreamingScreen> {
                   autoResumeTimeout: const Duration(seconds: 5),
                 ),
                 controller: chartController,
+                autoScrollConfig: const AutoScrollConfig(
+                  enabled: true,
+                  maxVisiblePoints: 50,
+                  resumeOnNewData: true,
+                  animateScroll: false,
+                ),
                 interactionConfig: const InteractionConfig(
                   enabled: true,
                   enableZoom: true,

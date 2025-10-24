@@ -1444,17 +1444,21 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Related: FR-002 (auto-scroll in streaming mode only), T019 (no interactions in streaming)
   void _updateAutoScrollViewport() {
     // Guard: Only auto-scroll in streaming mode
-    if (_chartMode.value != ChartMode.streaming) return;
+    if (_chartMode.value != ChartMode.streaming) {
+      return;
+    }
 
     // Guard: Only auto-scroll if config enabled
-    if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) return;
+    if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) {
+      return;
+    }
 
     // Schedule auto-scroll update for after the current frame completes
     // This avoids Flutter rendering pipeline corruption by NOT using setState during frame rendering
     // Instead, we modify ValueNotifier directly in post-frame callback
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       final newZoomPanState = _calculateAutoScrollUpdate();
       if (newZoomPanState != null) {
         // Update ValueNotifier directly (NOT setState) to avoid rendering corruption
@@ -1479,7 +1483,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     });
   }
 
-  /// Calculates the zoom and pan state needed to auto-scroll viewport to show latest data.
+  /// Calculates the pan offset needed to create a sliding window showing the latest data.
+  ///
+  /// This implements auto-scroll as a **sliding window** that shows only the last N points
+  /// (configured via AutoScrollConfig.maxVisiblePoints). As new data arrives, older data
+  /// scrolls out of view on the left edge, creating a smooth real-time monitoring experience.
+  ///
+  /// **Behavior:**
+  /// - Preserves user's current zoom level (only adjusts pan offset)
+  /// - Shows the most recent maxVisiblePoints at the right edge
+  /// - Older data scrolls off the left edge of viewport
+  /// - Creates a moving window effect for continuous data streams
   ///
   /// Returns null if auto-scroll is not needed or calculations fail validation.
   /// This method performs extensive safety checks to prevent rendering issues.
@@ -1506,70 +1520,73 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Calculate pan offset to show the rightmost (latest) data
-    // Pan offset is in pixel units, but we calculate based on data range
+    // Get current zoom/pan state (preserve user's zoom level)
+    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+
+    // SAFETY: Validate current zoom state
+    if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
+      return null;
+    }
+
+    // Calculate chart rect for coordinate transformations
     final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
-    
-    // Calculate data bounds to determine scroll offset (pass chartRect for accurate zoom/pan)
-    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
-    final dataRangeX = bounds.maxX - bounds.minX;
-
-    // SAFETY: Validate data range (prevent division by zero and NaN)
-    if (dataRangeX <= 0 || !dataRangeX.isFinite) return null;
-
-    // SAFETY: Validate bounds are reasonable
-    if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return null;
-
-    // Calculate what portion of data should be visible
-    final visibleRatio = config.maxVisiblePoints / maxPointCount;
-
-    // SAFETY: Validate visible ratio
-    if (!visibleRatio.isFinite || visibleRatio <= 0 || visibleRatio > 1.0) return null;
-
-    // Calculate new zoom level to show only maxVisiblePoints
-    // Zoom = 1.0 shows all data, higher zoom shows less
-    final newZoomX = 1.0 / visibleRatio;
-
-    // SAFETY: Validate zoom level (must be finite, positive, and reasonable)
-    if (!newZoomX.isFinite || newZoomX <= 0 || newZoomX > 100.0) return null;
 
     // SAFETY: Validate chart dimensions
     if (chartRect.width <= 0 || !chartRect.width.isFinite) return null;
     if (chartRect.height <= 0 || !chartRect.height.isFinite) return null;
 
-    // Calculate how much of the data range will be visible after zoom
-    final visibleDataRange = dataRangeX / newZoomX;
+    // Calculate data bounds (all data points)
+    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
+    final dataRangeX = bounds.maxX - bounds.minX;
 
-    // SAFETY: Validate visible range
-    if (!visibleDataRange.isFinite || visibleDataRange <= 0) return null;
-
-    // Calculate how much data is hidden on the left (to show rightmost data)
-    final dataShiftNeeded = dataRangeX - visibleDataRange;
-
-    // SAFETY: Validate shift amount
-    if (!dataShiftNeeded.isFinite || dataShiftNeeded < 0) return null;
-
-    // Convert data shift to pixel offset
-    final panOffsetX = -(dataShiftNeeded / dataRangeX) * chartRect.width * newZoomX;
-
-    // SAFETY: Validate final pan offset (must be finite and reasonable)
-    if (!panOffsetX.isFinite) return null;
-
-    // SAFETY: Prevent extreme pan values that could cause rendering issues
-    final maxReasonablePan = chartRect.width * 10.0; // Max 10x chart width
-    if (panOffsetX.abs() > maxReasonablePan) return null;
-
-    // Calculate the new zoom/pan state
-    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
-
-    // SAFETY: Validate current zoom state before applying changes
-    if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
+    // SAFETY: Validate data range (prevent division by zero and NaN)
+    if (dataRangeX <= 0 || !dataRangeX.isFinite) {
       return null;
     }
 
-    // Return the new zoom/pan state (caller will apply via ValueNotifier)
+    // SAFETY: Validate bounds are reasonable
+    if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return null;
+
+    // Calculate the data range that should be visible (in data coordinates)
+    // This is the "window size" in data units
+    // We want to show maxVisiblePoints worth of data at the current zoom level
+    final dataPointsToShow = config.maxVisiblePoints.toDouble();
+    final totalDataPoints = maxPointCount.toDouble();
+
+    // Calculate the X-range per data point (assuming uniform spacing)
+    final xRangePerPoint = dataRangeX / totalDataPoints;
+
+    // Calculate the visible data range (in data coordinates)
+    final visibleDataRangeX = xRangePerPoint * dataPointsToShow;
+
+    // SAFETY: Validate visible data range
+    if (!visibleDataRangeX.isFinite || visibleDataRangeX <= 0) return null;
+
+    // Calculate where the visible window should start (in data coordinates)
+    // We want to show the LAST N points, so window starts at (maxX - visibleDataRangeX)
+    final visibleWindowStartX = bounds.maxX - visibleDataRangeX;
+
+    // Calculate how much we need to pan to show this window
+    // Pan offset shifts the coordinate system: negative pan = scroll left (show right data)
+    // The visible window starts at visibleWindowStartX, but we want it to start at bounds.minX
+    // So we need to shift by (visibleWindowStartX - bounds.minX) in data coordinates
+
+    // Convert data shift to pixel offset at current zoom level
+    // Pixel offset = (data shift / data range) * chart width * zoom level
+    final dataShift = visibleWindowStartX - bounds.minX;
+    final panOffsetX = -(dataShift / dataRangeX) * chartRect.width * currentZoomState.zoomLevelX;
+
+    // SAFETY: Validate final pan offset (must be finite and reasonable)
+    if (!panOffsetX.isFinite) {
+      return null;
+    }
+
+    // SAFETY: Prevent extreme pan values that could cause rendering issues
+    final maxReasonablePan = chartRect.width * 100.0; // Allow larger pans for streaming
+    if (panOffsetX.abs() > maxReasonablePan) return null;
+
+    // Return the new zoom/pan state (KEEP current zoom level, only update pan)
     return currentZoomState.copyWith(
-      zoomLevelX: newZoomX,
       panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
     );
   }
