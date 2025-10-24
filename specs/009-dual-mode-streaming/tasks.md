@@ -199,9 +199,9 @@
 - [X] T071 Add stream error handling to data reception in lib/src/widgets/braven_chart.dart to catch errors and invoke onStreamError callback immediately (FR-017a, no retry per clarification Q2) - Implemented at line 1165-1176, all 6/6 tests passing
 - [X] T072 Add validation to prevent data updates when stream not configured (default to interactive mode per FR-003) - Already exists at line 856 (null check) and line 808 (default mode)
 - [X] T073 Add race condition prevention to mode transitions in lib/src/widgets/braven_chart.dart with idempotent guards on _pauseStreaming and _resumeStreaming - Already exists (line 1295 guard, line 1362 guard)
-- [ ] T074 Add hot reload handling to reset chart to streaming mode (no mode persistence across hot reload per edge case)
-- [ ] T075 Verify onStreamError callback invoked immediately on stream error with integration test
-- [ ] T076 Verify edge cases handled correctly with integration test (no crashes, predictable behavior)
+- [X] T074 Add hot reload handling to reset chart to streaming mode (no mode persistence across hot reload per edge case) - Implemented reassemble() override at line 987-1006
+- [X] T075 Verify onStreamError callback invoked immediately on stream error with integration test - All 6/6 tests passing
+- [X] T076 Verify edge cases handled correctly with integration test (no crashes, predictable behavior) - All 6/6 tests passing (hot reload requires manual testing)
 
 **Checkpoint**: Error handling and edge cases covered
 

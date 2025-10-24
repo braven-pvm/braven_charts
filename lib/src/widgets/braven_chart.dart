@@ -980,6 +980,31 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
   }
 
+  /// T074: Handle hot reload - reset to streaming mode (no mode persistence).
+  ///
+  /// Called during hot reload in development mode. Per spec edge case,
+  /// chart should reset to streaming mode regardless of current mode.
+  @override
+  void reassemble() {
+    super.reassemble();
+
+    // Reset to streaming mode if streamingConfig is provided
+    if (widget.streamingConfig != null && _chartMode.value != ChartMode.streaming) {
+      // Cancel auto-resume timer if active
+      _autoResumeTimer?.cancel();
+      _autoResumeTimer = null;
+
+      // Clear buffered data on hot reload
+      _bufferedPoints.removeAll();
+
+      // Reset to streaming mode
+      _chartMode.value = ChartMode.streaming;
+
+      // Notify mode changed
+      widget.streamingConfig?.onModeChanged?.call(ChartMode.streaming);
+    }
+  }
+
   @override
   void dispose() {
     // Cancel stream subscription
