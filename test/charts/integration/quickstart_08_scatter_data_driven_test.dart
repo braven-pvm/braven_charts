@@ -25,7 +25,8 @@ void main() {
     test('Marker sizes vary by third variable', () {
       // PLACEHOLDER: Will verify sizes scaled between minSize and maxSize
       // Based on metadata['size'] or dataPoint.size property
-      expect(true, isTrue, reason: 'Placeholder - awaiting ChartDataPoint.size property');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting ChartDataPoint.size property');
     });
 
     test('Marker size represents data value', () {

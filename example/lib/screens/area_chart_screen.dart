@@ -59,7 +59,8 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
             Expanded(
               child: Text(
                 'Area charts support solid and gradient fills, stacking multiple series, '
-                'and custom baselines (zero, fixed value, or another series).',
+                'custom baselines, AND line styles (straight, smooth bezier, stepped) '
+                'for the top edge interpolation.',
                 style: TextStyle(color: Colors.green.shade900),
               ),
             ),
@@ -71,13 +72,14 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
 
   Widget _buildSolidAreaChart(BuildContext context) {
     return ChartContainer(
-      title: 'Solid Fill Area Chart',
-      subtitle: 'Single color fill with optional line overlay',
+      title: 'Solid Fill Area Chart (Straight Lines)',
+      subtitle: 'Linear interpolation - sharp angular edges',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.area,
+          lineStyle: LineStyle.straight, // Explicit straight line edges
           series: [
             ChartSeries(
               id: 'sine_wave',
@@ -94,17 +96,18 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
 
   Widget _buildGradientAreaChart(BuildContext context) {
     return ChartContainer(
-      title: 'Gradient Area Chart',
-      subtitle: 'Vertical gradient fill from top to bottom',
+      title: 'Smooth Bezier Area Chart',
+      subtitle: 'Cubic bezier curves - flowing smooth edges (Catmull-Rom spline)',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.area,
+          lineStyle: LineStyle.smooth, // Smooth bezier curves for area edge
           series: [
             ChartSeries(
               id: 'gradient_data',
-              name: 'Gradient Area',
+              name: 'Smooth Area',
               points: ChartDataGenerator.generateRandomData(pointCount: 15).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
             ),
           ],
@@ -117,13 +120,14 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
 
   Widget _buildStackedAreaChart(BuildContext context) {
     return ChartContainer(
-      title: 'Stacked Area Chart',
-      subtitle: 'Multiple series stacked on top of each other',
+      title: 'Stacked Area Chart (Stepped)',
+      subtitle: 'Multiple series stacked with stepped interpolation',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.area,
+          lineStyle: LineStyle.stepped, // Stepped edges for discrete data
           series: [
             ChartSeries(
               id: 'series1',
@@ -156,13 +160,14 @@ class _AreaChartScreenState extends State<AreaChartScreen> {
 
   Widget _buildBaselineAreaChart(BuildContext context) {
     return ChartContainer(
-      title: 'Custom Baseline Area Chart',
-      subtitle: 'Area chart with fixed baseline value',
+      title: 'Custom Baseline Area Chart (Smooth Bezier)',
+      subtitle: 'Area with fixed baseline and smooth cubic curves',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.area,
+          lineStyle: LineStyle.smooth, // Smooth bezier for elegant baseline area
           series: [
             ChartSeries(
               id: 'baseline_data',

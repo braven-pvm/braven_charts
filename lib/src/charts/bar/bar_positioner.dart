@@ -167,7 +167,8 @@ class BarPositioner {
     for (int catIndex = 0; catIndex < numCategories; catIndex++) {
       // Calculate starting X position for this category
       final categoryStart = catIndex * categoryWidth;
-      final groupStart = categoryStart + (categoryWidth - categoryWidth * barWidthRatio) / 2;
+      final groupStart =
+          categoryStart + (categoryWidth - categoryWidth * barWidthRatio) / 2;
 
       for (int seriesIndex = 0; seriesIndex < numSeries; seriesIndex++) {
         final value = seriesData[seriesIndex][catIndex];

@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Run: flutter test test/widgets/integration/quickstart_step2_test.dart
 void main() {
   group('Quickstart Step 2: Add Annotations', () {
-    testWidgets('Adds PointAnnotation to highlight data point', (WidgetTester tester) async {
+    testWidgets('Adds PointAnnotation to highlight data point',
+        (WidgetTester tester) async {
       // Step 2 from quickstart.md - Add PointAnnotation
       await tester.pumpWidget(
         MaterialApp(
@@ -65,7 +66,8 @@ void main() {
       expect(annotation.markerShape, equals(MarkerShape.star));
     });
 
-    testWidgets('Adds ThresholdAnnotation to show target line', (WidgetTester tester) async {
+    testWidgets('Adds ThresholdAnnotation to show target line',
+        (WidgetTester tester) async {
       // Step 2 from quickstart.md - Add ThresholdAnnotation
       await tester.pumpWidget(
         MaterialApp(
@@ -121,7 +123,8 @@ void main() {
       expect(annotation.style.borderColor, equals(Colors.green));
     });
 
-    testWidgets('Combines PointAnnotation and ThresholdAnnotation', (WidgetTester tester) async {
+    testWidgets('Combines PointAnnotation and ThresholdAnnotation',
+        (WidgetTester tester) async {
       // Step 2 complete example from quickstart.md
       await tester.pumpWidget(
         MaterialApp(
@@ -179,11 +182,13 @@ void main() {
       expect(pointAnnotation.markerShape, equals(MarkerShape.star));
 
       // Verify ThresholdAnnotation
-      final thresholdAnnotation = chartWidget.annotations[1] as ThresholdAnnotation;
+      final thresholdAnnotation =
+          chartWidget.annotations[1] as ThresholdAnnotation;
       expect(thresholdAnnotation.value, equals(20000));
     });
 
-    testWidgets('Annotations render on top of chart', (WidgetTester tester) async {
+    testWidgets('Annotations render on top of chart',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -270,9 +275,12 @@ void main() {
       final chartWidget = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(chartWidget.annotations.length, equals(3));
 
-      expect((chartWidget.annotations[0] as PointAnnotation).markerShape, equals(MarkerShape.star));
-      expect((chartWidget.annotations[1] as PointAnnotation).markerShape, equals(MarkerShape.circle));
-      expect((chartWidget.annotations[2] as PointAnnotation).markerShape, equals(MarkerShape.square));
+      expect((chartWidget.annotations[0] as PointAnnotation).markerShape,
+          equals(MarkerShape.star));
+      expect((chartWidget.annotations[1] as PointAnnotation).markerShape,
+          equals(MarkerShape.circle));
+      expect((chartWidget.annotations[2] as PointAnnotation).markerShape,
+          equals(MarkerShape.square));
     });
   });
 }

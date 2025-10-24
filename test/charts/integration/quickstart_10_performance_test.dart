@@ -15,17 +15,23 @@ void main() {
     test('10,000 points render in <16ms', () {
       // PLACEHOLDER: Will measure frame time with Stopwatch
       // Constitutional requirement: <16ms for 60 FPS
-      expect(true, isTrue, reason: 'Placeholder - awaiting performance benchmark implementation');
+      expect(true, isTrue,
+          reason:
+              'Placeholder - awaiting performance benchmark implementation');
     });
 
     test('Maintains 60 FPS requirement', () {
       // PLACEHOLDER: Will verify frame time < 16.67ms
-      expect(true, isTrue, reason: 'Placeholder - awaiting performance benchmark implementation');
+      expect(true, isTrue,
+          reason:
+              'Placeholder - awaiting performance benchmark implementation');
     });
 
     test('Performance meets constitutional requirements', () {
       // PLACEHOLDER: Will validate all chart types at scale
-      expect(true, isTrue, reason: 'Placeholder - awaiting performance benchmark implementation');
+      expect(true, isTrue,
+          reason:
+              'Placeholder - awaiting performance benchmark implementation');
     });
   });
 }

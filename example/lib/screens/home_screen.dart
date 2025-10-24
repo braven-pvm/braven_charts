@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../advanced_streaming_example.dart';
+import '../basic_streaming_example.dart';
+import '../buffer_status_example.dart';
 import 'advanced_features_screen.dart';
 import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
@@ -9,9 +12,14 @@ import 'event_debug_screen.dart';
 import 'interaction_examples_screen.dart';
 import 'interaction_showcase_screen.dart';
 import 'line_chart_screen.dart';
+import 'line_style_comparison_screen.dart';
+import 'line_styles_streaming_screen.dart';
 import 'quickstart_screen.dart';
+import 'regression_test_screen.dart';
 import 'scatter_chart_screen.dart';
 import 'simple_zoom_test_screen.dart';
+import 'streaming_test_screen.dart';
+import 'ultimate_showcase_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -27,6 +35,8 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildWelcomeCard(context),
+          const SizedBox(height: 24),
+          _buildTestingSection(context),
           const SizedBox(height: 24),
           _buildShowcaseSection(context),
           const SizedBox(height: 24),
@@ -97,6 +107,123 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildTestingSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.science,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Testing & Validation',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '⚠️ Critical Testing Gates - Dual-Mode Streaming (User Story 1)',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please test both scenarios before proceeding to Phase 4:',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '✅ Regression Test - Static Chart',
+          subtitle: 'CRITICAL: Verify zoom/pan/interaction still work (no breaking changes)',
+          icon: Icons.check_circle,
+          color: Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RegressionTestScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🚀 Streaming Mode Test',
+          subtitle: 'NEW: Test dual-mode streaming, auto-scroll, mode transitions',
+          icon: Icons.stream,
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StreamingTestScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '📊 Basic Streaming Example',
+          subtitle: 'Minimal setup - just add dataStream and StreamingConfig()',
+          icon: Icons.play_circle,
+          color: Colors.lightBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BasicStreamingExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '⚙️ Advanced Streaming Example',
+          subtitle: 'All callbacks, manual control, custom timeout, event log',
+          icon: Icons.settings_applications,
+          color: Colors.indigo,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AdvancedStreamingExample()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '📈 Buffer Status Example',
+          subtitle: '"Return to Live" button with real-time buffer count tracking',
+          icon: Icons.queue,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BufferStatusExample()),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildShowcaseSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,6 +237,18 @@ class HomeScreen extends StatelessWidget {
                 ),
           ),
         ),
+        _buildChartCard(
+          context,
+          title: '🏆 Ultimate Showcase',
+          subtitle: 'ALL features: Multiple series, streaming, themes, types, interaction',
+          icon: Icons.stars,
+          color: Colors.amber,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UltimateShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         _buildChartCard(
           context,
           title: 'Annotations',
@@ -247,6 +386,30 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const LineChartScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🔬 Line Style Comparison Lab',
+          subtitle: 'Switch styles for SAME data - static & streaming modes',
+          icon: Icons.compare,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LineStyleComparisonScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🎨 Line Styles - Live Streaming',
+          subtitle: 'Cubic bezier curves with real-time data (10Hz)',
+          icon: Icons.show_chart,
+          color: Colors.lightBlue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LineStylesStreamingScreen()),
           ),
         ),
         const SizedBox(height: 12),

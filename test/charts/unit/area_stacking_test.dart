@@ -156,7 +156,8 @@ void main() {
         ];
 
         final stacker = AreaStacking();
-        final stacked = stacker.stack([series], baseline: const AreaBaseline.zero());
+        final stacked =
+            stacker.stack([series], baseline: const AreaBaseline.zero());
 
         final baselinePoints = stacked.last;
         expect(baselinePoints[0].dy, equals(0));

@@ -66,7 +66,8 @@ void main() {
         expect(widget, isA<Text>());
       });
 
-      testWidgets('uses default tooltip when no custom builder', (tester) async {
+      testWidgets('uses default tooltip when no custom builder',
+          (tester) async {
         await tester.pumpWidget(
           const MaterialApp(home: Scaffold(body: SizedBox())),
         );
@@ -87,7 +88,8 @@ void main() {
     });
 
     group('Tooltip Content Formatting', () {
-      testWidgets('buildDefaultTooltip() generates tooltip with series name', (tester) async {
+      testWidgets('buildDefaultTooltip() generates tooltip with series name',
+          (tester) async {
         await tester.pumpWidget(
           const MaterialApp(home: Scaffold(body: SizedBox())),
         );
@@ -106,7 +108,8 @@ void main() {
         expect(widget, isA<Container>());
       });
 
-      testWidgets('buildDefaultTooltip() includes X and Y values', (tester) async {
+      testWidgets('buildDefaultTooltip() includes X and Y values',
+          (tester) async {
         await tester.pumpWidget(
           const MaterialApp(home: Scaffold(body: SizedBox())),
         );
@@ -129,7 +132,8 @@ void main() {
         expect(find.textContaining('56.78'), findsOneWidget);
       });
 
-      testWidgets('buildMultiSeriesTooltip() handles multiple series', (tester) async {
+      testWidgets('buildMultiSeriesTooltip() handles multiple series',
+          (tester) async {
         await tester.pumpWidget(
           const MaterialApp(home: Scaffold(body: SizedBox())),
         );
@@ -154,7 +158,8 @@ void main() {
     });
 
     group('Tooltip Positioning', () {
-      test('calculatePosition() places tooltip above point by default (top)', () {
+      test('calculatePosition() places tooltip above point by default (top)',
+          () {
         const cursorPos = Offset(400, 300);
         const tooltipSize = Size(120, 60);
         const chartBounds = Rect.fromLTWH(0, 0, 800, 600);
@@ -243,7 +248,8 @@ void main() {
         );
 
         expect(position.dx, greaterThanOrEqualTo(chartBounds.left));
-        expect(position.dx + tooltipSize.width, lessThanOrEqualTo(chartBounds.right));
+        expect(position.dx + tooltipSize.width,
+            lessThanOrEqualTo(chartBounds.right));
       });
 
       test('keeps tooltip within canvas bounds (right edge)', () {
@@ -261,7 +267,8 @@ void main() {
         );
 
         expect(position.dx, greaterThanOrEqualTo(chartBounds.left));
-        expect(position.dx + tooltipSize.width, lessThanOrEqualTo(chartBounds.right));
+        expect(position.dx + tooltipSize.width,
+            lessThanOrEqualTo(chartBounds.right));
       });
 
       test('left position places tooltip to left of cursor', () {
@@ -380,4 +387,3 @@ void main() {
     });
   });
 }
-

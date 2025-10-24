@@ -46,7 +46,8 @@ class TrendAnnotation extends ChartAnnotation {
     this.lineWidth = 2.0,
     this.dashPattern,
   }) : assert(
-          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+          trendType != TrendType.movingAverage ||
+              (windowSize != null && windowSize > 0),
           'windowSize must be positive when trendType is movingAverage',
         );
 

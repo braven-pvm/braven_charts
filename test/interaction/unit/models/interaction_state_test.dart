@@ -13,7 +13,8 @@ Map<String, dynamic> pointToMap(ChartDataPoint point) {
   return {
     'x': point.x,
     'y': point.y,
-    if (point.timestamp != null) 'timestamp': point.timestamp!.toIso8601String(),
+    if (point.timestamp != null)
+      'timestamp': point.timestamp!.toIso8601String(),
     if (point.label != null) 'label': point.label,
     if (point.metadata != null) ...point.metadata!,
   };
@@ -91,7 +92,8 @@ void main() {
       expect(state.activeGesture, equals(mockGesture));
     });
 
-    test('validation: isCrosshairVisible=true can have null crosshairPosition', () {
+    test('validation: isCrosshairVisible=true can have null crosshairPosition',
+        () {
       // Note: InteractionState doesn't validate this - it's allowed
       final state = InteractionState.initial().copyWith(
         isCrosshairVisible: true,

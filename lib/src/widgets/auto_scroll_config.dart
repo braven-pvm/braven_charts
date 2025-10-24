@@ -113,7 +113,8 @@ class AutoScrollConfig {
       maxVisiblePoints: maxVisiblePoints ?? this.maxVisiblePoints,
       resumeOnNewData: resumeOnNewData ?? this.resumeOnNewData,
       animateScroll: animateScroll ?? this.animateScroll,
-      scrollAnimationDuration: scrollAnimationDuration ?? this.scrollAnimationDuration,
+      scrollAnimationDuration:
+          scrollAnimationDuration ?? this.scrollAnimationDuration,
     );
   }
 

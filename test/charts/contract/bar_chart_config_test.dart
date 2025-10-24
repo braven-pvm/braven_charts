@@ -138,7 +138,8 @@ void main() {
             groupSpacing: 4.0,
             cornerRadius: 0.0,
             borderWidth: 0.0,
-            useGradient: true, // INVALID: both gradientStart and gradientEnd are null
+            useGradient:
+                true, // INVALID: both gradientStart and gradientEnd are null
             gradientStart: null,
             gradientEnd: null,
           ),

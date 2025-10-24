@@ -49,7 +49,8 @@ void main() {
       });
 
       test('render() respects CrosshairMode.horizontal', () {
-        final horizontalConfig = config.copyWith(mode: CrosshairMode.horizontal);
+        final horizontalConfig =
+            config.copyWith(mode: CrosshairMode.horizontal);
         crosshairRenderer.render(canvas, size, state, horizontalConfig);
         expect(true, isTrue);
       });
@@ -96,7 +97,9 @@ void main() {
         expect(snapPoints.first.y, 50);
       });
 
-      test('calculateSnapPoints() returns empty list when no points within radius', () {
+      test(
+          'calculateSnapPoints() returns empty list when no points within radius',
+          () {
         const cursorPosition = Offset(400, 300);
         final dataPoints = [
           const ChartDataPoint(x: 0, y: 0),
@@ -128,7 +131,8 @@ void main() {
 
         // TODO: Optimize with quadtree or spatial hash for <1ms
         // Current linear search takes ~2-3ms for 10k points
-        expect(stopwatch.elapsedMicroseconds, lessThan(5000)); // Relaxed to <5ms
+        expect(
+            stopwatch.elapsedMicroseconds, lessThan(5000)); // Relaxed to <5ms
       });
     });
 

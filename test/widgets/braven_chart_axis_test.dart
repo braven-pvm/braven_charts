@@ -126,7 +126,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('applies custom axis configuration', (WidgetTester tester) async {
+    testWidgets('applies custom axis configuration',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -204,7 +205,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('different axis configs for x and y', (WidgetTester tester) async {
+    testWidgets('different axis configs for x and y',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -260,7 +262,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('grid visibility controlled by showGrid', (WidgetTester tester) async {
+    testWidgets('grid visibility controlled by showGrid',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',

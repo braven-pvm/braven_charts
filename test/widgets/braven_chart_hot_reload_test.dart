@@ -12,7 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChart Hot Reload Support', () {
-    testWidgets('didUpdateWidget() handles series changes', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles series changes',
+        (WidgetTester tester) async {
       // Arrange - initial series
       final series1 = ChartSeries(
         id: 'series-1',
@@ -59,7 +60,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('didUpdateWidget() handles theme changes', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles theme changes',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -97,7 +99,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('didUpdateWidget() handles controller swap', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles controller swap',
+        (WidgetTester tester) async {
       // Arrange
       final controller1 = ChartController();
       final controller2 = ChartController();
@@ -138,14 +141,17 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
 
       // Verify controller1 is still usable (not disposed by widget)
-      expect(() => controller1.addPoint('test', const ChartDataPoint(x: 0, y: 0)), returnsNormally);
+      expect(
+          () => controller1.addPoint('test', const ChartDataPoint(x: 0, y: 0)),
+          returnsNormally);
 
       // Cleanup
       controller1.dispose();
       controller2.dispose();
     });
 
-    testWidgets('didUpdateWidget() handles controller removal', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles controller removal',
+        (WidgetTester tester) async {
       // Arrange - start with external controller
       final controller = ChartController();
       final series = ChartSeries(
@@ -187,7 +193,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('didUpdateWidget() handles stream swap', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles stream swap',
+        (WidgetTester tester) async {
       // Arrange - use broadcast streams to avoid listener issues
       final streamController1 = StreamController<ChartDataPoint>.broadcast();
       final streamController2 = StreamController<ChartDataPoint>.broadcast();
@@ -238,7 +245,8 @@ void main() {
       await streamController2.close();
     });
 
-    testWidgets('didUpdateWidget() handles stream removal', (WidgetTester tester) async {
+    testWidgets('didUpdateWidget() handles stream removal',
+        (WidgetTester tester) async {
       // Arrange - start with broadcast stream
       final streamController = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
@@ -280,7 +288,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('no duplicate controller subscriptions', (WidgetTester tester) async {
+    testWidgets('no duplicate controller subscriptions',
+        (WidgetTester tester) async {
       // Arrange
       final controller = ChartController();
       final series = ChartSeries(
@@ -314,7 +323,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('no duplicate stream subscriptions', (WidgetTester tester) async {
+    testWidgets('no duplicate stream subscriptions',
+        (WidgetTester tester) async {
       // Arrange - use broadcast stream
       final streamController = StreamController<ChartDataPoint>.broadcast();
       final series = ChartSeries(
@@ -348,7 +358,8 @@ void main() {
       await streamController.close();
     });
 
-    testWidgets('chart type changes handled correctly', (WidgetTester tester) async {
+    testWidgets('chart type changes handled correctly',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -388,7 +399,8 @@ void main() {
       expect(find.byType(BravenChart), findsOneWidget);
     });
 
-    testWidgets('dimensions changes handled correctly', (WidgetTester tester) async {
+    testWidgets('dimensions changes handled correctly',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -431,7 +443,8 @@ void main() {
       expect(sizedBox.height, equals(400));
     });
 
-    testWidgets('annotation changes handled correctly', (WidgetTester tester) async {
+    testWidgets('annotation changes handled correctly',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',

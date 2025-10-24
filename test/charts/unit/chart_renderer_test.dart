@@ -164,7 +164,8 @@ void main() {
         );
 
         // Bounds should be different sizes
-        expect(smallPath.getBounds().width, lessThan(largePath.getBounds().width));
+        expect(
+            smallPath.getBounds().width, lessThan(largePath.getBounds().width));
       });
 
       testWidgets('none marker shape does not render', (tester) async {
@@ -498,5 +499,8 @@ class _TestMarkerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_TestMarkerPainter oldDelegate) => shape != oldDelegate.shape || position != oldDelegate.position || size != oldDelegate.size;
+  bool shouldRepaint(_TestMarkerPainter oldDelegate) =>
+      shape != oldDelegate.shape ||
+      position != oldDelegate.position ||
+      size != oldDelegate.size;
 }

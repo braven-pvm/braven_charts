@@ -3,7 +3,8 @@
 // Task: T012
 // Status: Implementation complete, tests aligned
 
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart' as chart_tooltip;
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart'
+    as chart_tooltip;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,10 +14,12 @@ void main() {
       final config = chart_tooltip.TooltipConfig.defaultConfig();
 
       expect(config.enabled, isTrue);
-      expect(config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
+      expect(
+          config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
       expect(config.showDelay, equals(const Duration(milliseconds: 100)));
       expect(config.hideDelay, equals(const Duration(milliseconds: 200)));
-      expect(config.preferredPosition, equals(chart_tooltip.TooltipPosition.auto));
+      expect(
+          config.preferredPosition, equals(chart_tooltip.TooltipPosition.auto));
       expect(config.offsetFromPoint, equals(10.0));
       expect(config.style, isNotNull);
       expect(config.customBuilder, isNull);
@@ -54,7 +57,8 @@ void main() {
         triggerMode: chart_tooltip.TooltipTriggerMode.hover,
       );
 
-      expect(config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
+      expect(
+          config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
     });
 
     test('TooltipTriggerMode.tap for mobile', () {
@@ -76,7 +80,8 @@ void main() {
     test('TooltipPosition.auto enables smart positioning', () {
       final config = chart_tooltip.TooltipConfig.defaultConfig();
 
-      expect(config.preferredPosition, equals(chart_tooltip.TooltipPosition.auto));
+      expect(
+          config.preferredPosition, equals(chart_tooltip.TooltipPosition.auto));
     });
 
     test('TooltipPosition can be set to top', () {
@@ -84,7 +89,8 @@ void main() {
         preferredPosition: chart_tooltip.TooltipPosition.top,
       );
 
-      expect(config.preferredPosition, equals(chart_tooltip.TooltipPosition.top));
+      expect(
+          config.preferredPosition, equals(chart_tooltip.TooltipPosition.top));
     });
 
     test('TooltipPosition can be set to bottom', () {
@@ -92,7 +98,8 @@ void main() {
         preferredPosition: chart_tooltip.TooltipPosition.bottom,
       );
 
-      expect(config.preferredPosition, equals(chart_tooltip.TooltipPosition.bottom));
+      expect(config.preferredPosition,
+          equals(chart_tooltip.TooltipPosition.bottom));
     });
 
     test('validation: showDelay cannot be negative', () {
@@ -182,7 +189,8 @@ void main() {
         shadowBlurRadius: 8.0,
       );
 
-      Widget customBuilder(BuildContext context, Map<String, dynamic> dataPoint) {
+      Widget customBuilder(
+          BuildContext context, Map<String, dynamic> dataPoint) {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -205,9 +213,11 @@ void main() {
       );
 
       expect(config.enabled, isTrue);
-      expect(config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
+      expect(
+          config.triggerMode, equals(chart_tooltip.TooltipTriggerMode.hover));
       expect(config.showDelay, equals(const Duration(milliseconds: 200)));
-      expect(config.preferredPosition, equals(chart_tooltip.TooltipPosition.top));
+      expect(
+          config.preferredPosition, equals(chart_tooltip.TooltipPosition.top));
       expect(config.customBuilder, isNotNull);
     });
   });

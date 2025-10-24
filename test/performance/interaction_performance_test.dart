@@ -36,12 +36,15 @@ void main() {
     });
 
     // T038: Frame time measurement test (SC-002: <16ms frames during interactions)
-    testWidgets('maintains 60fps (<16ms frames) during mouse hover (SC-002)', (WidgetTester tester) async {
+    testWidgets('maintains 60fps (<16ms frames) during mouse hover (SC-002)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: chart)));
       await tester.pumpAndSettle();
 
-      final renderBox = tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
-      final chartCenter = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
+      final renderBox =
+          tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
+      final chartCenter =
+          renderBox.localToGlobal(renderBox.size.center(Offset.zero));
 
       // Measure frame times during 100 mouse movements
       final List<Duration> frameTimes = [];
@@ -67,7 +70,8 @@ void main() {
       expect(
         maxFrameTime.inMilliseconds,
         lessThan(16),
-        reason: 'Frame time exceeded 16ms threshold (SC-002 violation): ${maxFrameTime.inMilliseconds}ms',
+        reason:
+            'Frame time exceeded 16ms threshold (SC-002 violation): ${maxFrameTime.inMilliseconds}ms',
       );
 
       // Calculate average frame time
@@ -87,7 +91,8 @@ void main() {
     });
 
     // T039: Widget rebuild count test (SC-003: zero rebuilds during interactions)
-    testWidgets('triggers zero widget rebuilds during mouse hover (SC-003)', (WidgetTester tester) async {
+    testWidgets('triggers zero widget rebuilds during mouse hover (SC-003)',
+        (WidgetTester tester) async {
       int buildCount = 0;
 
       await tester.pumpWidget(MaterialApp(
@@ -103,8 +108,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final initialBuildCount = buildCount;
-      final renderBox = tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
-      final chartCenter = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
+      final renderBox =
+          tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
+      final chartCenter =
+          renderBox.localToGlobal(renderBox.size.center(Offset.zero));
 
       // Perform 50 mouse movements
       for (int i = 0; i < 50; i++) {
@@ -118,7 +125,8 @@ void main() {
       expect(
         buildCount,
         equals(initialBuildCount),
-        reason: 'Widget rebuilds detected during mouse hover (SC-003 violation): ${buildCount - initialBuildCount} rebuilds',
+        reason:
+            'Widget rebuilds detected during mouse hover (SC-003 violation): ${buildCount - initialBuildCount} rebuilds',
       );
 
       print('Rebuild Metrics (SC-003):');
@@ -129,13 +137,16 @@ void main() {
     });
 
     // T040: CustomPainter repaint isolation test (SC-004: only overlays repaint, not base chart)
-    testWidgets('isolates CustomPainter repaints to overlays only (SC-004)', (WidgetTester tester) async {
+    testWidgets('isolates CustomPainter repaints to overlays only (SC-004)',
+        (WidgetTester tester) async {
       // Create test painter wrappers to count repaints
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: chart)));
       await tester.pumpAndSettle();
 
-      final renderBox = tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
-      final chartCenter = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
+      final renderBox =
+          tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
+      final chartCenter =
+          renderBox.localToGlobal(renderBox.size.center(Offset.zero));
 
       // Note: Without access to internal painter state, we verify indirectly
       // by confirming base chart uses zoomPanState (stable) while overlays use interactionState (changes frequently)
@@ -150,22 +161,30 @@ void main() {
 
       // Verification: Test confirms ValueListenableBuilder wraps overlays correctly
       // Base chart should remain stable (no rebuilds from T039 test confirms this)
-      expect(true, isTrue, reason: 'Repaint isolation verified through architecture (SC-004)');
+      expect(true, isTrue,
+          reason: 'Repaint isolation verified through architecture (SC-004)');
 
       print('Repaint Isolation (SC-004):');
-      print('  Base chart painter: Depends only on zoomPanState (stable during hover)');
-      print('  Crosshair painter: Depends on interactionState (changes with every hover)');
-      print('  Tooltip painter: Depends on interactionState (changes with hover + timer)');
+      print(
+          '  Base chart painter: Depends only on zoomPanState (stable during hover)');
+      print(
+          '  Crosshair painter: Depends on interactionState (changes with every hover)');
+      print(
+          '  Tooltip painter: Depends on interactionState (changes with hover + timer)');
       print('  Isolation mechanism: ValueListenableBuilder + RepaintBoundary');
     });
 
     // T041: High-frequency consecutive mouse movements test (SC-005: 1000+ movements)
-    testWidgets('handles 1000+ consecutive mouse movements without performance degradation (SC-005)', (WidgetTester tester) async {
+    testWidgets(
+        'handles 1000+ consecutive mouse movements without performance degradation (SC-005)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: chart)));
       await tester.pumpAndSettle();
 
-      final renderBox = tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
-      final chartCenter = renderBox.localToGlobal(renderBox.size.center(Offset.zero));
+      final renderBox =
+          tester.firstRenderObject<RenderBox>(find.byType(bc.BravenChart));
+      final chartCenter =
+          renderBox.localToGlobal(renderBox.size.center(Offset.zero));
       final chartSize = renderBox.size;
 
       final stopwatch = Stopwatch()..start();
@@ -213,7 +232,8 @@ void main() {
       expect(
         degradationRatio,
         lessThan(1.5), // Allow 50% tolerance for test variance
-        reason: 'Performance degraded over time (SC-005 violation): ${(degradationRatio * 100 - 100).toStringAsFixed(1)}% slower',
+        reason:
+            'Performance degraded over time (SC-005 violation): ${(degradationRatio * 100 - 100).toStringAsFixed(1)}% slower',
       );
 
       // Verify all frames stay under 16ms threshold
@@ -221,14 +241,16 @@ void main() {
       expect(
         maxFrameTime.inMilliseconds,
         lessThan(16),
-        reason: 'Frame time exceeded 16ms during high-frequency movements (SC-005): ${maxFrameTime.inMilliseconds}ms',
+        reason:
+            'Frame time exceeded 16ms during high-frequency movements (SC-005): ${maxFrameTime.inMilliseconds}ms',
       );
 
       print('High-Frequency Performance (SC-005):');
       print('  Total movements: 1200');
       print('  First 600 avg: ${(firstHalfAvg / 1000).toStringAsFixed(2)}ms');
       print('  Last 600 avg: ${(secondHalfAvg / 1000).toStringAsFixed(2)}ms');
-      print('  Degradation ratio: ${(degradationRatio * 100).toStringAsFixed(1)}%');
+      print(
+          '  Degradation ratio: ${(degradationRatio * 100).toStringAsFixed(1)}%');
       print('  Max frame time: ${maxFrameTime.inMilliseconds}ms');
       print('  Target: <16ms, <150% degradation');
     });

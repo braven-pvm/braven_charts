@@ -44,10 +44,12 @@ void main() {
       // Actually, the hitRate in the code is releaseCount/acquireCount which doesn't make sense
       // Let's check what makes sense: we want to measure object reuse
       // Better metric: (acquires - creates) / acquires = reuse rate
-      final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
+      final reuseRate =
+          (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
 
       expect(reuseRate, greaterThanOrEqualTo(0.9),
-          reason: 'Paint pool reuse rate $reuseRate < 90% (created: ${stats.totalCreated}, acquired: ${stats.acquireCount})');
+          reason:
+              'Paint pool reuse rate $reuseRate < 90% (created: ${stats.totalCreated}, acquired: ${stats.acquireCount})');
     });
 
     test('Path pool achieves >90% hit rate during rendering', () {
@@ -73,9 +75,11 @@ void main() {
       }
 
       final stats = pool.statistics;
-      final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
+      final reuseRate =
+          (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
 
-      expect(reuseRate, greaterThanOrEqualTo(0.9), reason: 'Path pool reuse rate $reuseRate < 90%');
+      expect(reuseRate, greaterThanOrEqualTo(0.9),
+          reason: 'Path pool reuse rate $reuseRate < 90%');
     });
 
     test('TextPainter pool achieves >90% hit rate', () {
@@ -99,9 +103,11 @@ void main() {
       }
 
       final stats = pool.statistics;
-      final reuseRate = (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
+      final reuseRate =
+          (stats.acquireCount - stats.totalCreated) / stats.acquireCount;
 
-      expect(reuseRate, greaterThanOrEqualTo(0.9), reason: 'TextPainter pool reuse rate $reuseRate < 90%');
+      expect(reuseRate, greaterThanOrEqualTo(0.9),
+          reason: 'TextPainter pool reuse rate $reuseRate < 90%');
     });
 
     test('Acquire operation completes in <100ns', () {
@@ -124,12 +130,15 @@ void main() {
       }
       stopwatch.stop();
 
-      final avgNs = (stopwatch.elapsedMicroseconds * 1000) / (iterations * 2); // *2 for acquire+release
+      final avgNs = (stopwatch.elapsedMicroseconds * 1000) /
+          (iterations * 2); // *2 for acquire+release
 
       // Note: In practice, <100ns per operation is the target
       // However, Dart VM overhead might make this closer to 1000ns
       // The important thing is it's fast enough to not impact rendering
-      expect(avgNs, lessThan(10000.0), reason: 'Acquire/Release took ${avgNs}ns on average, exceeds 10µs budget');
+      expect(avgNs, lessThan(10000.0),
+          reason:
+              'Acquire/Release took ${avgNs}ns on average, exceeds 10µs budget');
     });
 
     test('Pool maintains maxSize limit', () {
@@ -153,7 +162,8 @@ void main() {
       final stats = pool.statistics;
 
       // Pool should not exceed maxSize
-      expect(stats.currentSize, lessThanOrEqualTo(10), reason: 'Pool size ${stats.currentSize} exceeds maxSize 10');
+      expect(stats.currentSize, lessThanOrEqualTo(10),
+          reason: 'Pool size ${stats.currentSize} exceeds maxSize 10');
 
       // Should have created 20 objects
       expect(stats.totalCreated, equals(20));

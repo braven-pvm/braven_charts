@@ -167,7 +167,8 @@ class LineChartLayer extends ChartLayer {
   }
 
   @override
-  String toString() => 'LineChartLayer(series: ${series.length}, lineStyle: ${config.lineStyle}, zIndex: $zIndex)';
+  String toString() =>
+      'LineChartLayer(series: ${series.length}, lineStyle: ${config.lineStyle}, zIndex: $zIndex)';
 
   // Default color palette (will be replaced by theme colors)
   static final List<Color> _defaultColors = [

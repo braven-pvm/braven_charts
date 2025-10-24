@@ -23,7 +23,8 @@ void main() {
     });
 
     group('Pointer Event Processing', () {
-      test('processPointerEvent() translates mouse move to data coordinates', () {
+      test('processPointerEvent() translates mouse move to data coordinates',
+          () {
         final pointerEvent = const PointerMoveEvent(
           position: Offset(400, 300),
         );
@@ -94,7 +95,8 @@ void main() {
 
         final result = eventHandler.processKeyEvent(keyEvent);
 
-        expect(result, equals(KeyEventResult.ignored)); // Currently returns ignored
+        expect(result,
+            equals(KeyEventResult.ignored)); // Currently returns ignored
       });
 
       test('processKeyEvent() handles arrow left key', () {
@@ -106,7 +108,8 @@ void main() {
 
         final result = eventHandler.processKeyEvent(keyEvent);
 
-        expect(result, equals(KeyEventResult.ignored)); // Currently returns ignored
+        expect(result,
+            equals(KeyEventResult.ignored)); // Currently returns ignored
       });
 
       test('processKeyEvent() handles zoom keys (+/-)', () {
@@ -118,7 +121,8 @@ void main() {
 
         final result = eventHandler.processKeyEvent(zoomInEvent);
 
-        expect(result, equals(KeyEventResult.ignored)); // Currently returns ignored
+        expect(result,
+            equals(KeyEventResult.ignored)); // Currently returns ignored
       });
 
       test('processKeyEvent() completes in <50ms', () {
@@ -198,7 +202,8 @@ void main() {
         eventHandler.routeEvent(mockEvent);
 
         expect(handler1Called, isTrue); // Higher priority called
-        expect(handler2Called, isTrue); // Lower priority also called (handler1 didn't stop)
+        expect(handler2Called,
+            isTrue); // Lower priority also called (handler1 didn't stop)
       });
     });
 

@@ -133,13 +133,15 @@ class ChartSeriesStyle {
     this.fillOpacity,
     this.barWidthRatio,
   })  : assert(lineWidth == null || lineWidth >= 0, 'lineWidth must be >= 0'),
-        assert(markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
+        assert(
+            markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
         assert(
           fillOpacity == null || (fillOpacity >= 0.0 && fillOpacity <= 1.0),
           'fillOpacity must be between 0.0 and 1.0',
         ),
         assert(
-          barWidthRatio == null || (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
+          barWidthRatio == null ||
+              (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
           'barWidthRatio must be in (0.0, 1.0]',
         );
 
@@ -187,7 +189,8 @@ class ChartSeriesStyle {
           barWidthRatio == other.barWidthRatio;
 
   @override
-  int get hashCode => Object.hash(color, lineWidth, markerSize, fillOpacity, barWidthRatio);
+  int get hashCode =>
+      Object.hash(color, lineWidth, markerSize, fillOpacity, barWidthRatio);
 
   @override
   String toString() {

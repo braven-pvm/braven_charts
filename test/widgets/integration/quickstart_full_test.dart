@@ -16,7 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// Run: flutter test test/widgets/integration/quickstart_full_test.dart
 void main() {
   group('Quickstart Step 3: Simplified Data Input (fromValues)', () {
-    testWidgets('fromValues factory creates chart from y-values', (WidgetTester tester) async {
+    testWidgets('fromValues factory creates chart from y-values',
+        (WidgetTester tester) async {
       // Step 3 from quickstart.md
       await tester.pumpWidget(
         MaterialApp(
@@ -79,7 +80,8 @@ void main() {
   });
 
   group('Quickstart Step 4: Customize Axes', () {
-    testWidgets('hidden() preset creates sparkline', (WidgetTester tester) async {
+    testWidgets('hidden() preset creates sparkline',
+        (WidgetTester tester) async {
       // Step 4 from quickstart.md - Sparkline style
       await tester.pumpWidget(
         MaterialApp(
@@ -111,7 +113,8 @@ void main() {
       expect(chartWidget.yAxis!.showAxis, isFalse);
     });
 
-    testWidgets('gridOnly() preset shows grid without axes', (WidgetTester tester) async {
+    testWidgets('gridOnly() preset shows grid without axes',
+        (WidgetTester tester) async {
       // Step 4 from quickstart.md - Grid-only style
       await tester.pumpWidget(
         MaterialApp(
@@ -137,7 +140,8 @@ void main() {
       expect(chartWidget.yAxis!.showGrid, isTrue);
     });
 
-    testWidgets('copyWith() customizes axis config', (WidgetTester tester) async {
+    testWidgets('copyWith() customizes axis config',
+        (WidgetTester tester) async {
       // Step 4 from quickstart.md - Custom grid style
       await tester.pumpWidget(
         MaterialApp(
@@ -167,7 +171,8 @@ void main() {
   });
 
   group('Quickstart Step 5: Real-Time Data', () {
-    testWidgets('dataStream updates chart automatically', (WidgetTester tester) async {
+    testWidgets('dataStream updates chart automatically',
+        (WidgetTester tester) async {
       // Step 5 from quickstart.md
       final streamController = StreamController<ChartDataPoint>();
 
@@ -238,7 +243,8 @@ void main() {
   });
 
   group('Quickstart Step 6: Programmatic Control', () {
-    testWidgets('ChartController adds data points', (WidgetTester tester) async {
+    testWidgets('ChartController adds data points',
+        (WidgetTester tester) async {
       // Step 6 from quickstart.md
       final controller = ChartController();
 
@@ -261,10 +267,13 @@ void main() {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final nextX = controller.getAllSeries()['sales']?.length ?? 0;
+                    final nextX =
+                        controller.getAllSeries()['sales']?.length ?? 0;
                     controller.addPoint(
                       'sales',
-                      ChartDataPoint(x: nextX.toDouble(), y: Random().nextDouble() * 30000),
+                      ChartDataPoint(
+                          x: nextX.toDouble(),
+                          y: Random().nextDouble() * 30000),
                     );
                   },
                   child: const Text('Add Point'),
@@ -298,7 +307,8 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('ChartController adds annotations', (WidgetTester tester) async {
+    testWidgets('ChartController adds annotations',
+        (WidgetTester tester) async {
       final controller = ChartController();
 
       await tester.pumpWidget(
@@ -388,7 +398,8 @@ void main() {
       await tester.pump();
 
       expect(controller.getAllSeries()['data']!.length, equals(2));
-      expect(controller.getAllSeries()['data']![0].x, equals(1)); // Second point is now first
+      expect(controller.getAllSeries()['data']![0].x,
+          equals(1)); // Second point is now first
 
       // Cleanup
       controller.dispose();

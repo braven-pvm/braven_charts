@@ -15,7 +15,8 @@
 
 import 'dart:ui' as ui;
 
-import 'package:braven_charts/src/charts/base/chart_config.dart' show MarkerShape;
+import 'package:braven_charts/src/charts/base/chart_config.dart'
+    show MarkerShape;
 import 'package:braven_charts/src/charts/base/chart_layer.dart';
 import 'package:braven_charts/src/charts/scatter/scatter_chart_config.dart';
 import 'package:braven_charts/src/charts/scatter/scatter_chart_layer.dart';
@@ -39,8 +40,10 @@ void main() {
 
     setUp(() {
       paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
       textCache = LinkedHashMapTextLayoutCache();
       perfMonitor = StopwatchPerformanceMonitor();
     });
@@ -94,7 +97,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(20.0), reason: 'Circle markers render took ${elapsedMs}ms, exceeds 20ms budget');
+      expect(elapsedMs, lessThan(20.0),
+          reason:
+              'Circle markers render took ${elapsedMs}ms, exceeds 20ms budget');
     });
 
     test('Renders 10,000 points with all 6 marker shapes in <16ms', () {
@@ -139,7 +144,9 @@ void main() {
         stopwatch.stop();
 
         final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-        expect(elapsedMs, lessThan(20.0), reason: '$shape markers render took ${elapsedMs}ms, exceeds 20ms budget');
+        expect(elapsedMs, lessThan(20.0),
+            reason:
+                '$shape markers render took ${elapsedMs}ms, exceeds 20ms budget');
       }
     });
 
@@ -180,7 +187,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(20.0), reason: 'Data-driven sizing render took ${elapsedMs}ms, exceeds 20ms budget');
+      expect(elapsedMs, lessThan(20.0),
+          reason:
+              'Data-driven sizing render took ${elapsedMs}ms, exceeds 20ms budget');
     });
 
     test('Renders 10,000 points with outlined markers in <16ms', () {
@@ -214,7 +223,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(25.0), reason: 'Outlined markers render took ${elapsedMs}ms, exceeds 25ms budget');
+      expect(elapsedMs, lessThan(25.0),
+          reason:
+              'Outlined markers render took ${elapsedMs}ms, exceeds 25ms budget');
     });
 
     test('Renders 10,000 points with clustering enabled in <16ms', () {
@@ -248,7 +259,8 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(25.0), reason: 'Clustering render took ${elapsedMs}ms, exceeds 25ms budget');
+      expect(elapsedMs, lessThan(25.0),
+          reason: 'Clustering render took ${elapsedMs}ms, exceeds 25ms budget');
     });
 
     test('Paint pool hit rate > 90%', () {
@@ -285,7 +297,8 @@ void main() {
       final paintStats = paintPool.statistics;
 
       // Constitutional requirement: >90% hit rate
-      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9),
+          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }

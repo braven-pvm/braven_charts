@@ -30,8 +30,10 @@ void main() {
 
     setUp(() {
       paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
       textCache = LinkedHashMapTextLayoutCache();
       perfMonitor = StopwatchPerformanceMonitor();
     });
@@ -63,7 +65,8 @@ void main() {
         id: 'series2',
         points: List.generate(
           500,
-          (i) => ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
+          (i) =>
+              ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
         ),
       );
 
@@ -95,7 +98,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Vertical grouped bars render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Vertical grouped bars render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 1,000 horizontal bars (grouped) in <16ms', () {
@@ -110,7 +115,8 @@ void main() {
         id: 'series2',
         points: List.generate(
           500,
-          (i) => ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
+          (i) =>
+              ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
         ),
       );
 
@@ -139,7 +145,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Horizontal grouped bars render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Horizontal grouped bars render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 1,000 stacked bars (vertical) in <16ms', () {
@@ -191,7 +199,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Stacked bars render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Stacked bars render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 1,000 bars with rounded corners and borders in <16ms', () {
@@ -206,7 +216,8 @@ void main() {
         id: 'series2',
         points: List.generate(
           500,
-          (i) => ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
+          (i) =>
+              ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
         ),
       );
 
@@ -236,7 +247,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Rounded bars with borders render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Rounded bars with borders render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 1,000 bars with gradient fill in <16ms', () {
@@ -251,7 +264,8 @@ void main() {
         id: 'series2',
         points: List.generate(
           500,
-          (i) => ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
+          (i) =>
+              ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
         ),
       );
 
@@ -282,7 +296,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Gradient bars render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Gradient bars render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Paint pool hit rate > 90%', () {
@@ -297,7 +313,8 @@ void main() {
         id: 'series2',
         points: List.generate(
           500,
-          (i) => ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
+          (i) =>
+              ChartDataPoint(x: i.toDouble(), y: ((i + 50) % 100).toDouble()),
         ),
       );
 
@@ -329,7 +346,8 @@ void main() {
       final paintStats = paintPool.statistics;
 
       // Constitutional requirement: >90% hit rate
-      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9),
+          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }
