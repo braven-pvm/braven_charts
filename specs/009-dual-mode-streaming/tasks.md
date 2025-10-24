@@ -211,9 +211,9 @@
 
 **Purpose**: Complete developer documentation and working examples
 
-- [ ] T077 [P] Update example/lib/main.dart with basic streaming chart example (minimal configuration)
-- [ ] T078 [P] Create example/lib/advanced_streaming_example.dart with advanced configuration (custom timeout, buffer callbacks, manual resume)
-- [ ] T079 [P] Create example/lib/buffer_status_example.dart demonstrating buffer count tracking and "Return to Live" button
+- [X] T077 [P] Update example/lib/main.dart with basic streaming chart example (minimal configuration) - Created basic_streaming_example.dart with minimal setup
+- [X] T078 [P] Create example/lib/advanced_streaming_example.dart with advanced configuration (custom timeout, buffer callbacks, manual resume) - Complete with all callbacks and manual control
+- [X] T079 [P] Create example/lib/buffer_status_example.dart demonstrating buffer count tracking and "Return to Live" button - Complete with real-time buffer tracking
 - [ ] T080 [P] Update README.md with quick start for dual-mode streaming feature
 - [ ] T081 [P] Add inline documentation to ChartMode enum in lib/src/models/chart_mode.dart with examples
 - [ ] T082 [P] Add inline documentation to StreamingConfig class in lib/src/models/streaming_config.dart with examples for each parameter
