@@ -34,7 +34,8 @@ void main() {
         // First cluster should contain the 3 nearby points
         final firstCluster = result.clusters.first;
         expect(firstCluster.pointCount, greaterThanOrEqualTo(2));
-        expect(firstCluster.pointIndices.length, equals(firstCluster.pointCount));
+        expect(
+            firstCluster.pointIndices.length, equals(firstCluster.pointCount));
       });
 
       test('calculates cluster center as average of clustered points', () {
@@ -53,7 +54,8 @@ void main() {
         final result = clusterer.cluster(points);
 
         // If all three points are clustered, center should be near (1, ~0.58)
-        if (result.clusters.isNotEmpty && result.clusters.first.pointCount == 3) {
+        if (result.clusters.isNotEmpty &&
+            result.clusters.first.pointCount == 3) {
           final center = result.clusters.first.center;
           expect(center.dx, closeTo(1.0, 0.5));
           expect(center.dy, closeTo(0.58, 0.5));
@@ -157,11 +159,13 @@ void main() {
         final result = clusterer.cluster(points);
 
         // Should have one cluster with 2 points
-        final clusters = result.clusters.where((c) => c.pointCount >= 2).toList();
+        final clusters =
+            result.clusters.where((c) => c.pointCount >= 2).toList();
         expect(clusters.isNotEmpty, isTrue);
 
         // Isolated point should not form a cluster
-        expect(result.unclusteredPoints, contains(2)); // Index of isolated point
+        expect(
+            result.unclusteredPoints, contains(2)); // Index of isolated point
       });
 
       test('threshold = 3 requires at least 3 points to form cluster', () {
@@ -208,7 +212,8 @@ void main() {
         final resultHigh = clustererHighThreshold.cluster(points);
 
         // Higher threshold should result in fewer or equal clusters
-        expect(resultHigh.clusters.length, lessThanOrEqualTo(resultLow.clusters.length));
+        expect(resultHigh.clusters.length,
+            lessThanOrEqualTo(resultLow.clusters.length));
       });
 
       test('points below threshold remain unclustered', () {
@@ -344,7 +349,8 @@ void main() {
         if (result.clusters.isNotEmpty) {
           expect(result.clusters.first.pointCount, equals(3));
           expect(result.clusters.first.center, equals(const Offset(5, 5)));
-          expect(result.clusters.first.radius, equals(0.0)); // All at same point
+          expect(
+              result.clusters.first.radius, equals(0.0)); // All at same point
         }
       });
 

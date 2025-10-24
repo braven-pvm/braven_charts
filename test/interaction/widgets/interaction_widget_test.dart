@@ -29,7 +29,8 @@ void main() {
       );
     });
 
-    testWidgets('T035.1: BravenChart renders without interaction config (default behavior)',
+    testWidgets(
+        'T035.1: BravenChart renders without interaction config (default behavior)',
         (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
@@ -126,8 +127,10 @@ void main() {
       // Verify custom config is used
       final bravenChart = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(bravenChart.interactionConfig!.crosshair.enabled, isTrue);
-      expect(bravenChart.interactionConfig!.crosshair.style.lineColor, equals(Colors.red));
-      expect(bravenChart.interactionConfig!.crosshair.style.lineWidth, equals(3.0));
+      expect(bravenChart.interactionConfig!.crosshair.style.lineColor,
+          equals(Colors.red));
+      expect(bravenChart.interactionConfig!.crosshair.style.lineWidth,
+          equals(3.0));
     });
 
     testWidgets('T035.4: BravenChart renders with custom tooltip config',
@@ -170,9 +173,12 @@ void main() {
       // Verify custom tooltip config is used
       final bravenChart = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(bravenChart.interactionConfig!.tooltip.enabled, isTrue);
-      expect(bravenChart.interactionConfig!.tooltip.style.backgroundColor, equals(Colors.blue));
-      expect(bravenChart.interactionConfig!.tooltip.style.textColor, equals(Colors.white));
-      expect(bravenChart.interactionConfig!.tooltip.showDelay, equals(const Duration(milliseconds: 200)));
+      expect(bravenChart.interactionConfig!.tooltip.style.backgroundColor,
+          equals(Colors.blue));
+      expect(bravenChart.interactionConfig!.tooltip.style.textColor,
+          equals(Colors.white));
+      expect(bravenChart.interactionConfig!.tooltip.showDelay,
+          equals(const Duration(milliseconds: 200)));
     });
 
     testWidgets('T035.5: BravenChart with zoom/pan enabled',
@@ -244,13 +250,15 @@ void main() {
 
       // Assert
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(find.byType(Focus), findsWidgets); // Focus widget should be present
+      expect(
+          find.byType(Focus), findsWidgets); // Focus widget should be present
 
       // Verify keyboard config
       final bravenChart = tester.widget<BravenChart>(find.byType(BravenChart));
       expect(bravenChart.interactionConfig!.keyboard.enabled, isTrue);
       expect(bravenChart.interactionConfig!.keyboard.enableArrowKeys, isTrue);
-      expect(bravenChart.interactionConfig!.keyboard.enablePlusMinusKeys, isTrue);
+      expect(
+          bravenChart.interactionConfig!.keyboard.enablePlusMinusKeys, isTrue);
       expect(bravenChart.interactionConfig!.keyboard.zoomStep, equals(0.1));
     });
 
@@ -430,7 +438,8 @@ void main() {
 
       // Verify new config is applied
       final bravenChart = tester.widget<BravenChart>(find.byType(BravenChart));
-      expect(bravenChart.interactionConfig!.crosshair.style.lineColor, equals(Colors.red));
+      expect(bravenChart.interactionConfig!.crosshair.style.lineColor,
+          equals(Colors.red));
     });
 
     testWidgets('T035.11: Interaction disabled when config.enabled = false',

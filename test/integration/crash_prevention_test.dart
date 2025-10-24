@@ -8,7 +8,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Crash Prevention - SC-001', () {
-    testWidgets('T018: 1000+ continuous mouse movements without crashes', (WidgetTester tester) async {
+    testWidgets('T018: 1000+ continuous mouse movements without crashes',
+        (WidgetTester tester) async {
       // Arrange: Create chart with 50+ data points and full interaction enabled
       final chart = MaterialApp(
         home: Scaffold(
@@ -48,7 +49,9 @@ void main() {
       final chartTopLeft = tester.getTopLeft(chartFinder);
 
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await gesture.addPointer(location: chartTopLeft + Offset(chartSize.width / 2, chartSize.height / 2));
+      await gesture.addPointer(
+          location:
+              chartTopLeft + Offset(chartSize.width / 2, chartSize.height / 2));
 
       // Move mouse in a pattern across the chart
       for (int i = 0; i < 1000; i++) {
@@ -73,7 +76,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('No box.dart:3345 or mouse_tracker.dart:199 errors during stress test', (WidgetTester tester) async {
+    testWidgets(
+        'No box.dart:3345 or mouse_tracker.dart:199 errors during stress test',
+        (WidgetTester tester) async {
       // This test verifies the specific crashes mentioned in SC-001 don't occur
 
       final chart = MaterialApp(
@@ -85,7 +90,8 @@ void main() {
                 id: 'stress-test',
                 points: List.generate(
                   200,
-                  (i) => ChartDataPoint(x: i.toDouble(), y: (i * 1.5).toDouble()),
+                  (i) =>
+                      ChartDataPoint(x: i.toDouble(), y: (i * 1.5).toDouble()),
                 ),
                 color: Colors.red,
               ),
@@ -107,7 +113,8 @@ void main() {
       await gesture.addPointer(location: tester.getCenter(chartFinder));
 
       for (int i = 0; i < 500; i++) {
-        await gesture.moveTo(tester.getCenter(chartFinder) + Offset(i % 100 - 50, i % 50 - 25));
+        await gesture.moveTo(
+            tester.getCenter(chartFinder) + Offset(i % 100 - 50, i % 50 - 25));
       }
 
       await tester.pump();

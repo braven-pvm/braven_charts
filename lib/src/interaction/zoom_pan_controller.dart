@@ -39,8 +39,10 @@ class ZoomPanController {
   ZoomPanController({
     this.frictionCoefficient = 0.95,
     this.velocityThreshold = 50.0,
-  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1, 'frictionCoefficient must be between 0 and 1'),
-        assert(velocityThreshold >= 0, 'velocityThreshold must be non-negative');
+  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1,
+            'frictionCoefficient must be between 0 and 1'),
+        assert(
+            velocityThreshold >= 0, 'velocityThreshold must be non-negative');
 
   /// Friction coefficient for inertial scrolling (0-1).
   ///
@@ -185,7 +187,8 @@ class ZoomPanController {
       case GestureType.pinch:
         // Pinch gesture (pinch-to-zoom)
         final scale = gesture.currentScale ?? 1.0;
-        final focalPoint = gesture.currentPosition; // Use current position as focal point
+        final focalPoint =
+            gesture.currentPosition; // Use current position as focal point
         return zoom(
           state,
           zoomFactor: scale,
@@ -200,7 +203,8 @@ class ZoomPanController {
       case GestureType.doubleTap:
         // Double-tap to zoom
         final zoomFactor = doubleTapZoomFactor ?? 2.0;
-        final focalPoint = gesture.currentPosition; // Use current position as tap location
+        final focalPoint =
+            gesture.currentPosition; // Use current position as tap location
         return zoom(state, zoomFactor: zoomFactor, focalPoint: focalPoint);
 
       default:

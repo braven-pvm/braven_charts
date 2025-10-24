@@ -17,7 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Crosshair Integration Tests', () {
-    testWidgets('Crosshair appears on hover and remains visible during snap', (WidgetTester tester) async {
+    testWidgets('Crosshair appears on hover and remains visible during snap',
+        (WidgetTester tester) async {
       // Create a test chart with known data points
       final testSeries = ChartSeries(
         id: 'test_series',
@@ -98,7 +99,8 @@ void main() {
 
       // Now move near a data point (within snap radius of 30px)
       // This should snap to the point but crosshair should REMAIN VISIBLE
-      final nearDataPoint = chartCenter + const Offset(10, 10); // Close to a point
+      final nearDataPoint =
+          chartCenter + const Offset(10, 10); // Close to a point
       await gesture.moveTo(nearDataPoint);
       await tester.pumpAndSettle();
 
@@ -113,7 +115,9 @@ void main() {
       await gesture.removePointer();
     });
 
-    testWidgets('Crosshair uses correct screen coordinates for snap point highlight', (WidgetTester tester) async {
+    testWidgets(
+        'Crosshair uses correct screen coordinates for snap point highlight',
+        (WidgetTester tester) async {
       // This test specifically verifies the bug fix where crosshair
       // was disappearing because it was using data coordinates instead
       // of screen coordinates for the nearestPoint
@@ -145,25 +149,37 @@ void main() {
                     enabled: true,
                     mode: CrosshairMode.both,
                     snapToDataPoint: true,
-                    snapRadius: 200.0, // VERY large radius to ensure we catch a point
+                    snapRadius:
+                        200.0, // VERY large radius to ensure we catch a point
                   ),
                   onCrosshairChanged: (position, snapPoints) {
                     capturedSnapPoints = snapPoints; // Capture for verification
                     if (snapPoints.isNotEmpty) {
                       // Verify snap point has metadata with screen coordinates
                       final snapPoint = snapPoints.first;
-                      expect(snapPoint.metadata, isNotNull, reason: 'Snap point should have metadata');
+                      expect(snapPoint.metadata, isNotNull,
+                          reason: 'Snap point should have metadata');
 
                       if (snapPoint.metadata != null) {
-                        expect(snapPoint.metadata!.containsKey('screenX'), true, reason: 'Snap point should have screenX coordinate');
-                        expect(snapPoint.metadata!.containsKey('screenY'), true, reason: 'Snap point should have screenY coordinate');
+                        expect(snapPoint.metadata!.containsKey('screenX'), true,
+                            reason:
+                                'Snap point should have screenX coordinate');
+                        expect(snapPoint.metadata!.containsKey('screenY'), true,
+                            reason:
+                                'Snap point should have screenY coordinate');
 
                         // Screen coordinates should be within widget bounds
-                        final screenX = snapPoint.metadata!['screenX'] as double;
-                        final screenY = snapPoint.metadata!['screenY'] as double;
+                        final screenX =
+                            snapPoint.metadata!['screenX'] as double;
+                        final screenY =
+                            snapPoint.metadata!['screenY'] as double;
 
-                        expect(screenX >= 0 && screenX <= 400, true, reason: 'screenX should be within widget bounds (got $screenX)');
-                        expect(screenY >= 0 && screenY <= 400, true, reason: 'screenY should be within widget bounds (got $screenY)');
+                        expect(screenX >= 0 && screenX <= 400, true,
+                            reason:
+                                'screenX should be within widget bounds (got $screenX)');
+                        expect(screenY >= 0 && screenY <= 400, true,
+                            reason:
+                                'screenY should be within widget bounds (got $screenY)');
 
                         snapPointPosition = Offset(screenX, screenY);
                       }
@@ -188,16 +204,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify callback was called and snap points were provided
-      expect(capturedSnapPoints, isNotNull, reason: 'Callback should have been invoked');
+      expect(capturedSnapPoints, isNotNull,
+          reason: 'Callback should have been invoked');
 
       // Verify that we detected a snap point with valid screen coordinates
-      expect(snapPointPosition, isNotNull, reason: 'Should have detected a snap point near center');
+      expect(snapPointPosition, isNotNull,
+          reason: 'Should have detected a snap point near center');
 
       // Clean up
       await gesture.removePointer();
     });
 
-    testWidgets('Crosshair renders in all three modes correctly', (WidgetTester tester) async {
+    testWidgets('Crosshair renders in all three modes correctly',
+        (WidgetTester tester) async {
       final testSeries = ChartSeries(
         id: 'test',
         points: [
@@ -235,7 +254,8 @@ void main() {
         final chartFinder = find.byType(BravenChart);
         final chartCenter = tester.getCenter(chartFinder);
 
-        final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        final gesture =
+            await tester.createGesture(kind: PointerDeviceKind.mouse);
         await gesture.addPointer(location: chartCenter);
         await gesture.moveTo(chartCenter);
         await tester.pumpAndSettle();
@@ -247,7 +267,8 @@ void main() {
       }
     });
 
-    testWidgets('Crosshair snaps to nearest point within snap radius', (WidgetTester tester) async {
+    testWidgets('Crosshair snaps to nearest point within snap radius',
+        (WidgetTester tester) async {
       // Use simple data bounds 0-100 for easy screen position calculation
       final testSeries = ChartSeries(
         id: 'test',
@@ -298,8 +319,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should have snapped to the middle point
-      expect(capturedSnapPoints, isNotNull, reason: 'Callback should have been called');
-      expect(capturedSnapPoints!.isNotEmpty, true, reason: 'Should snap to nearest point within radius');
+      expect(capturedSnapPoints, isNotNull,
+          reason: 'Callback should have been called');
+      expect(capturedSnapPoints!.isNotEmpty, true,
+          reason: 'Should snap to nearest point within radius');
 
       // Move far from any point (outside snap radius) - use top-left corner
       capturedSnapPoints = null;
@@ -311,13 +334,15 @@ void main() {
       // Should NOT snap (no points within radius)
       // Note: If crosshair is still shown, snapPoints list should be empty
       if (capturedSnapPoints != null) {
-        expect(capturedSnapPoints!.isEmpty, true, reason: 'Should not snap when far from points');
+        expect(capturedSnapPoints!.isEmpty, true,
+            reason: 'Should not snap when far from points');
       }
 
       await gesture.removePointer();
     });
 
-    testWidgets('Crosshair disappears when mouse leaves chart area', (WidgetTester tester) async {
+    testWidgets('Crosshair disappears when mouse leaves chart area',
+        (WidgetTester tester) async {
       final testSeries = ChartSeries(
         id: 'test',
         points: [const ChartDataPoint(x: 0, y: 0)],
@@ -364,7 +389,8 @@ void main() {
       await gesture.moveTo(outsidePoint);
       await tester.pumpAndSettle();
 
-      expect(crosshairExited, true, reason: 'Hover callback should fire with null when exiting');
+      expect(crosshairExited, true,
+          reason: 'Hover callback should fire with null when exiting');
 
       await gesture.removePointer();
     });

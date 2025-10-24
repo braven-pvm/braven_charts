@@ -28,8 +28,10 @@ class CoordinateTransformer {
   /// Maps from screen pixel space (chartBounds) to data value space (dataBounds).
   Offset screenToData(Offset screenPosition) {
     // Calculate normalized position within chart bounds (0.0 to 1.0)
-    final normalizedX = (screenPosition.dx - chartBounds.left) / chartBounds.width;
-    final normalizedY = (screenPosition.dy - chartBounds.top) / chartBounds.height;
+    final normalizedX =
+        (screenPosition.dx - chartBounds.left) / chartBounds.width;
+    final normalizedY =
+        (screenPosition.dy - chartBounds.top) / chartBounds.height;
 
     // Map to data bounds
     // Note: Y axis is inverted (screen Y increases downward, data Y increases upward)
@@ -50,7 +52,8 @@ class CoordinateTransformer {
     // Map to chart bounds
     // Note: Y axis is inverted (data Y increases upward, screen Y increases downward)
     final screenX = chartBounds.left + (normalizedX * chartBounds.width);
-    final screenY = chartBounds.top + ((1.0 - normalizedY) * chartBounds.height);
+    final screenY =
+        chartBounds.top + ((1.0 - normalizedY) * chartBounds.height);
 
     return Offset(screenX, screenY);
   }

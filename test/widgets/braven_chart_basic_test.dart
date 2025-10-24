@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChart Basic Rendering', () {
-    testWidgets('renders with minimal required params', (WidgetTester tester) async {
+    testWidgets('renders with minimal required params',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -66,7 +67,8 @@ void main() {
 
       // Assert
       expect(find.byType(BravenChart), findsOneWidget);
-      expect(find.byType(SizedBox), findsWidgets); // Should have SizedBox for dimensions
+      expect(find.byType(SizedBox),
+          findsWidgets); // Should have SizedBox for dimensions
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
@@ -240,7 +242,8 @@ void main() {
 
       // Assert
       expect(find.text('Sales Report'), findsOneWidget);
-      expect(find.byType(Column), findsOneWidget); // Title should add Column wrapper
+      expect(find.byType(Column),
+          findsOneWidget); // Title should add Column wrapper
     });
 
     testWidgets('renders with subtitle', (WidgetTester tester) async {
@@ -310,7 +313,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('renders with axis configurations', (WidgetTester tester) async {
+    testWidgets('renders with axis configurations',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -373,7 +377,8 @@ void main() {
       expect(find.text('Peak'), findsOneWidget);
     });
 
-    testWidgets('renders without annotations when list is empty', (WidgetTester tester) async {
+    testWidgets('renders without annotations when list is empty',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -402,7 +407,8 @@ void main() {
       // No Stack when annotations are empty
     });
 
-    testWidgets('renders with RepaintBoundary for performance', (WidgetTester tester) async {
+    testWidgets('renders with RepaintBoundary for performance',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',

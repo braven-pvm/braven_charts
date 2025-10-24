@@ -106,11 +106,14 @@ void main() {
       // Verify tooltip stays within bounds
       expect(position.dx, greaterThanOrEqualTo(0));
       expect(position.dy, greaterThanOrEqualTo(0));
-      expect(position.dx + tooltipSize.width, lessThanOrEqualTo(chartBounds.width));
-      expect(position.dy + tooltipSize.height, lessThanOrEqualTo(chartBounds.height));
+      expect(position.dx + tooltipSize.width,
+          lessThanOrEqualTo(chartBounds.width));
+      expect(position.dy + tooltipSize.height,
+          lessThanOrEqualTo(chartBounds.height));
     });
 
-    testWidgets('buildDefaultTooltip() generates default content', (tester) async {
+    testWidgets('buildDefaultTooltip() generates default content',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: SizedBox()),
@@ -133,7 +136,8 @@ void main() {
       expect(widget, isA<Container>());
     });
 
-    testWidgets('buildMultiSeriesTooltip() shows multiple series', (tester) async {
+    testWidgets('buildMultiSeriesTooltip() shows multiple series',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: SizedBox()),

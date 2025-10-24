@@ -410,7 +410,9 @@ class TooltipProvider implements ITooltipProvider {
 
     // Update if point changed
     if (oldPoint != null && newPoint != null) {
-      return oldPoint.x != newPoint.x || oldPoint.y != newPoint.y || oldPoint.label != newPoint.label;
+      return oldPoint.x != newPoint.x ||
+          oldPoint.y != newPoint.y ||
+          oldPoint.label != newPoint.label;
     }
 
     return false;

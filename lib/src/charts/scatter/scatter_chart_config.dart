@@ -55,7 +55,8 @@ class ScatterChartConfig {
     required this.enableClustering,
     required this.clusterThreshold,
   })  : assert(
-          sizingMode != MarkerSizingMode.fixed || (fixedSize != null && fixedSize > 0),
+          sizingMode != MarkerSizingMode.fixed ||
+              (fixedSize != null && fixedSize > 0),
           'fixedSize is required and must be > 0 when sizingMode is fixed',
         ),
         assert(
@@ -148,10 +149,12 @@ class ScatterChartConfig {
 
     if (sizingMode == MarkerSizingMode.dataDriven) {
       if (minSize == null) {
-        throw ArgumentError('minSize is required when sizingMode is dataDriven');
+        throw ArgumentError(
+            'minSize is required when sizingMode is dataDriven');
       }
       if (maxSize == null) {
-        throw ArgumentError('maxSize is required when sizingMode is dataDriven');
+        throw ArgumentError(
+            'maxSize is required when sizingMode is dataDriven');
       }
       if (minSize! >= maxSize!) {
         throw ArgumentError(

@@ -97,15 +97,19 @@ class BarChartLayer extends ChartLayer {
       // Calculate bar layout using BarPositioner
       final barLayouts = _positioner.calculateLayout(
         seriesData: seriesData,
-        categoryWidth: _calculateCategoryWidth(series.isNotEmpty ? series.first.length : 0),
+        categoryWidth: _calculateCategoryWidth(
+            series.isNotEmpty ? series.first.length : 0),
         chartHeight: chartHeight,
-        baseline: 0.0, // TODO: Use proper baseline when coordinate system integrated
+        baseline:
+            0.0, // TODO: Use proper baseline when coordinate system integrated
       );
 
       // Render each bar (need series index to get color)
       var globalBarIndex = 0;
       for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
-        for (var categoryIndex = 0; categoryIndex < series[seriesIndex].length; categoryIndex++) {
+        for (var categoryIndex = 0;
+            categoryIndex < series[seriesIndex].length;
+            categoryIndex++) {
           if (globalBarIndex >= barLayouts.length) break;
 
           final barLayout = barLayouts[globalBarIndex];
@@ -118,7 +122,9 @@ class BarChartLayer extends ChartLayer {
           final barRect = _createBarRect(barLayout, context);
 
           // Apply gradient if configured
-          if (config.useGradient && config.gradientStart != null && config.gradientEnd != null) {
+          if (config.useGradient &&
+              config.gradientStart != null &&
+              config.gradientEnd != null) {
             final shader = _renderer.createGradientShader(
               bounds: barRect,
               startColor: Color(config.gradientStart!),
@@ -148,7 +154,8 @@ class BarChartLayer extends ChartLayer {
           if (config.borderWidth > 0) {
             paint.style = PaintingStyle.stroke;
             paint.strokeWidth = config.borderWidth;
-            paint.color = config.borderColor != null ? Color(config.borderColor!) : color;
+            paint.color =
+                config.borderColor != null ? Color(config.borderColor!) : color;
             paint.shader = null;
 
             if (config.cornerRadius > 0) {
@@ -208,7 +215,8 @@ class BarChartLayer extends ChartLayer {
   }
 
   @override
-  String toString() => 'BarChartLayer(series: ${series.length}, mode: ${config.groupingMode}, orientation: ${config.orientation}, zIndex: $zIndex)';
+  String toString() =>
+      'BarChartLayer(series: ${series.length}, mode: ${config.groupingMode}, orientation: ${config.orientation}, zIndex: $zIndex)';
 
   // Default color palette (will be replaced by theme colors)
   static final List<Color> _defaultColors = [

@@ -30,8 +30,10 @@ void main() {
 
     setUp(() {
       paintPool = ObjectPool<Paint>(factory: () => Paint(), reset: (p) {});
-      pathPool = ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
-      textPainterPool = ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
+      pathPool =
+          ObjectPool<Path>(factory: () => Path(), reset: (p) => p.reset());
+      textPainterPool =
+          ObjectPool<TextPainter>(factory: () => TextPainter(), reset: (tp) {});
       textCache = LinkedHashMapTextLayoutCache();
       perfMonitor = StopwatchPerformanceMonitor();
     });
@@ -84,7 +86,8 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Solid fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason: 'Solid fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with gradient fill in <16ms', () {
@@ -116,7 +119,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Gradient fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Gradient fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 10,000 points with pattern fill in <16ms', () {
@@ -148,7 +153,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Pattern fill render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Pattern fill render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Renders 3 stacked series (30K total points) in <16ms', () {
@@ -197,7 +204,9 @@ void main() {
       stopwatch.stop();
 
       final elapsedMs = stopwatch.elapsedMicroseconds / 1000;
-      expect(elapsedMs, lessThan(16.0), reason: 'Stacked areas (30K points) render took ${elapsedMs}ms, exceeds 16ms budget');
+      expect(elapsedMs, lessThan(16.0),
+          reason:
+              'Stacked areas (30K points) render took ${elapsedMs}ms, exceeds 16ms budget');
     });
 
     test('Paint pool hit rate > 90%', () {
@@ -232,7 +241,8 @@ void main() {
       final paintStats = paintPool.statistics;
 
       // Constitutional requirement: >90% hit rate
-      expect(paintStats.hitRate, greaterThan(0.9), reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
+      expect(paintStats.hitRate, greaterThan(0.9),
+          reason: 'Paint pool hit rate ${paintStats.hitRate} < 90%');
     });
   });
 }

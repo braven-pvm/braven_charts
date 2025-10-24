@@ -7,7 +7,8 @@ import 'dart:ui' show Offset, PointerDeviceKind;
 
 import 'package:braven_charts/src/interaction/gesture_recognizer.dart';
 import 'package:braven_charts/src/interaction/models/gesture_details.dart';
-import 'package:flutter/gestures.dart' show PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerScrollEvent;
+import 'package:flutter/gestures.dart'
+    show PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerScrollEvent;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -92,7 +93,8 @@ void main() {
 
       test('pan requires minimum movement threshold', () {
         const down = PointerDownEvent(position: Offset(100, 100));
-        const tinyMove = PointerMoveEvent(position: Offset(101, 100)); // 1px movement
+        const tinyMove =
+            PointerMoveEvent(position: Offset(101, 100)); // 1px movement
 
         gestureRecognizer.onPointerDown(down);
         final gesture = gestureRecognizer.onPointerMove(tinyMove);
@@ -105,15 +107,19 @@ void main() {
     group('Pinch/Scale Gesture Recognition', () {
       test('recognizeScale() detects two-finger pinch', () {
         // Two pointers down
-        const pointer1Down = PointerDownEvent(position: Offset(100, 100), pointer: 1);
-        const pointer2Down = PointerDownEvent(position: Offset(200, 200), pointer: 2);
+        const pointer1Down =
+            PointerDownEvent(position: Offset(100, 100), pointer: 1);
+        const pointer2Down =
+            PointerDownEvent(position: Offset(200, 200), pointer: 2);
 
         gestureRecognizer.onPointerDown(pointer1Down);
         gestureRecognizer.onPointerDown(pointer2Down);
 
         // Move pointers closer (pinch in)
-        const pointer1Move = PointerMoveEvent(position: Offset(120, 120), pointer: 1);
-        const pointer2Move = PointerMoveEvent(position: Offset(180, 180), pointer: 2);
+        const pointer1Move =
+            PointerMoveEvent(position: Offset(120, 120), pointer: 1);
+        const pointer2Move =
+            PointerMoveEvent(position: Offset(180, 180), pointer: 2);
 
         gestureRecognizer.onPointerMove(pointer1Move);
         final gesture = gestureRecognizer.onPointerMove(pointer2Move);
@@ -125,16 +131,20 @@ void main() {
       });
 
       test('calculates scale factor correctly', () {
-        const pointer1Down = PointerDownEvent(position: Offset(100, 150), pointer: 1);
-        const pointer2Down = PointerDownEvent(position: Offset(300, 150), pointer: 2);
+        const pointer1Down =
+            PointerDownEvent(position: Offset(100, 150), pointer: 1);
+        const pointer2Down =
+            PointerDownEvent(position: Offset(300, 150), pointer: 2);
 
         gestureRecognizer.onPointerDown(pointer1Down);
         gestureRecognizer.onPointerDown(pointer2Down);
 
         // Original distance: 200px
         // Move pointers further apart (pinch out)
-        const pointer1Move = PointerMoveEvent(position: Offset(50, 150), pointer: 1);
-        const pointer2Move = PointerMoveEvent(position: Offset(350, 150), pointer: 2);
+        const pointer1Move =
+            PointerMoveEvent(position: Offset(50, 150), pointer: 1);
+        const pointer2Move =
+            PointerMoveEvent(position: Offset(350, 150), pointer: 2);
         // New distance: 300px
 
         gestureRecognizer.onPointerMove(pointer1Move);
@@ -191,15 +201,19 @@ void main() {
       });
 
       test('prefers pinch over pan when two pointers present', () {
-        const pointer1 = PointerDownEvent(position: Offset(100, 100), pointer: 1);
-        const pointer2 = PointerDownEvent(position: Offset(200, 200), pointer: 2);
+        const pointer1 =
+            PointerDownEvent(position: Offset(100, 100), pointer: 1);
+        const pointer2 =
+            PointerDownEvent(position: Offset(200, 200), pointer: 2);
 
         gestureRecognizer.onPointerDown(pointer1);
         gestureRecognizer.onPointerDown(pointer2);
 
         // Both pointers move (could be pan or pinch)
-        const pointer1Move = PointerMoveEvent(position: Offset(110, 105), pointer: 1);
-        const pointer2Move = PointerMoveEvent(position: Offset(210, 205), pointer: 2);
+        const pointer1Move =
+            PointerMoveEvent(position: Offset(110, 105), pointer: 1);
+        const pointer2Move =
+            PointerMoveEvent(position: Offset(210, 205), pointer: 2);
 
         gestureRecognizer.onPointerMove(pointer1Move);
         final gesture = gestureRecognizer.onPointerMove(pointer2Move);
@@ -270,7 +284,8 @@ void main() {
           final down = PointerDownEvent(position: Offset(i.toDouble(), 100));
           gestureRecognizer.onPointerDown(down);
 
-          final move = PointerMoveEvent(position: Offset(i.toDouble() + 50, 100));
+          final move =
+              PointerMoveEvent(position: Offset(i.toDouble() + 50, 100));
           gestureRecognizer.onPointerMove(move);
 
           final up = PointerUpEvent(position: Offset(i.toDouble() + 50, 100));

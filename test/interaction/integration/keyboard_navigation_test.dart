@@ -72,7 +72,8 @@ void main() {
 
       // Navigate to previous
       currentPoint = nextPoint!;
-      var prevPoint = keyboardHandler.navigateToPrevious(currentPoint, testData);
+      var prevPoint =
+          keyboardHandler.navigateToPrevious(currentPoint, testData);
       expect(prevPoint, equals(testData[1]));
 
       // Test wrapping: navigate next from last point

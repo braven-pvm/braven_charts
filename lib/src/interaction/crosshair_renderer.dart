@@ -6,9 +6,11 @@
 library;
 
 import 'dart:math' as math;
-import 'dart:ui' show Canvas, Offset, Paint, PaintingStyle, Path, Rect, Size, TextDirection;
+import 'dart:ui'
+    show Canvas, Offset, Paint, PaintingStyle, Path, Rect, Size, TextDirection;
 
-import 'package:flutter/material.dart' show Color, TextPainter, TextSpan, TextStyle;
+import 'package:flutter/material.dart'
+    show Color, TextPainter, TextSpan, TextStyle;
 
 import '../coordinates/coordinate_transformer.dart';
 import '../foundation/data_models/chart_data_point.dart';
@@ -65,7 +67,11 @@ class HighlightStyle {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is HighlightStyle && other.color == color && other.radius == radius && other.strokeWidth == strokeWidth && other.filled == filled;
+    return other is HighlightStyle &&
+        other.color == color &&
+        other.radius == radius &&
+        other.strokeWidth == strokeWidth &&
+        other.filled == filled;
   }
 
   @override
@@ -191,7 +197,9 @@ class CrosshairRenderer implements ICrosshairRenderer {
     CrosshairConfig config,
   ) {
     // Early exit if crosshair is disabled or not visible
-    if (!config.enabled || !state.isCrosshairVisible || state.crosshairPosition == null) {
+    if (!config.enabled ||
+        !state.isCrosshairVisible ||
+        state.crosshairPosition == null) {
       return;
     }
 
@@ -230,7 +238,8 @@ class CrosshairRenderer implements ICrosshairRenderer {
       );
 
       const highlightStyle = HighlightStyle();
-      renderSnapPointHighlights(canvas, snapPoints, transformer, highlightStyle);
+      renderSnapPointHighlights(
+          canvas, snapPoints, transformer, highlightStyle);
     }
   }
 
@@ -337,11 +346,13 @@ class CrosshairRenderer implements ICrosshairRenderer {
   ) {
     final paint = Paint()
       ..color = highlightStyle.color
-      ..style = highlightStyle.filled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..style =
+          highlightStyle.filled ? PaintingStyle.fill : PaintingStyle.stroke
       ..strokeWidth = highlightStyle.strokeWidth;
 
     for (final point in snapPoints) {
-      final screenPos = coordinateTransformer.dataToScreen(Offset(point.x, point.y));
+      final screenPos =
+          coordinateTransformer.dataToScreen(Offset(point.x, point.y));
       canvas.drawCircle(screenPos, highlightStyle.radius, paint);
     }
   }

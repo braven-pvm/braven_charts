@@ -113,17 +113,23 @@ class AreaBaseline {
   /// - [type] = [AreaBaselineType.series] but [seriesId] is null
   void validate() {
     if (type == AreaBaselineType.fixed && fixedValue == null) {
-      throw ArgumentError('fixedValue is required when type is AreaBaselineType.fixed');
+      throw ArgumentError(
+          'fixedValue is required when type is AreaBaselineType.fixed');
     }
     if (type == AreaBaselineType.series && seriesId == null) {
-      throw ArgumentError('seriesId is required when type is AreaBaselineType.series');
+      throw ArgumentError(
+          'seriesId is required when type is AreaBaselineType.series');
     }
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AreaBaseline && runtimeType == other.runtimeType && type == other.type && fixedValue == other.fixedValue && seriesId == other.seriesId;
+      other is AreaBaseline &&
+          runtimeType == other.runtimeType &&
+          type == other.type &&
+          fixedValue == other.fixedValue &&
+          seriesId == other.seriesId;
 
   @override
   int get hashCode => Object.hash(type, fixedValue, seriesId);
@@ -210,7 +216,8 @@ class AreaChartConfig {
   /// - [showLine] = true but [lineConfig] is null
   void validate() {
     if (fillOpacity < 0.0 || fillOpacity > 1.0) {
-      throw ArgumentError('fillOpacity must be in range [0.0, 1.0], got $fillOpacity');
+      throw ArgumentError(
+          'fillOpacity must be in range [0.0, 1.0], got $fillOpacity');
     }
     if (showLine && lineConfig == null) {
       throw ArgumentError('lineConfig is required when showLine is true');

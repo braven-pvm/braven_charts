@@ -39,3 +39,5 @@ logs/
 # Temporary files
 hash.txt
 *.tmp
+*.temp
+terminal_input.txt

@@ -6,7 +6,8 @@
 import 'package:braven_charts/src/interaction/keyboard_handler.dart' as bc;
 import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
-import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyEvent, KeyDownEvent, PhysicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, KeyEvent, KeyDownEvent, PhysicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -175,7 +176,8 @@ void main() {
         selectedPoints: [dataPoints[0], dataPoints[1]],
       );
 
-      final newState = keyboardHandler.closeTooltipOrClearSelection(activeState);
+      final newState =
+          keyboardHandler.closeTooltipOrClearSelection(activeState);
 
       expect(newState.isTooltipVisible, isFalse);
       expect(newState.selectedPoints, isEmpty);
@@ -187,7 +189,8 @@ void main() {
         createKeyEvent(LogicalKeyboardKey.arrowRight), // Navigate next
         createKeyEvent(LogicalKeyboardKey.arrowLeft), // Navigate previous
         createKeyEvent(LogicalKeyboardKey.arrowUp), // Pan up (or series nav)
-        createKeyEvent(LogicalKeyboardKey.arrowDown), // Pan down (or series nav)
+        createKeyEvent(
+            LogicalKeyboardKey.arrowDown), // Pan down (or series nav)
         createKeyEvent(LogicalKeyboardKey.home), // First point
         createKeyEvent(LogicalKeyboardKey.end), // Last point
         createKeyEvent(LogicalKeyboardKey.equal), // Zoom in (+)

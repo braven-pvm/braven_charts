@@ -78,7 +78,8 @@ void main() {
         animationDuration: const Duration(milliseconds: 500),
       );
 
-      expect(state.animationDuration, equals(const Duration(milliseconds: 500)));
+      expect(
+          state.animationDuration, equals(const Duration(milliseconds: 500)));
     });
 
     test('allowOverscroll can be configured', () {

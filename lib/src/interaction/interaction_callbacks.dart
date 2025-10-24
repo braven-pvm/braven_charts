@@ -26,7 +26,8 @@ import '../foundation/data_models/chart_data_point.dart';
 ///   },
 /// )
 /// ```
-typedef DataPointCallback = void Function(ChartDataPoint point, Offset position);
+typedef DataPointCallback = void Function(
+    ChartDataPoint point, Offset position);
 
 /// Called when the cursor hovers over a data point.
 ///
@@ -36,7 +37,8 @@ typedef DataPointCallback = void Function(ChartDataPoint point, Offset position)
 ///
 /// This callback may be invoked frequently during mouse movement.
 /// Keep logic lightweight to avoid performance issues.
-typedef DataPointHoverCallback = void Function(ChartDataPoint? point, Offset position);
+typedef DataPointHoverCallback = void Function(
+    ChartDataPoint? point, Offset position);
 
 /// Called when a user performs a long-press gesture on a data point.
 ///
@@ -45,7 +47,8 @@ typedef DataPointHoverCallback = void Function(ChartDataPoint? point, Offset pos
 /// - [position]: Screen coordinates of the long-press event
 ///
 /// Typically used on mobile devices for context menus or additional actions.
-typedef DataPointLongPressCallback = void Function(ChartDataPoint point, Offset position);
+typedef DataPointLongPressCallback = void Function(
+    ChartDataPoint point, Offset position);
 
 /// Called when the selected data points change.
 ///
@@ -110,7 +113,8 @@ typedef CrosshairChangeCallback = void Function(
 /// - [dataPoint]: The data point the tooltip is showing (null if hidden)
 ///
 /// Useful for coordinating external UI with tooltip state.
-typedef TooltipChangeCallback = void Function(bool visible, ChartDataPoint? dataPoint);
+typedef TooltipChangeCallback = void Function(
+    bool visible, ChartDataPoint? dataPoint);
 
 /// Called when a keyboard action is performed.
 ///
@@ -119,7 +123,8 @@ typedef TooltipChangeCallback = void Function(bool visible, ChartDataPoint? data
 /// - [targetPoint]: The data point targeted by the action (null for global actions)
 ///
 /// Useful for logging keyboard interactions or custom keyboard handlers.
-typedef KeyboardActionCallback = void Function(String action, ChartDataPoint? targetPoint);
+typedef KeyboardActionCallback = void Function(
+    String action, ChartDataPoint? targetPoint);
 
 // ==============================================================================
 // Callback Invoker Helper Class

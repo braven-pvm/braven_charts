@@ -30,22 +30,27 @@
 library;
 
 // Area charts
-export 'area/area_chart_config.dart' show AreaChartConfig, AreaFillStyle, AreaBaselineType;
+export 'area/area_chart_config.dart'
+    show AreaChartConfig, AreaFillStyle, AreaBaselineType;
 export 'area/area_chart_layer.dart' show AreaChartLayer;
 export 'area/area_stacking.dart' show AreaStacking;
 // Bar charts
-export 'bar/bar_chart_config.dart' show BarChartConfig, BarOrientation, BarGroupingMode;
+export 'bar/bar_chart_config.dart'
+    show BarChartConfig, BarOrientation, BarGroupingMode;
 export 'bar/bar_chart_layer.dart' show BarChartLayer;
 export 'bar/bar_positioner.dart' show BarPositioner, BarLayoutInfo;
 // Base classes and utilities
 export 'base/chart_config.dart' show MarkerShape;
-export 'base/chart_layer.dart' show ChartLayer, ChartTheme, ChartAnimationConfig;
+export 'base/chart_layer.dart'
+    show ChartLayer, ChartTheme, ChartAnimationConfig;
 export 'base/chart_renderer.dart' show ChartRenderer;
 // Line charts
 export 'line/line_chart_config.dart' show LineChartConfig, LineStyle;
 export 'line/line_chart_layer.dart' show LineChartLayer;
 export 'line/line_interpolator.dart' show LineInterpolator;
 // Scatter charts
-export 'scatter/scatter_chart_config.dart' show ScatterChartConfig, MarkerSizingMode, MarkerStyle;
+export 'scatter/scatter_chart_config.dart'
+    show ScatterChartConfig, MarkerSizingMode, MarkerStyle;
 export 'scatter/scatter_chart_layer.dart' show ScatterChartLayer;
-export 'scatter/scatter_clusterer.dart' show ScatterClusterer, ClusterInfo, ClusterResult;
+export 'scatter/scatter_clusterer.dart'
+    show ScatterClusterer, ClusterInfo, ClusterResult;

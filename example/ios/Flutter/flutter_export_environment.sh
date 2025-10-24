@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=G:\Media\SDK\flutter"
-export "FLUTTER_APPLICATION_PATH=X:\Cloud Storage\Dropbox\Repositories\Flutter\braven_charts_v2.0\example"
+export "FLUTTER_ROOT=C:\tools\flutter"
+export "FLUTTER_APPLICATION_PATH=E:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib\main.dart"
 export "FLUTTER_BUILD_DIR=build"

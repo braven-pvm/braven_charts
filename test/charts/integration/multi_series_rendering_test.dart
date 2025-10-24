@@ -15,28 +15,33 @@ void main() {
     test('LineChartLayer renders 3 series with distinct colors', () {
       // PLACEHOLDER: Will test color cycling from theme
       // Currently ChartTheme is a placeholder class
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('AreaChartLayer renders 3 series with distinct colors', () {
       // PLACEHOLDER: Will test color cycling from theme
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('BarChartLayer renders 3 series with distinct colors', () {
       // PLACEHOLDER: Will test color cycling from theme
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('ScatterChartLayer renders 3 series with distinct colors', () {
       // PLACEHOLDER: Will test color cycling from theme
-      expect(true, isTrue, reason: 'Placeholder - awaiting theming integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting theming integration');
     });
 
     test('All chart types respect z-ordering', () {
       // PLACEHOLDER: Will test layer stacking via zIndex property
       // Requires RenderPipeline from Layer 1 to be integrated
-      expect(true, isTrue, reason: 'Placeholder - awaiting rendering pipeline integration');
+      expect(true, isTrue,
+          reason: 'Placeholder - awaiting rendering pipeline integration');
     });
 
     test('Multi-series line chart matches quickstart Example 2', () {

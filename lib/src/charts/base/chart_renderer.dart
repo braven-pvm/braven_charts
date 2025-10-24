@@ -199,7 +199,8 @@ class ChartRenderer {
     bool vertical = true,
   }) {
     // Create cache key
-    final cacheKey = '${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}'
+    final cacheKey =
+        '${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}'
         '_${startColor.toARGB32()}_${endColor.toARGB32()}_$vertical';
 
     // Return cached shader if available

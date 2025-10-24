@@ -86,7 +86,9 @@ class GestureDetails {
         orElse: () => PointerDeviceKind.mouse,
       ),
       startTime: DateTime.parse(json['startTime'] as String),
-      endTime: json['endTime'] != null ? DateTime.parse(json['endTime'] as String) : null,
+      endTime: json['endTime'] != null
+          ? DateTime.parse(json['endTime'] as String)
+          : null,
     );
   }
 
@@ -110,11 +112,13 @@ class GestureDetails {
           'Pinch gesture requires at least 2 pointers',
         ),
         assert(
-          type != GestureType.pinch || (initialScale != null && currentScale != null),
+          type != GestureType.pinch ||
+              (initialScale != null && currentScale != null),
           'Pinch gesture requires initialScale and currentScale',
         ),
         assert(
-          type != GestureType.pan || (panDelta != null && totalPanDelta != null),
+          type != GestureType.pan ||
+              (panDelta != null && totalPanDelta != null),
           'Pan gesture requires panDelta and totalPanDelta',
         ),
         assert(

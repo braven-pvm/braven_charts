@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('PerformanceMetrics', () {
     group('meetsTargets', () {
-      test('returns true when all targets met (avg<8ms, p99<16ms, hitRate>0.90)', () {
+      test(
+          'returns true when all targets met (avg<8ms, p99<16ms, hitRate>0.90)',
+          () {
         final metrics = PerformanceMetrics(
           frameTime: const Duration(microseconds: 7000),
           averageFrameTime: const Duration(microseconds: 7500), // <8ms ✓
@@ -318,8 +320,10 @@ void main() {
         expect(metrics1.p99FrameTime, equals(metrics2.p99FrameTime));
         expect(metrics1.jankCount, equals(metrics2.jankCount));
         expect(metrics1.poolHitRate, equals(metrics2.poolHitRate));
-        expect(metrics1.renderedElementCount, equals(metrics2.renderedElementCount));
-        expect(metrics1.culledElementCount, equals(metrics2.culledElementCount));
+        expect(metrics1.renderedElementCount,
+            equals(metrics2.renderedElementCount));
+        expect(
+            metrics1.culledElementCount, equals(metrics2.culledElementCount));
       });
     });
   });

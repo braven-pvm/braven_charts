@@ -1,5 +1,5 @@
 /// API Contract: ChartController
-/// 
+///
 /// This contract defines the expected behavior of the ChartController class.
 /// Tests should be written BEFORE implementation (TDD red phase).
 library;
@@ -65,7 +65,8 @@ void main() {
       test('MUST reject Infinity coordinates', () {
         final controller = ChartController();
         expect(
-          () => controller.addPoint('s1', const ChartDataPoint(double.infinity, 1)),
+          () => controller.addPoint(
+              's1', const ChartDataPoint(double.infinity, 1)),
           throwsA(isA<AssertionError>()),
         );
       });
@@ -234,7 +235,8 @@ void main() {
 
       test('MUST handle non-existent ID gracefully', () {
         final controller = ChartController();
-        expect(() => controller.removeAnnotation('nonexistent'), returnsNormally);
+        expect(
+            () => controller.removeAnnotation('nonexistent'), returnsNormally);
       });
     });
 

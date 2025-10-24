@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChart Annotation Rendering', () {
-    testWidgets('renders TextAnnotation at position', (WidgetTester tester) async {
+    testWidgets('renders TextAnnotation at position',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -43,7 +44,8 @@ void main() {
       expect(find.byType(Stack), findsOneWidget); // Annotations use Stack
     });
 
-    testWidgets('renders PointAnnotation on data point', (WidgetTester tester) async {
+    testWidgets('renders PointAnnotation on data point',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -80,7 +82,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets); // Marker uses CustomPaint
     });
 
-    testWidgets('renders RangeAnnotation spanning range', (WidgetTester tester) async {
+    testWidgets('renders RangeAnnotation spanning range',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -114,7 +117,8 @@ void main() {
       expect(find.byType(Stack), findsOneWidget);
     });
 
-    testWidgets('renders ThresholdAnnotation as horizontal line', (WidgetTester tester) async {
+    testWidgets('renders ThresholdAnnotation as horizontal line',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -149,7 +153,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('renders ThresholdAnnotation as vertical line', (WidgetTester tester) async {
+    testWidgets('renders ThresholdAnnotation as vertical line',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -183,7 +188,8 @@ void main() {
       expect(find.byType(Stack), findsOneWidget);
     });
 
-    testWidgets('renders TrendAnnotation as overlay', (WidgetTester tester) async {
+    testWidgets('renders TrendAnnotation as overlay',
+        (WidgetTester tester) async {
       // Arrange
       final series = ChartSeries(
         id: 'test-series',
@@ -312,7 +318,8 @@ void main() {
       expect(find.text('Z-Index 5'), findsOneWidget);
     });
 
-    testWidgets('interactive annotations respond to tap', (WidgetTester tester) async {
+    testWidgets('interactive annotations respond to tap',
+        (WidgetTester tester) async {
       // Arrange
       ChartAnnotation? tappedAnnotation;
       final series = ChartSeries(
@@ -353,7 +360,8 @@ void main() {
       expect(tappedAnnotation, isNotNull);
     });
 
-    testWidgets('non-interactive annotations ignore taps', (WidgetTester tester) async {
+    testWidgets('non-interactive annotations ignore taps',
+        (WidgetTester tester) async {
       // Arrange
       ChartAnnotation? tappedAnnotation;
       final series = ChartSeries(

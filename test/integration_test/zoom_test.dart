@@ -34,7 +34,8 @@ void main() {
                       name: 'Test Data',
                       points: List.generate(
                         10,
-                        (i) => ChartDataPoint(x: i.toDouble(), y: i * i.toDouble()),
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: i * i.toDouble()),
                       ),
                     ),
                   ],
@@ -45,7 +46,8 @@ void main() {
                       zoomChangeCount++;
                       lastZoomX = zoomX;
                       lastZoomY = zoomY;
-                      print('🧪 TEST: Zoom changed - X=${(zoomX * 100).toInt()}%, Y=${(zoomY * 100).toInt()}% (change #$zoomChangeCount)');
+                      print(
+                          '🧪 TEST: Zoom changed - X=${(zoomX * 100).toInt()}%, Y=${(zoomY * 100).toInt()}% (change #$zoomChangeCount)');
                     },
                   ),
                 ),
@@ -82,12 +84,14 @@ void main() {
         print('🧪 TEST: Sent Numpad Add #${i + 1}');
       }
 
-      print('🧪 TEST: Zoom changes after +/+/+: $zoomChangeCount (started at $initialZoomChangeCount)');
+      print(
+          '🧪 TEST: Zoom changes after +/+/+: $zoomChangeCount (started at $initialZoomChangeCount)');
       print(
           '🧪 TEST: Final zoom level: X=${lastZoomX != null ? (lastZoomX! * 100).toInt() : "null"}%, Y=${lastZoomY != null ? (lastZoomY! * 100).toInt() : "null"}%');
 
       // Verify zoom changed
-      expect(zoomChangeCount, greaterThan(initialZoomChangeCount), reason: 'Zoom callback should have been called');
+      expect(zoomChangeCount, greaterThan(initialZoomChangeCount),
+          reason: 'Zoom callback should have been called');
 
       // Test Numpad Subtract (zoom out)
       print('\n🧪 TEST: Testing ZOOM OUT with Numpad Subtract...');
@@ -100,16 +104,19 @@ void main() {
         print('🧪 TEST: Sent Numpad Subtract #${i + 1}');
       }
 
-      print('🧪 TEST: Zoom changes after -/-: $zoomChangeCount (was $beforeZoomOutCount)');
+      print(
+          '🧪 TEST: Zoom changes after -/-: $zoomChangeCount (was $beforeZoomOutCount)');
       print(
           '🧪 TEST: Final zoom level: X=${lastZoomX != null ? (lastZoomX! * 100).toInt() : "null"}%, Y=${lastZoomY != null ? (lastZoomY! * 100).toInt() : "null"}%');
 
       // Verify zoom changed again
-      expect(zoomChangeCount, greaterThan(beforeZoomOutCount), reason: 'Zoom callback should have been called for zoom out');
+      expect(zoomChangeCount, greaterThan(beforeZoomOutCount),
+          reason: 'Zoom callback should have been called for zoom out');
 
       // Verify chart is still rendered
       final customPaintFinder = find.byType(CustomPaint);
-      expect(customPaintFinder, findsWidgets, reason: 'Chart should still be rendered after keyboard zoom');
+      expect(customPaintFinder, findsWidgets,
+          reason: 'Chart should still be rendered after keyboard zoom');
 
       print('🧪 TEST: ✅ KEYBOARD ZOOM TEST PASSED');
       print('🧪 ========== END KEYBOARD ZOOM TEST ==========\n');
@@ -138,7 +145,8 @@ void main() {
                       name: 'Test Data',
                       points: List.generate(
                         10,
-                        (i) => ChartDataPoint(x: i.toDouble(), y: i * i.toDouble()),
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: i * i.toDouble()),
                       ),
                     ),
                   ],
@@ -149,7 +157,8 @@ void main() {
                       zoomChangeCount++;
                       lastZoomX = zoomX;
                       lastZoomY = zoomY;
-                      print('🧪 TEST: Zoom changed - X=${(zoomX * 100).toInt()}%, Y=${(zoomY * 100).toInt()}% (change #$zoomChangeCount)');
+                      print(
+                          '🧪 TEST: Zoom changed - X=${(zoomX * 100).toInt()}%, Y=${(zoomY * 100).toInt()}% (change #$zoomChangeCount)');
                     },
                   ),
                 ),
@@ -200,7 +209,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      print('\n🧪 TEST: Zoom changes after scroll: $zoomChangeCount (started at $initialZoomCount)');
+      print(
+          '\n🧪 TEST: Zoom changes after scroll: $zoomChangeCount (started at $initialZoomCount)');
       print(
           '🧪 TEST: Current zoom: X=${lastZoomX != null ? (lastZoomX! * 100).toInt() : "null"}%, Y=${lastZoomY != null ? (lastZoomY! * 100).toInt() : "null"}%');
 
@@ -212,14 +222,17 @@ void main() {
 
       // Verify chart is still rendered
       final customPaintFinder = find.byType(CustomPaint);
-      expect(customPaintFinder, findsWidgets, reason: 'Chart should still be rendered after SHIFT+scroll zoom');
+      expect(customPaintFinder, findsWidgets,
+          reason: 'Chart should still be rendered after SHIFT+scroll zoom');
 
       print('🧪 TEST: Chart is still rendered (CustomPaint found)');
 
       if (zoomChangeCount > initialZoomCount) {
-        print('🧪 TEST: ✅ SHIFT+SCROLL ZOOM TEST PASSED - Zoom callback was called');
+        print(
+            '🧪 TEST: ✅ SHIFT+SCROLL ZOOM TEST PASSED - Zoom callback was called');
       } else {
-        print('🧪 TEST: ⚠️  SHIFT+SCROLL ZOOM TEST WARNING - Zoom callback was NOT called');
+        print(
+            '🧪 TEST: ⚠️  SHIFT+SCROLL ZOOM TEST WARNING - Zoom callback was NOT called');
       }
 
       print('🧪 ========== END SHIFT+SCROLL ZOOM TEST ==========\n');

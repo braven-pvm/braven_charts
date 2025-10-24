@@ -137,7 +137,8 @@ void main() {
       );
     });
 
-    testWidgets('ThresholdAnnotation horizontal golden', (WidgetTester tester) async {
+    testWidgets('ThresholdAnnotation horizontal golden',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -173,7 +174,8 @@ void main() {
       );
     });
 
-    testWidgets('ThresholdAnnotation vertical golden', (WidgetTester tester) async {
+    testWidgets('ThresholdAnnotation vertical golden',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

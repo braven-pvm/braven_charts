@@ -68,7 +68,8 @@ class KeyboardHandler {
   final double panAmount;
 
   // Custom key bindings registry
-  final Map<LogicalKeyboardKey, void Function(InteractionState state)> _customBindings = {};
+  final Map<LogicalKeyboardKey, void Function(InteractionState state)>
+      _customBindings = {};
 
   /// Processes a keyboard event when chart has focus.
   ///
@@ -231,8 +232,10 @@ class KeyboardHandler {
   ) {
     final factor = zoomIn ? zoomFactor : (1.0 / zoomFactor);
 
-    final newZoomX = (currentState.zoomLevelX * factor).clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
-    final newZoomY = (currentState.zoomLevelY * factor).clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
+    final newZoomX = (currentState.zoomLevelX * factor)
+        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
+    final newZoomY = (currentState.zoomLevelY * factor)
+        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
 
     return currentState.copyWith(
       zoomLevelX: newZoomX,
@@ -327,7 +330,8 @@ class KeyboardHandler {
     if (dataPoints == null || dataPoints.isEmpty) return state;
 
     final currentIndex = state.focusedPointIndex;
-    final newIndex = currentIndex >= dataPoints.length - 1 ? 0 : currentIndex + 1;
+    final newIndex =
+        currentIndex >= dataPoints.length - 1 ? 0 : currentIndex + 1;
 
     final newPoint = dataPoints[newIndex];
     // Note: Screen reader announcement should be called by widget layer
@@ -346,7 +350,8 @@ class KeyboardHandler {
     if (dataPoints == null || dataPoints.isEmpty) return state;
 
     final currentIndex = state.focusedPointIndex;
-    final newIndex = currentIndex <= 0 ? dataPoints.length - 1 : currentIndex - 1;
+    final newIndex =
+        currentIndex <= 0 ? dataPoints.length - 1 : currentIndex - 1;
 
     final newPoint = dataPoints[newIndex];
     // Note: Screen reader announcement should be called by widget layer
@@ -408,8 +413,10 @@ class KeyboardHandler {
   InteractionState _handleZoomIn(InteractionState state) {
     // Apply zoom to current zoom/pan state
     final currentZoomState = state.zoomPanState;
-    final newZoomX = (currentZoomState.zoomLevelX * zoomInFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-    final newZoomY = (currentZoomState.zoomLevelY * zoomInFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomX = (currentZoomState.zoomLevelX * zoomInFactor)
+        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomY = (currentZoomState.zoomLevelY * zoomInFactor)
+        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
     final newZoomState = currentZoomState.copyWith(
       zoomLevelX: newZoomX,
@@ -422,8 +429,10 @@ class KeyboardHandler {
   InteractionState _handleZoomOut(InteractionState state) {
     // Apply zoom to current zoom/pan state
     final currentZoomState = state.zoomPanState;
-    final newZoomX = (currentZoomState.zoomLevelX * zoomOutFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-    final newZoomY = (currentZoomState.zoomLevelY * zoomOutFactor).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomX = (currentZoomState.zoomLevelX * zoomOutFactor)
+        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomY = (currentZoomState.zoomLevelY * zoomOutFactor)
+        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
 
     final newZoomState = currentZoomState.copyWith(
       zoomLevelX: newZoomX,
@@ -437,7 +446,9 @@ class KeyboardHandler {
     InteractionState state,
     List<Map<String, dynamic>>? dataPoints,
   ) {
-    if (state.hoveredPoint == null && dataPoints != null && dataPoints.isNotEmpty) {
+    if (state.hoveredPoint == null &&
+        dataPoints != null &&
+        dataPoints.isNotEmpty) {
       // If no point focused yet, focus the first one
       final firstPoint = dataPoints.first;
       return state.copyWith(

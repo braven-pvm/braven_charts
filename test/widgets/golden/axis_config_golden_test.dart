@@ -52,7 +52,8 @@ void main() {
       );
     });
 
-    testWidgets('hidden() preset golden (sparkline)', (WidgetTester tester) async {
+    testWidgets('hidden() preset golden (sparkline)',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

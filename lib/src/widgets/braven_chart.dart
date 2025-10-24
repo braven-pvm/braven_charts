@@ -5,6 +5,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show cos, sin, sqrt, log, pow, ln10;
 
+// Layer 5: Chart Configuration
+import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
+import 'package:braven_charts/src/charts/line/line_interpolator.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
@@ -17,8 +20,11 @@ import 'package:braven_charts/src/interaction/models/interaction_state.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
 import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
+import 'package:braven_charts/src/models/chart_mode.dart';
+import 'package:braven_charts/src/models/streaming_config.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
+import 'package:braven_charts/src/utils/buffer_manager.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/point_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/range_annotation.dart';
@@ -28,6 +34,7 @@ import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
 import 'package:braven_charts/src/widgets/auto_scroll_config.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
+import 'package:braven_charts/src/widgets/controller/streaming_controller.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 // Layer 5: Widgets
@@ -83,6 +90,7 @@ class BravenChart extends StatefulWidget {
   BravenChart({
     super.key,
     required this.chartType,
+    this.lineStyle = LineStyle.straight,
     required this.series,
     this.width,
     this.height,
@@ -91,8 +99,10 @@ class BravenChart extends StatefulWidget {
     this.yAxis,
     this.annotations = const [],
     this.controller,
+    this.streamingController,
     this.dataStream,
     this.autoScrollConfig,
+    this.streamingConfig,
     this.title,
     this.subtitle,
     this.showLegend = true,
@@ -128,6 +138,7 @@ class BravenChart extends StatefulWidget {
   factory BravenChart.fromValues({
     Key? key,
     required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required List<double> yValues,
     List<double>? xValues,
@@ -171,6 +182,7 @@ class BravenChart extends StatefulWidget {
     return BravenChart(
       key: key,
       chartType: chartType,
+      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -215,6 +227,7 @@ class BravenChart extends StatefulWidget {
   factory BravenChart.fromMap({
     Key? key,
     required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required Map<dynamic, double> data,
     String? seriesName,
@@ -260,6 +273,7 @@ class BravenChart extends StatefulWidget {
     return BravenChart(
       key: key,
       chartType: chartType,
+      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -301,6 +315,7 @@ class BravenChart extends StatefulWidget {
   factory BravenChart.fromJson({
     Key? key,
     required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required String json,
     String? seriesName,
@@ -351,6 +366,7 @@ class BravenChart extends StatefulWidget {
     return BravenChart(
       key: key,
       chartType: chartType,
+      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -380,6 +396,16 @@ class BravenChart extends StatefulWidget {
 
   /// Type of chart to render (line, area, bar, scatter).
   final ChartType chartType;
+
+  /// Line interpolation style for line charts.
+  ///
+  /// Determines how points are connected:
+  /// - [LineStyle.straight]: Direct linear segments (default)
+  /// - [LineStyle.smooth]: Smooth bezier curves (Catmull-Rom spline)
+  /// - [LineStyle.stepped]: Horizontal-then-vertical steps
+  ///
+  /// Only applies to line charts. Ignored for other chart types.
+  final LineStyle lineStyle;
 
   /// Data series to display.
   ///
@@ -436,6 +462,27 @@ class BravenChart extends StatefulWidget {
   /// If null, widget creates an internal controller.
   final ChartController? controller;
 
+  /// Controller for programmatic streaming mode control (T055: FR-010).
+  ///
+  /// Provides methods to manually pause and resume streaming, enabling
+  /// custom UI controls for dual-mode streaming behavior.
+  ///
+  /// Example:
+  /// ```dart
+  /// final streamingController = StreamingController();
+  ///
+  /// ElevatedButton(
+  ///   onPressed: () => streamingController.resumeStreaming(),
+  ///   child: Text('Resume Live'),
+  /// ),
+  ///
+  /// BravenChart(
+  ///   streamingController: streamingController,
+  ///   // ...
+  /// )
+  /// ```
+  final StreamingController? streamingController;
+
   /// Stream for real-time data updates.
   ///
   /// When provided, the widget subscribes and adds incoming points
@@ -462,6 +509,45 @@ class BravenChart extends StatefulWidget {
   /// )
   /// ```
   final AutoScrollConfig? autoScrollConfig;
+
+  /// Configuration for dual-mode streaming behavior (T010: FR-001 through FR-020).
+  ///
+  /// When provided, enables automatic mode switching between streaming and interactive:
+  /// - **Streaming mode**: High-frequency updates (>10Hz), interactions disabled, auto-scroll
+  /// - **Interactive mode**: Full interaction enabled, stream data buffered, auto-resume timer
+  ///
+  /// **Key Features:**
+  /// - Auto-pause on interaction (hover, click, zoom, pan) → switches to interactive mode
+  /// - Configurable auto-resume timeout (default 10s) → returns to streaming mode
+  /// - FIFO buffer for incoming data during interactive mode (default 10K points)
+  /// - Callbacks for mode changes, buffer updates, and return-to-live events
+  ///
+  /// **Example:**
+  /// ```dart
+  /// BravenChart(
+  ///   dataStream: sensorDataStream,  // Stream of ChartDataPoint
+  ///   streamingConfig: StreamingConfig(
+  ///     autoResumeTimeout: Duration(seconds: 15),
+  ///     maxBufferSize: 5000,
+  ///     onModeChanged: (mode) => print('Mode: $mode'),
+  ///     onBufferUpdated: (size, isFull) => print('Buffer: $size'),
+  ///     onReturnToLive: () => print('Resumed streaming'),
+  ///     onStreamError: (error) => print('Error: $error'),
+  ///   ),
+  ///   // ... other parameters
+  /// )
+  /// ```
+  ///
+  /// **Requirements:**
+  /// - Must provide `dataStream` when using `streamingConfig`
+  /// - Constitution II: Uses ValueNotifier pattern for >10Hz updates
+  /// - Performance: 60fps streaming, <16ms interaction, <50ms mode transitions
+  ///
+  /// **Related:**
+  /// - FR-001 to FR-020: All functional requirements
+  /// - SC-001 to SC-010: All success criteria
+  /// - Constitution II: No setState during high-frequency updates
+  final StreamingConfig? streamingConfig;
 
   // ==================== UI ELEMENTS ====================
 
@@ -598,6 +684,70 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
   late final ValueNotifier<InteractionState> _interactionStateNotifier;
 
+  /// ValueNotifier for tracking current chart operating mode (FR-001, FR-002 - T007).
+  ///
+  /// This notifier manages the mutually exclusive streaming vs. interactive modes:
+  /// - ChartMode.streaming: High-frequency updates (>10Hz), interactions disabled
+  /// - ChartMode.interactive: Full interaction enabled, streaming paused
+  ///
+  /// Mode changes trigger:
+  /// - Auto-resume timer reset (FR-003)
+  /// - StreamingConfig.onModeChanged callback (FR-004)
+  /// - Conditional rendering of interaction overlays
+  ///
+  /// CRITICAL: Must be disposed in dispose() to prevent memory leaks.
+  ///
+  /// Related: Constitution II (no setState for >10Hz updates), FR-001 performance targets.
+  late final ValueNotifier<ChartMode> _chartMode;
+
+  /// Buffer manager for incoming data points during interactive mode (FR-006, FR-013, FR-014 - T008).
+  ///
+  /// When chart transitions to interactive mode (user hovers, clicks, zooms), incoming
+  /// stream data is buffered instead of being rendered immediately. This enables:
+  /// - Pause for historical analysis without data loss
+  /// - FIFO buffering with configurable max size (default 10,000 points)
+  /// - Automatic oldest-data discard when buffer is full
+  /// - Bulk application of buffered data on auto-resume or manual resume
+  ///
+  /// Buffer operations:
+  /// - add(): Append new point (discards oldest if full)
+  /// - removeAll(): Get all buffered points for bulk application
+  /// - clear(): Discard all buffered data
+  /// - isFull: Check if buffer reached capacity
+  ///
+  /// Lifecycle:
+  /// - Created in initState() with StreamingConfig.maxBufferSize
+  /// - Active only in interactive mode (ChartMode.interactive)
+  /// - Cleared on resume to streaming mode
+  /// - No disposal needed (Queue auto-managed by Dart GC)
+  ///
+  /// Related: FR-006 (buffer in interactive), FR-013 (size limit), FR-014 (FIFO),
+  ///          FR-011 (apply on resume), SC-005 (10K points performance)
+  late final BufferManager<ChartDataPoint> _bufferedPoints;
+
+  /// Auto-resume timer for returning to streaming mode after inactivity (FR-007, FR-009 - T009).
+  ///
+  /// When chart transitions to interactive mode (user hovers, zooms, pans), this timer
+  /// starts counting down. If no user interactions occur before timeout, the chart
+  /// automatically resumes streaming mode:
+  /// - Timer duration: StreamingConfig.autoResumeTimeout (default 10 seconds)
+  /// - Timer reset: On ANY user interaction (hover, click, zoom, pan) per FR-008
+  /// - On timeout: Apply buffered data + switch to streaming mode + invoke callbacks
+  ///
+  /// Timer lifecycle:
+  /// - Created when transitioning FROM streaming TO interactive mode
+  /// - Canceled and restarted on each user interaction while in interactive mode
+  /// - Canceled when manually resuming or disposing widget
+  /// - Canceled in dispose() to prevent memory leaks
+  ///
+  /// Related callbacks invoked on timeout:
+  /// - StreamingConfig.onModeChanged(ChartMode.streaming)
+  /// - StreamingConfig.onReturnToLive()
+  ///
+  /// Related: FR-007 (configurable timeout), FR-008 (reset on interaction),
+  ///          FR-009 (auto-resume), FR-011 (apply buffered data), SC-006 (100ms resume)
+  Timer? _autoResumeTimer;
+
   /// Tracks if currently panning with middle-mouse button.
   bool _isPanningWithMiddleMouse = false;
 
@@ -631,7 +781,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Stores the calculated chart area (with padding) so that onHover,
   /// onTap, and other interaction callbacks can access it without
   /// needing to recalculate from render box (which may not be accurate).
+  ///
+  /// CRITICAL: This chartRect is in CustomPaint coordinate space (0,0 = top-left of CustomPaint).
+  /// When using in Stack coordinate space (which includes title), add _titleOffset.dy to Y coordinates.
   Rect? _cachedChartRect;
+
+  /// Offset of the chart canvas relative to the Stack (includes title height).
+  ///
+  /// When a title/subtitle is present, the CustomPaint canvas is positioned BELOW the title.
+  /// This offset tracks the Y distance from Stack's top (0,0) to CustomPaint's top.
+  /// Must be added to chartRect Y coordinates when positioning overlays in Stack space.
+  Offset _titleOffset = Offset.zero;
 
   /// Cached Stack size for tooltip positioning.
   ///
@@ -651,8 +811,28 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
+    // Validation: If dataStream provided, streamingConfig must also be provided (T022: FR-002)
+    if (widget.dataStream != null && widget.streamingConfig == null) {
+      throw ArgumentError(
+        'streamingConfig is required when dataStream is provided. '
+        'Provide StreamingConfig to enable dual-mode streaming behavior.',
+      );
+    }
+
     // Initialize ValueNotifier for interaction state
     _interactionStateNotifier = ValueNotifier<InteractionState>(InteractionState.initial());
+
+    // Initialize dual-mode streaming state (T011: FR-002, FR-003)
+    // Determine initial mode: streaming if streamingConfig provided, interactive otherwise
+    final initialMode = (widget.streamingConfig != null) ? ChartMode.streaming : ChartMode.interactive;
+    _chartMode = ValueNotifier<ChartMode>(initialMode);
+
+    // Initialize buffer manager with configured max size (default 10K points)
+    final bufferSize = widget.streamingConfig?.maxBufferSize ?? 10000;
+    _bufferedPoints = BufferManager<ChartDataPoint>(maxSize: bufferSize);
+
+    // Auto-resume timer initialized as null - created when transitioning to interactive mode
+    _autoResumeTimer = null;
 
     // Initialize zoom animation controller (250ms for smooth transitions)
     _zoomAnimationController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this)
@@ -694,6 +874,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Subscribe to dataStream if provided
     if (widget.dataStream != null) {
       _subscribeToStream(widget.dataStream!);
+    }
+
+    // Register StreamingController callbacks if provided (T055: FR-010)
+    if (widget.streamingController != null) {
+      widget.streamingController!.registerResumeCallback(_resumeStreaming);
+      widget.streamingController!.registerPauseCallback(_pauseStreaming);
     }
 
     // Initialize interaction system if enabled
@@ -814,6 +1000,31 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
   }
 
+  /// T074: Handle hot reload - reset to streaming mode (no mode persistence).
+  ///
+  /// Called during hot reload in development mode. Per spec edge case,
+  /// chart should reset to streaming mode regardless of current mode.
+  @override
+  void reassemble() {
+    super.reassemble();
+
+    // Reset to streaming mode if streamingConfig is provided
+    if (widget.streamingConfig != null && _chartMode.value != ChartMode.streaming) {
+      // Cancel auto-resume timer if active
+      _autoResumeTimer?.cancel();
+      _autoResumeTimer = null;
+
+      // Clear buffered data on hot reload
+      _bufferedPoints.removeAll();
+
+      // Reset to streaming mode
+      _chartMode.value = ChartMode.streaming;
+
+      // Notify mode changed
+      widget.streamingConfig?.onModeChanged?.call(ChartMode.streaming);
+    }
+  }
+
   @override
   void dispose() {
     // Cancel stream subscription
@@ -852,6 +1063,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Dispose ValueNotifier (after all timers and controllers)
     _interactionStateNotifier.dispose();
+
+    // Dispose dual-mode streaming resources
+    _autoResumeTimer?.cancel();
+    _autoResumeTimer = null;
+    _chartMode.dispose();
+    // Note: _bufferedPoints has no dispose method (Queue is GC-managed)
 
     super.dispose();
   }
@@ -927,14 +1144,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       snapPointsData = [nearestPointData];
 
       // Calculate the marker's screen position
+      // CRITICAL FIX: _dataToScreenPoint already returns absolute screen coordinates
+      // (includes chartRect.left/top offset). DO NOT add the offset again!
       final allSeries = _getAllSeries();
 
       final markerScreenX = (nearestPointData['screenX'] as num?)?.toDouble();
       final markerScreenY = (nearestPointData['screenY'] as num?)?.toDouble();
 
       final Offset markerPosition;
-      if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite && _cachedChartRect != null) {
-        markerPosition = Offset(markerScreenX + _cachedChartRect!.left, markerScreenY + _cachedChartRect!.top);
+      if (markerScreenX != null && markerScreenY != null && markerScreenX.isFinite && markerScreenY.isFinite) {
+        // screenX/screenY from _findNearestDataPoint already include chartRect offset
+        markerPosition = Offset(markerScreenX, markerScreenY);
       } else {
         final dataX = (nearestPointData['x'] as num?)?.toDouble() ?? 0;
         final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
@@ -946,7 +1166,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           final screenPos = _dataToScreenPoint(point, _cachedChartRect!, bounds);
 
           if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-            markerPosition = Offset(screenPos.dx + _cachedChartRect!.left, screenPos.dy + _cachedChartRect!.top);
+            // _dataToScreenPoint already returns absolute screen coordinates
+            markerPosition = screenPos;
           } else {
             markerPosition = position;
           }
@@ -990,7 +1211,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     _streamSubscription = stream.listen(
       _onStreamData,
       onError: (error) {
-        // Handle stream errors gracefully
+        // T071: Handle stream errors gracefully (FR-017a)
+        // Invoke callback immediately (no retry per clarification Q2)
+        widget.streamingConfig?.onStreamError?.call(error);
       },
       onDone: () {
         // Stream completed
@@ -1032,46 +1255,253 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _processStreamData() {
     if (_pendingDataPoint == null) return;
 
+    final point = _pendingDataPoint!;
+
     // Clear the pending data point
     _pendingDataPoint = null;
 
-    // Add point to the first series (or create a default series)
-    // This is a simplified approach - real implementation would need
-    // to determine which series to add the point to
-    // NOTE: No interaction state update needed here - this updates chart data, not interaction state
+    // Handle data based on current mode (T017: FR-006)
+    _updateData(point);
+  }
+
+  /// Updates chart data based on current mode (T017: FR-006).
+  ///
+  /// Behavior:
+  /// - **Streaming mode**: Applies data immediately to chart (triggers rebuild)
+  /// - **Interactive mode**: Buffers data silently (no visual update)
+  ///
+  /// This is the core of dual-mode streaming:
+  /// - In streaming mode, users see real-time updates with auto-scroll
+  /// - In interactive mode, users can explore historical data without distraction
+  /// - Buffered data is applied when returning to streaming mode
+  ///
+  /// Related: FR-006 (mode-dependent behavior), T029 (_bufferDataPoint)
+  void _updateData(ChartDataPoint point) {
+    final controller = _getController();
+    if (controller == null) return;
+
+    // Check current mode
+    if (_chartMode.value == ChartMode.streaming) {
+      // Streaming mode: Apply data immediately to the chart
+      // Use 'stream' as the default series ID for streamed data
+      controller.addPoint('stream', point);
+
+      // DO NOT delete historic data - user should be able to pan through all data
+      // The auto-scroll calculation will handle showing only the most recent points
+      // in the viewport, but all data remains available for manual exploration
+
+      // Update auto-scroll viewport if enabled (T018: FR-002)
+      _updateAutoScrollViewport();
+    } else {
+      // Interactive mode: Buffer data silently (T029: FR-006)
+      _bufferDataPoint(point);
+    }
+  }
+
+  /// Buffers a data point during interactive mode (T029: FR-006, FR-013, FR-014).
+  ///
+  /// When in interactive mode, incoming stream data is buffered instead of rendered.
+  /// This enables users to explore historical data without distraction from new updates.
+  ///
+  /// **Behavior**:
+  /// - Adds point to FIFO buffer (_bufferedPoints)
+  /// - Automatically discards oldest when buffer is full (FR-014)
+  /// - Invokes StreamingConfig.onBufferUpdated callback (FR-015)
+  ///
+  /// **Related**: FR-006 (buffer in interactive), FR-013 (size limit), FR-014 (FIFO)
+  void _bufferDataPoint(ChartDataPoint point) {
+    // Add to buffer (automatically handles overflow via FIFO)
+    _bufferedPoints.add(point);
+
+    // Invoke buffer update callback if provided (FR-015)
+    widget.streamingConfig?.onBufferUpdated?.call(_bufferedPoints.length);
+
+    // T062: Enforce maxBufferSize - force auto-resume if buffer full (FR-014, SC-005)
+    final maxSize = widget.streamingConfig?.maxBufferSize ?? 10000;
+    if (_bufferedPoints.length >= maxSize) {
+      // Buffer full - immediately resume to prevent unbounded growth
+      _resumeStreaming();
+    }
+  }
+
+  /// Transitions from streaming mode to interactive mode (T030: FR-004, FR-005).
+  ///
+  /// Called when user initiates ANY intentional interaction (click, zoom, pan).
+  /// This method atomically switches modes and starts the auto-resume timer.
+  ///
+  /// **Behavior**:
+  /// - Guards against redundant transitions (already in interactive mode)
+  /// - Sets _chartMode to ChartMode.interactive (triggers rebuild via ValueNotifier)
+  /// - Invokes StreamingConfig.onModeChanged callback (FR-004)
+  /// - Starts auto-resume timer with configured timeout (FR-007)
+  ///
+  /// **Related**: FR-004 (pause on interaction), FR-005 (disable interactions in streaming),
+  ///              FR-007 (configurable timeout), FR-008 (reset timer on interaction)
+  void _pauseStreaming() {
+    // Guard: Only transition if streamingConfig is provided
+    if (widget.streamingConfig == null) return;
+
+    final wasInStreamingMode = _chartMode.value == ChartMode.streaming;
+
+    // If already in interactive mode, just reset the timer (FR-008)
+    if (!wasInStreamingMode) {
+      _resetAutoResumeTimer();
+      return;
+    }
+
+    // Transition to interactive mode (atomic operation)
+    _chartMode.value = ChartMode.interactive;
+
+    // Invoke mode changed callback (FR-004)
+    widget.streamingConfig?.onModeChanged?.call(ChartMode.interactive);
+
+    // Start auto-resume timer (FR-007, FR-009)
+    _startAutoResumeTimer();
+  }
+
+  /// Resets the auto-resume timer on continued interactions (FR-008).
+  ///
+  /// Called when user continues interacting while already in interactive mode.
+  /// This ensures the timer only starts counting AFTER the last interaction.
+  void _resetAutoResumeTimer() {
+    // Only reset if already in interactive mode with an active timer
+    if (_chartMode.value != ChartMode.interactive) return;
+    if (widget.streamingConfig == null) return;
+
+    // Cancel existing timer and start fresh
+    _autoResumeTimer?.cancel();
+
+    // Get timeout duration from config
+    final timeout = widget.streamingConfig?.autoResumeTimeout ?? const Duration(seconds: 10);
+
+    // Start new timer from current moment
+    _autoResumeTimer = Timer(timeout, () {
+      _resumeStreaming();
+    });
+  }
+
+  /// Starts the auto-resume timer for returning to streaming mode after inactivity (FR-007, FR-009).
+  ///
+  /// Timer is reset on ANY user interaction while in interactive mode (FR-008).
+  /// When timer expires, chart automatically resumes streaming mode (FR-009).
+  void _startAutoResumeTimer() {
+    // Cancel any existing timer
+    _autoResumeTimer?.cancel();
+
+    // Get timeout duration from config (default 10 seconds per FR-007)
+    final timeout = widget.streamingConfig?.autoResumeTimeout ?? const Duration(seconds: 10);
+
+    // Start new timer
+    _autoResumeTimer = Timer(timeout, () {
+      // Timer expired - resume streaming mode (FR-009)
+      _resumeStreaming();
+    });
+  }
+
+  /// Resumes streaming mode from interactive mode (FR-009, FR-011).
+  ///
+  /// Called automatically after auto-resume timeout, or manually via API.
+  ///
+  /// **Behavior**:
+  /// - Applies all buffered data to chart (FR-011)
+  /// - Clears buffer
+  /// - Transitions to streaming mode
+  /// - Invokes callbacks
+  void _resumeStreaming() {
+    // Guard: Only transition if currently in interactive mode
+    if (_chartMode.value != ChartMode.interactive) return;
+
+    final controller = _getController();
+    if (controller == null) return;
+
+    // Apply all buffered data (FR-011)
+    final bufferedData = _bufferedPoints.removeAll();
+    for (final point in bufferedData) {
+      controller.addPoint('stream', point);
+    }
+
+    // Transition to streaming mode
+    _chartMode.value = ChartMode.streaming;
+
+    // Cancel auto-resume timer
+    _autoResumeTimer?.cancel();
+    _autoResumeTimer = null;
+
+    // Invoke callbacks
+    widget.streamingConfig?.onModeChanged?.call(ChartMode.streaming);
+    widget.streamingConfig?.onReturnToLive?.call();
+  }
+
+  /// Updates viewport for auto-scroll in streaming mode (T018: FR-002).
+  ///
+  /// Behavior:
+  /// - Only applies when mode == ChartMode.streaming
+  /// - Only applies when autoScrollConfig.enabled == true
+  /// - Scrolls viewport to show latest data (rightmost points)
+  /// - Uses ValueNotifier to avoid setState-during-rendering crashes
+  ///
+  /// This method is safe to call during data streaming because:
+  /// 1. Only updates when in streaming mode (no interaction conflicts)
+  /// 2. Uses ValueNotifier pattern (Constitution II compliance)
+  /// 3. Doesn't trigger setState during rendering pipeline
+  ///
+  /// Related: FR-002 (auto-scroll in streaming mode only), T019 (no interactions in streaming)
+  void _updateAutoScrollViewport() {
+    // Guard: Only auto-scroll in streaming mode
+    if (_chartMode.value != ChartMode.streaming) {
+      return;
+    }
+
+    // Guard: Only auto-scroll if config enabled
+    if (widget.autoScrollConfig == null || !widget.autoScrollConfig!.enabled) {
+      return;
+    }
+
+    // Schedule auto-scroll update for after the current frame completes
+    // This avoids Flutter rendering pipeline corruption by NOT using setState during frame rendering
+    // Instead, we modify ValueNotifier directly in post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final newZoomPanState = _calculateAutoScrollUpdate();
+      if (newZoomPanState != null) {
+        // Update ValueNotifier directly (NOT setState) to avoid rendering corruption
+        // The ValueNotifier will trigger listeners to rebuild automatically
+        _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+          zoomPanState: newZoomPanState,
+        );
+      }
+    });
   }
 
   /// Called when the controller notifies of changes.
   void _onControllerUpdate() {
     if (!mounted) return;
 
-    // Rebuild with new data
-    // NOTE: Controller updates don't affect interaction state (crosshair, tooltip, etc.)
-    // They update chart data/annotations which triggers rebuild via widget updates
-    // No interaction state changes needed here
-
-    // TODO: Auto-scroll feature temporarily disabled due to Flutter rendering pipeline conflicts
-    // The post-frame callback approach still triggers setState during hit testing, causing crashes.
-    // Need to implement auto-scroll using a different mechanism (e.g., animation controller-based
-    // or trigger only on user interaction, not automatic updates).
-    //
-    // See commits cac0e72, 17da7ff for previous attempts and failure analysis.
+    // Rebuild with new data from controller
+    // Controller.addPoint() -> notifyListeners() -> this callback -> setState() -> rebuild
+    // This ensures buffered points appear immediately when _resumeStreaming() adds them
+    setState(() {
+      // Data is fetched from controller in build() via _getAllSeries()
+      // No state changes needed here - just trigger rebuild
+    });
   }
 
-  /// AUTO-SCROLL FEATURE TEMPORARILY DISABLED
+  /// Calculates the pan offset needed to create a sliding window showing the latest data.
   ///
-  /// This method is disabled because it causes catastrophic Flutter rendering failures.
-  /// The issue: ANY setState during or after the frame rendering pipeline (including
-  /// post-frame callbacks) corrupts Flutter's hit testing and mouse tracking.
+  /// This implements auto-scroll as a **sliding window** that shows only the last N points
+  /// (configured via AutoScrollConfig.maxVisiblePoints). As new data arrives, older data
+  /// scrolls out of view on the left edge, creating a smooth real-time monitoring experience.
   ///
-  /// Multiple fix attempts failed:
-  /// 1. Post-frame callback - still triggers during rendering
-  /// 2. Direct state modification - Flutter detects changes during hit testing
-  /// 3. Deferred setState - post-frame callbacks run during mouse tracker updates
+  /// **Behavior:**
+  /// - Adjusts BOTH zoom and pan to create sliding window effect
+  /// - Zoom level calculated to make maxVisiblePoints fill the viewport
+  /// - Pan offset calculated to show the most recent maxVisiblePoints at right edge
+  /// - Older data scrolls off the left edge of viewport
+  /// - Creates a moving window where new data always fills the viewport
   ///
-  /// The feature needs a complete architectural redesign using AnimationController
-  /// or only triggering on explicit user actions, not automatic data updates.
-  /*
+  /// Returns null if auto-scroll is not needed or calculations fail validation.
+  /// This method performs extensive safety checks to prevent rendering issues.
   ZoomPanState? _calculateAutoScrollUpdate() {
     final config = widget.autoScrollConfig;
     if (config == null || !config.enabled) {
@@ -1095,74 +1525,147 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       return null;
     }
 
-    // Calculate pan offset to show the rightmost (latest) data
-    // Pan offset is in pixel units, but we calculate based on data range
+    // Get current zoom/pan state for Y-axis only (X will be recalculated)
+    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
+
+    // SAFETY: Validate current zoom state
+    if (!currentZoomState.zoomLevelY.isFinite) {
+      return null;
+    }
+
+    // Calculate chart rect for coordinate transformations
     final chartRect = _cachedChartRect ?? _calculateChartRect(context.size ?? Size.zero);
-    
-    // Calculate data bounds to determine scroll offset (pass chartRect for accurate zoom/pan)
-    final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
-    final dataRangeX = bounds.maxX - bounds.minX;
-
-    // SAFETY: Validate data range (prevent division by zero and NaN)
-    if (dataRangeX <= 0 || !dataRangeX.isFinite) return null;
-
-    // SAFETY: Validate bounds are reasonable
-    if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return null;
-
-    // Calculate what portion of data should be visible
-    final visibleRatio = config.maxVisiblePoints / maxPointCount;
-
-    // SAFETY: Validate visible ratio
-    if (!visibleRatio.isFinite || visibleRatio <= 0 || visibleRatio > 1.0) return null;
-
-    // Calculate new zoom level to show only maxVisiblePoints
-    // Zoom = 1.0 shows all data, higher zoom shows less
-    final newZoomX = 1.0 / visibleRatio;
-
-    // SAFETY: Validate zoom level (must be finite, positive, and reasonable)
-    if (!newZoomX.isFinite || newZoomX <= 0 || newZoomX > 100.0) return null;
 
     // SAFETY: Validate chart dimensions
     if (chartRect.width <= 0 || !chartRect.width.isFinite) return null;
     if (chartRect.height <= 0 || !chartRect.height.isFinite) return null;
 
-    // Calculate how much of the data range will be visible after zoom
-    final visibleDataRange = dataRangeX / newZoomX;
+    // Calculate RAW data bounds (WITHOUT zoom/pan transformations)
+    // CRITICAL: We need the ACTUAL full data range to calculate zoom properly
+    // _calculateDataBounds() applies current zoom/pan state which gives wrong results
+    final bounds = _calculateRawDataBounds(allSeries);
+    final dataRangeX = bounds.maxX - bounds.minX;
 
-    // SAFETY: Validate visible range
-    if (!visibleDataRange.isFinite || visibleDataRange <= 0) return null;
-
-    // Calculate how much data is hidden on the left (to show rightmost data)
-    final dataShiftNeeded = dataRangeX - visibleDataRange;
-
-    // SAFETY: Validate shift amount
-    if (!dataShiftNeeded.isFinite || dataShiftNeeded < 0) return null;
-
-    // Convert data shift to pixel offset
-    final panOffsetX = -(dataShiftNeeded / dataRangeX) * chartRect.width * newZoomX;
-
-    // SAFETY: Validate final pan offset (must be finite and reasonable)
-    if (!panOffsetX.isFinite) return null;
-
-    // SAFETY: Prevent extreme pan values that could cause rendering issues
-    final maxReasonablePan = chartRect.width * 10.0; // Max 10x chart width
-    if (panOffsetX.abs() > maxReasonablePan) return null;
-
-    // Calculate the new zoom/pan state
-    final currentZoomState = _interactionStateNotifier.value.zoomPanState;
-
-    // SAFETY: Validate current zoom state before applying changes
-    if (!currentZoomState.zoomLevelX.isFinite || !currentZoomState.zoomLevelY.isFinite) {
+    // SAFETY: Validate data range (prevent division by zero and NaN)
+    if (dataRangeX <= 0 || !dataRangeX.isFinite) {
       return null;
     }
 
-    // Return the new zoom/pan state (caller will apply via setState)
+    // SAFETY: Validate bounds are reasonable
+    if (!bounds.minX.isFinite || !bounds.maxX.isFinite) return null;
+
+    // === SLIDING WINDOW - RIGHTMOST N POINTS ===
+    // Goal: Show exactly the rightmost maxVisiblePoints (e.g., 150 points) filling the viewport
+    // All historic data is preserved - user can pan back through entire dataset
+    //
+    // Approach:
+    // - Calculate zoom so that targetVisibleRangeX (150 X-units) fills the viewport
+    // - Pan to show the rightmost portion of the data
+    // - During initial fill (< 150 points), show entire buffer
+    // - Once buffer has >= 150 points, show rightmost 150
+    //
+    // Result:
+    // - Zoom is CONSTANT (based on targetVisibleRangeX, not buffer size)
+    // - Historic data is preserved for manual panning
+    // - Auto-scroll smoothly tracks newest data
+
+    final dataPointsToShow = config.maxVisiblePoints.toDouble();
+
+    // Calculate X-spacing from actual data
+    double xRangePerPoint = 1.0;
+    if (allSeries.isNotEmpty && allSeries.first.points.length >= 2) {
+      final firstSeries = allSeries.first;
+      final sortedData = List<ChartDataPoint>.from(firstSeries.points)..sort((a, b) => a.x.compareTo(b.x));
+
+      double totalSpacing = 0;
+      int spacingCount = 0;
+      for (int i = 1; i < sortedData.length && i < 10; i++) {
+        final spacing = (sortedData[i].x - sortedData[i - 1].x).abs();
+        if (spacing > 0 && spacing.isFinite) {
+          totalSpacing += spacing;
+          spacingCount++;
+        }
+      }
+      if (spacingCount > 0) {
+        xRangePerPoint = totalSpacing / spacingCount;
+      }
+    }
+
+    // The DESIRED visible X-range (constant: 150 X-units)
+    final targetVisibleRangeX = xRangePerPoint * dataPointsToShow; // e.g., 150.0
+    if (!targetVisibleRangeX.isFinite || targetVisibleRangeX <= 0) return null;
+
+    // Calculate zoom: how much to zoom so targetVisibleRangeX fills the viewport
+    // At zoom=1.0, the entire dataRangeX would fill viewport
+    // We want targetVisibleRangeX (150 units) to fill viewport instead
+    //
+    // Formula: zoom = dataRangeX / targetVisibleRangeX
+    //
+    // Examples:
+    // - dataRangeX = 50 units, targetVisibleRangeX = 150 → zoom = 0.33x (show all data during initial fill)
+    // - dataRangeX = 150 units, targetVisibleRangeX = 150 → zoom = 1.0x (perfect fit)
+    // - dataRangeX = 450 units, targetVisibleRangeX = 150 → zoom = 3.0x (zoomed in, show rightmost 150 units)
+    //
+    // This zoom value, combined with pan, ensures exactly 150 units are visible
+    final calculatedZoom = dataRangeX / targetVisibleRangeX;
+
+    if (!calculatedZoom.isFinite || calculatedZoom <= 0) return null;
+    final clampedZoomX = calculatedZoom.clamp(0.1, 100.0);
+
+    // Show the NEWEST targetVisibleRangeX (150 units) from the buffer
+    // Window end = rightmost point in buffer
+    // Window start = end - 150 units
+    final windowEnd = bounds.maxX;
+    final windowStart = windowEnd - targetVisibleRangeX;
+
+    // CRITICAL: Clamp window start to buffer bounds to prevent showing empty space
+    // If buffer is smaller than targetVisibleRangeX, show entire buffer
+    final clampedWindowStart = windowStart < bounds.minX ? bounds.minX : windowStart;
+
+    // === CRITICAL FIX: Pan offset calculation ===
+    // Pan offset is stored in PIXEL units and gets divided by zoom when applied (line 2832)
+    //
+    // The zoom/pan system (line 2822-2837):
+    // 1. centerX = (dataMinX + dataMaxX) / 2  -- center of FULL data range
+    // 2. rangeX = dataRangeX / zoom  -- visible range after zoom
+    // 3. panDataX = -panX * (dataRangeX / width)  -- pan in data units (NEGATED!)
+    // 4. minX = centerX - rangeX/2 + panDataX  -- visible window
+    //
+    // Natural center (pan=0): centerX = (0 + 291) / 2 = 145.5
+    // Desired center (rightmost): bounds.maxX - targetVisibleRangeX/2 = 291 - 75 = 216
+    // Shift needed: 216 - 145.5 = 70.5 = (dataRangeX - targetVisibleRangeX) / 2
+    //
+    // This shift should be CONSTANT once we have >150 points!
+    // Convert to pixels and negate (because panDataX = -panX):
+    final shiftInDataUnits = (dataRangeX - targetVisibleRangeX) / 2;
+    final panOffsetX = -(shiftInDataUnits / dataRangeX) * chartRect.width;
+
+    // DEBUG
+    debugPrint('\n🎯 [AutoScroll - Rightmost Window (No Data Deletion)]');
+    debugPrint('  Buffer: $maxPointCount points (all historic data preserved)');
+    debugPrint('  Buffer X-range: ${dataRangeX.toStringAsFixed(1)} units (${bounds.minX.toStringAsFixed(1)} to ${bounds.maxX.toStringAsFixed(1)})');
+    debugPrint('  Target visible: ${targetVisibleRangeX.toStringAsFixed(1)} X-units (${dataPointsToShow.toInt()} points)');
+    debugPrint(
+        '  Calculated zoom: ${calculatedZoom.toStringAsFixed(3)} (${dataRangeX.toStringAsFixed(1)} / ${targetVisibleRangeX.toStringAsFixed(1)})');
+    debugPrint('  Desired window: ${windowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+    debugPrint('  Clamped window: ${clampedWindowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+    debugPrint('  Pan offset: ${panOffsetX.toStringAsFixed(1)} px');
+
+    // SAFETY: Validate final pan offset (must be finite and reasonable)
+    if (!panOffsetX.isFinite) {
+      return null;
+    }
+
+    // SAFETY: Prevent extreme pan values that could cause rendering issues
+    final maxReasonablePan = chartRect.width * 100.0; // Allow larger pans for streaming
+    if (panOffsetX.abs() > maxReasonablePan) return null;
+
+    // Return the new zoom/pan state with BOTH zoom and pan updated
     return currentZoomState.copyWith(
-      zoomLevelX: newZoomX,
+      zoomLevelX: clampedZoomX,
       panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
     );
   }
-  */
 
   /// Animates zoom level changes for smooth transitions.
   ///
@@ -1316,14 +1819,39 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           child: CustomPaint(
             painter: _BravenChartPainter(
               chartType: widget.chartType,
+              lineStyle: widget.lineStyle,
               series: allSeries,
               theme: effectiveTheme,
               xAxis: effectiveXAxis,
               yAxis: effectiveYAxis,
               annotations: [], // Chart painter doesn't render annotations
               zoomPanState: interactionState.zoomPanState,
-              // Pass preliminary/original data bounds so painter can avoid O(n) scans
-              originalDataBounds: preliminaryBounds,
+              // CRITICAL FIX: Don't use cached originalDataBounds when controller series exist
+              // because new points added via controller.addPoint() won't be in the cached bounds.
+              // This causes buffered streaming points to fall outside viewport after zoom/pan.
+              // For streaming scenarios, we must recalculate bounds on every paint.
+              // TODO: Optimize by tracking controller series changes and only invalidating when needed.
+              originalDataBounds: _getController() == null ? preliminaryBounds : null,
+              // CRITICAL FIX: Pass callback to receive chartRect calculated with ACTUAL render size
+              onChartRectCalculated: (Rect chartRect, Size size) {
+                // Calculate title offset: difference between Stack size and CustomPaint size
+                // CustomPaint is positioned BELOW the title in Stack coordinate space
+                final titleHeight = _cachedStackSize != null ? (_cachedStackSize!.height - size.height) : 0.0;
+                final newTitleOffset = Offset(0, titleHeight);
+
+                // Update cached values if changed
+                if (_cachedChartRect != chartRect || _titleOffset != newTitleOffset) {
+                  // Use post-frame callback to avoid setState during build
+                  SchedulerBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _cachedChartRect = chartRect;
+                        _titleOffset = newTitleOffset;
+                      });
+                    }
+                  });
+                }
+              },
             ),
             child: Container(), // Force size from parent instead of using size parameter
           ),
@@ -1379,9 +1907,32 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       chartWidget = Column(mainAxisSize: MainAxisSize.min, children: children);
     }
 
-    // Wrap with interaction system if enabled
+    // Wrap with mode-dependent interaction system (T019, T021: FR-005, Constitution II)
+    // Uses ValueListenableBuilder to rebuild only when mode changes (no setState needed)
+    // CRITICAL: Dual-mode interaction handling (T030: FR-004 + FR-005)
+    // FR-004: Detect first interaction to trigger pause
+    // FR-005: Disable full interaction system in streaming mode
     if (widget.interactionConfig != null && widget.interactionConfig!.enabled) {
-      chartWidget = _wrapWithInteractionSystem(chartWidget);
+      chartWidget = ValueListenableBuilder<ChartMode>(
+        valueListenable: _chartMode,
+        builder: (context, currentMode, child) {
+          // Interactive mode: Full interaction system enabled
+          if (currentMode == ChartMode.interactive) {
+            return _wrapWithInteractionSystem(child!);
+          }
+
+          // Streaming mode: Minimal interaction detector for FR-004 (pause on first interaction)
+          // Wraps chart with lightweight listeners that ONLY trigger mode switch
+          // Full interaction system disabled per FR-005
+          if (widget.streamingConfig != null) {
+            return _wrapWithStreamingModeInteractionDetector(child!);
+          }
+
+          // No streaming config: return chart without handlers
+          return child!;
+        },
+        child: chartWidget,
+      );
     }
 
     return chartWidget;
@@ -1398,11 +1949,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final chartRect = _calculateChartRect(size);
 
-        // Cache both the full stack size and chartRect for use in interaction callbacks
+        // CRITICAL FIX: Do NOT calculate chartRect here with LayoutBuilder size.
+        // LayoutBuilder sees the full widget size including title/subtitle (537px height),
+        // but CustomPaint renders with a smaller size (493px, excluding title).
+        // This size mismatch causes proportional coordinate transformation errors.
+        // Cache only the Stack size - chartRect will be calculated with actual render size.
         _cachedStackSize = size;
-        _cachedChartRect = chartRect;
+        // chartRect will be set by painter callback with the CORRECT size
+
+        // Use cached chartRect if available (set by previous paint), otherwise return child without interaction
+        final chartRect = _cachedChartRect;
+        if (chartRect == null) {
+          // First build before painter has run - return child without interaction overlays
+          // Painter will set _cachedChartRect and trigger rebuild
+          return child;
+        }
 
         // Build the full interaction stack
         Widget interactiveWidget = Stack(
@@ -1421,6 +1983,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                       !interactionState.crosshairPosition!.dy.isFinite) {
                     return const SizedBox.shrink();
                   }
+
+                  // Translate chartRect from CustomPaint space to Stack space
+                  final stackChartRect = chartRect.translate(_titleOffset.dx, _titleOffset.dy);
 
                   return Positioned.fill(
                     child: RepaintBoundary(
@@ -1456,7 +2021,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                             if (allSeries.isEmpty) return null;
                             return _calculateDataBounds(allSeries, chartRect: chartRect);
                           }(),
-                          chartRect: chartRect,
+                          chartRect: stackChartRect,
                         ),
                       ),
                     ),
@@ -1496,6 +2061,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             config.onDataPointHover?.call(null, exitPosition);
           },
           onHover: (event) {
+            // NOTE: Hover does NOT pause streaming - only intentional interactions do
+            // (click, zoom, pan, scroll). This prevents accidental stream pausing from
+            // casual mouse movement over the chart.
+            //
+            // However, if already in interactive mode, hover DOES reset the timer (T043: FR-008)
+            // This keeps the chart paused while user is actively hovering/exploring
+            if (_chartMode.value == ChartMode.interactive) {
+              _resetAutoResumeTimer();
+            }
+
             // Throttle the ENTIRE hover processing (calculations + state update)
             _processHoverThrottled(event.localPosition, config);
           },
@@ -1512,6 +2087,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final isShiftPressed = _isShiftPressed;
 
               if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
+                // T030: Pause streaming on zoom (FR-004) or reset timer if already paused (FR-008)
+                _pauseStreaming();
+
                 // SHIFT + Scroll → Zoom at cursor position
                 final scrollDelta = signal.scrollDelta.dy;
                 // Zoom in when scrolling up (negative delta), zoom out when scrolling down
@@ -1547,6 +2125,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Handle middle-mouse button pan (PRIMARY pan method)
           onPointerDown: (event) {
             if (event.buttons == kMiddleMouseButton && config.enablePan) {
+              // T030: Pause streaming on pan start (FR-004) or reset timer if already paused (FR-008)
+              _pauseStreaming();
+
               _isPanningWithMiddleMouse = true;
               _panStartPosition = event.localPosition;
             }
@@ -1554,6 +2135,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
           onPointerMove: (event) {
             if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
+              // Reset timer on continued panning (FR-008)
+              _resetAutoResumeTimer();
+
               final delta = event.localPosition - _panStartPosition!;
 
               final newZoomPanState = _zoomPanController!.pan(
@@ -1590,6 +2174,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         interactiveWidget = GestureDetector(
           // Handle tap for selection
           onTapDown: (details) {
+            // T030: Pause streaming on tap (FR-004) or reset timer if already paused (FR-008)
+            _pauseStreaming();
+
             // Handle selection if enabled
             if (config.enableSelection) {
               final nearestPointData = _findNearestDataPoint(details.localPosition);
@@ -1630,12 +2217,18 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Otherwise use pan gestures if only pan is enabled
           onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
               ? (details) {
+                  // T030: Pause streaming on scale gesture (FR-004)
+                  _pauseStreaming();
+
                   // Track initial state for gestures
                 }
               : null,
 
           onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
               ? (details) {
+                  // T043: Reset timer on continued zoom/pan gestures (FR-008)
+                  _resetAutoResumeTimer();
+
                   ZoomPanState newZoomPanState = _interactionStateNotifier.value.zoomPanState;
 
                   // Handle pinch-to-zoom (when scale changes)
@@ -1727,6 +2320,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               final key = event.logicalKey;
               if (widget.interactionConfig != null && widget.interactionConfig!.enableZoom) {
                 if (key == LogicalKeyboardKey.numpadAdd || key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.equal) {
+                  // T030: Pause streaming on keyboard zoom (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Zoom IN centered on data (no pan offset change) with SMOOTH ANIMATION
                   final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -1746,6 +2342,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
                   return KeyEventResult.handled;
                 } else if (key == LogicalKeyboardKey.minus || key == LogicalKeyboardKey.numpadSubtract) {
+                  // T030: Pause streaming on keyboard zoom (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Zoom OUT centered on data (no pan offset change) with SMOOTH ANIMATION
                   final currentZoomState = _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 0.83333).clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
@@ -1774,6 +2373,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     key == LogicalKeyboardKey.arrowRight ||
                     key == LogicalKeyboardKey.arrowUp ||
                     key == LogicalKeyboardKey.arrowDown) {
+                  // T030: Pause streaming on keyboard pan (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
                   // Calculate new pan offset based on arrow direction
                   final currentPanOffset = _interactionStateNotifier.value.zoomPanState.panOffset;
                   const panAmount = 50.0; // Same as KeyboardHandler default
@@ -1865,6 +2467,36 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     );
   }
 
+  /// Wraps the chart with minimal interaction detection in streaming mode (T030: FR-004).
+  ///
+  /// This is a lightweight detector that exists ONLY to catch the first user interaction
+  /// and trigger the streaming → interactive mode transition. Unlike the full interaction
+  /// system, this ONLY listens for INTENTIONAL events (clicks, scrolls, gestures) and calls
+  /// _pauseStreaming() - no crosshair, no tooltip, no zoom/pan processing.
+  ///
+  /// **CRITICAL**: Does NOT trigger on hover/mouse movement - only on deliberate user actions:
+  /// - Mouse clicks (any button)
+  /// - Touch gestures (tap, pan, zoom)
+  /// - Scroll wheel events
+  /// - Keyboard interactions
+  ///
+  /// **Purpose**: Resolves FR-004 vs FR-005 conflict:
+  /// - FR-004: Must detect first INTENTIONAL interaction to pause streaming
+  /// - FR-005: Must disable all interaction handlers in streaming mode
+  ///
+  /// **Design**: Minimal event detection without full interaction processing.
+  Widget _wrapWithStreamingModeInteractionDetector(Widget child) {
+    return GestureDetector(
+      onTapDown: (_) => _pauseStreaming(), // Click triggers pause (FR-004)
+      onScaleStart: (_) => _pauseStreaming(), // Touch pan/zoom triggers pause (FR-004)
+      child: Listener(
+        onPointerSignal: (_) => _pauseStreaming(), // Scroll triggers pause (FR-004)
+        onPointerDown: (_) => _pauseStreaming(), // Any pointer down triggers pause (FR-004)
+        child: child,
+      ),
+    );
+  }
+
   /// Converts a Map<String, dynamic> to a ChartDataPoint.
   ///
   /// Helper for callback invocations that require ChartDataPoint.
@@ -1890,7 +2522,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) return null;
 
-    final chartRect = _calculateChartRect(context.size!);
+    // CRITICAL FIX: Use cached size from LayoutBuilder, not context.size
+    // context.size can be incorrect during interaction system initialization
+    if (_cachedStackSize == null || _cachedChartRect == null) {
+      return null; // Not yet initialized
+    }
+
+    final chartRect = _cachedChartRect!;
     final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
 
     Map<String, dynamic>? nearestPoint;
@@ -1932,6 +2570,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Transforms a data point to screen coordinates.
   ///
   /// Uses the same transformation logic as _BravenChartPainter._dataToPixel.
+  /// Returns coordinates in STACK space (includes title offset if present).
   Offset _dataToScreenPoint(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
     final xRange = bounds.maxX - bounds.minX;
     final yRange = bounds.maxY - bounds.minY;
@@ -1939,10 +2578,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
     final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
 
+    // Calculate position in CustomPaint coordinate space
     final pixelX = chartRect.left + (xPercent * chartRect.width);
     final pixelY = chartRect.bottom - (yPercent * chartRect.height);
 
-    return Offset(pixelX, pixelY);
+    // Add title offset to translate from CustomPaint space to Stack space
+    return Offset(pixelX + _titleOffset.dx, pixelY + _titleOffset.dy);
   }
 
   /// Calculates the chart rectangle within the widget.
@@ -2108,6 +2749,41 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Calculates data bounds for all series.
   ///
   /// Same logic as _BravenChartPainter._calculateDataBounds - MUST include zoom/pan!
+  /// Calculates RAW data bounds without any zoom/pan transformations.
+  ///
+  /// This method returns the actual min/max values from the dataset,
+  /// which is essential for auto-scroll to determine the full data range.
+  /// Use this instead of _calculateDataBounds() when you need the complete
+  /// data range regardless of current zoom/pan state.
+  _DataBounds _calculateRawDataBounds(List<ChartSeries> series) {
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final s in series) {
+      for (final point in s.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    // Ensure valid bounds even for empty or single-point datasets
+    if (minX == double.infinity) minX = 0;
+    if (maxX == double.negativeInfinity) maxX = 1;
+    if (minY == double.infinity) minY = 0;
+    if (maxY == double.negativeInfinity) maxY = 1;
+
+    // Add padding for Y-axis
+    final yRange = maxY - minY;
+    minY -= yRange * 0.1;
+    maxY += yRange * 0.1;
+
+    return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+
   _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect}) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
@@ -2578,6 +3254,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 class _BravenChartPainter extends CustomPainter {
   _BravenChartPainter({
     required this.chartType,
+    required this.lineStyle,
     required this.series,
     required this.theme,
     required this.xAxis,
@@ -2585,12 +3262,14 @@ class _BravenChartPainter extends CustomPainter {
     required this.annotations,
     this.zoomPanState,
     this.originalDataBounds,
+    this.onChartRectCalculated,
   });
   // Toggle this at runtime to enable simple paint-stage profiling logs.
   // Keep false by default; set to true in a debug session to get timing output.
   static bool enablePaintProfiling = false;
 
   final ChartType chartType;
+  final LineStyle lineStyle;
   final List<ChartSeries> series;
   final ChartTheme theme;
   final AxisConfig xAxis;
@@ -2599,6 +3278,8 @@ class _BravenChartPainter extends CustomPainter {
   final ZoomPanState? zoomPanState;
   // Optional precomputed bounds to avoid scanning series on every paint
   final _DataBounds? originalDataBounds;
+  // Callback to notify State of the calculated chartRect with actual render size
+  final void Function(Rect chartRect, Size size)? onChartRectCalculated;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2652,6 +3333,10 @@ class _BravenChartPainter extends CustomPainter {
         (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
 
     final chartRect = Rect.fromLTWH(leftPadding, topPadding, size.width - leftPadding - rightPadding, size.height - topPadding - bottomPadding);
+
+    // CRITICAL FIX: Notify State of the chartRect calculated with ACTUAL render size.
+    // This ensures cached chartRect matches the size CustomPaint uses for rendering.
+    onChartRectCalculated?.call(chartRect, size);
 
     // Recalculate bounds with correct chart rect for zoom/pan
     final bounds = _calculateDataBounds(chartRect: chartRect);
@@ -2948,6 +3633,9 @@ class _BravenChartPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(chartRect);
 
+    // Create LineInterpolator with the configured line style
+    final interpolator = LineInterpolator(lineStyle);
+
     for (var i = 0; i < series.length; i++) {
       final s = series[i];
       if (s.points.isEmpty) continue;
@@ -2959,21 +3647,15 @@ class _BravenChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 
-      final path = Path();
-      bool first = true;
-
+      // Convert ChartDataPoints to screen coordinates (Offsets)
       // CRITICAL FIX: Render ALL points to maintain line continuity
       // Canvas clipping will automatically crop the visible region
       // This ensures line segments entering/exiting the viewport are drawn correctly
-      for (final point in s.points) {
-        final offset = _dataToPixel(point, chartRect, bounds);
-        if (first) {
-          path.moveTo(offset.dx, offset.dy);
-          first = false;
-        } else {
-          path.lineTo(offset.dx, offset.dy);
-        }
-      }
+      final points = s.points.map((point) => _dataToPixel(point, chartRect, bounds)).toList();
+
+      // Use LineInterpolator to generate path with the specified line style
+      // (straight, smooth bezier, or stepped)
+      final path = interpolator.interpolate(points);
 
       canvas.drawPath(path, paint);
     }
@@ -3017,46 +3699,78 @@ class _BravenChartPainter extends CustomPainter {
         ..color = color.withValues(alpha: 0.3)
         ..style = PaintingStyle.fill;
 
+      // Convert data points to screen coordinates
+      final screenPoints = s.points.map((point) => _dataToPixel(point, chartRect, bounds)).toList();
+
+      // Create the area fill path
       final path = Path();
+      final firstPoint = screenPoints.first;
+      final lastPoint = screenPoints.last;
 
-      // CRITICAL FIX: Process ALL points to maintain area shape
-      // Canvas clipping will automatically crop the visible region
-      final firstPoint = _dataToPixel(s.points.first, chartRect, bounds);
+      // Start at bottom-left baseline
       path.moveTo(firstPoint.dx, chartRect.bottom);
-      path.lineTo(firstPoint.dx, firstPoint.dy);
 
-      for (final point in s.points) {
-        final offset = _dataToPixel(point, chartRect, bounds);
-        path.lineTo(offset.dx, offset.dy);
+      // Build the top edge with interpolation based on lineStyle
+      if (lineStyle == LineStyle.straight) {
+        // Straight lines: Go to each point directly
+        for (final point in screenPoints) {
+          path.lineTo(point.dx, point.dy);
+        }
+      } else if (lineStyle == LineStyle.smooth) {
+        // Smooth curves: Use Catmull-Rom to cubic bezier
+        if (screenPoints.length >= 2) {
+          // Go to first point
+          path.lineTo(firstPoint.dx, firstPoint.dy);
+
+          if (screenPoints.length == 2) {
+            // Only 2 points: straight line
+            path.lineTo(screenPoints[1].dx, screenPoints[1].dy);
+          } else {
+            // 3+ points: Use bezier curves
+            for (int j = 0; j < screenPoints.length - 1; j++) {
+              final p0 = j > 0 ? screenPoints[j - 1] : screenPoints[j];
+              final p1 = screenPoints[j];
+              final p2 = screenPoints[j + 1];
+              final p3 = j < screenPoints.length - 2 ? screenPoints[j + 2] : screenPoints[j + 1];
+
+              // Catmull-Rom to Bezier control points
+              final cp1 = Offset(
+                p1.dx + (p2.dx - p0.dx) / 6,
+                p1.dy + (p2.dy - p0.dy) / 6,
+              );
+              final cp2 = Offset(
+                p2.dx - (p3.dx - p1.dx) / 6,
+                p2.dy - (p3.dy - p1.dy) / 6,
+              );
+
+              path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
+            }
+          }
+        }
+      } else if (lineStyle == LineStyle.stepped) {
+        // Stepped: horizontal then vertical segments
+        path.lineTo(firstPoint.dx, firstPoint.dy);
+        for (int j = 1; j < screenPoints.length; j++) {
+          path.lineTo(screenPoints[j].dx, screenPoints[j - 1].dy); // Horizontal
+          path.lineTo(screenPoints[j].dx, screenPoints[j].dy); // Vertical
+        }
       }
 
-      final lastPoint = _dataToPixel(s.points.last, chartRect, bounds);
+      // Complete the area by going back to baseline
       path.lineTo(lastPoint.dx, chartRect.bottom);
       path.close();
 
       canvas.drawPath(path, fillPaint);
 
-      // Draw line on top
+      // Draw the top edge line using LineInterpolator
       final linePaint = Paint()
         ..color = color
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
 
-      final linePath = Path();
-      bool first = true;
-
-      // CRITICAL FIX: Process ALL points for the outline too
-      for (final point in s.points) {
-        final offset = _dataToPixel(point, chartRect, bounds);
-        if (first) {
-          linePath.moveTo(offset.dx, offset.dy);
-          first = false;
-        } else {
-          linePath.lineTo(offset.dx, offset.dy);
-        }
-      }
-
-      canvas.drawPath(linePath, linePaint);
+      final interpolator = LineInterpolator(lineStyle);
+      final topEdgePath = interpolator.interpolate(screenPoints);
+      canvas.drawPath(topEdgePath, linePaint);
     }
 
     canvas.restore(); // Remove clipping

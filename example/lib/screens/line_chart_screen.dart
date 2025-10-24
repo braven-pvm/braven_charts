@@ -78,6 +78,7 @@ class _LineChartScreenState extends State<LineChartScreen> {
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.line,
+          lineStyle: LineStyle.straight, // Explicit straight line style
           series: [
             ChartSeries(
               id: 'linear_data',
@@ -94,13 +95,14 @@ class _LineChartScreenState extends State<LineChartScreen> {
 
   Widget _buildSmoothLineChart(BuildContext context) {
     return ChartContainer(
-      title: 'Smooth Line Chart',
-      subtitle: 'Bezier curve interpolation',
+      title: 'Smooth Line Chart (Bezier Curves)',
+      subtitle: 'Catmull-Rom spline → cubic bezier interpolation',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.line,
+          lineStyle: LineStyle.smooth, // Smooth bezier curves
           series: [
             ChartSeries(
               id: 'sine_wave',
@@ -118,12 +120,13 @@ class _LineChartScreenState extends State<LineChartScreen> {
   Widget _buildSteppedLineChart(BuildContext context) {
     return ChartContainer(
       title: 'Stepped Line Chart',
-      subtitle: 'Step interpolation (stair-step)',
+      subtitle: 'Step interpolation (horizontal-then-vertical)',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.line,
+          lineStyle: LineStyle.stepped, // Stepped line style
           series: [
             ChartSeries(
               id: 'random_data',
@@ -141,12 +144,13 @@ class _LineChartScreenState extends State<LineChartScreen> {
   Widget _buildMultiSeriesChart(BuildContext context) {
     return ChartContainer(
       title: 'Multi-Series Line Chart',
-      subtitle: 'Multiple series with different markers',
+      subtitle: 'Multiple series with smooth bezier curves',
       height: 350,
       onRefresh: _refreshData,
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.line,
+          lineStyle: LineStyle.smooth, // Smooth curves for multi-series
           series: [
             ChartSeries(
               id: 'revenue',

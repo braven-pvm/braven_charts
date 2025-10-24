@@ -36,14 +36,20 @@ class InteractionState {
       hoveredSeriesId: json['hoveredSeriesId'] as String?,
       focusedPoint: json['focusedPoint'] as Map<String, dynamic>?,
       focusedPointIndex: json['focusedPointIndex'] as int? ?? -1,
-      selectedPoints: (json['selectedPoints'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? const [],
+      selectedPoints: (json['selectedPoints'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const [],
       crosshairPosition: json['crosshairPosition'] != null
           ? Offset(
               (json['crosshairPosition']['dx'] as num).toDouble(),
               (json['crosshairPosition']['dy'] as num).toDouble(),
             )
           : null,
-      snapPoints: (json['snapPoints'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? const [],
+      snapPoints: (json['snapPoints'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const [],
       isCrosshairVisible: json['isCrosshairVisible'] as bool? ?? false,
       isTooltipVisible: json['isTooltipVisible'] as bool? ?? false,
       tooltipPosition: json['tooltipPosition'] != null
@@ -53,9 +59,16 @@ class InteractionState {
             )
           : null,
       tooltipDataPoint: json['tooltipDataPoint'] as Map<String, dynamic>?,
-      zoomPanState: json['zoomPanState'] != null ? ZoomPanState.fromJson(json['zoomPanState'] as Map<String, dynamic>) : const ZoomPanState.initial(),
-      activeGesture: json['activeGesture'] != null ? GestureDetails.fromJson(json['activeGesture'] as Map<String, dynamic>) : null,
-      lastUpdated: json['lastUpdated'] != null ? DateTime.parse(json['lastUpdated'] as String) : null,
+      zoomPanState: json['zoomPanState'] != null
+          ? ZoomPanState.fromJson(json['zoomPanState'] as Map<String, dynamic>)
+          : const ZoomPanState.initial(),
+      activeGesture: json['activeGesture'] != null
+          ? GestureDetails.fromJson(
+              json['activeGesture'] as Map<String, dynamic>)
+          : null,
+      lastUpdated: json['lastUpdated'] != null
+          ? DateTime.parse(json['lastUpdated'] as String)
+          : null,
     );
   }
 

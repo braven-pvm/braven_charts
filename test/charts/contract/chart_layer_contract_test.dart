@@ -31,168 +31,200 @@ void main() {
         //   returnsNormally,
         // );
 
-        fail('LineChartLayer not implemented yet - expected behavior: implement render() method');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: implement render() method');
       });
 
       test('implements shouldRender() method', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
       });
 
       test('implements updateData() method', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: implement updateData() method');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: implement updateData() method');
       });
 
       test('implements prepare() method', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
       });
 
       test('implements dispose() method', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
       });
 
       test('has series getter', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: provide series getter');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: provide series getter');
       });
 
       test('has theme getter', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: provide theme getter');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: provide theme getter');
       });
 
       test('has animationConfig getter', () {
         // TODO: Uncomment when LineChartLayer is implemented
-        fail('LineChartLayer not implemented yet - expected behavior: provide animationConfig getter');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: provide animationConfig getter');
       });
     });
 
     group('AreaChartLayer', () {
       test('implements render() method', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: implement render() method');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: implement render() method');
       });
 
       test('implements shouldRender() method', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
       });
 
       test('implements updateData() method', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: implement updateData() method');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: implement updateData() method');
       });
 
       test('implements prepare() method', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
       });
 
       test('implements dispose() method', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
       });
 
       test('has series getter', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: provide series getter');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: provide series getter');
       });
 
       test('has theme getter', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: provide theme getter');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: provide theme getter');
       });
 
       test('has animationConfig getter', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: provide animationConfig getter');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: provide animationConfig getter');
       });
     });
 
     group('BarChartLayer', () {
       test('implements render() method', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: implement render() method');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: implement render() method');
       });
 
       test('implements shouldRender() method', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
       });
 
       test('implements updateData() method', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: implement updateData() method');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: implement updateData() method');
       });
 
       test('implements prepare() method', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
       });
 
       test('implements dispose() method', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
       });
 
       test('has series getter', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: provide series getter');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: provide series getter');
       });
 
       test('has theme getter', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: provide theme getter');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: provide theme getter');
       });
 
       test('has animationConfig getter', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: provide animationConfig getter');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: provide animationConfig getter');
       });
     });
 
     group('ScatterChartLayer', () {
       test('implements render() method', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: implement render() method');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: implement render() method');
       });
 
       test('implements shouldRender() method', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: implement shouldRender() method returning bool');
       });
 
       test('implements updateData() method', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: implement updateData() method');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: implement updateData() method');
       });
 
       test('implements prepare() method', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: implement prepare() method for resource acquisition');
       });
 
       test('implements dispose() method', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: implement dispose() method for resource cleanup');
       });
 
       test('has series getter', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: provide series getter');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: provide series getter');
       });
 
       test('has theme getter', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: provide theme getter');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: provide theme getter');
       });
 
       test('has animationConfig getter', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: provide animationConfig getter');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: provide animationConfig getter');
       });
     });
 
@@ -209,22 +241,26 @@ void main() {
         //   reason: 'Line charts must render 10,000 points in <16ms',
         // );
 
-        fail('LineChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
+        fail(
+            'LineChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
       });
 
       test('AreaChartLayer renders 10,000 points in <16ms', () {
         // TODO: Uncomment when AreaChartLayer is implemented
-        fail('AreaChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
+        fail(
+            'AreaChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
       });
 
       test('BarChartLayer renders 1,000 bars in <16ms', () {
         // TODO: Uncomment when BarChartLayer is implemented
-        fail('BarChartLayer not implemented yet - expected behavior: render 1,000 bars in <16ms');
+        fail(
+            'BarChartLayer not implemented yet - expected behavior: render 1,000 bars in <16ms');
       });
 
       test('ScatterChartLayer renders 10,000 points in <16ms', () {
         // TODO: Uncomment when ScatterChartLayer is implemented
-        fail('ScatterChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
+        fail(
+            'ScatterChartLayer not implemented yet - expected behavior: render 10,000 points in <16ms');
       });
     });
   });
