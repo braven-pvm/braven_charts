@@ -15,11 +15,12 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Scrollbar, ScrollbarPainter;
 
 import '../foundation/foundation.dart' as braven;
 import '../theming/components/scrollbar_config.dart';
 import 'scrollbar/scrollbar_controller.dart';
+import 'scrollbar/scrollbar_painter.dart';
 import 'scrollbar/scrollbar_state.dart';
 
 /// Dual-purpose scrollbar for chart navigation (pan + zoom).
@@ -188,10 +189,23 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
         return ValueListenableBuilder<ScrollbarState>(
           valueListenable: _stateNotifier,
           builder: (context, state, child) {
-            // Placeholder: Will wire CustomPaint in T045
+            // Create ScrollbarPainter with current state and configuration
+            final painter = ScrollbarPainter(
+              config: widget.theme,
+              state: state,
+              isHorizontal: widget.axis == Axis.horizontal,
+              trackLength: trackLength,
+              isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
+              opacity: 1.0, // TODO: Phase 4 (User Story 3) will add auto-hide animation
+            );
+
+            // Render scrollbar using CustomPaint
             return SizedBox(
               width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
               height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
+              child: CustomPaint(
+                painter: painter,
+              ),
             );
           },
         );
