@@ -97,8 +97,14 @@ void main() {
         ),
       );
 
-      // ASSERT: Should contain CustomPaint for rendering
-      expect(find.byType(CustomPaint), findsOneWidget);
+      // ASSERT: Should contain CustomPaint for rendering (check descendant to avoid MaterialApp's CustomPaint)
+      expect(
+        find.descendant(
+          of: find.byType(ChartScrollbar),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('MUST update when viewport changes',
