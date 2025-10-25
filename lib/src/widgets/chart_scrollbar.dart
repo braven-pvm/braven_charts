@@ -185,6 +185,14 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
             ? constraints.maxWidth
             : constraints.maxHeight;
 
+        // Calculate handle size using ScrollbarController (T046)
+        final handleSize = ScrollbarController.calculateHandleSize(
+          widget.dataRange.span,
+          widget.viewportRange.span,
+          trackLength,
+          widget.theme.minHandleSize,
+        );
+
         // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
         return ValueListenableBuilder<ScrollbarState>(
           valueListenable: _stateNotifier,
@@ -192,7 +200,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
             // Create ScrollbarPainter with current state and configuration
             final painter = ScrollbarPainter(
               config: widget.theme,
-              state: state,
+              state: state.copyWith(handleSize: handleSize), // Use calculated size
               isHorizontal: widget.axis == Axis.horizontal,
               trackLength: trackLength,
               isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
