@@ -176,9 +176,27 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement build() in Phase 3 (User Story 1)
-    // For now, return empty SizedBox to satisfy Dart analyzer
-    return const SizedBox.shrink();
+    // Use LayoutBuilder to get available space for trackLength calculation
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate track length based on orientation
+        final trackLength = widget.axis == Axis.horizontal
+            ? constraints.maxWidth
+            : constraints.maxHeight;
+
+        // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
+        return ValueListenableBuilder<ScrollbarState>(
+          valueListenable: _stateNotifier,
+          builder: (context, state, child) {
+            // Placeholder: Will wire CustomPaint in T045
+            return SizedBox(
+              width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
+              height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
+            );
+          },
+        );
+      },
+    );
   }
 
   /// Updates handle position and size based on current viewport and data range.
