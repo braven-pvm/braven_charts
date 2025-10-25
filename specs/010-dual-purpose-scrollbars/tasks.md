@@ -167,10 +167,10 @@
 
 ### Contract Tests for User Story 2 (TDD - Write FIRST) ⚠️
 
-- [ ] T059 [P] [US2] Contract test for GestureDetector onPanStart handling in test/contract/widgets/scrollbar_gesture_pan_start_test.dart
+- [X] T059 [P] [US2] Contract test for GestureDetector onPanStart handling in test/contract/widgets/scrollbar_gesture_pan_start_test.dart
 - [ ] T060 [P] [US2] Contract test for GestureDetector onPanUpdate handling in test/contract/widgets/scrollbar_gesture_pan_update_test.dart
 - [ ] T061 [P] [US2] Contract test for GestureDetector onPanEnd handling in test/contract/widgets/scrollbar_gesture_pan_end_test.dart
-- [ ] T062 [P] [US2] Contract test for viewport update throttling (60 FPS) in test/contract/widgets/scrollbar_throttle_test.dart
+- [ ] T062 [US2] Contract test for viewport update throttling (60 FPS) in test/contract/widgets/scrollbar_throttle_test.dart
 
 ### Implementation for User Story 2
 
