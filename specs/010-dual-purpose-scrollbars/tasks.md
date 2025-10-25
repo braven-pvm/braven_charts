@@ -137,7 +137,7 @@
 - [X] T046 [US1] Calculate handle size using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
 - [X] T047 [US1] Calculate handle position using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
 - [X] T048 [US1] Implement didUpdateWidget() to sync handle with external viewport changes in lib/src/widgets/chart_scrollbar.dart
-- [ ] T049 [US1] Add RepaintBoundary wrapper around ChartScrollbar in lib/src/widgets/chart_scrollbar.dart
+- [X] T049 [US1] Add RepaintBoundary wrapper around ChartScrollbar in lib/src/widgets/chart_scrollbar.dart
 - [ ] T050 [US1] Modify BravenChart to conditionally render X scrollbar based on InteractionConfig.showXScrollbar in lib/src/widgets/braven_chart.dart
 - [ ] T051 [US1] Modify BravenChart to conditionally render Y scrollbar based on InteractionConfig.showYScrollbar in lib/src/widgets/braven_chart.dart
 - [ ] T052 [US1] Implement BravenChart layout structure (Column/Row) to position scrollbars outside chart canvas in lib/src/widgets/braven_chart.dart
