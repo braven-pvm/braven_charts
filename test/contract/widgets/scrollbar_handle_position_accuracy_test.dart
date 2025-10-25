@@ -23,8 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// - Widget updates handle position when viewport shifts
 void main() {
   group('ChartScrollbar handle position accuracy - CONTRACT', () {
-    testWidgets('MUST position handle at 0% when viewport at start of data range',
-        (WidgetTester tester) async {
+    testWidgets('MUST position handle at 0% when viewport at start of data range', (WidgetTester tester) async {
       // ARRANGE: Viewport at beginning (scrollOffset = 0)
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -54,15 +53,14 @@ void main() {
       // handleSize = 200 * (50/100) = 100.0
       // handlePosition = (200 - 100) * (0.0 / 50.0) = 0.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): After build() implementation, extract handle position from painter:
       // final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
       // final painter = customPaint.painter as ScrollbarPainter;
       // expect(painter.handlePosition, equals(0.0));
     });
 
-    testWidgets('MUST position handle at 100% when viewport at end of data range',
-        (WidgetTester tester) async {
+    testWidgets('MUST position handle at 100% when viewport at end of data range', (WidgetTester tester) async {
       // ARRANGE: Viewport at end (scrollOffset = maxScrollOffset)
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -92,12 +90,11 @@ void main() {
       // handleSize = 100.0
       // handlePosition = (200 - 100) * (50.0 / 50.0) = 100.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 100.0
     });
 
-    testWidgets('MUST position handle at 50% when viewport in middle of data range',
-        (WidgetTester tester) async {
+    testWidgets('MUST position handle at 50% when viewport in middle of data range', (WidgetTester tester) async {
       // ARRANGE: Viewport in middle (scrollOffset = 50% of maxScrollOffset)
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -127,12 +124,11 @@ void main() {
       // handleSize = 100.0
       // handlePosition = (200 - 100) * (25.0 / 50.0) = 100.0 * 0.5 = 50.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 50.0
     });
 
-    testWidgets('MUST position handle at 30% when viewport at 30% offset',
-        (WidgetTester tester) async {
+    testWidgets('MUST position handle at 30% when viewport at 30% offset', (WidgetTester tester) async {
       // ARRANGE: Viewport at 30% through scrollable range
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -162,12 +158,11 @@ void main() {
       // handleSize = 100.0
       // handlePosition = (200 - 100) * (15.0 / 50.0) = 100.0 * 0.3 = 30.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 30.0
     });
 
-    testWidgets('MUST update handle position when viewport shifts',
-        (WidgetTester tester) async {
+    testWidgets('MUST update handle position when viewport shifts', (WidgetTester tester) async {
       // ARRANGE: Initial viewport at 0% offset
       const trackWidth = 200.0;
       var scrollbar = ChartScrollbar(
@@ -217,12 +212,11 @@ void main() {
       // Initial: handlePosition = 0.0
       // Updated: handlePosition = 100.0 (at end)
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 100.0 after update
     });
 
-    testWidgets('MUST respect vertical orientation for handle position calculation',
-        (WidgetTester tester) async {
+    testWidgets('MUST respect vertical orientation for handle position calculation', (WidgetTester tester) async {
       // ARRANGE: Vertical scrollbar with viewport at 50% offset
       const trackHeight = 300.0;
       final scrollbar = ChartScrollbar(
@@ -252,12 +246,11 @@ void main() {
       // handleSize = 300 * (100/200) = 150.0
       // handlePosition = (300 - 150) * (50.0 / 100.0) = 150 * 0.5 = 75.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 75.0 (vertical dimension)
     });
 
-    testWidgets('MUST clamp position when viewport exceeds data range (edge case)',
-        (WidgetTester tester) async {
+    testWidgets('MUST clamp position when viewport exceeds data range (edge case)', (WidgetTester tester) async {
       // ARRANGE: Invalid viewport (extends beyond data range)
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -284,12 +277,11 @@ void main() {
       // ASSERT: Widget should render without crashing
       // Expected: Handle clamped to valid bounds (defensive programming)
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition is clamped within [0, trackLength - handleSize]
     });
 
-    testWidgets('MUST handle zero viewport range gracefully (edge case)',
-        (WidgetTester tester) async {
+    testWidgets('MUST handle zero viewport range gracefully (edge case)', (WidgetTester tester) async {
       // ARRANGE: Degenerate case (zero viewport range)
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -315,12 +307,11 @@ void main() {
 
       // ASSERT: Widget should render without crashing
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition is valid (defensive programming)
     });
 
-    testWidgets('MUST handle negative data range (non-zero min) correctly',
-        (WidgetTester tester) async {
+    testWidgets('MUST handle negative data range (non-zero min) correctly', (WidgetTester tester) async {
       // ARRANGE: Data range with negative minimum
       const trackWidth = 200.0;
       final scrollbar = ChartScrollbar(
@@ -350,7 +341,7 @@ void main() {
       // handleSize = 100.0
       // handlePosition = (200 - 100) * (25.0 / 50.0) = 50.0
       expect(find.byType(ChartScrollbar), findsOneWidget);
-      
+
       // TODO (T044): Validate painter.handlePosition == 50.0
     });
   });

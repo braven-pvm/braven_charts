@@ -138,12 +138,12 @@
 - [X] T047 [US1] Calculate handle position using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
 - [X] T048 [US1] Implement didUpdateWidget() to sync handle with external viewport changes in lib/src/widgets/chart_scrollbar.dart
 - [X] T049 [US1] Add RepaintBoundary wrapper around ChartScrollbar in lib/src/widgets/chart_scrollbar.dart
-- [ ] T050 [US1] Modify BravenChart to conditionally render X scrollbar based on InteractionConfig.showXScrollbar in lib/src/widgets/braven_chart.dart
-- [ ] T051 [US1] Modify BravenChart to conditionally render Y scrollbar based on InteractionConfig.showYScrollbar in lib/src/widgets/braven_chart.dart
-- [ ] T052 [US1] Implement BravenChart layout structure (Column/Row) to position scrollbars outside chart canvas in lib/src/widgets/braven_chart.dart
-- [ ] T053 [US1] Wire ChartScrollbar.dataRange from BravenChart's full data range in lib/src/widgets/braven_chart.dart
-- [ ] T054 [US1] Wire ChartScrollbar.viewportRange from BravenChart's ViewportState in lib/src/widgets/braven_chart.dart
-- [ ] T055 [US1] Wire ChartScrollbar.theme from ChartTheme.scrollbarTheme in lib/src/widgets/braven_chart.dart
+- [X] T050 [US1] Modify BravenChart to conditionally render X scrollbar based on InteractionConfig.showXScrollbar in lib/src/widgets/braven_chart.dart
+- [X] T051 [US1] Modify BravenChart to conditionally render Y scrollbar based on InteractionConfig.showYScrollbar in lib/src/widgets/braven_chart.dart
+- [X] T052 [US1] Implement BravenChart layout structure (Column/Row) to position scrollbars outside chart canvas in lib/src/widgets/braven_chart.dart
+- [X] T053 [US1] Wire ChartScrollbar.dataRange from BravenChart's full data range in lib/src/widgets/braven_chart.dart
+- [X] T054 [US1] Wire ChartScrollbar.viewportRange from BravenChart's ViewportState in lib/src/widgets/braven_chart.dart
+- [X] T055 [US1] Wire ChartScrollbar.theme from ChartTheme.scrollbarTheme in lib/src/widgets/braven_chart.dart
 
 ### Integration Tests for User Story 1
 

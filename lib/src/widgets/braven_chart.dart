@@ -11,6 +11,7 @@ import 'package:braven_charts/src/charts/line/line_interpolator.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 // Layer 0: Foundation
 import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
+import 'package:braven_charts/src/foundation/foundation.dart' show DataRange;
 // Layer 7: Interaction
 import 'package:braven_charts/src/interaction/event_handler.dart' hide KeyEventResult;
 import 'package:braven_charts/src/interaction/keyboard_handler.dart';
@@ -33,6 +34,7 @@ import 'package:braven_charts/src/widgets/annotations/threshold_annotation.dart'
 import 'package:braven_charts/src/widgets/annotations/trend_annotation.dart';
 import 'package:braven_charts/src/widgets/auto_scroll_config.dart';
 import 'package:braven_charts/src/widgets/axis/axis_config.dart';
+import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
 import 'package:braven_charts/src/widgets/controller/streaming_controller.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
@@ -1907,6 +1909,89 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       chartWidget = Column(mainAxisSize: MainAxisSize.min, children: children);
     }
 
+    // Add scrollbars if enabled (T050-T055: User Story 1 - Dual-purpose scrollbars)
+    // Scrollbars positioned OUTSIDE chart canvas for clear separation of concerns
+    if (widget.interactionConfig != null) {
+      final showX = widget.interactionConfig!.showXScrollbar;
+      final showY = widget.interactionConfig!.showYScrollbar;
+
+      if (showX || showY) {
+        // Calculate data range from preliminary bounds
+        final dataBounds = preliminaryBounds;
+
+        // Get current viewport from zoom/pan state
+        final zoomPanState = _interactionStateNotifier.value.zoomPanState;
+
+        // Convert zoom/pan state to viewport ranges
+        // Note: Default viewport is full data range when no zoom/pan applied
+        final xDataRange = DataRange(min: dataBounds.minX, max: dataBounds.maxX);
+        final yDataRange = DataRange(min: dataBounds.minY, max: dataBounds.maxY);
+
+        // Extract viewport from visibleDataBounds Rect
+        final visibleBounds = zoomPanState.visibleDataBounds;
+        final xViewportRange = DataRange(
+          min: visibleBounds.left,
+          max: visibleBounds.right,
+        );
+        final yViewportRange = DataRange(
+          min: visibleBounds.top,
+          max: visibleBounds.bottom,
+        );
+
+        // Get scrollbar theme
+        final scrollbarTheme = effectiveTheme.scrollbarTheme;
+
+        // Build scrollbar layout
+        Widget chartWithScrollbars = chartWidget;
+
+        // Add Y scrollbar (vertical, on right side)
+        if (showY) {
+          chartWithScrollbars = Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: chartWithScrollbars),
+              SizedBox(
+                width: scrollbarTheme.yAxisScrollbar.thickness,
+                child: ChartScrollbar(
+                  axis: Axis.vertical,
+                  dataRange: yDataRange,
+                  viewportRange: yViewportRange,
+                  onViewportChanged: (newViewport) {
+                    _onScrollbarViewportChanged(newViewport, isXAxis: false);
+                  },
+                  theme: scrollbarTheme.yAxisScrollbar,
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Add X scrollbar (horizontal, on bottom)
+        if (showX) {
+          chartWithScrollbars = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: chartWithScrollbars),
+              SizedBox(
+                height: scrollbarTheme.xAxisScrollbar.thickness,
+                child: ChartScrollbar(
+                  axis: Axis.horizontal,
+                  dataRange: xDataRange,
+                  viewportRange: xViewportRange,
+                  onViewportChanged: (newViewport) {
+                    _onScrollbarViewportChanged(newViewport, isXAxis: true);
+                  },
+                  theme: scrollbarTheme.xAxisScrollbar,
+                ),
+              ),
+            ],
+          );
+        }
+
+        chartWidget = chartWithScrollbars;
+      }
+    }
+
     // Wrap with mode-dependent interaction system (T019, T021: FR-005, Constitution II)
     // Uses ValueListenableBuilder to rebuild only when mode changes (no setState needed)
     // CRITICAL: Dual-mode interaction handling (T030: FR-004 + FR-005)
@@ -3213,6 +3298,51 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Calculates the visible data range based on current zoom/pan state
   /// and invokes the callback if it exists.
+  /// Handles scrollbar viewport changes (T050-T055: User Story 1).
+  ///
+  /// Converts scrollbar DataRange to ZoomPanState and updates viewport.
+  /// This method is called when user interacts with scrollbars.
+  void _onScrollbarViewportChanged(DataRange newViewport, {required bool isXAxis}) {
+    // Get current zoom/pan state
+    final currentState = _interactionStateNotifier.value.zoomPanState;
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) return;
+
+    // Calculate new visible bounds by updating the appropriate axis
+    final Rect newVisibleBounds;
+    if (isXAxis) {
+      // Update X axis, keep Y axis unchanged
+      newVisibleBounds = Rect.fromLTRB(
+        newViewport.min,
+        currentState.visibleDataBounds.top,
+        newViewport.max,
+        currentState.visibleDataBounds.bottom,
+      );
+    } else {
+      // Update Y axis, keep X axis unchanged
+      newVisibleBounds = Rect.fromLTRB(
+        currentState.visibleDataBounds.left,
+        newViewport.min,
+        currentState.visibleDataBounds.right,
+        newViewport.max,
+      );
+    }
+
+    // Create new zoom/pan state with updated visible bounds
+    // Keep original bounds and other properties unchanged
+    final newZoomPanState = currentState.copyWith(
+      visibleDataBounds: newVisibleBounds,
+    );
+
+    // Update state
+    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+      zoomPanState: newZoomPanState,
+    );
+
+    // Invoke viewport callback
+    _invokeViewportCallback();
+  }
+
   void _invokeViewportCallback() {
     if (widget.interactionConfig?.onViewportChanged == null) return;
 

@@ -23,8 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Related: T039-T041 (contract tests), T044-T049 (implementation)
 void main() {
   group('Horizontal ChartScrollbar golden tests', () {
-    testWidgets('MUST render light theme horizontal scrollbar at start position',
-        (WidgetTester tester) async {
+    testWidgets('MUST render light theme horizontal scrollbar at start position', (WidgetTester tester) async {
       // ARRANGE: Light theme scrollbar at start (0% offset)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -58,8 +57,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render dark theme horizontal scrollbar at start position',
-        (WidgetTester tester) async {
+    testWidgets('MUST render dark theme horizontal scrollbar at start position', (WidgetTester tester) async {
       // ARRANGE: Dark theme scrollbar at start
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -94,8 +92,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar at middle position',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar at middle position', (WidgetTester tester) async {
       // ARRANGE: Scrollbar at middle (50% offset)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -128,8 +125,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar at end position',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar at end position', (WidgetTester tester) async {
       // ARRANGE: Scrollbar at end (100% offset)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -162,8 +158,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar with 10% viewport (highly zoomed)',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar with 10% viewport (highly zoomed)', (WidgetTester tester) async {
       // ARRANGE: Small viewport (10% visible, 10x zoom)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -196,8 +191,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar at minimum handle size',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar at minimum handle size', (WidgetTester tester) async {
       // ARRANGE: Extreme zoom (0.5% visible) -> minimum handle size (20px)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -230,8 +224,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render high contrast theme horizontal scrollbar',
-        (WidgetTester tester) async {
+    testWidgets('MUST render high contrast theme horizontal scrollbar', (WidgetTester tester) async {
       // ARRANGE: High contrast theme for accessibility (uses preset)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -264,8 +257,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar with full viewport (100% visible)',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar with full viewport (100% visible)', (WidgetTester tester) async {
       // ARRANGE: Full viewport (no zoom) -> full-width handle
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -298,8 +290,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST render horizontal scrollbar with custom theme colors',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar with custom theme colors', (WidgetTester tester) async {
       // ARRANGE: Custom theme with distinct colors
       final customTheme = ScrollbarConfig.defaultLight.copyWith(
         trackColor: Colors.blue[100]!,
