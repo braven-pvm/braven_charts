@@ -193,6 +193,18 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
           widget.theme.minHandleSize,
         );
 
+        // Calculate scroll offset from viewport position
+        final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
+
+        // Calculate handle position using ScrollbarController (T047)
+        final handlePosition = ScrollbarController.calculateHandlePosition(
+          widget.dataRange.span,
+          widget.viewportRange.span,
+          trackLength,
+          scrollOffset,
+          widget.theme.minHandleSize,
+        );
+
         // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
         return ValueListenableBuilder<ScrollbarState>(
           valueListenable: _stateNotifier,
@@ -200,7 +212,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
             // Create ScrollbarPainter with current state and configuration
             final painter = ScrollbarPainter(
               config: widget.theme,
-              state: state.copyWith(handleSize: handleSize), // Use calculated size
+              state: state.copyWith(
+                handleSize: handleSize,
+                handlePosition: handlePosition,
+              ),
               isHorizontal: widget.axis == Axis.horizontal,
               trackLength: trackLength,
               isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
