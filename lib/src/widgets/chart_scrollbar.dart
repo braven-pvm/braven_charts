@@ -177,62 +177,64 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
 
   @override
   Widget build(BuildContext context) {
-    // Use LayoutBuilder to get available space for trackLength calculation
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate track length based on orientation
-        final trackLength = widget.axis == Axis.horizontal
-            ? constraints.maxWidth
-            : constraints.maxHeight;
+    // Wrap in RepaintBoundary to isolate scrollbar repaints from rest of chart (T049)
+    return RepaintBoundary(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate track length based on orientation
+          final trackLength = widget.axis == Axis.horizontal
+              ? constraints.maxWidth
+              : constraints.maxHeight;
 
-        // Calculate handle size using ScrollbarController (T046)
-        final handleSize = ScrollbarController.calculateHandleSize(
-          widget.dataRange.span,
-          widget.viewportRange.span,
-          trackLength,
-          widget.theme.minHandleSize,
-        );
+          // Calculate handle size using ScrollbarController (T046)
+          final handleSize = ScrollbarController.calculateHandleSize(
+            widget.dataRange.span,
+            widget.viewportRange.span,
+            trackLength,
+            widget.theme.minHandleSize,
+          );
 
-        // Calculate scroll offset from viewport position
-        final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
+          // Calculate scroll offset from viewport position
+          final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
 
-        // Calculate handle position using ScrollbarController (T047)
-        final handlePosition = ScrollbarController.calculateHandlePosition(
-          widget.dataRange.span,
-          widget.viewportRange.span,
-          trackLength,
-          scrollOffset,
-          widget.theme.minHandleSize,
-        );
+          // Calculate handle position using ScrollbarController (T047)
+          final handlePosition = ScrollbarController.calculateHandlePosition(
+            widget.dataRange.span,
+            widget.viewportRange.span,
+            trackLength,
+            scrollOffset,
+            widget.theme.minHandleSize,
+          );
 
-        // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
-        return ValueListenableBuilder<ScrollbarState>(
-          valueListenable: _stateNotifier,
-          builder: (context, state, child) {
-            // Create ScrollbarPainter with current state and configuration
-            final painter = ScrollbarPainter(
-              config: widget.theme,
-              state: state.copyWith(
-                handleSize: handleSize,
-                handlePosition: handlePosition,
-              ),
-              isHorizontal: widget.axis == Axis.horizontal,
-              trackLength: trackLength,
-              isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
-              opacity: 1.0, // TODO: Phase 4 (User Story 3) will add auto-hide animation
-            );
+          // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
+          return ValueListenableBuilder<ScrollbarState>(
+            valueListenable: _stateNotifier,
+            builder: (context, state, child) {
+              // Create ScrollbarPainter with current state and configuration
+              final painter = ScrollbarPainter(
+                config: widget.theme,
+                state: state.copyWith(
+                  handleSize: handleSize,
+                  handlePosition: handlePosition,
+                ),
+                isHorizontal: widget.axis == Axis.horizontal,
+                trackLength: trackLength,
+                isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
+                opacity: 1.0, // TODO: Phase 4 (User Story 3) will add auto-hide animation
+              );
 
-            // Render scrollbar using CustomPaint
-            return SizedBox(
-              width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
-              height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
-              child: CustomPaint(
-                painter: painter,
-              ),
-            );
-          },
-        );
-      },
+              // Render scrollbar using CustomPaint
+              return SizedBox(
+                width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
+                height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
+                child: CustomPaint(
+                  painter: painter,
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
