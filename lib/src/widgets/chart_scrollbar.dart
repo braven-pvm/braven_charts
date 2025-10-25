@@ -129,15 +129,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   void initState() {
     super.initState();
 
-    // Initialize state with handle geometry from current viewport
+    // Initialize state with default values
     _stateNotifier = ValueNotifier(ScrollbarState.initial());
     _focusNode = FocusNode();
-
-    // Schedule initial handle geometry calculation
-    // (deferred to first build to get accurate widget dimensions)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateHandleGeometry();
-    });
 
     // Start auto-hide timer if enabled
     if (widget.theme.autoHide) {
@@ -149,11 +143,17 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   void didUpdateWidget(ChartScrollbar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Recalculate handle geometry when viewport or data range changes
+    // Sync scrollbar visibility when viewport changes externally (T048)
     if (oldWidget.viewportRange != widget.viewportRange ||
         oldWidget.dataRange != widget.dataRange ||
         oldWidget.axis != widget.axis) {
-      _updateHandleGeometry();
+      // Make scrollbar visible when viewport changes
+      _stateNotifier.value = _stateNotifier.value.copyWith(isVisible: true);
+
+      // Restart auto-hide timer if enabled
+      if (widget.theme.autoHide) {
+        _scheduleAutoHide();
+      }
     }
 
     // Restart auto-hide timer if theme changed
@@ -233,49 +233,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
           },
         );
       },
-    );
-  }
-
-  /// Updates handle position and size based on current viewport and data range.
-  ///
-  /// Called when:
-  /// - Widget initializes (initState)
-  /// - External viewport changes (didUpdateWidget)
-  /// - Track dimensions change (build phase)
-  void _updateHandleGeometry() {
-    // Get current widget dimensions from context
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) {
-      // Widget not laid out yet, skip update
-      return;
-    }
-
-    final size = renderBox.size;
-    final trackLength = widget.axis == Axis.horizontal ? size.width : size.height;
-
-    // Calculate handle size using ScrollbarController
-    final handleSize = ScrollbarController.calculateHandleSize(
-      widget.dataRange.span,
-      widget.viewportRange.span,
-      trackLength,
-      widget.theme.minHandleSize,
-    );
-
-    // Calculate handle position using ScrollbarController
-    final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
-
-    final handlePosition = ScrollbarController.calculateHandlePosition(
-      widget.dataRange.span,
-      widget.viewportRange.span,
-      trackLength,
-      scrollOffset,
-      widget.theme.minHandleSize,
-    );
-
-    // Update state via ValueNotifier (Performance First: no setState)
-    _stateNotifier.value = _stateNotifier.value.copyWith(
-      handleSize: handleSize,
-      handlePosition: handlePosition,
     );
   }
 
