@@ -148,7 +148,7 @@
 ### Integration Tests for User Story 1
 
 - [X] T056 [US1] Integration test: Zoom in to 10% → verify scrollbar appears with 10% handle size in test/integration/scrollbar_zoom_visual_feedback_test.dart
-- [ ] T057 [US1] Integration test: Viewport at 100% → verify scrollbar hidden in test/integration/scrollbar_auto_hide_full_viewport_test.dart
+- [X] T057 [US1] Integration test: Viewport at 100% → verify scrollbar hidden in test/integration/scrollbar_auto_hide_full_viewport_test.dart
 - [ ] T058 [US1] Integration test: Viewport at 30% position → verify handle at 30% track position in test/integration/scrollbar_position_accuracy_test.dart
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - scrollbar displays with correct handle size/position reflecting viewport state
