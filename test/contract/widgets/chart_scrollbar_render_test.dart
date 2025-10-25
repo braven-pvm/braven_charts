@@ -17,8 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// - Orientation handling
 void main() {
   group('ChartScrollbar rendering - CONTRACT', () {
-    testWidgets('MUST render horizontal scrollbar without errors',
-        (WidgetTester tester) async {
+    testWidgets('MUST render horizontal scrollbar without errors', (WidgetTester tester) async {
       // ARRANGE: Create horizontal scrollbar
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -45,8 +44,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST render vertical scrollbar without errors',
-        (WidgetTester tester) async {
+    testWidgets('MUST render vertical scrollbar without errors', (WidgetTester tester) async {
       // ARRANGE: Create vertical scrollbar
       final scrollbar = ChartScrollbar(
         axis: Axis.vertical,
@@ -73,8 +71,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST contain CustomPaint widget for rendering',
-        (WidgetTester tester) async {
+    testWidgets('MUST contain CustomPaint widget for rendering', (WidgetTester tester) async {
       // ARRANGE: Create scrollbar
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -107,8 +104,7 @@ void main() {
       );
     });
 
-    testWidgets('MUST update when viewport changes',
-        (WidgetTester tester) async {
+    testWidgets('MUST update when viewport changes', (WidgetTester tester) async {
       // ARRANGE: Create scrollbar with initial viewport
       var scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -157,8 +153,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST handle full viewport (100% visible)',
-        (WidgetTester tester) async {
+    testWidgets('MUST handle full viewport (100% visible)', (WidgetTester tester) async {
       // ARRANGE: Viewport = total range (fully zoomed out)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -185,8 +180,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST handle minimum viewport (highly zoomed in)',
-        (WidgetTester tester) async {
+    testWidgets('MUST handle minimum viewport (highly zoomed in)', (WidgetTester tester) async {
       // ARRANGE: Very small viewport (extreme zoom)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -213,8 +207,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST apply theme configuration',
-        (WidgetTester tester) async {
+    testWidgets('MUST apply theme configuration', (WidgetTester tester) async {
       // ARRANGE: Scrollbar with custom theme
       final customConfig = ScrollbarConfig.defaultDark.copyWith(
         thickness: 16.0,
@@ -247,8 +240,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST handle zero-size container gracefully',
-        (WidgetTester tester) async {
+    testWidgets('MUST handle zero-size container gracefully', (WidgetTester tester) async {
       // ARRANGE: Scrollbar in zero-size container (edge case)
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,
@@ -275,8 +267,7 @@ void main() {
       expect(find.byType(ChartScrollbar), findsOneWidget);
     });
 
-    testWidgets('MUST dispose resources properly',
-        (WidgetTester tester) async {
+    testWidgets('MUST dispose resources properly', (WidgetTester tester) async {
       // ARRANGE: Create scrollbar
       final scrollbar = ChartScrollbar(
         axis: Axis.horizontal,

@@ -144,9 +144,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     super.didUpdateWidget(oldWidget);
 
     // Sync scrollbar visibility when viewport changes externally (T048)
-    if (oldWidget.viewportRange != widget.viewportRange ||
-        oldWidget.dataRange != widget.dataRange ||
-        oldWidget.axis != widget.axis) {
+    if (oldWidget.viewportRange != widget.viewportRange || oldWidget.dataRange != widget.dataRange || oldWidget.axis != widget.axis) {
       // Make scrollbar visible when viewport changes
       _stateNotifier.value = _stateNotifier.value.copyWith(isVisible: true);
 
@@ -182,9 +180,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Calculate track length based on orientation
-          final trackLength = widget.axis == Axis.horizontal
-              ? constraints.maxWidth
-              : constraints.maxHeight;
+          final trackLength = widget.axis == Axis.horizontal ? constraints.maxWidth : constraints.maxHeight;
 
           // Calculate handle size using ScrollbarController (T046)
           final handleSize = ScrollbarController.calculateHandleSize(

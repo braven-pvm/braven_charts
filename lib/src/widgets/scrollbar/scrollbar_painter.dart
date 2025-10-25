@@ -237,7 +237,7 @@ class ScrollbarPainter extends CustomPainter {
         : config.thickness * 0.5; // Half of thickness for vertical
 
     // Calculate total grip height/width
-    final totalGripSize = (lineCount - 1) * lineSpacing;
+    const totalGripSize = (lineCount - 1) * lineSpacing;
 
     if (isHorizontal) {
       // Horizontal: vertical lines in center of handle
