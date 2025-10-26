@@ -8,10 +8,9 @@
 /// fast enough to maintain 60 FPS performance (<0.1ms per calculation).
 library;
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:braven_charts/src/foundation/foundation.dart' as braven;
 import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ScrollbarController Calculation Performance (T079)', () {
@@ -49,8 +48,7 @@ void main() {
       final averageTimeMs = stopwatch.elapsedMicroseconds / iterations / 1000;
 
       // Verify average time is <0.1ms
-      expect(averageTimeMs, lessThan(0.1),
-        reason: 'calculateHandleSize should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
+      expect(averageTimeMs, lessThan(0.1), reason: 'calculateHandleSize should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
 
       print('calculateHandleSize: ${averageTimeMs.toStringAsFixed(4)}ms avg over $iterations iterations');
     });
@@ -92,7 +90,7 @@ void main() {
       final averageTimeMs = stopwatch.elapsedMicroseconds / iterations / 1000;
 
       expect(averageTimeMs, lessThan(0.1),
-        reason: 'calculateHandlePosition should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
+          reason: 'calculateHandlePosition should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
 
       print('calculateHandlePosition: ${averageTimeMs.toStringAsFixed(4)}ms avg over $iterations iterations');
     });
@@ -133,8 +131,7 @@ void main() {
       stopwatch.stop();
       final averageTimeMs = stopwatch.elapsedMicroseconds / iterations / 1000;
 
-      expect(averageTimeMs, lessThan(0.1),
-        reason: 'handleToDataRange should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
+      expect(averageTimeMs, lessThan(0.1), reason: 'handleToDataRange should complete in <0.1ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
 
       print('handleToDataRange: ${averageTimeMs.toStringAsFixed(4)}ms avg over $iterations iterations');
     });
@@ -155,7 +152,7 @@ void main() {
           trackLength,
           minHandleSize,
         );
-        
+
         final scrollOffset = viewportRange.min - dataRange.min;
         final handlePosition = ScrollbarController.calculateHandlePosition(
           scrollOffset,
@@ -164,7 +161,7 @@ void main() {
           trackLength,
           minHandleSize,
         );
-        
+
         final newHandlePosition = handlePosition + dragDelta;
         ScrollbarController.handleToDataRange(
           newHandlePosition,
@@ -187,7 +184,7 @@ void main() {
           trackLength,
           minHandleSize,
         );
-        
+
         // Calculate current handle position
         final scrollOffset = viewportRange.min - dataRange.min;
         final handlePosition = ScrollbarController.calculateHandlePosition(
@@ -197,7 +194,7 @@ void main() {
           trackLength,
           minHandleSize,
         );
-        
+
         // Convert new handle position to data range
         final newHandlePosition = handlePosition + dragDelta;
         ScrollbarController.handleToDataRange(
@@ -214,7 +211,7 @@ void main() {
 
       // Full sequence should be <0.3ms (conservative, allows for all 3 calculations)
       expect(averageTimeMs, lessThan(0.3),
-        reason: 'Full calculation sequence should complete in <0.3ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
+          reason: 'Full calculation sequence should complete in <0.3ms (actual: ${averageTimeMs.toStringAsFixed(4)}ms)');
 
       print('Combined sequence: ${averageTimeMs.toStringAsFixed(4)}ms avg over $iterations iterations');
     });
@@ -248,8 +245,7 @@ void main() {
         stopwatch.stop();
         final averageTimeMs = stopwatch.elapsedMicroseconds / iterations / 1000;
 
-        expect(averageTimeMs, lessThan(0.1),
-          reason: 'Performance should remain <0.1ms for dataRange ${dataRange.min}-${dataRange.max}');
+        expect(averageTimeMs, lessThan(0.1), reason: 'Performance should remain <0.1ms for dataRange ${dataRange.min}-${dataRange.max}');
       }
     });
   });
