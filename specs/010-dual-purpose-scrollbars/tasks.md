@@ -179,11 +179,11 @@
 - [X] T065 [US2] Implement _onPanUpdate() for handle drag (center zone) in lib/src/widgets/chart_scrollbar.dart
 - [X] T066 [US2] Update ScrollbarState.handlePosition via ValueNotifier in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
 - [X] T067 [US2] Implement viewport update throttling (16ms timer) in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
-- [ ] T068 [US2] Convert handle position delta to DataRange delta using ScrollbarController.handleToDataRange() in lib/src/widgets/chart_scrollbar.dart
-- [ ] T069 [US2] Fire onViewportChanged callback with new DataRange in lib/src/widgets/chart_scrollbar.dart
-- [ ] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
-- [ ] T071 [US2] Fire InteractionConfig.onPanChanged callback in _onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
-- [ ] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
+- [X] T068 [US2] Convert handle position delta to DataRange delta using ScrollbarController.handleToDataRange() in lib/src/widgets/chart_scrollbar.dart
+- [X] T069 [US2] Fire onViewportChanged callback with new DataRange in lib/src/widgets/chart_scrollbar.dart
+- [X] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
+- [X] T071 [US2] Fire InteractionConfig.onPanChanged callback in _onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
+- [X] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
 - [ ] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
