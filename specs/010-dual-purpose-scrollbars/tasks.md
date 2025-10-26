@@ -178,7 +178,7 @@
 - [X] T064 [US2] Implement _onPanStart() to detect drag zone (center vs edges) in lib/src/widgets/chart_scrollbar.dart
 - [X] T065 [US2] Implement _onPanUpdate() for handle drag (center zone) in lib/src/widgets/chart_scrollbar.dart
 - [X] T066 [US2] Update ScrollbarState.handlePosition via ValueNotifier in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
-- [ ] T067 [US2] Implement viewport update throttling (16ms timer) in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
+- [X] T067 [US2] Implement viewport update throttling (16ms timer) in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
 - [ ] T068 [US2] Convert handle position delta to DataRange delta using ScrollbarController.handleToDataRange() in lib/src/widgets/chart_scrollbar.dart
 - [ ] T069 [US2] Fire onViewportChanged callback with new DataRange in lib/src/widgets/chart_scrollbar.dart
 - [ ] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart

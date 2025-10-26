@@ -129,6 +129,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Set in _onPanStart, used in _onPanUpdate, cleared in _onPanEnd.
   Offset? _dragStartPosition;
 
+  /// Throttle timer for viewport updates (T067 - 60 FPS = 16ms max).
+  Timer? _throttleTimer;
+
+  /// Pending viewport update (for throttling - T067).
+  braven.DataRange? _pendingViewportUpdate;
+
   @override
   void initState() {
     super.initState();
@@ -174,6 +180,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     _stateNotifier.dispose();
     _focusNode.dispose();
     _cancelAutoHide();
+    _throttleTimer?.cancel();
     super.dispose();
   }
 
@@ -308,9 +315,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final trackLength = widget.axis == Axis.horizontal 
-        ? renderBox.size.width 
-        : renderBox.size.height;
+    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
 
     // Calculate current handle size and position
     final currentHandleSize = ScrollbarController.calculateHandleSize(
@@ -363,9 +368,26 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
       handlePosition: newHandlePositionClamped,
     );
 
-    // Fire viewport changed callback (T069)
-    // TODO (T067): Throttle this to 60 FPS (max 1 call per 16ms)
-    widget.onViewportChanged(newViewport);
+    // Throttle viewport updates to 60 FPS (T067)
+    // Store the latest viewport update
+    _pendingViewportUpdate = newViewport;
+
+    // If no throttle is active, fire immediately and start throttle period
+    if (_throttleTimer == null) {
+      widget.onViewportChanged(_pendingViewportUpdate!);
+      _pendingViewportUpdate = null;
+
+      // Start 16ms throttle period
+      _throttleTimer = Timer(const Duration(milliseconds: 16), () {
+        // Throttle period ended - fire any pending update
+        if (_pendingViewportUpdate != null) {
+          widget.onViewportChanged(_pendingViewportUpdate!);
+          _pendingViewportUpdate = null;
+        }
+        _throttleTimer = null;
+      });
+    }
+    // Else: throttle active - just store the update, it will fire when throttle expires
 
     // Update drag start position for next delta calculation
     _dragStartPosition = currentPosition;
@@ -375,9 +397,18 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   ///
   /// Finalizes drag operation and ensures final viewport sync.
   ///
-  /// **TODO (T070)**: Ensure final viewport sync (flush throttled updates).
   /// **TODO (T071)**: Fire InteractionConfig.onPanChanged callback.
   void _onPanEnd(DragEndDetails details) {
+    // Flush any pending throttled viewport update (T070)
+    if (_pendingViewportUpdate != null) {
+      widget.onViewportChanged(_pendingViewportUpdate!);
+      _pendingViewportUpdate = null;
+    }
+
+    // Cancel throttle timer
+    _throttleTimer?.cancel();
+    _throttleTimer = null;
+
     // Clear drag start position
     _dragStartPosition = null;
 
@@ -391,7 +422,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
       _scheduleAutoHide();
     }
 
-    // TODO (T070): Flush any throttled viewport updates (final sync)
     // TODO (T071): Fire InteractionConfig.onPanChanged with total delta
   }
 }

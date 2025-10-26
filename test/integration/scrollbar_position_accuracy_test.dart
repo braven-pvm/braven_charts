@@ -26,8 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Related: ScrollbarController.calculateHandlePosition calculations
 void main() {
   group('T058: Scrollbar position accuracy', () {
-    testWidgets('Scrollbar renders at various viewport positions',
-        (WidgetTester tester) async {
+    testWidgets('Scrollbar renders at various viewport positions', (WidgetTester tester) async {
       // Arrange: Create chart with 100 points
       final series = ChartSeries(
         id: 'test',
@@ -76,8 +75,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Chart with scrollbars renders correctly at start of data',
-        (WidgetTester tester) async {
+    testWidgets('Chart with scrollbars renders correctly at start of data', (WidgetTester tester) async {
       // Arrange: Create chart starting at beginning
       final series = ChartSeries(
         id: 'test',
@@ -120,8 +118,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Chart with both scrollbars handles large datasets',
-        (WidgetTester tester) async {
+    testWidgets('Chart with both scrollbars handles large datasets', (WidgetTester tester) async {
       // Arrange: Create large dataset
       final series = ChartSeries(
         id: 'test',
@@ -170,8 +167,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Scrollbar renders correctly with minimal dataset',
-        (WidgetTester tester) async {
+    testWidgets('Scrollbar renders correctly with minimal dataset', (WidgetTester tester) async {
       // Arrange: Create minimal dataset
       final series = ChartSeries(
         id: 'test',
