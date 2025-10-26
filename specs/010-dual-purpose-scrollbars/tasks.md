@@ -54,7 +54,7 @@
 - [X] T010 [P] Contract test for ScrollbarController.calculateHandlePosition() in test/contract/widgets/scrollbar_controller_position_test.dart
 - [X] T011 [P] Contract test for ScrollbarController.handleToDataRange() inverse transform in test/contract/widgets/scrollbar_controller_inverse_test.dart
 - [X] T012 [P] Contract test for ScrollbarController.dataRangeToHandle() in test/contract/widgets/scrollbar_controller_forward_test.dart
-- [ ] T013 [P] Contract test for ScrollbarConfig immutability and copyWith() in test/contract/theming/scrollbar_config_test.dart
+- [X] T013 [P] Contract test for ScrollbarConfig immutability and copyWith() in test/contract/theming/scrollbar_config_test.dart
 - [X] T014 [P] Contract test for ScrollbarTheme integration with ChartTheme in test/contract/theming/scrollbar_theme_test.dart
 
 ### Foundational Controllers (Pure Functions)
