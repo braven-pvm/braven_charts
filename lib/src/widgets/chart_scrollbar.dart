@@ -50,6 +50,7 @@ class ChartScrollbar extends StatefulWidget {
   /// - [dataRange]: Full range of data available (e.g., 0-100 for 100 data points)
   /// - [viewportRange]: Currently visible range (subset of dataRange)
   /// - [onViewportChanged]: Callback fired when user changes viewport via scrollbar
+  /// - [onPanChanged]: Optional callback fired when pan gesture completes (T071)
   /// - [theme]: Visual configuration (colors, sizes, interaction settings)
   const ChartScrollbar({
     super.key,
@@ -57,6 +58,7 @@ class ChartScrollbar extends StatefulWidget {
     required this.dataRange,
     required this.viewportRange,
     required this.onViewportChanged,
+    this.onPanChanged,
     required this.theme,
   });
 
@@ -96,6 +98,17 @@ class ChartScrollbar extends StatefulWidget {
   /// **Contract**: New viewport will always be subset of dataRange (clamped if needed)
   final ValueChanged<braven.DataRange> onViewportChanged;
 
+  /// Optional callback fired when pan gesture completes (T071).
+  ///
+  /// **Fired on**:
+  /// - Pan drag completes (_onPanEnd called)
+  ///
+  /// **Parameters**:
+  /// - offset: Total pan offset from drag start to end (dx for horizontal, dy for vertical)
+  ///
+  /// **Integration**: This is typically wired from InteractionConfig.onPanChanged
+  final void Function(Offset)? onPanChanged;
+
   /// Visual configuration (colors, sizes, interaction settings).
   ///
   /// Contains:
@@ -128,6 +141,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Initial drag position (for delta calculations in _onPanUpdate).
   /// Set in _onPanStart, used in _onPanUpdate, cleared in _onPanEnd.
   Offset? _dragStartPosition;
+
+  /// Initial viewport range at drag start (for delta calculation in _onPanEnd - T071).
+  /// Set in _onPanStart, used in _onPanEnd, cleared in _onPanEnd.
+  braven.DataRange? _dragStartViewportRange;
 
   /// Throttle timer for viewport updates (T067 - 60 FPS = 16ms max).
   Timer? _throttleTimer;
@@ -281,6 +298,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     // Capture initial drag position for delta calculations (T064)
     _dragStartPosition = details.localPosition;
 
+    // Capture initial viewport range for callback delta calculation (T071)
+    _dragStartViewportRange = widget.viewportRange;
+
     // Set isDragging flag to true
     _stateNotifier.value = _stateNotifier.value.copyWith(
       isDragging: true,
@@ -396,8 +416,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Handles pan gesture end (T070-T071).
   ///
   /// Finalizes drag operation and ensures final viewport sync.
-  ///
-  /// **TODO (T071)**: Fire InteractionConfig.onPanChanged callback.
+  /// Fires onPanChanged callback with total pan delta.
   void _onPanEnd(DragEndDetails details) {
     // Flush any pending throttled viewport update (T070)
     if (_pendingViewportUpdate != null) {
@@ -409,8 +428,26 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     _throttleTimer?.cancel();
     _throttleTimer = null;
 
-    // Clear drag start position
+    // Fire onPanChanged callback with total pan delta (T071)
+    if (widget.onPanChanged != null && _dragStartViewportRange != null) {
+      // Calculate total pan delta from start to end
+      final initialViewportMin = _dragStartViewportRange!.min;
+      final finalViewportMin = widget.viewportRange.min;
+      final dataDelta = finalViewportMin - initialViewportMin;
+
+      // Convert data delta to offset based on axis
+      // For horizontal: dx = dataDelta, dy = 0
+      // For vertical: dx = 0, dy = dataDelta
+      final offset = widget.axis == Axis.horizontal 
+          ? Offset(dataDelta, 0.0) 
+          : Offset(0.0, dataDelta);
+
+      widget.onPanChanged!(offset);
+    }
+
+    // Clear drag start position and viewport
     _dragStartPosition = null;
+    _dragStartViewportRange = null;
 
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(
@@ -421,7 +458,5 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     if (widget.theme.autoHide) {
       _scheduleAutoHide();
     }
-
-    // TODO (T071): Fire InteractionConfig.onPanChanged with total delta
   }
 }
