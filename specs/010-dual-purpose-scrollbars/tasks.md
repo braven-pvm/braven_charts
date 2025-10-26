@@ -190,11 +190,11 @@
 
 ### Integration Tests for User Story 2
 
-- [ ] T074 [US2] Integration test: Drag handle from 0% to 50% → verify viewport pans to middle in test/integration/scrollbar_drag_pan_test.dart
-- [ ] T075 [US2] Integration test: Drag beyond data boundaries → verify clamping (no overscroll) in test/integration/scrollbar_boundary_clamp_test.dart
-- [ ] T076 [US2] Integration test: Click track at 70% → verify handle animates to 70% over 300ms in test/integration/scrollbar_track_click_jump_test.dart
-- [ ] T077 [US2] Integration test: Rapid drag → verify 60 FPS throttling (max 1 update per 16ms) in test/integration/scrollbar_throttle_performance_test.dart
-- [ ] T078 [US2] Integration test: Pan drag completes → verify onPanChanged callback fired with delta in test/integration/scrollbar_pan_callback_test.dart
+- [X] T074 [US2] Integration test: Drag handle from 0% to 50% → verify viewport pans to middle in test/integration/scrollbar_drag_pan_test.dart
+- [X] T075 [US2] Integration test: Drag beyond data boundaries → verify clamping (no overscroll) in test/integration/scrollbar_boundary_clamp_test.dart
+- [X] T076 [US2] Integration test: Click track at 70% → verify handle animates to 70% over 300ms in test/integration/scrollbar_track_click_jump_test.dart
+- [X] T077 [US2] Integration test: Rapid drag → verify 60 FPS throttling (max 1 update per 16ms) in test/integration/scrollbar_throttle_performance_test.dart
+- [X] T078 [US2] Integration test: Pan drag completes → verify onPanChanged callback fired with delta in test/integration/scrollbar_pan_callback_test.dart
 
 ### Performance Tests for User Story 2
 
