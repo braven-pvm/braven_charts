@@ -198,8 +198,8 @@
 
 ### Performance Tests for User Story 2
 
-- [ ] T079 [US2] Benchmark ScrollbarController calculations (<0.1ms) in test/performance/scrollbar_calculation_benchmark.dart
-- [ ] T080 [US2] Benchmark frame time during drag (target <16.67ms) in test/performance/scrollbar_drag_frame_time_test.dart
+- [X] T079 [US2] Benchmark ScrollbarController calculations (<0.1ms) in test/performance/scrollbar_calculation_benchmark.dart
+- [X] T080 [US2] Benchmark frame time during drag (target <16.67ms) in test/performance/scrollbar_drag_frame_time_test.dart
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently - scrollbar displays AND pans viewport on drag
 
