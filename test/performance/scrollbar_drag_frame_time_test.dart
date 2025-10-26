@@ -7,13 +7,12 @@
 /// by ensuring frame rendering time stays below 16.67ms threshold.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:braven_charts/src/foundation/foundation.dart' as braven;
 import 'package:braven_charts/src/theming/components/scrollbar_config.dart';
 import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartScrollbar Drag Frame Time Performance (T080)', () {
@@ -21,9 +20,9 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       final frameTimes = <Duration>[];
-      
+
       // Add frame timing observer
       SchedulerBinding.instance.addTimingsCallback((List<FrameTiming> timings) {
         for (final timing in timings) {
@@ -62,12 +61,12 @@ void main() {
 
       // Simulate realistic drag with multiple updates
       final TestGesture gesture = await tester.startGesture(startPoint);
-      
+
       for (int i = 0; i < 20; i++) {
         await gesture.moveBy(const Offset(5, 0));
         await tester.pump(); // Pump frame for each movement
       }
-      
+
       await gesture.up();
       await tester.pumpAndSettle();
 
@@ -85,14 +84,12 @@ void main() {
 
         // Verify max frame time is below 60 FPS threshold
         // Allow some tolerance for test environment overhead (25ms = ~40 FPS minimum)
-        expect(maxFrameTime, lessThan(25.0),
-          reason: 'Maximum frame time should stay below 25ms during drag (target: <16.67ms for 60 FPS)');
-        
+        expect(maxFrameTime, lessThan(25.0), reason: 'Maximum frame time should stay below 25ms during drag (target: <16.67ms for 60 FPS)');
+
         // Verify average frame time is well below threshold
-        expect(avgFrameTime, lessThan(16.67),
-          reason: 'Average frame time should be <16.67ms for 60 FPS');
+        expect(avgFrameTime, lessThan(16.67), reason: 'Average frame time should be <16.67ms for 60 FPS');
       } else {
-        // If no frame timings captured (test environment limitation), 
+        // If no frame timings captured (test environment limitation),
         // test passes if no jank/freezes detected
         expect(true, true, reason: 'Drag completed without blocking');
       }
@@ -102,7 +99,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       final updateTimestamps = <int>[];
 
       // Build scrollbar widget
@@ -132,13 +129,13 @@ void main() {
       final startPoint = tester.getCenter(scrollbarFinder);
 
       final TestGesture gesture = await tester.startGesture(startPoint);
-      
+
       // Rapid movements at 1ms intervals (1000 FPS input rate)
       for (int i = 0; i < 30; i++) {
         await gesture.moveBy(const Offset(3, 0));
         await tester.pump(const Duration(milliseconds: 1));
       }
-      
+
       await gesture.up();
       await tester.pumpAndSettle();
 
@@ -150,7 +147,7 @@ void main() {
         }
 
         final avgInterval = intervals.reduce((a, b) => a + b) / intervals.length;
-        
+
         print('Viewport update analysis:');
         print('  Total updates: ${updateTimestamps.length}');
         print('  Avg interval: ${avgInterval.toStringAsFixed(2)}ms');
@@ -158,8 +155,7 @@ void main() {
 
         // Verify throttling is effective (updates not at input rate)
         // With 30 moves at 1ms = 30ms total, we should have ~2 updates (30ms / 16ms)
-        expect(updateTimestamps.length, lessThan(10),
-          reason: 'Viewport updates should be throttled (not 1:1 with pointer events)');
+        expect(updateTimestamps.length, lessThan(10), reason: 'Viewport updates should be throttled (not 1:1 with pointer events)');
       }
     });
 
@@ -204,7 +200,7 @@ void main() {
 
       // Perform drag
       final scrollbarFinder = find.byType(ChartScrollbar);
-      
+
       await tester.drag(scrollbarFinder, const Offset(100, 0));
       await tester.pumpAndSettle();
 
@@ -217,7 +213,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       int frameCount = 0;
 
       // Build scrollbar widget
@@ -246,23 +242,23 @@ void main() {
       final startPoint = tester.getCenter(scrollbarFinder);
 
       final TestGesture gesture = await tester.startGesture(startPoint);
-      
+
       // Continuous movement over 200ms
-      for (int i = 0; i < 12; i++) { // ~16.67ms per frame at 60 FPS
+      for (int i = 0; i < 12; i++) {
+        // ~16.67ms per frame at 60 FPS
         await gesture.moveBy(const Offset(8, 0));
         await tester.pump(const Duration(milliseconds: 16));
         frameCount++;
       }
-      
+
       await gesture.up();
       await tester.pumpAndSettle();
 
       // Verify all frames processed
       expect(frameCount, 12, reason: 'All frames should be processed without drops');
-      
+
       // Verify final viewport updated
-      expect(viewportRange.min, greaterThan(0), 
-        reason: 'Viewport should reflect continuous drag movement');
+      expect(viewportRange.min, greaterThan(0), reason: 'Viewport should reflect continuous drag movement');
     });
   });
 }

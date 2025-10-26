@@ -146,6 +146,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   /// Set in _onPanStart, used in _onPanEnd, cleared in _onPanEnd.
   braven.DataRange? _dragStartViewportRange;
 
+  /// Last viewport sent to onViewportChanged (for onPanChanged delta calculation - T071).
+  /// Tracked during drag to calculate total pan delta in _onPanEnd.
+  braven.DataRange? _lastSentViewport;
+
   /// Throttle timer for viewport updates (T067 - 60 FPS = 16ms max).
   Timer? _throttleTimer;
 
@@ -512,6 +516,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     // If no throttle is active, fire immediately and start throttle period
     if (_throttleTimer == null) {
       widget.onViewportChanged(_pendingViewportUpdate!);
+      _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
       _pendingViewportUpdate = null;
 
       // Start 16ms throttle period
@@ -519,6 +524,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         // Throttle period ended - fire any pending update
         if (_pendingViewportUpdate != null) {
           widget.onViewportChanged(_pendingViewportUpdate!);
+          _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
           _pendingViewportUpdate = null;
         }
         _throttleTimer = null;
@@ -538,6 +544,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     // Flush any pending throttled viewport update (T070)
     if (_pendingViewportUpdate != null) {
       widget.onViewportChanged(_pendingViewportUpdate!);
+      _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
       _pendingViewportUpdate = null;
     }
 
@@ -546,10 +553,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     _throttleTimer = null;
 
     // Fire onPanChanged callback with total pan delta (T071)
-    if (widget.onPanChanged != null && _dragStartViewportRange != null) {
-      // Calculate total pan delta from start to end
+    if (widget.onPanChanged != null && _dragStartViewportRange != null && _lastSentViewport != null) {
+      // Calculate total pan delta from start to end using last sent viewport
       final initialViewportMin = _dragStartViewportRange!.min;
-      final finalViewportMin = widget.viewportRange.min;
+      final finalViewportMin = _lastSentViewport!.min;
       final dataDelta = finalViewportMin - initialViewportMin;
 
       // Convert data delta to offset based on axis
@@ -560,9 +567,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
       widget.onPanChanged!(offset);
     }
 
-    // Clear drag start position and viewport
+    // Clear drag state
     _dragStartPosition = null;
     _dragStartViewportRange = null;
+    _lastSentViewport = null;
 
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(

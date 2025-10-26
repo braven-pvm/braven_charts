@@ -7,12 +7,11 @@
 /// to the click position with the correct duration and curve.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:braven_charts/src/foundation/foundation.dart' as braven;
 import 'package:braven_charts/src/theming/components/scrollbar_config.dart';
 import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartScrollbar Track Click Jump Animation Integration (T076)', () {
@@ -20,7 +19,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20); // Start at 0%
-      
+
       final capturedViewports = <braven.DataRange>[];
 
       // Build scrollbar widget
@@ -55,7 +54,7 @@ void main() {
       final clickPosition = Offset(scrollbarRect.left + 280, scrollbarRect.center.dy);
 
       await tester.tapAt(clickPosition);
-      
+
       // Pump frames to allow animation to progress
       // Animation is 300ms, pump every 50ms to see intermediate states
       await tester.pump(); // Start animation
@@ -82,7 +81,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       final capturedViewports = <braven.DataRange>[];
       final timestamps = <int>[];
 
@@ -115,15 +114,15 @@ void main() {
       final clickPosition = Offset(scrollbarRect.left + 200, scrollbarRect.center.dy);
 
       await tester.tapAt(clickPosition);
-      
+
       // Sample animation at different time points
       await tester.pump(); // Start
       await tester.pump(const Duration(milliseconds: 100));
       final viewportAt100ms = capturedViewports.last.min;
-      
+
       await tester.pump(const Duration(milliseconds: 100)); // 200ms total
       final viewportAt200ms = capturedViewports.last.min;
-      
+
       await tester.pump(const Duration(milliseconds: 100)); // 300ms total
       await tester.pumpAndSettle();
       final finalViewportMin = capturedViewports.last.min;
@@ -132,16 +131,15 @@ void main() {
       // Check that progress in first 100ms > progress in last 100ms
       final progressEarly = viewportAt100ms - 0; // Change from 0 to 100ms
       final progressLate = finalViewportMin - viewportAt200ms; // Change from 200ms to 300ms
-      
-      expect(progressEarly, greaterThan(progressLate), 
-        reason: 'Ease-out curve should move faster initially, slower at end');
+
+      expect(progressEarly, greaterThan(progressLate), reason: 'Ease-out curve should move faster initially, slower at end');
     });
 
     testWidgets('Click track near boundary clamps viewport', (WidgetTester tester) async {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       braven.DataRange? capturedViewport;
 
       // Build scrollbar widget
@@ -184,7 +182,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20);
-      
+
       final capturedViewports = <braven.DataRange>[];
 
       // Build scrollbar widget

@@ -7,12 +7,11 @@
 /// and properly clamps viewport to valid boundaries.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:braven_charts/src/foundation/foundation.dart' as braven;
 import 'package:braven_charts/src/theming/components/scrollbar_config.dart';
 import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartScrollbar Boundary Clamping Integration (T075)', () {
@@ -20,7 +19,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 60, max: 80); // Start near end
-      
+
       braven.DataRange? capturedViewport;
 
       // Build scrollbar widget
@@ -47,7 +46,7 @@ void main() {
 
       // Try to drag beyond right boundary
       final scrollbarFinder = find.byType(ChartScrollbar);
-      
+
       // Drag far to the right (way beyond boundary)
       await tester.drag(scrollbarFinder, const Offset(500, 0));
       await tester.pumpAndSettle();
@@ -63,7 +62,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 20, max: 40); // Start near beginning
-      
+
       braven.DataRange? capturedViewport;
 
       // Build scrollbar widget
@@ -90,7 +89,7 @@ void main() {
 
       // Try to drag beyond left boundary
       final scrollbarFinder = find.byType(ChartScrollbar);
-      
+
       // Drag far to the left (way beyond boundary)
       await tester.drag(scrollbarFinder, const Offset(-500, 0));
       await tester.pumpAndSettle();
@@ -106,7 +105,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 40, max: 60); // Middle of range
-      
+
       braven.DataRange? capturedViewport;
 
       // Build scrollbar widget
@@ -133,7 +132,7 @@ void main() {
 
       // Drag moderate distance (within boundaries)
       final scrollbarFinder = find.byType(ChartScrollbar);
-      
+
       await tester.drag(scrollbarFinder, const Offset(50, 0));
       await tester.pumpAndSettle();
 
@@ -148,7 +147,7 @@ void main() {
       // Setup
       const dataRange = braven.DataRange(min: 0, max: 100);
       braven.DataRange viewportRange = const braven.DataRange(min: 0, max: 20); // Start at top
-      
+
       braven.DataRange? capturedViewport;
 
       // Build scrollbar widget
@@ -175,7 +174,7 @@ void main() {
 
       // Try to drag beyond top boundary (negative direction)
       final scrollbarFinder = find.byType(ChartScrollbar);
-      
+
       await tester.drag(scrollbarFinder, const Offset(0, -500));
       await tester.pumpAndSettle();
 
