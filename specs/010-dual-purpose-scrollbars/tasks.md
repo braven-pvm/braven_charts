@@ -217,7 +217,7 @@
 
 ### Contract Tests for User Story 3 (TDD - Write FIRST) ⚠️
 
-- [ ] T079 [P] [US3] Contract test for HitTestZone detection (leftEdge/rightEdge) in test/contract/widgets/scrollbar_hit_test_edge_detection_test.dart
+- [X] T079 [P] [US3] Contract test for HitTestZone detection (leftEdge/rightEdge) in test/contract/widgets/scrollbar_hit_test_edge_detection_test.dart
 - [ ] T080 [P] [US3] Contract test for left edge drag (adjusts viewportMin) in test/contract/widgets/scrollbar_left_edge_resize_test.dart
 - [ ] T081 [P] [US3] Contract test for right edge drag (adjusts viewportMax) in test/contract/widgets/scrollbar_right_edge_resize_test.dart
 - [ ] T082 [P] [US3] Contract test for minimum handle size clamping in test/contract/widgets/scrollbar_min_handle_size_test.dart
