@@ -66,16 +66,14 @@ void main() {
       // With 50 move events, WITHOUT throttling we'd get 50+ viewport updates
       // WITH throttling (Timer 16ms), callbacks should be significantly reduced
       // Expected: In test with rapid pumps, throttle mechanism should batch updates
-      
+
       // The implementation fires first update immediately, then throttles to 16ms windows
       // With 50 rapid moves, we expect far fewer than 50 callbacks
-      expect(capturedViewports.length, lessThan(50),
-        reason: 'Throttling must reduce callback count below move event count');
-      
+      expect(capturedViewports.length, lessThan(50), reason: 'Throttling must reduce callback count below move event count');
+
       // Verify throttling is effective (< 80% of move events became callbacks)
       final throttleRatio = capturedViewports.length / 50;
-      expect(throttleRatio, lessThan(0.8),
-        reason: 'Throttling should reduce callbacks to < 80% of move events');
+      expect(throttleRatio, lessThan(0.8), reason: 'Throttling should reduce callbacks to < 80% of move events');
     });
 
     testWidgets('Final viewport update fires immediately on pan end', (WidgetTester tester) async {
