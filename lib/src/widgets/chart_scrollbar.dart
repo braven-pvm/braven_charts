@@ -125,6 +125,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Timer for auto-hide feature.
   Timer? _autoHideTimer;
 
+  /// Initial drag position (for delta calculations in _onPanUpdate).
+  /// Set in _onPanStart, used in _onPanUpdate, cleared in _onPanEnd.
+  Offset? _dragStartPosition;
+
   @override
   void initState() {
     super.initState();
@@ -265,8 +269,11 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Initializes drag state when user starts dragging scrollbar handle.
   /// Captures initial touch position for delta calculations in _onPanUpdate.
   ///
-  /// **TODO (T064)**: Detect drag zone (center vs edges) for pan vs zoom.
+  /// **TODO (Future)**: Detect drag zone (center vs edges) for pan vs zoom.
   void _onPanStart(DragStartDetails details) {
+    // Capture initial drag position for delta calculations (T064)
+    _dragStartPosition = details.localPosition;
+
     // Set isDragging flag to true
     _stateNotifier.value = _stateNotifier.value.copyWith(
       isDragging: true,
@@ -277,25 +284,91 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
       _cancelAutoHide();
     }
 
-    // TODO (T064): Capture initial touch position
-    // TODO (T064): Detect if drag started on handle center (pan) or edges (zoom)
+    // NOTE: Drag zone detection (center vs edges) will be added in future
+    // for zoom functionality (User Story 3). Currently assumes pan-only mode.
   }
 
   /// Handles pan gesture update (T065-T066).
   ///
   /// Calculates viewport delta from drag distance and triggers viewport update.
   ///
-  /// **TODO (T065)**: Implement delta calculation and viewport update.
-  /// **TODO (T066)**: Update handlePosition via ValueNotifier.
   /// **TODO (T067)**: Implement 60 FPS throttling (max 1 update per 16ms).
   void _onPanUpdate(DragUpdateDetails details) {
-    // TODO (T065): Calculate drag delta from initial position
-    // TODO (T065): Convert handle position delta to DataRange delta
-    // TODO (T066): Update ScrollbarState.handlePosition via ValueNotifier
-    // TODO (T067): Throttle viewport updates to 60 FPS
-    // TODO (T068): Call ScrollbarController.handleToDataRange()
-    // TODO (T069): Fire widget.onViewportChanged callback
-    // TODO (T072): Add boundary clamping (no overscroll)
+    // Skip if no drag start position captured (shouldn't happen, but defensive)
+    if (_dragStartPosition == null) return;
+
+    // Calculate drag delta from initial position (T065)
+    final currentPosition = details.localPosition;
+    final dragDelta = currentPosition - _dragStartPosition!;
+
+    // Extract relevant coordinate based on axis
+    final pixelDelta = widget.axis == Axis.horizontal ? dragDelta.dx : dragDelta.dy;
+
+    // Get current layout dimensions from build context
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final trackLength = widget.axis == Axis.horizontal 
+        ? renderBox.size.width 
+        : renderBox.size.height;
+
+    // Calculate current handle size and position
+    final currentHandleSize = ScrollbarController.calculateHandleSize(
+      widget.dataRange.span,
+      widget.viewportRange.span,
+      trackLength,
+      widget.theme.minHandleSize,
+    );
+
+    final currentHandlePosition = ScrollbarController.calculateHandlePosition(
+      widget.viewportRange.min - widget.dataRange.min,
+      widget.dataRange.span,
+      widget.viewportRange.span,
+      trackLength,
+      widget.theme.minHandleSize,
+    );
+
+    // Calculate new handle position after drag (T066)
+    final newHandlePosition = currentHandlePosition + pixelDelta;
+
+    // Convert handle position to data range offset (T068)
+    final newScrollOffset = ScrollbarController.handleToDataRange(
+      newHandlePosition,
+      widget.dataRange.span,
+      widget.viewportRange.span,
+      trackLength,
+      currentHandleSize,
+    );
+
+    // Calculate new viewport range (maintaining viewport size, shifting position)
+    final viewportSize = widget.viewportRange.span;
+    final newViewportMin = widget.dataRange.min + newScrollOffset;
+
+    // Apply boundary clamping (T072)
+    final clampedMin = newViewportMin.clamp(widget.dataRange.min, widget.dataRange.max - viewportSize);
+    final clampedMax = clampedMin + viewportSize;
+
+    final newViewport = braven.DataRange(min: clampedMin, max: clampedMax);
+
+    // Update handle position in state via ValueNotifier (T066)
+    final newHandlePositionClamped = ScrollbarController.calculateHandlePosition(
+      clampedMin - widget.dataRange.min,
+      widget.dataRange.span,
+      widget.viewportRange.span,
+      trackLength,
+      widget.theme.minHandleSize,
+    );
+
+    _stateNotifier.value = _stateNotifier.value.copyWith(
+      handlePosition: newHandlePositionClamped,
+    );
+
+    // Fire viewport changed callback (T069)
+    // TODO (T067): Throttle this to 60 FPS (max 1 call per 16ms)
+    widget.onViewportChanged(newViewport);
+
+    // Update drag start position for next delta calculation
+    _dragStartPosition = currentPosition;
   }
 
   /// Handles pan gesture end (T070-T071).
@@ -305,6 +378,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// **TODO (T070)**: Ensure final viewport sync (flush throttled updates).
   /// **TODO (T071)**: Fire InteractionConfig.onPanChanged callback.
   void _onPanEnd(DragEndDetails details) {
+    // Clear drag start position
+    _dragStartPosition = null;
+
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(
       isDragging: false,
