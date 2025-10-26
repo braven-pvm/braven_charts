@@ -220,7 +220,7 @@
 - [X] T079 [P] [US3] Contract test for HitTestZone detection (leftEdge/rightEdge) in test/contract/widgets/scrollbar_hit_test_edge_detection_test.dart
 - [X] T080 [P] [US3] Contract test for left edge drag (adjusts viewportMin) in test/contract/widgets/scrollbar_left_edge_resize_test.dart
 - [X] T081 [P] [US3] Contract test for right edge drag (adjusts viewportMax) in test/contract/widgets/scrollbar_right_edge_resize_test.dart
-- [ ] T082 [P] [US3] Contract test for minimum handle size clamping in test/contract/widgets/scrollbar_min_handle_size_test.dart
+- [X] T082 [P] [US3] Contract test for minimum handle size clamping in test/contract/widgets/scrollbar_min_handle_size_test.dart
 - [ ] T083 [P] [US3] Golden test for edge resize cursors (↔) in test/golden/scrollbar_edge_cursor_test.dart
 
 ### Implementation for User Story 3
