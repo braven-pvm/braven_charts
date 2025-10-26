@@ -15,7 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Validates that scrollbars appear and render correctly when data exceeds viewport:
 /// - X scrollbar appears when chart has more data than can be displayed
-/// - Y scrollbar appears when chart has more data than can be displayed  
+/// - Y scrollbar appears when chart has more data than can be displayed
 /// - Both scrollbars appear when both axes have excess data
 /// - Scrollbars render without errors and display visual feedback
 ///
@@ -27,8 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// This integration test verifies end-to-end rendering and interaction.
 void main() {
   group('T056: Scrollbar zoom visual feedback integration', () {
-    testWidgets('X scrollbar appears and renders when chart has large dataset',
-        (WidgetTester tester) async {
+    testWidgets('X scrollbar appears and renders when chart has large dataset', (WidgetTester tester) async {
       // Arrange: Create chart with 100 points (simulating zoomed state)
       final series = ChartSeries(
         id: 'test',
@@ -75,13 +74,12 @@ void main() {
 
       // Assert: Verify chart renders without errors
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // Assert: No error indicators
       expect(tester.takeException(), isNull, reason: 'Should render without throwing exceptions');
     });
 
-    testWidgets('Y scrollbar appears and renders when chart has large dataset',
-        (WidgetTester tester) async {
+    testWidgets('Y scrollbar appears and renders when chart has large dataset', (WidgetTester tester) async {
       // Arrange: Create chart with 100 points
       final series = ChartSeries(
         id: 'test',
@@ -131,8 +129,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Both scrollbars appear when both axes have large datasets',
-        (WidgetTester tester) async {
+    testWidgets('Both scrollbars appear when both axes have large datasets', (WidgetTester tester) async {
       // Arrange: Create chart with 100 points with varied X and Y
       final series = ChartSeries(
         id: 'test',
@@ -182,8 +179,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Chart renders correctly with scrollbars disabled',
-        (WidgetTester tester) async {
+    testWidgets('Chart renders correctly with scrollbars disabled', (WidgetTester tester) async {
       // Arrange: Create chart with scrollbars disabled
       final series = ChartSeries(
         id: 'test',
