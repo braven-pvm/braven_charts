@@ -19,6 +19,7 @@ import 'package:flutter/material.dart' hide Scrollbar, ScrollbarPainter;
 
 import '../foundation/foundation.dart' as braven;
 import '../theming/components/scrollbar_config.dart';
+import 'scrollbar/hit_test_zone.dart';
 import 'scrollbar/scrollbar_controller.dart';
 import 'scrollbar/scrollbar_painter.dart';
 import 'scrollbar/scrollbar_state.dart';
@@ -270,17 +271,22 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
                 opacity: 1.0, // TODO: Phase 4 (User Story 3) will add auto-hide animation
               );
 
-              // Render scrollbar using CustomPaint
+              // Render scrollbar using CustomPaint wrapped in MouseRegion for hover detection (T084)
               return SizedBox(
                 width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
                 height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
-                child: GestureDetector(
-                  onTapUp: _onTrackClick, // T073: Track click to jump
-                  onPanStart: _onPanStart,
-                  onPanUpdate: _onPanUpdate,
-                  onPanEnd: _onPanEnd,
-                  child: CustomPaint(
-                    painter: painter,
+                child: MouseRegion(
+                  cursor: _getCursorForZone(state.hoverZone), // T093: Dynamic cursor based on hover zone
+                  onHover: _onHover, // T084: Detect edge zones and update hoverZone
+                  onExit: (_) => _onExit(), // T084: Clear hoverZone on exit
+                  child: GestureDetector(
+                    onTapUp: _onTrackClick, // T073: Track click to jump
+                    onPanStart: _onPanStart,
+                    onPanUpdate: _onPanUpdate,
+                    onPanEnd: _onPanEnd,
+                    child: CustomPaint(
+                      painter: painter,
+                    ),
                   ),
                 ),
               );
@@ -309,6 +315,82 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   }
 
   // NOTE: _resetAutoHide() will be added in Phase 4 (User Story 2) when gesture handlers are implemented
+
+  // --- Hover Detection (T084-T085) ---
+
+  /// Handles mouse hover to detect edge zones and update cursor (T084-T085).
+  ///
+  /// Detects which zone of the scrollbar the mouse is hovering over:
+  /// - Left/Top edge (first 8px of handle): For left/top edge resize
+  /// - Right/Bottom edge (last 8px of handle): For right/bottom edge resize
+  /// - Center of handle: For panning
+  /// - Track (outside handle): For track click
+  ///
+  /// Updates ScrollbarState.hoverZone via ValueNotifier to trigger cursor change (T085).
+  ///
+  /// Constitutional Requirements:
+  /// - Performance First: O(1) hit test using ScrollbarController.getHitTestZone()
+  void _onHover(PointerEvent event) {
+    // Get current layout dimensions
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+
+    // Calculate handle geometry from current state
+    final currentState = _stateNotifier.value;
+    final handlePosition = currentState.handlePosition;
+    final handleSize = currentState.handleSize;
+
+    // Detect hit test zone using ScrollbarController
+    // Note: getHitTestZone() takes Offset as first positional parameter
+    final zone = ScrollbarController.getHitTestZone(
+      event.localPosition, // Offset (first positional parameter)
+      widget.axis, // Axis (second positional parameter)
+      trackLength, // double (third positional parameter)
+      handlePosition, // double (fourth positional parameter)
+      handleSize, // double (fifth positional parameter)
+      edgeDetectionThreshold: widget.theme.edgeGripWidth, // Named parameter
+    );
+
+    // Update hoverZone in state via ValueNotifier (T085)
+    if (zone != currentState.hoverZone) {
+      _stateNotifier.value = currentState.copyWith(hoverZone: zone);
+    }
+  }
+
+  /// Clears hover zone when mouse exits scrollbar area (T084).
+  void _onExit() {
+    _stateNotifier.value = _stateNotifier.value.clearHoverZone();
+  }
+
+  /// Returns appropriate cursor for the given hover zone (T093-T095).
+  ///
+  /// **Cursor Mapping**:
+  /// - Track → SystemMouseCursors.click (indicates clickable)
+  /// - Center → SystemMouseCursors.grab (indicates draggable for panning)
+  /// - Left/Right edge (horizontal) → SystemMouseCursors.resizeColumn (indicates horizontal resize)
+  /// - Top/Bottom edge (vertical) → SystemMouseCursors.resizeRow (indicates vertical resize)
+  /// - null (not hovering) → SystemMouseCursors.basic (default cursor)
+  ///
+  /// Constitutional Requirements:
+  /// - Accessibility: Cursor provides visual feedback for interaction affordances
+  MouseCursor _getCursorForZone(HitTestZone? zone) {
+    if (zone == null) return SystemMouseCursors.basic;
+
+    switch (zone) {
+      case HitTestZone.track:
+        return SystemMouseCursors.click;
+      case HitTestZone.center:
+        return SystemMouseCursors.grab;
+      case HitTestZone.leftEdge:
+      case HitTestZone.rightEdge:
+        return SystemMouseCursors.resizeColumn; // T094: Horizontal scrollbar edges
+      case HitTestZone.topEdge:
+      case HitTestZone.bottomEdge:
+        return SystemMouseCursors.resizeRow; // T095: Vertical scrollbar edges
+    }
+  }
 
   // --- Track Click Handler (T073) ---
 
