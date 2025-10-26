@@ -223,8 +223,13 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
               return SizedBox(
                 width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
                 height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
-                child: CustomPaint(
-                  painter: painter,
+                child: GestureDetector(
+                  onPanStart: _onPanStart,
+                  onPanUpdate: _onPanUpdate,
+                  onPanEnd: _onPanEnd,
+                  child: CustomPaint(
+                    painter: painter,
+                  ),
                 ),
               );
             },
@@ -252,4 +257,65 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   }
 
   // NOTE: _resetAutoHide() will be added in Phase 4 (User Story 2) when gesture handlers are implemented
+
+  // --- Pan Gesture Handlers (T063-T066) ---
+
+  /// Handles pan gesture start (T064).
+  ///
+  /// Initializes drag state when user starts dragging scrollbar handle.
+  /// Captures initial touch position for delta calculations in _onPanUpdate.
+  ///
+  /// **TODO (T064)**: Detect drag zone (center vs edges) for pan vs zoom.
+  void _onPanStart(DragStartDetails details) {
+    // Set isDragging flag to true
+    _stateNotifier.value = _stateNotifier.value.copyWith(
+      isDragging: true,
+    );
+
+    // Cancel auto-hide while dragging
+    if (widget.theme.autoHide) {
+      _cancelAutoHide();
+    }
+
+    // TODO (T064): Capture initial touch position
+    // TODO (T064): Detect if drag started on handle center (pan) or edges (zoom)
+  }
+
+  /// Handles pan gesture update (T065-T066).
+  ///
+  /// Calculates viewport delta from drag distance and triggers viewport update.
+  ///
+  /// **TODO (T065)**: Implement delta calculation and viewport update.
+  /// **TODO (T066)**: Update handlePosition via ValueNotifier.
+  /// **TODO (T067)**: Implement 60 FPS throttling (max 1 update per 16ms).
+  void _onPanUpdate(DragUpdateDetails details) {
+    // TODO (T065): Calculate drag delta from initial position
+    // TODO (T065): Convert handle position delta to DataRange delta
+    // TODO (T066): Update ScrollbarState.handlePosition via ValueNotifier
+    // TODO (T067): Throttle viewport updates to 60 FPS
+    // TODO (T068): Call ScrollbarController.handleToDataRange()
+    // TODO (T069): Fire widget.onViewportChanged callback
+    // TODO (T072): Add boundary clamping (no overscroll)
+  }
+
+  /// Handles pan gesture end (T070-T071).
+  ///
+  /// Finalizes drag operation and ensures final viewport sync.
+  ///
+  /// **TODO (T070)**: Ensure final viewport sync (flush throttled updates).
+  /// **TODO (T071)**: Fire InteractionConfig.onPanChanged callback.
+  void _onPanEnd(DragEndDetails details) {
+    // Reset isDragging flag
+    _stateNotifier.value = _stateNotifier.value.copyWith(
+      isDragging: false,
+    );
+
+    // Restart auto-hide timer if enabled
+    if (widget.theme.autoHide) {
+      _scheduleAutoHide();
+    }
+
+    // TODO (T070): Flush any throttled viewport updates (final sync)
+    // TODO (T071): Fire InteractionConfig.onPanChanged with total delta
+  }
 }
