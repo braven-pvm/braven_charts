@@ -184,9 +184,9 @@
 - [X] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
 - [X] T071 [US2] Fire InteractionConfig.onPanChanged callback in _onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
 - [X] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
-- [ ] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
+- [X] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
+- [X] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
+- [X] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
 
 ### Integration Tests for User Story 2
 

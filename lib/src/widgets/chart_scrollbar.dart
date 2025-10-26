@@ -128,7 +128,7 @@ class ChartScrollbar extends StatefulWidget {
 /// - Uses ValueNotifier<ScrollbarState> instead of setState() for >10Hz updates
 /// - All state changes go through ValueNotifier for performance optimization
 /// - Throttles viewport updates to 60 FPS to prevent chart jank
-class _ChartScrollbarState extends State<ChartScrollbar> {
+class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProviderStateMixin {
   /// Reactive state management (Constitutional requirement: ValueNotifier for >10Hz events).
   late ValueNotifier<ScrollbarState> _stateNotifier;
 
@@ -152,6 +152,18 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   /// Pending viewport update (for throttling - T067).
   braven.DataRange? _pendingViewportUpdate;
 
+  /// Animation controller for track click jump (T073 - 300ms ease-out).
+  AnimationController? _jumpAnimationController;
+
+  /// Animation for track click jump (T073).
+  Animation<double>? _jumpAnimation;
+
+  /// Target viewport for jump animation (T073).
+  braven.DataRange? _jumpTargetViewport;
+
+  /// Initial viewport for jump animation (T073).
+  braven.DataRange? _jumpStartViewport;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +171,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     // Initialize state with default values
     _stateNotifier = ValueNotifier(ScrollbarState.initial());
     _focusNode = FocusNode();
+
+    // Initialize jump animation controller (T073)
+    _jumpAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this, // Requires TickerProviderStateMixin
+    );
 
     // Start auto-hide timer if enabled
     if (widget.theme.autoHide) {
@@ -198,6 +216,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
     _focusNode.dispose();
     _cancelAutoHide();
     _throttleTimer?.cancel();
+    _jumpAnimationController?.dispose();
     super.dispose();
   }
 
@@ -252,6 +271,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
                 width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
                 height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
                 child: GestureDetector(
+                  onTapUp: _onTrackClick, // T073: Track click to jump
                   onPanStart: _onPanStart,
                   onPanUpdate: _onPanUpdate,
                   onPanEnd: _onPanEnd,
@@ -286,6 +306,100 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
 
   // NOTE: _resetAutoHide() will be added in Phase 4 (User Story 2) when gesture handlers are implemented
 
+  // --- Track Click Handler (T073) ---
+
+  /// Handles track click to jump viewport to click position (T073).
+  ///
+  /// Animates viewport to center at click position using 300ms ease-out curve.
+  /// Cancels any active animation before starting new one (T073B).
+  void _onTrackClick(TapUpDetails details) {
+    // Cancel any active jump animation (T073B - animation cancellation)
+    _cancelJumpAnimation();
+
+    // Get current layout dimensions
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+
+    // Extract click position based on axis
+    final clickPosition = widget.axis == Axis.horizontal ? details.localPosition.dx : details.localPosition.dy;
+
+    // Calculate target scroll offset to center viewport at click position
+    final viewportSize = widget.viewportRange.span;
+    final clickRatio = clickPosition / trackLength;
+    final targetDataPosition = widget.dataRange.min + (clickRatio * widget.dataRange.span);
+
+    // Center viewport at click position
+    final targetViewportMin = targetDataPosition - (viewportSize / 2);
+
+    // Apply boundary clamping
+    final clampedMin = targetViewportMin.clamp(widget.dataRange.min, widget.dataRange.max - viewportSize);
+    final clampedMax = clampedMin + viewportSize;
+
+    final targetViewport = braven.DataRange(min: clampedMin, max: clampedMax);
+
+    // Store initial and target viewports for animation
+    _jumpStartViewport = widget.viewportRange;
+    _jumpTargetViewport = targetViewport;
+
+    // Create 300ms ease-out animation (T073)
+    _jumpAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _jumpAnimationController!,
+        curve: Curves.easeOut, // FR-007 enhanced
+      ),
+    )..addListener(() {
+        // Interpolate between start and target viewport
+        if (_jumpStartViewport != null && _jumpTargetViewport != null) {
+          final t = _jumpAnimation!.value;
+          final interpolatedMin = _jumpStartViewport!.min + ((_jumpTargetViewport!.min - _jumpStartViewport!.min) * t);
+          final interpolatedMax = _jumpStartViewport!.max + ((_jumpTargetViewport!.max - _jumpStartViewport!.max) * t);
+
+          final interpolatedViewport = braven.DataRange(min: interpolatedMin, max: interpolatedMax);
+
+          // Fire viewport changed callback
+          widget.onViewportChanged(interpolatedViewport);
+        }
+      });
+
+    // Add completion listener to clean up
+    _jumpAnimationController!.addStatusListener(_onJumpAnimationComplete);
+
+    // Start animation from 0.0
+    _jumpAnimationController!.forward(from: 0.0);
+
+    // Cancel auto-hide while animating
+    if (widget.theme.autoHide) {
+      _cancelAutoHide();
+    }
+  }
+
+  /// Animation completion listener (T073).
+  void _onJumpAnimationComplete(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      // Clean up animation state
+      _jumpStartViewport = null;
+      _jumpTargetViewport = null;
+      _jumpAnimationController?.removeStatusListener(_onJumpAnimationComplete);
+
+      // Restart auto-hide timer
+      if (widget.theme.autoHide) {
+        _scheduleAutoHide();
+      }
+    }
+  }
+
+  /// Cancels active jump animation (T073B).
+  void _cancelJumpAnimation() {
+    if (_jumpAnimationController?.isAnimating ?? false) {
+      _jumpAnimationController?.stop();
+      _jumpAnimationController?.reset();
+      _jumpStartViewport = null;
+      _jumpTargetViewport = null;
+    }
+  }
+
   // --- Pan Gesture Handlers (T063-T066) ---
 
   /// Handles pan gesture start (T064).
@@ -295,6 +409,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
   ///
   /// **TODO (Future)**: Detect drag zone (center vs edges) for pan vs zoom.
   void _onPanStart(DragStartDetails details) {
+    // Cancel any active jump animation (T073B - concurrent interaction cancellation)
+    _cancelJumpAnimation();
+
     // Capture initial drag position for delta calculations (T064)
     _dragStartPosition = details.localPosition;
 
@@ -438,9 +555,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
       // Convert data delta to offset based on axis
       // For horizontal: dx = dataDelta, dy = 0
       // For vertical: dx = 0, dy = dataDelta
-      final offset = widget.axis == Axis.horizontal 
-          ? Offset(dataDelta, 0.0) 
-          : Offset(0.0, dataDelta);
+      final offset = widget.axis == Axis.horizontal ? Offset(dataDelta, 0.0) : Offset(0.0, dataDelta);
 
       widget.onPanChanged!(offset);
     }
