@@ -19,10 +19,10 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 0.0;
       const initialViewportMax = 50.0;
-      
+
       // ACT: Drag right edge left by 10 data units
       const dragDelta = -10.0; // Negative = leftward
-      
+
       // ASSERT: viewportMax decreases, viewportMin unchanged
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -33,7 +33,7 @@ void main() {
         minZoomRatio: 0.01,
         maxZoomRatio: 1.0,
       );
-      
+
       expect(newViewport.min, equals(0.0)); // Unchanged (anchored)
       expect(newViewport.max, equals(40.0)); // Decreased from 50
       expect(newViewport.span, equals(40.0)); // Reduced from 50 (zoomed in)
@@ -45,10 +45,10 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 0.0;
       const initialViewportMax = 50.0;
-      
+
       // ACT: Drag right edge right by 10 data units
       const dragDelta = 10.0; // Positive = rightward
-      
+
       // ASSERT: viewportMax increases, viewportMin unchanged
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -59,7 +59,7 @@ void main() {
         minZoomRatio: 0.01,
         maxZoomRatio: 1.0,
       );
-      
+
       expect(newViewport.min, equals(0.0)); // Unchanged (anchored)
       expect(newViewport.max, equals(60.0)); // Increased from 50
       expect(newViewport.span, equals(60.0)); // Increased from 50 (zoomed out)
@@ -71,10 +71,10 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 0.0;
       const initialViewportMax = 80.0;
-      
+
       // ACT: Drag right edge way past dataMax
       const dragDelta = 50.0; // Would go to 130, but should clamp to 100
-      
+
       // ASSERT: viewportMax clamped at dataMax
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -85,7 +85,7 @@ void main() {
         minZoomRatio: 0.01,
         maxZoomRatio: 1.0,
       );
-      
+
       expect(newViewport.min, equals(0.0)); // Unchanged
       expect(newViewport.max, equals(100.0)); // Clamped at dataMax
     });
@@ -96,10 +96,10 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 0.0;
       const initialViewportMax = 50.0;
-      
+
       // ACT: Drag right edge left by 50 units (would make viewport 0-0 = 0 span)
       const dragDelta = -50.0;
-      
+
       // ASSERT: viewportMax clamped to enforce 1% minimum (1 unit span)
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -110,7 +110,7 @@ void main() {
         minZoomRatio: 0.01, // 1% of 100 = 1 unit minimum
         maxZoomRatio: 1.0,
       );
-      
+
       expect(newViewport.min, equals(0.0)); // Unchanged
       expect(newViewport.max, equals(1.0)); // Clamped to leave 1 unit visible
       expect(newViewport.span, greaterThanOrEqualTo(1.0)); // At least 1% visible
@@ -122,11 +122,11 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 50.0;
       const initialViewportMax = 80.0;
-      
+
       // ACT: Drag right edge right by 40 units (would make viewport 50-120 = 70 span)
       // But maxZoomRatio=1.0 means max span = 100 units (entire data range)
       const dragDelta = 40.0;
-      
+
       // ASSERT: viewportMax clamped to enforce maxZoomRatio
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -137,7 +137,7 @@ void main() {
         minZoomRatio: 0.01,
         maxZoomRatio: 1.0, // 100% max (no zoom out beyond full range)
       );
-      
+
       // Since viewportMin=50, and maxZoomRatio=1.0 (100 units),
       // viewportMax should clamp to 150 (50 + 100 = 150), but also clamp to dataMax=100
       expect(newViewport.min, equals(50.0)); // Unchanged
@@ -151,9 +151,9 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = 20.0;
       const initialViewportMax = 70.0;
-      
+
       // ACT: Multiple drag scenarios
-      
+
       // Drag left (zoom in)
       var newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -165,7 +165,7 @@ void main() {
         maxZoomRatio: 1.0,
       );
       expect(newViewport.min, equals(20.0)); // Unchanged
-      
+
       // Drag right (zoom out)
       newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -185,10 +185,10 @@ void main() {
       const dataMax = 100.0;
       const initialViewportMin = -50.0;
       const initialViewportMax = 0.0;
-      
+
       // ACT: Drag right edge right by 30 units (zoom out)
       const dragDelta = 30.0;
-      
+
       // ASSERT: viewportMax increases
       final newViewport = _calculateRightEdgeResize(
         dataMin: dataMin,
@@ -199,7 +199,7 @@ void main() {
         minZoomRatio: 0.01,
         maxZoomRatio: 1.0,
       );
-      
+
       expect(newViewport.min, equals(-50.0)); // Anchored
       expect(newViewport.max, equals(30.0)); // 0 + 30 = 30
     });
@@ -209,10 +209,10 @@ void main() {
 /// Data structure representing a viewport range.
 class ViewportRange {
   const ViewportRange(this.min, this.max);
-  
+
   final double min;
   final double max;
-  
+
   double get span => max - min;
 }
 
@@ -229,32 +229,32 @@ ViewportRange _calculateRightEdgeResize({
   required double maxZoomRatio, // e.g., 1.0 = 100% maximum visible
 }) {
   final dataSpan = dataMax - dataMin;
-  
+
   // Apply delta to viewportMax (left edge anchored)
   var newViewportMax = currentViewportMax + delta;
-  
+
   // Clamp to data range boundaries
   newViewportMax = newViewportMax.clamp(currentViewportMin, dataMax);
-  
+
   // Calculate resulting viewport span
   final newSpan = newViewportMax - currentViewportMin;
-  
+
   // Enforce zoom limits
   final minSpan = dataSpan * minZoomRatio; // Minimum visible span
   final maxSpan = dataSpan * maxZoomRatio; // Maximum visible span
-  
+
   // If zoomed in too far (span too small), clamp viewportMax
   if (newSpan < minSpan) {
     newViewportMax = currentViewportMin + minSpan;
   }
-  
+
   // If zoomed out too far (span too large), clamp viewportMax
   if (newSpan > maxSpan) {
     newViewportMax = currentViewportMin + maxSpan;
   }
-  
+
   // Final clamp to data boundaries
   newViewportMax = newViewportMax.clamp(dataMin, dataMax);
-  
+
   return ViewportRange(currentViewportMin, newViewportMax);
 }

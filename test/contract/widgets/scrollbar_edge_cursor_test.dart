@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Contract test for cursor changes at scrollbar handle edges.
 ///
 /// T083 [US3] - Tests that cursor selection logic returns correct cursor type
-/// when hovering over left/right edges of horizontal scrollbar handle or 
+/// when hovering over left/right edges of horizontal scrollbar handle or
 /// top/bottom edges of vertical scrollbar handle.
 ///
 /// Requirements from FR-011:
@@ -25,7 +25,7 @@ void main() {
       const handleEnd = 200.0;
       const mousePosition = 104.0; // Within 8px of left edge
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -34,7 +34,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is ew-resize (horizontal resize)
       expect(cursor, equals(SystemMouseCursors.resizeLeftRight));
     });
@@ -46,7 +46,7 @@ void main() {
       const handleEnd = 200.0;
       const mousePosition = 196.0; // Within 8px of right edge (200-8=192, 196>192)
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -55,7 +55,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is ew-resize (horizontal resize)
       expect(cursor, equals(SystemMouseCursors.resizeLeftRight));
     });
@@ -67,7 +67,7 @@ void main() {
       const handleEnd = 200.0;
       const mousePosition = 150.0; // Center of handle
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -76,7 +76,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is grab (for panning center)
       expect(cursor, equals(SystemMouseCursors.grab));
     });
@@ -88,7 +88,7 @@ void main() {
       const handleEnd = 150.0;
       const mousePosition = 54.0; // Within 8px of top edge
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -97,7 +97,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is ns-resize (vertical resize)
       expect(cursor, equals(SystemMouseCursors.resizeUpDown));
     });
@@ -109,7 +109,7 @@ void main() {
       const handleEnd = 150.0;
       const mousePosition = 146.0; // Within 8px of bottom edge (150-8=142, 146>142)
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -118,7 +118,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is ns-resize (vertical resize)
       expect(cursor, equals(SystemMouseCursors.resizeUpDown));
     });
@@ -130,7 +130,7 @@ void main() {
       const handleEnd = 150.0;
       const mousePosition = 100.0; // Center of handle
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Get cursor for position
       final cursor = _getCursorForPosition(
         axis: axis,
@@ -139,7 +139,7 @@ void main() {
         mousePosition: mousePosition,
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor is grab (for panning center)
       expect(cursor, equals(SystemMouseCursors.grab));
     });
@@ -150,7 +150,7 @@ void main() {
       const handleStart = 0.0;
       const handleEnd = 100.0;
       const edgeZoneWidth = 8.0;
-      
+
       // ACT: Test positions at boundary transitions
       final cursor7_9 = _getCursorForPosition(
         axis: axis,
@@ -159,7 +159,7 @@ void main() {
         mousePosition: 7.9, // Just inside left edge zone
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       final cursor8_1 = _getCursorForPosition(
         axis: axis,
         handleStart: handleStart,
@@ -167,7 +167,7 @@ void main() {
         mousePosition: 8.1, // Just outside left edge zone (center)
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       final cursor91_9 = _getCursorForPosition(
         axis: axis,
         handleStart: handleStart,
@@ -175,7 +175,7 @@ void main() {
         mousePosition: 91.9, // Just outside right edge zone (center)
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       final cursor92_1 = _getCursorForPosition(
         axis: axis,
         handleStart: handleStart,
@@ -183,7 +183,7 @@ void main() {
         mousePosition: 92.1, // Just inside right edge zone
         edgeZoneWidth: edgeZoneWidth,
       );
-      
+
       // ASSERT: Cursor transitions correctly
       expect(cursor7_9, equals(SystemMouseCursors.resizeLeftRight)); // Left edge
       expect(cursor8_1, equals(SystemMouseCursors.grab)); // Center
@@ -206,21 +206,17 @@ MouseCursor _getCursorForPosition({
   // Convert mouse position to position within handle (0 = start, size = end)
   final positionInHandle = mousePosition - handleStart;
   final handleSize = handleEnd - handleStart;
-  
+
   // Check if in left/top edge zone
   if (positionInHandle < edgeZoneWidth) {
-    return axis == Axis.horizontal
-        ? SystemMouseCursors.resizeLeftRight
-        : SystemMouseCursors.resizeUpDown;
+    return axis == Axis.horizontal ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.resizeUpDown;
   }
-  
+
   // Check if in right/bottom edge zone
   if (positionInHandle > handleSize - edgeZoneWidth) {
-    return axis == Axis.horizontal
-        ? SystemMouseCursors.resizeLeftRight
-        : SystemMouseCursors.resizeUpDown;
+    return axis == Axis.horizontal ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.resizeUpDown;
   }
-  
+
   // In center zone - use grab cursor for panning
   return SystemMouseCursors.grab;
 }

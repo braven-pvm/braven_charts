@@ -169,6 +169,13 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   /// Initial viewport for jump animation (T073).
   braven.DataRange? _jumpStartViewport;
 
+  /// Drag zone captured at drag start (T086 - for edge resize vs center pan).
+  /// Set in _onPanStart, used in _onPanUpdate to determine resize vs pan behavior.
+  /// - leftEdge/topEdge: Resize viewport min (anchor viewport max)
+  /// - rightEdge/bottomEdge: Resize viewport max (anchor viewport min)
+  /// - center: Pan viewport (shift both min and max by same delta)
+  HitTestZone? _dragZone;
+
   @override
   void initState() {
     super.initState();
@@ -488,12 +495,16 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
 
   // --- Pan Gesture Handlers (T063-T066) ---
 
-  /// Handles pan gesture start (T064).
+  /// Handles pan gesture start (T064, T086).
   ///
   /// Initializes drag state when user starts dragging scrollbar handle.
   /// Captures initial touch position for delta calculations in _onPanUpdate.
+  /// Detects drag zone (edge vs center) for resize vs pan behavior (T086).
   ///
-  /// **TODO (Future)**: Detect drag zone (center vs edges) for pan vs zoom.
+  /// **Drag Zones** (T086):
+  /// - leftEdge/topEdge: User dragging left/top edge → resize viewport min
+  /// - rightEdge/bottomEdge: User dragging right/bottom edge → resize viewport max
+  /// - center: User dragging center → pan viewport (both min and max shift)
   void _onPanStart(DragStartDetails details) {
     // Cancel any active jump animation (T073B - concurrent interaction cancellation)
     _cancelJumpAnimation();
@@ -504,6 +515,27 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     // Capture initial viewport range for callback delta calculation (T071)
     _dragStartViewportRange = widget.viewportRange;
 
+    // Detect drag zone (T086 - edge detection for zoom functionality)
+    // Get current layout dimensions
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+      final currentState = _stateNotifier.value;
+      
+      // Use ScrollbarController to detect which zone was clicked
+      _dragZone = ScrollbarController.getHitTestZone(
+        details.localPosition,
+        widget.axis,
+        trackLength,
+        currentState.handlePosition,
+        currentState.handleSize,
+        edgeDetectionThreshold: widget.theme.edgeGripWidth,
+      );
+    } else {
+      // Fallback: assume center pan if can't get layout
+      _dragZone = HitTestZone.center;
+    }
+
     // Set isDragging flag to true
     _stateNotifier.value = _stateNotifier.value.copyWith(
       isDragging: true,
@@ -513,9 +545,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     if (widget.theme.autoHide) {
       _cancelAutoHide();
     }
-
-    // NOTE: Drag zone detection (center vs edges) will be added in future
-    // for zoom functionality (User Story 3). Currently assumes pan-only mode.
   }
 
   /// Handles pan gesture update (T065-T066).
