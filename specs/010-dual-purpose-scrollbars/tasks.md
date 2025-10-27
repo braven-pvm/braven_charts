@@ -228,11 +228,11 @@
 - [X] T084 [US3] Implement _onHover() to detect edge zones and update cursor in lib/src/widgets/chart_scrollbar.dart
 - [X] T085 [US3] Store hover zone in ScrollbarState.hoverZone via ValueNotifier in lib/src/widgets/chart_scrollbar.dart
 - [X] T086 [US3] Modify _onPanStart() to detect leftEdge/rightEdge zones in lib/src/widgets/chart_scrollbar.dart
-- [ ] T087 [US3] Implement _onPanUpdate() for left edge drag (resize viewport min) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T088 [US3] Implement _onPanUpdate() for right edge drag (resize viewport max) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart
-- [ ] T090 [US3] Enforce minZoomRatio (1% minimum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
-- [ ] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
+- [X] T087 [US3] Implement _onPanUpdate() for left edge drag (resize viewport min) in lib/src/widgets/chart_scrollbar.dart
+- [X] T088 [US3] Implement _onPanUpdate() for right edge drag (resize viewport max) in lib/src/widgets/chart_scrollbar.dart
+- [X] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart
+- [X] T090 [US3] Enforce minZoomRatio (1% minimum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
+- [X] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
 - [ ] T091A [US3] Implement zoom limit feedback: flash animation (opacity 0.8 → 0.4 → 0.8 over 200ms per FR-011 enhanced) when zoom limit reached in lib/src/widgets/chart_scrollbar.dart
 - [ ] T091B [US3] Implement zoom limit feedback: cursor changes to 'not-allowed' when dragging beyond zoom limits (FR-011 enhanced) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize _onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
