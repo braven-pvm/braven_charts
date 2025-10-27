@@ -227,7 +227,7 @@
 
 - [X] T084 [US3] Implement _onHover() to detect edge zones and update cursor in lib/src/widgets/chart_scrollbar.dart
 - [X] T085 [US3] Store hover zone in ScrollbarState.hoverZone via ValueNotifier in lib/src/widgets/chart_scrollbar.dart
-- [ ] T086 [US3] Modify _onPanStart() to detect leftEdge/rightEdge zones in lib/src/widgets/chart_scrollbar.dart
+- [X] T086 [US3] Modify _onPanStart() to detect leftEdge/rightEdge zones in lib/src/widgets/chart_scrollbar.dart
 - [ ] T087 [US3] Implement _onPanUpdate() for left edge drag (resize viewport min) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T088 [US3] Implement _onPanUpdate() for right edge drag (resize viewport max) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart

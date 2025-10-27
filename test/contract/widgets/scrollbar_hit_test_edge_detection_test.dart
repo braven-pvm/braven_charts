@@ -18,10 +18,10 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT: Hit at position 105 (within first 8px of handle)
       const hitPosition = 105.0;
-      
+
       // ASSERT: Should detect leftEdge zone
       final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.leftEdge));
@@ -32,10 +32,10 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT: Hit at position 195 (within last 8px of handle)
       const hitPosition = 195.0;
-      
+
       // ASSERT: Should detect rightEdge zone
       final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.rightEdge));
@@ -46,10 +46,10 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT: Hit at position 150 (middle of handle, between edges)
       const hitPosition = 150.0;
-      
+
       // ASSERT: Should detect center zone
       final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.center));
@@ -60,10 +60,10 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT: Hit at position 108 (exactly at left edge boundary)
       const hitPosition = 108.0;
-      
+
       // ASSERT: Should detect leftEdge (inclusive boundary)
       final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.leftEdge));
@@ -74,10 +74,10 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT: Hit at position 192 (exactly at right edge boundary)
       const hitPosition = 192.0;
-      
+
       // ASSERT: Should detect rightEdge (inclusive boundary)
       final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.rightEdge));
@@ -89,18 +89,15 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 120.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT & ASSERT: Left edge zone (100-108)
-      expect(_detectHitZone(105.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.leftEdge));
-      
+      expect(_detectHitZone(105.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.leftEdge));
+
       // ACT & ASSERT: Small center zone (108-112)
-      expect(_detectHitZone(110.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.center));
-      
+      expect(_detectHitZone(110.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.center));
+
       // ACT & ASSERT: Right edge zone (112-120)
-      expect(_detectHitZone(115.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.rightEdge));
+      expect(_detectHitZone(115.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.rightEdge));
     });
 
     test('MUST return none when hit is outside handle bounds', () {
@@ -108,14 +105,12 @@ void main() {
       const handleStart = 100.0;
       const handleEnd = 200.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT & ASSERT: Hit before handle start
-      expect(_detectHitZone(50.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.none));
-      
+      expect(_detectHitZone(50.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.none));
+
       // ACT & ASSERT: Hit after handle end
-      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.none));
+      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.none));
     });
 
     test('MUST work for vertical scrollbar (hit on Y-axis)', () {
@@ -123,28 +118,27 @@ void main() {
       const handleStart = 200.0;
       const handleEnd = 300.0;
       const edgeGripWidth = 8.0;
-      
+
       // ACT & ASSERT: Top edge (leftEdge in horizontal becomes topEdge in vertical)
-      expect(_detectHitZone(205.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.leftEdge)); // "leftEdge" represents "topEdge" for vertical
-      
+      expect(
+          _detectHitZone(205.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.leftEdge)); // "leftEdge" represents "topEdge" for vertical
+
       // ACT & ASSERT: Bottom edge
-      expect(_detectHitZone(295.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.rightEdge)); // "rightEdge" represents "bottomEdge" for vertical
-      
+      expect(_detectHitZone(295.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.rightEdge)); // "rightEdge" represents "bottomEdge" for vertical
+
       // ACT & ASSERT: Center
-      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), 
-             equals(HitTestZone.center));
+      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.center));
     });
   });
 }
 
 /// Enum representing hit test zones within scrollbar handle.
 enum HitTestZone {
-  none,       // Outside handle
-  leftEdge,   // First edgeGripWidth pixels (or top edge for vertical)
-  center,     // Between edge zones
-  rightEdge,  // Last edgeGripWidth pixels (or bottom edge for vertical)
+  none, // Outside handle
+  leftEdge, // First edgeGripWidth pixels (or top edge for vertical)
+  center, // Between edge zones
+  rightEdge, // Last edgeGripWidth pixels (or bottom edge for vertical)
 }
 
 /// Detect which zone of the scrollbar handle was hit.
