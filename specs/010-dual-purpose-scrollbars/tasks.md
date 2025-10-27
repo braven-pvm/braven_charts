@@ -235,7 +235,7 @@
 - [X] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
 - [ ] T091A [US3] Implement zoom limit feedback: flash animation (opacity 0.8 → 0.4 → 0.8 over 200ms per FR-011 enhanced) when zoom limit reached in lib/src/widgets/chart_scrollbar.dart
 - [ ] T091B [US3] Implement zoom limit feedback: cursor changes to 'not-allowed' when dragging beyond zoom limits (FR-011 enhanced) in lib/src/widgets/chart_scrollbar.dart
-- [ ] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize _onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
+- [X] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize _onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
 - [X] T093 [US3] Update cursor via MouseRegion based on hoverZone in lib/src/widgets/chart_scrollbar.dart
 - [X] T094 [US3] Implement SystemMouseCursors.resizeColumn for horizontal scrollbar edges in lib/src/widgets/chart_scrollbar.dart
 - [X] T095 [US3] Implement SystemMouseCursors.resizeRow for vertical scrollbar edges in lib/src/widgets/chart_scrollbar.dart
