@@ -261,6 +261,15 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
             widget.theme.minHandleSize,
           );
 
+          // Update state with calculated handle geometry (needed for hit testing in T086)
+          // Update synchronously so gesture handlers have correct values immediately
+          if (_stateNotifier.value.handleSize != handleSize || _stateNotifier.value.handlePosition != handlePosition) {
+            _stateNotifier.value = _stateNotifier.value.copyWith(
+              handleSize: handleSize,
+              handlePosition: handlePosition,
+            );
+          }
+
           // Use ValueListenableBuilder for reactive state updates (Constitutional requirement)
           return ValueListenableBuilder<ScrollbarState>(
             valueListenable: _stateNotifier,
@@ -518,7 +527,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     // Detect drag zone (T086 - edge detection for zoom functionality)
     // Get current layout dimensions
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
+    if (renderBox != null && widget.theme.enableResizeHandles) {
+      // Edge resize enabled - detect which zone was clicked
       final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
       final currentState = _stateNotifier.value;
       
@@ -532,7 +542,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         edgeDetectionThreshold: widget.theme.edgeGripWidth,
       );
     } else {
-      // Fallback: assume center pan if can't get layout
+      // Fallback: edge resize disabled or can't get layout - use center pan only
       _dragZone = HitTestZone.center;
     }
 
@@ -547,9 +557,15 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     }
   }
 
-  /// Handles pan gesture update (T065-T066).
+  /// Handles pan gesture update (T065-T066, T087-T089).
   ///
   /// Calculates viewport delta from drag distance and triggers viewport update.
+  /// Supports both center pan (T065-T066) and edge resize (T087-T089).
+  ///
+  /// **Drag Modes**:
+  /// - **Center Pan** (T065-T066): Drag center → shift entire viewport (both min and max)
+  /// - **Left Edge Resize** (T087): Drag left edge → adjust viewportMin (right edge anchored)
+  /// - **Right Edge Resize** (T088): Drag right edge → adjust viewportMax (left edge anchored)
   ///
   /// **TODO (T067)**: Implement 60 FPS throttling (max 1 update per 16ms).
   void _onPanUpdate(DragUpdateDetails details) {
@@ -585,33 +601,135 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
       widget.theme.minHandleSize,
     );
 
-    // Calculate new handle position after drag (T066)
-    final newHandlePosition = currentHandlePosition + pixelDelta;
+    // Determine behavior based on drag zone (T086-T089)
+    // If _dragZone is null (edge case - drag without pan start), default to center pan
+    late final braven.DataRange newViewport;
 
-    // Convert handle position to data range offset (T068)
-    final newScrollOffset = ScrollbarController.handleToDataRange(
-      newHandlePosition,
-      widget.dataRange.span,
-      widget.viewportRange.span,
-      trackLength,
-      currentHandleSize,
-    );
+    switch (_dragZone ?? HitTestZone.center) {
+      case HitTestZone.leftEdge:
+      case HitTestZone.topEdge:
+        // Left/Top Edge Resize (T087): Adjust viewportMin, keep viewportMax anchored
+        // Convert pixel delta to data delta manually
+        final dataDelta = (pixelDelta / trackLength) * widget.dataRange.span;
 
-    // Calculate new viewport range (maintaining viewport size, shifting position)
-    final viewportSize = widget.viewportRange.span;
-    final newViewportMin = widget.dataRange.min + newScrollOffset;
+        var newViewportMin = widget.viewportRange.min + dataDelta;
 
-    // Apply boundary clamping (T072)
-    final clampedMin = newViewportMin.clamp(widget.dataRange.min, widget.dataRange.max - viewportSize);
-    final clampedMax = clampedMin + viewportSize;
+        // Clamp to data range boundaries and not exceed viewportMax
+        newViewportMin = newViewportMin.clamp(
+          widget.dataRange.min,
+          widget.viewportRange.max,
+        );
 
-    final newViewport = braven.DataRange(min: clampedMin, max: clampedMax);
+        // Calculate resulting span after resize
+        var newSpan = widget.viewportRange.max - newViewportMin;
+
+        // Enforce zoom limits (T090-T091)
+        final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
+        final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
+
+        // If zoomed in too far (span too small), clamp viewportMin
+        if (newSpan < minSpan) {
+          newViewportMin = widget.viewportRange.max - minSpan;
+        }
+
+        // If zoomed out too far (span too large), clamp viewportMin
+        if (newSpan > maxSpan) {
+          newViewportMin = widget.viewportRange.max - maxSpan;
+        }
+
+        // Final clamp to data boundaries
+        newViewportMin = newViewportMin.clamp(
+          widget.dataRange.min,
+          widget.dataRange.max,
+        );
+
+        newViewport = braven.DataRange(
+          min: newViewportMin,
+          max: widget.viewportRange.max, // Right edge anchored
+        );
+        break;
+
+      case HitTestZone.rightEdge:
+      case HitTestZone.bottomEdge:
+        // Right/Bottom Edge Resize (T088): Adjust viewportMax, keep viewportMin anchored
+        // Convert pixel delta to data delta manually
+        final dataDelta = (pixelDelta / trackLength) * widget.dataRange.span;
+
+        var newViewportMax = widget.viewportRange.max + dataDelta;
+
+        // Clamp to data range boundaries and not below viewportMin
+        newViewportMax = newViewportMax.clamp(
+          widget.viewportRange.min,
+          widget.dataRange.max,
+        );
+
+        // Calculate resulting span after resize
+        var newSpan = newViewportMax - widget.viewportRange.min;
+
+        // Enforce zoom limits (T090-T091)
+        final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
+        final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
+
+        // If zoomed in too far (span too small), clamp viewportMax
+        if (newSpan < minSpan) {
+          newViewportMax = widget.viewportRange.min + minSpan;
+        }
+
+        // If zoomed out too far (span too large), clamp viewportMax
+        if (newSpan > maxSpan) {
+          newViewportMax = widget.viewportRange.min + maxSpan;
+        }
+
+        // Final clamp to data boundaries
+        newViewportMax = newViewportMax.clamp(
+          widget.dataRange.min,
+          widget.dataRange.max,
+        );
+
+        newViewport = braven.DataRange(
+          min: widget.viewportRange.min, // Left edge anchored
+          max: newViewportMax,
+        );
+        break;
+
+      case HitTestZone.center:
+        // Center Pan (T065-T066): Calculate new handle position after drag
+        final newHandlePosition = currentHandlePosition + pixelDelta;
+
+        // Convert handle position to data range offset (T068)
+        final newScrollOffset = ScrollbarController.handleToDataRange(
+          newHandlePosition,
+          widget.dataRange.span,
+          widget.viewportRange.span,
+          trackLength,
+          currentHandleSize,
+        );
+
+        // Calculate new viewport range (maintaining viewport size, shifting position)
+        final viewportSize = widget.viewportRange.span;
+        final newViewportMin = widget.dataRange.min + newScrollOffset;
+
+        // Apply boundary clamping (T072)
+        final clampedMin = newViewportMin.clamp(
+          widget.dataRange.min,
+          widget.dataRange.max - viewportSize,
+        );
+        final clampedMax = clampedMin + viewportSize;
+
+        newViewport = braven.DataRange(min: clampedMin, max: clampedMax);
+        break;
+
+      case HitTestZone.track:
+        // Track click should trigger jump animation, not drag
+        // If we're here, user started drag on track (outside handle) - ignore
+        return;
+    }
 
     // Update handle position in state via ValueNotifier (T066)
     final newHandlePositionClamped = ScrollbarController.calculateHandlePosition(
-      clampedMin - widget.dataRange.min,
+      newViewport.min - widget.dataRange.min,
       widget.dataRange.span,
-      widget.viewportRange.span,
+      newViewport.span,
       trackLength,
       widget.theme.minHandleSize,
     );
