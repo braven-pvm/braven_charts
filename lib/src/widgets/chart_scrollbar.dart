@@ -52,6 +52,7 @@ class ChartScrollbar extends StatefulWidget {
   /// - [viewportRange]: Currently visible range (subset of dataRange)
   /// - [onViewportChanged]: Callback fired when user changes viewport via scrollbar
   /// - [onPanChanged]: Optional callback fired when pan gesture completes (T071)
+  /// - [onZoomChanged]: Optional callback fired when zoom gesture completes (T092)
   /// - [theme]: Visual configuration (colors, sizes, interaction settings)
   const ChartScrollbar({
     super.key,
@@ -60,6 +61,7 @@ class ChartScrollbar extends StatefulWidget {
     required this.viewportRange,
     required this.onViewportChanged,
     this.onPanChanged,
+    this.onZoomChanged,
     required this.theme,
   });
 
@@ -109,6 +111,20 @@ class ChartScrollbar extends StatefulWidget {
   ///
   /// **Integration**: This is typically wired from InteractionConfig.onPanChanged
   final void Function(Offset)? onPanChanged;
+
+  /// Optional callback fired when zoom gesture completes via edge resize (T092).
+  ///
+  /// **Fired on**:
+  /// - Edge resize drag completes (_onPanEnd called after leftEdge/rightEdge/topEdge/bottomEdge drag)
+  ///
+  /// **Parameters**:
+  /// - zoomRatio: New zoom ratio (viewportSpan / dataSpan) after zoom operation
+  ///
+  /// **Example**: If viewport was 0-50 (50% visible) and zoomed to 0-25 (25% visible),
+  /// zoomRatio = 0.25
+  ///
+  /// **Integration**: This is typically wired from InteractionConfig.onZoomChanged
+  final void Function(double)? onZoomChanged;
 
   /// Visual configuration (colors, sizes, interaction settings).
   ///
@@ -531,7 +547,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
       // Edge resize enabled - detect which zone was clicked
       final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
       final currentState = _stateNotifier.value;
-      
+
       // Use ScrollbarController to detect which zone was clicked
       _dragZone = ScrollbarController.getHitTestZone(
         details.localPosition,
@@ -621,7 +637,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         );
 
         // Calculate resulting span after resize
-        var newSpan = widget.viewportRange.max - newViewportMin;
+        final newSpan = widget.viewportRange.max - newViewportMin;
 
         // Enforce zoom limits (T090-T091)
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
@@ -664,7 +680,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         );
 
         // Calculate resulting span after resize
-        var newSpan = newViewportMax - widget.viewportRange.min;
+        final newSpan = newViewportMax - widget.viewportRange.min;
 
         // Enforce zoom limits (T090-T091)
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
@@ -768,7 +784,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   /// Handles pan gesture end (T070-T071).
   ///
   /// Finalizes drag operation and ensures final viewport sync.
-  /// Fires onPanChanged callback with total pan delta.
+  /// Fires onPanChanged callback with total pan delta (T071).
+  /// Fires onZoomChanged callback with zoom ratio for edge resize (T092).
   void _onPanEnd(DragEndDetails details) {
     // Flush any pending throttled viewport update (T070)
     if (_pendingViewportUpdate != null) {
@@ -782,7 +799,11 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     _throttleTimer = null;
 
     // Fire onPanChanged callback with total pan delta (T071)
-    if (widget.onPanChanged != null && _dragStartViewportRange != null && _lastSentViewport != null) {
+    // Only fire if center pan (not edge resize)
+    if (widget.onPanChanged != null && 
+        _dragStartViewportRange != null && 
+        _lastSentViewport != null &&
+        _dragZone == HitTestZone.center) {
       // Calculate total pan delta from start to end using last sent viewport
       final initialViewportMin = _dragStartViewportRange!.min;
       final finalViewportMin = _lastSentViewport!.min;
@@ -796,10 +817,27 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
       widget.onPanChanged!(offset);
     }
 
+    // Fire onZoomChanged callback with zoom ratio for edge resize (T092)
+    // Only fire if edge resize (not center pan)
+    if (widget.onZoomChanged != null && 
+        _lastSentViewport != null &&
+        (_dragZone == HitTestZone.leftEdge || 
+         _dragZone == HitTestZone.rightEdge ||
+         _dragZone == HitTestZone.topEdge ||
+         _dragZone == HitTestZone.bottomEdge)) {
+      // Calculate final zoom ratio (viewportSpan / dataSpan)
+      final viewportSpan = _lastSentViewport!.span;
+      final dataSpan = widget.dataRange.span;
+      final zoomRatio = viewportSpan / dataSpan;
+
+      widget.onZoomChanged!(zoomRatio);
+    }
+
     // Clear drag state
     _dragStartPosition = null;
     _dragStartViewportRange = null;
     _lastSentViewport = null;
+    _dragZone = null; // Clear drag zone (T092)
 
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(
