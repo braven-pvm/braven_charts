@@ -145,7 +145,7 @@ class ChartScrollbar extends StatefulWidget {
 /// - Uses ValueNotifier<ScrollbarState> instead of setState() for >10Hz updates
 /// - All state changes go through ValueNotifier for performance optimization
 /// - Throttles viewport updates to 60 FPS to prevent chart jank
-class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProviderStateMixin {
+class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStateMixin {
   /// Reactive state management (Constitutional requirement: ValueNotifier for >10Hz events).
   late ValueNotifier<ScrollbarState> _stateNotifier;
 
@@ -185,6 +185,16 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   /// Initial viewport for jump animation (T073).
   braven.DataRange? _jumpStartViewport;
 
+  /// Animation controller for zoom limit flash (T091A - 200ms).
+  late AnimationController _flashAnimationController;
+
+  /// Animation for zoom limit flash opacity (T091A - 0.8 → 0.4 → 0.8).
+  late Animation<double> _flashOpacityAnimation;
+
+  /// Flag to track if zoom limit was hit during current drag (T091B).
+  /// Used to show 'not-allowed' cursor when dragging beyond zoom limits.
+  bool _isAtZoomLimit = false;
+
   /// Drag zone captured at drag start (T086 - for edge resize vs center pan).
   /// Set in _onPanStart, used in _onPanUpdate to determine resize vs pan behavior.
   /// - leftEdge/topEdge: Resize viewport min (anchor viewport max)
@@ -205,6 +215,24 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
       duration: const Duration(milliseconds: 300),
       vsync: this, // Requires TickerProviderStateMixin
     );
+
+    // Initialize flash animation controller for zoom limit feedback (T091A)
+    _flashAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    // Create flash opacity animation: 0.8 → 0.4 → 0.8 (T091A)
+    _flashOpacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.8, end: 0.4).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50.0,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.4, end: 0.8).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50.0,
+      ),
+    ]).animate(_flashAnimationController);
 
     // Start auto-hide timer if enabled
     if (widget.theme.autoHide) {
@@ -245,6 +273,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     _cancelAutoHide();
     _throttleTimer?.cancel();
     _jumpAnimationController?.dispose();
+    _flashAnimationController.dispose(); // T091A
     super.dispose();
   }
 
@@ -290,37 +319,52 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
           return ValueListenableBuilder<ScrollbarState>(
             valueListenable: _stateNotifier,
             builder: (context, state, child) {
-              // Create ScrollbarPainter with current state and configuration
-              final painter = ScrollbarPainter(
-                config: widget.theme,
-                state: state.copyWith(
-                  handleSize: handleSize,
-                  handlePosition: handlePosition,
-                ),
-                isHorizontal: widget.axis == Axis.horizontal,
-                trackLength: trackLength,
-                isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
-                opacity: 1.0, // TODO: Phase 4 (User Story 3) will add auto-hide animation
-              );
+              // Use AnimatedBuilder to listen to flash animation (T091A)
+              return AnimatedBuilder(
+                animation: _flashAnimationController,
+                builder: (context, child) {
+                  // Calculate final opacity: base opacity * flash opacity
+                  // When not flashing, flash opacity is at rest (0.8), so final = 1.0 * 0.8 = 0.8
+                  // During flash: 0.8 → 0.4 → 0.8 creates visible flash effect
+                  final baseOpacity = state.isVisible ? 1.0 : 0.0;
+                  final flashOpacity = _flashAnimationController.isAnimating 
+                      ? _flashOpacityAnimation.value 
+                      : 1.0; // No flash effect when not animating
+                  final finalOpacity = baseOpacity * flashOpacity;
 
-              // Render scrollbar using CustomPaint wrapped in MouseRegion for hover detection (T084)
-              return SizedBox(
-                width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
-                height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
-                child: MouseRegion(
-                  cursor: _getCursorForZone(state.hoverZone), // T093: Dynamic cursor based on hover zone
-                  onHover: _onHover, // T084: Detect edge zones and update hoverZone
-                  onExit: (_) => _onExit(), // T084: Clear hoverZone on exit
-                  child: GestureDetector(
-                    onTapUp: _onTrackClick, // T073: Track click to jump
-                    onPanStart: _onPanStart,
-                    onPanUpdate: _onPanUpdate,
-                    onPanEnd: _onPanEnd,
-                    child: CustomPaint(
-                      painter: painter,
+                  // Create ScrollbarPainter with current state and configuration
+                  final painter = ScrollbarPainter(
+                    config: widget.theme,
+                    state: state.copyWith(
+                      handleSize: handleSize,
+                      handlePosition: handlePosition,
                     ),
-                  ),
-                ),
+                    isHorizontal: widget.axis == Axis.horizontal,
+                    trackLength: trackLength,
+                    isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
+                    opacity: finalOpacity, // Apply flash animation opacity (T091A)
+                  );
+
+                  // Render scrollbar using CustomPaint wrapped in MouseRegion for hover detection (T084)
+                  return SizedBox(
+                    width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
+                    height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
+                    child: MouseRegion(
+                      cursor: _getCursorForZone(state.hoverZone), // T093: Dynamic cursor based on hover zone
+                      onHover: _onHover, // T084: Detect edge zones and update hoverZone
+                      onExit: (_) => _onExit(), // T084: Clear hoverZone on exit
+                      child: GestureDetector(
+                        onTapUp: _onTrackClick, // T073: Track click to jump
+                        onPanStart: _onPanStart,
+                        onPanUpdate: _onPanUpdate,
+                        onPanEnd: _onPanEnd,
+                        child: CustomPaint(
+                          painter: painter,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -407,8 +451,25 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
   ///
   /// Constitutional Requirements:
   /// - Accessibility: Cursor provides visual feedback for interaction affordances
+  /// Determines cursor type based on hover zone and zoom limit state (T093-T095, T091B).
+  ///
+  /// Returns:
+  /// - SystemMouseCursors.forbidden: When at zoom limit during edge resize (T091B)
+  /// - SystemMouseCursors.resizeColumn/resizeRow: For edge zones (T094-T095)
+  /// - SystemMouseCursors.grab: For center zone (pan)
+  /// - SystemMouseCursors.click: For track zone (jump)
+  /// - SystemMouseCursors.basic: Default cursor
   MouseCursor _getCursorForZone(HitTestZone? zone) {
     if (zone == null) return SystemMouseCursors.basic;
+
+    // T091B: Show 'not-allowed' cursor when at zoom limit during edge resize
+    if (_isAtZoomLimit && 
+        (zone == HitTestZone.leftEdge || 
+         zone == HitTestZone.rightEdge || 
+         zone == HitTestZone.topEdge || 
+         zone == HitTestZone.bottomEdge)) {
+      return SystemMouseCursors.forbidden;
+    }
 
     switch (zone) {
       case HitTestZone.track:
@@ -643,6 +704,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
         final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
 
+        // Track unclamped value to detect limit hit (T091A-T091B)
+        final unclampedViewportMin = newViewportMin;
+
         // If zoomed in too far (span too small), clamp viewportMin
         if (newSpan < minSpan) {
           newViewportMin = widget.viewportRange.max - minSpan;
@@ -658,6 +722,18 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
           widget.dataRange.min,
           widget.dataRange.max,
         );
+
+        // Detect zoom limit hit and trigger feedback (T091A-T091B)
+        if (unclampedViewportMin != newViewportMin) {
+          // Zoom limit was hit - trigger flash animation and set cursor flag
+          if (!_isAtZoomLimit) {
+            _isAtZoomLimit = true;
+            _flashAnimationController.forward(from: 0.0); // Start flash animation (T091A)
+          }
+        } else {
+          // Not at limit - clear flag
+          _isAtZoomLimit = false;
+        }
 
         newViewport = braven.DataRange(
           min: newViewportMin,
@@ -686,6 +762,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
         final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
 
+        // Track unclamped value to detect limit hit (T091A-T091B)
+        final unclampedViewportMax = newViewportMax;
+
         // If zoomed in too far (span too small), clamp viewportMax
         if (newSpan < minSpan) {
           newViewportMax = widget.viewportRange.min + minSpan;
@@ -701,6 +780,18 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
           widget.dataRange.min,
           widget.dataRange.max,
         );
+
+        // Detect zoom limit hit and trigger feedback (T091A-T091B)
+        if (unclampedViewportMax != newViewportMax) {
+          // Zoom limit was hit - trigger flash animation and set cursor flag
+          if (!_isAtZoomLimit) {
+            _isAtZoomLimit = true;
+            _flashAnimationController.forward(from: 0.0); // Start flash animation (T091A)
+          }
+        } else {
+          // Not at limit - clear flag
+          _isAtZoomLimit = false;
+        }
 
         newViewport = braven.DataRange(
           min: widget.viewportRange.min, // Left edge anchored
@@ -800,10 +891,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
 
     // Fire onPanChanged callback with total pan delta (T071)
     // Only fire if center pan (not edge resize)
-    if (widget.onPanChanged != null && 
-        _dragStartViewportRange != null && 
-        _lastSentViewport != null &&
-        _dragZone == HitTestZone.center) {
+    if (widget.onPanChanged != null && _dragStartViewportRange != null && _lastSentViewport != null && _dragZone == HitTestZone.center) {
       // Calculate total pan delta from start to end using last sent viewport
       final initialViewportMin = _dragStartViewportRange!.min;
       final finalViewportMin = _lastSentViewport!.min;
@@ -819,12 +907,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
 
     // Fire onZoomChanged callback with zoom ratio for edge resize (T092)
     // Only fire if edge resize (not center pan)
-    if (widget.onZoomChanged != null && 
+    if (widget.onZoomChanged != null &&
         _lastSentViewport != null &&
-        (_dragZone == HitTestZone.leftEdge || 
-         _dragZone == HitTestZone.rightEdge ||
-         _dragZone == HitTestZone.topEdge ||
-         _dragZone == HitTestZone.bottomEdge)) {
+        (_dragZone == HitTestZone.leftEdge ||
+            _dragZone == HitTestZone.rightEdge ||
+            _dragZone == HitTestZone.topEdge ||
+            _dragZone == HitTestZone.bottomEdge)) {
       // Calculate final zoom ratio (viewportSpan / dataSpan)
       final viewportSpan = _lastSentViewport!.span;
       final dataSpan = widget.dataRange.span;
@@ -838,6 +926,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with SingleTickerProvid
     _dragStartViewportRange = null;
     _lastSentViewport = null;
     _dragZone = null; // Clear drag zone (T092)
+    _isAtZoomLimit = false; // Clear zoom limit flag (T091B)
 
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(
