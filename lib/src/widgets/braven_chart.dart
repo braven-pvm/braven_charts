@@ -801,6 +801,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// This is the RED area (entire widget) and is used for Positioned widget coordinates.
   Size? _cachedStackSize;
 
+  /// X-scrollbar height when visible (positioned OUTSIDE the Stack where overlays are).
+  /// Used to correct Y-coordinate transformations by subtracting from _cachedStackSize.
+  double _scrollbarHeightOffset = 0.0;
+
   /// Timer for hiding tooltip after a delay.
   ///
   /// The tooltip persists even after the mouse leaves the marker.
@@ -1838,7 +1842,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               onChartRectCalculated: (Rect chartRect, Size size) {
                 // Calculate title offset: difference between Stack size and CustomPaint size
                 // CustomPaint is positioned BELOW the title in Stack coordinate space
-                final titleHeight = _cachedStackSize != null ? (_cachedStackSize!.height - size.height) : 0.0;
+                // CRITICAL: When scrollbars are present, LayoutBuilder measures FULL size including scrollbars,
+                // but scrollbars are OUTSIDE the Stack where overlays are positioned.
+                // We must subtract scrollbar dimensions from _cachedStackSize before calculating offset.
+                final effectiveStackHeight = _cachedStackSize != null ? (_cachedStackSize!.height - _scrollbarHeightOffset) : 0.0;
+
+                final titleHeight = effectiveStackHeight > 0 ? (effectiveStackHeight - size.height) : 0.0;
                 final newTitleOffset = Offset(0, titleHeight);
 
                 // Update cached values if changed
@@ -1911,6 +1920,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Add scrollbars if enabled (T050-T055: User Story 1 - Dual-purpose scrollbars)
     // Scrollbars positioned OUTSIDE chart canvas for clear separation of concerns
+    // CRITICAL: Track scrollbar dimensions for coordinate transformation offset correction
     if (widget.interactionConfig != null) {
       final showX = widget.interactionConfig!.showXScrollbar;
       final showY = widget.interactionConfig!.showYScrollbar;
@@ -1919,27 +1929,29 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Calculate data range from preliminary bounds
         final dataBounds = preliminaryBounds;
 
-        // Get current viewport from zoom/pan state
-        final zoomPanState = _interactionStateNotifier.value.zoomPanState;
+        // CRITICAL FIX: Calculate visible bounds WITHOUT padding for scrollbar viewport
+        // _calculateDataBounds adds 10% Y-axis padding which inflates viewport range
+        // For scrollbars, we need the actual visible data bounds without padding
+        final actualDataBounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect, includePadding: false);
 
         // Convert zoom/pan state to viewport ranges
-        // Note: Default viewport is full data range when no zoom/pan applied
+        // Note: Use calculated data bounds (with zoom/pan applied, without padding) for viewport
         final xDataRange = DataRange(min: dataBounds.minX, max: dataBounds.maxX);
         final yDataRange = DataRange(min: dataBounds.minY, max: dataBounds.maxY);
 
-        // Extract viewport from visibleDataBounds Rect
-        final visibleBounds = zoomPanState.visibleDataBounds;
+        // Extract viewport from actualDataBounds (which has zoom/pan already applied, without padding)
         final xViewportRange = DataRange(
-          min: visibleBounds.left,
-          max: visibleBounds.right,
+          min: actualDataBounds.minX,
+          max: actualDataBounds.maxX,
         );
         final yViewportRange = DataRange(
-          min: visibleBounds.top,
-          max: visibleBounds.bottom,
-        );
-
-        // Get scrollbar theme
+          min: actualDataBounds.minY,
+          max: actualDataBounds.maxY,
+        ); // Get scrollbar theme
         final scrollbarTheme = effectiveTheme.scrollbarTheme;
+
+        // Track X-scrollbar height for coordinate offset correction
+        _scrollbarHeightOffset = showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0;
 
         // Build scrollbar layout
         Widget chartWithScrollbars = chartWidget;
@@ -1989,7 +2001,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         }
 
         chartWidget = chartWithScrollbars;
+      } else {
+        // No scrollbars: reset offset to zero
+        _scrollbarHeightOffset = 0.0;
       }
+    } else {
+      // Interaction disabled: reset offset to zero
+      _scrollbarHeightOffset = 0.0;
     }
 
     // Wrap with mode-dependent interaction system (T019, T021: FR-005, Constitution II)
@@ -2058,6 +2076,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             child,
 
             // Crosshair overlay (ValueListenableBuilder for independent rebuilds)
+            // Split into TWO layers: lines (clipped) + labels (unclipped)
             if (config.crosshair.enabled)
               ValueListenableBuilder<InteractionState>(
                 valueListenable: _interactionStateNotifier,
@@ -2072,44 +2091,74 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   // Translate chartRect from CustomPaint space to Stack space
                   final stackChartRect = chartRect.translate(_titleOffset.dx, _titleOffset.dy);
 
-                  return Positioned.fill(
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: _CrosshairPainter(
-                          position: interactionState.crosshairPosition!,
-                          config: config.crosshair,
-                          nearestPoint: interactionState.hoveredPoint != null &&
-                                  interactionState.hoveredPoint!.containsKey('x') &&
-                                  interactionState.hoveredPoint!.containsKey('y')
-                              ? () {
-                                  // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
-                                  final dataX = (interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
-                                  final dataY = (interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
+                  // Calculate shared painter data
+                  final nearestPoint = interactionState.hoveredPoint != null &&
+                          interactionState.hoveredPoint!.containsKey('x') &&
+                          interactionState.hoveredPoint!.containsKey('y')
+                      ? () {
+                          // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
+                          final dataX = (interactionState.hoveredPoint!['x'] as num?)?.toDouble() ?? 0;
+                          final dataY = (interactionState.hoveredPoint!['y'] as num?)?.toDouble() ?? 0;
 
-                                  final allSeries = _getAllSeries();
-                                  if (allSeries.isEmpty) return null;
+                          final allSeries = _getAllSeries();
+                          if (allSeries.isEmpty) return null;
 
-                                  final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
-                                  final point = ChartDataPoint(x: dataX, y: dataY);
-                                  final screenPos = _dataToScreenPoint(point, chartRect, bounds);
+                          final bounds = _calculateDataBounds(allSeries, chartRect: chartRect);
+                          final point = ChartDataPoint(x: dataX, y: dataY);
+                          final screenPos = _dataToScreenPoint(point, chartRect, bounds);
 
-                                  // Validate coordinates are finite and within reasonable bounds
-                                  if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
-                                    return screenPos;
-                                  }
-                                  return null;
-                                }()
-                              : null,
-                          chartSize: Size.infinite,
-                          dataBounds: () {
-                            final allSeries = _getAllSeries();
-                            if (allSeries.isEmpty) return null;
-                            return _calculateDataBounds(allSeries, chartRect: chartRect);
-                          }(),
-                          chartRect: stackChartRect,
+                          // Validate coordinates are finite and within reasonable bounds
+                          if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
+                            return screenPos;
+                          }
+                          return null;
+                        }()
+                      : null;
+
+                  final dataBounds = () {
+                    final allSeries = _getAllSeries();
+                    if (allSeries.isEmpty) return null;
+                    return _calculateDataBounds(allSeries, chartRect: chartRect);
+                  }();
+
+                  // LAYER 1: Crosshair LINES (clipped to chart area to prevent drawing over scrollbars)
+                  // LAYER 2: Coordinate LABELS (unclipped so they remain visible at edges)
+                  // CRITICAL: Labels layer wrapped in IgnorePointer to allow scrollbar interaction
+                  return Stack(
+                    children: [
+                      // Layer 1: Clipped crosshair lines
+                      Positioned.fill(
+                        child: ClipRect(
+                          clipper: ChartAreaClipper(stackChartRect),
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: _CrosshairLinesPainter(
+                                position: interactionState.crosshairPosition!,
+                                config: config.crosshair,
+                                nearestPoint: nearestPoint,
+                                chartSize: Size.infinite,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      // Layer 2: Unclipped coordinate labels (pointer-transparent)
+                      // CRITICAL: Positioned must be direct child of Stack, IgnorePointer goes inside
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: _CrosshairLabelsPainter(
+                                position: interactionState.crosshairPosition!,
+                                config: config.crosshair,
+                                dataBounds: dataBounds,
+                                chartRect: stackChartRect,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -2668,6 +2717,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final pixelY = chartRect.bottom - (yPercent * chartRect.height);
 
     // Add title offset to translate from CustomPaint space to Stack space
+    // Note: title offset already accounts for scrollbar space since it's calculated
+    // as the difference between _cachedStackSize and actual render size
     return Offset(pixelX + _titleOffset.dx, pixelY + _titleOffset.dy);
   }
 
@@ -2869,7 +2920,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
 
-  _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect}) {
+  _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect, bool includePadding = true}) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
@@ -2916,22 +2967,36 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       final rangeY = dataRangeY / zoomY;
 
       // Convert pan offset from pixel units to data units
-      final rect = chartRect ?? _calculateChartRect(context.size!);
-      final panDataX = -panX * (dataRangeX / rect.width);
-      final panDataY = panY * (dataRangeY / rect.height); // Invert Y for screen coordinates
+      // CRITICAL FIX: Use _cachedChartRect instead of accessing context.size during callbacks
+      // context.size throws "Cannot get size from a render object that has been marked dirty"
+      // when called during scrollbar animation callbacks (layout phase)
+      final rect = chartRect ?? _cachedChartRect;
+      if (rect == null) {
+        // No chart rect available yet - skip zoom/pan transformation
+        // This can happen on first build before layout completes
+        minX = dataMinX;
+        maxX = dataMaxX;
+        minY = dataMinY;
+        maxY = dataMaxY;
+      } else {
+        final panDataX = -panX * (dataRangeX / rect.width);
+        final panDataY = panY * (dataRangeY / rect.height); // Invert Y for screen coordinates
 
-      // Calculate visible bounds after zoom/pan (BEFORE padding)
-      minX = centerX - rangeX / 2 + panDataX;
-      maxX = centerX + rangeX / 2 + panDataX;
-      minY = centerY - rangeY / 2 + panDataY;
-      maxY = centerY + rangeY / 2 + panDataY;
+        // Calculate visible bounds after zoom/pan (BEFORE padding)
+        minX = centerX - rangeX / 2 + panDataX;
+        maxX = centerX + rangeX / 2 + panDataX;
+        minY = centerY - rangeY / 2 + panDataY;
+        maxY = centerY + rangeY / 2 + panDataY;
+      }
     }
 
-    // CRITICAL: Add padding AFTER zoom/pan transformation
+    // CRITICAL: Add padding AFTER zoom/pan transformation (optional for scrollbar calculations)
     // This ensures padding is applied to the visible viewport, not the original data
-    final yRange = maxY - minY;
-    minY -= yRange * 0.1;
-    maxY += yRange * 0.1;
+    if (includePadding) {
+      final yRange = maxY - minY;
+      minY -= yRange * 0.1;
+      maxY += yRange * 0.1;
+    }
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
@@ -3306,38 +3371,58 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Get current zoom/pan state
     final currentState = _interactionStateNotifier.value.zoomPanState;
     final allSeries = _getAllSeries();
-    if (allSeries.isEmpty) return;
+    if (allSeries.isEmpty || _cachedChartRect == null) return;
 
-    // Calculate new visible bounds by updating the appropriate axis
-    final Rect newVisibleBounds;
+    // Calculate ORIGINAL data bounds (full data range, no zoom/pan)
+    final dataBounds = _calculateRawDataBounds(allSeries);
+    final dataMinX = dataBounds.minX;
+    final dataMaxX = dataBounds.maxX;
+    final dataMinY = dataBounds.minY;
+    final dataMaxY = dataBounds.maxY;
+
+    final dataRangeX = dataMaxX - dataMinX;
+    final dataRangeY = dataMaxY - dataMinY;
+    final dataCenterX = (dataMinX + dataMaxX) / 2;
+    final dataCenterY = (dataMinY + dataMaxY) / 2;
+
+    // Calculate new zoom/pan parameters from scrollbar viewport
     if (isXAxis) {
-      // Update X axis, keep Y axis unchanged
-      newVisibleBounds = Rect.fromLTRB(
-        newViewport.min,
-        currentState.visibleDataBounds.top,
-        newViewport.max,
-        currentState.visibleDataBounds.bottom,
+      // Calculate X-axis zoom and pan from viewport
+      final visibleRangeX = newViewport.max - newViewport.min;
+      final newZoomX = dataRangeX / visibleRangeX;
+
+      final visibleCenterX = (newViewport.min + newViewport.max) / 2;
+      final panDataX = visibleCenterX - dataCenterX;
+      final newPanX = panDataX * (_cachedChartRect!.width / dataRangeX);
+
+      // Update X zoom/pan, keep Y unchanged
+      final newZoomPanState = currentState.copyWith(
+        zoomLevelX: newZoomX,
+        panOffset: Offset(newPanX, currentState.panOffset.dy),
+      );
+
+      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+        zoomPanState: newZoomPanState,
       );
     } else {
-      // Update Y axis, keep X axis unchanged
-      newVisibleBounds = Rect.fromLTRB(
-        currentState.visibleDataBounds.left,
-        newViewport.min,
-        currentState.visibleDataBounds.right,
-        newViewport.max,
+      // Calculate Y-axis zoom and pan from viewport
+      final visibleRangeY = newViewport.max - newViewport.min;
+      final newZoomY = dataRangeY / visibleRangeY;
+
+      final visibleCenterY = (newViewport.min + newViewport.max) / 2;
+      final panDataY = visibleCenterY - dataCenterY;
+      final newPanY = panDataY * (_cachedChartRect!.height / dataRangeY);
+
+      // Update Y zoom/pan, keep X unchanged
+      final newZoomPanState = currentState.copyWith(
+        zoomLevelY: newZoomY,
+        panOffset: Offset(currentState.panOffset.dx, newPanY),
+      );
+
+      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+        zoomPanState: newZoomPanState,
       );
     }
-
-    // Create new zoom/pan state with updated visible bounds
-    // Keep original bounds and other properties unchanged
-    final newZoomPanState = currentState.copyWith(
-      visibleDataBounds: newVisibleBounds,
-    );
-
-    // Update state
-    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-      zoomPanState: newZoomPanState,
-    );
 
     // Invoke viewport callback
     _invokeViewportCallback();
@@ -4439,7 +4524,291 @@ class _TrendPainter extends CustomPainter {
   }
 }
 
-/// Custom painter for crosshair rendering.
+/// Custom painter for crosshair LINES only (clipped to chart area).
+///
+/// Renders crosshair lines and snap point circle, but NOT coordinate labels.
+/// Designed to be clipped to chart bounds to prevent drawing over scrollbars.
+class _CrosshairLinesPainter extends CustomPainter {
+  _CrosshairLinesPainter({
+    required this.position,
+    required this.config,
+    this.nearestPoint,
+    required this.chartSize,
+  });
+
+  final Offset position;
+  final CrosshairConfig config;
+  final Offset? nearestPoint;
+  final Size chartSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!config.enabled) return;
+
+    final paint = Paint()
+      ..color = config.style.lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = config.style.lineWidth
+      ..strokeCap = config.style.strokeCap;
+
+    // Draw vertical line for vertical and both modes
+    if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+      if (config.style.dashPattern != null && config.style.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(position.dx, 0), Offset(position.dx, size.height), paint, config.style.dashPattern!);
+      } else {
+        canvas.drawLine(Offset(position.dx, 0), Offset(position.dx, size.height), paint);
+      }
+    }
+
+    // Draw horizontal line for horizontal and both modes
+    if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+      if (config.style.dashPattern != null && config.style.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(0, position.dy), Offset(size.width, position.dy), paint, config.style.dashPattern!);
+      } else {
+        canvas.drawLine(Offset(0, position.dy), Offset(size.width, position.dy), paint);
+      }
+    }
+
+    // Draw snap point highlight if snap is enabled and near a point
+    if (config.snapToDataPoint && nearestPoint != null) {
+      // Validate nearestPoint coordinates are finite (not NaN or infinity)
+      if (nearestPoint!.dx.isFinite && nearestPoint!.dy.isFinite) {
+        final highlightPaint = Paint()
+          ..color = config.style.lineColor.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+
+        canvas.drawCircle(nearestPoint!, 6.0, highlightPaint);
+
+        final borderPaint = Paint()
+          ..color = config.style.lineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+
+        canvas.drawCircle(nearestPoint!, 6.0, borderPaint);
+      }
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
+    final path = Path();
+    final dx = end.dx - start.dx;
+    final dy = end.dy - start.dy;
+    final distance = sqrt(dx * dx + dy * dy);
+
+    var currentDistance = 0.0;
+    var patternIndex = 0;
+    var isDash = true;
+
+    while (currentDistance < distance) {
+      final dashLength = dashPattern[patternIndex % dashPattern.length];
+      final nextDistance = (currentDistance + dashLength).clamp(0.0, distance);
+
+      if (isDash) {
+        final startRatio = currentDistance / distance;
+        final endRatio = nextDistance / distance;
+        path.moveTo(start.dx + dx * startRatio, start.dy + dy * startRatio);
+        path.lineTo(start.dx + dx * endRatio, start.dy + dy * endRatio);
+      }
+
+      currentDistance = nextDistance;
+      patternIndex++;
+      isDash = !isDash;
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_CrosshairLinesPainter oldDelegate) {
+    return position != oldDelegate.position || config != oldDelegate.config || nearestPoint != oldDelegate.nearestPoint;
+  }
+}
+
+/// Custom painter for crosshair COORDINATE LABELS only (unclipped).
+///
+/// Renders X and Y coordinate labels at chart edges.
+/// NOT clipped so labels remain visible even when crosshair is near chart bounds.
+class _CrosshairLabelsPainter extends CustomPainter {
+  _CrosshairLabelsPainter({
+    required this.position,
+    required this.config,
+    this.dataBounds,
+    this.chartRect,
+  });
+
+  final Offset position;
+  final CrosshairConfig config;
+  final _DataBounds? dataBounds;
+  final Rect? chartRect;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!config.enabled || !config.showCoordinateLabels) return;
+
+    _drawCoordinateLabels(canvas, size);
+  }
+
+  void _drawCoordinateLabels(Canvas canvas, Size size) {
+    // Wrap in try-catch to prevent ANY label rendering issues from breaking the entire crosshair
+    try {
+      // Validate that position coordinates are finite
+      if (!position.dx.isFinite || !position.dy.isFinite) {
+        return; // Skip label rendering if position is invalid
+      }
+
+      // Convert screen coordinates to data coordinates
+      double? dataX;
+      double? dataY;
+
+      if (dataBounds != null && chartRect != null) {
+        // Screen to data transformation (inverse of _dataToPixel)
+        final xRange = dataBounds!.maxX - dataBounds!.minX;
+        final yRange = dataBounds!.maxY - dataBounds!.minY;
+
+        // Calculate percentage from screen position
+        final xPercent = (position.dx - chartRect!.left) / chartRect!.width;
+        final yPercent = 1.0 - ((position.dy - chartRect!.top) / chartRect!.height);
+
+        // Convert to data coordinates
+        dataX = dataBounds!.minX + (xPercent * xRange);
+        dataY = dataBounds!.minY + (yPercent * yRange);
+      }
+
+      final textStyle = config.coordinateLabelStyle ??
+          TextStyle(color: config.style.labelTextColor, fontSize: 10, backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8));
+
+      // X coordinate label (positioned at bottom edge of chart area, INSIDE chartRect)
+      if (config.mode == CrosshairMode.vertical || config.mode == CrosshairMode.both) {
+        // Use data X value if available, otherwise fall back to screen position
+        final displayValue = dataX != null ? _formatDataValue(dataX) : position.dx.toStringAsFixed(0);
+
+        final xTextPainter = TextPainter(
+          text: TextSpan(text: 'X: $displayValue', style: textStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        // Position label INSIDE chart area (just above bottom edge of chartRect)
+        // Use chartRect bounds if available, otherwise fall back to canvas size
+        final chartBottom = chartRect?.bottom ?? size.height;
+
+        // Calculate label position with bounds checking
+        var xLabelX = position.dx - xTextPainter.width / 2;
+        final xLabelY = chartBottom - xTextPainter.height - 8; // 8px padding from chart bottom
+
+        // Clamp X position to keep label within chart bounds (if chartRect available)
+        if (chartRect != null) {
+          xLabelX = xLabelX.clamp(
+            chartRect!.left + config.style.labelPadding,
+            chartRect!.right - xTextPainter.width - config.style.labelPadding,
+          );
+        } else {
+          xLabelX = xLabelX.clamp(config.style.labelPadding, size.width - xTextPainter.width - config.style.labelPadding);
+        }
+
+        // Only draw if Y position is valid and all values are finite
+        if (xLabelY >= 0 && xLabelY + xTextPainter.height <= size.height && xLabelX.isFinite && xLabelY.isFinite) {
+          final xLabelOffset = Offset(xLabelX, xLabelY);
+
+          // Draw background with validated dimensions
+          final bgLeft = xLabelOffset.dx - config.style.labelPadding;
+          final bgTop = xLabelOffset.dy - config.style.labelPadding;
+          final bgWidth = xTextPainter.width + config.style.labelPadding * 2;
+          final bgHeight = xTextPainter.height + config.style.labelPadding * 2;
+
+          // Additional validation for rect dimensions
+          if (bgLeft.isFinite && bgTop.isFinite && bgWidth.isFinite && bgHeight.isFinite && bgWidth > 0 && bgHeight > 0) {
+            final xBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
+            canvas.drawRect(xBgRect, Paint()..color = config.style.labelBackgroundColor);
+            xTextPainter.paint(canvas, xLabelOffset);
+          }
+        }
+      }
+
+      // Y coordinate label (positioned at left edge of chart area, INSIDE chartRect)
+      if (config.mode == CrosshairMode.horizontal || config.mode == CrosshairMode.both) {
+        // Use data Y value if available, otherwise fall back to screen position
+        final displayValue = dataY != null ? _formatDataValue(dataY) : position.dy.toStringAsFixed(0);
+
+        final yTextPainter = TextPainter(
+          text: TextSpan(text: 'Y: $displayValue', style: textStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        // Position label INSIDE chart area (just right of left edge of chartRect)
+        // Use chartRect bounds if available, otherwise fall back to canvas edge
+        final chartLeft = chartRect?.left ?? 0.0;
+
+        // Calculate label position with bounds checking
+        final yLabelX = chartLeft + 8.0; // 8px padding from chart left edge
+        var yLabelY = position.dy - yTextPainter.height / 2;
+
+        // Clamp Y position to keep label within chart bounds (if chartRect available)
+        if (chartRect != null) {
+          yLabelY = yLabelY.clamp(
+            chartRect!.top + config.style.labelPadding,
+            chartRect!.bottom - yTextPainter.height - config.style.labelPadding,
+          );
+        } else {
+          yLabelY = yLabelY.clamp(config.style.labelPadding, size.height - yTextPainter.height - config.style.labelPadding);
+        }
+
+        // Only draw if X position is valid and all values are finite
+        if (yLabelX >= 0 && yLabelX + yTextPainter.width <= size.width && yLabelX.isFinite && yLabelY.isFinite) {
+          final yLabelOffset = Offset(yLabelX, yLabelY);
+
+          // Draw background with validated dimensions
+          final bgLeft = yLabelOffset.dx - config.style.labelPadding;
+          final bgTop = yLabelOffset.dy - config.style.labelPadding;
+          final bgWidth = yTextPainter.width + config.style.labelPadding * 2;
+          final bgHeight = yTextPainter.height + config.style.labelPadding * 2;
+
+          // Additional validation for rect dimensions
+          if (bgLeft.isFinite && bgTop.isFinite && bgWidth.isFinite && bgHeight.isFinite && bgWidth > 0 && bgHeight > 0) {
+            final yBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
+            canvas.drawRect(yBgRect, Paint()..color = config.style.labelBackgroundColor);
+            yTextPainter.paint(canvas, yLabelOffset);
+          }
+        }
+      }
+    } catch (e) {
+      // Silently fail label rendering - don't break the entire crosshair
+      // The crosshair lines will still render even if labels fail
+      return;
+    }
+  }
+
+  /// Formats data values for display (same logic as axis labels).
+  String _formatDataValue(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CrosshairLabelsPainter oldDelegate) {
+    return position != oldDelegate.position ||
+        config != oldDelegate.config ||
+        dataBounds != oldDelegate.dataBounds ||
+        chartRect != oldDelegate.chartRect;
+  }
+}
+
+/// Custom painter for crosshair rendering (DEPRECATED - split into Lines + Labels).
+///
+/// This painter is no longer used but kept for reference during migration.
+/// Use _CrosshairLinesPainter + _CrosshairLabelsPainter instead.
 class _CrosshairPainter extends CustomPainter {
   _CrosshairPainter({required this.position, required this.config, this.nearestPoint, required this.chartSize, this.dataBounds, this.chartRect});
 

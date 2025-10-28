@@ -17,6 +17,7 @@ import 'line_styles_streaming_screen.dart';
 import 'quickstart_screen.dart';
 import 'regression_test_screen.dart';
 import 'scatter_chart_screen.dart';
+import 'scrollbar_showcase_screen.dart';
 import 'simple_zoom_test_screen.dart';
 import 'streaming_test_screen.dart';
 import 'ultimate_showcase_screen.dart';
@@ -339,7 +340,19 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 12),
         _buildChartCard(
           context,
-          title: '🐛 Event Debug Tool',
+          title: '� Scrollbar Showcase - Pan + Zoom',
+          subtitle: 'Phase 5: Dual-purpose scrollbars with edge resize, limits, callbacks',
+          icon: Icons.view_carousel,
+          color: Colors.deepOrange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ScrollbarShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '�🐛 Event Debug Tool',
           subtitle: 'See all events in real-time (keyboard, mouse, gestures)',
           icon: Icons.bug_report,
           color: Colors.orange,
