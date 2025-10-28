@@ -55,10 +55,6 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData.putIfAbsent(seriesId, () => []);
     series.add(point);
 
-    // DEBUG: Log data additions
-    print(
-        '📊 [ChartController.addPoint] series="$seriesId" x=${point.x.toStringAsFixed(1)} y=${point.y.toStringAsFixed(1)} | Total points: ${series.length} | Range: ${series.first.x.toStringAsFixed(1)} to ${series.last.x.toStringAsFixed(1)}');
-
     notifyListeners();
   }
 
@@ -70,11 +66,7 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData[seriesId];
     if (series == null || series.isEmpty) return;
 
-    final removedPoint = series.removeAt(0);
-
-    // DEBUG: Log data deletion
-    print(
-        '🗑️  [ChartController.removeOldestPoint] series="$seriesId" DELETED x=${removedPoint.x.toStringAsFixed(1)} | Remaining: ${series.length} points');
+    series.removeAt(0);
 
     notifyListeners();
   }
@@ -87,11 +79,7 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData[seriesId];
     if (series == null) return;
 
-    final count = series.length;
     series.clear();
-
-    // DEBUG: Log series clearing
-    print('🧹 [ChartController.clearSeries] series="$seriesId" CLEARED $count points');
 
     notifyListeners();
   }
