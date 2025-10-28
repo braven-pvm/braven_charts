@@ -21,6 +21,7 @@ import '../foundation/foundation.dart' as braven;
 import '../theming/components/scrollbar_config.dart';
 import 'scrollbar/hit_test_zone.dart';
 import 'scrollbar/scrollbar_controller.dart';
+import 'scrollbar/scrollbar_interaction.dart';
 import 'scrollbar/scrollbar_painter.dart';
 import 'scrollbar/scrollbar_state.dart';
 
@@ -59,7 +60,7 @@ class ChartScrollbar extends StatefulWidget {
     required this.axis,
     required this.dataRange,
     required this.viewportRange,
-    required this.onViewportChanged,
+    required this.onPixelDeltaChanged,
     this.onPanChanged,
     this.onZoomChanged,
     required this.theme,
@@ -91,15 +92,28 @@ class ChartScrollbar extends StatefulWidget {
   /// **Invariant**: viewportRange ⊆ dataRange (must be subset)
   final braven.DataRange viewportRange;
 
-  /// Callback fired when user changes viewport via scrollbar interaction.
+  /// Callback fired when user interacts with scrollbar (pixel-delta pattern).
+  ///
+  /// **Architecture**: Scrollbar reports PIXEL deltas, parent converts to DATA deltas.
+  /// This eliminates circular dependencies by removing data state from scrollbar.
+  ///
+  /// **Parameters**:
+  /// - pixelDelta: Pixel offset from drag start (for pan/zoom) or absolute pixel position (for trackClick)
+  /// - interaction: Type of interaction (pan, zoom, trackClick, keyboard)
+  ///
+  /// **Parent Responsibility**:
+  /// 1. Convert pixelDelta to data delta using current viewport state
+  /// 2. Apply delta based on interaction type (shift both edges vs resize one edge)
+  /// 3. Clamp to data range boundaries
+  /// 4. Update zoomPanController with new viewport
   ///
   /// **Fired on**:
   /// - Handle drag (pan or zoom) - throttled to 60 FPS (max 1 update per 16ms)
   /// - Track click (jump) - immediate
   /// - Keyboard navigation - immediate
   ///
-  /// **Contract**: New viewport will always be subset of dataRange (clamped if needed)
-  final ValueChanged<braven.DataRange> onViewportChanged;
+  /// See: docs/architecture/SCROLLBAR_ARCHITECTURE_ANALYSIS.md
+  final void Function(Offset pixelDelta, ScrollbarInteraction interaction) onPixelDeltaChanged;
 
   /// Optional callback fired when pan gesture completes (T071).
   ///
@@ -155,29 +169,19 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// Timer for auto-hide feature.
   Timer? _autoHideTimer;
 
-  /// Initial drag position (for delta calculations in _onPanUpdate).
+  /// Initial drag position in pixels (for delta calculations in _onPanUpdate).
+  ///
+  /// **Pixel-Delta Pattern**: This is the ONLY position state we track.
+  /// No data baseline needed - parent owns all data state (single source of truth).
+  ///
   /// Set in _onPanStart, used in _onPanUpdate, cleared in _onPanEnd.
   Offset? _dragStartPosition;
-
-  /// Initial viewport range at drag start (for delta calculation in _onPanEnd - T071).
-  /// Set in _onPanStart, used in _onPanEnd, cleared in _onPanEnd.
-  braven.DataRange? _dragStartViewportRange;
-
-  /// Last viewport sent to onViewportChanged (for onPanChanged delta calculation - T071).
-  /// Tracked during drag to calculate total pan delta in _onPanEnd.
-  braven.DataRange? _lastSentViewport;
 
   /// Animation controller for track click jump (T073 - 300ms ease-out).
   AnimationController? _jumpAnimationController;
 
   /// Animation for track click jump (T073).
   Animation<double>? _jumpAnimation;
-
-  /// Target viewport for jump animation (T073).
-  braven.DataRange? _jumpTargetViewport;
-
-  /// Initial viewport for jump animation (T073).
-  braven.DataRange? _jumpStartViewport;
 
   /// Animation controller for zoom limit flash (T091A - 200ms).
   late AnimationController _flashAnimationController;
@@ -234,12 +238,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     }
   }
 
-  /// Fires the onViewportChanged callback immediately during drag.
-  /// Flutter's RawScrollbar pattern: fire immediately, let metrics drive visuals.
-  void _fireViewportChanged(braven.DataRange viewport) {
-    widget.onViewportChanged(viewport);
-  }
-
   @override
   void didUpdateWidget(ChartScrollbar oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -248,6 +246,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     if (oldWidget.viewportRange != widget.viewportRange || oldWidget.dataRange != widget.dataRange || oldWidget.axis != widget.axis) {
       // Make scrollbar visible when viewport changes
       _stateNotifier.value = _stateNotifier.value.copyWith(isVisible: true);
+
+      // PIXEL-DELTA PATTERN: No baseline tracking needed!
+      // Scrollbar only tracks pixel positions. Parent owns all data state.
 
       // Restart auto-hide timer if enabled
       if (widget.theme.autoHide) {
@@ -497,8 +498,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
   /// Handles track click to jump viewport to click position (T073).
   ///
-  /// Animates viewport to center at click position using 300ms ease-out curve.
-  /// Cancels any active animation before starting new one (T073B).
+  /// PIXEL-DELTA PATTERN: Reports pixel offset for track click with trackClick interaction type.
+  /// Parent converts to data position and handles the jump.
+  ///
+  /// Note: Track click jumps are NOT animated in pixel-delta pattern - parent handles animation.
   void _onTrackClick(TapUpDetails details) {
     // Cancel any active jump animation (T073B - animation cancellation)
     _cancelJumpAnimation();
@@ -512,56 +515,37 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Extract click position based on axis
     final clickPosition = widget.axis == Axis.horizontal ? details.localPosition.dx : details.localPosition.dy;
 
-    // Calculate target scroll offset to center viewport at click position
-    final viewportSize = widget.viewportRange.span;
-    final clickRatio = clickPosition / trackLength;
-    final targetDataPosition = widget.dataRange.min + (clickRatio * widget.dataRange.span);
+    // PIXEL-DELTA PATTERN: Report pixel offset for track click
+    // Parent will convert to data position and handle jump/animation
+    final pixelOffset = widget.axis == Axis.horizontal ? Offset(clickPosition, 0.0) : Offset(0.0, clickPosition);
 
-    // Center viewport at click position
-    final targetViewportMin = targetDataPosition - (viewportSize / 2);
+    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🎯 Track click at pixel: $clickPosition (trackLength: $trackLength)');
 
-    // Apply boundary clamping
-    final clampedMin = targetViewportMin.clamp(widget.dataRange.min, widget.dataRange.max - viewportSize);
-    final clampedMax = clampedMin + viewportSize;
+    // Report track click to parent with pixel position
+    widget.onPixelDeltaChanged(pixelOffset, ScrollbarInteraction.trackClick);
 
-    final targetViewport = braven.DataRange(min: clampedMin, max: clampedMax);
-
-    // Store initial and target viewports for animation
-    _jumpStartViewport = widget.viewportRange;
-    _jumpTargetViewport = targetViewport;
-
-    // Create 300ms ease-out animation (T073)
-    _jumpAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _jumpAnimationController!,
-        curve: Curves.easeOut, // FR-007 enhanced
-      ),
-    );
-
-    // Add named listener so it can be properly removed when canceling
-    _jumpAnimation!.addListener(_onJumpAnimationTick);
-
-    // Add completion listener to clean up
-    _jumpAnimationController!.addStatusListener(_onJumpAnimationComplete);
-
-    // Start animation from 0.0
-    _jumpAnimationController!.forward(from: 0.0);
-
-    // Cancel auto-hide while animating
+    // Cancel auto-hide while parent processes jump
     if (widget.theme.autoHide) {
       _cancelAutoHide();
+      // Restart after a delay
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && widget.theme.autoHide) {
+          _scheduleAutoHide();
+        }
+      });
     }
   }
 
   /// Animation completion listener (T073).
+  ///
+  /// PIXEL-DELTA PATTERN: Obsolete - animation handled by parent.
+  /// Kept for cleanup during transition.
   void _onJumpAnimationComplete(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
       // Remove animation listener
       _jumpAnimation?.removeListener(_onJumpAnimationTick);
 
       // Clean up animation state
-      _jumpStartViewport = null;
-      _jumpTargetViewport = null;
       _jumpAnimationController?.removeStatusListener(_onJumpAnimationComplete);
 
       // Restart auto-hide timer
@@ -573,23 +557,16 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
   /// Jump animation tick listener (T073).
   ///
-  /// Called on each animation frame to interpolate viewport during track-click jump.
-  /// This is extracted as a named method so it can be properly removed when canceling.
+  /// PIXEL-DELTA PATTERN: Animation is handled by parent, this method is obsolete.
+  /// Kept for backward compatibility during transition.
   void _onJumpAnimationTick() {
-    // Interpolate between start and target viewport
-    if (_jumpStartViewport != null && _jumpTargetViewport != null) {
-      final t = _jumpAnimation!.value;
-      final interpolatedMin = _jumpStartViewport!.min + ((_jumpTargetViewport!.min - _jumpStartViewport!.min) * t);
-      final interpolatedMax = _jumpStartViewport!.max + ((_jumpTargetViewport!.max - _jumpStartViewport!.max) * t);
-
-      final interpolatedViewport = braven.DataRange(min: interpolatedMin, max: interpolatedMax);
-
-      // Fire viewport changed callback
-      _fireViewportChanged(interpolatedViewport);
-    }
+    // PIXEL-DELTA PATTERN: Animation is handled by parent
+    // This method is no longer used but kept during refactoring
   }
 
   /// Cancels active jump animation (T073B).
+  ///
+  /// PIXEL-DELTA PATTERN: Simplified - no viewport state to clean up.
   void _cancelJumpAnimation() {
     if (_jumpAnimationController?.isAnimating ?? false) {
       _jumpAnimationController?.stop();
@@ -597,9 +574,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
       // CRITICAL: Remove the animation listener to prevent it from firing during drag
       _jumpAnimation?.removeListener(_onJumpAnimationTick);
-
-      _jumpStartViewport = null;
-      _jumpTargetViewport = null;
     }
   }
 
@@ -607,8 +581,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
   /// Handles pan gesture start (T064, T086).
   ///
-  /// Initializes drag state when user starts dragging scrollbar handle.
-  /// Captures initial touch position for delta calculations in _onPanUpdate.
+  /// PIXEL-DELTA PATTERN: Captures only the pixel position where drag started.
+  /// No data baseline tracking - parent owns all data state (single source of truth).
+  ///
   /// Detects drag zone (edge vs center) for resize vs pan behavior (T086).
   ///
   /// **Drag Zones** (T086):
@@ -616,14 +591,20 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// - rightEdge/bottomEdge: User dragging right/bottom edge → resize viewport max
   /// - center: User dragging center → pan viewport (both min and max shift)
   void _onPanStart(DragStartDetails details) {
+    print('========================================');
+    print('========================================');
+    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🎯 onPanStart FIRED');
+    print('========================================');
+    print('  details.localPosition: ${details.localPosition}');
+    print('  details.globalPosition: ${details.globalPosition}');
+    print('  current viewportRange: ${widget.viewportRange.min.toStringAsFixed(2)}-${widget.viewportRange.max.toStringAsFixed(2)}');
+
     // Cancel any active jump animation (T073B - concurrent interaction cancellation)
     _cancelJumpAnimation();
 
-    // Capture initial drag position for delta calculations (T064)
+    // PIXEL-DELTA PATTERN: Capture initial drag position (pixels only, no data state)
     _dragStartPosition = details.localPosition;
-
-    // Capture initial viewport range for callback delta calculation (T071)
-    _dragStartViewportRange = widget.viewportRange;
+    print('  SET _dragStartPosition: $_dragStartPosition');
 
     // Detect drag zone (T086 - edge detection for zoom functionality)
     // Get current layout dimensions
@@ -642,6 +623,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         currentState.handleSize,
         edgeDetectionThreshold: widget.theme.edgeGripWidth,
       );
+      print('  Detected drag zone: $_dragZone');
     } else {
       // Fallback: edge resize disabled or can't get layout - use center pan only
       _dragZone = HitTestZone.center;
@@ -660,240 +642,118 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
   /// Handles pan gesture update (T065-T066, T087-T089).
   ///
-  /// Calculates viewport delta from drag distance and triggers viewport update.
-  /// Supports both center pan (T065-T066) and edge resize (T087-T089).
+  /// PIXEL-DELTA PATTERN: Calculates pixel delta from drag start and reports it
+  /// to parent along with ScrollbarInteraction type. Parent converts pixel delta
+  /// to data delta using current viewport.
   ///
   /// **Drag Modes**:
-  /// - **Center Pan** (T065-T066): Drag center → shift entire viewport (both min and max)
-  /// - **Left Edge Resize** (T087): Drag left edge → adjust viewportMin (right edge anchored)
-  /// - **Right Edge Resize** (T088): Drag right edge → adjust viewportMax (left edge anchored)
+  /// - **Center Pan** (T065-T066): Reports ScrollbarInteraction.pan
+  /// - **Left/Top Edge Resize** (T087): Reports ScrollbarInteraction.zoomLeftOrTop
+  /// - **Right/Bottom Edge Resize** (T088): Reports ScrollbarInteraction.zoomRightOrBottom
   ///
   /// **TODO (T067)**: Implement 60 FPS throttling (max 1 update per 16ms).
   void _onPanUpdate(DragUpdateDetails details) {
-    // Skip if no drag start position captured (shouldn't happen, but defensive)
-    if (_dragStartPosition == null) return;
+    // Guard: Handle edge case where onPanUpdate fires before onPanStart
+    if (_dragStartPosition == null) {
+      print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] ⚠️ LAZY INIT - onPanUpdate fired before onPanStart!');
 
-    // Calculate drag delta from initial position (T065)
+      // Initialize drag start position NOW
+      _cancelJumpAnimation();
+      _dragStartPosition = details.localPosition;
+
+      // Detect drag zone
+      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null && widget.theme.enableResizeHandles) {
+        final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+        final currentState = _stateNotifier.value;
+
+        _dragZone = ScrollbarController.getHitTestZone(
+          _dragStartPosition!,
+          widget.axis,
+          trackLength,
+          currentState.handlePosition,
+          currentState.handleSize,
+          edgeDetectionThreshold: widget.theme.edgeGripWidth,
+        );
+      } else {
+        _dragZone = HitTestZone.center;
+      }
+
+      // Set isDragging flag
+      _stateNotifier.value = _stateNotifier.value.copyWith(isDragging: true);
+
+      // Cancel auto-hide
+      if (widget.theme.autoHide) {
+        _cancelAutoHide();
+      }
+
+      // Skip this first update - wait for next frame
+      print('  Initialized, skipping first update');
+      return;
+    }
+
+    // PIXEL-DELTA PATTERN: Calculate pixel delta from drag start (pixels only)
     final currentPosition = details.localPosition;
     final dragDelta = currentPosition - _dragStartPosition!;
 
     // Extract relevant coordinate based on axis
     final pixelDelta = widget.axis == Axis.horizontal ? dragDelta.dx : dragDelta.dy;
 
-    // Get current layout dimensions from build context
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-
-    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
-
-    // Determine behavior based on drag zone (T086-T089)
-    // If _dragZone is null (edge case - drag without pan start), default to center pan
-    late final braven.DataRange newViewport;
+    // Determine interaction type based on drag zone
+    ScrollbarInteraction interactionType;
 
     switch (_dragZone ?? HitTestZone.center) {
       case HitTestZone.leftEdge:
       case HitTestZone.topEdge:
-        // Left/Top Edge Resize (T087): Adjust viewportMin, keep viewportMax anchored
-        // Convert pixel delta to data delta manually
-        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
-        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
-
-        // CRITICAL: Use drag start viewport as baseline, not current viewport
-        var newViewportMin = _dragStartViewportRange!.min + dataDelta;
-
-        // Clamp to data range boundaries and not exceed viewportMax
-        // Use drag start max as anchor point (right edge stays fixed)
-        newViewportMin = newViewportMin.clamp(
-          widget.dataRange.min,
-          _dragStartViewportRange!.max,
-        );
-
-        // Calculate resulting span after resize
-        final newSpan = _dragStartViewportRange!.max - newViewportMin;
-
-        // Enforce zoom limits (T090-T091)
-        final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
-        final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
-
-        // Track unclamped value to detect limit hit (T091A-T091B)
-        final unclampedViewportMin = newViewportMin;
-
-        // If zoomed in too far (span too small), clamp viewportMin
-        if (newSpan < minSpan) {
-          newViewportMin = _dragStartViewportRange!.max - minSpan;
-        }
-
-        // If zoomed out too far (span too large), clamp viewportMin
-        if (newSpan > maxSpan) {
-          newViewportMin = _dragStartViewportRange!.max - maxSpan;
-        }
-
-        // Final clamp to data boundaries
-        newViewportMin = newViewportMin.clamp(
-          widget.dataRange.min,
-          widget.dataRange.max,
-        );
-
-        // Detect zoom limit hit and trigger feedback (T091A-T091B)
-        if (unclampedViewportMin != newViewportMin) {
-          // Zoom limit was hit - trigger flash animation and set cursor flag
-          if (!_isAtZoomLimit) {
-            _isAtZoomLimit = true;
-            _flashAnimationController.forward(from: 0.0); // Start flash animation (T091A)
-          }
-        } else {
-          // Not at limit - clear flag
-          _isAtZoomLimit = false;
-        }
-
-        newViewport = braven.DataRange(
-          min: newViewportMin,
-          max: _dragStartViewportRange!.max, // Right edge anchored at drag start position
-        );
+        interactionType = ScrollbarInteraction.zoomLeftOrTop;
         break;
 
       case HitTestZone.rightEdge:
       case HitTestZone.bottomEdge:
-        // Right/Bottom Edge Resize (T088): Adjust viewportMax, keep viewportMin anchored
-        // Convert pixel delta to data delta manually
-        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
-        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
-
-        // CRITICAL: Use drag start viewport as baseline, not current viewport
-        var newViewportMax = _dragStartViewportRange!.max + dataDelta;
-
-        // Clamp to data range boundaries and not below viewportMin
-        // Use drag start min as anchor point (left edge stays fixed)
-        newViewportMax = newViewportMax.clamp(
-          _dragStartViewportRange!.min,
-          widget.dataRange.max,
-        );
-
-        // Calculate resulting span after resize
-        final newSpan = newViewportMax - _dragStartViewportRange!.min;
-
-        // Enforce zoom limits (T090-T091)
-        final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
-        final maxSpan = widget.dataRange.span * widget.theme.maxZoomRatio;
-
-        // Track unclamped value to detect limit hit (T091A-T091B)
-        final unclampedViewportMax = newViewportMax;
-
-        // If zoomed in too far (span too small), clamp viewportMax
-        if (newSpan < minSpan) {
-          newViewportMax = _dragStartViewportRange!.min + minSpan;
-        }
-
-        // If zoomed out too far (span too large), clamp viewportMax
-        if (newSpan > maxSpan) {
-          newViewportMax = _dragStartViewportRange!.min + maxSpan;
-        }
-
-        // Final clamp to data boundaries
-        newViewportMax = newViewportMax.clamp(
-          widget.dataRange.min,
-          widget.dataRange.max,
-        );
-
-        // Detect zoom limit hit and trigger feedback (T091A-T091B)
-        if (unclampedViewportMax != newViewportMax) {
-          // Zoom limit was hit - trigger flash animation and set cursor flag
-          if (!_isAtZoomLimit) {
-            _isAtZoomLimit = true;
-            _flashAnimationController.forward(from: 0.0); // Start flash animation (T091A)
-          }
-        } else {
-          // Not at limit - clear flag
-          _isAtZoomLimit = false;
-        }
-
-        newViewport = braven.DataRange(
-          min: _dragStartViewportRange!.min, // Left edge anchored at drag start position
-          max: newViewportMax,
-        );
+        interactionType = ScrollbarInteraction.zoomRightOrBottom;
         break;
 
       case HitTestZone.center:
-        // Center Pan (T065-T066): Calculate new scroll offset from pixel delta
-        // Convert pixel delta to data delta
-        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
-        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
-
-        // Calculate new viewport range (maintaining viewport size, shifting position)
-        // CRITICAL: Use drag start viewport as baseline, not current viewport
-        final viewportSize = _dragStartViewportRange!.span;
-        final newViewportMin = _dragStartViewportRange!.min + dataDelta;
-
-        // Apply boundary clamping (T072)
-        final clampedMin = newViewportMin.clamp(
-          widget.dataRange.min,
-          widget.dataRange.max - viewportSize,
-        );
-        final clampedMax = clampedMin + viewportSize;
-
-        newViewport = braven.DataRange(min: clampedMin, max: clampedMax);
+        interactionType = ScrollbarInteraction.pan;
         break;
 
       case HitTestZone.track:
-        // Track click should trigger jump animation, not drag
-        // If we're here, user started drag on track (outside handle) - ignore
+        // Track click should trigger jump, not drag - ignore
         return;
     }
 
-    // Fire viewport change immediately - Flutter's pattern
-    _fireViewportChanged(newViewport);
+    // PIXEL-DELTA PATTERN: Report pixel delta to parent (parent converts to data delta)
+    // Create Offset with appropriate axis coordinate
+    final pixelDeltaOffset = widget.axis == Axis.horizontal ? Offset(pixelDelta, 0.0) : Offset(0.0, pixelDelta);
 
-    // Track for onPanChanged delta (T071)
-    _lastSentViewport = newViewport;
+    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] Reporting pixel delta: $pixelDeltaOffset, type: $interactionType');
 
-    // Do NOT update _dragStartPosition - keep it fixed from pan start
-    // This ensures we calculate cumulative delta from the original drag start point
+    // Report to parent - parent will convert to data delta and update viewport
+    widget.onPixelDeltaChanged(pixelDeltaOffset, interactionType);
   }
 
   /// Handles pan gesture end (T070-T071).
   ///
-  /// Finalizes drag operation and ensures final viewport sync.
-  /// Fires onPanChanged callback with total pan delta (T071).
-  /// Fires onZoomChanged callback with zoom ratio for edge resize (T092).
+  /// PIXEL-DELTA PATTERN: Simple cleanup - no baseline updates needed.
+  /// Parent owns all data state, scrollbar only tracks pixel positions.
   void _onPanEnd(DragEndDetails details) {
-    // Fire onPanChanged callback with total pan delta (T071)
-    // Only fire if center pan (not edge resize)
-    if (widget.onPanChanged != null && _dragStartViewportRange != null && _lastSentViewport != null && _dragZone == HitTestZone.center) {
-      // Calculate total pan delta from start to end using last sent viewport
-      final initialViewportMin = _dragStartViewportRange!.min;
-      final finalViewportMin = _lastSentViewport!.min;
-      final dataDelta = finalViewportMin - initialViewportMin;
+    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🏁 onPanEnd - cleaning up drag state');
 
-      // Convert data delta to offset based on axis
-      // For horizontal: dx = dataDelta, dy = 0
-      // For vertical: dx = 0, dy = dataDelta
-      final offset = widget.axis == Axis.horizontal ? Offset(dataDelta, 0.0) : Offset(0.0, dataDelta);
+    // PIXEL-DELTA PATTERN: Signal drag end to parent by sending Offset.zero
+    // This tells parent to clear its drag start baseline
+    final lastInteraction = _dragZone == HitTestZone.leftEdge || _dragZone == HitTestZone.topEdge
+        ? ScrollbarInteraction.zoomLeftOrTop
+        : _dragZone == HitTestZone.rightEdge || _dragZone == HitTestZone.bottomEdge
+            ? ScrollbarInteraction.zoomRightOrBottom
+            : ScrollbarInteraction.pan;
 
-      widget.onPanChanged!(offset);
-    }
+    widget.onPixelDeltaChanged(Offset.zero, lastInteraction);
+    print('  Sent drag-end signal (Offset.zero) with interaction: $lastInteraction');
 
-    // Fire onZoomChanged callback with zoom ratio for edge resize (T092)
-    // Only fire if edge resize (not center pan)
-    if (widget.onZoomChanged != null &&
-        _lastSentViewport != null &&
-        (_dragZone == HitTestZone.leftEdge ||
-            _dragZone == HitTestZone.rightEdge ||
-            _dragZone == HitTestZone.topEdge ||
-            _dragZone == HitTestZone.bottomEdge)) {
-      // Calculate final zoom ratio (viewportSpan / dataSpan)
-      final viewportSpan = _lastSentViewport!.span;
-      final dataSpan = widget.dataRange.span;
-      final zoomRatio = viewportSpan / dataSpan;
-
-      widget.onZoomChanged!(zoomRatio);
-    }
-
-    // Clear drag state
+    // PIXEL-DELTA PATTERN: Clear drag state (pixel position only)
     _dragStartPosition = null;
-    _dragStartViewportRange = null;
-    _lastSentViewport = null;
-    _dragZone = null; // Clear drag zone (T092)
-    _isAtZoomLimit = false; // Clear zoom limit flag (T091B)
+    _dragZone = null;
+    _isAtZoomLimit = false;
 
     // Reset isDragging flag
     _stateNotifier.value = _stateNotifier.value.copyWith(
