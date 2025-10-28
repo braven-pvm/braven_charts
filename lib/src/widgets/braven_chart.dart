@@ -3450,7 +3450,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         final visibleCenterX = (newViewportMin + newViewportMax) / 2;
         final dataCenterX = (dataMinX + dataMaxX) / 2;
         final panDataX = visibleCenterX - dataCenterX;
-        final newPanX = panDataX * (trackLength / dataRangeX);
+        // CRITICAL FIX: X-axis uses negation: panDataX = -panX * (dataRangeX / trackLength)
+        // Therefore reverse is: panX = -panDataX * (trackLength / dataRangeX)
+        final newPanX = -panDataX * (trackLength / dataRangeX);
 
         final newZoomPanState = currentState.copyWith(
           panOffset: Offset(newPanX, currentState.panOffset.dy),
@@ -3513,7 +3515,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // Converting to panX: panX = -panDataX * (trackLength / dataRangeX)
             final viewportSize = dataRangeX / currentState.zoomLevelX;
             final minPanX = -(dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX); // Viewport at left edge
-            final maxPanX = (dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX);  // Viewport at right edge
+            final maxPanX = (dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX); // Viewport at right edge
 
             final clampedPanX = targetPanX.clamp(minPanX, maxPanX);
 
@@ -3561,7 +3563,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final newZoomX = dataRangeX / newViewportSize;
             final newVisibleCenterX = (newViewportMinX + newViewportMaxX) / 2;
             final newPanDataX = newVisibleCenterX - dataCenterX;
-            final newPanX = newPanDataX * (trackLength / dataRangeX);
+            // CRITICAL FIX: X-axis uses negation: panDataX = -panX * (dataRangeX / trackLength)
+            // Therefore reverse is: panX = -panDataX * (trackLength / dataRangeX)
+            final newPanX = -newPanDataX * (trackLength / dataRangeX);
 
             final newZoomPanState = currentState.copyWith(
               zoomLevelX: newZoomX,
@@ -3676,7 +3680,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // Converting to panY: panY = panDataY * (trackLength / dataRangeY)
             final viewportSize = dataRangeY / currentState.zoomLevelY;
             final minPanY = -(dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY); // Viewport at bottom edge
-            final maxPanY = (dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY);  // Viewport at top edge
+            final maxPanY = (dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY); // Viewport at top edge
 
             final clampedPanY = targetPanY.clamp(minPanY, maxPanY);
 
