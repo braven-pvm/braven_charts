@@ -3506,16 +3506,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // NOT: newPan = currentPan + cumulativeDelta (which compounds each frame)
             final targetPanX = _scrollbarDragStartPan!.dx + panOffsetDeltaX;
 
-            // Clamp pan to valid range
-            // Max pan right: viewport starts at dataMinX → panData = 0 - (dataMaxX - dataMinX)/2
-            // Max pan left: viewport ends at dataMaxX → panData = (dataMaxX - dataMinX) - (dataMaxX - dataMinX)/2
+            // Clamp pan to valid range to prevent panning beyond data boundaries
+            // CORRECTED FORMULA: Account for negation in panDataX = -panX * (dataRangeX / trackLength)
+            // When viewport is at LEFT edge: minX = dataMinX → panDataX = -(dataRangeX - rangeX)/2
+            // When viewport is at RIGHT edge: maxX = dataMaxX → panDataX = (dataRangeX - rangeX)/2
+            // Converting to panX: panX = -panDataX * (trackLength / dataRangeX)
             final viewportSize = dataRangeX / currentState.zoomLevelX;
-            final maxPanDataRight = -(dataRangeX - viewportSize) / 2;
-            final maxPanDataLeft = (dataRangeX - viewportSize) / 2;
-            final maxPanRight = maxPanDataRight * (trackLength / dataRangeX);
-            final maxPanLeft = maxPanDataLeft * (trackLength / dataRangeX);
+            final minPanX = -(dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX); // Viewport at left edge
+            final maxPanX = (dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX);  // Viewport at right edge
 
-            final clampedPanX = targetPanX.clamp(maxPanRight, maxPanLeft);
+            final clampedPanX = targetPanX.clamp(minPanX, maxPanX);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(clampedPanX, currentState.panOffset.dy),
@@ -3577,12 +3577,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // Keyboard: Treated as pan
             final newPanX = currentState.panOffset.dx + panOffsetDeltaX;
 
+            // Clamp to prevent panning beyond data boundaries (same formula as scrollbar pan)
             final viewportSize = dataRangeX / currentState.zoomLevelX;
-            final maxPanDataRight = -(dataRangeX - viewportSize) / 2;
-            final maxPanDataLeft = (dataRangeX - viewportSize) / 2;
-            final maxPanRight = maxPanDataRight * (trackLength / dataRangeX);
-            final maxPanLeft = maxPanDataLeft * (trackLength / dataRangeX);
-            final clampedPanX = newPanX.clamp(maxPanRight, maxPanLeft);
+            final minPanX = -(dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX);
+            final maxPanX = (dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX);
+            final clampedPanX = newPanX.clamp(minPanX, maxPanX);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(clampedPanX, currentState.panOffset.dy),
@@ -3670,14 +3669,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
             final targetPanY = _scrollbarDragStartPan!.dy + panOffsetDeltaY;
 
-            // Clamp pan to valid range
+            // Clamp pan to valid range to prevent panning beyond data boundaries
+            // Y-axis formula: panDataY = panY * (dataRangeY / trackLength) [NO negation unlike X]
+            // When viewport is at BOTTOM edge: minY = dataMinY → panDataY = -(dataRangeY - rangeY)/2
+            // When viewport is at TOP edge: maxY = dataMaxY → panDataY = (dataRangeY - rangeY)/2
+            // Converting to panY: panY = panDataY * (trackLength / dataRangeY)
             final viewportSize = dataRangeY / currentState.zoomLevelY;
-            final maxPanDataDown = -(dataRangeY - viewportSize) / 2;
-            final maxPanDataUp = (dataRangeY - viewportSize) / 2;
-            final maxPanDown = maxPanDataDown * (trackLength / dataRangeY);
-            final maxPanUp = maxPanDataUp * (trackLength / dataRangeY);
+            final minPanY = -(dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY); // Viewport at bottom edge
+            final maxPanY = (dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY);  // Viewport at top edge
 
-            final clampedPanY = targetPanY.clamp(maxPanDown, maxPanUp);
+            final clampedPanY = targetPanY.clamp(minPanY, maxPanY);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(currentState.panOffset.dx, clampedPanY),
@@ -3739,12 +3740,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // Keyboard: Treated as pan
             final newPanY = currentState.panOffset.dy + panOffsetDeltaY;
 
+            // Clamp to prevent panning beyond data boundaries (same formula as scrollbar pan)
             final viewportSize = dataRangeY / currentState.zoomLevelY;
-            final maxPanDataDown = -(dataRangeY - viewportSize) / 2;
-            final maxPanDataUp = (dataRangeY - viewportSize) / 2;
-            final maxPanDown = maxPanDataDown * (trackLength / dataRangeY);
-            final maxPanUp = maxPanDataUp * (trackLength / dataRangeY);
-            final clampedPanY = newPanY.clamp(maxPanDown, maxPanUp);
+            final minPanY = -(dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY);
+            final maxPanY = (dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY);
+            final clampedPanY = newPanY.clamp(minPanY, maxPanY);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(currentState.panOffset.dx, clampedPanY),
