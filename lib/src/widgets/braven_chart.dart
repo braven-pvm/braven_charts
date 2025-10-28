@@ -43,6 +43,7 @@ import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
+import 'package:braven_charts/src/widgets/scrollbar/scrollbar_interaction.dart';
 import 'package:flutter/gestures.dart' show PointerScrollEvent, kMiddleMouseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
@@ -810,6 +811,25 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// The tooltip persists even after the mouse leaves the marker.
   /// It only hides after this timeout or when a new marker is hovered.
   Timer? _tooltipHideTimer;
+
+  /// Tracks pan offset at the start of a scrollbar drag operation.
+  ///
+  /// Scrollbar reports cumulative pixel delta from drag start (e.g., -1, -2, -3...).
+  /// To convert this to absolute pan offset, we need to know the starting point.
+  /// This field stores panOffset when the drag begins, allowing us to calculate:
+  ///   targetPan = dragStartPan + (cumulative delta * scaleFactor)
+  ///
+  /// Without this, adding cumulative delta to current pan on each frame causes
+  /// exponential acceleration (frame N adds sum of all previous deltas).
+  ///
+  /// Set on first pan interaction, cleared when drag ends or interaction changes.
+  Offset? _scrollbarDragStartPan;
+
+  /// Tracks the last scrollbar interaction type to detect interaction changes.
+  ///
+  /// Used to reset _scrollbarDragStartPan when switching between pan/zoom operations.
+  /// Example: User pans, then starts zooming → need to reset drag start tracking.
+  ScrollbarInteraction? _lastScrollbarInteraction;
 
   // ==================== LIFECYCLE METHODS ====================
 
@@ -1968,8 +1988,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   axis: Axis.vertical,
                   dataRange: yDataRange,
                   viewportRange: yViewportRange,
-                  onViewportChanged: (newViewport) {
-                    _onScrollbarViewportChanged(newViewport, isXAxis: false);
+                  onPixelDeltaChanged: (pixelDelta, interaction) {
+                    _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
                   },
                   theme: scrollbarTheme.yAxisScrollbar,
                 ),
@@ -1990,8 +2010,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   axis: Axis.horizontal,
                   dataRange: xDataRange,
                   viewportRange: xViewportRange,
-                  onViewportChanged: (newViewport) {
-                    _onScrollbarViewportChanged(newViewport, isXAxis: true);
+                  onPixelDeltaChanged: (pixelDelta, interaction) {
+                    _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
                   },
                   theme: scrollbarTheme.xAxisScrollbar,
                 ),
@@ -2954,6 +2974,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final panX = zoomPanState.panOffset.dx;
     final panY = zoomPanState.panOffset.dy;
 
+    // DEBUG: Log zoom/pan state when calculating data bounds
+    print('[BravenChart._calculateDataBounds] 🔍 READING ZOOM/PAN STATE:');
+    print('  zoomX: ${zoomX.toStringAsFixed(4)}, zoomY: ${zoomY.toStringAsFixed(4)}');
+    print('  panX: ${panX.toStringAsFixed(2)}, panY: ${panY.toStringAsFixed(2)}');
+
     // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
     if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
       // Calculate center from ORIGINAL data range
@@ -3363,15 +3388,48 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// Calculates the visible data range based on current zoom/pan state
   /// and invokes the callback if it exists.
-  /// Handles scrollbar viewport changes (T050-T055: User Story 1).
+  /// Handles scrollbar pixel delta changes (T050-T055: User Story 1 - PIXEL-DELTA PATTERN).
   ///
-  /// Converts scrollbar DataRange to ZoomPanState and updates viewport.
+  /// Converts scrollbar pixel delta to data delta using current viewport and updates zoom/pan state.
   /// This method is called when user interacts with scrollbars.
-  void _onScrollbarViewportChanged(DataRange newViewport, {required bool isXAxis}) {
+  ///
+  /// **PIXEL-DELTA PATTERN**: Scrollbar reports pixel deltas + interaction type.
+  /// Parent (this method) converts pixel deltas to zoom/pan state adjustments.
+  ///
+  /// CRITICAL FIX: Directly manipulate zoom/pan state instead of going through viewport calculations.
+  /// Previous bug: Used _calculateDataBounds which ALREADY applies zoom/pan, then applied MORE transformations,
+  /// creating a feedback loop causing jumps.
+  ///
+  /// New approach: Convert pixel delta directly to pan offset delta (for pan) or zoom level delta (for zoom edges).
+  void _onScrollbarPixelDelta(Offset pixelDelta, ScrollbarInteraction interaction, {required bool isXAxis}) {
+    print('[BravenChart._onScrollbarPixelDelta] SCROLLBAR PIXEL DELTA:');
+    print('  isXAxis: $isXAxis');
+    print('  pixelDelta: $pixelDelta');
+    print('  interaction: $interaction');
+
+    // DRAG END SIGNAL: Scrollbar sends Offset.zero when drag ends
+    // Clear drag start baseline so next drag starts fresh
+    if (pixelDelta == Offset.zero) {
+      print('  DRAG END - clearing drag start baseline');
+      _scrollbarDragStartPan = null;
+      _lastScrollbarInteraction = null;
+      return;
+    }
+
     // Get current zoom/pan state
     final currentState = _interactionStateNotifier.value.zoomPanState;
+    print(
+        '  BEFORE UPDATE - zoomX: ${currentState.zoomLevelX.toStringAsFixed(4)}, zoomY: ${currentState.zoomLevelY.toStringAsFixed(4)}, pan: ${currentState.panOffset}');
+
     final allSeries = _getAllSeries();
-    if (allSeries.isEmpty || _cachedChartRect == null) return;
+    if (allSeries.isEmpty) {
+      print('  EARLY RETURN: allSeries is EMPTY!');
+      return;
+    }
+    if (_cachedChartRect == null) {
+      print('  EARLY RETURN: _cachedChartRect is NULL!');
+      return;
+    }
 
     // Calculate ORIGINAL data bounds (full data range, no zoom/pan)
     final dataBounds = _calculateRawDataBounds(allSeries);
@@ -3382,47 +3440,370 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     final dataRangeX = dataMaxX - dataMinX;
     final dataRangeY = dataMaxY - dataMinY;
-    final dataCenterX = (dataMinX + dataMaxX) / 2;
-    final dataCenterY = (dataMinY + dataMaxY) / 2;
 
-    // Calculate new zoom/pan parameters from scrollbar viewport
+    // Convert pixel delta to data delta and apply based on interaction type
     if (isXAxis) {
-      // Calculate X-axis zoom and pan from viewport
-      final visibleRangeX = newViewport.max - newViewport.min;
-      final newZoomX = dataRangeX / visibleRangeX;
+      // Extract X pixel delta
+      final pixelDeltaX = pixelDelta.dx;
+      final trackLength = _cachedChartRect!.width;
 
-      final visibleCenterX = (newViewport.min + newViewport.max) / 2;
-      final panDataX = visibleCenterX - dataCenterX;
-      final newPanX = panDataX * (_cachedChartRect!.width / dataRangeX);
+      // Handle track click special case (absolute position, not delta)
+      if (interaction == ScrollbarInteraction.trackClick) {
+        // pixelDelta is absolute position in track coordinates (0 to trackLength)
+        // Convert to data position and center viewport there
+        final clickRatio = pixelDeltaX / trackLength;
+        final targetDataPosition = dataMinX + (clickRatio * dataRangeX);
 
-      // Update X zoom/pan, keep Y unchanged
-      final newZoomPanState = currentState.copyWith(
-        zoomLevelX: newZoomX,
-        panOffset: Offset(newPanX, currentState.panOffset.dy),
-      );
+        // Calculate viewport size from current zoom level
+        final viewportSize = dataRangeX / currentState.zoomLevelX;
 
-      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-        zoomPanState: newZoomPanState,
-      );
+        // Calculate new viewport centered at target position
+        final newViewportMin = (targetDataPosition - viewportSize / 2).clamp(dataMinX, dataMaxX - viewportSize);
+        final newViewportMax = newViewportMin + viewportSize;
+
+        print(
+            '  TRACK CLICK - clickRatio: ${clickRatio.toStringAsFixed(3)}, targetPos: ${targetDataPosition.toStringAsFixed(2)}, newViewport: ${newViewportMin.toStringAsFixed(2)}-${newViewportMax.toStringAsFixed(2)}');
+
+        // Convert viewport to zoom/pan (zoom stays same, only pan changes)
+        final visibleCenterX = (newViewportMin + newViewportMax) / 2;
+        final dataCenterX = (dataMinX + dataMaxX) / 2;
+        final panDataX = visibleCenterX - dataCenterX;
+        final newPanX = panDataX * (trackLength / dataRangeX);
+
+        final newZoomPanState = currentState.copyWith(
+          panOffset: Offset(newPanX, currentState.panOffset.dy),
+        );
+
+        _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+          zoomPanState: newZoomPanState,
+        );
+      } else {
+        // Regular drag: Convert pixel delta to pan offset delta
+        // CRITICAL FIX FOR SENSITIVITY: Scale by the ratio of data range to track length
+        // This makes scrollbar movement proportional to data movement
+        // Formula: panOffsetDelta = -(pixelDelta / trackLength) * trackLength = -pixelDelta
+        // BUT we need to account for zoom level! At zoom 2x, scrollbar should move half as much data
+        // So we scale by (dataRange / visibleRange) to maintain proper sensitivity
+
+        // Get current viewport size from zoom level
+        final viewportSize = dataRangeX / currentState.zoomLevelX;
+
+        // Scale factor: ratio of viewport to data range
+        // At zoom 1x (full data visible): scaleFactor = 1.0 (full sensitivity)
+        // At zoom 2x (50% visible): scaleFactor = 0.5 (half sensitivity)
+        final scaleFactor = viewportSize / dataRangeX;
+
+        // CRITICAL: Negate for correct directionality (drag scrollbar right = pan viewport right = negative pan offset)
+        // Scale by viewport ratio to maintain consistent sensitivity across zoom levels
+        final panOffsetDeltaX = -(pixelDeltaX * scaleFactor);
+
+        print(
+            '  DRAG - pixelDeltaX: ${pixelDeltaX.toStringAsFixed(2)}, scaleFactor: ${scaleFactor.toStringAsFixed(4)}, panOffsetDeltaX: ${panOffsetDeltaX.toStringAsFixed(2)}');
+
+        switch (interaction) {
+          case ScrollbarInteraction.pan:
+            // Reset drag start pan if interaction type changed
+            if (_lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = null;
+              _lastScrollbarInteraction = interaction;
+            }
+
+            // Capture starting pan offset on first frame of drag (when pixelDelta is near zero)
+            // Scrollbar reports CUMULATIVE pixel delta from drag start (e.g., 0, 1, 2, 3...)
+            // We must capture the baseline BEFORE applying any deltas to prevent initial jump
+            if (_scrollbarDragStartPan == null) {
+              _scrollbarDragStartPan = currentState.panOffset;
+              print(
+                  '  PAN - INITIAL FRAME - captured dragStartPan: ${_scrollbarDragStartPan!.dx.toStringAsFixed(2)}, pixelDelta: ${pixelDeltaX.toStringAsFixed(2)}');
+
+              // If this is truly the first frame (delta near zero), skip updating viewport
+              // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
+              if (pixelDeltaX.abs() < 0.5) {
+                print('  PAN - SKIPPING FIRST FRAME (delta too small)');
+                break; // Skip this frame, wait for next update
+              }
+            }
+
+            // Calculate absolute target pan from drag start
+            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
+            // NOT: newPan = currentPan + cumulativeDelta (which compounds each frame)
+            final targetPanX = _scrollbarDragStartPan!.dx + panOffsetDeltaX;
+
+            // Clamp pan to valid range
+            // Max pan right: viewport starts at dataMinX → panData = 0 - (dataMaxX - dataMinX)/2
+            // Max pan left: viewport ends at dataMaxX → panData = (dataMaxX - dataMinX) - (dataMaxX - dataMinX)/2
+            final viewportSize = dataRangeX / currentState.zoomLevelX;
+            final maxPanDataRight = -(dataRangeX - viewportSize) / 2;
+            final maxPanDataLeft = (dataRangeX - viewportSize) / 2;
+            final maxPanRight = maxPanDataRight * (trackLength / dataRangeX);
+            final maxPanLeft = maxPanDataLeft * (trackLength / dataRangeX);
+
+            final clampedPanX = targetPanX.clamp(maxPanRight, maxPanLeft);
+
+            print(
+                '  PAN - dragStartPan: ${_scrollbarDragStartPan!.dx.toStringAsFixed(2)}, targetPan: ${targetPanX.toStringAsFixed(2)}, clampedPan: ${clampedPanX.toStringAsFixed(2)} (range: ${maxPanRight.toStringAsFixed(2)} to ${maxPanLeft.toStringAsFixed(2)})');
+
+            final newZoomPanState = currentState.copyWith(
+              panOffset: Offset(clampedPanX, currentState.panOffset.dy),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.zoomLeftOrTop:
+          case ScrollbarInteraction.zoomRightOrBottom:
+            // Zoom edges: Adjust zoom level while keeping anchor point fixed
+            // This is more complex - need to calculate new zoom and pan to keep anchor point stationary
+
+            // Get current viewport from zoom/pan state
+            final dataCenterX = (dataMinX + dataMaxX) / 2;
+            final currentPanDataX = -currentState.panOffset.dx * (dataRangeX / trackLength);
+            final currentViewportSize = dataRangeX / currentState.zoomLevelX;
+            final currentVisibleCenterX = dataCenterX + currentPanDataX;
+            final currentViewportMinX = currentVisibleCenterX - currentViewportSize / 2;
+            final currentViewportMaxX = currentVisibleCenterX + currentViewportSize / 2;
+
+            // Convert pixel delta to data delta
+            final dataDeltaX = -(pixelDeltaX / trackLength) * dataRangeX;
+
+            // Calculate new viewport with anchor point
+            late final double newViewportMinX;
+            late final double newViewportMaxX;
+
+            if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
+              // Anchor right edge, adjust left edge
+              newViewportMinX = (currentViewportMinX + dataDeltaX).clamp(dataMinX, currentViewportMaxX - (dataRangeX * 0.01)); // Min 1% viewport
+              newViewportMaxX = currentViewportMaxX;
+              print('  ZOOM LEFT - anchor max: ${newViewportMaxX.toStringAsFixed(2)}, new min: ${newViewportMinX.toStringAsFixed(2)}');
+            } else {
+              // Anchor left edge, adjust right edge
+              newViewportMinX = currentViewportMinX;
+              newViewportMaxX = (currentViewportMaxX + dataDeltaX).clamp(currentViewportMinX + (dataRangeX * 0.01), dataMaxX); // Min 1% viewport
+              print('  ZOOM RIGHT - anchor min: ${newViewportMinX.toStringAsFixed(2)}, new max: ${newViewportMaxX.toStringAsFixed(2)}');
+            }
+
+            // Convert new viewport to zoom/pan state
+            final newViewportSize = newViewportMaxX - newViewportMinX;
+            final newZoomX = dataRangeX / newViewportSize;
+            final newVisibleCenterX = (newViewportMinX + newViewportMaxX) / 2;
+            final newPanDataX = newVisibleCenterX - dataCenterX;
+            final newPanX = newPanDataX * (trackLength / dataRangeX);
+
+            print('  ZOOM EDGE - newZoomX: ${newZoomX.toStringAsFixed(4)}, newPanX: ${newPanX.toStringAsFixed(2)}');
+
+            final newZoomPanState = currentState.copyWith(
+              zoomLevelX: newZoomX,
+              panOffset: Offset(newPanX, currentState.panOffset.dy),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.keyboard:
+            // Keyboard: Treated as pan
+            final newPanX = currentState.panOffset.dx + panOffsetDeltaX;
+
+            final viewportSize = dataRangeX / currentState.zoomLevelX;
+            final maxPanDataRight = -(dataRangeX - viewportSize) / 2;
+            final maxPanDataLeft = (dataRangeX - viewportSize) / 2;
+            final maxPanRight = maxPanDataRight * (trackLength / dataRangeX);
+            final maxPanLeft = maxPanDataLeft * (trackLength / dataRangeX);
+            final clampedPanX = newPanX.clamp(maxPanRight, maxPanLeft);
+
+            final newZoomPanState = currentState.copyWith(
+              panOffset: Offset(clampedPanX, currentState.panOffset.dy),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.trackClick:
+            // Already handled above
+            return;
+        }
+      }
     } else {
-      // Calculate Y-axis zoom and pan from viewport
-      final visibleRangeY = newViewport.max - newViewport.min;
-      final newZoomY = dataRangeY / visibleRangeY;
+      // Y-axis: Similar logic for vertical scrollbar
+      final pixelDeltaY = pixelDelta.dy;
+      final trackLength = _cachedChartRect!.height;
 
-      final visibleCenterY = (newViewport.min + newViewport.max) / 2;
-      final panDataY = visibleCenterY - dataCenterY;
-      final newPanY = panDataY * (_cachedChartRect!.height / dataRangeY);
+      // Handle track click special case (absolute position, not delta)
+      if (interaction == ScrollbarInteraction.trackClick) {
+        // pixelDelta is absolute position in track coordinates (0 to trackLength)
+        final clickRatio = pixelDeltaY / trackLength;
+        final targetDataPosition = dataMinY + (clickRatio * dataRangeY);
 
-      // Update Y zoom/pan, keep X unchanged
-      final newZoomPanState = currentState.copyWith(
-        zoomLevelY: newZoomY,
-        panOffset: Offset(currentState.panOffset.dx, newPanY),
-      );
+        // Calculate viewport size from current zoom level
+        final viewportSize = dataRangeY / currentState.zoomLevelY;
 
-      _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-        zoomPanState: newZoomPanState,
-      );
+        // Calculate new viewport centered at target position
+        final newViewportMin = (targetDataPosition - viewportSize / 2).clamp(dataMinY, dataMaxY - viewportSize);
+        final newViewportMax = newViewportMin + viewportSize;
+
+        // Convert viewport to zoom/pan (zoom stays same, only pan changes)
+        final visibleCenterY = (newViewportMin + newViewportMax) / 2;
+        final dataCenterY = (dataMinY + dataMaxY) / 2;
+        final panDataY = visibleCenterY - dataCenterY;
+        final newPanY = panDataY * (trackLength / dataRangeY);
+
+        final newZoomPanState = currentState.copyWith(
+          panOffset: Offset(currentState.panOffset.dx, newPanY),
+        );
+
+        _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+          zoomPanState: newZoomPanState,
+        );
+      } else {
+        // Regular drag: Convert pixel delta to pan offset delta
+        // CRITICAL FIX FOR SENSITIVITY: Scale by the ratio of viewport to data range
+        // This makes scrollbar movement proportional to data movement at current zoom level
+
+        // Get current viewport size from zoom level
+        final viewportSize = dataRangeY / currentState.zoomLevelY;
+
+        // Scale factor: ratio of viewport to data range
+        final scaleFactor = viewportSize / dataRangeY;
+
+        // CRITICAL: Negate for correct directionality (drag scrollbar down = pan viewport down = positive pan offset for Y)
+        final panOffsetDeltaY = pixelDeltaY * scaleFactor; // Note: NO negation for Y-axis (screen Y increases downward)
+
+        print(
+            '  DRAG - pixelDeltaY: ${pixelDeltaY.toStringAsFixed(2)}, scaleFactor: ${scaleFactor.toStringAsFixed(4)}, panOffsetDeltaY: ${panOffsetDeltaY.toStringAsFixed(2)}');
+
+        switch (interaction) {
+          case ScrollbarInteraction.pan:
+            // Reset drag start pan if interaction type changed
+            if (_lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = null;
+              _lastScrollbarInteraction = interaction;
+            }
+
+            // Capture starting pan offset on first frame of drag (when pixelDelta is near zero)
+            // Scrollbar reports CUMULATIVE pixel delta from drag start (e.g., 0, 1, 2, 3...)
+            // We must capture the baseline BEFORE applying any deltas to prevent initial jump
+            if (_scrollbarDragStartPan == null) {
+              _scrollbarDragStartPan = currentState.panOffset;
+              print(
+                  '  PAN - INITIAL FRAME - captured dragStartPan: ${_scrollbarDragStartPan!.dy.toStringAsFixed(2)}, pixelDelta: ${pixelDeltaY.toStringAsFixed(2)}');
+
+              // If this is truly the first frame (delta near zero), skip updating viewport
+              // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
+              if (pixelDeltaY.abs() < 0.5) {
+                print('  PAN - SKIPPING FIRST FRAME (delta too small)');
+                break; // Skip this frame, wait for next update
+              }
+            }
+
+            // Calculate absolute target pan from drag start
+            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
+            final targetPanY = _scrollbarDragStartPan!.dy + panOffsetDeltaY;
+
+            // Clamp pan to valid range
+            final viewportSize = dataRangeY / currentState.zoomLevelY;
+            final maxPanDataDown = -(dataRangeY - viewportSize) / 2;
+            final maxPanDataUp = (dataRangeY - viewportSize) / 2;
+            final maxPanDown = maxPanDataDown * (trackLength / dataRangeY);
+            final maxPanUp = maxPanDataUp * (trackLength / dataRangeY);
+
+            final clampedPanY = targetPanY.clamp(maxPanDown, maxPanUp);
+
+            print(
+                '  PAN - dragStartPan: ${_scrollbarDragStartPan!.dy.toStringAsFixed(2)}, targetPan: ${targetPanY.toStringAsFixed(2)}, clampedPan: ${clampedPanY.toStringAsFixed(2)} (range: ${maxPanDown.toStringAsFixed(2)} to ${maxPanUp.toStringAsFixed(2)})');
+
+            final newZoomPanState = currentState.copyWith(
+              panOffset: Offset(currentState.panOffset.dx, clampedPanY),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.zoomLeftOrTop:
+          case ScrollbarInteraction.zoomRightOrBottom:
+            // Zoom edges: Adjust zoom level while keeping anchor point fixed
+
+            // Get current viewport from zoom/pan state
+            final dataCenterY = (dataMinY + dataMaxY) / 2;
+            final currentPanDataY = currentState.panOffset.dy * (dataRangeY / trackLength);
+            final currentViewportSize = dataRangeY / currentState.zoomLevelY;
+            final currentVisibleCenterY = dataCenterY + currentPanDataY;
+            final currentViewportMinY = currentVisibleCenterY - currentViewportSize / 2;
+            final currentViewportMaxY = currentVisibleCenterY + currentViewportSize / 2;
+
+            // Convert pixel delta to data delta
+            final dataDeltaY = (pixelDeltaY / trackLength) * dataRangeY; // Note: NO negation for Y
+
+            // Calculate new viewport with anchor point
+            late final double newViewportMinY;
+            late final double newViewportMaxY;
+
+            if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
+              // Anchor bottom edge, adjust top edge
+              newViewportMinY = (currentViewportMinY + dataDeltaY).clamp(dataMinY, currentViewportMaxY - (dataRangeY * 0.01));
+              newViewportMaxY = currentViewportMaxY;
+              print('  ZOOM TOP - anchor max: ${newViewportMaxY.toStringAsFixed(2)}, new min: ${newViewportMinY.toStringAsFixed(2)}');
+            } else {
+              // Anchor top edge, adjust bottom edge
+              newViewportMinY = currentViewportMinY;
+              newViewportMaxY = (currentViewportMaxY + dataDeltaY).clamp(currentViewportMinY + (dataRangeY * 0.01), dataMaxY);
+              print('  ZOOM BOTTOM - anchor min: ${newViewportMinY.toStringAsFixed(2)}, new max: ${newViewportMaxY.toStringAsFixed(2)}');
+            }
+
+            // Convert new viewport to zoom/pan state
+            final newViewportSize = newViewportMaxY - newViewportMinY;
+            final newZoomY = dataRangeY / newViewportSize;
+            final newVisibleCenterY = (newViewportMinY + newViewportMaxY) / 2;
+            final newPanDataY = newVisibleCenterY - dataCenterY;
+            final newPanY = newPanDataY * (trackLength / dataRangeY);
+
+            print('  ZOOM EDGE - newZoomY: ${newZoomY.toStringAsFixed(4)}, newPanY: ${newPanY.toStringAsFixed(2)}');
+
+            final newZoomPanState = currentState.copyWith(
+              zoomLevelY: newZoomY,
+              panOffset: Offset(currentState.panOffset.dx, newPanY),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.keyboard:
+            // Keyboard: Treated as pan
+            final newPanY = currentState.panOffset.dy + panOffsetDeltaY;
+
+            final viewportSize = dataRangeY / currentState.zoomLevelY;
+            final maxPanDataDown = -(dataRangeY - viewportSize) / 2;
+            final maxPanDataUp = (dataRangeY - viewportSize) / 2;
+            final maxPanDown = maxPanDataDown * (trackLength / dataRangeY);
+            final maxPanUp = maxPanDataUp * (trackLength / dataRangeY);
+            final clampedPanY = newPanY.clamp(maxPanDown, maxPanUp);
+
+            final newZoomPanState = currentState.copyWith(
+              panOffset: Offset(currentState.panOffset.dx, clampedPanY),
+            );
+
+            _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
+              zoomPanState: newZoomPanState,
+            );
+            break;
+
+          case ScrollbarInteraction.trackClick:
+            // Already handled above
+            return;
+        }
+      }
     }
+
+    print(
+        '  AFTER UPDATE - zoomX: ${_interactionStateNotifier.value.zoomPanState.zoomLevelX.toStringAsFixed(4)}, zoomY: ${_interactionStateNotifier.value.zoomPanState.zoomLevelY.toStringAsFixed(4)}, pan: ${_interactionStateNotifier.value.zoomPanState.panOffset}');
 
     // Invoke viewport callback
     _invokeViewportCallback();
