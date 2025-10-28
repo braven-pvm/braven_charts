@@ -167,12 +167,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// Tracked during drag to calculate total pan delta in _onPanEnd.
   braven.DataRange? _lastSentViewport;
 
-  /// Throttle timer for viewport updates (T067 - 60 FPS = 16ms max).
-  Timer? _throttleTimer;
-
-  /// Pending viewport update (for throttling - T067).
-  braven.DataRange? _pendingViewportUpdate;
-
   /// Animation controller for track click jump (T073 - 300ms ease-out).
   AnimationController? _jumpAnimationController;
 
@@ -240,6 +234,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     }
   }
 
+  /// Fires the onViewportChanged callback immediately during drag.
+  /// Flutter's RawScrollbar pattern: fire immediately, let metrics drive visuals.
+  void _fireViewportChanged(braven.DataRange viewport) {
+    widget.onViewportChanged(viewport);
+  }
+
   @override
   void didUpdateWidget(ChartScrollbar oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -271,7 +271,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     _stateNotifier.dispose();
     _focusNode.dispose();
     _cancelAutoHide();
-    _throttleTimer?.cancel();
     _jumpAnimationController?.dispose();
     _flashAnimationController.dispose(); // T091A
     super.dispose();
@@ -297,14 +296,27 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
           // Calculate scroll offset from viewport position
           final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
 
+          // DEBUG: Log scrollbar calculation values
+          print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] '
+              'dataRange: ${widget.dataRange.min.toStringAsFixed(2)}-${widget.dataRange.max.toStringAsFixed(2)} (span: ${widget.dataRange.span.toStringAsFixed(2)}), '
+              'viewportRange: ${widget.viewportRange.min.toStringAsFixed(2)}-${widget.viewportRange.max.toStringAsFixed(2)} (span: ${widget.viewportRange.span.toStringAsFixed(2)}), '
+              'scrollOffset: ${scrollOffset.toStringAsFixed(2)}, '
+              'trackLength: ${trackLength.toStringAsFixed(2)}');
+
           // Calculate handle position using ScrollbarController (T047)
+          // Parameters: scrollOffset, totalRange, viewportRange, trackLength, handleSize
           final handlePosition = ScrollbarController.calculateHandlePosition(
+            scrollOffset,
             widget.dataRange.span,
             widget.viewportRange.span,
             trackLength,
-            scrollOffset,
-            widget.theme.minHandleSize,
+            handleSize,
           );
+
+          // DEBUG: Log calculation results
+          print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] '
+              'handleSize: ${handleSize.toStringAsFixed(2)}, '
+              'handlePosition: ${handlePosition.toStringAsFixed(2)}');
 
           // Update state with calculated handle geometry (needed for hit testing in T086)
           // Update synchronously so gesture handlers have correct values immediately
@@ -327,9 +339,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
                   // When not flashing, flash opacity is at rest (0.8), so final = 1.0 * 0.8 = 0.8
                   // During flash: 0.8 → 0.4 → 0.8 creates visible flash effect
                   final baseOpacity = state.isVisible ? 1.0 : 0.0;
-                  final flashOpacity = _flashAnimationController.isAnimating 
-                      ? _flashOpacityAnimation.value 
-                      : 1.0; // No flash effect when not animating
+                  final flashOpacity =
+                      _flashAnimationController.isAnimating ? _flashOpacityAnimation.value : 1.0; // No flash effect when not animating
                   final finalOpacity = baseOpacity * flashOpacity;
 
                   // Create ScrollbarPainter with current state and configuration
@@ -463,11 +474,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     if (zone == null) return SystemMouseCursors.basic;
 
     // T091B: Show 'not-allowed' cursor when at zoom limit during edge resize
-    if (_isAtZoomLimit && 
-        (zone == HitTestZone.leftEdge || 
-         zone == HitTestZone.rightEdge || 
-         zone == HitTestZone.topEdge || 
-         zone == HitTestZone.bottomEdge)) {
+    if (_isAtZoomLimit &&
+        (zone == HitTestZone.leftEdge || zone == HitTestZone.rightEdge || zone == HitTestZone.topEdge || zone == HitTestZone.bottomEdge)) {
       return SystemMouseCursors.forbidden;
     }
 
@@ -528,19 +536,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         parent: _jumpAnimationController!,
         curve: Curves.easeOut, // FR-007 enhanced
       ),
-    )..addListener(() {
-        // Interpolate between start and target viewport
-        if (_jumpStartViewport != null && _jumpTargetViewport != null) {
-          final t = _jumpAnimation!.value;
-          final interpolatedMin = _jumpStartViewport!.min + ((_jumpTargetViewport!.min - _jumpStartViewport!.min) * t);
-          final interpolatedMax = _jumpStartViewport!.max + ((_jumpTargetViewport!.max - _jumpStartViewport!.max) * t);
+    );
 
-          final interpolatedViewport = braven.DataRange(min: interpolatedMin, max: interpolatedMax);
-
-          // Fire viewport changed callback
-          widget.onViewportChanged(interpolatedViewport);
-        }
-      });
+    // Add named listener so it can be properly removed when canceling
+    _jumpAnimation!.addListener(_onJumpAnimationTick);
 
     // Add completion listener to clean up
     _jumpAnimationController!.addStatusListener(_onJumpAnimationComplete);
@@ -557,6 +556,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// Animation completion listener (T073).
   void _onJumpAnimationComplete(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
+      // Remove animation listener
+      _jumpAnimation?.removeListener(_onJumpAnimationTick);
+
       // Clean up animation state
       _jumpStartViewport = null;
       _jumpTargetViewport = null;
@@ -569,11 +571,33 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     }
   }
 
+  /// Jump animation tick listener (T073).
+  ///
+  /// Called on each animation frame to interpolate viewport during track-click jump.
+  /// This is extracted as a named method so it can be properly removed when canceling.
+  void _onJumpAnimationTick() {
+    // Interpolate between start and target viewport
+    if (_jumpStartViewport != null && _jumpTargetViewport != null) {
+      final t = _jumpAnimation!.value;
+      final interpolatedMin = _jumpStartViewport!.min + ((_jumpTargetViewport!.min - _jumpStartViewport!.min) * t);
+      final interpolatedMax = _jumpStartViewport!.max + ((_jumpTargetViewport!.max - _jumpStartViewport!.max) * t);
+
+      final interpolatedViewport = braven.DataRange(min: interpolatedMin, max: interpolatedMax);
+
+      // Fire viewport changed callback
+      _fireViewportChanged(interpolatedViewport);
+    }
+  }
+
   /// Cancels active jump animation (T073B).
   void _cancelJumpAnimation() {
     if (_jumpAnimationController?.isAnimating ?? false) {
       _jumpAnimationController?.stop();
       _jumpAnimationController?.reset();
+
+      // CRITICAL: Remove the animation listener to prevent it from firing during drag
+      _jumpAnimation?.removeListener(_onJumpAnimationTick);
+
       _jumpStartViewport = null;
       _jumpTargetViewport = null;
     }
@@ -662,22 +686,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
     final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
 
-    // Calculate current handle size and position
-    final currentHandleSize = ScrollbarController.calculateHandleSize(
-      widget.dataRange.span,
-      widget.viewportRange.span,
-      trackLength,
-      widget.theme.minHandleSize,
-    );
-
-    final currentHandlePosition = ScrollbarController.calculateHandlePosition(
-      widget.viewportRange.min - widget.dataRange.min,
-      widget.dataRange.span,
-      widget.viewportRange.span,
-      trackLength,
-      widget.theme.minHandleSize,
-    );
-
     // Determine behavior based on drag zone (T086-T089)
     // If _dragZone is null (edge case - drag without pan start), default to center pan
     late final braven.DataRange newViewport;
@@ -687,18 +695,21 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
       case HitTestZone.topEdge:
         // Left/Top Edge Resize (T087): Adjust viewportMin, keep viewportMax anchored
         // Convert pixel delta to data delta manually
-        final dataDelta = (pixelDelta / trackLength) * widget.dataRange.span;
+        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
+        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
 
-        var newViewportMin = widget.viewportRange.min + dataDelta;
+        // CRITICAL: Use drag start viewport as baseline, not current viewport
+        var newViewportMin = _dragStartViewportRange!.min + dataDelta;
 
         // Clamp to data range boundaries and not exceed viewportMax
+        // Use drag start max as anchor point (right edge stays fixed)
         newViewportMin = newViewportMin.clamp(
           widget.dataRange.min,
-          widget.viewportRange.max,
+          _dragStartViewportRange!.max,
         );
 
         // Calculate resulting span after resize
-        final newSpan = widget.viewportRange.max - newViewportMin;
+        final newSpan = _dragStartViewportRange!.max - newViewportMin;
 
         // Enforce zoom limits (T090-T091)
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
@@ -709,12 +720,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
         // If zoomed in too far (span too small), clamp viewportMin
         if (newSpan < minSpan) {
-          newViewportMin = widget.viewportRange.max - minSpan;
+          newViewportMin = _dragStartViewportRange!.max - minSpan;
         }
 
         // If zoomed out too far (span too large), clamp viewportMin
         if (newSpan > maxSpan) {
-          newViewportMin = widget.viewportRange.max - maxSpan;
+          newViewportMin = _dragStartViewportRange!.max - maxSpan;
         }
 
         // Final clamp to data boundaries
@@ -737,7 +748,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
         newViewport = braven.DataRange(
           min: newViewportMin,
-          max: widget.viewportRange.max, // Right edge anchored
+          max: _dragStartViewportRange!.max, // Right edge anchored at drag start position
         );
         break;
 
@@ -745,18 +756,21 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
       case HitTestZone.bottomEdge:
         // Right/Bottom Edge Resize (T088): Adjust viewportMax, keep viewportMin anchored
         // Convert pixel delta to data delta manually
-        final dataDelta = (pixelDelta / trackLength) * widget.dataRange.span;
+        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
+        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
 
-        var newViewportMax = widget.viewportRange.max + dataDelta;
+        // CRITICAL: Use drag start viewport as baseline, not current viewport
+        var newViewportMax = _dragStartViewportRange!.max + dataDelta;
 
         // Clamp to data range boundaries and not below viewportMin
+        // Use drag start min as anchor point (left edge stays fixed)
         newViewportMax = newViewportMax.clamp(
-          widget.viewportRange.min,
+          _dragStartViewportRange!.min,
           widget.dataRange.max,
         );
 
         // Calculate resulting span after resize
-        final newSpan = newViewportMax - widget.viewportRange.min;
+        final newSpan = newViewportMax - _dragStartViewportRange!.min;
 
         // Enforce zoom limits (T090-T091)
         final minSpan = widget.dataRange.span * widget.theme.minZoomRatio;
@@ -767,12 +781,12 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
         // If zoomed in too far (span too small), clamp viewportMax
         if (newSpan < minSpan) {
-          newViewportMax = widget.viewportRange.min + minSpan;
+          newViewportMax = _dragStartViewportRange!.min + minSpan;
         }
 
         // If zoomed out too far (span too large), clamp viewportMax
         if (newSpan > maxSpan) {
-          newViewportMax = widget.viewportRange.min + maxSpan;
+          newViewportMax = _dragStartViewportRange!.min + maxSpan;
         }
 
         // Final clamp to data boundaries
@@ -794,27 +808,21 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         }
 
         newViewport = braven.DataRange(
-          min: widget.viewportRange.min, // Left edge anchored
+          min: _dragStartViewportRange!.min, // Left edge anchored at drag start position
           max: newViewportMax,
         );
         break;
 
       case HitTestZone.center:
-        // Center Pan (T065-T066): Calculate new handle position after drag
-        final newHandlePosition = currentHandlePosition + pixelDelta;
-
-        // Convert handle position to data range offset (T068)
-        final newScrollOffset = ScrollbarController.handleToDataRange(
-          newHandlePosition,
-          widget.dataRange.span,
-          widget.viewportRange.span,
-          trackLength,
-          currentHandleSize,
-        );
+        // Center Pan (T065-T066): Calculate new scroll offset from pixel delta
+        // Convert pixel delta to data delta
+        // CRITICAL: Negate delta for correct directionality (drag right = increase viewport)
+        final dataDelta = -(pixelDelta / trackLength) * widget.dataRange.span;
 
         // Calculate new viewport range (maintaining viewport size, shifting position)
-        final viewportSize = widget.viewportRange.span;
-        final newViewportMin = widget.dataRange.min + newScrollOffset;
+        // CRITICAL: Use drag start viewport as baseline, not current viewport
+        final viewportSize = _dragStartViewportRange!.span;
+        final newViewportMin = _dragStartViewportRange!.min + dataDelta;
 
         // Apply boundary clamping (T072)
         final clampedMin = newViewportMin.clamp(
@@ -832,44 +840,14 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         return;
     }
 
-    // Update handle position in state via ValueNotifier (T066)
-    final newHandlePositionClamped = ScrollbarController.calculateHandlePosition(
-      newViewport.min - widget.dataRange.min,
-      widget.dataRange.span,
-      newViewport.span,
-      trackLength,
-      widget.theme.minHandleSize,
-    );
+    // Fire viewport change immediately - Flutter's pattern
+    _fireViewportChanged(newViewport);
 
-    _stateNotifier.value = _stateNotifier.value.copyWith(
-      handlePosition: newHandlePositionClamped,
-    );
+    // Track for onPanChanged delta (T071)
+    _lastSentViewport = newViewport;
 
-    // Throttle viewport updates to 60 FPS (T067)
-    // Store the latest viewport update
-    _pendingViewportUpdate = newViewport;
-
-    // If no throttle is active, fire immediately and start throttle period
-    if (_throttleTimer == null) {
-      widget.onViewportChanged(_pendingViewportUpdate!);
-      _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
-      _pendingViewportUpdate = null;
-
-      // Start 16ms throttle period
-      _throttleTimer = Timer(const Duration(milliseconds: 16), () {
-        // Throttle period ended - fire any pending update
-        if (_pendingViewportUpdate != null) {
-          widget.onViewportChanged(_pendingViewportUpdate!);
-          _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
-          _pendingViewportUpdate = null;
-        }
-        _throttleTimer = null;
-      });
-    }
-    // Else: throttle active - just store the update, it will fire when throttle expires
-
-    // Update drag start position for next delta calculation
-    _dragStartPosition = currentPosition;
+    // Do NOT update _dragStartPosition - keep it fixed from pan start
+    // This ensures we calculate cumulative delta from the original drag start point
   }
 
   /// Handles pan gesture end (T070-T071).
@@ -878,17 +856,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// Fires onPanChanged callback with total pan delta (T071).
   /// Fires onZoomChanged callback with zoom ratio for edge resize (T092).
   void _onPanEnd(DragEndDetails details) {
-    // Flush any pending throttled viewport update (T070)
-    if (_pendingViewportUpdate != null) {
-      widget.onViewportChanged(_pendingViewportUpdate!);
-      _lastSentViewport = _pendingViewportUpdate; // Track for onPanChanged delta (T071)
-      _pendingViewportUpdate = null;
-    }
-
-    // Cancel throttle timer
-    _throttleTimer?.cancel();
-    _throttleTimer = null;
-
     // Fire onPanChanged callback with total pan delta (T071)
     // Only fire if center pan (not edge resize)
     if (widget.onPanChanged != null && _dragStartViewportRange != null && _lastSentViewport != null && _dragZone == HitTestZone.center) {
