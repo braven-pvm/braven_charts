@@ -2974,11 +2974,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final panX = zoomPanState.panOffset.dx;
     final panY = zoomPanState.panOffset.dy;
 
-    // DEBUG: Log zoom/pan state when calculating data bounds
-    print('[BravenChart._calculateDataBounds] 🔍 READING ZOOM/PAN STATE:');
-    print('  zoomX: ${zoomX.toStringAsFixed(4)}, zoomY: ${zoomY.toStringAsFixed(4)}');
-    print('  panX: ${panX.toStringAsFixed(2)}, panY: ${panY.toStringAsFixed(2)}');
-
     // Only apply zoom/pan if not at default state (zoom != 1.0 or pan != 0)
     if (zoomX != 1.0 || zoomY != 1.0 || panX != 0.0 || panY != 0.0) {
       // Calculate center from ORIGINAL data range
@@ -3402,15 +3397,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   ///
   /// New approach: Convert pixel delta directly to pan offset delta (for pan) or zoom level delta (for zoom edges).
   void _onScrollbarPixelDelta(Offset pixelDelta, ScrollbarInteraction interaction, {required bool isXAxis}) {
-    print('[BravenChart._onScrollbarPixelDelta] SCROLLBAR PIXEL DELTA:');
-    print('  isXAxis: $isXAxis');
-    print('  pixelDelta: $pixelDelta');
-    print('  interaction: $interaction');
-
     // DRAG END SIGNAL: Scrollbar sends Offset.zero when drag ends
     // Clear drag start baseline so next drag starts fresh
     if (pixelDelta == Offset.zero) {
-      print('  DRAG END - clearing drag start baseline');
       _scrollbarDragStartPan = null;
       _lastScrollbarInteraction = null;
       return;
@@ -3418,16 +3407,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Get current zoom/pan state
     final currentState = _interactionStateNotifier.value.zoomPanState;
-    print(
-        '  BEFORE UPDATE - zoomX: ${currentState.zoomLevelX.toStringAsFixed(4)}, zoomY: ${currentState.zoomLevelY.toStringAsFixed(4)}, pan: ${currentState.panOffset}');
 
     final allSeries = _getAllSeries();
     if (allSeries.isEmpty) {
-      print('  EARLY RETURN: allSeries is EMPTY!');
       return;
     }
     if (_cachedChartRect == null) {
-      print('  EARLY RETURN: _cachedChartRect is NULL!');
       return;
     }
 
@@ -3461,9 +3446,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         final newViewportMin = (targetDataPosition - viewportSize / 2).clamp(dataMinX, dataMaxX - viewportSize);
         final newViewportMax = newViewportMin + viewportSize;
 
-        print(
-            '  TRACK CLICK - clickRatio: ${clickRatio.toStringAsFixed(3)}, targetPos: ${targetDataPosition.toStringAsFixed(2)}, newViewport: ${newViewportMin.toStringAsFixed(2)}-${newViewportMax.toStringAsFixed(2)}');
-
         // Convert viewport to zoom/pan (zoom stays same, only pan changes)
         final visibleCenterX = (newViewportMin + newViewportMax) / 2;
         final dataCenterX = (dataMinX + dataMaxX) / 2;
@@ -3491,14 +3473,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Scale factor: ratio of viewport to data range
         // At zoom 1x (full data visible): scaleFactor = 1.0 (full sensitivity)
         // At zoom 2x (50% visible): scaleFactor = 0.5 (half sensitivity)
-        final scaleFactor = viewportSize / dataRangeX;
+        // SENSITIVITY MULTIPLIER: 1.5x to make dragging more responsive
+        final scaleFactor = (viewportSize / dataRangeX) * 1.5;
 
         // CRITICAL: Negate for correct directionality (drag scrollbar right = pan viewport right = negative pan offset)
         // Scale by viewport ratio to maintain consistent sensitivity across zoom levels
         final panOffsetDeltaX = -(pixelDeltaX * scaleFactor);
-
-        print(
-            '  DRAG - pixelDeltaX: ${pixelDeltaX.toStringAsFixed(2)}, scaleFactor: ${scaleFactor.toStringAsFixed(4)}, panOffsetDeltaX: ${panOffsetDeltaX.toStringAsFixed(2)}');
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
@@ -3513,13 +3493,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // We must capture the baseline BEFORE applying any deltas to prevent initial jump
             if (_scrollbarDragStartPan == null) {
               _scrollbarDragStartPan = currentState.panOffset;
-              print(
-                  '  PAN - INITIAL FRAME - captured dragStartPan: ${_scrollbarDragStartPan!.dx.toStringAsFixed(2)}, pixelDelta: ${pixelDeltaX.toStringAsFixed(2)}');
 
               // If this is truly the first frame (delta near zero), skip updating viewport
               // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
               if (pixelDeltaX.abs() < 0.5) {
-                print('  PAN - SKIPPING FIRST FRAME (delta too small)');
                 break; // Skip this frame, wait for next update
               }
             }
@@ -3539,9 +3516,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final maxPanLeft = maxPanDataLeft * (trackLength / dataRangeX);
 
             final clampedPanX = targetPanX.clamp(maxPanRight, maxPanLeft);
-
-            print(
-                '  PAN - dragStartPan: ${_scrollbarDragStartPan!.dx.toStringAsFixed(2)}, targetPan: ${targetPanX.toStringAsFixed(2)}, clampedPan: ${clampedPanX.toStringAsFixed(2)} (range: ${maxPanRight.toStringAsFixed(2)} to ${maxPanLeft.toStringAsFixed(2)})');
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(clampedPanX, currentState.panOffset.dy),
@@ -3576,12 +3550,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               // Anchor right edge, adjust left edge
               newViewportMinX = (currentViewportMinX + dataDeltaX).clamp(dataMinX, currentViewportMaxX - (dataRangeX * 0.01)); // Min 1% viewport
               newViewportMaxX = currentViewportMaxX;
-              print('  ZOOM LEFT - anchor max: ${newViewportMaxX.toStringAsFixed(2)}, new min: ${newViewportMinX.toStringAsFixed(2)}');
             } else {
               // Anchor left edge, adjust right edge
               newViewportMinX = currentViewportMinX;
               newViewportMaxX = (currentViewportMaxX + dataDeltaX).clamp(currentViewportMinX + (dataRangeX * 0.01), dataMaxX); // Min 1% viewport
-              print('  ZOOM RIGHT - anchor min: ${newViewportMinX.toStringAsFixed(2)}, new max: ${newViewportMaxX.toStringAsFixed(2)}');
             }
 
             // Convert new viewport to zoom/pan state
@@ -3590,8 +3562,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final newVisibleCenterX = (newViewportMinX + newViewportMaxX) / 2;
             final newPanDataX = newVisibleCenterX - dataCenterX;
             final newPanX = newPanDataX * (trackLength / dataRangeX);
-
-            print('  ZOOM EDGE - newZoomX: ${newZoomX.toStringAsFixed(4)}, newPanX: ${newPanX.toStringAsFixed(2)}');
 
             final newZoomPanState = currentState.copyWith(
               zoomLevelX: newZoomX,
@@ -3668,13 +3638,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         final viewportSize = dataRangeY / currentState.zoomLevelY;
 
         // Scale factor: ratio of viewport to data range
-        final scaleFactor = viewportSize / dataRangeY;
+        // SENSITIVITY MULTIPLIER: 1.5x to make dragging more responsive
+        final scaleFactor = (viewportSize / dataRangeY) * 1.5;
 
-        // CRITICAL: Negate for correct directionality (drag scrollbar down = pan viewport down = positive pan offset for Y)
-        final panOffsetDeltaY = pixelDeltaY * scaleFactor; // Note: NO negation for Y-axis (screen Y increases downward)
-
-        print(
-            '  DRAG - pixelDeltaY: ${pixelDeltaY.toStringAsFixed(2)}, scaleFactor: ${scaleFactor.toStringAsFixed(4)}, panOffsetDeltaY: ${panOffsetDeltaY.toStringAsFixed(2)}');
+        // CRITICAL: NO negation for Y-axis (screen Y increases downward, data Y increases downward)
+        // Drag scrollbar down (positive pixel delta) = pan viewport down (positive pan offset)
+        final panOffsetDeltaY = pixelDeltaY * scaleFactor;
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
@@ -3689,13 +3658,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             // We must capture the baseline BEFORE applying any deltas to prevent initial jump
             if (_scrollbarDragStartPan == null) {
               _scrollbarDragStartPan = currentState.panOffset;
-              print(
-                  '  PAN - INITIAL FRAME - captured dragStartPan: ${_scrollbarDragStartPan!.dy.toStringAsFixed(2)}, pixelDelta: ${pixelDeltaY.toStringAsFixed(2)}');
 
               // If this is truly the first frame (delta near zero), skip updating viewport
               // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
               if (pixelDeltaY.abs() < 0.5) {
-                print('  PAN - SKIPPING FIRST FRAME (delta too small)');
                 break; // Skip this frame, wait for next update
               }
             }
@@ -3712,9 +3678,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final maxPanUp = maxPanDataUp * (trackLength / dataRangeY);
 
             final clampedPanY = targetPanY.clamp(maxPanDown, maxPanUp);
-
-            print(
-                '  PAN - dragStartPan: ${_scrollbarDragStartPan!.dy.toStringAsFixed(2)}, targetPan: ${targetPanY.toStringAsFixed(2)}, clampedPan: ${clampedPanY.toStringAsFixed(2)} (range: ${maxPanDown.toStringAsFixed(2)} to ${maxPanUp.toStringAsFixed(2)})');
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(currentState.panOffset.dx, clampedPanY),
@@ -3738,7 +3701,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final currentViewportMaxY = currentVisibleCenterY + currentViewportSize / 2;
 
             // Convert pixel delta to data delta
-            final dataDeltaY = (pixelDeltaY / trackLength) * dataRangeY; // Note: NO negation for Y
+            // NO negation for Y-axis (matches pan behavior)
+            final dataDeltaY = (pixelDeltaY / trackLength) * dataRangeY;
 
             // Calculate new viewport with anchor point
             late final double newViewportMinY;
@@ -3748,12 +3712,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               // Anchor bottom edge, adjust top edge
               newViewportMinY = (currentViewportMinY + dataDeltaY).clamp(dataMinY, currentViewportMaxY - (dataRangeY * 0.01));
               newViewportMaxY = currentViewportMaxY;
-              print('  ZOOM TOP - anchor max: ${newViewportMaxY.toStringAsFixed(2)}, new min: ${newViewportMinY.toStringAsFixed(2)}');
             } else {
               // Anchor top edge, adjust bottom edge
               newViewportMinY = currentViewportMinY;
               newViewportMaxY = (currentViewportMaxY + dataDeltaY).clamp(currentViewportMinY + (dataRangeY * 0.01), dataMaxY);
-              print('  ZOOM BOTTOM - anchor min: ${newViewportMinY.toStringAsFixed(2)}, new max: ${newViewportMaxY.toStringAsFixed(2)}');
             }
 
             // Convert new viewport to zoom/pan state
@@ -3762,8 +3724,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final newVisibleCenterY = (newViewportMinY + newViewportMaxY) / 2;
             final newPanDataY = newVisibleCenterY - dataCenterY;
             final newPanY = newPanDataY * (trackLength / dataRangeY);
-
-            print('  ZOOM EDGE - newZoomY: ${newZoomY.toStringAsFixed(4)}, newPanY: ${newPanY.toStringAsFixed(2)}');
 
             final newZoomPanState = currentState.copyWith(
               zoomLevelY: newZoomY,
@@ -3801,9 +3761,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         }
       }
     }
-
-    print(
-        '  AFTER UPDATE - zoomX: ${_interactionStateNotifier.value.zoomPanState.zoomLevelX.toStringAsFixed(4)}, zoomY: ${_interactionStateNotifier.value.zoomPanState.zoomLevelY.toStringAsFixed(4)}, pan: ${_interactionStateNotifier.value.zoomPanState.panOffset}');
 
     // Invoke viewport callback
     _invokeViewportCallback();

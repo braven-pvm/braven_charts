@@ -297,13 +297,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
           // Calculate scroll offset from viewport position
           final scrollOffset = widget.viewportRange.min - widget.dataRange.min;
 
-          // DEBUG: Log scrollbar calculation values
-          print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] '
-              'dataRange: ${widget.dataRange.min.toStringAsFixed(2)}-${widget.dataRange.max.toStringAsFixed(2)} (span: ${widget.dataRange.span.toStringAsFixed(2)}), '
-              'viewportRange: ${widget.viewportRange.min.toStringAsFixed(2)}-${widget.viewportRange.max.toStringAsFixed(2)} (span: ${widget.viewportRange.span.toStringAsFixed(2)}), '
-              'scrollOffset: ${scrollOffset.toStringAsFixed(2)}, '
-              'trackLength: ${trackLength.toStringAsFixed(2)}');
-
           // Calculate handle position using ScrollbarController (T047)
           // Parameters: scrollOffset, totalRange, viewportRange, trackLength, handleSize
           final handlePosition = ScrollbarController.calculateHandlePosition(
@@ -313,11 +306,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
             trackLength,
             handleSize,
           );
-
-          // DEBUG: Log calculation results
-          print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] '
-              'handleSize: ${handleSize.toStringAsFixed(2)}, '
-              'handlePosition: ${handlePosition.toStringAsFixed(2)}');
 
           // Update state with calculated handle geometry (needed for hit testing in T086)
           // Update synchronously so gesture handlers have correct values immediately
@@ -519,8 +507,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Parent will convert to data position and handle jump/animation
     final pixelOffset = widget.axis == Axis.horizontal ? Offset(clickPosition, 0.0) : Offset(0.0, clickPosition);
 
-    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🎯 Track click at pixel: $clickPosition (trackLength: $trackLength)');
-
     // Report track click to parent with pixel position
     widget.onPixelDeltaChanged(pixelOffset, ScrollbarInteraction.trackClick);
 
@@ -591,20 +577,11 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// - rightEdge/bottomEdge: User dragging right/bottom edge → resize viewport max
   /// - center: User dragging center → pan viewport (both min and max shift)
   void _onPanStart(DragStartDetails details) {
-    print('========================================');
-    print('========================================');
-    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🎯 onPanStart FIRED');
-    print('========================================');
-    print('  details.localPosition: ${details.localPosition}');
-    print('  details.globalPosition: ${details.globalPosition}');
-    print('  current viewportRange: ${widget.viewportRange.min.toStringAsFixed(2)}-${widget.viewportRange.max.toStringAsFixed(2)}');
-
     // Cancel any active jump animation (T073B - concurrent interaction cancellation)
     _cancelJumpAnimation();
 
     // PIXEL-DELTA PATTERN: Capture initial drag position (pixels only, no data state)
     _dragStartPosition = details.localPosition;
-    print('  SET _dragStartPosition: $_dragStartPosition');
 
     // Detect drag zone (T086 - edge detection for zoom functionality)
     // Get current layout dimensions
@@ -623,7 +600,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         currentState.handleSize,
         edgeDetectionThreshold: widget.theme.edgeGripWidth,
       );
-      print('  Detected drag zone: $_dragZone');
     } else {
       // Fallback: edge resize disabled or can't get layout - use center pan only
       _dragZone = HitTestZone.center;
@@ -655,8 +631,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   void _onPanUpdate(DragUpdateDetails details) {
     // Guard: Handle edge case where onPanUpdate fires before onPanStart
     if (_dragStartPosition == null) {
-      print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] ⚠️ LAZY INIT - onPanUpdate fired before onPanStart!');
-
       // Initialize drag start position NOW
       _cancelJumpAnimation();
       _dragStartPosition = details.localPosition;
@@ -688,7 +662,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
       }
 
       // Skip this first update - wait for next frame
-      print('  Initialized, skipping first update');
       return;
     }
 
@@ -726,8 +699,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Create Offset with appropriate axis coordinate
     final pixelDeltaOffset = widget.axis == Axis.horizontal ? Offset(pixelDelta, 0.0) : Offset(0.0, pixelDelta);
 
-    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] Reporting pixel delta: $pixelDeltaOffset, type: $interactionType');
-
     // Report to parent - parent will convert to data delta and update viewport
     widget.onPixelDeltaChanged(pixelDeltaOffset, interactionType);
   }
@@ -737,8 +708,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   /// PIXEL-DELTA PATTERN: Simple cleanup - no baseline updates needed.
   /// Parent owns all data state, scrollbar only tracks pixel positions.
   void _onPanEnd(DragEndDetails details) {
-    print('[${widget.axis == Axis.horizontal ? "X" : "Y"}-Scrollbar] 🏁 onPanEnd - cleaning up drag state');
-
     // PIXEL-DELTA PATTERN: Signal drag end to parent by sending Offset.zero
     // This tells parent to clear its drag start baseline
     final lastInteraction = _dragZone == HitTestZone.leftEdge || _dragZone == HitTestZone.topEdge
@@ -748,7 +717,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
             : ScrollbarInteraction.pan;
 
     widget.onPixelDeltaChanged(Offset.zero, lastInteraction);
-    print('  Sent drag-end signal (Offset.zero) with interaction: $lastInteraction');
 
     // PIXEL-DELTA PATTERN: Clear drag state (pixel position only)
     _dragStartPosition = null;
