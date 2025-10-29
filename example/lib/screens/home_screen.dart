@@ -4,6 +4,7 @@ import '../advanced_streaming_example.dart';
 import '../basic_streaming_example.dart';
 import '../buffer_status_example.dart';
 import 'advanced_features_screen.dart';
+import 'annotations_comprehensive_screen.dart';
 import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
 import 'axis_theming_screen.dart';
@@ -252,7 +253,19 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 12),
         _buildChartCard(
           context,
-          title: 'Annotations',
+          title: '📊 Annotations Comprehensive',
+          subtitle: 'FULL annotation control: Create, edit, delete all 5 types + stress test',
+          icon: Icons.edit_note,
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AnnotationsComprehensiveScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: 'Annotations Showcase',
           subtitle: '5 annotation types: Text, Point, Range, Threshold, Trend',
           icon: Icons.label,
           color: Colors.purple,
