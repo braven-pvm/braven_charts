@@ -446,7 +446,7 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                   Slider(
                     value: edgeGripWidth,
                     min: 4,
-                    max: 16,
+                    max: 35,
                     divisions: 12,
                     label: '${edgeGripWidth.toInt()}px',
                     onChanged: (value) => setState(() => edgeGripWidth = value),
