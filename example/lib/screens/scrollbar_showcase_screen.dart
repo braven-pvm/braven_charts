@@ -41,6 +41,28 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
   double edgeGripWidth = 8.0;
   double thickness = 16.0;
 
+  // Theming state - Colors
+  Color trackColor = const Color(0xFFF5F5F5);
+  Color handleColor = const Color(0xFF9E9E9E);
+  Color handleHoverColor = const Color(0xFF757575);
+  Color handleActiveColor = const Color(0xFF616161);
+  Color handleDisabledColor = const Color(0xFFE0E0E0);
+  Color trackHoverColor = const Color(0xFFEEEEEE);
+  Color gripIndicatorColor = const Color(0xFF616161);
+
+  // Theming state - Visual
+  double minHandleSize = 20.0;
+  double borderRadius = 4.0;
+  double padding = 4.0;
+  bool showGripIndicator = true;
+
+  // Theming state - Animation
+  Duration fadeDuration = const Duration(milliseconds: 200);
+
+  // Theming state - Accessibility
+  bool forcedColorsMode = false;
+  bool prefersReducedMotion = false;
+
   // Chart state tracking
   double currentZoomX = 1.0;
   double currentZoomY = 1.0;
@@ -190,6 +212,7 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                           theme: ChartTheme.defaultLight.copyWith(
                             scrollbarTheme: ScrollbarTheme.defaultLight.copyWith(
                               xAxisScrollbar: ScrollbarConfig(
+                                // Interaction settings
                                 enableResizeHandles: enableResizeHandles,
                                 autoHide: autoHide,
                                 minZoomRatio: minZoomRatio,
@@ -197,8 +220,27 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                                 edgeGripWidth: edgeGripWidth,
                                 thickness: thickness,
                                 autoHideDelay: const Duration(seconds: 2),
+                                // Color theming
+                                trackColor: trackColor,
+                                handleColor: handleColor,
+                                handleHoverColor: handleHoverColor,
+                                handleActiveColor: handleActiveColor,
+                                handleDisabledColor: handleDisabledColor,
+                                trackHoverColor: trackHoverColor,
+                                gripIndicatorColor: gripIndicatorColor,
+                                // Visual theming
+                                minHandleSize: minHandleSize,
+                                borderRadius: borderRadius,
+                                padding: padding,
+                                showGripIndicator: showGripIndicator,
+                                // Animation
+                                fadeDuration: fadeDuration,
+                                // Accessibility
+                                forcedColorsMode: forcedColorsMode,
+                                prefersReducedMotion: prefersReducedMotion,
                               ),
                               yAxisScrollbar: ScrollbarConfig(
+                                // Interaction settings
                                 enableResizeHandles: enableResizeHandles,
                                 autoHide: autoHide,
                                 minZoomRatio: minZoomRatio,
@@ -206,6 +248,24 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                                 edgeGripWidth: edgeGripWidth,
                                 thickness: thickness,
                                 autoHideDelay: const Duration(seconds: 2),
+                                // Color theming
+                                trackColor: trackColor,
+                                handleColor: handleColor,
+                                handleHoverColor: handleHoverColor,
+                                handleActiveColor: handleActiveColor,
+                                handleDisabledColor: handleDisabledColor,
+                                trackHoverColor: trackHoverColor,
+                                gripIndicatorColor: gripIndicatorColor,
+                                // Visual theming
+                                minHandleSize: minHandleSize,
+                                borderRadius: borderRadius,
+                                padding: padding,
+                                showGripIndicator: showGripIndicator,
+                                // Animation
+                                fadeDuration: fadeDuration,
+                                // Accessibility
+                                forcedColorsMode: forcedColorsMode,
+                                prefersReducedMotion: prefersReducedMotion,
                               ),
                             ),
                           ),
@@ -404,6 +464,177 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                     onChanged: (value) => setState(() => thickness = value),
                   ),
                   const Divider(),
+                  // Theming section
+                  const SizedBox(height: 8),
+                  const Text(
+                    '🎨 Theming (Colors & Visual):',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Color controls
+                  _buildColorControl('Track Color', trackColor, (color) => setState(() => trackColor = color)),
+                  _buildColorControl('Handle Color', handleColor, (color) => setState(() => handleColor = color)),
+                  _buildColorControl('Handle Hover', handleHoverColor, (color) => setState(() => handleHoverColor = color)),
+                  _buildColorControl('Handle Active', handleActiveColor, (color) => setState(() => handleActiveColor = color)),
+                  _buildColorControl('Grip Indicator', gripIndicatorColor, (color) => setState(() => gripIndicatorColor = color)),
+
+                  const SizedBox(height: 12),
+
+                  // Visual controls
+                  Text(
+                    'Min Handle Size: ${minHandleSize.toInt()}px',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  Slider(
+                    value: minHandleSize,
+                    min: 16,
+                    max: 48,
+                    divisions: 32,
+                    label: '${minHandleSize.toInt()}px',
+                    onChanged: (value) => setState(() => minHandleSize = value),
+                  ),
+
+                  Text(
+                    'Border Radius: ${borderRadius.toInt()}px',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  Slider(
+                    value: borderRadius,
+                    min: 0,
+                    max: 12,
+                    divisions: 12,
+                    label: '${borderRadius.toInt()}px',
+                    onChanged: (value) => setState(() => borderRadius = value),
+                  ),
+
+                  Text(
+                    'Padding: ${padding.toInt()}px',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  Slider(
+                    value: padding,
+                    min: 0,
+                    max: 8,
+                    divisions: 8,
+                    label: '${padding.toInt()}px',
+                    onChanged: (value) => setState(() => padding = value),
+                  ),
+
+                  SwitchListTile(
+                    title: const Text('Show Grip Indicator'),
+                    subtitle: const Text('3-line dots on handle center'),
+                    value: showGripIndicator,
+                    dense: true,
+                    onChanged: (value) => setState(() => showGripIndicator = value),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Animation controls
+                  Text(
+                    'Fade Duration: ${fadeDuration.inMilliseconds}ms',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  Slider(
+                    value: fadeDuration.inMilliseconds.toDouble(),
+                    min: 100,
+                    max: 500,
+                    divisions: 40,
+                    label: '${fadeDuration.inMilliseconds}ms',
+                    onChanged: (value) => setState(() => fadeDuration = Duration(milliseconds: value.toInt())),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Accessibility controls
+                  SwitchListTile(
+                    title: const Text('Forced Colors Mode'),
+                    subtitle: const Text('High contrast for accessibility'),
+                    value: forcedColorsMode,
+                    dense: true,
+                    onChanged: (value) => setState(() => forcedColorsMode = value),
+                  ),
+
+                  SwitchListTile(
+                    title: const Text('Prefers Reduced Motion'),
+                    subtitle: const Text('Disable animations for accessibility'),
+                    value: prefersReducedMotion,
+                    dense: true,
+                    onChanged: (value) => setState(() => prefersReducedMotion = value),
+                  ),
+
+                  const Divider(),
+                  // Theming Presets
+                  const SizedBox(height: 8),
+                  const Text(
+                    '🎨 Theming Presets:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.wb_sunny, size: 16),
+                        label: const Text('Light'),
+                        onPressed: () => setState(() {
+                          trackColor = const Color(0xFFF5F5F5);
+                          handleColor = const Color(0xFF9E9E9E);
+                          handleHoverColor = const Color(0xFF757575);
+                          handleActiveColor = const Color(0xFF616161);
+                          handleDisabledColor = const Color(0xFFE0E0E0);
+                          trackHoverColor = const Color(0xFFEEEEEE);
+                          gripIndicatorColor = const Color(0xFF616161);
+                          _logEvent('THEME: Light preset loaded');
+                        }),
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.nightlight, size: 16),
+                        label: const Text('Dark'),
+                        onPressed: () => setState(() {
+                          trackColor = const Color(0xFF212121);
+                          handleColor = const Color(0xFF616161);
+                          handleHoverColor = const Color(0xFF757575);
+                          handleActiveColor = const Color(0xFF9E9E9E);
+                          handleDisabledColor = const Color(0xFF424242);
+                          trackHoverColor = const Color(0xFF303030);
+                          gripIndicatorColor = const Color(0xFF9E9E9E);
+                          _logEvent('THEME: Dark preset loaded');
+                        }),
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.contrast, size: 16),
+                        label: const Text('High Contrast'),
+                        onPressed: () => setState(() {
+                          trackColor = const Color(0xFFFFFFFF);
+                          handleColor = const Color(0xFF000000);
+                          handleHoverColor = const Color(0xFF1A1A1A);
+                          handleActiveColor = const Color(0xFF333333);
+                          handleDisabledColor = const Color(0xFFCCCCCC);
+                          trackHoverColor = const Color(0xFFF0F0F0);
+                          gripIndicatorColor = const Color(0xFFFFFFFF);
+                          _logEvent('THEME: High Contrast preset loaded (WCAG AAA)');
+                        }),
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.palette, size: 16),
+                        label: const Text('Blue Accent'),
+                        onPressed: () => setState(() {
+                          trackColor = const Color(0xFFE3F2FD);
+                          handleColor = const Color(0xFF2196F3);
+                          handleHoverColor = const Color(0xFF1976D2);
+                          handleActiveColor = const Color(0xFF0D47A1);
+                          handleDisabledColor = const Color(0xFF90CAF9);
+                          trackHoverColor = const Color(0xFFBBDEFB);
+                          gripIndicatorColor = const Color(0xFFFFFFFF);
+                          _logEvent('THEME: Blue Accent preset loaded');
+                        }),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
                   // Presets
                   const SizedBox(height: 8),
                   const Text(
@@ -589,6 +820,119 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildColorControl(String label, Color currentColor, Function(Color) onColorChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              // Simple color picker using a dialog with predefined colors
+              showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Select $label'),
+                  content: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      // Grays
+                      _buildColorSwatch(const Color(0xFFFFFFFF), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFF5F5F5), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFEEEEEE), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFE0E0E0), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF9E9E9E), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF757575), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF616161), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF424242), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF212121), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF000000), onColorChanged),
+                      // Blues
+                      _buildColorSwatch(const Color(0xFFE3F2FD), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF90CAF9), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF2196F3), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF1976D2), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF0D47A1), onColorChanged),
+                      // Reds
+                      _buildColorSwatch(const Color(0xFFFFEBEE), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFEF9A9A), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFF44336), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFC62828), onColorChanged),
+                      // Greens
+                      _buildColorSwatch(const Color(0xFFE8F5E9), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFA5D6A7), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF4CAF50), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF2E7D32), onColorChanged),
+                      // Oranges
+                      _buildColorSwatch(const Color(0xFFFFF3E0), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFFFCC80), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFFF9800), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFE65100), onColorChanged),
+                      // Purples
+                      _buildColorSwatch(const Color(0xFFF3E5F5), onColorChanged),
+                      _buildColorSwatch(const Color(0xFFCE93D8), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF9C27B0), onColorChanged),
+                      _buildColorSwatch(const Color(0xFF6A1B9A), onColorChanged),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: currentColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade400, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorSwatch(Color color, Function(Color) onColorChanged) {
+    return GestureDetector(
+      onTap: () {
+        onColorChanged(color);
+        Navigator.pop(context);
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
       ),
     );
   }
