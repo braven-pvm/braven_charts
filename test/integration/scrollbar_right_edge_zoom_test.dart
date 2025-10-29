@@ -182,114 +182,114 @@ void main() {
           reason: 'Viewport should maintain reasonable size',
         );
 
-      print('✅ Right edge zoom verified: minX anchored (Δ=${(finalMinX - initialMinX).toStringAsFixed(2)}), '
+        print('✅ Right edge zoom verified: minX anchored (Δ=${(finalMinX - initialMinX).toStringAsFixed(2)}), '
             'maxX decreased by ${(initialMaxX - finalMaxX).toStringAsFixed(2)}');
-    },
+      },
       skip: true, // Edge zoom feature not yet working - see test output for details
     );
     testWidgets(
       'Multiple right edge drags maintain left anchor',
       (WidgetTester tester) async {
-      // ============================================
-      // Setup
-      // ============================================
+        // ============================================
+        // Setup
+        // ============================================
 
-      final dataPoints = List.generate(
-        100,
-        (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
-      );
+        final dataPoints = List.generate(
+          100,
+          (i) => ChartDataPoint(x: i.toDouble(), y: i.toDouble()),
+        );
 
-      Map<String, double>? lastViewport;
+        Map<String, double>? lastViewport;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 800,
-              height: 600,
-              child: BravenChart(
-                chartType: ChartType.line,
-                series: [
-                  ChartSeries(
-                    id: 'test-series',
-                    points: dataPoints,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 800,
+                height: 600,
+                child: BravenChart(
+                  chartType: ChartType.line,
+                  series: [
+                    ChartSeries(
+                      id: 'test-series',
+                      points: dataPoints,
+                    ),
+                  ],
+                  interactionConfig: InteractionConfig(
+                    enableZoom: true,
+                    enablePan: true,
+                    showXScrollbar: true,
+                    showYScrollbar: false,
+                    onViewportChanged: (viewport) {
+                      lastViewport = viewport;
+                    },
                   ),
-                ],
-                interactionConfig: InteractionConfig(
-                  enableZoom: true,
-                  enablePan: true,
-                  showXScrollbar: true,
-                  showYScrollbar: false,
-                  onViewportChanged: (viewport) {
-                    lastViewport = viewport;
-                  },
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final scrollbarFinder = find.byType(ChartScrollbar).first;
-      final scrollbarBox = tester.renderObject<RenderBox>(scrollbarFinder);
-      final scrollbarRect = scrollbarBox.localToGlobal(Offset.zero) & scrollbarBox.size;
-
-      final initialMinX = lastViewport?['minX'] ?? 0.0;
-
-      final viewportHistory = <Map<String, double>>[];
-
-      // ============================================
-      // Perform: 3 consecutive right edge drags
-      // ============================================
-
-      for (int i = 0; i < 3; i++) {
-        print('\n🔄 Drag ${i + 1}:');
-        print('   Before: MinX=${lastViewport?['minX']}, MaxX=${lastViewport?['maxX']}');
-
-        lastViewport = null; // Reset
-
-        // Drag from near right side
-        await tester.timedDragFrom(
-          Offset(scrollbarRect.right - 30, scrollbarRect.center.dy),
-          const Offset(-30, 0),
-          const Duration(milliseconds: 200),
         );
         await tester.pumpAndSettle();
 
-        if (lastViewport != null) {
-          viewportHistory.add(Map.from(lastViewport!));
-          print('   After: MinX=${lastViewport?['minX']}, MaxX=${lastViewport?['maxX']}');
+        final scrollbarFinder = find.byType(ChartScrollbar).first;
+        final scrollbarBox = tester.renderObject<RenderBox>(scrollbarFinder);
+        final scrollbarRect = scrollbarBox.localToGlobal(Offset.zero) & scrollbarBox.size;
+
+        final initialMinX = lastViewport?['minX'] ?? 0.0;
+
+        final viewportHistory = <Map<String, double>>[];
+
+        // ============================================
+        // Perform: 3 consecutive right edge drags
+        // ============================================
+
+        for (int i = 0; i < 3; i++) {
+          print('\n🔄 Drag ${i + 1}:');
+          print('   Before: MinX=${lastViewport?['minX']}, MaxX=${lastViewport?['maxX']}');
+
+          lastViewport = null; // Reset
+
+          // Drag from near right side
+          await tester.timedDragFrom(
+            Offset(scrollbarRect.right - 30, scrollbarRect.center.dy),
+            const Offset(-30, 0),
+            const Duration(milliseconds: 200),
+          );
+          await tester.pumpAndSettle();
+
+          if (lastViewport != null) {
+            viewportHistory.add(Map.from(lastViewport!));
+            print('   After: MinX=${lastViewport?['minX']}, MaxX=${lastViewport?['maxX']}');
+          }
         }
-      }
 
-      // ============================================
-      // Verify: All drags kept left edge anchored
-      // ============================================
+        // ============================================
+        // Verify: All drags kept left edge anchored
+        // ============================================
 
-      print('\n📊 Viewport History:');
-      for (int i = 0; i < viewportHistory.length; i++) {
-        final vp = viewportHistory[i];
-        print('   ${i + 1}: MinX=${vp['minX']}, MaxX=${vp['maxX']}');
+        print('\n📊 Viewport History:');
+        for (int i = 0; i < viewportHistory.length; i++) {
+          final vp = viewportHistory[i];
+          print('   ${i + 1}: MinX=${vp['minX']}, MaxX=${vp['maxX']}');
 
-        expect(
-          vp['minX'],
-          closeTo(initialMinX, 2.0),
-          reason: 'Drag ${i + 1}: Left edge should stay anchored at ${initialMinX.toStringAsFixed(2)}',
-        );
-      }
+          expect(
+            vp['minX'],
+            closeTo(initialMinX, 2.0),
+            reason: 'Drag ${i + 1}: Left edge should stay anchored at ${initialMinX.toStringAsFixed(2)}',
+          );
+        }
 
-      // Verify progressive zoom (each maxX smaller than or equal to previous)
-      for (int i = 1; i < viewportHistory.length; i++) {
-        expect(
-          viewportHistory[i]['maxX'],
-          lessThanOrEqualTo(viewportHistory[i - 1]['maxX']! + 1.0), // +1.0 tolerance
-          reason: 'Each drag should zoom in further (decrease maxX)',
-        );
-      }
+        // Verify progressive zoom (each maxX smaller than or equal to previous)
+        for (int i = 1; i < viewportHistory.length; i++) {
+          expect(
+            viewportHistory[i]['maxX'],
+            lessThanOrEqualTo(viewportHistory[i - 1]['maxX']! + 1.0), // +1.0 tolerance
+            reason: 'Each drag should zoom in further (decrease maxX)',
+          );
+        }
 
-      print('✅ All drags maintained left edge anchoring');
-    },
+        print('✅ All drags maintained left edge anchoring');
+      },
       skip: true, // Depends on edge zoom feature working
     );
   });
