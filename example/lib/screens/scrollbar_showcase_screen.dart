@@ -51,7 +51,7 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
   Color gripIndicatorColor = const Color(0xFF616161);
 
   // Theming state - Visual
-  double minHandleSize = 20.0;
+  double minHandleSize = 20.0; // Default 20px (range 10-35px)
   double borderRadius = 4.0;
   double padding = 4.0;
   bool showGripIndicator = true;
@@ -488,9 +488,9 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                   ),
                   Slider(
                     value: minHandleSize,
-                    min: 16,
-                    max: 48,
-                    divisions: 32,
+                    min: 10,
+                    max: 35,
+                    divisions: 25,
                     label: '${minHandleSize.toInt()}px',
                     onChanged: (value) => setState(() => minHandleSize = value),
                   ),
@@ -658,6 +658,7 @@ class _ScrollbarShowcaseScreenState extends State<ScrollbarShowcaseScreen> {
                           maxZoomRatio = 1.0;
                           edgeGripWidth = 8.0;
                           thickness = 16.0;
+                          minHandleSize = 20.0;
                           _logEvent('PRESET: Default configuration loaded');
                         }),
                       ),
