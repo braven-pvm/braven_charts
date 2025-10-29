@@ -45,7 +45,7 @@ class ScrollbarConfig {
     this.autoHide = true,
     this.autoHideDelay = const Duration(seconds: 2),
     this.fadeDuration = const Duration(milliseconds: 200),
-    this.enableResizeHandles = false, // Disabled by default until US3 integration tests pass
+    this.enableResizeHandles = true, // Enabled for US3 edge zoom testing
     this.minZoomRatio = 0.01,
     this.maxZoomRatio = 1.0,
     this.padding = 4.0,
