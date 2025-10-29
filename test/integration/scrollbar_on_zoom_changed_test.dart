@@ -13,9 +13,9 @@
 // Test Pattern: Full BravenChart integration with callback tracking
 // When Feature Fixed: Remove `skip: true` from all test cases
 
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 void main() {
   group('T101: onZoomChanged Callback', () {
@@ -24,7 +24,7 @@ void main() {
       (WidgetTester tester) async {
         // Track zoom changes via callback
         final List<Map<String, double>> zoomHistory = [];
-        
+
         // Create test data (100 points: 0-99)
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -72,7 +72,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -98,20 +98,18 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify onZoomChanged fired
-        expect(zoomHistory.length, greaterThanOrEqualTo(1),
-            reason: 'onZoomChanged should fire at least once when zoom completes');
+        expect(zoomHistory.length, greaterThanOrEqualTo(1), reason: 'onZoomChanged should fire at least once when zoom completes');
 
         // Verify callback data is correct
         final zoomEvent = zoomHistory.last;
         expect(zoomEvent, contains('zoomX'));
         expect(zoomEvent, contains('zoomY'));
-        
+
         final zoomLevelX = zoomEvent['zoomX']!;
         debugPrint('📊 Zoom event X level: $zoomLevelX');
-        
+
         // Zoom level should be > 1.0 (zoomed in)
-        expect(zoomLevelX, greaterThan(1.0),
-            reason: 'Zoom level should be >1.0 when zoomed in');
+        expect(zoomLevelX, greaterThan(1.0), reason: 'Zoom level should be >1.0 when zoomed in');
       },
       skip: true, // SKIPPED: Edge zoom feature not working yet
     );
@@ -121,7 +119,7 @@ void main() {
       (WidgetTester tester) async {
         // Track zoom changes
         final List<Map<String, double>> zoomHistory = [];
-        
+
         // Create test data
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -166,7 +164,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -188,14 +186,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify onZoomChanged fired
-        expect(zoomHistory.length, greaterThanOrEqualTo(1),
-            reason: 'onZoomChanged should fire for left edge zoom');
+        expect(zoomHistory.length, greaterThanOrEqualTo(1), reason: 'onZoomChanged should fire for left edge zoom');
 
         final zoomEvent = zoomHistory.last;
         final zoomLevelX = zoomEvent['zoomX']!;
-        
-        expect(zoomLevelX, greaterThan(1.0),
-            reason: 'Left edge zoom should increase zoom level (>1.0)');
+
+        expect(zoomLevelX, greaterThan(1.0), reason: 'Left edge zoom should increase zoom level (>1.0)');
       },
       skip: true, // SKIPPED: Edge zoom feature not working yet
     );
@@ -205,7 +201,7 @@ void main() {
       (WidgetTester tester) async {
         // Track zoom changes
         final List<Map<String, double>> zoomHistory = [];
-        
+
         // Create test data
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -250,7 +246,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -274,8 +270,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify onZoomChanged did NOT fire (pan operations should not trigger zoom callback)
-        expect(zoomHistory.length, equals(0),
-            reason: 'onZoomChanged should NOT fire for pan operations (center drag)');
+        expect(zoomHistory.length, equals(0), reason: 'onZoomChanged should NOT fire for pan operations (center drag)');
 
         debugPrint('✅ onZoomChanged correctly did not fire for pan operation');
       },
@@ -287,7 +282,7 @@ void main() {
       (WidgetTester tester) async {
         // Track zoom changes with timestamps
         final List<Map<String, dynamic>> zoomHistory = [];
-        
+
         // Create test data
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -337,7 +332,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -361,8 +356,7 @@ void main() {
         // Verify callback fired exactly ONCE (on drag end, not during drag)
         // Note: Some implementations may throttle and fire multiple times during drag
         // The ideal behavior is ONE event on drag end only
-        expect(zoomHistory.length, greaterThanOrEqualTo(1),
-            reason: 'onZoomChanged should fire at least once');
+        expect(zoomHistory.length, greaterThanOrEqualTo(1), reason: 'onZoomChanged should fire at least once');
 
         // If multiple events fired, they should be throttled (not one per frame)
         if (zoomHistory.length > 1) {

@@ -18,10 +18,10 @@
 // - Verify cursor updates when hovering over different scrollbar zones
 // - May require golden tests or render tree inspection
 
-import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('T099: Cursor Changes on Hover', () {
@@ -47,7 +47,7 @@ void main() {
                 child: BravenChart(
                   chartType: ChartType.line,
                   series: [testSeries],
-                  interactionConfig: InteractionConfig(
+                  interactionConfig: const InteractionConfig(
                     enableZoom: true,
                     enablePan: true,
                     showXScrollbar: true,
@@ -68,7 +68,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -97,7 +97,7 @@ void main() {
         // 1. Find MouseRegion widget and check its cursor property
         // 2. Use golden test to verify visual cursor appearance
         // 3. Add cursor callback to ChartScrollbar for testing
-        
+
         debugPrint('⚠️  Cursor verification not implemented - requires MouseRegion inspection');
 
         await gesture.removePointer();
@@ -127,7 +127,7 @@ void main() {
                 child: BravenChart(
                   chartType: ChartType.line,
                   series: [testSeries],
-                  interactionConfig: InteractionConfig(
+                  interactionConfig: const InteractionConfig(
                     enableZoom: true,
                     enablePan: true,
                     showXScrollbar: true,
@@ -148,7 +148,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -214,7 +214,7 @@ void main() {
                 child: BravenChart(
                   chartType: ChartType.line,
                   series: [testSeries],
-                  interactionConfig: InteractionConfig(
+                  interactionConfig: const InteractionConfig(
                     enableZoom: true,
                     enablePan: true,
                     showXScrollbar: true,
@@ -235,7 +235,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,

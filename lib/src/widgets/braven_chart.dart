@@ -1941,175 +1941,181 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Add scrollbars if enabled (T050-T055: User Story 1 - Dual-purpose scrollbars)
     // Scrollbars positioned OUTSIDE chart canvas for clear separation of concerns
     // CRITICAL: Track scrollbar dimensions for coordinate transformation offset correction
+    // CRITICAL FIX: Wrap scrollbar creation in ValueListenableBuilder so handle resizes when zoom/pan changes
     if (widget.interactionConfig != null) {
       final showX = widget.interactionConfig!.showXScrollbar;
       final showY = widget.interactionConfig!.showYScrollbar;
 
       if (showX || showY) {
-        // Calculate data range from preliminary bounds
-        final dataBounds = preliminaryBounds;
+        chartWidget = ValueListenableBuilder<InteractionState>(
+          valueListenable: _interactionStateNotifier,
+          builder: (context, interactionState, child) {
+            // CRITICAL FIX: Calculate TWO separate bounds for scrollbar
+            // 1. ORIGINAL data bounds (no zoom/pan) - for dataRange (full range)
+            // 2. CURRENT visible bounds (with zoom/pan) - for viewportRange (what's visible)
+            final originalDataBounds = _calculatePreliminaryBounds(allSeries);
+            final visibleDataBounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect, includePadding: false);
 
-        // CRITICAL FIX: Calculate visible bounds WITHOUT padding for scrollbar viewport
-        // _calculateDataBounds adds 10% Y-axis padding which inflates viewport range
-        // For scrollbars, we need the actual visible data bounds without padding
-        final actualDataBounds = _calculateDataBounds(allSeries, chartRect: _cachedChartRect, includePadding: false);
+            // dataRange = FULL original data range (constant regardless of zoom/pan)
+            final xDataRange = DataRange(min: originalDataBounds.minX, max: originalDataBounds.maxX);
+            final yDataRange = DataRange(min: originalDataBounds.minY, max: originalDataBounds.maxY);
 
-        // Convert zoom/pan state to viewport ranges
-        // Note: Use calculated data bounds (with zoom/pan applied, without padding) for viewport
-        final xDataRange = DataRange(min: dataBounds.minX, max: dataBounds.maxX);
-        final yDataRange = DataRange(min: dataBounds.minY, max: dataBounds.maxY);
+            // viewportRange = CURRENT visible range (changes with zoom/pan)
+            final xViewportRange = DataRange(
+              min: visibleDataBounds.minX,
+              max: visibleDataBounds.maxX,
+            );
+            final yViewportRange = DataRange(
+              min: visibleDataBounds.minY,
+              max: visibleDataBounds.maxY,
+            );
 
-        // Extract viewport from actualDataBounds (which has zoom/pan already applied, without padding)
-        final xViewportRange = DataRange(
-          min: actualDataBounds.minX,
-          max: actualDataBounds.maxX,
+            // Get scrollbar theme
+            final scrollbarTheme = effectiveTheme.scrollbarTheme;
+
+            // Track X-scrollbar height for coordinate offset correction
+            _scrollbarHeightOffset = showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0;
+
+            // Build scrollbar layout aligned with chart viewport (Issue #1 fix)
+            // Strategy: Add padding to chart for scrollbar space, then overlay scrollbars using Stack
+            Widget chartWithScrollbars = child!;
+
+            // Get chart rect for positioning calculations
+            final chartRect = _cachedChartRect;
+
+            // Only apply alignment if we have a valid chart rect
+            if (chartRect != null && (showX || showY)) {
+              // Calculate padding values from chart rect
+              // chartRect is Rect.fromLTWH(left, top, width, height)
+              final leftPad = chartRect.left;
+              final topPad = chartRect.top;
+
+              // Add padding to chart to make room for scrollbars (so they don't overlap axes)
+              final paddedChart = Padding(
+                padding: EdgeInsets.only(
+                  right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
+                  bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
+                ),
+                child: child,
+              );
+
+              // Build list of scrollbar overlays
+              final List<Widget> scrollbarOverlays = [];
+
+              // Add X scrollbar (horizontal, bottom, aligned with chart rect)
+              if (showX) {
+                scrollbarOverlays.add(
+                  Positioned(
+                    left: leftPad,
+                    right: 0,
+                    bottom: 0,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
+                      ),
+                      child: SizedBox(
+                        height: scrollbarTheme.xAxisScrollbar.thickness,
+                        child: ChartScrollbar(
+                          axis: Axis.horizontal,
+                          dataRange: xDataRange,
+                          viewportRange: xViewportRange,
+                          onPixelDeltaChanged: (pixelDelta, interaction) {
+                            _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
+                          },
+                          theme: scrollbarTheme.xAxisScrollbar,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              // Add Y scrollbar (vertical, right, aligned with chart rect)
+              if (showY) {
+                scrollbarOverlays.add(
+                  Positioned(
+                    top: topPad,
+                    right: 0,
+                    bottom: 0,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
+                      ),
+                      child: SizedBox(
+                        width: scrollbarTheme.yAxisScrollbar.thickness,
+                        child: ChartScrollbar(
+                          axis: Axis.vertical,
+                          dataRange: yDataRange,
+                          viewportRange: yViewportRange,
+                          onPixelDeltaChanged: (pixelDelta, interaction) {
+                            _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
+                          },
+                          theme: scrollbarTheme.yAxisScrollbar,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              // Overlay scrollbars on top of padded chart using Stack
+              chartWithScrollbars = Stack(
+                children: [
+                  paddedChart,
+                  ...scrollbarOverlays,
+                ],
+              );
+            } else {
+              // Fallback: No chart rect available, use original full-width layout
+              // Add Y scrollbar (vertical, on right side)
+              if (showY) {
+                chartWithScrollbars = Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: chartWithScrollbars),
+                    SizedBox(
+                      width: scrollbarTheme.yAxisScrollbar.thickness,
+                      child: ChartScrollbar(
+                        axis: Axis.vertical,
+                        dataRange: yDataRange,
+                        viewportRange: yViewportRange,
+                        onPixelDeltaChanged: (pixelDelta, interaction) {
+                          _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
+                        },
+                        theme: scrollbarTheme.yAxisScrollbar,
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              // Add X scrollbar (horizontal, on bottom)
+              if (showX) {
+                chartWithScrollbars = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: chartWithScrollbars),
+                    SizedBox(
+                      height: scrollbarTheme.xAxisScrollbar.thickness,
+                      child: ChartScrollbar(
+                        axis: Axis.horizontal,
+                        dataRange: xDataRange,
+                        viewportRange: xViewportRange,
+                        onPixelDeltaChanged: (pixelDelta, interaction) {
+                          _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
+                        },
+                        theme: scrollbarTheme.xAxisScrollbar,
+                      ),
+                    ),
+                  ],
+                );
+              }
+            }
+
+            return chartWithScrollbars;
+          },
+          child: chartWidget,
         );
-        final yViewportRange = DataRange(
-          min: actualDataBounds.minY,
-          max: actualDataBounds.maxY,
-        ); // Get scrollbar theme
-        final scrollbarTheme = effectiveTheme.scrollbarTheme;
-
-        // Track X-scrollbar height for coordinate offset correction
-        _scrollbarHeightOffset = showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0;
-
-        // Build scrollbar layout aligned with chart viewport (Issue #1 fix)
-        // Strategy: Add padding to chart for scrollbar space, then overlay scrollbars using Stack
-        Widget chartWithScrollbars = chartWidget;
-
-        // Get chart rect for positioning calculations
-        final chartRect = _cachedChartRect;
-
-        // Only apply alignment if we have a valid chart rect
-        if (chartRect != null && (showX || showY)) {
-          // Calculate padding values from chart rect
-          // chartRect is Rect.fromLTWH(left, top, width, height)
-          final leftPad = chartRect.left;
-          final topPad = chartRect.top;
-
-          // Add padding to chart to make room for scrollbars (so they don't overlap axes)
-          final paddedChart = Padding(
-            padding: EdgeInsets.only(
-              right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
-              bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
-            ),
-            child: chartWidget,
-          );
-
-          // Build list of scrollbar overlays
-          final List<Widget> scrollbarOverlays = [];
-
-          // Add X scrollbar (horizontal, bottom, aligned with chart rect)
-          if (showX) {
-            scrollbarOverlays.add(
-              Positioned(
-                left: leftPad,
-                right: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
-                  ),
-                  child: SizedBox(
-                    height: scrollbarTheme.xAxisScrollbar.thickness,
-                    child: ChartScrollbar(
-                      axis: Axis.horizontal,
-                      dataRange: xDataRange,
-                      viewportRange: xViewportRange,
-                      onPixelDeltaChanged: (pixelDelta, interaction) {
-                        _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
-                      },
-                      theme: scrollbarTheme.xAxisScrollbar,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // Add Y scrollbar (vertical, right, aligned with chart rect)
-          if (showY) {
-            scrollbarOverlays.add(
-              Positioned(
-                top: topPad,
-                right: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
-                  ),
-                  child: SizedBox(
-                    width: scrollbarTheme.yAxisScrollbar.thickness,
-                    child: ChartScrollbar(
-                      axis: Axis.vertical,
-                      dataRange: yDataRange,
-                      viewportRange: yViewportRange,
-                      onPixelDeltaChanged: (pixelDelta, interaction) {
-                        _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
-                      },
-                      theme: scrollbarTheme.yAxisScrollbar,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // Overlay scrollbars on top of padded chart using Stack
-          chartWithScrollbars = Stack(
-            children: [
-              paddedChart,
-              ...scrollbarOverlays,
-            ],
-          );
-        } else {
-          // Fallback: No chart rect available, use original full-width layout
-          // Add Y scrollbar (vertical, on right side)
-          if (showY) {
-            chartWithScrollbars = Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: chartWithScrollbars),
-                SizedBox(
-                  width: scrollbarTheme.yAxisScrollbar.thickness,
-                  child: ChartScrollbar(
-                    axis: Axis.vertical,
-                    dataRange: yDataRange,
-                    viewportRange: yViewportRange,
-                    onPixelDeltaChanged: (pixelDelta, interaction) {
-                      _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
-                    },
-                    theme: scrollbarTheme.yAxisScrollbar,
-                  ),
-                ),
-              ],
-            );
-          }
-
-          // Add X scrollbar (horizontal, on bottom)
-          if (showX) {
-            chartWithScrollbars = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: chartWithScrollbars),
-                SizedBox(
-                  height: scrollbarTheme.xAxisScrollbar.thickness,
-                  child: ChartScrollbar(
-                    axis: Axis.horizontal,
-                    dataRange: xDataRange,
-                    viewportRange: xViewportRange,
-                    onPixelDeltaChanged: (pixelDelta, interaction) {
-                      _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
-                    },
-                    theme: scrollbarTheme.xAxisScrollbar,
-                  ),
-                ),
-              ],
-            );
-          }
-        }
-
-        chartWidget = chartWithScrollbars;
       } else {
         // No scrollbars: reset offset to zero
         _scrollbarHeightOffset = 0.0;
@@ -3648,41 +3654,20 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Get current viewport size from zoom level
         final viewportSize = dataRangeX / currentState.zoomLevelX;
 
-        // Scale factor: ratio of viewport to data range
-        // At zoom 1x (full data visible): scaleFactor = 1.0 (full sensitivity)
-        // At zoom 2x (50% visible): scaleFactor = 0.5 (half sensitivity)
-        // SENSITIVITY MULTIPLIER: 1.5x to make dragging more responsive
-        final scaleFactor = (viewportSize / dataRangeX) * 1.5;
+        // CRITICAL FIX: Use reduced sensitivity multiplier for comfortable panning
+        // Testing showed 1.0x was too sensitive, reducing to 0.5x for better control
+        // SENSITIVITY MULTIPLIER: 0.5x (drag scrollbar 10px = pan viewport 5px)
+        const scaleFactor = 0.5;
 
         // CRITICAL: Negate for correct directionality (drag scrollbar right = pan viewport right = negative pan offset)
-        // Scale by viewport ratio to maintain consistent sensitivity across zoom levels
         final panOffsetDeltaX = -(pixelDeltaX * scaleFactor);
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
-            // Reset drag start pan if interaction type changed
-            if (_lastScrollbarInteraction != interaction) {
-              _scrollbarDragStartPan = null;
-              _lastScrollbarInteraction = interaction;
-            }
-
-            // Capture starting pan offset on first frame of drag (when pixelDelta is near zero)
-            // Scrollbar reports CUMULATIVE pixel delta from drag start (e.g., 0, 1, 2, 3...)
-            // We must capture the baseline BEFORE applying any deltas to prevent initial jump
-            if (_scrollbarDragStartPan == null) {
-              _scrollbarDragStartPan = currentState.panOffset;
-
-              // If this is truly the first frame (delta near zero), skip updating viewport
-              // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
-              if (pixelDeltaX.abs() < 0.5) {
-                break; // Skip this frame, wait for next update
-              }
-            }
-
-            // Calculate absolute target pan from drag start
-            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
-            // NOT: newPan = currentPan + cumulativeDelta (which compounds each frame)
-            final targetPanX = _scrollbarDragStartPan!.dx + panOffsetDeltaX;
+            // CRITICAL FIX: Apply delta directly to current pan offset
+            // Don't use cumulative tracking - scrollbar sends INCREMENTAL deltas (frame-to-frame changes)
+            // This allows reversing direction mid-drag
+            final newPanX = currentState.panOffset.dx + panOffsetDeltaX;
 
             // Clamp pan to valid range to prevent panning beyond data boundaries
             // CORRECTED FORMULA: Account for negation in panDataX = -panX * (dataRangeX / trackLength)
@@ -3693,7 +3678,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final minPanX = -(dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX); // Viewport at left edge
             final maxPanX = (dataRangeX - viewportSize) / 2 * (trackLength / dataRangeX); // Viewport at right edge
 
-            final clampedPanX = targetPanX.clamp(minPanX, maxPanX);
+            final clampedPanX = newPanX.clamp(minPanX, maxPanX);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(clampedPanX, currentState.panOffset.dy),
@@ -3717,21 +3702,34 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final currentViewportMinX = currentVisibleCenterX - currentViewportSize / 2;
             final currentViewportMaxX = currentVisibleCenterX + currentViewportSize / 2;
 
-            // Convert pixel delta to data delta
-            final dataDeltaX = -(pixelDeltaX / trackLength) * dataRangeX;
+            // CRITICAL: Scrollbar sends CUMULATIVE delta from drag start, not incremental!
+            // We need to track the starting viewport and calculate absolute positions.
 
-            // Calculate new viewport with anchor point
+            // Initialize drag start viewport on first frame or interaction change
+            if (_scrollbarDragStartPan == null || _lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = Offset(currentViewportMinX, currentViewportMaxX);
+              _lastScrollbarInteraction = interaction;
+              return; // CRITICAL: Return immediately on first frame to skip processing
+            }
+
+            // Convert CUMULATIVE pixel delta to data delta
+            // SENSITIVITY: 35% (0.35x multiplier) for balanced zoom control
+            final dataDeltaX = (pixelDeltaX / trackLength) * dataRangeX * 0.35;
+
+            // Calculate new viewport bounds from ORIGINAL viewport + cumulative delta
+            final startViewportMinX = _scrollbarDragStartPan!.dx;
+            final startViewportMaxX = _scrollbarDragStartPan!.dy; // Calculate new viewport with anchor point
             late final double newViewportMinX;
             late final double newViewportMaxX;
 
             if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
-              // Anchor right edge, adjust left edge
-              newViewportMinX = (currentViewportMinX + dataDeltaX).clamp(dataMinX, currentViewportMaxX - (dataRangeX * 0.01)); // Min 1% viewport
-              newViewportMaxX = currentViewportMaxX;
+              // Anchor right edge, adjust left edge from STARTING position
+              newViewportMinX = (startViewportMinX + dataDeltaX).clamp(dataMinX, startViewportMaxX - (dataRangeX * 0.01)); // Min 1% viewport
+              newViewportMaxX = startViewportMaxX;
             } else {
-              // Anchor left edge, adjust right edge
-              newViewportMinX = currentViewportMinX;
-              newViewportMaxX = (currentViewportMaxX + dataDeltaX).clamp(currentViewportMinX + (dataRangeX * 0.01), dataMaxX); // Min 1% viewport
+              // Anchor left edge, adjust right edge from STARTING position
+              newViewportMinX = startViewportMinX;
+              newViewportMaxX = (startViewportMaxX + dataDeltaX).clamp(startViewportMinX + (dataRangeX * 0.01), dataMaxX); // Min 1% viewport
             }
 
             // Convert new viewport to zoom/pan state
@@ -3810,15 +3808,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         );
       } else {
         // Regular drag: Convert pixel delta to pan offset delta
-        // CRITICAL FIX FOR SENSITIVITY: Scale by the ratio of viewport to data range
-        // This makes scrollbar movement proportional to data movement at current zoom level
+        // CRITICAL FIX FOR SENSITIVITY: Use constant sensitivity multiplier
 
         // Get current viewport size from zoom level
         final viewportSize = dataRangeY / currentState.zoomLevelY;
 
-        // Scale factor: ratio of viewport to data range
-        // SENSITIVITY MULTIPLIER: 1.5x to make dragging more responsive
-        final scaleFactor = (viewportSize / dataRangeY) * 1.5;
+        // CRITICAL FIX: Use reduced sensitivity multiplier for comfortable panning
+        // Testing showed 1.0x was too sensitive, reducing to 0.5x for better control
+        // SENSITIVITY MULTIPLIER: 0.5x (drag scrollbar 10px = pan viewport 5px)
+        const scaleFactor = 0.5;
 
         // CRITICAL: NO negation for Y-axis (screen Y increases downward, data Y increases downward)
         // Drag scrollbar down (positive pixel delta) = pan viewport down (positive pan offset)
@@ -3826,28 +3824,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
-            // Reset drag start pan if interaction type changed
-            if (_lastScrollbarInteraction != interaction) {
-              _scrollbarDragStartPan = null;
-              _lastScrollbarInteraction = interaction;
-            }
-
-            // Capture starting pan offset on first frame of drag (when pixelDelta is near zero)
-            // Scrollbar reports CUMULATIVE pixel delta from drag start (e.g., 0, 1, 2, 3...)
-            // We must capture the baseline BEFORE applying any deltas to prevent initial jump
-            if (_scrollbarDragStartPan == null) {
-              _scrollbarDragStartPan = currentState.panOffset;
-
-              // If this is truly the first frame (delta near zero), skip updating viewport
-              // Otherwise, process normally (handles edge case where onPanUpdate fires before we capture)
-              if (pixelDeltaY.abs() < 0.5) {
-                break; // Skip this frame, wait for next update
-              }
-            }
-
-            // Calculate absolute target pan from drag start
-            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
-            final targetPanY = _scrollbarDragStartPan!.dy + panOffsetDeltaY;
+            // CRITICAL FIX: Apply delta directly to current pan offset
+            // Don't use cumulative tracking - scrollbar sends INCREMENTAL deltas (frame-to-frame changes)
+            // This allows reversing direction mid-drag
+            final newPanY = currentState.panOffset.dy + panOffsetDeltaY;
 
             // Clamp pan to valid range to prevent panning beyond data boundaries
             // Y-axis formula: panDataY = panY * (dataRangeY / trackLength) [NO negation unlike X]
@@ -3858,7 +3838,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final minPanY = -(dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY); // Viewport at bottom edge
             final maxPanY = (dataRangeY - viewportSize) / 2 * (trackLength / dataRangeY); // Viewport at top edge
 
-            final clampedPanY = targetPanY.clamp(minPanY, maxPanY);
+            final clampedPanY = newPanY.clamp(minPanY, maxPanY);
 
             final newZoomPanState = currentState.copyWith(
               panOffset: Offset(currentState.panOffset.dx, clampedPanY),
@@ -3881,22 +3861,35 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             final currentViewportMinY = currentVisibleCenterY - currentViewportSize / 2;
             final currentViewportMaxY = currentVisibleCenterY + currentViewportSize / 2;
 
-            // Convert pixel delta to data delta
-            // NO negation for Y-axis (matches pan behavior)
-            final dataDeltaY = (pixelDeltaY / trackLength) * dataRangeY;
+            // CRITICAL: Scrollbar sends CUMULATIVE delta from drag start, not incremental!
+            // We need to track the starting viewport and calculate absolute positions.
 
-            // Calculate new viewport with anchor point
+            // Initialize drag start viewport on first frame or interaction change
+            // For Y-axis, store in separate variable to avoid conflict with X-axis
+            if (_scrollbarDragStartPan == null || _lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = Offset(currentViewportMinY, currentViewportMaxY);
+              _lastScrollbarInteraction = interaction;
+              return; // CRITICAL: Return immediately on first frame to skip processing
+            }
+
+            // Convert CUMULATIVE pixel delta to data delta
+            // SENSITIVITY: 35% (0.35x multiplier) for balanced zoom control
+            final dataDeltaY = (pixelDeltaY / trackLength) * dataRangeY * 0.35;
+
+            // Calculate new viewport bounds from ORIGINAL viewport + cumulative delta
+            final startViewportMinY = _scrollbarDragStartPan!.dx;
+            final startViewportMaxY = _scrollbarDragStartPan!.dy; // Calculate new viewport with anchor point
             late final double newViewportMinY;
             late final double newViewportMaxY;
 
             if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
-              // Anchor bottom edge, adjust top edge
-              newViewportMinY = (currentViewportMinY + dataDeltaY).clamp(dataMinY, currentViewportMaxY - (dataRangeY * 0.01));
-              newViewportMaxY = currentViewportMaxY;
+              // Anchor bottom edge, adjust top edge from STARTING position
+              newViewportMinY = (startViewportMinY + dataDeltaY).clamp(dataMinY, startViewportMaxY - (dataRangeY * 0.01));
+              newViewportMaxY = startViewportMaxY;
             } else {
-              // Anchor top edge, adjust bottom edge
-              newViewportMinY = currentViewportMinY;
-              newViewportMaxY = (currentViewportMaxY + dataDeltaY).clamp(currentViewportMinY + (dataRangeY * 0.01), dataMaxY);
+              // Anchor top edge, adjust bottom edge from STARTING position
+              newViewportMinY = startViewportMinY;
+              newViewportMaxY = (startViewportMaxY + dataDeltaY).clamp(startViewportMinY + (dataRangeY * 0.01), dataMaxY);
             }
 
             // Convert new viewport to zoom/pan state

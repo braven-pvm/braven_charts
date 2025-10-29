@@ -12,9 +12,9 @@
 // Test Pattern: Full BravenChart integration with viewport tracking via onViewportChanged callback
 // When Feature Fixed: Remove `skip: true` from all test cases
 
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 void main() {
   group('T098: Zoom to Minimum Handle Size', () {
@@ -23,7 +23,7 @@ void main() {
       (WidgetTester tester) async {
         // Track viewport changes and handle size
         Map<String, double>? lastViewport;
-        
+
         // Create large dataset (1000 points) to enable extreme zoom
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -70,7 +70,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -86,7 +86,7 @@ void main() {
         final dataRange = 1000.0; // 0-999
         final viewportRange = initialViewport['maxX']! - initialViewport['minX']!;
         final expectedInitialHandleSize = (viewportRange / dataRange) * trackWidth;
-        
+
         debugPrint('📊 Initial viewport range: $viewportRange / $dataRange');
         debugPrint('📊 Expected initial handle size: $expectedInitialHandleSize');
 
@@ -94,10 +94,10 @@ void main() {
         // Drag right edge LEFT multiple times to zoom in (shrink viewport from right)
         int zoomAttempts = 0;
         const maxZoomAttempts = 20; // Safety limit
-        
+
         while (zoomAttempts < maxZoomAttempts) {
           zoomAttempts++;
-          
+
           final dragX = scrollbarRect.right - 30; // Right edge zone
           final dragY = scrollbarRect.center.dy;
 
@@ -106,7 +106,7 @@ void main() {
           // Store viewport before drag
           final beforeViewport = lastViewport!;
           final beforeRange = beforeViewport['maxX']! - beforeViewport['minX']!;
-          
+
           // Calculate expected handle size before drag
           final beforeHandleSize = (beforeRange / dataRange) * trackWidth;
           debugPrint('📊 Before drag #$zoomAttempts: Handle size = ${beforeHandleSize.toStringAsFixed(2)}px');
@@ -124,7 +124,7 @@ void main() {
           final afterViewport = lastViewport!;
           final afterRange = afterViewport['maxX']! - afterViewport['minX']!;
           final afterHandleSize = (afterRange / dataRange) * trackWidth;
-          
+
           debugPrint('📊 After drag #$zoomAttempts: Handle size = ${afterHandleSize.toStringAsFixed(2)}px');
 
           // Verify handle size never goes below minimum (20.0px default)
@@ -132,19 +132,19 @@ void main() {
               reason: 'Handle size should never be smaller than minHandleSize (20.0px default)');
 
           // Check if handle has reached minimum size (zoom limit)
-          if (afterHandleSize <= 21.0) { // Within 1px of minimum (20.0px)
+          if (afterHandleSize <= 21.0) {
+            // Within 1px of minimum (20.0px)
             debugPrint('✅ Handle reached minimum size after $zoomAttempts zoom attempts');
-            
+
             // Verify zoom stopped (viewport shouldn't change further)
             expect(afterRange, closeTo(beforeRange, 2.0),
                 reason: 'When handle is at minimum size, zoom should stop (viewport should not shrink further)');
-            
+
             break;
           }
         }
 
-        expect(zoomAttempts, lessThan(maxZoomAttempts),
-            reason: 'Should reach minimum handle size within $maxZoomAttempts attempts');
+        expect(zoomAttempts, lessThan(maxZoomAttempts), reason: 'Should reach minimum handle size within $maxZoomAttempts attempts');
       },
       skip: true, // SKIPPED: Edge zoom feature not working (viewport doesn't change)
     );
@@ -154,7 +154,7 @@ void main() {
       (WidgetTester tester) async {
         // Track viewport changes
         Map<String, double>? lastViewport;
-        
+
         // Create dataset (1000 points)
         final testSeries = ChartSeries(
           id: 'test-series',
@@ -199,7 +199,7 @@ void main() {
         final scrollbarBox = tester.renderObject(scrollbarFinder) as RenderBox;
         final scrollbarSize = scrollbarBox.size;
         final scrollbarOffset = scrollbarBox.localToGlobal(Offset.zero);
-        
+
         final scrollbarRect = Rect.fromLTWH(
           scrollbarOffset.dx,
           scrollbarOffset.dy,
@@ -210,20 +210,20 @@ void main() {
         // Perform multiple zoom operations until minZoomRatio limit reached
         int zoomAttempts = 0;
         const maxZoomAttempts = 30; // Safety limit
-        
+
         const dataRange = 1000.0;
         const minZoomRatio = 0.01; // Default from ScrollbarConfig.defaultLight (1% minimum)
         const minViewportRange = dataRange * minZoomRatio; // 10 data points minimum
 
         while (zoomAttempts < maxZoomAttempts) {
           zoomAttempts++;
-          
+
           final dragX = scrollbarRect.right - 30; // Right edge zone
           final dragY = scrollbarRect.center.dy;
 
           final beforeViewport = lastViewport!;
           final beforeRange = beforeViewport['maxX']! - beforeViewport['minX']!;
-          
+
           debugPrint('🎯 Zoom attempt #$zoomAttempts: Current range = ${beforeRange.toStringAsFixed(2)}');
 
           // Drag right edge LEFT to zoom in
@@ -245,17 +245,15 @@ void main() {
           // Check if zoom limit reached
           if (afterRange <= minViewportRange + 5.0) {
             debugPrint('✅ Zoom limit reached after $zoomAttempts attempts (range: ${afterRange.toStringAsFixed(2)})');
-            
+
             // Verify zoom stopped
-            expect(afterRange, closeTo(beforeRange, 3.0),
-                reason: 'When at zoom limit, viewport should not shrink further');
-            
+            expect(afterRange, closeTo(beforeRange, 3.0), reason: 'When at zoom limit, viewport should not shrink further');
+
             break;
           }
         }
 
-        expect(zoomAttempts, lessThan(maxZoomAttempts),
-            reason: 'Should reach zoom limit within $maxZoomAttempts attempts');
+        expect(zoomAttempts, lessThan(maxZoomAttempts), reason: 'Should reach zoom limit within $maxZoomAttempts attempts');
       },
       skip: true, // SKIPPED: Edge zoom feature not working (viewport doesn't change)
     );
@@ -265,7 +263,7 @@ void main() {
       (WidgetTester tester) async {
         // This test would verify visual feedback (e.g., handle flash, bounce animation)
         // when user tries to zoom beyond the minimum handle size limit.
-        // 
+        //
         // Currently skipped because:
         // 1. Visual feedback spec not finalized (FR-054 gap)
         // 2. Edge zoom not working yet
