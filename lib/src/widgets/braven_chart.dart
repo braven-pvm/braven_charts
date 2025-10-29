@@ -1973,51 +1973,140 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Track X-scrollbar height for coordinate offset correction
         _scrollbarHeightOffset = showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0;
 
-        // Build scrollbar layout
+        // Build scrollbar layout aligned with chart viewport (Issue #1 fix)
+        // Strategy: Add padding to chart for scrollbar space, then overlay scrollbars using Stack
         Widget chartWithScrollbars = chartWidget;
 
-        // Add Y scrollbar (vertical, on right side)
-        if (showY) {
-          chartWithScrollbars = Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: chartWithScrollbars),
-              SizedBox(
-                width: scrollbarTheme.yAxisScrollbar.thickness,
-                child: ChartScrollbar(
-                  axis: Axis.vertical,
-                  dataRange: yDataRange,
-                  viewportRange: yViewportRange,
-                  onPixelDeltaChanged: (pixelDelta, interaction) {
-                    _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
-                  },
-                  theme: scrollbarTheme.yAxisScrollbar,
-                ),
-              ),
-            ],
-          );
-        }
+        // Get chart rect for positioning calculations
+        final chartRect = _cachedChartRect;
 
-        // Add X scrollbar (horizontal, on bottom)
-        if (showX) {
-          chartWithScrollbars = Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: chartWithScrollbars),
-              SizedBox(
-                height: scrollbarTheme.xAxisScrollbar.thickness,
-                child: ChartScrollbar(
-                  axis: Axis.horizontal,
-                  dataRange: xDataRange,
-                  viewportRange: xViewportRange,
-                  onPixelDeltaChanged: (pixelDelta, interaction) {
-                    _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
-                  },
-                  theme: scrollbarTheme.xAxisScrollbar,
+        // Only apply alignment if we have a valid chart rect
+        if (chartRect != null && (showX || showY)) {
+          // Calculate padding values from chart rect
+          // chartRect is Rect.fromLTWH(left, top, width, height)
+          final leftPad = chartRect.left;
+          final topPad = chartRect.top;
+
+          // Add padding to chart to make room for scrollbars (so they don't overlap axes)
+          final paddedChart = Padding(
+            padding: EdgeInsets.only(
+              right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
+              bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
+            ),
+            child: chartWidget,
+          );
+
+          // Build list of scrollbar overlays
+          final List<Widget> scrollbarOverlays = [];
+
+          // Add X scrollbar (horizontal, bottom, aligned with chart rect)
+          if (showX) {
+            scrollbarOverlays.add(
+              Positioned(
+                left: leftPad,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: showY ? scrollbarTheme.yAxisScrollbar.thickness : 0.0,
+                  ),
+                  child: SizedBox(
+                    height: scrollbarTheme.xAxisScrollbar.thickness,
+                    child: ChartScrollbar(
+                      axis: Axis.horizontal,
+                      dataRange: xDataRange,
+                      viewportRange: xViewportRange,
+                      onPixelDeltaChanged: (pixelDelta, interaction) {
+                        _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
+                      },
+                      theme: scrollbarTheme.xAxisScrollbar,
+                    ),
+                  ),
                 ),
               ),
+            );
+          }
+
+          // Add Y scrollbar (vertical, right, aligned with chart rect)
+          if (showY) {
+            scrollbarOverlays.add(
+              Positioned(
+                top: topPad,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0,
+                  ),
+                  child: SizedBox(
+                    width: scrollbarTheme.yAxisScrollbar.thickness,
+                    child: ChartScrollbar(
+                      axis: Axis.vertical,
+                      dataRange: yDataRange,
+                      viewportRange: yViewportRange,
+                      onPixelDeltaChanged: (pixelDelta, interaction) {
+                        _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
+                      },
+                      theme: scrollbarTheme.yAxisScrollbar,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          // Overlay scrollbars on top of padded chart using Stack
+          chartWithScrollbars = Stack(
+            children: [
+              paddedChart,
+              ...scrollbarOverlays,
             ],
           );
+        } else {
+          // Fallback: No chart rect available, use original full-width layout
+          // Add Y scrollbar (vertical, on right side)
+          if (showY) {
+            chartWithScrollbars = Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: chartWithScrollbars),
+                SizedBox(
+                  width: scrollbarTheme.yAxisScrollbar.thickness,
+                  child: ChartScrollbar(
+                    axis: Axis.vertical,
+                    dataRange: yDataRange,
+                    viewportRange: yViewportRange,
+                    onPixelDeltaChanged: (pixelDelta, interaction) {
+                      _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: false);
+                    },
+                    theme: scrollbarTheme.yAxisScrollbar,
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // Add X scrollbar (horizontal, on bottom)
+          if (showX) {
+            chartWithScrollbars = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: chartWithScrollbars),
+                SizedBox(
+                  height: scrollbarTheme.xAxisScrollbar.thickness,
+                  child: ChartScrollbar(
+                    axis: Axis.horizontal,
+                    dataRange: xDataRange,
+                    viewportRange: xViewportRange,
+                    onPixelDeltaChanged: (pixelDelta, interaction) {
+                      _onScrollbarPixelDelta(pixelDelta, interaction, isXAxis: true);
+                    },
+                    theme: scrollbarTheme.xAxisScrollbar,
+                  ),
+                ),
+              ],
+            );
+          }
         }
 
         chartWidget = chartWithScrollbars;
