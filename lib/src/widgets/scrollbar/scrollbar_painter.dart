@@ -168,6 +168,7 @@ class ScrollbarPainter extends CustomPainter {
   ///
   /// Implements:
   /// - FR-021A: Default, hover, active, disabled states
+  /// - Edge zone highlighting with separate edgeHoverColor
   /// - Border radius for rounded rectangle
   void _paintHandle(Canvas canvas, Rect handleRect) {
     // Determine handle color based on interaction state
@@ -189,6 +190,77 @@ class ScrollbarPainter extends CustomPainter {
         Radius.circular(config.borderRadius),
       ),
       handlePaint,
+    );
+
+    // Paint edge zone highlights if hovering over an edge
+    if (state.hoverZone == HitTestZone.leftEdge ||
+        state.hoverZone == HitTestZone.rightEdge ||
+        state.hoverZone == HitTestZone.topEdge ||
+        state.hoverZone == HitTestZone.bottomEdge) {
+      _paintEdgeHighlight(canvas, handleRect);
+    }
+  }
+
+  /// Paints edge zone highlight overlay when hovering over resize edges.
+  ///
+  /// Renders a colored overlay on the edge zone (first/last edgeGripWidth pixels)
+  /// using the edgeHoverColor to provide visual feedback for zoom affordance.
+  void _paintEdgeHighlight(Canvas canvas, Rect handleRect) {
+    // Calculate edge zone rect based on hover zone
+    final Rect edgeRect;
+
+    if (state.hoverZone == HitTestZone.leftEdge || state.hoverZone == HitTestZone.topEdge) {
+      // Left/Top edge: First edgeGripWidth pixels
+      if (isHorizontal) {
+        edgeRect = Rect.fromLTWH(
+          handleRect.left,
+          handleRect.top,
+          config.edgeGripWidth,
+          handleRect.height,
+        );
+      } else {
+        edgeRect = Rect.fromLTWH(
+          handleRect.left,
+          handleRect.top,
+          handleRect.width,
+          config.edgeGripWidth,
+        );
+      }
+    } else {
+      // Right/Bottom edge: Last edgeGripWidth pixels
+      if (isHorizontal) {
+        edgeRect = Rect.fromLTWH(
+          handleRect.right - config.edgeGripWidth,
+          handleRect.top,
+          config.edgeGripWidth,
+          handleRect.height,
+        );
+      } else {
+        edgeRect = Rect.fromLTWH(
+          handleRect.left,
+          handleRect.bottom - config.edgeGripWidth,
+          handleRect.width,
+          config.edgeGripWidth,
+        );
+      }
+    }
+
+    // Apply edge hover color with opacity
+    final effectiveEdgeColor = config.edgeHoverColor.withOpacity(
+      config.edgeHoverColor.opacity * opacity,
+    );
+
+    final edgePaint = Paint()
+      ..color = effectiveEdgeColor
+      ..style = PaintingStyle.fill;
+
+    // Draw edge highlight with border radius
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        edgeRect,
+        Radius.circular(config.borderRadius),
+      ),
+      edgePaint,
     );
   }
 

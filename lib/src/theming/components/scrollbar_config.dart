@@ -13,6 +13,7 @@ class ScrollbarConfig {
         trackColor: Color(json['trackColor'] as int),
         handleColor: Color(json['handleColor'] as int),
         handleHoverColor: Color(json['handleHoverColor'] as int),
+        edgeHoverColor: json['edgeHoverColor'] != null ? Color(json['edgeHoverColor'] as int) : const Color(0xFF2196F3),
         handleActiveColor: Color(json['handleActiveColor'] as int),
         handleDisabledColor: json['handleDisabledColor'] != null ? Color(json['handleDisabledColor'] as int) : const Color(0xFFEEEEEE),
         trackHoverColor: json['trackHoverColor'] != null ? Color(json['trackHoverColor'] as int) : const Color(0xFFE0E0E0),
@@ -31,11 +32,12 @@ class ScrollbarConfig {
         prefersReducedMotion: json['prefersReducedMotion'] as bool? ?? false,
       );
   const ScrollbarConfig({
-    this.thickness = 12.0,
+    this.thickness = 10.0,
     this.minHandleSize = 20.0,
     this.trackColor = const Color(0xFFF5F5F5),
     this.handleColor = const Color(0xFFBDBDBD),
     this.handleHoverColor = const Color(0xFF9E9E9E),
+    this.edgeHoverColor = const Color(0xFF2196F3),
     this.handleActiveColor = const Color(0xFF757575),
     this.handleDisabledColor = const Color(0xFFEEEEEE),
     this.borderRadius = 4.0,
@@ -58,7 +60,7 @@ class ScrollbarConfig {
 
   /// Width (for vertical) or height (for horizontal) of the scrollbar track.
   ///
-  /// Default: 12.0 (matches Material Design scrollbar thickness)
+  /// Default: 10.0 (compact for minimal visual footprint)
   final double thickness;
 
   /// Minimum size of the handle (prevents tiny handles when zoomed way out).
@@ -84,6 +86,13 @@ class ScrollbarConfig {
   /// Should have 3:1 contrast ratio with handleColor (WCAG 2.1 SC 1.4.11).
   /// Default: Darker grey (#9E9E9E)
   final Color handleHoverColor;
+
+  /// Edge zone color when mouse is hovering over edge zones (for zoom affordance).
+  ///
+  /// Provides visual distinction between center pan (grey hover) and edge zoom (blue hover).
+  /// Should have 4.5:1 contrast ratio with handleColor (WCAG 2.1 SC 1.4.3).
+  /// Default: Material Blue 500 (#2196F3)
+  final Color edgeHoverColor;
 
   /// Handle color when user is dragging it.
   ///
@@ -183,6 +192,7 @@ class ScrollbarConfig {
     trackColor: Color(0xFFF5F5F5), // Light grey
     handleColor: Color(0xFFBDBDBD), // Medium grey
     handleHoverColor: Color(0xFF9E9E9E), // Darker grey
+    edgeHoverColor: Color(0xFF2196F3), // Material Blue 500
     handleActiveColor: Color(0xFF757575), // Dark grey
     handleDisabledColor: Color(0xFFEEEEEE), // Very light grey
     trackHoverColor: Color(0xFFE0E0E0), // Slightly darker grey
@@ -193,6 +203,7 @@ class ScrollbarConfig {
     trackColor: Color(0xFF212121), // Dark background
     handleColor: Color(0xFF616161), // Medium grey
     handleHoverColor: Color(0xFF757575), // Lighter grey
+    edgeHoverColor: Color(0xFF64B5F6), // Material Blue 300 (lighter for dark theme)
     handleActiveColor: Color(0xFF9E9E9E), // Light grey
     handleDisabledColor: Color(0xFF424242), // Dark grey
     trackHoverColor: Color(0xFF303030), // Slightly lighter dark
@@ -203,6 +214,7 @@ class ScrollbarConfig {
     trackColor: Color(0xFFFFFFFF), // Pure white
     handleColor: Color(0xFF000000), // Pure black
     handleHoverColor: Color(0xFF1976D2), // Blue
+    edgeHoverColor: Color(0xFF0D47A1), // Dark blue for edge zones
     handleActiveColor: Color(0xFFD32F2F), // Red
     handleDisabledColor: Color(0xFFBDBDBD), // Medium grey
     trackHoverColor: Color(0xFFE0E0E0), // Light grey
@@ -216,6 +228,7 @@ class ScrollbarConfig {
     Color? trackColor,
     Color? handleColor,
     Color? handleHoverColor,
+    Color? edgeHoverColor,
     Color? handleActiveColor,
     Color? handleDisabledColor,
     Color? trackHoverColor,
@@ -239,6 +252,7 @@ class ScrollbarConfig {
         trackColor: trackColor ?? this.trackColor,
         handleColor: handleColor ?? this.handleColor,
         handleHoverColor: handleHoverColor ?? this.handleHoverColor,
+        edgeHoverColor: edgeHoverColor ?? this.edgeHoverColor,
         handleActiveColor: handleActiveColor ?? this.handleActiveColor,
         handleDisabledColor: handleDisabledColor ?? this.handleDisabledColor,
         trackHoverColor: trackHoverColor ?? this.trackHoverColor,
@@ -264,6 +278,7 @@ class ScrollbarConfig {
         'trackColor': trackColor.value,
         'handleColor': handleColor.value,
         'handleHoverColor': handleHoverColor.value,
+        'edgeHoverColor': edgeHoverColor.value,
         'handleActiveColor': handleActiveColor.value,
         'handleDisabledColor': handleDisabledColor.value,
         'trackHoverColor': trackHoverColor.value,
@@ -291,6 +306,7 @@ class ScrollbarConfig {
           trackColor == other.trackColor &&
           handleColor == other.handleColor &&
           handleHoverColor == other.handleHoverColor &&
+          edgeHoverColor == other.edgeHoverColor &&
           handleActiveColor == other.handleActiveColor &&
           handleDisabledColor == other.handleDisabledColor &&
           trackHoverColor == other.trackHoverColor &&
@@ -315,6 +331,7 @@ class ScrollbarConfig {
         trackColor,
         handleColor,
         handleHoverColor,
+        edgeHoverColor,
         handleActiveColor,
         handleDisabledColor,
         trackHoverColor,
