@@ -18,7 +18,6 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class AnnotationsComprehensiveScreen extends StatefulWidget {
   const AnnotationsComprehensiveScreen({super.key});
@@ -38,9 +37,9 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
   // Annotation storage
   List<ChartAnnotation> _annotations = [];
   ChartAnnotation? _selectedAnnotation;
-  
+
   // Event tracking
-  List<String> _eventLog = [];
+  final List<String> _eventLog = [];
   int _eventCount = 0;
 
   // View state
@@ -51,7 +50,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
   // Creation state
   String _creationType = 'text';
   final _textController = TextEditingController(text: 'New Annotation');
-  
+
   @override
   void initState() {
     super.initState();
@@ -321,20 +320,24 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
                           title: 'Interactive Annotation Demo',
                           annotations: _annotations,
                           theme: ChartTheme.defaultLight,
-                          interactionConfig: InteractionConfig(
+                          interactionConfig: const InteractionConfig(
                             enabled: true,
                             enableZoom: true,
                             enablePan: true,
                           ),
-                          onAnnotationTap: _interactiveAnnotations ? (annotation) {
-                            setState(() {
-                              _selectedAnnotation = annotation;
-                            });
-                            _logEvent('TAP: ${annotation.runtimeType} [${annotation.id}]');
-                          } : null,
-                          onAnnotationDragged: _interactiveAnnotations ? (annotation, newPosition) {
-                            _logEvent('DRAG: ${annotation.runtimeType} to $newPosition');
-                          } : null,
+                          onAnnotationTap: _interactiveAnnotations
+                              ? (annotation) {
+                                  setState(() {
+                                    _selectedAnnotation = annotation;
+                                  });
+                                  _logEvent('TAP: ${annotation.runtimeType} [${annotation.id}]');
+                                }
+                              : null,
+                          onAnnotationDragged: _interactiveAnnotations
+                              ? (annotation, newPosition) {
+                                  _logEvent('DRAG: ${annotation.runtimeType} to $newPosition');
+                                }
+                              : null,
                         ),
                       ),
                     ),
@@ -487,7 +490,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _creationType,
+          initialValue: _creationType,
           decoration: const InputDecoration(
             labelText: 'Annotation Type',
             border: OutlineInputBorder(),
@@ -662,8 +665,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isSelected)
-                        const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      if (isSelected) const Icon(Icons.check_circle, color: Colors.green, size: 16),
                       IconButton(
                         icon: const Icon(Icons.delete, size: 18),
                         iconSize: 18,
@@ -744,7 +746,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
               const SizedBox(height: 8),
               const Divider(),
               const SizedBox(height: 8),
-              
+
               // Type-specific properties
               if (annotation is TextAnnotation) ...[
                 _buildPropertyRow('Text', annotation.text),
