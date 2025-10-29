@@ -4889,13 +4889,56 @@ class _AnnotationOverlay extends StatelessWidget {
     );
   }  /// Builds a range annotation widget (rectangular region).
   Widget _buildRangeAnnotation(RangeAnnotation annotation) {
-    // Simplified: Show a semi-transparent rectangle
-    // Full implementation would transform data coordinates to screen coordinates
+    // PHASE 1, TASK 1.2: Coordinate transformation integration
+    if (chartRect == null) {
+      // Chart not yet rendered - don't show annotation
+      return const SizedBox.shrink();
+    }
+
+    final bounds = _calculateDataBounds(series);
+    
+    // Calculate screen coordinates for the range bounds
+    // Handle null values (infinite ranges) by using chart bounds
+    final double startXData = annotation.startX ?? bounds.minX;
+    final double endXData = annotation.endX ?? bounds.maxX;
+    final double startYData = annotation.startY ?? bounds.minY;
+    final double endYData = annotation.endY ?? bounds.maxY;
+
+    // Transform data coordinates to screen coordinates
+    final startPoint = _dataToScreenPoint(
+      ChartDataPoint(x: startXData, y: startYData),
+      chartRect!,
+      bounds,
+    );
+    final endPoint = _dataToScreenPoint(
+      ChartDataPoint(x: endXData, y: endYData),
+      chartRect!,
+      bounds,
+    );
+
+    // Calculate the rectangle dimensions
+    // Note: Y coordinates are inverted in screen space (top is smaller)
+    final left = startPoint.dx - titleOffset.dx;
+    final top = endPoint.dy - titleOffset.dy; // endY has smaller screen coordinate
+    final width = (endPoint.dx - startPoint.dx).abs();
+    final height = (startPoint.dy - endPoint.dy).abs();
+
+    // Check if range is at least partially visible
+    if (!chartRect!.overlaps(Rect.fromLTWH(
+      chartRect!.left - titleOffset.dx,
+      chartRect!.top - titleOffset.dy,
+      chartRect!.width,
+      chartRect!.height,
+    ))) {
+      // Range is completely outside visible area
+      return const SizedBox.shrink();
+    }
+
     return Positioned(
-      left: 50, // Placeholder
-      top: 50, // Placeholder
-      width: 200, // Placeholder
-      height: 100, // Placeholder
+      left: left,
+      top: top,
+      width: width,
+      height: height,
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: Container(
