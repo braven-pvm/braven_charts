@@ -3664,10 +3664,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
-            // CRITICAL FIX: Apply delta directly to current pan offset
-            // Don't use cumulative tracking - scrollbar sends INCREMENTAL deltas (frame-to-frame changes)
-            // This allows reversing direction mid-drag
-            final newPanX = currentState.panOffset.dx + panOffsetDeltaX;
+            // CRITICAL FIX: Scrollbar sends CUMULATIVE deltas, not incremental!
+            // Initialize drag start pan on first frame or interaction change
+            if (_scrollbarDragStartPan == null || _lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = currentState.panOffset;
+              _lastScrollbarInteraction = interaction;
+              return; // CRITICAL: Return immediately on first frame to skip processing
+            }
+
+            // Calculate absolute target pan from drag start + cumulative delta
+            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
+            final newPanX = _scrollbarDragStartPan!.dx + panOffsetDeltaX;
 
             // Clamp pan to valid range to prevent panning beyond data boundaries
             // CORRECTED FORMULA: Account for negation in panDataX = -panX * (dataRangeX / trackLength)
@@ -3810,9 +3817,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         // Regular drag: Convert pixel delta to pan offset delta
         // CRITICAL FIX FOR SENSITIVITY: Use constant sensitivity multiplier
 
-        // Get current viewport size from zoom level
-        final viewportSize = dataRangeY / currentState.zoomLevelY;
-
         // CRITICAL FIX: Use reduced sensitivity multiplier for comfortable panning
         // Testing showed 1.0x was too sensitive, reducing to 0.5x for better control
         // SENSITIVITY MULTIPLIER: 0.5x (drag scrollbar 10px = pan viewport 5px)
@@ -3824,10 +3828,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         switch (interaction) {
           case ScrollbarInteraction.pan:
-            // CRITICAL FIX: Apply delta directly to current pan offset
-            // Don't use cumulative tracking - scrollbar sends INCREMENTAL deltas (frame-to-frame changes)
-            // This allows reversing direction mid-drag
-            final newPanY = currentState.panOffset.dy + panOffsetDeltaY;
+            // CRITICAL FIX: Scrollbar sends CUMULATIVE deltas, not incremental!
+            // Initialize drag start pan on first frame or interaction change
+            if (_scrollbarDragStartPan == null || _lastScrollbarInteraction != interaction) {
+              _scrollbarDragStartPan = currentState.panOffset;
+              _lastScrollbarInteraction = interaction;
+              return; // CRITICAL: Return immediately on first frame to skip processing
+            }
+
+            // Calculate absolute target pan from drag start + cumulative delta
+            // This prevents acceleration: newPan = dragStartPan + cumulativeDelta
+            final newPanY = _scrollbarDragStartPan!.dy + panOffsetDeltaY;
 
             // Clamp pan to valid range to prevent panning beyond data boundaries
             // Y-axis formula: panDataY = panY * (dataRangeY / trackLength) [NO negation unlike X]
