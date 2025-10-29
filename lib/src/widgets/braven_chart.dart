@@ -4953,8 +4953,27 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a threshold annotation widget (horizontal or vertical line).
   Widget _buildThresholdAnnotation(ThresholdAnnotation annotation) {
-    // Simplified: Show a line across the chart
-    // Full implementation would use coordinate transformation
+    // PHASE 1, TASK 1.3: Coordinate transformation integration
+    if (chartRect == null) {
+      // Chart not yet rendered - don't show annotation
+      return const SizedBox.shrink();
+    }
+
+    final bounds = _calculateDataBounds(series);
+    
+    // Check if the threshold value is within visible data bounds
+    if (annotation.axis == AnnotationAxis.y) {
+      if (annotation.value < bounds.minY || annotation.value > bounds.maxY) {
+        // Y threshold is outside visible range
+        return const SizedBox.shrink();
+      }
+    } else {
+      if (annotation.value < bounds.minX || annotation.value > bounds.maxX) {
+        // X threshold is outside visible range
+        return const SizedBox.shrink();
+      }
+    }
+
     return Positioned.fill(
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
@@ -4962,9 +4981,12 @@ class _AnnotationOverlay extends StatelessWidget {
           painter: _ThresholdPainter(
             axis: annotation.axis,
             value: annotation.value,
-            color: annotation.style.borderColor ?? Colors.red,
-            width: annotation.style.borderWidth,
+            color: annotation.lineColor,
+            width: annotation.lineWidth,
             dashPattern: annotation.dashPattern,
+            chartRect: chartRect!,
+            bounds: bounds,
+            titleOffset: titleOffset,
           ),
         ),
       ),
@@ -5123,13 +5145,25 @@ class _MarkerPainter extends CustomPainter {
 
 /// Custom painter for threshold lines.
 class _ThresholdPainter extends CustomPainter {
-  _ThresholdPainter({required this.axis, required this.value, required this.color, required this.width, this.dashPattern});
+  _ThresholdPainter({
+    required this.axis,
+    required this.value,
+    required this.color,
+    required this.width,
+    this.dashPattern,
+    required this.chartRect,
+    required this.bounds,
+    required this.titleOffset,
+  });
 
   final AnnotationAxis axis;
   final double value;
   final Color color;
   final double width;
   final List<double>? dashPattern;
+  final Rect chartRect;
+  final _DataBounds bounds;
+  final Offset titleOffset;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -5138,22 +5172,82 @@ class _ThresholdPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = width;
 
-    // Simplified: Draw line at 50% of the canvas
-    // Full implementation would use coordinate transformation
+    // PHASE 1, TASK 1.3: Use coordinate transformation
     if (axis == AnnotationAxis.y) {
-      // Horizontal line
-      final y = size.height / 2;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      // Horizontal line at Y value
+      // Transform the Y data value to screen coordinate
+      final yRange = bounds.maxY - bounds.minY;
+      final yPercent = yRange == 0 ? 0.5 : (value - bounds.minY) / yRange;
+      final pixelY = chartRect.bottom - (yPercent * chartRect.height);
+      final y = pixelY + titleOffset.dy;
+
+      // Draw line across the full width of the chart
+      final startX = chartRect.left + titleOffset.dx;
+      final endX = chartRect.right + titleOffset.dx;
+
+      if (dashPattern != null && dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(startX, y), Offset(endX, y), paint, dashPattern!);
+      } else {
+        canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
+      }
     } else {
-      // Vertical line
-      final x = size.width / 2;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+      // Vertical line at X value
+      // Transform the X data value to screen coordinate
+      final xRange = bounds.maxX - bounds.minX;
+      final xPercent = xRange == 0 ? 0.5 : (value - bounds.minX) / xRange;
+      final pixelX = chartRect.left + (xPercent * chartRect.width);
+      final x = pixelX + titleOffset.dx;
+
+      // Draw line across the full height of the chart
+      final startY = chartRect.top + titleOffset.dy;
+      final endY = chartRect.bottom + titleOffset.dy;
+
+      if (dashPattern != null && dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, Offset(x, startY), Offset(x, endY), paint, dashPattern!);
+      } else {
+        canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
+      }
     }
+  }
+
+  /// Draws a dashed line between two points.
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
+    final path = Path();
+    final totalDistance = (end - start).distance;
+    var currentDistance = 0.0;
+    var patternIndex = 0;
+    var isDash = true;
+
+    while (currentDistance < totalDistance) {
+      final dashLength = dashPattern[patternIndex % dashPattern.length];
+      final nextDistance = (currentDistance + dashLength).clamp(0.0, totalDistance);
+
+      if (isDash) {
+        final t1 = currentDistance / totalDistance;
+        final t2 = nextDistance / totalDistance;
+        final p1 = Offset.lerp(start, end, t1)!;
+        final p2 = Offset.lerp(start, end, t2)!;
+        path.moveTo(p1.dx, p1.dy);
+        path.lineTo(p2.dx, p2.dy);
+      }
+
+      currentDistance = nextDistance;
+      patternIndex++;
+      isDash = !isDash;
+    }
+
+    canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(_ThresholdPainter oldDelegate) {
-    return axis != oldDelegate.axis || value != oldDelegate.value || color != oldDelegate.color || width != oldDelegate.width;
+    return axis != oldDelegate.axis ||
+        value != oldDelegate.value ||
+        color != oldDelegate.color ||
+        width != oldDelegate.width ||
+        chartRect != oldDelegate.chartRect ||
+        bounds != oldDelegate.bounds ||
+        titleOffset != oldDelegate.titleOffset;
   }
 }
 
