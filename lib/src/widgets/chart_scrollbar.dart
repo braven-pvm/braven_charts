@@ -282,9 +282,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Wrap in RepaintBoundary to isolate scrollbar repaints from rest of chart (T049)
     return RepaintBoundary(
       child: LayoutBuilder(
-        // CRITICAL: Key by viewport range to force rebuild when viewport changes
-        // Without this, LayoutBuilder caches the builder and won't recalculate handle size
-        key: ValueKey('${widget.viewportRange.min}-${widget.viewportRange.max}'),
         builder: (context, constraints) {
           // Calculate track length based on orientation
           final trackLength = widget.axis == Axis.horizontal ? constraints.maxWidth : constraints.maxHeight;
