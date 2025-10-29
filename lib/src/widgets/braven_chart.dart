@@ -1901,6 +1901,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             interactiveAnnotations: widget.interactiveAnnotations,
             onAnnotationTap: widget.onAnnotationTap,
             onAnnotationDragged: widget.onAnnotationDragged,
+            series: _getAllSeries(),
+            chartRect: _cachedChartRect,
+            titleOffset: _titleOffset,
           ),
         ],
       );
@@ -4767,12 +4770,23 @@ class _DataBounds {
 /// This widget handles rendering all 5 annotation types with z-index ordering
 /// and optional interaction support.
 class _AnnotationOverlay extends StatelessWidget {
-  const _AnnotationOverlay({required this.annotations, required this.interactiveAnnotations, this.onAnnotationTap, this.onAnnotationDragged});
+  const _AnnotationOverlay({
+    required this.annotations,
+    required this.interactiveAnnotations,
+    this.onAnnotationTap,
+    this.onAnnotationDragged,
+    required this.series,
+    this.chartRect,
+    required this.titleOffset,
+  });
 
   final List<ChartAnnotation> annotations;
   final bool interactiveAnnotations;
   final void Function(ChartAnnotation annotation)? onAnnotationTap;
   final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
+  final List<ChartSeries> series;
+  final Rect? chartRect;
+  final Offset titleOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -4829,11 +4843,42 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a point annotation widget (marker on specific data point).
   Widget _buildPointAnnotation(PointAnnotation annotation) {
-    // Simplified: Just show a marker at the approximate position
-    // Full implementation would transform data coordinates to screen coordinates
+    // PHASE 1, TASK 1.1: Coordinate transformation integration
+    // Get the series containing the data point
+    final targetSeries = series.where((s) => s.id == annotation.seriesId).firstOrNull;
+    
+    if (targetSeries == null || annotation.dataPointIndex >= targetSeries.points.length) {
+      // Series not found or invalid index - don't render
+      return const SizedBox.shrink();
+    }
+
+    // Get the specific data point
+    final dataPoint = targetSeries.points[annotation.dataPointIndex];
+
+    // Calculate bounds for coordinate transformation
+    if (chartRect == null) {
+      // Chart not yet rendered - don't show annotation
+      return const SizedBox.shrink();
+    }
+
+    final bounds = _calculateDataBounds(series);
+    
+    // Transform data coordinates to screen coordinates
+    final screenPos = _dataToScreenPoint(dataPoint, chartRect!, bounds);
+    
+    // Check if point is within visible bounds (optimization)
+    if (!chartRect!.contains(Offset(screenPos.dx - titleOffset.dx, screenPos.dy - titleOffset.dy))) {
+      // Point is outside visible area
+      return const SizedBox.shrink();
+    }
+
+    // Apply offset for marker centering
+    final markerLeft = screenPos.dx - annotation.markerSize;
+    final markerTop = screenPos.dy - annotation.markerSize;
+
     return Positioned(
-      left: 100, // Placeholder - would use coordinate transformation
-      top: 100, // Placeholder - would use coordinate transformation
+      left: markerLeft,
+      top: markerTop,
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: CustomPaint(
@@ -4842,9 +4887,7 @@ class _AnnotationOverlay extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// Builds a range annotation widget (rectangular region).
+  }  /// Builds a range annotation widget (rectangular region).
   Widget _buildRangeAnnotation(RangeAnnotation annotation) {
     // Simplified: Show a semi-transparent rectangle
     // Full implementation would transform data coordinates to screen coordinates
@@ -4901,6 +4944,57 @@ class _AnnotationOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // ==================== COORDINATE TRANSFORMATION HELPERS ====================
+
+  /// Calculate data bounds from the provided series.
+  /// This is a simplified version for annotation rendering.
+  _DataBounds _calculateDataBounds(List<ChartSeries> seriesList) {
+    if (seriesList.isEmpty) {
+      return _DataBounds(minX: 0, maxX: 1, minY: 0, maxY: 1);
+    }
+
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final series in seriesList) {
+      for (final point in series.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    // Handle edge case where all values are the same
+    if (minX == maxX) {
+      minX -= 0.5;
+      maxX += 0.5;
+    }
+    if (minY == maxY) {
+      minY -= 0.5;
+      maxY += 0.5;
+    }
+
+    return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+
+  /// Transform a data point to screen coordinates.
+  /// This is a simplified version for annotation rendering.
+  Offset _dataToScreenPoint(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
+    final xRange = bounds.maxX - bounds.minX;
+    final yRange = bounds.maxY - bounds.minY;
+    
+    final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
+    final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
+    
+    final pixelX = chartRect.left + (xPercent * chartRect.width);
+    final pixelY = chartRect.bottom - (yPercent * chartRect.height);
+    
+    return Offset(pixelX + titleOffset.dx, pixelY + titleOffset.dy);
   }
 }
 
