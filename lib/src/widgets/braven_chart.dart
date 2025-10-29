@@ -2299,15 +2299,18 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 delta,
               );
 
+              // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
+              final clampedState = _clampPanOffset(newZoomPanState);
+
               // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
               _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
-                zoomPanState: newZoomPanState,
+                zoomPanState: clampedState,
               );
 
               _panStartPosition = event.localPosition;
 
               // Invoke pan callback with NEW state
-              config.onPanChanged?.call(newZoomPanState.panOffset);
+              config.onPanChanged?.call(clampedState.panOffset);
 
               // Invoke viewport callback
               _invokeViewportCallback();
@@ -2400,6 +2403,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   // Handle pan (when delta changes but scale is 1.0)
                   if (config.enablePan && details.focalPointDelta != Offset.zero) {
                     newZoomPanState = _zoomPanController!.pan(newZoomPanState, details.focalPointDelta);
+
+                    // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
+                    newZoomPanState = _clampPanOffset(newZoomPanState);
 
                     // Invoke pan callback
                     config.onPanChanged?.call(newZoomPanState.panOffset);
@@ -2940,6 +2946,89 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
   }
 
+  /// Clamps pan offset to prevent panning beyond data boundaries.
+  ///
+  /// **Coordinate System**:
+  /// - Pan offset (pixels): `panX`, `panY` in screen coordinates
+  /// - Pan data (data units): `panDataX = -panX * (dataRangeX / rect.width)`
+  /// - Viewport: `minX = centerX - rangeX/2 + panDataX`, `maxX = centerX + rangeX/2 + panDataX`
+  ///
+  /// **Boundary Conditions with Padding**:
+  /// - Adds visual breathing room (default 5% of visible range on each side)
+  /// - LEFT edge: `minX = dataMinX - padding` → allows panning slightly beyond left boundary
+  /// - RIGHT edge: `maxX = dataMaxX + padding` → allows panning slightly beyond right boundary
+  ///
+  /// **Padding Calculation**:
+  /// - `padding = visibleRange * edgePaddingPercent`
+  /// - At zoom 1x (100 points visible, 5% padding): 5 points of padding
+  /// - At zoom 4x (25 points visible, 5% padding): 1.25 points of padding
+  ///
+  /// **Returns**: New ZoomPanState with clamped pan offset
+  ZoomPanState _clampPanOffset(ZoomPanState state) {
+    if (_cachedChartRect == null) {
+      return state; // Can't clamp without chart rect
+    }
+
+    final allSeries = _getAllSeries();
+    if (allSeries.isEmpty) {
+      return state; // No data to clamp against
+    }
+
+    // Get ORIGINAL data bounds (without zoom/pan transformation)
+    final dataBounds = _calculateRawDataBounds(allSeries);
+    final dataMinX = dataBounds.minX;
+    final dataMaxX = dataBounds.maxX;
+    final dataMinY = dataBounds.minY;
+    final dataMaxY = dataBounds.maxY;
+
+    final dataRangeX = dataMaxX - dataMinX;
+    final dataRangeY = dataMaxY - dataMinY;
+
+    final rect = _cachedChartRect!;
+
+    // Calculate visible range based on zoom level
+    final rangeX = dataRangeX / state.zoomLevelX;
+    final rangeY = dataRangeY / state.zoomLevelY;
+
+    // Add edge padding (5% of visible range on each side)
+    // This allows panning slightly beyond data boundaries for better visibility
+    const edgePaddingPercent = 0.05;
+    final paddingX = rangeX * edgePaddingPercent;
+    final paddingY = rangeY * edgePaddingPercent;
+
+    // Adjust effective data range to include padding
+    final effectiveMinX = dataMinX - paddingX;
+    final effectiveMaxX = dataMaxX + paddingX;
+    final effectiveMinY = dataMinY - paddingY;
+    final effectiveMaxY = dataMaxY + paddingY;
+
+    // Calculate center of ORIGINAL data range (not effective range)
+    // This is critical - viewport transformation uses original center
+    final originalCenterX = (dataMinX + dataMaxX) / 2;
+    final originalCenterY = (dataMinY + dataMaxY) / 2;
+
+    final maxPanDataX = effectiveMinX - originalCenterX + rangeX / 2;
+    final maxPanX = -maxPanDataX * (rect.width / dataRangeX);
+
+    final maxPanDataY = effectiveMinY - originalCenterY + rangeY / 2;
+    final maxPanY = -maxPanDataY * (rect.height / dataRangeY);
+
+    // Calculate min allowed pan offset (at RIGHT/BOTTOM edge with padding)
+    final minPanDataX = effectiveMaxX - originalCenterX - rangeX / 2;
+    final minPanX = -minPanDataX * (rect.width / dataRangeX);
+
+    final minPanDataY = effectiveMaxY - originalCenterY - rangeY / 2;
+    final minPanY = -minPanDataY * (rect.height / dataRangeY);
+
+    // Clamp pan offset
+    final clampedPanX = state.panOffset.dx.clamp(minPanX, maxPanX);
+    final clampedPanY = state.panOffset.dy.clamp(minPanY, maxPanY);
+
+    return state.copyWith(
+      panOffset: Offset(clampedPanX, clampedPanY),
+    );
+  }
+
   _DataBounds _calculateDataBounds(List<ChartSeries> series, {Rect? chartRect, bool includePadding = true}) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
@@ -3008,9 +3097,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         minY = centerY - rangeY / 2 + panDataY;
         maxY = centerY + rangeY / 2 + panDataY;
       }
-    }
-
-    // CRITICAL: Add padding AFTER zoom/pan transformation (optional for scrollbar calculations)
+    } // CRITICAL: Add padding AFTER zoom/pan transformation (optional for scrollbar calculations)
     // This ensures padding is applied to the visible viewport, not the original data
     if (includePadding) {
       final yRange = maxY - minY;
