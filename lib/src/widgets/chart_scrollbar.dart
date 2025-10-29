@@ -390,7 +390,16 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     _autoHideTimer = null;
   }
 
-  // NOTE: _resetAutoHide() will be added in Phase 4 (User Story 2) when gesture handlers are implemented
+  /// Resets auto-hide timer (cancels and reschedules).
+  ///
+  /// Used when user interacts with scrollbar but doesn't start dragging
+  /// (e.g., hovering, clicking track). This keeps scrollbar visible during
+  /// interaction while ensuring it hides after inactivity.
+  void _resetAutoHide() {
+    if (widget.theme.autoHide) {
+      _scheduleAutoHide();
+    }
+  }
 
   // --- Hover Detection (T084-T085) ---
 
@@ -433,6 +442,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     if (zone != currentState.hoverZone) {
       _stateNotifier.value = currentState.copyWith(hoverZone: zone);
     }
+
+    // Reset auto-hide timer on hover (Issue #2 fix)
+    _resetAutoHide();
   }
 
   /// Clears hover zone when mouse exits scrollbar area (T084).
@@ -510,16 +522,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Report track click to parent with pixel position
     widget.onPixelDeltaChanged(pixelOffset, ScrollbarInteraction.trackClick);
 
-    // Cancel auto-hide while parent processes jump
-    if (widget.theme.autoHide) {
-      _cancelAutoHide();
-      // Restart after a delay
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && widget.theme.autoHide) {
-          _scheduleAutoHide();
-        }
-      });
-    }
+    // Reset auto-hide timer after track click (Issue #2 fix)
+    _resetAutoHide();
   }
 
   /// Animation completion listener (T073).
