@@ -71,28 +71,40 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
         TextAnnotation(
           id: 'text1',
           text: 'Peak Temperature',
-          position: const Offset(300, 80),
+          position: const Offset(200, 80),
           style: const AnnotationStyle(
-            fontSize: 14,
-            textColor: Colors.red,
+            textStyle: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+              letterSpacing: 0.5,
+            ),
             backgroundColor: Colors.white,
             borderColor: Colors.red,
             borderWidth: 2,
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           ),
         ),
-        // Data-coordinate mode TextAnnotation (anchored to data point)
+        // Data-coordinate mode TextAnnotation (anchored to data point) 
         TextAnnotation(
           id: 'text2_data_mode',
           text: 'Data Point\n(15, 32)',
           dataX: 15.0,
           dataY: 32.0,
           seriesId: 'temperature',
-          backgroundColor: Colors.purple.withOpacity(0.9),
+          backgroundColor: Colors.purple.withAlpha(20),
           borderColor: Colors.purple,
           style: const AnnotationStyle(
-            fontSize: 12,
-            textColor: Colors.white,
-            fontWeight: FontWeight.bold,
+            textStyle: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.purple,
+              fontFamily: 'monospace',
+            ),
+            borderWidth: 0.5,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
+            padding: EdgeInsets.all(6),
           ),
         ),
         PointAnnotation(
@@ -105,23 +117,41 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
           markerColor: Colors.orange,
         ),
         RangeAnnotation(
-          id: 'range1',
-          label: 'Above Average',
-          startY: 20,
-          endY: 25,
-          fillColor: Colors.green.withOpacity(0.1),
-          borderColor: Colors.green,
-          labelPosition: AnnotationLabelPosition.topLeft,
-        ),
+            id: 'range1',
+            label: 'Above Average',
+            startY: 20,
+            endY: 25,
+            fillColor: Colors.green.withAlpha(20),
+            borderColor: Colors.green,
+            labelPosition: AnnotationLabelPosition.topLeft,
+            style: const AnnotationStyle(
+              textStyle: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.green,
+              ),
+              backgroundColor: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            )),
         RangeAnnotation(
-          id: 'range2',
-          label: 'Above Average',
-          startX: 6,
-          endX: 8,
-          fillColor: Colors.blue.withOpacity(0.1),
-          borderColor: Colors.blue,
-          labelPosition: AnnotationLabelPosition.topLeft,
-        ),
+            id: 'range2',
+            label: 'Above',
+            startX: 6,
+            endX: 8,
+            fillColor: Colors.blue.withOpacity(0.1),
+            borderColor: Colors.blue,
+            labelPosition: AnnotationLabelPosition.bottomRight,
+            style: const AnnotationStyle(
+              textStyle: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+              backgroundColor: Colors.white,
+              borderRadius: BorderRadius.zero, // Sharp corners
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            )),
 
         ThresholdAnnotation(
           id: 'threshold1',
@@ -158,8 +188,10 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
           text: _textController.text.isEmpty ? 'New Text' : _textController.text,
           position: const Offset(200, 100),
           style: const AnnotationStyle(
-            fontSize: 14,
-            textColor: Colors.black,
+            textStyle: TextStyle(
+              fontSize: 14,
+              color: Colors.black,
+            ),
             backgroundColor: Colors.white,
             borderColor: Colors.grey,
             borderWidth: 1,
@@ -257,7 +289,9 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             random.nextDouble() * 400,
             random.nextDouble() * 300,
           ),
-          style: const AnnotationStyle(fontSize: 10),
+          style: const AnnotationStyle(
+            textStyle: TextStyle(fontSize: 10),
+          ),
         ),
       );
 

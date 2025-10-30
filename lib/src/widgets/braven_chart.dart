@@ -4890,14 +4890,15 @@ class _AnnotationOverlay extends StatelessWidget {
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: Container(
-          padding: const EdgeInsets.all(4),
+          padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             color: annotation.backgroundColor,
             border: annotation.borderColor != null ? Border.all(color: annotation.borderColor!) : null,
+            borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
           ),
           child: Text(
             annotation.text,
-            style: TextStyle(fontSize: annotation.style.fontSize, fontWeight: annotation.style.fontWeight, color: annotation.style.textColor),
+            style: annotation.style.textStyle,
           ),
         ),
       ),
@@ -5058,6 +5059,59 @@ class _AnnotationOverlay extends StatelessWidget {
                     width: annotation.style.borderWidth,
                   )
                 : null,
+          ),
+          // Render label if provided
+          child: annotation.label != null ? _buildRangeLabel(annotation, clampedWidth, clampedHeight) : null,
+        ),
+      ),
+    );
+  }
+
+  /// Builds a positioned label widget for range annotations.
+  Widget _buildRangeLabel(RangeAnnotation annotation, double width, double height) {
+    Alignment alignment;
+    EdgeInsets padding;
+
+    // Position label according to labelPosition setting
+    switch (annotation.labelPosition) {
+      case AnnotationLabelPosition.topLeft:
+        alignment = Alignment.topLeft;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.topRight:
+        alignment = Alignment.topRight;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.bottomLeft:
+        alignment = Alignment.bottomLeft;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.bottomRight:
+        alignment = Alignment.bottomRight;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.center:
+        alignment = Alignment.center;
+        padding = EdgeInsets.zero;
+        break;
+    }
+
+    return Align(
+      alignment: alignment,
+      child: Padding(
+        padding: padding,
+        child: Container(
+          padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
+            borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
+            border: annotation.style.borderColor != null
+                ? Border.all(color: annotation.style.borderColor!, width: 1)
+                : null,
+          ),
+          child: Text(
+            annotation.label!,
+            style: annotation.style.textStyle,
           ),
         ),
       ),

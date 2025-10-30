@@ -242,7 +242,7 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
             markerShape: MarkerShape.star,
             markerSize: 14,
             style: const AnnotationStyle(
-              textColor: Colors.orange,
+              textStyle: TextStyle(color: Colors.orange),
               borderColor: Colors.orange,
             ),
           ),
