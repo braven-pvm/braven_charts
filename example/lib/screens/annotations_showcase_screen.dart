@@ -167,8 +167,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           text: 'Peak Sales!',
           position: const Offset(320, 80),
           style: const AnnotationStyle(
-            fontSize: 14,
-            textColor: Colors.red,
+            textStyle: TextStyle(fontSize: 14, color: Colors.red),
             backgroundColor: Colors.white,
             borderColor: Colors.red,
             borderWidth: 2,
@@ -187,7 +186,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           markerShape: MarkerShape.star,
           markerSize: 16,
           style: const AnnotationStyle(
-            textColor: Colors.orange,
+            textStyle: TextStyle(color: Colors.orange),
             borderColor: Colors.orange,
           ),
         ),
@@ -215,9 +214,9 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           value: 20000,
           axis: AnnotationAxis.y,
           style: const AnnotationStyle(
+            textStyle: TextStyle(color: Colors.green),
             borderColor: Colors.green,
             borderWidth: 2,
-            textColor: Colors.green,
           ),
         ),
         ThresholdAnnotation(
@@ -226,9 +225,9 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           value: 14000,
           axis: AnnotationAxis.y,
           style: AnnotationStyle(
+            textStyle: TextStyle(color: Colors.red.shade300),
             borderColor: Colors.red.shade300,
             borderWidth: 2,
-            textColor: Colors.red.shade300,
           ),
         ),
       ]);
@@ -313,8 +312,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
                   text: 'Year Start',
                   position: const Offset(50, 250),
                   style: const AnnotationStyle(
-                    fontSize: 12,
-                    textColor: Colors.blue,
+                    textStyle: TextStyle(fontSize: 12, color: Colors.blue),
                     backgroundColor: Colors.white,
                   ),
                 ),
@@ -323,8 +321,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
                   text: 'Mid-Year\nReview',
                   position: const Offset(200, 150),
                   style: AnnotationStyle(
-                    fontSize: 14,
-                    textColor: Colors.orange.shade700,
+                    textStyle: TextStyle(fontSize: 14, color: Colors.orange.shade700),
                     backgroundColor: Colors.orange.shade50,
                     borderColor: Colors.orange,
                     borderWidth: 2,
@@ -335,8 +332,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
                   text: 'Strong Finish 🎉',
                   position: const Offset(320, 80),
                   style: const AnnotationStyle(
-                    fontSize: 14,
-                    textColor: Colors.green,
+                    textStyle: TextStyle(fontSize: 14, color: Colors.green),
                     backgroundColor: Colors.white,
                     borderColor: Colors.green,
                     borderWidth: 2,
@@ -354,8 +350,8 @@ TextAnnotation(
   text: 'Important Note',
   position: Offset(200, 100), // Fixed screen position
   style: AnnotationStyle(
-    fontSize: 14,
-    textColor: Colors.blue,
+    textStyle: TextStyle(fontSize: 14),
+    textStyle: TextStyle(color: Colors.blue),
   ),
 )'''),
           ],
@@ -416,8 +412,7 @@ TextAnnotation(
                   backgroundColor: Colors.red.withOpacity(0.9),
                   borderColor: Colors.red,
                   style: const AnnotationStyle(
-                    fontSize: 12,
-                    textColor: Colors.white,
+                    textStyle: TextStyle(fontSize: 12, color: Colors.white),
                   ),
                 ),
                 // Data-coordinate mode: Anchored to valley point
@@ -430,8 +425,7 @@ TextAnnotation(
                   backgroundColor: Colors.blue.withOpacity(0.9),
                   borderColor: Colors.blue,
                   style: const AnnotationStyle(
-                    fontSize: 12,
-                    textColor: Colors.white,
+                    textStyle: TextStyle(fontSize: 12, color: Colors.white),
                   ),
                 ),
               ],
@@ -476,8 +470,8 @@ TextAnnotation(
   seriesId: 'my-series', // Series ID
   backgroundColor: Colors.red,
   style: AnnotationStyle(
-    fontSize: 12,
-    textColor: Colors.white,
+    textStyle: TextStyle(fontSize: 12),
+    textStyle: TextStyle(color: Colors.white),
   ),
 )'''),
           ],
@@ -522,7 +516,7 @@ TextAnnotation(
                   markerShape: MarkerShape.triangle,
                   markerSize: 14,
                   style: const AnnotationStyle(
-                    textColor: Colors.red,
+                    textStyle: TextStyle(color: Colors.red),
                     borderColor: Colors.red,
                   ),
                 ),
@@ -534,7 +528,7 @@ TextAnnotation(
                   markerShape: MarkerShape.star,
                   markerSize: 16,
                   style: const AnnotationStyle(
-                    textColor: Colors.green,
+                    textStyle: TextStyle(color: Colors.green),
                     borderColor: Colors.green,
                   ),
                 ),
@@ -546,7 +540,7 @@ TextAnnotation(
                   markerShape: MarkerShape.diamond,
                   markerSize: 12,
                   style: const AnnotationStyle(
-                    textColor: Colors.orange,
+                    textStyle: TextStyle(color: Colors.orange),
                     borderColor: Colors.orange,
                   ),
                 ),
@@ -565,7 +559,7 @@ PointAnnotation(
   markerShape: MarkerShape.star,
   markerSize: 16,
   style: AnnotationStyle(
-    textColor: Colors.green,
+    textStyle: TextStyle(color: Colors.green),
     borderColor: Colors.green,
   ),
 )
@@ -614,7 +608,7 @@ PointAnnotation(
                   fillColor: Colors.blue.withValues(alpha: 0.1),
                   borderColor: Colors.blue,
                   style: AnnotationStyle(
-                    textColor: Colors.blue.shade700,
+                    textStyle: TextStyle(color: Colors.blue.shade700),
                   ),
                 ),
                 RangeAnnotation(
@@ -625,7 +619,7 @@ PointAnnotation(
                   fillColor: Colors.green.withValues(alpha: 0.1),
                   borderColor: Colors.green,
                   style: AnnotationStyle(
-                    textColor: Colors.green.shade700,
+                    textStyle: TextStyle(color: Colors.green.shade700),
                   ),
                 ),
                 RangeAnnotation(
@@ -636,7 +630,7 @@ PointAnnotation(
                   fillColor: Colors.orange.withValues(alpha: 0.1),
                   borderColor: Colors.orange,
                   style: AnnotationStyle(
-                    textColor: Colors.orange.shade700,
+                    textStyle: TextStyle(color: Colors.orange.shade700),
                   ),
                 ),
                 RangeAnnotation(
@@ -662,7 +656,7 @@ RangeAnnotation(
   fillColor: Colors.blue.withOpacity(0.1),
   borderColor: Colors.blue,
   style: AnnotationStyle(
-    textColor: Colors.blue,
+    textStyle: TextStyle(color: Colors.blue),
   ),
 )'''),
           ],
@@ -705,10 +699,9 @@ RangeAnnotation(
                   value: 20000,
                   axis: AnnotationAxis.y,
                   style: const AnnotationStyle(
+                    textStyle: TextStyle(color: Colors.green, fontSize: 12),
                     borderColor: Colors.green,
                     borderWidth: 3,
-                    textColor: Colors.green,
-                    fontSize: 12,
                   ),
                 ),
                 ThresholdAnnotation(
@@ -717,10 +710,9 @@ RangeAnnotation(
                   value: 23000,
                   axis: AnnotationAxis.y,
                   style: AnnotationStyle(
+                    textStyle: TextStyle(color: Colors.blue.shade700, fontSize: 11),
                     borderColor: Colors.blue.shade700,
                     borderWidth: 2,
-                    textColor: Colors.blue.shade700,
-                    fontSize: 11,
                   ),
                 ),
                 ThresholdAnnotation(
@@ -729,10 +721,9 @@ RangeAnnotation(
                   value: 14000,
                   axis: AnnotationAxis.y,
                   style: const AnnotationStyle(
+                    textStyle: TextStyle(color: Colors.red, fontSize: 11),
                     borderColor: Colors.red,
                     borderWidth: 2,
-                    textColor: Colors.red,
-                    fontSize: 11,
                   ),
                 ),
                 ThresholdAnnotation(
@@ -743,7 +734,7 @@ RangeAnnotation(
                   style: AnnotationStyle(
                     borderColor: Colors.purple.shade400,
                     borderWidth: 2,
-                    textColor: Colors.purple.shade700,
+                    textStyle: TextStyle(color: Colors.purple.shade700),
                   ),
                 ),
               ],
@@ -816,7 +807,7 @@ ThresholdAnnotation(
                   style: AnnotationStyle(
                     borderColor: Colors.blue.shade700,
                     borderWidth: 3,
-                    textColor: Colors.blue.shade700,
+                    textStyle: TextStyle(color: Colors.blue.shade700),
                   ),
                 ),
                 TrendAnnotation(
@@ -828,7 +819,7 @@ ThresholdAnnotation(
                   style: const AnnotationStyle(
                     borderColor: Colors.orange,
                     borderWidth: 2,
-                    textColor: Colors.orange,
+                    textStyle: TextStyle(color: Colors.orange),
                   ),
                 ),
               ],
