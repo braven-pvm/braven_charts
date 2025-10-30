@@ -26,6 +26,7 @@ import 'package:braven_charts/src/models/streaming_config.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/utils/buffer_manager.dart';
+import 'package:braven_charts/src/utils/trend_calculator.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/point_annotation.dart';
 import 'package:braven_charts/src/widgets/annotations/range_annotation.dart';
@@ -5306,16 +5307,66 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a trend annotation widget (trend line or regression).
   Widget _buildTrendAnnotation(TrendAnnotation annotation) {
-    // Simplified: Placeholder for trend line
-    // Full implementation would calculate and render the trend
+    if (chartRect == null) return const SizedBox.shrink();
+
+    // Find the series that this trend applies to
+    ChartSeries? targetSeries;
+    try {
+      targetSeries = series.firstWhere((s) => s.id == annotation.seriesId);
+    } catch (e) {
+      // Series not found - annotation won't be displayed
+      debugPrint('TrendAnnotation: Series "${annotation.seriesId}" not found');
+      return const SizedBox.shrink();
+    }
+
+    // Calculate trend based on type
+    List<ChartDataPoint>? trendPoints;
+    TrendResult? trendResult;
+
+    switch (annotation.trendType) {
+      case TrendType.linear:
+        trendResult = TrendCalculator.linearRegression(targetSeries.points);
+        trendPoints = trendResult?.trendPoints;
+        break;
+
+      case TrendType.polynomial:
+        final degree = annotation.degree; // Default is 2 in data model
+        trendResult = TrendCalculator.polynomialRegression(targetSeries.points, degree);
+        trendPoints = trendResult?.trendPoints;
+        break;
+
+      case TrendType.movingAverage:
+        final windowSize = annotation.windowSize ?? 5; // Default window
+        trendPoints = TrendCalculator.movingAverage(targetSeries.points, windowSize);
+        break;
+
+      case TrendType.exponential:
+        const alpha = 0.3; // Standard smoothing factor
+        trendPoints = TrendCalculator.exponentialSmoothing(targetSeries.points, alpha);
+        break;
+    }
+
+    // If calculation failed or no data, don't render
+    if (trendPoints == null || trendPoints.isEmpty) {
+      debugPrint('TrendAnnotation: Failed to calculate trend for series "${annotation.seriesId}"');
+      return const SizedBox.shrink();
+    }
+
+    // Calculate bounds for coordinate transformation
+    final bounds = _calculateDataBounds(series);
+
     return Positioned.fill(
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: CustomPaint(
           painter: _TrendPainter(
-            trendType: annotation.trendType,
-            color: annotation.style.borderColor ?? Colors.purple,
-            width: annotation.style.borderWidth,
+            trendPoints: trendPoints,
+            bounds: bounds,
+            chartRect: chartRect!,
+            titleOffset: titleOffset,
+            lineColor: annotation.lineColor,
+            lineWidth: annotation.lineWidth,
+            dashPattern: annotation.dashPattern,
           ),
         ),
       ),
@@ -5595,27 +5646,114 @@ class _ThresholdPainter extends CustomPainter {
 
 /// Custom painter for trend lines.
 class _TrendPainter extends CustomPainter {
-  _TrendPainter({required this.trendType, required this.color, required this.width});
+  _TrendPainter({
+    required this.trendPoints,
+    required this.bounds,
+    required this.chartRect,
+    required this.titleOffset,
+    required this.lineColor,
+    required this.lineWidth,
+    this.dashPattern,
+  });
 
-  final TrendType trendType;
-  final Color color;
-  final double width;
+  final List<ChartDataPoint> trendPoints;
+  final _DataBounds bounds;
+  final Rect chartRect;
+  final Offset titleOffset;
+  final Color lineColor;
+  final double lineWidth;
+  final List<double>? dashPattern;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = width;
+    if (trendPoints.isEmpty) return;
 
-    // Simplified: Draw diagonal line as placeholder
-    // Full implementation would calculate actual trend
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
+    final paint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = lineWidth;
+
+    // Transform trend points from data coordinates to screen coordinates
+    final screenPoints = <Offset>[];
+    for (final point in trendPoints) {
+      // Calculate percentage within data bounds
+      final xRange = bounds.maxX - bounds.minX;
+      final yRange = bounds.maxY - bounds.minY;
+      
+      final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
+      final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
+      
+      // Convert to screen pixels
+      final screenX = chartRect.left + titleOffset.dx + (xPercent * chartRect.width);
+      final screenY = chartRect.bottom + titleOffset.dy - (yPercent * chartRect.height);
+      
+      screenPoints.add(Offset(screenX, screenY));
+    }
+
+    // Draw trend line
+    if (screenPoints.length >= 2) {
+      if (dashPattern != null && dashPattern!.isNotEmpty) {
+        // Draw dashed line
+        _drawDashedPath(canvas, screenPoints, paint, dashPattern!);
+      } else {
+        // Draw solid line
+        final path = Path()..moveTo(screenPoints.first.dx, screenPoints.first.dy);
+        for (int i = 1; i < screenPoints.length; i++) {
+          path.lineTo(screenPoints[i].dx, screenPoints[i].dy);
+        }
+        canvas.drawPath(path, paint);
+      }
+    }
+  }
+
+  /// Helper method to draw a dashed path through multiple points
+  void _drawDashedPath(Canvas canvas, List<Offset> points, Paint paint, List<double> pattern) {
+    if (points.length < 2) return;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      final start = points[i];
+      final end = points[i + 1];
+      
+      final dx = end.dx - start.dx;
+      final dy = end.dy - start.dy;
+      final segmentLength = sqrt(dx * dx + dy * dy);
+      
+      double distance = 0;
+      int patternIndex = 0;
+      bool draw = true;
+      
+      while (distance < segmentLength) {
+        final patternLength = pattern[patternIndex % pattern.length];
+        final nextDistance = (distance + patternLength).clamp(0.0, segmentLength);
+        
+        if (draw) {
+          final t1 = distance / segmentLength;
+          final t2 = nextDistance / segmentLength;
+          
+          final x1 = start.dx + dx * t1;
+          final y1 = start.dy + dy * t1;
+          final x2 = start.dx + dx * t2;
+          final y2 = start.dy + dy * t2;
+          
+          canvas.drawLine(Offset(x1, y1), Offset(x2, y2), paint);
+        }
+        
+        distance = nextDistance;
+        patternIndex++;
+        draw = !draw;
+      }
+    }
   }
 
   @override
   bool shouldRepaint(_TrendPainter oldDelegate) {
-    return trendType != oldDelegate.trendType || color != oldDelegate.color || width != oldDelegate.width;
+    return trendPoints != oldDelegate.trendPoints ||
+           bounds != oldDelegate.bounds ||
+           chartRect != oldDelegate.chartRect ||
+           titleOffset != oldDelegate.titleOffset ||
+           lineColor != oldDelegate.lineColor ||
+           lineWidth != oldDelegate.lineWidth ||
+           dashPattern != oldDelegate.dashPattern;
   }
 }
 

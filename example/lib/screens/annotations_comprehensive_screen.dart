@@ -182,6 +182,43 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
               borderRadius: BorderRadius.circular(5), // Sharp corners
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
             )),
+
+        // TrendAnnotation examples demonstrating all trend types
+        TrendAnnotation(
+          id: 'trend_linear',
+          seriesId: 'temperature',
+          trendType: TrendType.linear,
+          lineColor: Colors.blue.withAlpha(180),
+          lineWidth: 2.5,
+          dashPattern: const [8, 4],
+        ),
+
+        TrendAnnotation(
+          id: 'trend_moving_avg',
+          seriesId: 'temperature',
+          trendType: TrendType.movingAverage,
+          windowSize: 5,
+          lineColor: Colors.green.withAlpha(180),
+          lineWidth: 2,
+        ),
+
+        TrendAnnotation(
+          id: 'trend_polynomial',
+          seriesId: 'temperature',
+          trendType: TrendType.polynomial,
+          degree: 3,
+          lineColor: Colors.orange.withAlpha(180),
+          lineWidth: 2.5,
+          dashPattern: const [4, 4],
+        ),
+
+        TrendAnnotation(
+          id: 'trend_exponential',
+          seriesId: 'temperature',
+          trendType: TrendType.exponential,
+          lineColor: Colors.purple.withAlpha(180),
+          lineWidth: 2,
+        ),
       ];
     });
   }
