@@ -1,12 +1,12 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
-import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/src/foundation/type_system/chart_error.dart';
+import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
+import 'package:flutter/material.dart';
 
 /// Rendering style hints for series visualization.
 enum SeriesStyle {
@@ -35,6 +35,22 @@ enum SeriesStyle {
 /// );
 /// ```
 class ChartSeries {
+  /// Creates a chart series with required id and points.
+  ///
+  /// [id] must not be empty.
+  /// [points] can be empty but must not be null.
+  /// If [isXOrdered] is true, points should be sorted by x-value.
+  ChartSeries({
+    required this.id,
+    this.name,
+    required this.points,
+    this.color,
+    this.style,
+    this.isXOrdered = false,
+    this.metadata,
+    this.annotations = const [],
+  }) : assert(id.isNotEmpty, 'id must not be empty');
+
   /// Unique identifier for the series.
   final String id;
 
@@ -87,22 +103,6 @@ class ChartSeries {
   // Cached computed properties
   dr.DataRange? _xRange;
   dr.DataRange? _yRange;
-
-  /// Creates a chart series with required id and points.
-  ///
-  /// [id] must not be empty.
-  /// [points] can be empty but must not be null.
-  /// If [isXOrdered] is true, points should be sorted by x-value.
-  ChartSeries({
-    required this.id,
-    this.name,
-    required this.points,
-    this.color,
-    this.style,
-    this.isXOrdered = false,
-    this.metadata,
-    this.annotations = const [],
-  }) : assert(id.isNotEmpty, 'id must not be empty');
 
   /// Returns true if the series has no data points.
   bool get isEmpty => points.isEmpty;

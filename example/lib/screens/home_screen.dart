@@ -7,6 +7,7 @@ import 'advanced_features_screen.dart';
 import 'annotations_comprehensive_screen.dart';
 import 'annotations_showcase_screen.dart';
 import 'area_chart_screen.dart';
+import 'series_annotations_showcase_screen.dart';
 import 'axis_theming_screen.dart';
 import 'bar_chart_screen.dart';
 import 'event_debug_screen.dart';
@@ -248,6 +249,18 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const UltimateShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '🎯 Series-Level Annotations',
+          subtitle: 'NEW: 3 series with independent annotations (Temperature, Humidity, Pressure)',
+          icon: Icons.layers,
+          color: Colors.deepOrange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SeriesAnnotationsShowcaseScreen()),
           ),
         ),
         const SizedBox(height: 12),
