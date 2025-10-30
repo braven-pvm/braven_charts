@@ -3572,8 +3572,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   }
 
   /// Gets all annotations from widget and controller combined.
+  ///
+  /// **Architecture**: Merges annotations from three sources in this priority:
+  /// 1. Chart-level annotations (widget.annotations) - global annotations
+  /// 2. Series-level annotations (series.annotations) - series-specific annotations
+  /// 3. Controller annotations - programmatic annotations
+  ///
+  /// This enables both patterns:
+  /// - **Preferred**: Attach annotations to ChartSeries for encapsulation
+  /// - **Legacy**: Use chart-level annotations for backwards compatibility
   List<ChartAnnotation> _getAllAnnotations() {
     final result = <ChartAnnotation>[...widget.annotations];
+
+    // Add series-level annotations (NEW: preferred pattern)
+    for (final series in _getAllSeries()) {
+      result.addAll(series.annotations);
+    }
 
     // Add controller annotations if available
     final controller = _getController();
@@ -5309,17 +5323,37 @@ class _AnnotationOverlay extends StatelessWidget {
   Widget _buildTrendAnnotation(TrendAnnotation annotation) {
     if (chartRect == null) return const SizedBox.shrink();
 
-    // Find the series that this trend applies to
+    // Find the series that owns this trend annotation
+    // **NEW ARCHITECTURE**: First check if annotation is attached to a series
+    // (series.annotations), then fall back to seriesId lookup for chart-level annotations
     ChartSeries? targetSeries;
-    try {
-      targetSeries = series.firstWhere((s) => s.id == annotation.seriesId);
-    } catch (e) {
-      // Series not found - annotation won't be displayed
-      debugPrint('TrendAnnotation: Series "${annotation.seriesId}" not found');
+    
+    // Search series-level annotations first (preferred pattern)
+    for (final s in series) {
+      if (s.annotations.contains(annotation)) {
+        targetSeries = s;
+        break;
+      }
+    }
+    
+    // Fall back to seriesId lookup for chart-level/controller annotations
+    if (targetSeries == null && annotation.seriesId.isNotEmpty) {
+      try {
+        targetSeries = series.firstWhere((s) => s.id == annotation.seriesId);
+      } catch (e) {
+        debugPrint('TrendAnnotation: Series "${annotation.seriesId}" not found');
+        return const SizedBox.shrink();
+      }
+    }
+    
+    // If still no series found, annotation is invalid
+    if (targetSeries == null) {
+      debugPrint('TrendAnnotation: No parent series found for annotation "${annotation.id}"');
       return const SizedBox.shrink();
     }
 
-    // Calculate trend based on type
+    // Calculate trend based on type using the PARENT SERIES DATA
+    // This eliminates the dataset scope issue - trends always use their series' data
     List<ChartDataPoint>? trendPoints;
     TrendResult? trendResult;
 
@@ -5348,7 +5382,7 @@ class _AnnotationOverlay extends StatelessWidget {
 
     // If calculation failed or no data, don't render
     if (trendPoints == null || trendPoints.isEmpty) {
-      debugPrint('TrendAnnotation: Failed to calculate trend for series "${annotation.seriesId}"');
+      debugPrint('TrendAnnotation: Failed to calculate trend for series "${targetSeries.id}"');
       return const SizedBox.shrink();
     }
 

@@ -22,7 +22,11 @@ import 'chart_annotation.dart';
 class TrendAnnotation extends ChartAnnotation {
   /// Creates a trend annotation.
   ///
-  /// The [seriesId] identifies which series to calculate the trend for.
+  /// **Preferred Pattern**: Attach to ChartSeries.annotations - seriesId is optional
+  /// and will be inferred from parent series automatically.
+  ///
+  /// **Legacy Pattern**: Use chart-level annotations with explicit [seriesId].
+  ///
   /// The [trendType] determines the statistical method used.
   /// The [windowSize] is required for moving average trends.
   /// The [degree] is used for polynomial trends (default 2).
@@ -38,7 +42,7 @@ class TrendAnnotation extends ChartAnnotation {
     super.allowDragging,
     super.allowEditing,
     super.zIndex,
-    required this.seriesId,
+    this.seriesId = '', // Now optional - inferred from parent series
     required this.trendType,
     this.windowSize,
     this.degree = 2,
@@ -52,6 +56,9 @@ class TrendAnnotation extends ChartAnnotation {
         );
 
   /// The ID of the series to calculate the trend for.
+  ///
+  /// **Optional** when annotation is attached to ChartSeries.annotations.
+  /// **Required** when using chart-level annotations for backwards compatibility.
   final String seriesId;
 
   /// The type of trend calculation to perform.
