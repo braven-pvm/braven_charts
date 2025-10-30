@@ -86,7 +86,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           ),
         ),
-        // Data-coordinate mode TextAnnotation (anchored to data point) 
+        // Data-coordinate mode TextAnnotation (anchored to data point)
         TextAnnotation(
           id: 'text2_data_mode',
           text: 'Data Point\n(15, 32)',
