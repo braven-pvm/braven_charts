@@ -28,15 +28,9 @@ class AnnotationsComprehensiveScreen extends StatefulWidget {
 }
 
 class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiveScreen> {
-  // Sample data
-  final _timeSeries = ChartSeries(
-    id: 'temperature',
-    name: 'Temperature (°C)',
-    points: _generateTimeSeriesData(),
-  );
+  // Sample data with annotations attached directly to the series (NEW PATTERN)
+  late ChartSeries _timeSeries;
 
-  // Annotation storage
-  List<ChartAnnotation> _annotations = [];
   ChartAnnotation? _selectedAnnotation;
 
   // Event tracking
@@ -64,9 +58,16 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
     super.dispose();
   }
 
+  /// Helper to get all annotations from the series
+  List<ChartAnnotation> get _annotations => _timeSeries.annotations;
+
   void _loadDefaultAnnotations() {
-    setState(() {
-      _annotations = [
+    // Create series with annotations attached (PREFERRED PATTERN)
+    _timeSeries = ChartSeries(
+      id: 'temperature',
+      name: 'Temperature (°C)',
+      points: _generateTimeSeriesData(),
+      annotations: [
         // Screen-coordinate mode TextAnnotation (static position)
         TextAnnotation(
           id: 'text1',
@@ -184,9 +185,9 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             )),
 
         // TrendAnnotation examples demonstrating all trend types
+        // NOTE: No seriesId needed - trends automatically use parent series data!
         TrendAnnotation(
           id: 'trend_linear',
-          seriesId: 'temperature',
           trendType: TrendType.linear,
           lineColor: Colors.blue.withAlpha(180),
           lineWidth: 2.5,
@@ -195,7 +196,6 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
 
         TrendAnnotation(
           id: 'trend_moving_avg',
-          seriesId: 'temperature',
           trendType: TrendType.movingAverage,
           windowSize: 5,
           lineColor: Colors.green.withAlpha(180),
@@ -204,7 +204,6 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
 
         TrendAnnotation(
           id: 'trend_polynomial',
-          seriesId: 'temperature',
           trendType: TrendType.polynomial,
           degree: 3,
           lineColor: Colors.orange.withAlpha(180),
@@ -214,13 +213,13 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
 
         TrendAnnotation(
           id: 'trend_exponential',
-          seriesId: 'temperature',
           trendType: TrendType.exponential,
           lineColor: Colors.purple.withAlpha(180),
           lineWidth: 2,
         ),
-      ];
-    });
+      ],
+    );
+    setState(() {});
   }
 
   void _logEvent(String event) {
@@ -305,7 +304,10 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
 
     if (newAnnotation != null) {
       setState(() {
-        _annotations.add(newAnnotation!);
+        // Update series with new annotation list (immutable pattern)
+        _timeSeries = _timeSeries.copyWith(
+          annotations: [..._timeSeries.annotations, newAnnotation!],
+        );
         _selectedAnnotation = newAnnotation;
       });
       _logEvent('CREATED: ${_creationType.toUpperCase()} annotation [$id]');
@@ -314,7 +316,10 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
 
   void _deleteAnnotation(ChartAnnotation annotation) {
     setState(() {
-      _annotations.removeWhere((a) => a.id == annotation.id);
+      // Update series with filtered annotation list
+      _timeSeries = _timeSeries.copyWith(
+        annotations: _timeSeries.annotations.where((a) => a.id != annotation.id).toList(),
+      );
       if (_selectedAnnotation?.id == annotation.id) {
         _selectedAnnotation = null;
       }
@@ -325,7 +330,8 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
   void _deleteAllAnnotations() {
     final count = _annotations.length;
     setState(() {
-      _annotations.clear();
+      // Clear all series annotations
+      _timeSeries = _timeSeries.copyWith(annotations: []);
       _selectedAnnotation = null;
     });
     _logEvent('DELETED ALL: Removed $count annotations');
@@ -394,7 +400,8 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
     }
 
     setState(() {
-      _annotations = stressAnnotations;
+      // Replace series with stress test annotations
+      _timeSeries = _timeSeries.copyWith(annotations: stressAnnotations);
       _selectedAnnotation = null;
     });
     _logEvent('STRESS TEST: Created 500 annotations (100 of each type)');
@@ -433,9 +440,8 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
                         child: BravenChart(
                           key: ValueKey('chart_${_annotations.length}'),
                           chartType: _chartType,
-                          series: [_timeSeries],
-                          title: 'Interactive Annotation Demo',
-                          annotations: _annotations,
+                          series: [_timeSeries], // Annotations now attached to series!
+                          title: 'Interactive Annotation Demo (Series-Level Annotations)',
                           theme: ChartTheme.defaultLight,
                           interactionConfig: const InteractionConfig(
                             enabled: true,
