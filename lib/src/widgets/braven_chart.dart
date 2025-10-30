@@ -5679,14 +5679,14 @@ class _TrendPainter extends CustomPainter {
       // Calculate percentage within data bounds
       final xRange = bounds.maxX - bounds.minX;
       final yRange = bounds.maxY - bounds.minY;
-      
+
       final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
       final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
-      
+
       // Convert to screen pixels
       final screenX = chartRect.left + titleOffset.dx + (xPercent * chartRect.width);
       final screenY = chartRect.bottom + titleOffset.dy - (yPercent * chartRect.height);
-      
+
       screenPoints.add(Offset(screenX, screenY));
     }
 
@@ -5713,31 +5713,31 @@ class _TrendPainter extends CustomPainter {
     for (int i = 0; i < points.length - 1; i++) {
       final start = points[i];
       final end = points[i + 1];
-      
+
       final dx = end.dx - start.dx;
       final dy = end.dy - start.dy;
       final segmentLength = sqrt(dx * dx + dy * dy);
-      
+
       double distance = 0;
       int patternIndex = 0;
       bool draw = true;
-      
+
       while (distance < segmentLength) {
         final patternLength = pattern[patternIndex % pattern.length];
         final nextDistance = (distance + patternLength).clamp(0.0, segmentLength);
-        
+
         if (draw) {
           final t1 = distance / segmentLength;
           final t2 = nextDistance / segmentLength;
-          
+
           final x1 = start.dx + dx * t1;
           final y1 = start.dy + dy * t1;
           final x2 = start.dx + dx * t2;
           final y2 = start.dy + dy * t2;
-          
+
           canvas.drawLine(Offset(x1, y1), Offset(x2, y2), paint);
         }
-        
+
         distance = nextDistance;
         patternIndex++;
         draw = !draw;
@@ -5748,12 +5748,12 @@ class _TrendPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrendPainter oldDelegate) {
     return trendPoints != oldDelegate.trendPoints ||
-           bounds != oldDelegate.bounds ||
-           chartRect != oldDelegate.chartRect ||
-           titleOffset != oldDelegate.titleOffset ||
-           lineColor != oldDelegate.lineColor ||
-           lineWidth != oldDelegate.lineWidth ||
-           dashPattern != oldDelegate.dashPattern;
+        bounds != oldDelegate.bounds ||
+        chartRect != oldDelegate.chartRect ||
+        titleOffset != oldDelegate.titleOffset ||
+        lineColor != oldDelegate.lineColor ||
+        lineWidth != oldDelegate.lineWidth ||
+        dashPattern != oldDelegate.dashPattern;
   }
 }
 
