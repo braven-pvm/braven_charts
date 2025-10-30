@@ -5172,20 +5172,133 @@ class _AnnotationOverlay extends StatelessWidget {
       }
     }
 
+    // Calculate label position based on labelPosition
+    double? labelLeft;
+    double? labelTop;
+    double? labelRight;
+    double? labelBottom;
+
+    // Determine vertical translation based on position (for horizontal lines)
+    // or horizontal translation based on position (for vertical lines)
+    Offset translation;
+
+    if (annotation.axis == AnnotationAxis.y) {
+      // Horizontal line - calculate Y position
+      final yRange = bounds.maxY - bounds.minY;
+      final yPercent = yRange == 0 ? 0.5 : (annotation.value - bounds.minY) / yRange;
+      final pixelY = chartRect!.bottom - (yPercent * chartRect!.height);
+      final y = pixelY + titleOffset.dy;
+
+      // Position label along the horizontal line based on labelPosition
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          labelLeft = chartRect!.left + titleOffset.dx + 8;
+          labelTop = y;
+          translation = const Offset(0, -1.0); // Above line (shift up by full height)
+          break;
+        case AnnotationLabelPosition.topRight:
+          labelRight = 8; // 8px from right edge
+          labelTop = y;
+          translation = const Offset(0, -1.0); // Above line (shift up by full height)
+          break;
+        case AnnotationLabelPosition.bottomLeft:
+          labelLeft = chartRect!.left + titleOffset.dx + 8;
+          labelTop = y;
+          translation = const Offset(0, 0); // Below line (no shift)
+          break;
+        case AnnotationLabelPosition.bottomRight:
+          labelRight = 8; // 8px from right edge
+          labelTop = y;
+          translation = const Offset(0, 0); // Below line (no shift)
+          break;
+        case AnnotationLabelPosition.center:
+          labelLeft = chartRect!.left + (chartRect!.width / 2) + titleOffset.dx;
+          labelTop = y;
+          translation = const Offset(0, -0.5); // Centered on line
+          break;
+      }
+    } else {
+      // Vertical line - calculate X position
+      final xRange = bounds.maxX - bounds.minX;
+      final xPercent = xRange == 0 ? 0.5 : (annotation.value - bounds.minX) / xRange;
+      final pixelX = chartRect!.left + (xPercent * chartRect!.width);
+      final x = pixelX + titleOffset.dx;
+
+      // Position label along the vertical line based on labelPosition
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          labelLeft = x;
+          labelTop = chartRect!.top + titleOffset.dy + 8;
+          translation = const Offset(-1.0, 0); // Left of line (shift left by full width)
+          break;
+        case AnnotationLabelPosition.topRight:
+          labelLeft = x;
+          labelTop = chartRect!.top + titleOffset.dy + 8;
+          translation = const Offset(0, 0); // Right of line (no shift)
+          break;
+        case AnnotationLabelPosition.bottomLeft:
+          labelLeft = x;
+          labelBottom = 8; // 8px from bottom edge
+          translation = const Offset(-1.0, 0); // Left of line (shift left by full width)
+          break;
+        case AnnotationLabelPosition.bottomRight:
+          labelLeft = x;
+          labelBottom = 8; // 8px from bottom edge
+          translation = const Offset(0, 0); // Right of line (no shift)
+          break;
+        case AnnotationLabelPosition.center:
+          labelLeft = x;
+          labelTop = chartRect!.top + (chartRect!.height / 2) + titleOffset.dy;
+          translation = const Offset(-0.5, 0); // Centered on line (horizontal centering)
+          break;
+      }
+    }
+
     return Positioned.fill(
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
-        child: CustomPaint(
-          painter: _ThresholdPainter(
-            axis: annotation.axis,
-            value: annotation.value,
-            color: annotation.lineColor,
-            width: annotation.lineWidth,
-            dashPattern: annotation.dashPattern,
-            chartRect: chartRect!,
-            bounds: bounds,
-            titleOffset: titleOffset,
-          ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Threshold line
+            CustomPaint(
+              painter: _ThresholdPainter(
+                axis: annotation.axis,
+                value: annotation.value,
+                color: annotation.lineColor,
+                width: annotation.lineWidth,
+                dashPattern: annotation.dashPattern,
+                chartRect: chartRect!,
+                bounds: bounds,
+                titleOffset: titleOffset,
+              ),
+            ),
+            // Label (if present)
+            if (annotation.label != null && annotation.label!.isNotEmpty)
+              Positioned(
+                left: labelLeft,
+                top: labelTop,
+                right: labelRight,
+                bottom: labelBottom,
+                child: FractionalTranslation(
+                  translation: translation, // Position-aware translation
+                  child: Container(
+                    padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
+                      borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
+                      border: annotation.style.borderColor != null
+                          ? Border.all(color: annotation.style.borderColor!, width: annotation.style.borderWidth)
+                          : null,
+                    ),
+                    child: Text(
+                      annotation.label!,
+                      style: annotation.style.textStyle,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
