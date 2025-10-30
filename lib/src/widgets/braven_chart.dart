@@ -4970,8 +4970,9 @@ class _AnnotationOverlay extends StatelessWidget {
     }
 
     final bounds = _calculateDataBounds(series);
-    
-    double left, top, width, height;    if (annotation.startX != null && annotation.endX != null) {
+
+    double left, top, width, height;
+    if (annotation.startX != null && annotation.endX != null) {
       // Explicit X range - transform data coordinates to screen coordinates
       final startPoint = dataToScreenPoint(
         ChartDataPoint(x: annotation.startX!, y: bounds.minY),
@@ -5105,9 +5106,7 @@ class _AnnotationOverlay extends StatelessWidget {
           decoration: BoxDecoration(
             color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
             borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
-            border: annotation.style.borderColor != null
-                ? Border.all(color: annotation.style.borderColor!, width: 1)
-                : null,
+            border: annotation.style.borderColor != null ? Border.all(color: annotation.style.borderColor!, width: 1) : null,
           ),
           child: Text(
             annotation.label!,
