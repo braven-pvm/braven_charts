@@ -149,7 +149,7 @@ void main() {
                     markerShape: MarkerShape.star,
                     markerSize: 12,
                     style: const AnnotationStyle(
-                      textColor: Colors.yellowAccent,
+                      textStyle: TextStyle(color: Colors.yellowAccent),
                     ),
                   ),
                 ],
