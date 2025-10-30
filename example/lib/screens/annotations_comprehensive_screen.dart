@@ -164,15 +164,24 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             )),
 
         ThresholdAnnotation(
-          id: 'threshold1',
-          label: 'Target: 28°C',
-          axis: AnnotationAxis.y,
-          value: 28,
-          lineColor: Colors.blue,
-          lineWidth: 2,
-          // dashPattern: const [5, 5],
-          labelPosition: AnnotationLabelPosition.topRight,
-        ),
+            id: 'threshold1',
+            label: 'Target: 28°C',
+            axis: AnnotationAxis.y,
+            value: 28,
+            lineColor: Colors.red,
+            lineWidth: 2,
+            dashPattern: const [5, 5],
+            labelPosition: AnnotationLabelPosition.bottomLeft,
+            style: AnnotationStyle(
+              textStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white60,
+              ),
+              backgroundColor: Colors.red,
+              borderRadius: BorderRadius.circular(5), // Sharp corners
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+            )),
       ];
     });
   }
