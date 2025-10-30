@@ -4946,9 +4946,35 @@ class _AnnotationOverlay extends StatelessWidget {
       top: markerTop,
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
-        child: CustomPaint(
-          size: Size(annotation.markerSize * 2, annotation.markerSize * 2),
-          painter: _MarkerPainter(shape: annotation.markerShape, size: annotation.markerSize, color: annotation.markerColor),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Marker
+            CustomPaint(
+              size: Size(annotation.markerSize * 2, annotation.markerSize * 2),
+              painter: _MarkerPainter(shape: annotation.markerShape, size: annotation.markerSize, color: annotation.markerColor),
+            ),
+            // Label (if present)
+            if (annotation.label != null && annotation.label!.isNotEmpty)
+              Positioned(
+                left: annotation.markerSize * 2 + 4, // 4px offset from marker
+                top: annotation.markerSize - (annotation.style.fontSize / 2), // Vertically centered with marker
+                child: Container(
+                  padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
+                    borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
+                    border: annotation.style.borderColor != null
+                        ? Border.all(color: annotation.style.borderColor!, width: annotation.style.borderWidth)
+                        : null,
+                  ),
+                  child: Text(
+                    annotation.label!,
+                    style: annotation.style.textStyle,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
