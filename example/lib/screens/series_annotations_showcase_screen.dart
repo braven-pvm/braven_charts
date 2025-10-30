@@ -181,24 +181,33 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
             spacing: 24,
             runSpacing: 8,
             children: [
-              _buildLegendItem('🌡️ Temperature', [
-                'Threshold: Target temp (28°C)',
-                'Linear trend line',
-                'Range: Above average zone',
-                'Point: Peak temperature marker',
-              ], Colors.red),
-              _buildLegendItem('💧 Humidity', [
-                'Threshold: Comfort level (60%)',
-                'Moving average trend (5-period)',
-                'Range: Optimal humidity zone',
-                'Text: Data point annotation',
-              ], Colors.blue),
-              _buildLegendItem('⚖️ Pressure', [
-                'Threshold: Standard pressure (1013 hPa)',
-                'Polynomial trend (degree 3)',
-                'Range: High pressure zone',
-                'Point: Pressure spike marker',
-              ], Colors.green),
+              _buildLegendItem(
+                  '🌡️ Temperature',
+                  [
+                    'Threshold: Target temp (28°C)',
+                    'Linear trend line',
+                    'Range: Hot zone (26-32°C)',
+                    'Point: Peak temperature marker',
+                  ],
+                  Colors.red),
+              _buildLegendItem(
+                  '💧 Humidity',
+                  [
+                    'Threshold: Comfort level (60%)',
+                    'Moving average trend (5-period)',
+                    'Range: Comfort zone (55-65%)',
+                    'Text: Low humidity annotation',
+                  ],
+                  Colors.blue),
+              _buildLegendItem(
+                  '⚖️ Pressure',
+                  [
+                    'Threshold: Standard pressure (1013 hPa)',
+                    'Polynomial trend (degree 3)',
+                    'Range: High pressure zone (1016-1021 hPa)',
+                    'Point: Pressure spike marker',
+                  ],
+                  Colors.green),
             ],
           ),
         ],
@@ -291,14 +300,14 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
           dashPattern: const [6, 3],
         ),
 
-        // Range annotation for above-average zone
+        // Range annotation for above-average zone (more visible)
         RangeAnnotation(
           id: 'temp_range',
-          label: 'Above Average',
-          startY: 28,
-          endY: 35,
-          fillColor: Colors.red.withAlpha(20),
-          borderColor: Colors.red.withAlpha(100),
+          label: 'Hot Zone',
+          startY: 26,
+          endY: 32,
+          fillColor: Colors.red.withAlpha(40),
+          borderColor: Colors.red.withAlpha(150),
           labelPosition: AnnotationLabelPosition.topLeft,
           style: const AnnotationStyle(
             textStyle: TextStyle(
@@ -306,7 +315,10 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
               fontWeight: FontWeight.w600,
               color: Colors.red,
             ),
-            backgroundColor: Colors.transparent,
+            backgroundColor: Colors.white,
+            borderColor: Colors.red,
+            borderWidth: 1,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
             padding: EdgeInsets.all(4),
           ),
         ),
@@ -377,14 +389,14 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
           lineWidth: 2,
         ),
 
-        // Range annotation for optimal humidity
+        // Range annotation for optimal humidity (more visible)
         RangeAnnotation(
           id: 'humidity_range',
-          label: 'Optimal Zone',
+          label: 'Comfort Zone',
           startY: 55,
           endY: 65,
-          fillColor: Colors.blue.withAlpha(20),
-          borderColor: Colors.blue.withAlpha(100),
+          fillColor: Colors.blue.withAlpha(40),
+          borderColor: Colors.blue.withAlpha(150),
           labelPosition: AnnotationLabelPosition.bottomRight,
           style: const AnnotationStyle(
             textStyle: TextStyle(
@@ -392,7 +404,10 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
               fontWeight: FontWeight.w600,
               color: Colors.blue,
             ),
-            backgroundColor: Colors.transparent,
+            backgroundColor: Colors.white,
+            borderColor: Colors.blue,
+            borderWidth: 1,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
             padding: EdgeInsets.all(4),
           ),
         ),
@@ -462,14 +477,14 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
           dashPattern: const [4, 4],
         ),
 
-        // Range annotation for high pressure
+        // Range annotation for high pressure (more visible)
         RangeAnnotation(
           id: 'pressure_range',
           label: 'High Pressure',
-          startY: 1015,
-          endY: 1020,
-          fillColor: Colors.green.withAlpha(20),
-          borderColor: Colors.green.withAlpha(100),
+          startY: 1016,
+          endY: 1021,
+          fillColor: Colors.green.withAlpha(40),
+          borderColor: Colors.green.withAlpha(150),
           labelPosition: AnnotationLabelPosition.topRight,
           style: const AnnotationStyle(
             textStyle: TextStyle(
@@ -477,7 +492,10 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
               fontWeight: FontWeight.w600,
               color: Colors.green,
             ),
-            backgroundColor: Colors.transparent,
+            backgroundColor: Colors.white,
+            borderColor: Colors.green,
+            borderWidth: 1,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
             padding: EdgeInsets.all(4),
           ),
         ),
@@ -611,13 +629,30 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
     );
   }
 
-  // Data generation methods
+  // Data generation methods - Realistic weather data with trends, noise, and variation
   static List<ChartDataPoint> _generateTemperatureData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(42);
+    
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      final y = 25 + math.sin(i * 0.3) * 5 + random.nextDouble() * 3;
+      
+      // Base temperature with daily cycle
+      final dailyCycle = 22 + math.sin(i * 0.5) * 6;
+      
+      // Upward trend (warming)
+      final trend = i * 0.15;
+      
+      // Multi-frequency variations (weather systems)
+      final weather = math.sin(i * 0.3) * 3 + math.cos(i * 0.7) * 2;
+      
+      // Random noise (micro-variations)
+      final noise = (random.nextDouble() - 0.5) * 4;
+      
+      // Occasional spikes (hot days)
+      final spike = (i == 12 || i == 25) ? random.nextDouble() * 5 : 0;
+      
+      final y = dailyCycle + trend + weather + noise + spike;
       points.add(ChartDataPoint(x: x, y: y));
     }
     return points;
@@ -626,10 +661,30 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   static List<ChartDataPoint> _generateHumidityData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(123);
+    
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      final y = 60 + math.cos(i * 0.25) * 8 + random.nextDouble() * 4;
-      points.add(ChartDataPoint(x: x, y: y));
+      
+      // Base humidity
+      final base = 58;
+      
+      // Inverse correlation with temperature pattern
+      final tempInfluence = -math.sin(i * 0.5) * 4;
+      
+      // Weather system influence
+      final weather = math.cos(i * 0.4) * 6 + math.sin(i * 0.8) * 3;
+      
+      // Random variations
+      final noise = (random.nextDouble() - 0.5) * 5;
+      
+      // Occasional dry periods
+      final dryPeriod = (i >= 7 && i <= 10) ? -8 : 0;
+      
+      // Occasional humid periods
+      final humidPeriod = (i >= 18 && i <= 22) ? 6 : 0;
+      
+      final y = base + tempInfluence + weather + noise + dryPeriod + humidPeriod;
+      points.add(ChartDataPoint(x: x, y: y.clamp(40, 80)));
     }
     return points;
   }
@@ -637,9 +692,29 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   static List<ChartDataPoint> _generatePressureData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(456);
+    
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      final y = 1013 + math.sin(i * 0.2) * 4 + random.nextDouble() * 2;
+      
+      // Base pressure (standard atmospheric)
+      final base = 1013;
+      
+      // Pressure systems (high and low)
+      final systems = math.sin(i * 0.25) * 5 + math.cos(i * 0.15) * 4;
+      
+      // Fronts passing through
+      final fronts = math.sin(i * 0.6) * 3;
+      
+      // Random micro-variations
+      final noise = (random.nextDouble() - 0.5) * 2;
+      
+      // High pressure period
+      final highPressure = (i >= 15 && i <= 23) ? 4 : 0;
+      
+      // Pressure spike
+      final spike = (i == 20) ? 3 : 0;
+      
+      final y = base + systems + fronts + noise + highPressure + spike;
       points.add(ChartDataPoint(x: x, y: y));
     }
     return points;
