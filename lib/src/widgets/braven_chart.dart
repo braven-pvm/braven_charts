@@ -4818,6 +4818,7 @@ class _AnnotationOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     // Annotations are already sorted by z-index in _getAllAnnotations()
     return Stack(
+      clipBehavior: Clip.none, // CRITICAL: Don't clip annotations that extend beyond Stack bounds
       children: annotations.map((annotation) {
         return _buildAnnotationWidget(annotation);
       }).toList(),
@@ -4907,7 +4908,6 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a point annotation widget (marker on specific data point).
   Widget _buildPointAnnotation(PointAnnotation annotation) {
-    // PHASE 1, TASK 1.1: Coordinate transformation integration
     // Get the series containing the data point
     final targetSeries = series.where((s) => s.id == annotation.seriesId).firstOrNull;
 
@@ -4954,63 +4954,110 @@ class _AnnotationOverlay extends StatelessWidget {
   }
 
   /// Builds a range annotation widget (rectangular region).
+  ///
+  /// Handles both explicit and infinite ranges for X and Y axes:
+  /// - Explicit ranges (non-null startX/endX, startY/endY): Transform data coordinates to screen coordinates
+  /// - Infinite X ranges (null startX/endX): Span the full visible viewport width (changes with zoom/pan)
+  /// - Infinite Y ranges (null startY/endY): Span the full chart canvas height (always top-to-bottom)
+  ///
+  /// The asymmetric handling of infinite ranges ensures proper behavior:
+  /// - X-axis: Infinite ranges track the viewport (useful for vertical bands across visible data)
+  /// - Y-axis: Infinite ranges always span chart height (prevents thin horizontal slices when zoomed)
   Widget _buildRangeAnnotation(RangeAnnotation annotation) {
-    // PHASE 1, TASK 1.2: Coordinate transformation integration
     if (chartRect == null) {
-      // Chart not yet rendered - don't show annotation
       return const SizedBox.shrink();
     }
 
     final bounds = _calculateDataBounds(series);
+    
+    double left, top, width, height;    if (annotation.startX != null && annotation.endX != null) {
+      // Explicit X range - transform data coordinates to screen coordinates
+      final startPoint = dataToScreenPoint(
+        ChartDataPoint(x: annotation.startX!, y: bounds.minY),
+        chartRect!,
+        bounds,
+      );
+      final endPoint = dataToScreenPoint(
+        ChartDataPoint(x: annotation.endX!, y: bounds.maxY),
+        chartRect!,
+        bounds,
+      );
+      left = startPoint.dx;
+      width = (endPoint.dx - startPoint.dx).abs();
+    } else {
+      // Infinite X range - use full chartRect width
+      left = chartRect!.left;
+      width = chartRect!.width;
+    }
 
-    // Calculate screen coordinates for the range bounds
-    // Handle null values (infinite ranges) by using chart bounds
-    final double startXData = annotation.startX ?? bounds.minX;
-    final double endXData = annotation.endX ?? bounds.maxX;
-    final double startYData = annotation.startY ?? bounds.minY;
-    final double endYData = annotation.endY ?? bounds.maxY;
+    if (annotation.startY != null && annotation.endY != null) {
+      // Explicit Y range - transform data coordinates to screen coordinates
+      final startPoint = dataToScreenPoint(
+        ChartDataPoint(x: bounds.minX, y: annotation.startY!),
+        chartRect!,
+        bounds,
+      );
+      final endPoint = dataToScreenPoint(
+        ChartDataPoint(x: bounds.maxX, y: annotation.endY!),
+        chartRect!,
+        bounds,
+      );
+      top = endPoint.dy; // endY has smaller screen coordinate (Y is inverted)
+      height = (startPoint.dy - endPoint.dy).abs();
+    } else {
+      // Infinite Y range - use full chartRect height (always spans top-to-bottom of canvas)
+      top = chartRect!.top;
+      height = chartRect!.height;
+    }
 
-    // Transform data coordinates to screen coordinates
-    final startPoint = dataToScreenPoint(
-      ChartDataPoint(x: startXData, y: startYData),
-      chartRect!,
-      bounds,
-    );
-    final endPoint = dataToScreenPoint(
-      ChartDataPoint(x: endXData, y: endYData),
-      chartRect!,
-      bounds,
-    );
+    // Calculate rectangle edges for visibility check and clipping
+    final right = left + width;
+    final bottom = top + height;
 
-    // Calculate the rectangle dimensions
-    // Note: Y coordinates are inverted in screen space (top is smaller)
-    final left = startPoint.dx;
-    final top = endPoint.dy; // endY has smaller screen coordinate
-    final width = (endPoint.dx - startPoint.dx).abs();
-    final height = (startPoint.dy - endPoint.dy).abs();
+    // Visibility check: Hide only if the annotation is completely outside the chart area.
+    // An annotation is completely outside if both corners are on the same side of the boundary.
+    final bothLeft = right < chartRect!.left;
+    final bothRight = left > chartRect!.right;
+    final bothAbove = bottom < chartRect!.top;
+    final bothBelow = top > chartRect!.bottom;
 
-    // Check if range is at least partially visible
-    if (!chartRect!.overlaps(Rect.fromLTWH(
-      left,
-      top,
-      width,
-      height,
-    ))) {
-      // Range is completely outside visible area
+    if (bothLeft || bothRight || bothAbove || bothBelow) {
+      // Range is completely outside visible area on one side
+      return const SizedBox.shrink();
+    }
+
+    // Clamp all four edges independently to chartRect boundaries.
+    // This prevents Flutter from clipping the entire widget when coordinates extend outside bounds.
+    final clampedLeft = left.clamp(chartRect!.left, chartRect!.right);
+    final clampedTop = top.clamp(chartRect!.top, chartRect!.bottom);
+    final clampedRight = right.clamp(chartRect!.left, chartRect!.right);
+    final clampedBottom = bottom.clamp(chartRect!.top, chartRect!.bottom);
+
+    // Recalculate dimensions from clamped edges
+    final clampedWidth = clampedRight - clampedLeft;
+    final clampedHeight = clampedBottom - clampedTop;
+
+    // Validate dimensions - if width or height is <= 0 after clipping, annotation has no visible area
+    if (clampedWidth <= 0 || clampedHeight <= 0) {
       return const SizedBox.shrink();
     }
 
     return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
+      left: clampedLeft,
+      top: clampedTop,
+      width: clampedWidth,
+      height: clampedHeight,
       child: GestureDetector(
         onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
         child: Container(
           decoration: BoxDecoration(
-            color: annotation.style.backgroundColor ?? Colors.blue.withOpacity(0.2),
-            border: Border.all(color: annotation.style.borderColor ?? Colors.blue, width: annotation.style.borderWidth),
+            color: annotation.fillColor,
+            border: annotation.borderColor != null
+                ? Border.all(
+                    color: annotation.borderColor!,
+                    width: annotation.style.borderWidth,
+                  )
+                : null,
           ),
         ),
       ),
