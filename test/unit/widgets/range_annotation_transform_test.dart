@@ -1,6 +1,6 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 /// Unit tests for Phase 1, Task 1.2: RangeAnnotation coordinate transformation
 ///
@@ -13,8 +13,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -58,8 +58,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -101,8 +101,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -144,8 +144,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -155,7 +155,7 @@ void main() {
         startX: 3.0,
         endX: 7.0,
         startY: null, // Infinite in negative Y direction
-        endY: null,   // Infinite in positive Y direction
+        endY: null, // Infinite in positive Y direction
         fillColor: Colors.purple.withOpacity(0.1),
       );
 
@@ -187,8 +187,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 20, y: 20),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 20, y: 20),
         ],
       );
 
@@ -249,8 +249,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -260,7 +260,7 @@ void main() {
         startX: 4.0,
         endX: 6.0,
         startY: null, // Full height
-        endY: null,   // Full height
+        endY: null, // Full height
         fillColor: Colors.orange.withOpacity(0.2),
       );
 
@@ -292,8 +292,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -301,7 +301,7 @@ void main() {
       final annotation = RangeAnnotation(
         id: 'horizontal-strip',
         startX: null, // Full width
-        endX: null,   // Full width
+        endX: null, // Full width
         startY: 4.0,
         endY: 6.0,
         fillColor: Colors.cyan.withOpacity(0.2),

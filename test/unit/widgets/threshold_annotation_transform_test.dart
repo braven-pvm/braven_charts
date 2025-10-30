@@ -1,6 +1,6 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 /// Unit tests for Phase 1, Task 1.3: ThresholdAnnotation coordinate transformation
 ///
@@ -13,8 +13,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -57,8 +57,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -100,8 +100,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -143,8 +143,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -185,8 +185,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -227,8 +227,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 
@@ -289,8 +289,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 10, y: 10),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 10, y: 10),
         ],
       );
 

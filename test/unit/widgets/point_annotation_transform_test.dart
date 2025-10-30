@@ -1,9 +1,9 @@
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
 
 /// Unit tests for Phase 1, Task 1.1: PointAnnotation coordinate transformation
-/// 
+///
 /// These tests verify that PointAnnotation markers are correctly positioned
 /// at their data point locations using proper coordinate transformation.
 void main() {
@@ -13,11 +13,11 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
-          ChartDataPoint(x: 2, y: 2),
-          ChartDataPoint(x: 3, y: 3),
-          ChartDataPoint(x: 4, y: 4),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1),
+          const ChartDataPoint(x: 2, y: 2),
+          const ChartDataPoint(x: 3, y: 3),
+          const ChartDataPoint(x: 4, y: 4),
         ],
       );
 
@@ -52,7 +52,7 @@ void main() {
 
       // Assert: The chart should render without errors
       expect(find.byType(BravenChart), findsOneWidget);
-      
+
       // The annotation should be rendered (as a CustomPaint with _MarkerPainter)
       // Note: We can't directly test the position without accessing internals,
       // but we can verify the chart builds successfully
@@ -64,8 +64,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1),
         ],
       );
 
@@ -99,7 +99,7 @@ void main() {
 
       // Assert: Chart should render without throwing errors
       expect(tester.takeException(), isNull);
-      
+
       // Annotation should be hidden (SizedBox.shrink) - no crash
       expect(find.byType(BravenChart), findsOneWidget);
     });
@@ -109,8 +109,8 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1),
         ],
       );
 
@@ -144,7 +144,7 @@ void main() {
 
       // Assert: Chart should render without throwing errors
       expect(tester.takeException(), isNull);
-      
+
       // Annotation should be hidden - no crash
       expect(find.byType(BravenChart), findsOneWidget);
     });
@@ -154,10 +154,10 @@ void main() {
       final series = ChartSeries(
         id: 'test-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
-          ChartDataPoint(x: 2, y: 2),
-          ChartDataPoint(x: 3, y: 3),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1),
+          const ChartDataPoint(x: 2, y: 2),
+          const ChartDataPoint(x: 3, y: 3),
         ],
       );
 
@@ -215,8 +215,8 @@ void main() {
       final series = ChartSeries(
         id: 'different-series',
         points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 1, y: 1),
         ],
       );
 

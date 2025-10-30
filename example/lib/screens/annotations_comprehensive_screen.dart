@@ -5,6 +5,7 @@
 ///
 /// Features:
 /// - Create/Edit/Delete all 5 annotation types
+/// - TextAnnotation dual-mode: screen-coordinate (static) and data-coordinate (anchored)
 /// - Real-time property editing for each type
 /// - Visual configuration panels
 /// - Tap and drag interaction demos
@@ -66,6 +67,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
   void _loadDefaultAnnotations() {
     setState(() {
       _annotations = [
+        // Screen-coordinate mode TextAnnotation (static position)
         TextAnnotation(
           id: 'text1',
           text: 'Peak Temperature',
@@ -76,6 +78,21 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             backgroundColor: Colors.white,
             borderColor: Colors.red,
             borderWidth: 2,
+          ),
+        ),
+        // Data-coordinate mode TextAnnotation (anchored to data point)
+        TextAnnotation(
+          id: 'text2_data_mode',
+          text: 'Data Point\n(15, 32)',
+          dataX: 15.0,
+          dataY: 32.0,
+          seriesId: 'temperature',
+          backgroundColor: Colors.purple.withOpacity(0.9),
+          borderColor: Colors.purple,
+          style: const AnnotationStyle(
+            fontSize: 12,
+            textColor: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
         PointAnnotation(
@@ -396,18 +413,44 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
         ),
         border: Border(bottom: BorderSide(color: Colors.purple.shade200, width: 2)),
       ),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusChip('Total Annotations', '${_annotations.length}', Colors.purple),
-          _buildStatusChip('Text', '${_annotations.whereType<TextAnnotation>().length}', Colors.blue),
-          _buildStatusChip('Point', '${_annotations.whereType<PointAnnotation>().length}', Colors.orange),
-          _buildStatusChip('Range', '${_annotations.whereType<RangeAnnotation>().length}', Colors.green),
-          _buildStatusChip('Threshold', '${_annotations.whereType<ThresholdAnnotation>().length}', Colors.red),
-          _buildStatusChip('Trend', '${_annotations.whereType<TrendAnnotation>().length}', Colors.indigo),
-          _buildStatusChip('Selected', _selectedAnnotation != null ? '1' : '0', Colors.amber),
-          _buildStatusChip('Events', '$_eventCount', Colors.teal),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _buildStatusChip('Total Annotations', '${_annotations.length}', Colors.purple),
+              _buildStatusChip('Text', '${_annotations.whereType<TextAnnotation>().length}', Colors.blue),
+              _buildStatusChip('Point', '${_annotations.whereType<PointAnnotation>().length}', Colors.orange),
+              _buildStatusChip('Range', '${_annotations.whereType<RangeAnnotation>().length}', Colors.green),
+              _buildStatusChip('Threshold', '${_annotations.whereType<ThresholdAnnotation>().length}', Colors.red),
+              _buildStatusChip('Trend', '${_annotations.whereType<TrendAnnotation>().length}', Colors.indigo),
+              _buildStatusChip('Selected', _selectedAnnotation != null ? '1' : '0', Colors.amber),
+              _buildStatusChip('Events', '$_eventCount', Colors.teal),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade400),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.green.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '💡 NEW: TextAnnotation dual-mode! Red = screen-anchored (static), Purple = data-anchored (moves with zoom/pan)',
+                    style: TextStyle(fontSize: 11, color: Colors.green.shade900, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -750,7 +793,11 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
               // Type-specific properties
               if (annotation is TextAnnotation) ...[
                 _buildPropertyRow('Text', annotation.text),
-                _buildPropertyRow('Position', '(${annotation.position.dx.toInt()}, ${annotation.position.dy.toInt()})'),
+                // Handle dual-mode positioning
+                if (annotation.position != null)
+                  _buildPropertyRow('Position (Screen)', '(${annotation.position!.dx.toInt()}, ${annotation.position!.dy.toInt()})')
+                else if (annotation.dataX != null && annotation.dataY != null)
+                  _buildPropertyRow('Position (Data)', '(${annotation.dataX}, ${annotation.dataY}) in ${annotation.seriesId}'),
                 _buildPropertyRow('Anchor', annotation.anchor.toString().split('.').last),
               ] else if (annotation is PointAnnotation) ...[
                 _buildPropertyRow('Series', annotation.seriesId),
