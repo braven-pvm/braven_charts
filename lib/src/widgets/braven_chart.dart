@@ -5327,7 +5327,7 @@ class _AnnotationOverlay extends StatelessWidget {
     // **NEW ARCHITECTURE**: First check if annotation is attached to a series
     // (series.annotations), then fall back to seriesId lookup for chart-level annotations
     ChartSeries? targetSeries;
-    
+
     // Search series-level annotations first (preferred pattern)
     for (final s in series) {
       if (s.annotations.contains(annotation)) {
@@ -5335,7 +5335,7 @@ class _AnnotationOverlay extends StatelessWidget {
         break;
       }
     }
-    
+
     // Fall back to seriesId lookup for chart-level/controller annotations
     if (targetSeries == null && annotation.seriesId.isNotEmpty) {
       try {
@@ -5345,7 +5345,7 @@ class _AnnotationOverlay extends StatelessWidget {
         return const SizedBox.shrink();
       }
     }
-    
+
     // If still no series found, annotation is invalid
     if (targetSeries == null) {
       debugPrint('TrendAnnotation: No parent series found for annotation "${annotation.id}"');
