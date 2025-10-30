@@ -82,8 +82,7 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
           text: 'Event at ${lastPoint.x.toInt()}',
           position: const Offset(200, 100),
           style: const AnnotationStyle(
-            fontSize: 12,
-            textColor: Colors.blue,
+            textStyle: TextStyle(fontSize: 12, color: Colors.blue),
             backgroundColor: Colors.white,
           ),
         ),
