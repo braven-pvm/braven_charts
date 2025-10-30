@@ -57,6 +57,8 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           const SizedBox(height: 32),
           _buildTextAnnotationDemo(),
           const SizedBox(height: 24),
+          _buildDualModeTextAnnotationDemo(),
+          const SizedBox(height: 24),
           _buildPointAnnotationDemo(),
           const SizedBox(height: 24),
           _buildRangeAnnotationDemo(),
@@ -290,15 +292,15 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
                 Icon(Icons.text_fields, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
                 const Text(
-                  'TextAnnotation',
+                  'TextAnnotation - Screen Coordinates',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             const Text(
-              'Add free-form text labels anywhere on the chart. '
-              'Perfect for explanations, callouts, and notes.',
+              'Add free-form text labels at fixed screen positions. '
+              'Text stays in place regardless of zoom/pan.',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -350,13 +352,132 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
 TextAnnotation(
   id: 'note',
   text: 'Important Note',
-  position: Offset(200, 100),
+  position: Offset(200, 100), // Fixed screen position
   style: AnnotationStyle(
     fontSize: 14,
     textColor: Colors.blue,
-    backgroundColor: Colors.white,
-    borderColor: Colors.blue,
-    borderWidth: 2,
+  ),
+)'''),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDualModeTextAnnotationDemo() {
+    return Card(
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.anchor, color: Colors.green.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'TextAnnotation - Data Coordinates (NEW!)',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Anchor text to specific data points. Text moves with zoom/pan. '
+              'Try zooming/panning to see the difference!',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            BravenChart(
+              chartType: ChartType.line,
+              series: [
+                ChartSeries(
+                  id: 'demo-data',
+                  name: 'Demo Series',
+                  points: [
+                    const ChartDataPoint(x: 0, y: 5),
+                    const ChartDataPoint(x: 1, y: 7),
+                    const ChartDataPoint(x: 2, y: 3), // Valley
+                    const ChartDataPoint(x: 3, y: 8),
+                    const ChartDataPoint(x: 4, y: 6),
+                    const ChartDataPoint(x: 5, y: 9), // Peak
+                  ],
+                ),
+              ],
+              annotations: [
+                // Data-coordinate mode: Anchored to peak point
+                TextAnnotation(
+                  id: 'peak',
+                  text: 'Peak\n(5, 9)',
+                  dataX: 5.0,
+                  dataY: 9.0,
+                  seriesId: 'demo-data',
+                  backgroundColor: Colors.red.withOpacity(0.9),
+                  borderColor: Colors.red,
+                  style: const AnnotationStyle(
+                    fontSize: 12,
+                    textColor: Colors.white,
+                  ),
+                ),
+                // Data-coordinate mode: Anchored to valley point
+                TextAnnotation(
+                  id: 'valley',
+                  text: 'Valley\n(2, 3)',
+                  dataX: 2.0,
+                  dataY: 3.0,
+                  seriesId: 'demo-data',
+                  backgroundColor: Colors.blue.withOpacity(0.9),
+                  borderColor: Colors.blue,
+                  style: const AnnotationStyle(
+                    fontSize: 12,
+                    textColor: Colors.white,
+                  ),
+                ),
+              ],
+              width: 400,
+              height: 300,
+              theme: ChartTheme.defaultLight,
+              interactionConfig: const InteractionConfig(
+                enableZoom: true,
+                enablePan: true,
+                crosshair: CrosshairConfig(enabled: true),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber.shade700),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Zoom/pan to see data-anchored text move with the data points!',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildCodeSnippet('''
+// Data-coordinate mode: Anchored to data point
+TextAnnotation(
+  id: 'peak',
+  text: 'Peak (5, 9)',
+  dataX: 5.0,          // Data X coordinate
+  dataY: 9.0,          // Data Y coordinate
+  seriesId: 'my-series', // Series ID
+  backgroundColor: Colors.red,
+  style: AnnotationStyle(
+    fontSize: 12,
+    textColor: Colors.white,
   ),
 )'''),
           ],
