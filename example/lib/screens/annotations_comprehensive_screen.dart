@@ -107,12 +107,22 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
         RangeAnnotation(
           id: 'range1',
           label: 'Above Average',
-          startY: 25,
-          endY: 35,
+          startY: 20,
+          endY: 25,
           fillColor: Colors.green.withOpacity(0.1),
           borderColor: Colors.green,
           labelPosition: AnnotationLabelPosition.topLeft,
         ),
+        RangeAnnotation(
+          id: 'range2',
+          label: 'Above Average',
+          startX: 6,
+          endX: 8,
+          fillColor: Colors.blue.withOpacity(0.1),
+          borderColor: Colors.blue,
+          labelPosition: AnnotationLabelPosition.topLeft,
+        ),
+
         ThresholdAnnotation(
           id: 'threshold1',
           label: 'Target: 28°C',
