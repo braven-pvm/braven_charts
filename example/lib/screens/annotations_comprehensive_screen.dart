@@ -113,17 +113,18 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             seriesId: 'temperature',
             dataPointIndex: 12,
             markerShape: MarkerShape.circle,
-            markerSize: 12,
-            markerColor: Colors.orange,
-            style: const AnnotationStyle(
+            offset: Offset.zero,
+            markerSize: 10,
+            markerColor: Colors.blue.shade300,
+            style: AnnotationStyle(
               textStyle: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.green,
+                fontSize: 12,
+                fontWeight: FontWeight.w200,
+                color: Colors.blue.shade700,
               ),
               backgroundColor: Colors.transparent,
-              borderRadius: BorderRadius.all(Radius.circular(6)),
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              borderRadius: const BorderRadius.all(Radius.circular(6)),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             )),
         RangeAnnotation(
             id: 'range1',
@@ -169,7 +170,7 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
           value: 28,
           lineColor: Colors.blue,
           lineWidth: 2,
-          dashPattern: const [5, 5],
+          // dashPattern: const [5, 5],
           labelPosition: AnnotationLabelPosition.topRight,
         ),
       ];
