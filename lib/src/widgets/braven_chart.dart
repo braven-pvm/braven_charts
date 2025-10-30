@@ -4958,19 +4958,25 @@ class _AnnotationOverlay extends StatelessWidget {
             if (annotation.label != null && annotation.label!.isNotEmpty)
               Positioned(
                 left: annotation.markerSize * 2 + 4, // 4px offset from marker
-                top: annotation.markerSize - (annotation.style.fontSize / 2), // Vertically centered with marker
-                child: Container(
-                  padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
-                    borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
-                    border: annotation.style.borderColor != null
-                        ? Border.all(color: annotation.style.borderColor!, width: annotation.style.borderWidth)
-                        : null,
-                  ),
-                  child: Text(
-                    annotation.label!,
-                    style: annotation.style.textStyle,
+                top: annotation.markerSize, // Position at marker's vertical center
+                child: Transform.translate(
+                  offset: const Offset(0, -0.5), // Shift up by half its own height (using fractional offset)
+                  child: FractionalTranslation(
+                    translation: const Offset(0, -0.5), // Center vertically relative to marker center
+                    child: Container(
+                      padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
+                        borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
+                        border: annotation.style.borderColor != null
+                            ? Border.all(color: annotation.style.borderColor!, width: annotation.style.borderWidth)
+                            : null,
+                      ),
+                      child: Text(
+                        annotation.label!,
+                        style: annotation.style.textStyle,
+                      ),
+                    ),
                   ),
                 ),
               ),
