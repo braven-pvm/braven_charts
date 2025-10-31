@@ -153,7 +153,7 @@ class BravenChart extends StatefulWidget {
     ChartTheme? theme,
     AxisConfig? xAxis,
     AxisConfig? yAxis,
-    List<ChartAnnotation> annotations = const [],
+    List<TextAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
     String? title,
@@ -241,7 +241,7 @@ class BravenChart extends StatefulWidget {
     ChartTheme? theme,
     AxisConfig? xAxis,
     AxisConfig? yAxis,
-    List<ChartAnnotation> annotations = const [],
+    List<TextAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
     String? title,
@@ -329,7 +329,7 @@ class BravenChart extends StatefulWidget {
     ChartTheme? theme,
     AxisConfig? xAxis,
     AxisConfig? yAxis,
-    List<ChartAnnotation> annotations = const [],
+    List<TextAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
     String? title,
@@ -453,10 +453,12 @@ class BravenChart extends StatefulWidget {
 
   // ==================== ANNOTATIONS ====================
 
-  /// Static annotations to render on the chart.
+  /// Static chart-level text annotations to render on the chart.
   ///
+  /// Only TextAnnotation is supported at chart level since it's not tied to a specific series.
+  /// For series-specific annotations (Point, Range, Threshold, Trend), add them to ChartSeries.annotations.
   /// For dynamic annotations, use [controller.addAnnotation()].
-  final List<ChartAnnotation> annotations;
+  final List<TextAnnotation> annotations;
 
   // ==================== REAL-TIME DATA ====================
 

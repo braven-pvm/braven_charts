@@ -197,26 +197,26 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
                     ChartDataPoint(x: 5, y: 22000),
                     ChartDataPoint(x: 6, y: 25000),
                   ],
-                ),
-              ],
-              annotations: [
-                PointAnnotation(
-                  id: 'record_month',
-                  seriesId: 'monthly_sales',
-                  dataPointIndex: 5,
-                  label: 'Record Month!',
-                  markerShape: MarkerShape.star,
-                  markerSize: 12,
-                ),
-                ThresholdAnnotation(
-                  id: 'sales_target',
-                  axis: AnnotationAxis.y,
-                  value: 20000,
-                  label: 'Sales Target',
-                  style: const AnnotationStyle(
-                    borderColor: Colors.green,
-                    borderWidth: 2,
-                  ),
+                  annotations: [
+                    PointAnnotation(
+                      id: 'record_month',
+                      seriesId: 'monthly_sales',
+                      dataPointIndex: 5,
+                      label: 'Record Month!',
+                      markerShape: MarkerShape.star,
+                      markerSize: 12,
+                    ),
+                    ThresholdAnnotation(
+                      id: 'sales_target',
+                      axis: AnnotationAxis.y,
+                      value: 20000,
+                      label: 'Sales Target',
+                      style: const AnnotationStyle(
+                        borderColor: Colors.green,
+                        borderWidth: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
               title: 'Monthly Sales 2025',
