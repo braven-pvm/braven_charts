@@ -184,27 +184,27 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
               _buildLegendItem(
                   '🌡️ Temperature',
                   [
-                    'Threshold: Target temp (28°C)',
+                    'Threshold: Target level (65)',
                     'Linear trend line',
-                    'Range: Hot zone (26-32°C)',
+                    'Range: Hot zone (65-85)',
                     'Point: Peak temperature marker',
                   ],
                   Colors.red),
               _buildLegendItem(
                   '💧 Humidity',
                   [
-                    'Threshold: Comfort level (60%)',
+                    'Threshold: Comfort level (55)',
                     'Moving average trend (5-period)',
-                    'Range: Comfort zone (55-65%)',
+                    'Range: Comfort zone (45-65)',
                     'Text: Low humidity annotation',
                   ],
                   Colors.blue),
               _buildLegendItem(
                   '⚖️ Pressure',
                   [
-                    'Threshold: Standard pressure (1013 hPa)',
+                    'Threshold: Standard level (50)',
                     'Polynomial trend (degree 3)',
-                    'Range: High pressure zone (1016-1021 hPa)',
+                    'Range: High pressure zone (60-80)',
                     'Point: Pressure spike marker',
                   ],
                   Colors.green),
@@ -264,16 +264,16 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   ChartSeries _buildTemperatureSeries() {
     return ChartSeries(
       id: 'temperature',
-      name: 'Temperature (°C)',
+      name: 'Temperature (normalized)',
       points: _generateTemperatureData(),
       color: Colors.red,
       annotations: [
         // Threshold annotation for target temperature
         ThresholdAnnotation(
           id: 'temp_threshold',
-          label: 'Target: 28°C',
+          label: 'Target: 65',
           axis: AnnotationAxis.y,
-          value: 28,
+          value: 65,
           lineColor: Colors.red,
           lineWidth: 2,
           dashPattern: const [8, 4],
@@ -304,8 +304,8 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
         RangeAnnotation(
           id: 'temp_range',
           label: 'Hot Zone',
-          startY: 26,
-          endY: 32,
+          startY: 65,
+          endY: 85,
           fillColor: Colors.red.withAlpha(40),
           borderColor: Colors.red.withAlpha(150),
           labelPosition: AnnotationLabelPosition.topLeft,
@@ -353,16 +353,16 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   ChartSeries _buildHumiditySeries() {
     return ChartSeries(
       id: 'humidity',
-      name: 'Humidity (%)',
+      name: 'Humidity (normalized)',
       points: _generateHumidityData(),
       color: Colors.blue,
       annotations: [
         // Threshold annotation for comfort level
         ThresholdAnnotation(
           id: 'humidity_threshold',
-          label: 'Comfort: 60%',
+          label: 'Comfort: 55',
           axis: AnnotationAxis.y,
-          value: 60,
+          value: 55,
           lineColor: Colors.blue,
           lineWidth: 2,
           dashPattern: const [5, 5],
@@ -393,7 +393,7 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
         RangeAnnotation(
           id: 'humidity_range',
           label: 'Comfort Zone',
-          startY: 55,
+          startY: 45,
           endY: 65,
           fillColor: Colors.blue.withAlpha(40),
           borderColor: Colors.blue.withAlpha(150),
@@ -417,7 +417,7 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
           id: 'humidity_note',
           text: 'Low\nHumidity',
           dataX: 8.0,
-          dataY: 52.0,
+          dataY: 35.0,
           seriesId: 'humidity',
           style: const AnnotationStyle(
             textStyle: TextStyle(
@@ -440,16 +440,16 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   ChartSeries _buildPressureSeries() {
     return ChartSeries(
       id: 'pressure',
-      name: 'Pressure (hPa)',
+      name: 'Pressure (normalized)',
       points: _generatePressureData(),
       color: Colors.green,
       annotations: [
         // Threshold annotation for standard pressure
         ThresholdAnnotation(
           id: 'pressure_threshold',
-          label: 'Standard: 1013 hPa',
+          label: 'Standard: 50',
           axis: AnnotationAxis.y,
-          value: 1013,
+          value: 50,
           lineColor: Colors.green,
           lineWidth: 2,
           dashPattern: const [10, 5],
@@ -481,8 +481,8 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
         RangeAnnotation(
           id: 'pressure_range',
           label: 'High Pressure',
-          startY: 1016,
-          endY: 1021,
+          startY: 60,
+          endY: 80,
           fillColor: Colors.green.withAlpha(40),
           borderColor: Colors.green.withAlpha(150),
           labelPosition: AnnotationLabelPosition.topRight,
@@ -629,31 +629,42 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
     );
   }
 
-  // Data generation methods - Realistic weather data with trends, noise, and variation
+  // Data generation methods - NORMALIZED to 0-100 scale for equal visibility
+  // All three series now use the same Y-axis range, making variations clearly visible
   static List<ChartDataPoint> _generateTemperatureData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(42);
-    
+
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      
-      // Base temperature with daily cycle
-      final dailyCycle = 22 + math.sin(i * 0.5) * 6;
-      
-      // Upward trend (warming)
-      final trend = i * 0.15;
-      
-      // Multi-frequency variations (weather systems)
-      final weather = math.sin(i * 0.3) * 3 + math.cos(i * 0.7) * 2;
-      
-      // Random noise (micro-variations)
-      final noise = (random.nextDouble() - 0.5) * 4;
-      
-      // Occasional spikes (hot days)
-      final spike = (i == 12 || i == 25) ? random.nextDouble() * 5 : 0;
-      
-      final y = dailyCycle + trend + weather + noise + spike;
-      points.add(ChartDataPoint(x: x, y: y));
+
+      // Base around 50 with strong oscillations
+      final dailyCycle = 50 + math.sin(i * 0.4) * 15;
+
+      // Upward trend
+      final trend = i * 0.5;
+
+      // Weather fronts
+      final fronts = math.sin(i * 0.2) * 10;
+
+      // Random day-to-day variation
+      final noise = (random.nextDouble() - 0.5) * 8;
+
+      // Heat wave days (big spike)
+      final heatWave = (i >= 10 && i <= 14) ? 12 : 0;
+
+      // Cold snap (big dip)
+      final coldSnap = (i >= 22 && i <= 25) ? -10 : 0;
+
+      // Major spikes
+      final spike = (i == 12)
+          ? 15
+          : (i == 24)
+              ? -12
+              : 0;
+
+      final y = dailyCycle + trend + fronts + noise + heatWave + coldSnap + spike;
+      points.add(ChartDataPoint(x: x, y: y.clamp(10, 95)));
     }
     return points;
   }
@@ -661,30 +672,33 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   static List<ChartDataPoint> _generateHumidityData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(123);
-    
+
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      
-      // Base humidity
-      final base = 58;
-      
-      // Inverse correlation with temperature pattern
-      final tempInfluence = -math.sin(i * 0.5) * 4;
-      
-      // Weather system influence
-      final weather = math.cos(i * 0.4) * 6 + math.sin(i * 0.8) * 3;
-      
+
+      // Base around 55 with large swings
+      final base = 55;
+
+      // Strong inverse temperature correlation
+      final tempInfluence = -math.sin(i * 0.4) * 12;
+
+      // Weather patterns
+      final weather = math.cos(i * 0.3) * 10 + math.sin(i * 0.7) * 8;
+
       // Random variations
-      final noise = (random.nextDouble() - 0.5) * 5;
-      
-      // Occasional dry periods
-      final dryPeriod = (i >= 7 && i <= 10) ? -8 : 0;
-      
-      // Occasional humid periods
-      final humidPeriod = (i >= 18 && i <= 22) ? 6 : 0;
-      
-      final y = base + tempInfluence + weather + noise + dryPeriod + humidPeriod;
-      points.add(ChartDataPoint(x: x, y: y.clamp(40, 80)));
+      final noise = (random.nextDouble() - 0.5) * 10;
+
+      // Very dry period (big drop)
+      final dryPeriod = (i >= 6 && i <= 11) ? -18 : 0;
+
+      // Very humid period (big increase)
+      final humidPeriod = (i >= 18 && i <= 23) ? 15 : 0;
+
+      // Rain events (sharp spikes)
+      final rain = (i == 8 || i == 20) ? 20 : 0;
+
+      final y = base + tempInfluence + weather + noise + dryPeriod + humidPeriod + rain;
+      points.add(ChartDataPoint(x: x, y: y.clamp(15, 95)));
     }
     return points;
   }
@@ -692,30 +706,33 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   static List<ChartDataPoint> _generatePressureData() {
     final points = <ChartDataPoint>[];
     final random = math.Random(456);
-    
+
     for (int i = 0; i < 30; i++) {
       final x = i.toDouble();
-      
-      // Base pressure (standard atmospheric)
-      final base = 1013;
-      
-      // Pressure systems (high and low)
-      final systems = math.sin(i * 0.25) * 5 + math.cos(i * 0.15) * 4;
-      
-      // Fronts passing through
-      final fronts = math.sin(i * 0.6) * 3;
-      
-      // Random micro-variations
-      final noise = (random.nextDouble() - 0.5) * 2;
-      
-      // High pressure period
-      final highPressure = (i >= 15 && i <= 23) ? 4 : 0;
-      
-      // Pressure spike
-      final spike = (i == 20) ? 3 : 0;
-      
-      final y = base + systems + fronts + noise + highPressure + spike;
-      points.add(ChartDataPoint(x: x, y: y));
+
+      // Base around 50 (normalized from 1013 hPa)
+      final base = 50;
+
+      // Large pressure systems moving through
+      final systems = math.sin(i * 0.22) * 15 + math.cos(i * 0.12) * 10;
+
+      // Frontal passages (sharp changes)
+      final fronts = math.sin(i * 0.5) * 8;
+
+      // Random variations
+      final noise = (random.nextDouble() - 0.5) * 6;
+
+      // High pressure dome (big elevation)
+      final highPressure = (i >= 14 && i <= 24) ? 15 : 0;
+
+      // Low pressure trough (big depression)
+      final lowPressure = (i >= 3 && i <= 8) ? -12 : 0;
+
+      // Storm system (sharp drop)
+      final storm = (i == 19 || i == 20) ? -18 : 0;
+
+      final y = base + systems + fronts + noise + highPressure + lowPressure + storm;
+      points.add(ChartDataPoint(x: x, y: y.clamp(10, 95)));
     }
     return points;
   }
