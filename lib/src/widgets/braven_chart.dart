@@ -114,7 +114,7 @@ class BravenChart extends StatefulWidget {
     this.subtitle,
     this.showLegend = true,
     this.showToolbar = false,
-    this.interactiveAnnotations = false,
+    this.interactiveAnnotations = true,
     this.loadingWidget,
     this.errorWidget,
     this.onPointTap,
@@ -163,7 +163,7 @@ class BravenChart extends StatefulWidget {
     String? subtitle,
     bool showLegend = true,
     bool showToolbar = false,
-    bool interactiveAnnotations = false,
+    bool interactiveAnnotations = true,
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -251,7 +251,7 @@ class BravenChart extends StatefulWidget {
     String? subtitle,
     bool showLegend = true,
     bool showToolbar = false,
-    bool interactiveAnnotations = false,
+    bool interactiveAnnotations = true,
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -339,7 +339,7 @@ class BravenChart extends StatefulWidget {
     String? subtitle,
     bool showLegend = true,
     bool showToolbar = false,
-    bool interactiveAnnotations = false,
+    bool interactiveAnnotations = true,
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -2736,7 +2736,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Handles right-click events to show annotation context menu
   void _handleRightClick(TapDownDetails details) {
-    if (!mounted) return;
+    if (!mounted || !widget.interactiveAnnotations) return;
 
     print('🖱️ [BravenChart] Right-click detected:');
     print('   - localPosition: ${details.localPosition}');
