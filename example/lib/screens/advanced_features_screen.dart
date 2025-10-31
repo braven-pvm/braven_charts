@@ -233,17 +233,28 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
       }
 
       setState(() {
+        // Note: Controller only supports TextAnnotation (chart-level).
+        // For series-specific annotations like PointAnnotation, add them to ChartSeries.annotations.
+        // Here we use TextAnnotation in data-coordinate mode to mark the peak.
         _controllerDemo.addAnnotation(
-          PointAnnotation(
+          TextAnnotation(
             id: 'peak_${DateTime.now().millisecondsSinceEpoch}',
-            label: 'Peak: ${maxY.toStringAsFixed(1)}',
+            text: '⭐ Peak: ${maxY.toStringAsFixed(1)}',
+            dataX: series[maxIndex].x,
+            dataY: maxY,
             seriesId: 'controlled',
-            dataPointIndex: maxIndex,
-            markerShape: MarkerShape.star,
-            markerSize: 14,
+            anchor: AnnotationAnchor.bottomCenter,
             style: const AnnotationStyle(
-              textStyle: TextStyle(color: Colors.orange),
+              textStyle: TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              backgroundColor: Colors.white,
               borderColor: Colors.orange,
+              borderWidth: 2,
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             ),
           ),
         );
