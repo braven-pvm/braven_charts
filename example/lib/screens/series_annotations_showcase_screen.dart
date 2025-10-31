@@ -36,6 +36,21 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
   bool _showHumidity = true;
   bool _showPressure = true;
 
+  // Controller for dynamic annotation management
+  late final ChartController _chartController;
+
+  @override
+  void initState() {
+    super.initState();
+    _chartController = ChartController();
+  }
+
+  @override
+  void dispose() {
+    _chartController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,8 +78,9 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: BravenChart(
-                    chartType: ChartType.line,
+                    chartType: ChartType.area,
                     series: _buildAllSeries(),
+                    controller: _chartController,
                     title: 'Multi-Series Weather Data with Series-Level Annotations',
                     theme: ChartTheme.defaultLight,
                     interactionConfig: const InteractionConfig(
@@ -412,25 +428,13 @@ class _SeriesAnnotationsShowcaseScreenState extends State<SeriesAnnotationsShowc
           ),
         ),
 
-        // Text annotation for specific data point
-        TextAnnotation(
+        // Use PointAnnotation for data-anchored labels instead of TextAnnotation
+        PointAnnotation(
           id: 'humidity_note',
-          text: 'Low\nHumidity',
-          dataX: 8.0,
-          dataY: 35.0,
+          label: 'Low\nHumidity',
           seriesId: 'humidity',
-          style: const AnnotationStyle(
-            textStyle: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-            backgroundColor: Colors.white,
-            borderColor: Colors.blue,
-            borderWidth: 1,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            padding: EdgeInsets.all(4),
-          ),
+          dataPointIndex: 8, // Index for x=8
+          markerColor: Colors.blue,
         ),
       ],
     );
