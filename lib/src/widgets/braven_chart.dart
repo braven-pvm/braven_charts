@@ -38,17 +38,20 @@ import 'package:braven_charts/src/widgets/axis/axis_config.dart';
 import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart';
 import 'package:braven_charts/src/widgets/controller/streaming_controller.dart';
+import 'package:braven_charts/src/widgets/enums/annotation_anchor.dart';
 import 'package:braven_charts/src/widgets/enums/annotation_axis.dart';
 import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 // Layer 5: Widgets
 import 'package:braven_charts/src/widgets/enums/chart_type.dart';
 import 'package:braven_charts/src/widgets/enums/marker_shape.dart';
 import 'package:braven_charts/src/widgets/enums/trend_type.dart';
+import 'package:braven_charts/src/widgets/interactions/annotation_context_menu.dart';
 import 'package:braven_charts/src/widgets/scrollbar/scrollbar_interaction.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart' show PointerScrollEvent, kMiddleMouseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
-import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyDownEvent, KeyRepeatEvent;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, KeyDownEvent, KeyRepeatEvent, BrowserContextMenu;
 
 /// Primary user-facing widget for rendering interactive charts.
 ///
@@ -121,9 +124,9 @@ class BravenChart extends StatefulWidget {
     this.onAnnotationTap,
     this.onAnnotationDragged,
     this.interactionConfig,
-  }) : assert(series.isNotEmpty || dataStream != null, 'At least one series or dataStream is required'),
-       assert(width == null || width > 0, 'Width must be positive'),
-       assert(height == null || height > 0, 'Height must be positive');
+  })  : assert(series.isNotEmpty || dataStream != null, 'At least one series or dataStream is required'),
+        assert(width == null || width > 0, 'Width must be positive'),
+        assert(height == null || height > 0, 'Height must be positive');
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
@@ -840,6 +843,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
+    // Disable browser's context menu on web to allow custom annotation menu (T007)
+    if (kIsWeb) {
+      BrowserContextMenu.disableContextMenu();
+    }
+
     // Validation: If dataStream provided, streamingConfig must also be provided (T022: FR-002)
     if (widget.dataStream != null && widget.streamingConfig == null) {
       throw ArgumentError(
@@ -1091,6 +1099,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     _autoResumeTimer = null;
     _chartMode.dispose();
     // Note: _bufferedPoints has no dispose method (Queue is GC-managed)
+
+    // Re-enable browser's context menu on web when widget is disposed (T007)
+    if (kIsWeb) {
+      BrowserContextMenu.enableContextMenu();
+    }
 
     super.dispose();
   }
@@ -2134,6 +2147,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       );
     }
 
+    // Browser context menu is disabled app-wide in initState() (web only)
+    // and re-enabled in dispose() to ensure proper lifecycle management
     return chartWidget;
   }
 
@@ -2188,8 +2203,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                   final stackChartRect = chartRect.translate(_titleOffset.dx, _titleOffset.dy);
 
                   // Calculate shared painter data
-                  final nearestPoint =
-                      interactionState.hoveredPoint != null &&
+                  final nearestPoint = interactionState.hoveredPoint != null &&
                           interactionState.hoveredPoint!.containsKey('x') &&
                           interactionState.hoveredPoint!.containsKey('y')
                       ? () {
@@ -2392,6 +2406,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         // Wrap with GestureDetector for tap/long-press/pan/pinch
         interactiveWidget = GestureDetector(
+          // Handle right-click for annotation context menu
+          onSecondaryTapDown: (details) {
+            _handleRightClick(details);
+          },
+
           // Handle tap for selection
           onTapDown: (details) {
             // T030: Pause streaming on tap (FR-004) or reset timer if already paused (FR-008)
@@ -2713,6 +2732,125 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Helper for callback invocations that require ChartDataPoint.
   ChartDataPoint _mapToDataPoint(Map<String, dynamic> data) {
     return ChartDataPoint(x: (data['x'] as num?)?.toDouble() ?? 0, y: (data['y'] as num?)?.toDouble() ?? 0, metadata: {...data});
+  }
+
+  /// Handles right-click events to show annotation context menu
+  void _handleRightClick(TapDownDetails details) {
+    if (!mounted) return;
+
+    print('🖱️ [BravenChart] Right-click detected:');
+    print('   - localPosition: ${details.localPosition}');
+    print('   - globalPosition: ${details.globalPosition}');
+    print('   - _cachedChartRect: $_cachedChartRect');
+    print('   - _titleOffset: $_titleOffset');
+
+    // CRITICAL: Subtract title offset because:
+    // - GestureDetector is at widget top (includes title)
+    // - Annotation Stack is positioned BELOW title in Column
+    // - So click Y includes title height, but Stack Y starts after title
+    final adjustedLocalPosition = details.localPosition - _titleOffset;
+    print('   - adjustedLocalPosition (after removing title offset): $adjustedLocalPosition');
+
+    // Get available series IDs for data-position mode
+    final availableSeriesIds = _getAllSeries().map((s) => s.id).toList();
+    if (availableSeriesIds.isEmpty) return;
+
+    // Check if right-click hit an existing annotation (use adjusted position!)
+    final clickedAnnotation = _findAnnotationAtPosition(adjustedLocalPosition);
+    print('   - clickedAnnotation: ${clickedAnnotation?.id ?? "null"}');
+
+    // Show context menu
+    AnnotationContextMenu.show(
+      context: context,
+      position: details.globalPosition,
+      localPosition: adjustedLocalPosition, // Pass chart-relative position
+      existingAnnotation: clickedAnnotation,
+      availableSeriesIds: availableSeriesIds,
+      onSave: (annotation) {
+        if (widget.controller != null) {
+          if (clickedAnnotation != null) {
+            // Update existing
+            widget.controller!.updateAnnotation(annotation.id, annotation);
+          } else {
+            // Add new
+            widget.controller!.addAnnotation(annotation);
+          }
+        }
+      },
+      onDelete: (annotationId) {
+        if (widget.controller != null) {
+          widget.controller!.removeAnnotation(annotationId);
+        }
+      },
+    );
+  }
+
+  /// Finds a TextAnnotation at the given screen position
+  TextAnnotation? _findAnnotationAtPosition(Offset position) {
+    // Check if click hit any existing text annotation
+    final annotations = widget.controller?.getAllAnnotations() ?? [];
+
+    print('🎯 [BravenChart] _findAnnotationAtPosition called:');
+    print('   - position: $position');
+    print('   - annotations count: ${annotations.length}');
+
+    for (final annotation in annotations.reversed) {
+      // Get the annotation bounds (approximate based on text and anchor)
+      final annotationPos = annotation.position;
+
+      // Create a hit-test rectangle around the annotation
+      // Approximate size - actual size depends on text content and styling
+      const approximateWidth = 100.0;
+      const approximateHeight = 30.0;
+
+      // Adjust hit rectangle based on anchor point
+      final anchorOffset = _getAnchorOffsetForHitTest(annotation.anchor);
+      final hitRect = Rect.fromLTWH(
+        annotationPos.dx + (anchorOffset.dx * approximateWidth),
+        annotationPos.dy + (anchorOffset.dy * approximateHeight),
+        approximateWidth,
+        approximateHeight,
+      );
+
+      print('   - Checking annotation "${annotation.text}":');
+      print('     - annotationPos: $annotationPos');
+      print('     - anchor: ${annotation.anchor}');
+      print('     - anchorOffset: $anchorOffset');
+      print('     - hitRect: $hitRect');
+      print('     - contains: ${hitRect.contains(position)}');
+
+      if (hitRect.contains(position)) {
+        print('   ✅ HIT! Returning annotation: ${annotation.id}');
+        return annotation;
+      }
+    }
+
+    print('   ❌ No annotation hit');
+    return null;
+  }
+
+  /// Get anchor offset for hit testing (similar to rendering but for Rect creation)
+  Offset _getAnchorOffsetForHitTest(AnnotationAnchor anchor) {
+    switch (anchor) {
+      case AnnotationAnchor.topLeft:
+        return const Offset(0, 0);
+      case AnnotationAnchor.topCenter:
+        return const Offset(-0.5, 0);
+      case AnnotationAnchor.topRight:
+        return const Offset(-1, 0);
+      case AnnotationAnchor.centerLeft:
+        return const Offset(0, -0.5);
+      case AnnotationAnchor.center:
+        return const Offset(-0.5, -0.5);
+      case AnnotationAnchor.centerRight:
+        return const Offset(-1, -0.5);
+      case AnnotationAnchor.bottomLeft:
+        return const Offset(0, -1);
+      case AnnotationAnchor.bottomCenter:
+        return const Offset(-0.5, -1);
+      case AnnotationAnchor.bottomRight:
+        return const Offset(-1, -1);
+    }
   }
 
   /// Finds the nearest data point to a screen position.
@@ -3340,8 +3478,15 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// - AUTO: returns tooltip without arrow
   Widget _buildTooltipWithArrow(
     Widget tooltipContent,
-    ({Color backgroundColor, Color borderColor, double borderWidth, double borderRadius, double padding, double shadowBlurRadius, Color shadowColor})
-    tooltipStyle,
+    ({
+      Color backgroundColor,
+      Color borderColor,
+      double borderWidth,
+      double borderRadius,
+      double padding,
+      double shadowBlurRadius,
+      Color shadowColor
+    }) tooltipStyle,
     TooltipPosition position,
   ) {
     // Build shadow if needed
@@ -3470,9 +3615,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         const SizedBox(height: 4),
         Text('Y: ${y is num ? y.toStringAsFixed(2) : y.toString()}', style: textStyle),
         // Show additional properties if present
-        ...dataPoint.entries
-            .where((e) => e.key != 'x' && e.key != 'y')
-            .map(
+        ...dataPoint.entries.where((e) => e.key != 'x' && e.key != 'y').map(
               (e) => Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text('${e.key}: ${e.value}', style: textStyle.copyWith(fontSize: config.style.fontSize * 0.83)),
@@ -4004,16 +4147,13 @@ class _BravenChartPainter extends CustomPainter {
 
     // Calculate chart area (leave room for axes based on their positions)
     // Use dynamic calculation or user-provided reservedSize
-    final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left)
-        ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
-        : 0.0;
-    final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right)
-        ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
-        : 0.0;
+    final leftPadding =
+        (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
+    final rightPadding =
+        (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false) : 0.0;
     final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
-    final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom)
-        ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true)
-        : 0.0;
+    final bottomPadding =
+        (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true) : 0.0;
 
     final chartRect = Rect.fromLTWH(leftPadding, topPadding, size.width - leftPadding - rightPadding, size.height - topPadding - bottomPadding);
 
@@ -4761,62 +4901,64 @@ class _AnnotationOverlay extends StatelessWidget {
 
   /// Builds a text annotation widget.
   Widget _buildTextAnnotation(TextAnnotation annotation) {
-    // Determine positioning mode and calculate screen position
-    final Offset screenPosition;
+    // TextAnnotation now uses screen coordinates only
+    final screenPosition = annotation.position;
 
-    if (annotation.dataX != null && annotation.dataY != null && annotation.seriesId != null) {
-      // DATA-COORDINATE MODE: Transform data coordinates to screen coordinates
+    print('🎨 [BravenChart] Rendering annotation:');
+    print('   - Text: "${annotation.text}"');
+    print('   - Position (stored): $screenPosition');
+    print('   - Anchor: ${annotation.anchor}');
+    print('   - Anchor offset: ${_getAnchorOffset(annotation.anchor)}');
 
-      // Validate series exists
-      final targetSeries = series.where((s) => s.id == annotation.seriesId).firstOrNull;
-      if (targetSeries == null) {
-        // Series not found - don't render
-        return const SizedBox.shrink();
-      }
-
-      // Validate chartRect is available
-      if (chartRect == null) {
-        // Chart not yet rendered - don't show annotation
-        return const SizedBox.shrink();
-      }
-
-      // Calculate bounds for coordinate transformation
-      final bounds = _calculateDataBounds(series);
-
-      // Create temporary data point for transformation
-      final dataPoint = ChartDataPoint(x: annotation.dataX!, y: annotation.dataY!);
-
-      // Transform data coordinates to screen coordinates
-      screenPosition = dataToScreenPoint(dataPoint, chartRect!, bounds);
-
-      // Check if point is within visible bounds (optimization)
-      if (!chartRect!.contains(screenPosition)) {
-        // Point is outside visible area - don't render
-        return const SizedBox.shrink();
-      }
-    } else {
-      // SCREEN-COORDINATE MODE: Use static position directly
-      screenPosition = annotation.position!;
-    }
-
-    final Widget textWidget = Positioned(
-      left: screenPosition.dx,
-      top: screenPosition.dy,
-      child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
-        child: Container(
-          padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: annotation.backgroundColor,
-            border: annotation.borderColor != null ? Border.all(color: annotation.borderColor!) : null,
-            borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
-          ),
-          child: Text(annotation.text, style: annotation.style.textStyle),
+    // Build the annotation content
+    final annotationContent = GestureDetector(
+      onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
+      child: Container(
+        padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: annotation.backgroundColor,
+          border: annotation.borderColor != null ? Border.all(color: annotation.borderColor!) : null,
+          borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
         ),
+        child: Text(annotation.text, style: annotation.style.textStyle),
       ),
     );
 
-    return textWidget;
+    // Use Align to apply anchor positioning
+    // The anchor determines which point of the widget should be at the screenPosition
+    return Positioned(
+      left: screenPosition.dx,
+      top: screenPosition.dy,
+      child: FractionalTranslation(
+        translation: _getAnchorOffset(annotation.anchor),
+        child: annotationContent,
+      ),
+    );
+  }
+
+  /// Converts AnnotationAnchor to a fractional offset for FractionalTranslation.
+  /// Returns negative values because FractionalTranslation shifts the widget.
+  Offset _getAnchorOffset(AnnotationAnchor anchor) {
+    switch (anchor) {
+      case AnnotationAnchor.topLeft:
+        return const Offset(0, 0);
+      case AnnotationAnchor.topCenter:
+        return const Offset(-0.5, 0);
+      case AnnotationAnchor.topRight:
+        return const Offset(-1, 0);
+      case AnnotationAnchor.centerLeft:
+        return const Offset(0, -0.5);
+      case AnnotationAnchor.center:
+        return const Offset(-0.5, -0.5);
+      case AnnotationAnchor.centerRight:
+        return const Offset(-1, -0.5);
+      case AnnotationAnchor.bottomLeft:
+        return const Offset(0, -1);
+      case AnnotationAnchor.bottomCenter:
+        return const Offset(-0.5, -1);
+      case AnnotationAnchor.bottomRight:
+        return const Offset(-1, -1);
+    }
   }
 
   /// Builds a point annotation widget (marker on specific data point).
@@ -5798,8 +5940,7 @@ class _CrosshairLabelsPainter extends CustomPainter {
         dataY = dataBounds!.minY + (yPercent * yRange);
       }
 
-      final textStyle =
-          config.coordinateLabelStyle ??
+      final textStyle = config.coordinateLabelStyle ??
           TextStyle(color: config.style.labelTextColor, fontSize: 10, backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8));
 
       // X coordinate label (positioned at bottom edge of chart area, INSIDE chartRect)
@@ -6046,8 +6187,7 @@ class _CrosshairPainter extends CustomPainter {
         dataY = dataBounds!.minY + (yPercent * yRange);
       }
 
-      final textStyle =
-          config.coordinateLabelStyle ??
+      final textStyle = config.coordinateLabelStyle ??
           TextStyle(color: config.style.labelTextColor, fontSize: 10, backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8));
 
       // X coordinate label (bottom of vertical line)

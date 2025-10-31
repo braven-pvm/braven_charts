@@ -87,32 +87,12 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           ),
         ),
-        // Data-coordinate mode TextAnnotation (anchored to data point)
-        TextAnnotation(
-          id: 'text2_data_mode',
-          text: 'Data Point\n(15, 32)',
-          dataX: 15.0,
-          dataY: 32.0,
-          seriesId: 'temperature',
-          backgroundColor: Colors.purple.withAlpha(20),
-          borderColor: Colors.purple,
-          style: const AnnotationStyle(
-            textStyle: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.purple,
-              fontFamily: 'monospace',
-            ),
-            borderWidth: 0.5,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            padding: EdgeInsets.all(6),
-          ),
-        ),
+        // Use PointAnnotation for data-anchored text instead of TextAnnotation
         PointAnnotation(
-            id: 'point1',
-            label: 'Highest Point',
+            id: 'text2_data_point',
+            label: 'Data Point\n(15, 32)',
             seriesId: 'temperature',
-            dataPointIndex: 12,
+            dataPointIndex: 15, // Approximate index for x=15
             markerShape: MarkerShape.circle,
             offset: Offset.zero,
             markerSize: 10,
@@ -899,11 +879,8 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
               // Type-specific properties
               if (annotation is TextAnnotation) ...[
                 _buildPropertyRow('Text', annotation.text),
-                // Handle dual-mode positioning
-                if (annotation.position != null)
-                  _buildPropertyRow('Position (Screen)', '(${annotation.position!.dx.toInt()}, ${annotation.position!.dy.toInt()})')
-                else if (annotation.dataX != null && annotation.dataY != null)
-                  _buildPropertyRow('Position (Data)', '(${annotation.dataX}, ${annotation.dataY}) in ${annotation.seriesId}'),
+                // TextAnnotation now uses screen coordinates only
+                _buildPropertyRow('Position (Screen)', '(${annotation.position.dx.toInt()}, ${annotation.position.dy.toInt()})'),
                 _buildPropertyRow('Anchor', annotation.anchor.toString().split('.').last),
               ] else if (annotation is PointAnnotation) ...[
                 _buildPropertyRow('Series', annotation.seriesId),

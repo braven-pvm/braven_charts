@@ -375,31 +375,27 @@ TextAnnotation(
                     const ChartDataPoint(x: 4, y: 6),
                     const ChartDataPoint(x: 5, y: 9), // Peak
                   ],
+                  // Use PointAnnotation for data-anchored labels
+                  annotations: [
+                    PointAnnotation(
+                      id: 'peak',
+                      label: 'Peak\n(5, 9)',
+                      seriesId: 'demo-data',
+                      dataPointIndex: 5, // Index for x=5
+                      markerColor: Colors.red,
+                    ),
+                    PointAnnotation(
+                      id: 'valley',
+                      label: 'Valley\n(2, 3)',
+                      seriesId: 'demo-data',
+                      dataPointIndex: 2, // Index for x=2
+                      markerColor: Colors.blue,
+                    ),
+                  ],
                 ),
               ],
-              annotations: [
-                // Data-coordinate mode: Anchored to peak point
-                TextAnnotation(
-                  id: 'peak',
-                  text: 'Peak\n(5, 9)',
-                  dataX: 5.0,
-                  dataY: 9.0,
-                  seriesId: 'demo-data',
-                  backgroundColor: Colors.red.withOpacity(0.9),
-                  borderColor: Colors.red,
-                  style: const AnnotationStyle(textStyle: TextStyle(fontSize: 12, color: Colors.white)),
-                ),
-                // Data-coordinate mode: Anchored to valley point
-                TextAnnotation(
-                  id: 'valley',
-                  text: 'Valley\n(2, 3)',
-                  dataX: 2.0,
-                  dataY: 3.0,
-                  seriesId: 'demo-data',
-                  backgroundColor: Colors.blue.withOpacity(0.9),
-                  borderColor: Colors.blue,
-                  style: const AnnotationStyle(textStyle: TextStyle(fontSize: 12, color: Colors.white)),
-                ),
+              annotations: const [
+                // TextAnnotation now uses screen coordinates for static labels
               ],
               width: 400,
               height: 300,
