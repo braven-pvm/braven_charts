@@ -843,11 +843,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
-    // Disable browser's context menu on web to allow custom annotation menu (T007)
-    if (kIsWeb) {
-      BrowserContextMenu.disableContextMenu();
-    }
-
     // Validation: If dataStream provided, streamingConfig must also be provided (T022: FR-002)
     if (widget.dataStream != null && widget.streamingConfig == null) {
       throw ArgumentError(
@@ -1099,11 +1094,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     _autoResumeTimer = null;
     _chartMode.dispose();
     // Note: _bufferedPoints has no dispose method (Queue is GC-managed)
-
-    // Re-enable browser's context menu on web when widget is disposed (T007)
-    if (kIsWeb) {
-      BrowserContextMenu.enableContextMenu();
-    }
 
     super.dispose();
   }
@@ -2149,6 +2139,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Disable browser context menu on web by wrapping entire chart
     // This ensures our custom annotation menu shows instead of browser menu
+    if (kIsWeb) {
+      BrowserContextMenu.disableContextMenu();
+    }
     return chartWidget;
   }
 
@@ -2771,19 +2764,21 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       existingAnnotation: clickedAnnotation,
       availableSeriesIds: availableSeriesIds,
       onSave: (annotation) {
-        if (widget.controller != null) {
+        final controller = _getController();
+        if (controller != null) {
           if (clickedAnnotation != null) {
             // Update existing
-            widget.controller!.updateAnnotation(annotation.id, annotation);
+            controller.updateAnnotation(annotation.id, annotation);
           } else {
             // Add new
-            widget.controller!.addAnnotation(annotation);
+            controller.addAnnotation(annotation);
           }
         }
       },
       onDelete: (annotationId) {
-        if (widget.controller != null) {
-          widget.controller!.removeAnnotation(annotationId);
+        final controller = _getController();
+        if (controller != null) {
+          controller.removeAnnotation(annotationId);
         }
       },
     );
@@ -2792,7 +2787,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Finds a TextAnnotation at the given screen position
   TextAnnotation? _findAnnotationAtPosition(Offset position) {
     // Check if click hit any existing text annotation
-    final annotations = widget.controller?.getAllAnnotations() ?? [];
+    final annotations = _getController()?.getAllAnnotations() ?? [];
 
     print('🎯 [BravenChart] _findAnnotationAtPosition called:');
     print('   - position: $position');
