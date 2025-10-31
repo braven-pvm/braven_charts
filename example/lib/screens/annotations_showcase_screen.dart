@@ -42,10 +42,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Annotations Showcase'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      ),
+      appBar: AppBar(title: const Text('Annotations Showcase'), backgroundColor: Theme.of(context).colorScheme.primaryContainer),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -87,11 +84,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
                 children: [
                   Text(
                     'Annotation Types',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple.shade900,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple.shade900),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -115,10 +108,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Toggle Annotations',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            const Text('Toggle Annotations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -241,10 +231,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
           label: 'Growth Trend',
           seriesId: 'sales',
           trendType: TrendType.linear,
-          style: AnnotationStyle(
-            borderColor: Colors.blue.shade700,
-            borderWidth: 2,
-          ),
+          style: AnnotationStyle(borderColor: Colors.blue.shade700, borderWidth: 2),
         ),
       );
     }
@@ -255,15 +242,9 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'All Annotations Combined',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text('All Annotations Combined', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
-              'Toggle annotation types above to see them in action',
-              style: TextStyle(color: Colors.grey),
-            ),
+            const Text('Toggle annotation types above to see them in action', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
@@ -291,10 +272,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
               children: [
                 Icon(Icons.text_fields, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'TextAnnotation - Screen Coordinates',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('TextAnnotation - Screen Coordinates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -373,10 +351,7 @@ TextAnnotation(
               children: [
                 Icon(Icons.anchor, color: Colors.green.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'TextAnnotation - Data Coordinates (NEW!)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('TextAnnotation - Data Coordinates (NEW!)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -412,9 +387,7 @@ TextAnnotation(
                   seriesId: 'demo-data',
                   backgroundColor: Colors.red.withOpacity(0.9),
                   borderColor: Colors.red,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(fontSize: 12, color: Colors.white),
-                  ),
+                  style: const AnnotationStyle(textStyle: TextStyle(fontSize: 12, color: Colors.white)),
                 ),
                 // Data-coordinate mode: Anchored to valley point
                 TextAnnotation(
@@ -425,19 +398,13 @@ TextAnnotation(
                   seriesId: 'demo-data',
                   backgroundColor: Colors.blue.withOpacity(0.9),
                   borderColor: Colors.blue,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(fontSize: 12, color: Colors.white),
-                  ),
+                  style: const AnnotationStyle(textStyle: TextStyle(fontSize: 12, color: Colors.white)),
                 ),
               ],
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
-              interactionConfig: const InteractionConfig(
-                enableZoom: true,
-                enablePan: true,
-                crosshair: CrosshairConfig(enabled: true),
-              ),
+              interactionConfig: const InteractionConfig(enableZoom: true, enablePan: true, crosshair: CrosshairConfig(enabled: true)),
             ),
             const SizedBox(height: 8),
             Container(
@@ -492,10 +459,7 @@ TextAnnotation(
               children: [
                 Icon(Icons.place, color: Colors.red.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'PointAnnotation',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('PointAnnotation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -587,10 +551,7 @@ PointAnnotation(
               children: [
                 Icon(Icons.highlight, color: Colors.amber.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'RangeAnnotation',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('RangeAnnotation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -612,9 +573,7 @@ PointAnnotation(
                       endX: 3,
                       fillColor: Colors.blue.withValues(alpha: 0.1),
                       borderColor: Colors.blue,
-                      style: AnnotationStyle(
-                        textStyle: TextStyle(color: Colors.blue.shade700),
-                      ),
+                      style: AnnotationStyle(textStyle: TextStyle(color: Colors.blue.shade700)),
                     ),
                     RangeAnnotation(
                       id: 'q2',
@@ -623,9 +582,7 @@ PointAnnotation(
                       endX: 6,
                       fillColor: Colors.green.withValues(alpha: 0.1),
                       borderColor: Colors.green,
-                      style: AnnotationStyle(
-                        textStyle: TextStyle(color: Colors.green.shade700),
-                      ),
+                      style: AnnotationStyle(textStyle: TextStyle(color: Colors.green.shade700)),
                     ),
                     RangeAnnotation(
                       id: 'q3',
@@ -634,9 +591,7 @@ PointAnnotation(
                       endX: 8,
                       fillColor: Colors.orange.withValues(alpha: 0.1),
                       borderColor: Colors.orange,
-                      style: AnnotationStyle(
-                        textStyle: TextStyle(color: Colors.orange.shade700),
-                      ),
+                      style: AnnotationStyle(textStyle: TextStyle(color: Colors.orange.shade700)),
                     ),
                     RangeAnnotation(
                       id: 'target_zone',
@@ -683,10 +638,7 @@ RangeAnnotation(
               children: [
                 Icon(Icons.horizontal_rule, color: Colors.green.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'ThresholdAnnotation',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('ThresholdAnnotation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -792,10 +744,7 @@ ThresholdAnnotation(
               children: [
                 Icon(Icons.trending_up, color: Colors.indigo.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'TrendAnnotation',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                const Text('TrendAnnotation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -873,11 +822,7 @@ TrendAnnotation(
       ),
       child: Text(
         code,
-        style: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 11,
-          color: Colors.grey.shade800,
-        ),
+        style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.grey.shade800),
       ),
     );
   }
