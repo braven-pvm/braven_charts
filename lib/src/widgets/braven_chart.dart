@@ -2147,8 +2147,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       );
     }
 
-    // Browser context menu is disabled app-wide in initState() (web only)
-    // and re-enabled in dispose() to ensure proper lifecycle management
+    // Disable browser context menu on web by wrapping entire chart
+    // This ensures our custom annotation menu shows instead of browser menu
     return chartWidget;
   }
 
@@ -2409,6 +2409,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Handle right-click for annotation context menu
           onSecondaryTapDown: (details) {
             _handleRightClick(details);
+          },
+          // Consume the secondary tap to prevent browser context menu
+          onSecondaryTap: () {
+            // Event consumed - prevents default browser context menu
           },
 
           // Handle tap for selection
