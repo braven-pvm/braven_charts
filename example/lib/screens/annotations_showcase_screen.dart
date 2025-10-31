@@ -158,10 +158,11 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
   }
 
   Widget _buildAllAnnotationsChart() {
-    final annotations = <ChartAnnotation>[];
+    final chartAnnotations = <TextAnnotation>[];
+    final seriesAnnotations = <ChartAnnotation>[];
 
     if (_showTextAnnotations) {
-      annotations.add(
+      chartAnnotations.add(
         TextAnnotation(
           id: 'peak_label',
           text: 'Peak Sales!',
@@ -177,7 +178,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
     }
 
     if (_showPointAnnotations) {
-      annotations.add(
+      seriesAnnotations.add(
         PointAnnotation(
           id: 'highlight_peak',
           label: 'Record',
@@ -194,7 +195,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
     }
 
     if (_showRangeAnnotations) {
-      annotations.add(
+      seriesAnnotations.add(
         RangeAnnotation(
           id: 'summer_range',
           label: 'Summer Sales',
@@ -207,7 +208,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
     }
 
     if (_showThresholdAnnotations) {
-      annotations.addAll([
+      seriesAnnotations.addAll([
         ThresholdAnnotation(
           id: 'target',
           label: 'Target',
@@ -234,7 +235,7 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
     }
 
     if (_showTrendAnnotations) {
-      annotations.add(
+      seriesAnnotations.add(
         TrendAnnotation(
           id: 'growth_trend',
           label: 'Growth Trend',
@@ -266,8 +267,8 @@ class _AnnotationsShowcaseScreenState extends State<AnnotationsShowcaseScreen> {
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: [_salesData],
-              annotations: annotations,
+              series: [_salesData.copyWith(annotations: seriesAnnotations)],
+              annotations: chartAnnotations,
               title: '2025 Monthly Sales',
               width: 400,
               height: 350,
@@ -506,43 +507,46 @@ TextAnnotation(
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: [_salesData],
-              annotations: [
-                PointAnnotation(
-                  id: 'min',
-                  label: 'Lowest',
-                  seriesId: 'sales',
-                  dataPointIndex: 0,
-                  markerShape: MarkerShape.triangle,
-                  markerSize: 14,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.red),
-                    borderColor: Colors.red,
-                  ),
-                ),
-                PointAnnotation(
-                  id: 'max',
-                  label: 'Highest',
-                  seriesId: 'sales',
-                  dataPointIndex: 7,
-                  markerShape: MarkerShape.star,
-                  markerSize: 16,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.green),
-                    borderColor: Colors.green,
-                  ),
-                ),
-                PointAnnotation(
-                  id: 'mid',
-                  label: 'Notable',
-                  seriesId: 'sales',
-                  dataPointIndex: 3,
-                  markerShape: MarkerShape.diamond,
-                  markerSize: 12,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.orange),
-                    borderColor: Colors.orange,
-                  ),
+              series: [
+                _salesData.copyWith(
+                  annotations: [
+                    PointAnnotation(
+                      id: 'min',
+                      label: 'Lowest',
+                      seriesId: 'sales',
+                      dataPointIndex: 0,
+                      markerShape: MarkerShape.triangle,
+                      markerSize: 14,
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.red),
+                        borderColor: Colors.red,
+                      ),
+                    ),
+                    PointAnnotation(
+                      id: 'max',
+                      label: 'Highest',
+                      seriesId: 'sales',
+                      dataPointIndex: 7,
+                      markerShape: MarkerShape.star,
+                      markerSize: 16,
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.green),
+                        borderColor: Colors.green,
+                      ),
+                    ),
+                    PointAnnotation(
+                      id: 'mid',
+                      label: 'Notable',
+                      seriesId: 'sales',
+                      dataPointIndex: 3,
+                      markerShape: MarkerShape.diamond,
+                      markerSize: 12,
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.orange),
+                        borderColor: Colors.orange,
+                      ),
+                    ),
+                  ],
                 ),
               ],
               width: 400,
@@ -598,48 +602,51 @@ PointAnnotation(
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.area,
-              series: [_salesData],
-              annotations: [
-                RangeAnnotation(
-                  id: 'q1',
-                  label: 'Q1',
-                  startX: 1,
-                  endX: 3,
-                  fillColor: Colors.blue.withValues(alpha: 0.1),
-                  borderColor: Colors.blue,
-                  style: AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.blue.shade700),
-                  ),
-                ),
-                RangeAnnotation(
-                  id: 'q2',
-                  label: 'Q2',
-                  startX: 4,
-                  endX: 6,
-                  fillColor: Colors.green.withValues(alpha: 0.1),
-                  borderColor: Colors.green,
-                  style: AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.green.shade700),
-                  ),
-                ),
-                RangeAnnotation(
-                  id: 'q3',
-                  label: 'Q3',
-                  startX: 7,
-                  endX: 8,
-                  fillColor: Colors.orange.withValues(alpha: 0.1),
-                  borderColor: Colors.orange,
-                  style: AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.orange.shade700),
-                  ),
-                ),
-                RangeAnnotation(
-                  id: 'target_zone',
-                  label: 'Target Zone',
-                  startY: 18000,
-                  endY: 25000,
-                  fillColor: Colors.green.withValues(alpha: 0.05),
-                  borderColor: Colors.green.shade300,
+              series: [
+                _salesData.copyWith(
+                  annotations: [
+                    RangeAnnotation(
+                      id: 'q1',
+                      label: 'Q1',
+                      startX: 1,
+                      endX: 3,
+                      fillColor: Colors.blue.withValues(alpha: 0.1),
+                      borderColor: Colors.blue,
+                      style: AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.blue.shade700),
+                      ),
+                    ),
+                    RangeAnnotation(
+                      id: 'q2',
+                      label: 'Q2',
+                      startX: 4,
+                      endX: 6,
+                      fillColor: Colors.green.withValues(alpha: 0.1),
+                      borderColor: Colors.green,
+                      style: AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.green.shade700),
+                      ),
+                    ),
+                    RangeAnnotation(
+                      id: 'q3',
+                      label: 'Q3',
+                      startX: 7,
+                      endX: 8,
+                      fillColor: Colors.orange.withValues(alpha: 0.1),
+                      borderColor: Colors.orange,
+                      style: AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.orange.shade700),
+                      ),
+                    ),
+                    RangeAnnotation(
+                      id: 'target_zone',
+                      label: 'Target Zone',
+                      startY: 18000,
+                      endY: 25000,
+                      fillColor: Colors.green.withValues(alpha: 0.05),
+                      borderColor: Colors.green.shade300,
+                    ),
+                  ],
                 ),
               ],
               width: 400,
@@ -691,51 +698,54 @@ RangeAnnotation(
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.line,
-              series: [_salesData],
-              annotations: [
-                ThresholdAnnotation(
-                  id: 'target',
-                  label: 'Sales Target',
-                  value: 20000,
-                  axis: AnnotationAxis.y,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.green, fontSize: 12),
-                    borderColor: Colors.green,
-                    borderWidth: 3,
-                  ),
-                ),
-                ThresholdAnnotation(
-                  id: 'stretch',
-                  label: 'Stretch Goal',
-                  value: 23000,
-                  axis: AnnotationAxis.y,
-                  style: AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.blue.shade700, fontSize: 11),
-                    borderColor: Colors.blue.shade700,
-                    borderWidth: 2,
-                  ),
-                ),
-                ThresholdAnnotation(
-                  id: 'minimum',
-                  label: 'Minimum',
-                  value: 14000,
-                  axis: AnnotationAxis.y,
-                  style: const AnnotationStyle(
-                    textStyle: TextStyle(color: Colors.red, fontSize: 11),
-                    borderColor: Colors.red,
-                    borderWidth: 2,
-                  ),
-                ),
-                ThresholdAnnotation(
-                  id: 'mid_year',
-                  label: 'Mid Year',
-                  value: 4.5,
-                  axis: AnnotationAxis.x,
-                  style: AnnotationStyle(
-                    borderColor: Colors.purple.shade400,
-                    borderWidth: 2,
-                    textStyle: TextStyle(color: Colors.purple.shade700),
-                  ),
+              series: [
+                _salesData.copyWith(
+                  annotations: [
+                    ThresholdAnnotation(
+                      id: 'target',
+                      label: 'Sales Target',
+                      value: 20000,
+                      axis: AnnotationAxis.y,
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.green, fontSize: 12),
+                        borderColor: Colors.green,
+                        borderWidth: 3,
+                      ),
+                    ),
+                    ThresholdAnnotation(
+                      id: 'stretch',
+                      label: 'Stretch Goal',
+                      value: 23000,
+                      axis: AnnotationAxis.y,
+                      style: AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.blue.shade700, fontSize: 11),
+                        borderColor: Colors.blue.shade700,
+                        borderWidth: 2,
+                      ),
+                    ),
+                    ThresholdAnnotation(
+                      id: 'minimum',
+                      label: 'Minimum',
+                      value: 14000,
+                      axis: AnnotationAxis.y,
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(color: Colors.red, fontSize: 11),
+                        borderColor: Colors.red,
+                        borderWidth: 2,
+                      ),
+                    ),
+                    ThresholdAnnotation(
+                      id: 'mid_year',
+                      label: 'Mid Year',
+                      value: 4.5,
+                      axis: AnnotationAxis.x,
+                      style: AnnotationStyle(
+                        borderColor: Colors.purple.shade400,
+                        borderWidth: 2,
+                        textStyle: TextStyle(color: Colors.purple.shade700),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               width: 400,
@@ -797,30 +807,33 @@ ThresholdAnnotation(
             const SizedBox(height: 16),
             BravenChart(
               chartType: ChartType.scatter,
-              series: [_salesData],
-              annotations: [
-                TrendAnnotation(
-                  id: 'linear',
-                  label: 'Linear Trend',
-                  seriesId: 'sales',
-                  trendType: TrendType.linear,
-                  style: AnnotationStyle(
-                    borderColor: Colors.blue.shade700,
-                    borderWidth: 3,
-                    textStyle: TextStyle(color: Colors.blue.shade700),
-                  ),
-                ),
-                TrendAnnotation(
-                  id: 'moving_avg',
-                  label: 'Moving Avg',
-                  seriesId: 'sales',
-                  trendType: TrendType.movingAverage,
-                  windowSize: 5, // Required for moving average
-                  style: const AnnotationStyle(
-                    borderColor: Colors.orange,
-                    borderWidth: 2,
-                    textStyle: TextStyle(color: Colors.orange),
-                  ),
+              series: [
+                _salesData.copyWith(
+                  annotations: [
+                    TrendAnnotation(
+                      id: 'linear',
+                      label: 'Linear Trend',
+                      seriesId: 'sales',
+                      trendType: TrendType.linear,
+                      style: AnnotationStyle(
+                        borderColor: Colors.blue.shade700,
+                        borderWidth: 3,
+                        textStyle: TextStyle(color: Colors.blue.shade700),
+                      ),
+                    ),
+                    TrendAnnotation(
+                      id: 'moving_avg',
+                      label: 'Moving Avg',
+                      seriesId: 'sales',
+                      trendType: TrendType.movingAverage,
+                      windowSize: 5, // Required for moving average
+                      style: const AnnotationStyle(
+                        borderColor: Colors.orange,
+                        borderWidth: 2,
+                        textStyle: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               width: 400,
