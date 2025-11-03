@@ -2824,6 +2824,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       onSavePointAnnotation: (annotation) {
         _addPointAnnotationToSeries(annotation);
       },
+      onSaveRangeAnnotation: (annotation) {
+        final controller = _getController();
+        if (controller != null) {
+          controller.addAnnotation(annotation);
+        }
+      },
       onDeleteTextAnnotation: (annotationId) {
         final controller = _getController();
         if (controller != null) {
@@ -2832,6 +2838,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       },
       onDeletePointAnnotation: (seriesId, annotationId) {
         _removePointAnnotationFromSeries(seriesId, annotationId);
+      },
+      onDeleteRangeAnnotation: (annotationId) {
+        final controller = _getController();
+        if (controller != null) {
+          controller.removeAnnotation(annotationId);
+        }
       },
     );
   }
@@ -2846,6 +2858,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     print('   - annotations count: ${annotations.length}');
 
     for (final annotation in annotations.reversed) {
+      // Only check TextAnnotations for hit testing
+      if (annotation is! TextAnnotation) continue;
+      
       // Get the annotation bounds (approximate based on text and anchor)
       final annotationPos = annotation.position;
 

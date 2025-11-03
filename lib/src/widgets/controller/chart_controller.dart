@@ -2,7 +2,6 @@ import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:flutter/material.dart';
 
 import '../annotations/chart_annotation.dart';
-import '../annotations/text_annotation.dart';
 
 /// ChangeNotifier-based controller for programmatic chart updates.
 ///
@@ -92,16 +91,16 @@ class ChartController extends ChangeNotifier {
 
   // ========== Annotation Management Methods ==========
 
-  /// Adds a chart-level text annotation.
+  /// Adds a chart-level annotation.
   ///
-  /// Only TextAnnotation is supported at chart level since it's not tied to a specific series.
-  /// For series-specific annotations (Point, Range, Threshold, Trend), add them to ChartSeries.annotations.
+  /// Supports TextAnnotation, RangeAnnotation, and ThresholdAnnotation at chart level.
+  /// For series-specific annotations (Point, Trend), add them to ChartSeries.annotations.
   ///
   /// Returns the annotation's ID. If the annotation already has an ID,
   /// that ID is used. Otherwise, a new ID is auto-generated.
   ///
   /// Notifies listeners after the annotation is added.
-  String addAnnotation(TextAnnotation annotation) {
+  String addAnnotation(ChartAnnotation annotation) {
     final id = annotation.id.isEmpty ? 'annotation_${_annotationIdCounter++}' : annotation.id;
 
     _annotations[id] = annotation;
@@ -120,12 +119,12 @@ class ChartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates an existing chart-level text annotation.
+  /// Updates an existing chart-level annotation.
   ///
-  /// Only TextAnnotation is supported at chart level.
+  /// Supports TextAnnotation, RangeAnnotation, and ThresholdAnnotation at chart level.
   /// Throws [StateError] if the annotation doesn't exist.
   /// Notifies listeners after the update.
-  void updateAnnotation(String id, TextAnnotation annotation) {
+  void updateAnnotation(String id, ChartAnnotation annotation) {
     if (!_annotations.containsKey(id)) {
       throw StateError('Cannot update non-existent annotation: $id');
     }
@@ -134,17 +133,16 @@ class ChartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns a chart-level text annotation by ID, or null if not found.
-  TextAnnotation? getAnnotation(String id) {
-    final annotation = _annotations[id];
-    return annotation is TextAnnotation ? annotation : null;
+  /// Returns a chart-level annotation by ID, or null if not found.
+  ChartAnnotation? getAnnotation(String id) {
+    return _annotations[id];
   }
 
-  /// Returns a copy of all chart-level text annotations as a list.
+  /// Returns a copy of all chart-level annotations as a list.
   ///
   /// Returns a new list instance to prevent external modification.
-  List<TextAnnotation> getAllAnnotations() {
-    return _annotations.values.whereType<TextAnnotation>().toList();
+  List<ChartAnnotation> getAllAnnotations() {
+    return List.from(_annotations.values);
   }
 
   /// Clears all annotations from the chart.

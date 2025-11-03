@@ -164,6 +164,7 @@ class AnnotationContextMenu {
 
   static List<PopupMenuEntry<String>> _buildAddMenuItems(BuildContext context, AnnotationContextType contextType) {
     if (contextType == AnnotationContextType.pointAnnotation) {
+      // Point annotation context - only show point option
       return [
         PopupMenuItem<String>(
           value: 'add_point',
@@ -190,35 +191,8 @@ class AnnotationContextMenu {
           ),
         ),
       ];
-    } else if (contextType == AnnotationContextType.rangeAnnotation) {
-      return [
-        PopupMenuItem<String>(
-          value: 'add_range',
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          height: 30,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.select_all,
-                size: 16,
-                color: Colors.grey[700],
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'Add Range Annotation',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[800],
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ];
     } else {
-      // textAnnotation
+      // Text/chart context - show both text and range options
       return [
         PopupMenuItem<String>(
           value: 'add_text',
@@ -235,6 +209,34 @@ class AnnotationContextMenu {
               const SizedBox(width: 10),
               Text(
                 'Add Text Annotation',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuDivider(
+          height: 0.5,
+          color: Colors.grey.shade300,
+        ),
+        PopupMenuItem<String>(
+          value: 'add_range',
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          height: 30,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.select_all,
+                size: 16,
+                color: Colors.grey[700],
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Add Range Annotation',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[800],
