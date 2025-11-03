@@ -5604,19 +5604,26 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   double? _originalEndX;
 
   /// Size of the resize handles (width of the draggable area)
-  static const double _handleSize = 8.0;
+  static const double _handleSize = 20.0; // DEBUG: Increased from 8.0 for visibility
 
   /// Visual indicator size for the handle (thin line)
-  static const double _handleIndicatorWidth = 3.0;
+  static const double _handleIndicatorWidth = 10.0; // DEBUG: Increased from 3.0 for visibility
 
   @override
   Widget build(BuildContext context) {
     // Only show handles if annotation has explicit X range (not infinite)
     final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
 
+    // DEBUG: Print conditions
+    print('🔍 RangeAnnotationWidget build:');
+    print('   - hasExplicitXRange: $hasExplicitXRange (startX: ${widget.annotation.startX}, endX: ${widget.annotation.endX})');
+    print('   - interactiveAnnotations: ${widget.interactiveAnnotations}');
+    print('   - Should show handles: ${hasExplicitXRange && widget.interactiveAnnotations}');
+
     return MouseRegion(
       cursor: _getCursor(),
       child: Stack(
+        clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
         children: [
           // Main range container
           Positioned.fill(
@@ -5662,13 +5669,13 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     }
                   },
                   child: Container(
-                    color: Colors.transparent, // Invisible hit area
+                    color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
                         height: double.infinity, // Fill the full height
                         decoration: BoxDecoration(
-                          color: _hoveringLeftHandle || _draggingEdge == 'left' ? Colors.blue.withOpacity(0.8) : Colors.blue.withOpacity(0.4),
+                          color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
@@ -5702,13 +5709,13 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     }
                   },
                   child: Container(
-                    color: Colors.transparent, // Invisible hit area
+                    color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
                         height: double.infinity, // Fill the full height
                         decoration: BoxDecoration(
-                          color: _hoveringRightHandle || _draggingEdge == 'right' ? Colors.blue.withOpacity(0.8) : Colors.blue.withOpacity(0.4),
+                          color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
