@@ -2778,16 +2778,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       if (distance < 10.0) {
         contextType = AnnotationContextType.pointAnnotation;
         targetSeriesId = nearestPoint['seriesId'] as String;
-        
+
         // Find the data point index in the series
         final series = _getAllSeries().firstWhere((s) => s.id == targetSeriesId);
         final pointX = nearestPoint['x'] as double;
         final pointY = nearestPoint['y'] as double;
-        
+
         targetDataPointIndex = series.points.indexWhere(
           (p) => p.x == pointX && p.y == pointY,
         );
-        
+
         print('   - POINT CONTEXT: seriesId=$targetSeriesId, index=$targetDataPointIndex');
       } else {
         contextType = AnnotationContextType.textAnnotation;
