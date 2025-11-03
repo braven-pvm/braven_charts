@@ -85,70 +85,73 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       ),
       child: Container(
         width: 380,
+        constraints: const BoxConstraints(maxHeight: 600),
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with close button
-              Row(
-                children: [
-                  Icon(
-                    isEditMode ? Icons.edit : Icons.add_comment,
-                    size: 20,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isEditMode ? 'Edit Text Annotation' : 'Add Text Annotation',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Text field
-              _buildTextField(),
-              const SizedBox(height: 20),
-
-              // Anchor selector
-              _buildAnchorSelector(),
-              const SizedBox(height: 20),
-
-              // Styling section
-              _buildStylingSection(),
-              const SizedBox(height: 24),
-
-              // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _handleSave,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with close button
+                Row(
+                  children: [
+                    Icon(
+                      isEditMode ? Icons.edit : Icons.add_comment,
+                      size: 20,
+                      color: colorScheme.primary,
                     ),
-                    child: Text(isEditMode ? 'Update' : 'Add'),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    Text(
+                      isEditMode ? 'Edit Text Annotation' : 'Add Text Annotation',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Text field
+                _buildTextField(),
+                const SizedBox(height: 20),
+
+                // Anchor selector
+                _buildAnchorSelector(),
+                const SizedBox(height: 20),
+
+                // Styling section
+                _buildStylingSection(),
+                const SizedBox(height: 24),
+
+                // Action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _handleSave,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: Text(isEditMode ? 'Update' : 'Add'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -223,14 +226,14 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
         Text(
           'Anchor Point',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
               ),
         ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 6,
-          runSpacing: 6,
+          spacing: 5,
+          runSpacing: 5,
           children: anchors.map((anchor) {
             final isSelected = anchor == _anchor;
             return InkWell(
@@ -241,10 +244,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
                   color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[300]!,
                     width: 1,

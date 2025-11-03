@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../annotations/annotation_style.dart';
@@ -393,12 +394,72 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
   }
 
   void _showCustomColorPicker(Color currentColor, void Function(Color) onColorChanged) {
-    showDialog(
+    Color selectedColor = currentColor;
+
+    showDialog<bool>(
       context: context,
-      builder: (context) => _CustomColorPickerDialog(
-        initialColor: currentColor,
-        onColorSelected: onColorChanged,
-      ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              color: selectedColor,
+              onColorChanged: (Color color) {
+                selectedColor = color;
+              },
+              width: 40,
+              height: 40,
+              borderRadius: 4,
+              spacing: 5,
+              runSpacing: 5,
+              wheelDiameter: 200,
+              heading: Text(
+                'Select color',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              subheading: Text(
+                'Select color shade',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              wheelSubheading: Text(
+                'Selected color and its shades',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              showMaterialName: true,
+              showColorName: true,
+              showColorCode: true,
+              materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
+              pickersEnabled: const <ColorPickerType, bool>{
+                ColorPickerType.both: false,
+                ColorPickerType.primary: true,
+                ColorPickerType.accent: true,
+                ColorPickerType.bw: false,
+                ColorPickerType.custom: false,
+                ColorPickerType.wheel: true,
+              },
+              enableShadesSelection: true,
+              enableOpacity: true,
+              showRecentColors: true,
+              maxRecentColors: 5,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                onColorChanged(selectedColor);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Select'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -422,239 +483,5 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
         borderRadius: BorderRadius.circular(_borderRadius),
       ),
     );
-  }
-}
-
-/// Custom color picker dialog with RGB sliders and hex input.
-class _CustomColorPickerDialog extends StatefulWidget {
-  const _CustomColorPickerDialog({
-    required this.initialColor,
-    required this.onColorSelected,
-  });
-
-  final Color initialColor;
-  final void Function(Color) onColorSelected;
-
-  @override
-  State<_CustomColorPickerDialog> createState() => _CustomColorPickerDialogState();
-}
-
-class _CustomColorPickerDialogState extends State<_CustomColorPickerDialog> {
-  late double _red;
-  late double _green;
-  late double _blue;
-  late double _alpha;
-  late TextEditingController _hexController;
-
-  @override
-  void initState() {
-    super.initState();
-    final a = (widget.initialColor.a * 255).round();
-    final r = (widget.initialColor.r * 255).round();
-    final g = (widget.initialColor.g * 255).round();
-    final b = (widget.initialColor.b * 255).round();
-    _red = r.toDouble();
-    _green = g.toDouble();
-    _blue = b.toDouble();
-    _alpha = a.toDouble();
-    _hexController = TextEditingController(text: _colorToHex(widget.initialColor));
-  }
-
-  @override
-  void dispose() {
-    _hexController.dispose();
-    super.dispose();
-  }
-
-  Color get _currentColor => Color.fromARGB(_alpha.toInt(), _red.toInt(), _green.toInt(), _blue.toInt());
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Icon(Icons.palette, size: 20, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Custom Color',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Color preview
-            Container(
-              height: 60,
-              decoration: BoxDecoration(
-                color: _currentColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Hex input
-            TextField(
-              controller: _hexController,
-              decoration: InputDecoration(
-                labelText: 'Hex Code',
-                prefixText: '#',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-              onChanged: _onHexChanged,
-            ),
-            const SizedBox(height: 20),
-
-            // RGB Sliders
-            _buildColorSlider('Red', _red, Colors.red, (value) {
-              setState(() {
-                _red = value;
-                _updateHexFromRgb();
-              });
-            }),
-            const SizedBox(height: 12),
-            _buildColorSlider('Green', _green, Colors.green, (value) {
-              setState(() {
-                _green = value;
-                _updateHexFromRgb();
-              });
-            }),
-            const SizedBox(height: 12),
-            _buildColorSlider('Blue', _blue, Colors.blue, (value) {
-              setState(() {
-                _blue = value;
-                _updateHexFromRgb();
-              });
-            }),
-            const SizedBox(height: 12),
-            _buildColorSlider('Opacity', _alpha, Colors.grey, (value) {
-              setState(() {
-                _alpha = value;
-                _updateHexFromRgb();
-              });
-            }),
-            const SizedBox(height: 24),
-
-            // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () {
-                    widget.onColorSelected(_currentColor);
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Select'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildColorSlider(String label, double value, Color trackColor, void Function(double) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            Text(
-              value.toInt().toString(),
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
-            ),
-          ],
-        ),
-        SliderTheme(
-          data: SliderThemeData(
-            activeTrackColor: trackColor,
-            thumbColor: trackColor,
-          ),
-          child: Slider(
-            value: value,
-            min: 0,
-            max: 255,
-            divisions: 255,
-            onChanged: onChanged,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _colorToHex(Color color) {
-    final a = (color.a * 255).round() & 0xff;
-    final r = (color.r * 255).round() & 0xff;
-    final g = (color.g * 255).round() & 0xff;
-    final b = (color.b * 255).round() & 0xff;
-    return '${a.toRadixString(16).padLeft(2, '0')}'
-            '${r.toRadixString(16).padLeft(2, '0')}'
-            '${g.toRadixString(16).padLeft(2, '0')}'
-            '${b.toRadixString(16).padLeft(2, '0')}'
-        .toUpperCase();
-  }
-
-  void _onHexChanged(String hex) {
-    // Remove # if present
-    hex = hex.replaceAll('#', '');
-
-    // Parse hex to color
-    if (hex.length == 6) {
-      hex = 'FF$hex'; // Add full opacity if not specified
-    }
-
-    if (hex.length == 8) {
-      try {
-        final color = Color(int.parse(hex, radix: 16));
-        final a = (color.a * 255).round();
-        final r = (color.r * 255).round();
-        final g = (color.g * 255).round();
-        final b = (color.b * 255).round();
-        setState(() {
-          _alpha = a.toDouble();
-          _red = r.toDouble();
-          _green = g.toDouble();
-          _blue = b.toDouble();
-        });
-      } catch (e) {
-        // Invalid hex, ignore
-      }
-    }
-  }
-
-  void _updateHexFromRgb() {
-    _hexController.text = _colorToHex(_currentColor);
   }
 }
