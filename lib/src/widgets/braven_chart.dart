@@ -5666,10 +5666,9 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
+                        height: double.infinity, // Fill the full height
                         decoration: BoxDecoration(
-                          color: _hoveringLeftHandle || _draggingEdge == 'left' 
-                            ? Colors.blue.withOpacity(0.8) 
-                            : Colors.blue.withOpacity(0.4),
+                          color: _hoveringLeftHandle || _draggingEdge == 'left' ? Colors.blue.withOpacity(0.8) : Colors.blue.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
@@ -5707,10 +5706,9 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
+                        height: double.infinity, // Fill the full height
                         decoration: BoxDecoration(
-                          color: _hoveringRightHandle || _draggingEdge == 'right' 
-                            ? Colors.blue.withOpacity(0.8) 
-                            : Colors.blue.withOpacity(0.4),
+                          color: _hoveringRightHandle || _draggingEdge == 'right' ? Colors.blue.withOpacity(0.8) : Colors.blue.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
