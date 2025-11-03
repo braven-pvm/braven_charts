@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../annotations/point_annotation.dart';
@@ -80,13 +81,15 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       ),
       child: Container(
         width: 380,
+        constraints: const BoxConstraints(maxHeight: 600),
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Header with close button
               Row(
                 children: [
@@ -156,6 +159,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -453,6 +457,44 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 8),
+        // Custom color picker button
+        InkWell(
+          onTap: () => _showCustomColorPicker(_markerColor, (color) {
+                setState(() {
+                  _markerColor = color;
+                });
+              }),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.palette, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  'Custom Color',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: _markerColor,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -555,6 +597,76 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
           },
         ),
       ],
+    );
+  }
+
+  void _showCustomColorPicker(Color currentColor, void Function(Color) onColorChanged) {
+    Color selectedColor = currentColor;
+
+    showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              color: selectedColor,
+              onColorChanged: (Color color) {
+                selectedColor = color;
+              },
+              width: 40,
+              height: 40,
+              borderRadius: 4,
+              spacing: 5,
+              runSpacing: 5,
+              wheelDiameter: 200,
+              heading: Text(
+                'Select color',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              subheading: Text(
+                'Select color shade',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              wheelSubheading: Text(
+                'Selected color and its shades',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              showMaterialName: true,
+              showColorName: true,
+              showColorCode: true,
+              materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
+              colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
+              pickersEnabled: const <ColorPickerType, bool>{
+                ColorPickerType.both: false,
+                ColorPickerType.primary: true,
+                ColorPickerType.accent: true,
+                ColorPickerType.bw: false,
+                ColorPickerType.custom: false,
+                ColorPickerType.wheel: true,
+              },
+              enableShadesSelection: true,
+              enableOpacity: true,
+              showRecentColors: true,
+              maxRecentColors: 5,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                onColorChanged(selectedColor);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Select'),
+            ),
+          ],
+        );
+      },
     );
   }
 

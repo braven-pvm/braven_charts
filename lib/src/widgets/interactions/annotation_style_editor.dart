@@ -225,71 +225,73 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       children: [
         // Preset colors
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: presetColors.map((color) {
-            final isSelected = currentColor == color;
-            return InkWell(
-              onTap: () => onColorChanged(color),
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
+          spacing: 5,
+          runSpacing: 5,
+          children: [
+            ...presetColors.map((color) {
+              final isSelected = currentColor == color;
+              return InkWell(
+                onTap: () => onColorChanged(color),
+                borderRadius: BorderRadius.circular(5),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: isSelected ? Colors.black87 : Colors.grey.shade100,
+                      width: isSelected ? 0.5 : 0.2,
+                    ),
                   ),
+                  child: isSelected
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: _getContrastColor(color),
+                        )
+                      : null,
                 ),
-                child: isSelected
-                    ? Icon(
-                        Icons.check,
-                        size: 16,
-                        color: _getContrastColor(color),
-                      )
-                    : null,
+              );
+            }),
+            InkWell(
+              onTap: () => _showCustomColorPicker(currentColor, onColorChanged),
+              borderRadius: BorderRadius.circular(5),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  spacing: 5,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
+                    const Text(
+                      'Custom',
+                      style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                    ),
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: currentColor,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }).toList(),
+            )
+          ],
         ),
 
         const SizedBox(height: 8),
 
         // Custom color picker button
-        InkWell(
-          onTap: () => _showCustomColorPicker(currentColor, onColorChanged),
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.palette, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text(
-                  'Custom Color',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: currentColor,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -339,16 +341,16 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
             ),
             const Spacer(),
             Text(
-              '${_borderWidth.toInt()}px',
+              '${_borderWidth.toStringAsFixed(1)}px',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
             ),
           ],
         ),
         Slider(
           value: _borderWidth,
-          min: 0,
-          max: 8,
-          divisions: 16,
+          min: 0.0,
+          max: 8.0,
+          divisions: 32,
           onChanged: (value) {
             setState(() {
               _borderWidth = value;
