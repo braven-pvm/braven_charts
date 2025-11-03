@@ -5654,17 +5654,28 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               width: _handleSize,
               child: MouseRegion(
                 cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) => setState(() => _hoveringLeftHandle = true),
-                onExit: (_) => setState(() => _hoveringLeftHandle = false),
+                onEnter: (_) {
+                  print('🖱️ LEFT HANDLE: Mouse ENTER');
+                  setState(() => _hoveringLeftHandle = true);
+                },
+                onExit: (_) {
+                  print('🖱️ LEFT HANDLE: Mouse EXIT');
+                  setState(() => _hoveringLeftHandle = false);
+                },
                 child: Listener(
-                  onPointerDown: (event) => _startDrag('left', event.localPosition.dx),
+                  onPointerDown: (event) {
+                    print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                    _startDrag('left', event.localPosition.dx);
+                  },
                   onPointerMove: (event) {
                     if (_draggingEdge == 'left') {
+                      print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
                       _updateDrag(event.localPosition.dx, 'left');
                     }
                   },
                   onPointerUp: (event) {
                     if (_draggingEdge == 'left') {
+                      print('👆 LEFT HANDLE: Pointer UP');
                       _endDrag();
                     }
                   },
@@ -5694,17 +5705,28 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               width: _handleSize,
               child: MouseRegion(
                 cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) => setState(() => _hoveringRightHandle = true),
-                onExit: (_) => setState(() => _hoveringRightHandle = false),
+                onEnter: (_) {
+                  print('🖱️ RIGHT HANDLE: Mouse ENTER');
+                  setState(() => _hoveringRightHandle = true);
+                },
+                onExit: (_) {
+                  print('🖱️ RIGHT HANDLE: Mouse EXIT');
+                  setState(() => _hoveringRightHandle = false);
+                },
                 child: Listener(
-                  onPointerDown: (event) => _startDrag('right', event.localPosition.dx),
+                  onPointerDown: (event) {
+                    print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                    _startDrag('right', event.localPosition.dx);
+                  },
                   onPointerMove: (event) {
                     if (_draggingEdge == 'right') {
+                      print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
                       _updateDrag(event.localPosition.dx, 'right');
                     }
                   },
                   onPointerUp: (event) {
                     if (_draggingEdge == 'right') {
+                      print('👆 RIGHT HANDLE: Pointer UP');
                       _endDrag();
                     }
                   },
@@ -5739,21 +5761,27 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
 
   /// Starts dragging an edge
   void _startDrag(String edge, double localX) {
+    print('🎯 _startDrag called: edge=$edge, localX=$localX');
     setState(() {
       _draggingEdge = edge;
       _dragStartX = localX;
       _originalStartX = widget.annotation.startX;
       _originalEndX = widget.annotation.endX;
     });
+    print('   State updated: _draggingEdge=$_draggingEdge, _dragStartX=$_dragStartX');
   }
 
   /// Updates the range based on current drag position
   void _updateDrag(double currentX, String edge) {
+    print('📍 _updateDrag called: currentX=$currentX, edge=$edge');
+    
     if (widget.annotation.startX == null || widget.annotation.endX == null) {
+      print('   ❌ Skipped: infinite range');
       return; // Can't resize infinite ranges
     }
 
     if (_dragStartX == null || _originalStartX == null || _originalEndX == null) {
+      print('   ❌ Skipped: drag not initialized');
       return; // Drag not properly initialized
     }
 
@@ -5791,12 +5819,15 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       endX: newEndX,
     );
 
+    print('   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX');
+    
     // Notify parent
     widget.onAnnotationUpdate?.call(updatedAnnotation);
   }
 
   /// Ends dragging
   void _endDrag() {
+    print('🏁 _endDrag called');
     setState(() {
       _draggingEdge = null;
       _dragStartX = null;
