@@ -1893,6 +1893,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 interactiveAnnotations: widget.interactiveAnnotations,
                 onAnnotationTap: widget.onAnnotationTap,
                 onAnnotationDragged: widget.onAnnotationDragged,
+                onAnnotationUpdate: (updatedAnnotation) {
+                  // Update the annotation in the controller
+                  final controller = _getController();
+                  if (controller != null) {
+                    controller.updateAnnotation(updatedAnnotation.id, updatedAnnotation);
+                  }
+                },
                 series: _getAllSeries(),
                 chartRect: _cachedChartRect,
                 titleOffset: _titleOffset,
@@ -2462,13 +2469,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               ? (details) {
                   // ONLY handle pinch-to-zoom here (multi-touch zoom)
                   // Pan is handled separately via middle-mouse in Listener widget above
-                  
+
                   // Handle pinch-to-zoom (when scale changes with multi-touch)
                   if (details.scale != 1.0 && details.pointerCount >= 2) {
                     // T043: Reset timer on continued zoom gestures (FR-008)
                     _resetAutoResumeTimer();
 
-                    ZoomPanState newZoomPanState = _zoomPanController!.zoom(_interactionStateNotifier.value.zoomPanState, zoomFactor: details.scale, focalPoint: details.focalPoint);
+                    final ZoomPanState newZoomPanState = _zoomPanController!
+                        .zoom(_interactionStateNotifier.value.zoomPanState, zoomFactor: details.scale, focalPoint: details.focalPoint);
 
                     // Update state
                     _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: newZoomPanState);
@@ -4946,6 +4954,7 @@ class _AnnotationOverlay extends StatelessWidget {
     required this.interactiveAnnotations,
     this.onAnnotationTap,
     this.onAnnotationDragged,
+    this.onAnnotationUpdate,
     required this.series,
     this.chartRect,
     required this.titleOffset,
@@ -4957,6 +4966,7 @@ class _AnnotationOverlay extends StatelessWidget {
   final bool interactiveAnnotations;
   final void Function(ChartAnnotation annotation)? onAnnotationTap;
   final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
+  final void Function(ChartAnnotation annotation)? onAnnotationUpdate;
   final List<ChartSeries> series;
   final Rect? chartRect;
   final Offset titleOffset;
@@ -5204,62 +5214,18 @@ class _AnnotationOverlay extends StatelessWidget {
       top: clampedTop,
       width: clampedWidth,
       height: clampedHeight,
-      child: GestureDetector(
-        onTap: interactiveAnnotations && onAnnotationTap != null ? () => onAnnotationTap!(annotation) : null,
-        child: Container(
-          decoration: BoxDecoration(
-            color: annotation.fillColor,
-            border: annotation.borderColor != null ? Border.all(color: annotation.borderColor!, width: annotation.style.borderWidth) : null,
-          ),
-          // Render label if provided
-          child: annotation.label != null ? _buildRangeLabel(annotation, clampedWidth, clampedHeight) : null,
-        ),
-      ),
-    );
-  }
-
-  /// Builds a positioned label widget for range annotations.
-  Widget _buildRangeLabel(RangeAnnotation annotation, double width, double height) {
-    Alignment alignment;
-    EdgeInsets padding;
-
-    // Position label according to labelPosition setting
-    switch (annotation.labelPosition) {
-      case AnnotationLabelPosition.topLeft:
-        alignment = Alignment.topLeft;
-        padding = const EdgeInsets.all(4);
-        break;
-      case AnnotationLabelPosition.topRight:
-        alignment = Alignment.topRight;
-        padding = const EdgeInsets.all(4);
-        break;
-      case AnnotationLabelPosition.bottomLeft:
-        alignment = Alignment.bottomLeft;
-        padding = const EdgeInsets.all(4);
-        break;
-      case AnnotationLabelPosition.bottomRight:
-        alignment = Alignment.bottomRight;
-        padding = const EdgeInsets.all(4);
-        break;
-      case AnnotationLabelPosition.center:
-        alignment = Alignment.center;
-        padding = EdgeInsets.zero;
-        break;
-    }
-
-    return Align(
-      alignment: alignment,
-      child: Padding(
-        padding: padding,
-        child: Container(
-          padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
-            borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
-            border: annotation.style.borderColor != null ? Border.all(color: annotation.style.borderColor!, width: 1) : null,
-          ),
-          child: Text(annotation.label!, style: annotation.style.textStyle),
-        ),
+      child: _RangeAnnotationWidget(
+        annotation: annotation,
+        chartRect: chartRect!,
+        bounds: bounds,
+        clampedWidth: clampedWidth,
+        clampedHeight: clampedHeight,
+        interactiveAnnotations: interactiveAnnotations,
+        onAnnotationTap: onAnnotationTap,
+        onAnnotationUpdate: onAnnotationUpdate != null 
+          ? (updated) => onAnnotationUpdate!(updated)
+          : null,
+        dataToScreenPoint: dataToScreenPoint,
       ),
     );
   }
@@ -5584,6 +5550,268 @@ class _AnnotationOverlay extends StatelessWidget {
     maxY += yRange * 0.1;
 
     return _DataBounds(minX: minX, maxX: maxX, minY: minY, maxY: maxY);
+  }
+}
+
+// ==================== RANGE ANNOTATION RESIZE WIDGET ====================
+
+/// Interactive range annotation widget with resize handles.
+///
+/// Displays a range annotation with draggable handles on the left and right edges
+/// for resizing the range along the x-axis.
+class _RangeAnnotationWidget extends StatefulWidget {
+  const _RangeAnnotationWidget({
+    required this.annotation,
+    required this.chartRect,
+    required this.bounds,
+    required this.clampedWidth,
+    required this.clampedHeight,
+    required this.interactiveAnnotations,
+    required this.onAnnotationTap,
+    this.onAnnotationUpdate,
+    required this.dataToScreenPoint,
+  });
+
+  final RangeAnnotation annotation;
+  final Rect chartRect;
+  final _DataBounds bounds;
+  final double clampedWidth;
+  final double clampedHeight;
+  final bool interactiveAnnotations;
+  final void Function(ChartAnnotation)? onAnnotationTap;
+  final void Function(RangeAnnotation)? onAnnotationUpdate;
+  final Offset Function(ChartDataPoint, Rect, _DataBounds) dataToScreenPoint;
+
+  @override
+  State<_RangeAnnotationWidget> createState() => _RangeAnnotationWidgetState();
+}
+
+class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
+  /// Which edge is being dragged (null = none, 'left' = left edge, 'right' = right edge)
+  String? _draggingEdge;
+
+  /// Whether mouse is hovering over left handle
+  bool _hoveringLeftHandle = false;
+
+  /// Whether mouse is hovering over right handle
+  bool _hoveringRightHandle = false;
+
+  /// Size of the resize handles (width of the draggable area)
+  static const double _handleSize = 8.0;
+
+  /// Visual indicator size for the handle (thin line)
+  static const double _handleIndicatorWidth = 3.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // Only show handles if annotation has explicit X range (not infinite)
+    final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
+
+    return MouseRegion(
+      cursor: _getCursor(),
+      child: Stack(
+        children: [
+          // Main range container
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null
+                  ? () => widget.onAnnotationTap!(widget.annotation)
+                  : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.annotation.fillColor,
+                  border: widget.annotation.borderColor != null
+                      ? Border.all(
+                          color: widget.annotation.borderColor!,
+                          width: widget.annotation.style.borderWidth,
+                        )
+                      : null,
+                ),
+                // Render label if provided
+                child: widget.annotation.label != null
+                    ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight)
+                    : null,
+              ),
+            ),
+          ),
+
+          // Left resize handle (only if explicit X range and interactive)
+          if (hasExplicitXRange && widget.interactiveAnnotations)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: _handleSize,
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hoveringLeftHandle = true),
+                onExit: (_) => setState(() => _hoveringLeftHandle = false),
+                child: GestureDetector(
+                  onPanStart: (_) => _startDrag('left'),
+                  onPanUpdate: (details) => _updateDrag(details.delta.dx, 'left'),
+                  onPanEnd: (_) => _endDrag(),
+                  child: Container(
+                    color: Colors.transparent, // Invisible hit area
+                    child: Center(
+                      child: Container(
+                        width: _handleIndicatorWidth,
+                        decoration: BoxDecoration(
+                          color: _hoveringLeftHandle || _draggingEdge == 'left'
+                              ? Colors.blue.withOpacity(0.8)
+                              : Colors.blue.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Right resize handle (only if explicit X range and interactive)
+          if (hasExplicitXRange && widget.interactiveAnnotations)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: _handleSize,
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hoveringRightHandle = true),
+                onExit: (_) => setState(() => _hoveringRightHandle = false),
+                child: GestureDetector(
+                  onPanStart: (_) => _startDrag('right'),
+                  onPanUpdate: (details) => _updateDrag(details.delta.dx, 'right'),
+                  onPanEnd: (_) => _endDrag(),
+                  child: Container(
+                    color: Colors.transparent, // Invisible hit area
+                    child: Center(
+                      child: Container(
+                        width: _handleIndicatorWidth,
+                        decoration: BoxDecoration(
+                          color: _hoveringRightHandle || _draggingEdge == 'right'
+                              ? Colors.blue.withOpacity(0.8)
+                              : Colors.blue.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Gets the appropriate cursor based on hover state
+  MouseCursor _getCursor() {
+    if (_hoveringLeftHandle || _hoveringRightHandle || _draggingEdge != null) {
+      return SystemMouseCursors.resizeLeftRight;
+    }
+    return SystemMouseCursors.basic;
+  }
+
+  /// Starts dragging an edge
+  void _startDrag(String edge) {
+    setState(() {
+      _draggingEdge = edge;
+    });
+  }
+
+  /// Updates the range based on drag delta
+  void _updateDrag(double deltaX, String edge) {
+    if (widget.annotation.startX == null || widget.annotation.endX == null) {
+      return; // Can't resize infinite ranges
+    }
+
+    // Convert screen delta to data coordinate delta
+    // Screen X increases left-to-right, data X increases left-to-right (same direction)
+    final xRange = widget.bounds.maxX - widget.bounds.minX;
+    final screenWidth = widget.chartRect.width;
+    final dataPerPixel = xRange / screenWidth;
+    final dataDelta = deltaX * dataPerPixel;
+
+    // Calculate new range based on which edge is being dragged
+    double newStartX = widget.annotation.startX!;
+    double newEndX = widget.annotation.endX!;
+
+    if (edge == 'left') {
+      newStartX += dataDelta;
+      // Prevent crossing (left must stay left of right)
+      if (newStartX >= newEndX) {
+        newStartX = newEndX - (xRange * 0.01); // Maintain minimum 1% width
+      }
+    } else if (edge == 'right') {
+      newEndX += dataDelta;
+      // Prevent crossing (right must stay right of left)
+      if (newEndX <= newStartX) {
+        newEndX = newStartX + (xRange * 0.01); // Maintain minimum 1% width
+      }
+    }
+
+    // Create updated annotation
+    final updatedAnnotation = widget.annotation.copyWith(
+      startX: newStartX,
+      endX: newEndX,
+    );
+
+    // Notify parent
+    widget.onAnnotationUpdate?.call(updatedAnnotation);
+  }
+
+  /// Ends dragging
+  void _endDrag() {
+    setState(() {
+      _draggingEdge = null;
+    });
+  }
+
+  /// Builds a positioned label widget for range annotations.
+  Widget _buildRangeLabel(RangeAnnotation annotation, double width, double height) {
+    Alignment alignment;
+    EdgeInsets padding;
+
+    // Position label according to labelPosition setting
+    switch (annotation.labelPosition) {
+      case AnnotationLabelPosition.topLeft:
+        alignment = Alignment.topLeft;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.topRight:
+        alignment = Alignment.topRight;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.bottomLeft:
+        alignment = Alignment.bottomLeft;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.bottomRight:
+        alignment = Alignment.bottomRight;
+        padding = const EdgeInsets.all(4);
+        break;
+      case AnnotationLabelPosition.center:
+        alignment = Alignment.center;
+        padding = EdgeInsets.zero;
+        break;
+    }
+
+    return Align(
+      alignment: alignment,
+      child: Padding(
+        padding: padding,
+        child: Container(
+          padding: annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
+            borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
+            border: annotation.style.borderColor != null
+                ? Border.all(color: annotation.style.borderColor!, width: 1)
+                : null,
+          ),
+          child: Text(annotation.label!, style: annotation.style.textStyle),
+        ),
+      ),
+    );
   }
 }
 
