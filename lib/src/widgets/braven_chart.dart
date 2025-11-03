@@ -5615,18 +5615,28 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
 
     // DEBUG: Print conditions
+    print('');
+    print('═══════════════════════════════════════════════════════════');
     print('🔍 RangeAnnotationWidget build:');
     print('   - hasExplicitXRange: $hasExplicitXRange (startX: ${widget.annotation.startX}, endX: ${widget.annotation.endX})');
     print('   - interactiveAnnotations: ${widget.interactiveAnnotations}');
     print('   - Should show handles: ${hasExplicitXRange && widget.interactiveAnnotations}');
+    print('   - Handle size: $_handleSize');
+    print('   - Main container will be inset by: ${hasExplicitXRange && widget.interactiveAnnotations ? _handleSize : 0}px on each side');
+    print('═══════════════════════════════════════════════════════════');
+    print('');
 
     return MouseRegion(
       cursor: _getCursor(),
       child: Stack(
         clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
         children: [
-          // Main range container
-          Positioned.fill(
+          // Main range container - positioned to leave space for handles on left/right
+          Positioned(
+            left: hasExplicitXRange && widget.interactiveAnnotations ? _handleSize : 0,
+            right: hasExplicitXRange && widget.interactiveAnnotations ? _handleSize : 0,
+            top: 0,
+            bottom: 0,
             child: GestureDetector(
               onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
               child: Container(
@@ -5663,17 +5673,20 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               top: 0,
               bottom: 0,
               width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) {
-                  print('🖱️ LEFT HANDLE: Mouse ENTER');
-                  setState(() => _hoveringLeftHandle = true);
-                },
-                onExit: (_) {
-                  print('🖱️ LEFT HANDLE: Mouse EXIT');
-                  setState(() => _hoveringLeftHandle = false);
-                },
-                child: Listener(
+              child: Builder(
+                builder: (context) {
+                  print('🔨 LEFT HANDLE WIDGET IS BEING BUILT');
+                  return MouseRegion(
+                    cursor: SystemMouseCursors.resizeLeftRight,
+                    onEnter: (_) {
+                      print('🖱️ LEFT HANDLE: Mouse ENTER');
+                      setState(() => _hoveringLeftHandle = true);
+                    },
+                    onExit: (_) {
+                      print('🖱️ LEFT HANDLE: Mouse EXIT');
+                      setState(() => _hoveringLeftHandle = false);
+                    },
+                    child: Listener(
                   onPointerDown: (event) {
                     print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
                     _startDrag('left', event.localPosition.dx);
@@ -5704,6 +5717,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     ),
                   ),
                 ),
+                  );
+                },
               ),
             ),
 
@@ -5714,17 +5729,20 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               top: 0,
               bottom: 0,
               width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) {
-                  print('🖱️ RIGHT HANDLE: Mouse ENTER');
-                  setState(() => _hoveringRightHandle = true);
-                },
-                onExit: (_) {
-                  print('🖱️ RIGHT HANDLE: Mouse EXIT');
-                  setState(() => _hoveringRightHandle = false);
-                },
-                child: Listener(
+              child: Builder(
+                builder: (context) {
+                  print('🔨 RIGHT HANDLE WIDGET IS BEING BUILT');
+                  return MouseRegion(
+                    cursor: SystemMouseCursors.resizeLeftRight,
+                    onEnter: (_) {
+                      print('🖱️ RIGHT HANDLE: Mouse ENTER');
+                      setState(() => _hoveringRightHandle = true);
+                    },
+                    onExit: (_) {
+                      print('🖱️ RIGHT HANDLE: Mouse EXIT');
+                      setState(() => _hoveringRightHandle = false);
+                    },
+                    child: Listener(
                   onPointerDown: (event) {
                     print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
                     _startDrag('right', event.localPosition.dx);
@@ -5755,12 +5773,13 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                     ),
                   ),
                 ),
+                  );
+                },
               ),
             ),
-          ],
-        ),
+        ],
       ),
-    )
+    );
   }
 
   /// Gets the appropriate cursor based on hover state
