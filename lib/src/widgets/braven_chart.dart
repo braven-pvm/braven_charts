@@ -5658,109 +5658,109 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
 
           // Left resize handle (only if explicit X range and interactive) - MUST be after main container in z-order
           if (hasExplicitXRange && widget.interactiveAnnotations)
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: _handleSize,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.resizeLeftRight,
-                  onEnter: (_) {
-                    print('🖱️ LEFT HANDLE: Mouse ENTER');
-                    setState(() => _hoveringLeftHandle = true);
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: _handleSize,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
+                onEnter: (_) {
+                  print('🖱️ LEFT HANDLE: Mouse ENTER');
+                  setState(() => _hoveringLeftHandle = true);
+                },
+                onExit: (_) {
+                  print('🖱️ LEFT HANDLE: Mouse EXIT');
+                  setState(() => _hoveringLeftHandle = false);
+                },
+                child: Listener(
+                  onPointerDown: (event) {
+                    print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                    _startDrag('left', event.localPosition.dx);
                   },
-                  onExit: (_) {
-                    print('🖱️ LEFT HANDLE: Mouse EXIT');
-                    setState(() => _hoveringLeftHandle = false);
+                  onPointerMove: (event) {
+                    if (_draggingEdge == 'left') {
+                      print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                      _updateDrag(event.localPosition.dx, 'left');
+                    }
                   },
-                  child: Listener(
-                    onPointerDown: (event) {
-                      print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                      _startDrag('left', event.localPosition.dx);
-                    },
-                    onPointerMove: (event) {
-                      if (_draggingEdge == 'left') {
-                        print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                        _updateDrag(event.localPosition.dx, 'left');
-                      }
-                    },
-                    onPointerUp: (event) {
-                      if (_draggingEdge == 'left') {
-                        print('👆 LEFT HANDLE: Pointer UP');
-                        _endDrag();
-                      }
-                    },
-                    child: Container(
-                      color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
-                      child: Center(
-                        child: Container(
-                          width: _handleIndicatorWidth,
-                          height: double.infinity, // Fill the full height
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
-                            borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
-                          ),
+                  onPointerUp: (event) {
+                    if (_draggingEdge == 'left') {
+                      print('👆 LEFT HANDLE: Pointer UP');
+                      _endDrag();
+                    }
+                  },
+                  child: Container(
+                    color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
+                    child: Center(
+                      child: Container(
+                        width: _handleIndicatorWidth,
+                        height: double.infinity, // Fill the full height
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
+                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
 
-            // Right resize handle (only if explicit X range and interactive)
-            if (hasExplicitXRange && widget.interactiveAnnotations)
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: _handleSize,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.resizeLeftRight,
-                  onEnter: (_) {
-                    print('🖱️ RIGHT HANDLE: Mouse ENTER');
-                    setState(() => _hoveringRightHandle = true);
+          // Right resize handle (only if explicit X range and interactive)
+          if (hasExplicitXRange && widget.interactiveAnnotations)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: _handleSize,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
+                onEnter: (_) {
+                  print('🖱️ RIGHT HANDLE: Mouse ENTER');
+                  setState(() => _hoveringRightHandle = true);
+                },
+                onExit: (_) {
+                  print('🖱️ RIGHT HANDLE: Mouse EXIT');
+                  setState(() => _hoveringRightHandle = false);
+                },
+                child: Listener(
+                  onPointerDown: (event) {
+                    print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                    _startDrag('right', event.localPosition.dx);
                   },
-                  onExit: (_) {
-                    print('🖱️ RIGHT HANDLE: Mouse EXIT');
-                    setState(() => _hoveringRightHandle = false);
+                  onPointerMove: (event) {
+                    if (_draggingEdge == 'right') {
+                      print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                      _updateDrag(event.localPosition.dx, 'right');
+                    }
                   },
-                  child: Listener(
-                    onPointerDown: (event) {
-                      print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                      _startDrag('right', event.localPosition.dx);
-                    },
-                    onPointerMove: (event) {
-                      if (_draggingEdge == 'right') {
-                        print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                        _updateDrag(event.localPosition.dx, 'right');
-                      }
-                    },
-                    onPointerUp: (event) {
-                      if (_draggingEdge == 'right') {
-                        print('👆 RIGHT HANDLE: Pointer UP');
-                        _endDrag();
-                      }
-                    },
-                    child: Container(
-                      color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
-                      child: Center(
-                        child: Container(
-                          width: _handleIndicatorWidth,
-                          height: double.infinity, // Fill the full height
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
-                            borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
-                          ),
+                  onPointerUp: (event) {
+                    if (_draggingEdge == 'right') {
+                      print('👆 RIGHT HANDLE: Pointer UP');
+                      _endDrag();
+                    }
+                  },
+                  child: Container(
+                    color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
+                    child: Center(
+                      child: Container(
+                        width: _handleIndicatorWidth,
+                        height: double.infinity, // Fill the full height
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
+                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
-    );
+    )
   }
 
   /// Gets the appropriate cursor based on hover state
