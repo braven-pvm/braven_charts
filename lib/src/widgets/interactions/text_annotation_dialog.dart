@@ -313,14 +313,6 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
 
     final text = _textController.text.trim();
 
-    print('📝 [TextAnnotationDialog] Creating annotation:');
-    print('   - Text: "$text"');
-    print('   - Position (from widget.clickPosition): ${widget.clickPosition}');
-    print('   - Anchor: $_anchor');
-    print('   - Style: textColor=${_currentStyle.textColor}, fontSize=${_currentStyle.fontSize}');
-    print('   - Background: ${_currentStyle.backgroundColor}');
-    print('   - Border: color=${_currentStyle.borderColor}, width=${_currentStyle.borderWidth}, radius=${_currentStyle.borderRadius}');
-
     final annotation = TextAnnotation(
       id: widget.annotation?.id ?? 'text_${DateTime.now().millisecondsSinceEpoch}',
       text: text,
@@ -331,7 +323,6 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       borderColor: _currentStyle.borderColor,
     );
 
-    print('✅ [TextAnnotationDialog] Annotation created with position: ${annotation.position}');
     Navigator.of(context).pop(annotation);
   }
 }

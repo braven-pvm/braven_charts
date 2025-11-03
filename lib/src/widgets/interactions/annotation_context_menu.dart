@@ -65,11 +65,6 @@ class AnnotationContextMenu {
     void Function(String seriesId, String annotationId)? onDeletePointAnnotation,
     void Function(String annotationId)? onDeleteRangeAnnotation,
   }) async {
-    print('📋 [AnnotationContextMenu] show() called:');
-    print('   - position (global): $position');
-    print('   - localPosition: $localPosition');
-    print('   - contextType: $contextType');
-
     final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
 
@@ -322,8 +317,6 @@ class AnnotationContextMenu {
     required List<String> availableSeriesIds,
     required void Function(TextAnnotation) onSave,
   }) async {
-    print('💬 [AnnotationContextMenu] _showAddTextDialog called with localPosition: $localPosition');
-
     final annotation = await showDialog<TextAnnotation>(
       context: context,
       builder: (ctx) => TextAnnotationDialog(
@@ -332,7 +325,6 @@ class AnnotationContextMenu {
     );
 
     if (annotation != null) {
-      print('✅ [AnnotationContextMenu] Text annotation returned from dialog: ${annotation.position}');
       onSave(annotation);
     }
   }
@@ -343,10 +335,6 @@ class AnnotationContextMenu {
     required int dataPointIndex,
     required void Function(PointAnnotation) onSave,
   }) async {
-    print('📍 [AnnotationContextMenu] _showAddPointDialog called:');
-    print('   - seriesId: $seriesId');
-    print('   - dataPointIndex: $dataPointIndex');
-
     final annotation = await showDialog<PointAnnotation>(
       context: context,
       builder: (ctx) => PointAnnotationDialog(
@@ -356,7 +344,6 @@ class AnnotationContextMenu {
     );
 
     if (annotation != null) {
-      print('✅ [AnnotationContextMenu] Point annotation returned from dialog');
       onSave(annotation);
     }
   }
@@ -403,15 +390,12 @@ class AnnotationContextMenu {
     required BuildContext context,
     required void Function(RangeAnnotation) onSave,
   }) async {
-    print('📐 [AnnotationContextMenu] _showAddRangeDialog called');
-
     final annotation = await showDialog<RangeAnnotation>(
       context: context,
       builder: (ctx) => const RangeAnnotationDialog(),
     );
 
     if (annotation != null) {
-      print('✅ [AnnotationContextMenu] Range annotation returned from dialog');
       onSave(annotation);
     }
   }

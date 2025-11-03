@@ -696,15 +696,6 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
 
     final label = _labelController.text.trim();
 
-    print('📍 [PointAnnotationDialog] Creating annotation:');
-    print('   - Label: "$label"');
-    print('   - Series: ${widget.seriesId}');
-    print('   - DataPointIndex: ${widget.dataPointIndex}');
-    print('   - MarkerShape: $_markerShape');
-    print('   - MarkerSize: $_markerSize');
-    print('   - MarkerColor: $_markerColor');
-    print('   - Style: $_labelStyle');
-
     final annotation = PointAnnotation(
       id: widget.annotation?.id ?? 'point_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
@@ -717,7 +708,6 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       offset: _offset,
     );
 
-    print('✅ [PointAnnotationDialog] Annotation created');
     Navigator.of(context).pop(annotation);
   }
 }

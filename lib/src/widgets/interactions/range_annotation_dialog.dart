@@ -689,15 +689,6 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       return;
     }
 
-    print('📐 [RangeAnnotationDialog] Creating annotation:');
-    print('   - Label: "$label"');
-    print('   - X Range: $startX to $endX');
-    print('   - Y Range: $startY to $endY');
-    print('   - Fill Color: $_fillColor');
-    print('   - Border Color: $_borderColor');
-    print('   - Label Position: $_labelPosition');
-    print('   - Style: $_labelStyle');
-
     final annotation = RangeAnnotation(
       id: widget.annotation?.id ?? 'range_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
@@ -711,7 +702,6 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       labelPosition: _labelPosition,
     );
 
-    print('✅ [RangeAnnotationDialog] Annotation created');
     Navigator.of(context).pop(annotation);
   }
 }

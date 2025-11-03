@@ -2735,18 +2735,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   void _handleRightClick(TapDownDetails details) {
     if (!mounted || !widget.interactiveAnnotations) return;
 
-    print('🖱️ [BravenChart] Right-click detected:');
-    print('   - localPosition: ${details.localPosition}');
-    print('   - globalPosition: ${details.globalPosition}');
-    print('   - _cachedChartRect: $_cachedChartRect');
-    print('   - _titleOffset: $_titleOffset');
-
     // CRITICAL: Subtract title offset because:
     // - GestureDetector is at widget top (includes title)
     // - Annotation Stack is positioned BELOW title in Column
     // - So click Y includes title height, but Stack Y starts after title
     final adjustedLocalPosition = details.localPosition - _titleOffset;
-    print('   - adjustedLocalPosition (after removing title offset): $adjustedLocalPosition');
 
     // Get available series IDs for data-position mode
     final availableSeriesIds = _getAllSeries().map((s) => s.id).toList();
@@ -2754,15 +2747,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
     // Check if right-click hit an existing text annotation (use adjusted position!)
     final clickedTextAnnotation = _findAnnotationAtPosition(adjustedLocalPosition);
-    print('   - clickedTextAnnotation: ${clickedTextAnnotation?.id ?? "null"}');
 
     // Check if right-click hit an existing point annotation
     final clickedPointAnnotationData = _findPointAnnotationAtPosition(adjustedLocalPosition);
-    print('   - clickedPointAnnotation: ${clickedPointAnnotationData?['annotation'].id ?? "null"}');
 
     // Detect nearest data point for context determination
     final nearestPoint = _findNearestDataPoint(details.localPosition);
-    print('   - nearestPoint seriesId: ${nearestPoint?['seriesId'] ?? "null"}');
 
     // Determine context type and data point info
     AnnotationContextType contextType;
@@ -2787,15 +2777,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         targetDataPointIndex = series.points.indexWhere(
           (p) => p.x == pointX && p.y == pointY,
         );
-
-        print('   - POINT CONTEXT: seriesId=$targetSeriesId, index=$targetDataPointIndex');
       } else {
         contextType = AnnotationContextType.textAnnotation;
-        print('   - TEXT CONTEXT: point too far ($distance px)');
       }
     } else {
       contextType = AnnotationContextType.textAnnotation;
-      print('   - TEXT CONTEXT: no nearby point');
     }
 
     // Show context-sensitive menu
@@ -2853,14 +2839,10 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     // Check if click hit any existing text annotation
     final annotations = _getController()?.getAllAnnotations() ?? [];
 
-    print('🎯 [BravenChart] _findAnnotationAtPosition called:');
-    print('   - position: $position');
-    print('   - annotations count: ${annotations.length}');
-
     for (final annotation in annotations.reversed) {
       // Only check TextAnnotations for hit testing
       if (annotation is! TextAnnotation) continue;
-      
+
       // Get the annotation bounds (approximate based on text and anchor)
       final annotationPos = annotation.position;
 
@@ -2878,20 +2860,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
         approximateHeight,
       );
 
-      print('   - Checking annotation "${annotation.text}":');
-      print('     - annotationPos: $annotationPos');
-      print('     - anchor: ${annotation.anchor}');
-      print('     - anchorOffset: $anchorOffset');
-      print('     - hitRect: $hitRect');
-      print('     - contains: ${hitRect.contains(position)}');
-
       if (hitRect.contains(position)) {
-        print('   ✅ HIT! Returning annotation: ${annotation.id}');
         return annotation;
       }
     }
 
-    print('   ❌ No annotation hit');
     return null;
   }
 
@@ -2921,9 +2894,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Finds a PointAnnotation at the given screen position
   Map<String, dynamic>? _findPointAnnotationAtPosition(Offset position) {
-    print('🎯 [BravenChart] _findPointAnnotationAtPosition called:');
-    print('   - position: $position');
-
     if (_cachedChartRect == null) return null;
 
     final chartRect = _cachedChartRect!;
@@ -2948,7 +2918,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           final distance = sqrt(dx * dx + dy * dy);
 
           if (distance <= hitRadius) {
-            print('   ✅ HIT! Point annotation on series ${series.id}');
             return {
               'annotation': annotation,
               'seriesId': series.id,
@@ -2958,16 +2927,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       }
     }
 
-    print('   ❌ No point annotation hit');
     return null;
   }
 
   /// Adds a PointAnnotation to the specified series
   void _addPointAnnotationToSeries(PointAnnotation annotation) {
-    print('📍 [BravenChart] _addPointAnnotationToSeries:');
-    print('   - seriesId: ${annotation.seriesId}');
-    print('   - dataPointIndex: ${annotation.dataPointIndex}');
-
     setState(() {
       final series = _getAllSeries().firstWhere(
         (s) => s.id == annotation.seriesId,
@@ -2978,20 +2942,14 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       final existingIndex = series.annotations.indexWhere((a) => a.id == annotation.id);
       if (existingIndex >= 0) {
         series.annotations[existingIndex] = annotation;
-        print('   ✅ Updated existing annotation');
       } else {
         series.annotations.add(annotation);
-        print('   ✅ Added new annotation');
       }
     });
   }
 
   /// Removes a PointAnnotation from the specified series
   void _removePointAnnotationFromSeries(String seriesId, String annotationId) {
-    print('🗑️ [BravenChart] _removePointAnnotationFromSeries:');
-    print('   - seriesId: $seriesId');
-    print('   - annotationId: $annotationId');
-
     setState(() {
       final series = _getAllSeries().firstWhere(
         (s) => s.id == seriesId,
@@ -2999,7 +2957,6 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       );
 
       series.annotations.removeWhere((a) => a.id == annotationId);
-      print('   ✅ Removed annotation');
     });
   }
 
@@ -4288,7 +4245,7 @@ class _BravenChartPainter extends CustomPainter {
     final preliminaryBounds = _calculateDataBounds(chartRect: null);
     if (enablePaintProfiling) {
       stageStopwatch!.stop();
-      print('[PAINT] background/bounds: ${stageStopwatch.elapsedMilliseconds}ms');
+
       stageStopwatch
         ..reset()
         ..start();
@@ -4319,7 +4276,7 @@ class _BravenChartPainter extends CustomPainter {
     _drawGrid(canvas, chartRect, bounds);
     if (enablePaintProfiling) {
       stageStopwatch!.stop();
-      print('[PAINT] grid: ${stageStopwatch.elapsedMilliseconds}ms');
+
       stageStopwatch
         ..reset()
         ..start();
@@ -4342,7 +4299,7 @@ class _BravenChartPainter extends CustomPainter {
     }
     if (enablePaintProfiling) {
       stageStopwatch!.stop();
-      print('[PAINT] series: ${stageStopwatch.elapsedMilliseconds}ms');
+
       stageStopwatch
         ..reset()
         ..start();
@@ -4352,9 +4309,8 @@ class _BravenChartPainter extends CustomPainter {
     _drawAxes(canvas, size, chartRect, bounds);
     if (enablePaintProfiling) {
       stageStopwatch!.stop();
-      print('[PAINT] axes: ${stageStopwatch.elapsedMilliseconds}ms');
+
       totalStopwatch!.stop();
-      print('[PAINT] total: ${totalStopwatch.elapsedMilliseconds}ms');
     }
   }
 
@@ -5053,12 +5009,6 @@ class _AnnotationOverlay extends StatelessWidget {
   Widget _buildTextAnnotation(TextAnnotation annotation) {
     // TextAnnotation now uses screen coordinates only
     final screenPosition = annotation.position;
-
-    print('🎨 [BravenChart] Rendering annotation:');
-    print('   - Text: "${annotation.text}"');
-    print('   - Position (stored): $screenPosition');
-    print('   - Anchor: ${annotation.anchor}');
-    print('   - Anchor offset: ${_getAnchorOffset(annotation.anchor)}');
 
     // Build the annotation content
     final annotationContent = GestureDetector(
