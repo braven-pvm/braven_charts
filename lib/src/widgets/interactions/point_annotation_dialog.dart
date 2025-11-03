@@ -1,13 +1,13 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'package:braven_charts/src/widgets/interactions/annotation_style_editor.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../annotations/annotation_style.dart';
 import '../annotations/point_annotation.dart';
 import '../enums/marker_shape.dart';
-import 'annotation_style_editor.dart';
 
 /// Dialog for creating or editing PointAnnotations.
 ///
@@ -80,100 +80,105 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
 
     return Dialog(
       backgroundColor: colorScheme.surface,
+      insetPadding: const EdgeInsets.all(0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
         width: 380,
         constraints: const BoxConstraints(maxHeight: 600),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with close button
-                Row(
-                  children: [
-                    Icon(
-                      isEditMode ? Icons.edit : Icons.place,
-                      size: 20,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isEditMode ? 'Edit Point Annotation' : 'Add Point Annotation',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Data point info (read-only)
-                _buildDataPointInfo(),
-                const SizedBox(height: 20),
-
-                // Label field (optional)
-                _buildLabelField(),
-                const SizedBox(height: 20),
-
-                // Label styling (only shown when label is not empty)
-                AnnotationStyleEditor(
-                  initialStyle: _labelStyle,
-                  onStyleChanged: (style) {
-                    setState(() {
-                      _labelStyle = style;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Marker shape selector
-                _buildMarkerShapeSelector(),
-                const SizedBox(height: 20),
-
-                // Marker size slider
-                _buildMarkerSizeSlider(),
-                const SizedBox(height: 20),
-
-                // Marker color picker
-                _buildMarkerColorPicker(),
-                const SizedBox(height: 20),
-
-                // Advanced section (offset)
-                _buildAdvancedSection(),
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _handleSave,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with close button
+                  Row(
+                    children: [
+                      Icon(
+                        isEditMode ? Icons.edit : Icons.place,
+                        size: 20,
+                        color: colorScheme.primary,
                       ),
-                      child: Text(isEditMode ? 'Update' : 'Add'),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Text(
+                        isEditMode ? 'Edit Point Annotation' : 'Add Point Annotation',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Data point info (read-only)
+                  _buildDataPointInfo(),
+                  const SizedBox(height: 20),
+
+                  // Label field (optional)
+                  _buildLabelField(),
+                  const SizedBox(height: 20),
+
+                  // Label styling (only shown when label is not empty)
+
+                  // Marker shape selector
+                  _buildMarkerShapeSelector(),
+                  const SizedBox(height: 20),
+
+                  // Marker size slider
+                  _buildMarkerSizeSlider(),
+                  const SizedBox(height: 20),
+
+                  // Marker color picker
+                  _buildMarkerColorPicker(),
+                  const SizedBox(height: 20),
+
+                  AnnotationStyleEditor(
+                    initialStyle: _labelStyle,
+                    onStyleChanged: (style) {
+                      setState(() {
+                        _labelStyle = style;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Advanced section (offset)
+                  _buildAdvancedSection(),
+                  const SizedBox(height: 24),
+
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _handleSave,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(isEditMode ? 'Update' : 'Add'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -183,7 +188,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
 
   Widget _buildDataPointInfo() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -194,7 +199,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+              Icon(Icons.info, size: 16, color: Colors.blue.shade700),
               const SizedBox(width: 6),
               Text(
                 'Data Point',
@@ -206,7 +211,6 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
           Text(
             'Series: ${widget.seriesId}',
             style: TextStyle(
@@ -214,7 +218,6 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               color: Colors.grey[700],
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             'Point Index: ${widget.dataPointIndex}',
             style: TextStyle(
@@ -293,8 +296,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 5,
+          runSpacing: 5,
           children: shapes.map((shape) {
             final isSelected = shape == _markerShape;
             return InkWell(
@@ -305,7 +308,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
                   borderRadius: BorderRadius.circular(6),
@@ -315,14 +318,14 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
                   ),
                 ),
                 child: Row(
+                  spacing: 0,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildShapeIcon(shape, isSelected),
-                    const SizedBox(width: 6),
                     Text(
                       _shapeLabel(shape),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w500,
                         color: isSelected ? Colors.white : Colors.grey[700],
                       ),
@@ -339,7 +342,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
 
   Widget _buildShapeIcon(MarkerShape shape, bool isSelected) {
     final color = isSelected ? Colors.white : Colors.grey[700];
-    const size = 14.0;
+    const size = 12.0;
 
     switch (shape) {
       case MarkerShape.circle:
@@ -439,76 +442,77 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: presetColors.map((color) {
-            final isSelected = _markerColor == color;
-            return InkWell(
-              onTap: () {
+          spacing: 5,
+          runSpacing: 5,
+          children: [
+            ...presetColors.map((color) {
+              final isSelected = _markerColor == color;
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _markerColor = color;
+                  });
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: isSelected ? Colors.black87 : Colors.grey.shade100,
+                      width: isSelected ? 0.5 : 0.2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: color == Colors.black ? Colors.white : Colors.white,
+                        )
+                      : null,
+                ),
+              );
+            }),
+            // Custom color picker button
+            InkWell(
+              onTap: () => _showCustomColorPicker(_markerColor, (color) {
                 setState(() {
                   _markerColor = color;
                 });
-              },
-              borderRadius: BorderRadius.circular(6),
+              }),
+              borderRadius: BorderRadius.circular(5),
               child: Container(
-                width: 32,
-                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
-                  ),
+                  color: Colors.grey.shade100,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(5),
                 ),
-                child: isSelected
-                    ? Icon(
-                        Icons.check,
-                        size: 16,
-                        color: color == Colors.black ? Colors.white : Colors.white,
-                      )
-                    : null,
+                child: Row(
+                  spacing: 5,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
+                    const Text(
+                      'Custom',
+                      style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                    ),
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: _markerColor,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 8),
-        // Custom color picker button
-        InkWell(
-          onTap: () => _showCustomColorPicker(_markerColor, (color) {
-            setState(() {
-              _markerColor = color;
-            });
-          }),
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(6),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.palette, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text(
-                  'Custom Color',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: _markerColor,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ],
     );
