@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:braven_charts/src/widgets/annotations/annotation_style.dart';
+import 'package:braven_charts/src/widgets/interactions/annotation_style_editor.dart';
 import 'package:flutter/material.dart';
 
 import '../annotations/text_annotation.dart';
@@ -37,12 +38,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
 
   AnnotationAnchor _anchor = AnnotationAnchor.topLeft;
 
-  // Styling options
-  double _fontSize = 14.0;
-  Color _textColor = Colors.black;
-  Color? _backgroundColor;
-  Color? _borderColor;
-  bool _showStyling = false;
+  // Current annotation style (managed by AnnotationStyleEditor)
+  late AnnotationStyle _currentStyle;
 
   @override
   void initState() {
@@ -55,17 +52,18 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
 
     if (annotation != null) {
       _anchor = annotation.anchor;
-      _backgroundColor = annotation.backgroundColor;
-      _borderColor = annotation.borderColor;
-
-      // Extract font size and color from style if available
-      final textStyle = annotation.style.textStyle;
-      if (textStyle.fontSize != null) {
-        _fontSize = textStyle.fontSize!;
-      }
-      if (textStyle.color != null) {
-        _textColor = textStyle.color!;
-      }
+      _currentStyle = annotation.style;
+    } else {
+      // Default style for new annotations
+      _currentStyle = const AnnotationStyle(
+        textStyle: TextStyle(
+          color: Colors.black,
+          fontSize: 14.0,
+        ),
+        backgroundColor: Colors.white,
+        borderColor: Colors.grey,
+        borderWidth: 1.0,
+      );
     }
   }
 
@@ -269,151 +267,16 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
   }
 
   Widget _buildStylingSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () {
-            setState(() {
-              _showStyling = !_showStyling;
-            });
-          },
-          borderRadius: BorderRadius.circular(6),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Icon(
-                  _showStyling ? Icons.expand_less : Icons.expand_more,
-                  size: 18,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Styling (optional)',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_showStyling) ...[
-          const SizedBox(height: 12),
-          // Font size slider
-          Row(
-            children: [
-              Text(
-                'Font Size',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-              const Spacer(),
-              Text(
-                '${_fontSize.toInt()}px',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
-              ),
-            ],
-          ),
-          Slider(
-            value: _fontSize,
-            min: 8,
-            max: 32,
-            divisions: 24,
-            onChanged: (value) {
-              setState(() {
-                _fontSize = value;
-              });
-            },
-          ),
-          const SizedBox(height: 8),
-          // Color pickers (simple version)
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildColorOption('Text', _textColor, (color) {
-                setState(() {
-                  _textColor = color ?? Colors.black;
-                });
-              }),
-              _buildColorOption('Background', _backgroundColor, (color) {
-                setState(() {
-                  _backgroundColor = color;
-                });
-              }, allowNull: true),
-              _buildColorOption('Border', _borderColor, (color) {
-                setState(() {
-                  _borderColor = color;
-                });
-              }, allowNull: true),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildColorOption(
-    String label,
-    Color? color,
-    void Function(Color?) onChanged, {
-    bool allowNull = false,
-  }) {
-    final presetColors = [
-      Colors.black,
-      Colors.white,
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      if (allowNull) null,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 4,
-          children: presetColors.map((presetColor) {
-            final isSelected = color == presetColor;
-
-            return InkWell(
-              onTap: () => onChanged(presetColor),
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: presetColor ?? Colors.grey.shade100,
-                  border: Border.all(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: presetColor == null
-                    ? Icon(Icons.clear, size: 14, color: Colors.grey[500])
-                    : isSelected
-                        ? Icon(
-                            Icons.check,
-                            size: 14,
-                            color: presetColor == Colors.white || presetColor == Colors.orange ? Colors.grey[800] : Colors.white,
-                          )
-                        : null,
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+    return AnnotationStyleEditor(
+      initialStyle: _currentStyle,
+      onStyleChanged: (newStyle) {
+        setState(() {
+          _currentStyle = newStyle;
+        });
+      },
+      showTextControls: true,
+      showBackgroundControls: true,
+      showBorderControls: true,
     );
   }
 
@@ -451,19 +314,18 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     print('   - Text: "$text"');
     print('   - Position (from widget.clickPosition): ${widget.clickPosition}');
     print('   - Anchor: $_anchor');
+    print('   - Style: textColor=${_currentStyle.textColor}, fontSize=${_currentStyle.fontSize}');
+    print('   - Background: ${_currentStyle.backgroundColor}');
+    print('   - Border: color=${_currentStyle.borderColor}, width=${_currentStyle.borderWidth}, radius=${_currentStyle.borderRadius}');
 
     final annotation = TextAnnotation(
       id: widget.annotation?.id ?? 'text_${DateTime.now().millisecondsSinceEpoch}',
       text: text,
       position: widget.clickPosition,
       anchor: _anchor,
-      backgroundColor: _backgroundColor,
-      style: AnnotationStyle(
-          textStyle: TextStyle(
-        color: _textColor,
-        fontSize: _fontSize,
-      )),
-      borderColor: _borderColor,
+      style: _currentStyle,
+      backgroundColor: _currentStyle.backgroundColor,
+      borderColor: _currentStyle.borderColor,
     );
 
     print('✅ [TextAnnotationDialog] Annotation created with position: ${annotation.position}');
