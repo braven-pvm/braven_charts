@@ -4,8 +4,10 @@
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../annotations/annotation_style.dart';
 import '../annotations/point_annotation.dart';
 import '../enums/marker_shape.dart';
+import 'annotation_style_editor.dart';
 
 /// Dialog for creating or editing PointAnnotations.
 ///
@@ -43,6 +45,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
   double _markerSize = 12.0;
   Color _markerColor = Colors.red;
   Offset _offset = Offset.zero;
+  AnnotationStyle _labelStyle = const AnnotationStyle();
 
   bool _showAdvanced = false;
 
@@ -60,6 +63,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       _markerSize = annotation.markerSize;
       _markerColor = annotation.markerColor;
       _offset = annotation.offset;
+      _labelStyle = annotation.style;
     }
   }
 
@@ -90,76 +94,87 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // Header with close button
-              Row(
-                children: [
-                  Icon(
-                    isEditMode ? Icons.edit : Icons.place,
-                    size: 20,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isEditMode ? 'Edit Point Annotation' : 'Add Point Annotation',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Data point info (read-only)
-              _buildDataPointInfo(),
-              const SizedBox(height: 20),
-
-              // Label field (optional)
-              _buildLabelField(),
-              const SizedBox(height: 20),
-
-              // Marker shape selector
-              _buildMarkerShapeSelector(),
-              const SizedBox(height: 20),
-
-              // Marker size slider
-              _buildMarkerSizeSlider(),
-              const SizedBox(height: 20),
-
-              // Marker color picker
-              _buildMarkerColorPicker(),
-              const SizedBox(height: 20),
-
-              // Advanced section (offset)
-              _buildAdvancedSection(),
-              const SizedBox(height: 24),
-
-              // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _handleSave,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                // Header with close button
+                Row(
+                  children: [
+                    Icon(
+                      isEditMode ? Icons.edit : Icons.place,
+                      size: 20,
+                      color: colorScheme.primary,
                     ),
-                    child: Text(isEditMode ? 'Update' : 'Add'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isEditMode ? 'Edit Point Annotation' : 'Add Point Annotation',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Data point info (read-only)
+                _buildDataPointInfo(),
+                const SizedBox(height: 20),
+
+                // Label field (optional)
+                _buildLabelField(),
+                const SizedBox(height: 20),
+
+                // Label styling (only shown when label is not empty)
+                AnnotationStyleEditor(
+                  initialStyle: _labelStyle,
+                  onStyleChanged: (style) {
+                    setState(() {
+                      _labelStyle = style;
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Marker shape selector
+                _buildMarkerShapeSelector(),
+                const SizedBox(height: 20),
+
+                // Marker size slider
+                _buildMarkerSizeSlider(),
+                const SizedBox(height: 20),
+
+                // Marker color picker
+                _buildMarkerColorPicker(),
+                const SizedBox(height: 20),
+
+                // Advanced section (offset)
+                _buildAdvancedSection(),
+                const SizedBox(height: 24),
+
+                // Action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _handleSave,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: Text(isEditMode ? 'Update' : 'Add'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -461,10 +476,10 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         // Custom color picker button
         InkWell(
           onTap: () => _showCustomColorPicker(_markerColor, (color) {
-                setState(() {
-                  _markerColor = color;
-                });
-              }),
+            setState(() {
+              _markerColor = color;
+            });
+          }),
           borderRadius: BorderRadius.circular(6),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -684,10 +699,12 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
     print('   - MarkerShape: $_markerShape');
     print('   - MarkerSize: $_markerSize');
     print('   - MarkerColor: $_markerColor');
+    print('   - Style: $_labelStyle');
 
     final annotation = PointAnnotation(
       id: widget.annotation?.id ?? 'point_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
+      style: _labelStyle,
       seriesId: widget.seriesId,
       dataPointIndex: widget.dataPointIndex,
       markerShape: _markerShape,
