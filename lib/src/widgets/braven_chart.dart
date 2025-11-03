@@ -2447,46 +2447,34 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
             }
           },
 
-          // Use scale gestures if zoom is enabled (scale is superset of pan)
-          // Otherwise use pan gestures if only pan is enabled
-          onScaleStart: (config.enableZoom || config.enablePan) && _zoomPanController != null
+          // Use scale gestures ONLY for pinch-to-zoom (multi-touch)
+          // Pan is handled separately via middle-mouse button in Listener widget above
+          onScaleStart: config.enableZoom && _zoomPanController != null
               ? (details) {
-                  // T030: Pause streaming on scale gesture (FR-004)
+                  // T030: Pause streaming on zoom gesture (FR-004)
                   _pauseStreaming();
 
-                  // Track initial state for gestures
+                  // Track initial state for zoom gestures
                 }
               : null,
 
-          onScaleUpdate: (config.enableZoom || config.enablePan) && _zoomPanController != null
+          onScaleUpdate: config.enableZoom && _zoomPanController != null
               ? (details) {
-                  // T043: Reset timer on continued zoom/pan gestures (FR-008)
-                  _resetAutoResumeTimer();
+                  // ONLY handle pinch-to-zoom here (multi-touch zoom)
+                  // Pan is handled separately via middle-mouse in Listener widget above
+                  
+                  // Handle pinch-to-zoom (when scale changes with multi-touch)
+                  if (details.scale != 1.0 && details.pointerCount >= 2) {
+                    // T043: Reset timer on continued zoom gestures (FR-008)
+                    _resetAutoResumeTimer();
 
-                  ZoomPanState newZoomPanState = _interactionStateNotifier.value.zoomPanState;
+                    ZoomPanState newZoomPanState = _zoomPanController!.zoom(_interactionStateNotifier.value.zoomPanState, zoomFactor: details.scale, focalPoint: details.focalPoint);
 
-                  // Handle pinch-to-zoom (when scale changes)
-                  if (config.enableZoom && details.scale != 1.0) {
-                    newZoomPanState = _zoomPanController!.zoom(newZoomPanState, zoomFactor: details.scale, focalPoint: details.focalPoint);
+                    // Update state
+                    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: newZoomPanState);
 
                     // Invoke zoom callback
                     config.onZoomChanged?.call(newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
-                  }
-
-                  // Handle pan (when delta changes but scale is 1.0)
-                  if (config.enablePan && details.focalPointDelta != Offset.zero) {
-                    newZoomPanState = _zoomPanController!.pan(newZoomPanState, details.focalPointDelta);
-
-                    // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
-                    newZoomPanState = _clampPanOffset(newZoomPanState);
-
-                    // Invoke pan callback
-                    config.onPanChanged?.call(newZoomPanState.panOffset);
-                  }
-
-                  // Update state if anything changed
-                  if (newZoomPanState != _interactionStateNotifier.value.zoomPanState) {
-                    _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: newZoomPanState);
 
                     // Invoke viewport callback
                     _invokeViewportCallback();
@@ -2494,9 +2482,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 }
               : null,
 
-          onScaleEnd: (config.enableZoom || config.enablePan) && _zoomPanController != null
+          onScaleEnd: config.enableZoom && _zoomPanController != null
               ? (details) {
-                  // Gesture ended - no cleanup needed
+                  // Zoom gesture ended - no cleanup needed
                 }
               : null,
 
