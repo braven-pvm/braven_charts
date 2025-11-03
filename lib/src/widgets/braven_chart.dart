@@ -5620,37 +5620,44 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     print('   - interactiveAnnotations: ${widget.interactiveAnnotations}');
     print('   - Should show handles: ${hasExplicitXRange && widget.interactiveAnnotations}');
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.purple, width: 2), // DEBUG: Purple border around entire widget
-      ),
-      child: MouseRegion(
-        cursor: _getCursor(),
-        child: Stack(
-          clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
-          children: [
-            // Main range container
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: widget.annotation.fillColor,
-                    border: widget.annotation.borderColor != null
-                        ? Border.all(
-                            color: widget.annotation.borderColor!,
-                            width: widget.annotation.style.borderWidth,
-                          )
-                        : null,
-                  ),
-                  // Render label if provided
-                  child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
+    return MouseRegion(
+      cursor: _getCursor(),
+      child: Stack(
+        clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
+        children: [
+          // Main range container
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.annotation.fillColor,
+                  border: widget.annotation.borderColor != null
+                      ? Border.all(
+                          color: widget.annotation.borderColor!,
+                          width: widget.annotation.style.borderWidth,
+                        )
+                      : null,
+                ),
+                // Render label if provided
+                child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
+              ),
+            ),
+          ),
+
+          // DEBUG: Purple border overlay to visualize widget bounds (on top of main container)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.purple, width: 2),
                 ),
               ),
             ),
+          ),
 
-            // Left resize handle (only if explicit X range and interactive)
-            if (hasExplicitXRange && widget.interactiveAnnotations)
+          // Left resize handle (only if explicit X range and interactive) - MUST be after main container in z-order
+          if (hasExplicitXRange && widget.interactiveAnnotations)
               Positioned(
                 left: 0,
                 top: 0,
