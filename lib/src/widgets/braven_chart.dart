@@ -5620,133 +5620,138 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     print('   - interactiveAnnotations: ${widget.interactiveAnnotations}');
     print('   - Should show handles: ${hasExplicitXRange && widget.interactiveAnnotations}');
 
-    return MouseRegion(
-      cursor: _getCursor(),
-      child: Stack(
-        clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
-        children: [
-          // Main range container
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: widget.annotation.fillColor,
-                  border: widget.annotation.borderColor != null
-                      ? Border.all(
-                          color: widget.annotation.borderColor!,
-                          width: widget.annotation.style.borderWidth,
-                        )
-                      : null,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.purple, width: 2), // DEBUG: Purple border around entire widget
+      ),
+      child: MouseRegion(
+        cursor: _getCursor(),
+        child: Stack(
+          clipBehavior: Clip.none, // Allow handles to extend beyond bounds if needed
+          children: [
+            // Main range container
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: widget.annotation.fillColor,
+                    border: widget.annotation.borderColor != null
+                        ? Border.all(
+                            color: widget.annotation.borderColor!,
+                            width: widget.annotation.style.borderWidth,
+                          )
+                        : null,
+                  ),
+                  // Render label if provided
+                  child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
                 ),
-                // Render label if provided
-                child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
               ),
             ),
-          ),
 
-          // Left resize handle (only if explicit X range and interactive)
-          if (hasExplicitXRange && widget.interactiveAnnotations)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) {
-                  print('🖱️ LEFT HANDLE: Mouse ENTER');
-                  setState(() => _hoveringLeftHandle = true);
-                },
-                onExit: (_) {
-                  print('🖱️ LEFT HANDLE: Mouse EXIT');
-                  setState(() => _hoveringLeftHandle = false);
-                },
-                child: Listener(
-                  onPointerDown: (event) {
-                    print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                    _startDrag('left', event.localPosition.dx);
+            // Left resize handle (only if explicit X range and interactive)
+            if (hasExplicitXRange && widget.interactiveAnnotations)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: _handleSize,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeLeftRight,
+                  onEnter: (_) {
+                    print('🖱️ LEFT HANDLE: Mouse ENTER');
+                    setState(() => _hoveringLeftHandle = true);
                   },
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'left') {
-                      print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                      _updateDrag(event.localPosition.dx, 'left');
-                    }
+                  onExit: (_) {
+                    print('🖱️ LEFT HANDLE: Mouse EXIT');
+                    setState(() => _hoveringLeftHandle = false);
                   },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'left') {
-                      print('👆 LEFT HANDLE: Pointer UP');
-                      _endDrag();
-                    }
-                  },
-                  child: Container(
-                    color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
-                    child: Center(
-                      child: Container(
-                        width: _handleIndicatorWidth,
-                        height: double.infinity, // Fill the full height
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
-                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                  child: Listener(
+                    onPointerDown: (event) {
+                      print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                      _startDrag('left', event.localPosition.dx);
+                    },
+                    onPointerMove: (event) {
+                      if (_draggingEdge == 'left') {
+                        print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                        _updateDrag(event.localPosition.dx, 'left');
+                      }
+                    },
+                    onPointerUp: (event) {
+                      if (_draggingEdge == 'left') {
+                        print('👆 LEFT HANDLE: Pointer UP');
+                        _endDrag();
+                      }
+                    },
+                    child: Container(
+                      color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
+                      child: Center(
+                        child: Container(
+                          width: _handleIndicatorWidth,
+                          height: double.infinity, // Fill the full height
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
+                            borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          // Right resize handle (only if explicit X range and interactive)
-          if (hasExplicitXRange && widget.interactiveAnnotations)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) {
-                  print('🖱️ RIGHT HANDLE: Mouse ENTER');
-                  setState(() => _hoveringRightHandle = true);
-                },
-                onExit: (_) {
-                  print('🖱️ RIGHT HANDLE: Mouse EXIT');
-                  setState(() => _hoveringRightHandle = false);
-                },
-                child: Listener(
-                  onPointerDown: (event) {
-                    print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                    _startDrag('right', event.localPosition.dx);
+            // Right resize handle (only if explicit X range and interactive)
+            if (hasExplicitXRange && widget.interactiveAnnotations)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: _handleSize,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeLeftRight,
+                  onEnter: (_) {
+                    print('🖱️ RIGHT HANDLE: Mouse ENTER');
+                    setState(() => _hoveringRightHandle = true);
                   },
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'right') {
-                      print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                      _updateDrag(event.localPosition.dx, 'right');
-                    }
+                  onExit: (_) {
+                    print('🖱️ RIGHT HANDLE: Mouse EXIT');
+                    setState(() => _hoveringRightHandle = false);
                   },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'right') {
-                      print('👆 RIGHT HANDLE: Pointer UP');
-                      _endDrag();
-                    }
-                  },
-                  child: Container(
-                    color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
-                    child: Center(
-                      child: Container(
-                        width: _handleIndicatorWidth,
-                        height: double.infinity, // Fill the full height
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
-                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                  child: Listener(
+                    onPointerDown: (event) {
+                      print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                      _startDrag('right', event.localPosition.dx);
+                    },
+                    onPointerMove: (event) {
+                      if (_draggingEdge == 'right') {
+                        print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                        _updateDrag(event.localPosition.dx, 'right');
+                      }
+                    },
+                    onPointerUp: (event) {
+                      if (_draggingEdge == 'right') {
+                        print('👆 RIGHT HANDLE: Pointer UP');
+                        _endDrag();
+                      }
+                    },
+                    child: Container(
+                      color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
+                      child: Center(
+                        child: Container(
+                          width: _handleIndicatorWidth,
+                          height: double.infinity, // Fill the full height
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
+                            borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -5774,7 +5779,7 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   /// Updates the range based on current drag position
   void _updateDrag(double currentX, String edge) {
     print('📍 _updateDrag called: currentX=$currentX, edge=$edge');
-    
+
     if (widget.annotation.startX == null || widget.annotation.endX == null) {
       print('   ❌ Skipped: infinite range');
       return; // Can't resize infinite ranges
@@ -5820,7 +5825,7 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     );
 
     print('   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX');
-    
+
     // Notify parent
     widget.onAnnotationUpdate?.call(updatedAnnotation);
   }
