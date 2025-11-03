@@ -2752,21 +2752,67 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     final availableSeriesIds = _getAllSeries().map((s) => s.id).toList();
     if (availableSeriesIds.isEmpty) return;
 
-    // Check if right-click hit an existing annotation (use adjusted position!)
-    final clickedAnnotation = _findAnnotationAtPosition(adjustedLocalPosition);
-    print('   - clickedAnnotation: ${clickedAnnotation?.id ?? "null"}');
+    // Check if right-click hit an existing text annotation (use adjusted position!)
+    final clickedTextAnnotation = _findAnnotationAtPosition(adjustedLocalPosition);
+    print('   - clickedTextAnnotation: ${clickedTextAnnotation?.id ?? "null"}');
 
-    // Show context menu
+    // Check if right-click hit an existing point annotation
+    final clickedPointAnnotationData = _findPointAnnotationAtPosition(adjustedLocalPosition);
+    print('   - clickedPointAnnotation: ${clickedPointAnnotationData?['annotation'].id ?? "null"}');
+
+    // Detect nearest data point for context determination
+    final nearestPoint = _findNearestDataPoint(details.localPosition);
+    print('   - nearestPoint seriesId: ${nearestPoint?['seriesId'] ?? "null"}');
+
+    // Determine context type and data point info
+    AnnotationContextType contextType;
+    String? targetSeriesId;
+    int? targetDataPointIndex;
+
+    // If click is near a data point (within 10px), use point annotation context
+    if (nearestPoint != null) {
+      final dx = details.localPosition.dx - nearestPoint['screenX'];
+      final dy = details.localPosition.dy - nearestPoint['screenY'];
+      final distance = sqrt(dx * dx + dy * dy);
+
+      if (distance < 10.0) {
+        contextType = AnnotationContextType.pointAnnotation;
+        targetSeriesId = nearestPoint['seriesId'] as String;
+        
+        // Find the data point index in the series
+        final series = _getAllSeries().firstWhere((s) => s.id == targetSeriesId);
+        final pointX = nearestPoint['x'] as double;
+        final pointY = nearestPoint['y'] as double;
+        
+        targetDataPointIndex = series.points.indexWhere(
+          (p) => p.x == pointX && p.y == pointY,
+        );
+        
+        print('   - POINT CONTEXT: seriesId=$targetSeriesId, index=$targetDataPointIndex');
+      } else {
+        contextType = AnnotationContextType.textAnnotation;
+        print('   - TEXT CONTEXT: point too far ($distance px)');
+      }
+    } else {
+      contextType = AnnotationContextType.textAnnotation;
+      print('   - TEXT CONTEXT: no nearby point');
+    }
+
+    // Show context-sensitive menu
     AnnotationContextMenu.show(
       context: context,
       position: details.globalPosition,
-      localPosition: adjustedLocalPosition, // Pass chart-relative position
-      existingAnnotation: clickedAnnotation,
+      localPosition: adjustedLocalPosition,
+      contextType: contextType,
+      existingTextAnnotation: clickedTextAnnotation,
+      existingPointAnnotation: clickedPointAnnotationData?['annotation'] as PointAnnotation?,
+      seriesId: targetSeriesId,
+      dataPointIndex: targetDataPointIndex,
       availableSeriesIds: availableSeriesIds,
-      onSave: (annotation) {
+      onSaveTextAnnotation: (annotation) {
         final controller = _getController();
         if (controller != null) {
-          if (clickedAnnotation != null) {
+          if (clickedTextAnnotation != null) {
             // Update existing
             controller.updateAnnotation(annotation.id, annotation);
           } else {
@@ -2775,11 +2821,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           }
         }
       },
-      onDelete: (annotationId) {
+      onSavePointAnnotation: (annotation) {
+        _addPointAnnotationToSeries(annotation);
+      },
+      onDeleteTextAnnotation: (annotationId) {
         final controller = _getController();
         if (controller != null) {
           controller.removeAnnotation(annotationId);
         }
+      },
+      onDeletePointAnnotation: (seriesId, annotationId) {
+        _removePointAnnotationFromSeries(seriesId, annotationId);
       },
     );
   }
@@ -2850,6 +2902,90 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       case AnnotationAnchor.bottomRight:
         return const Offset(-1, -1);
     }
+  }
+
+  /// Finds a PointAnnotation at the given screen position
+  Map<String, dynamic>? _findPointAnnotationAtPosition(Offset position) {
+    print('🎯 [BravenChart] _findPointAnnotationAtPosition called:');
+    print('   - position: $position');
+
+    if (_cachedChartRect == null) return null;
+
+    final chartRect = _cachedChartRect!;
+    final bounds = _calculateDataBounds(_getAllSeries(), chartRect: chartRect);
+
+    for (final series in _getAllSeries()) {
+      for (final annotation in series.annotations.whereType<PointAnnotation>()) {
+        // Get the data point this annotation is attached to
+        if (annotation.dataPointIndex >= 0 && annotation.dataPointIndex < series.points.length) {
+          final point = series.points[annotation.dataPointIndex];
+
+          // Transform to screen coordinates
+          final screenPoint = _dataToScreenPoint(point, chartRect, bounds);
+
+          // Apply annotation offset
+          final annotationScreenPos = screenPoint + annotation.offset;
+
+          // Hit test with marker size as radius
+          final hitRadius = annotation.markerSize + 4.0; // Add 4px padding for easier clicking
+          final dx = position.dx - annotationScreenPos.dx;
+          final dy = position.dy - annotationScreenPos.dy;
+          final distance = sqrt(dx * dx + dy * dy);
+
+          if (distance <= hitRadius) {
+            print('   ✅ HIT! Point annotation on series ${series.id}');
+            return {
+              'annotation': annotation,
+              'seriesId': series.id,
+            };
+          }
+        }
+      }
+    }
+
+    print('   ❌ No point annotation hit');
+    return null;
+  }
+
+  /// Adds a PointAnnotation to the specified series
+  void _addPointAnnotationToSeries(PointAnnotation annotation) {
+    print('📍 [BravenChart] _addPointAnnotationToSeries:');
+    print('   - seriesId: ${annotation.seriesId}');
+    print('   - dataPointIndex: ${annotation.dataPointIndex}');
+
+    setState(() {
+      final series = _getAllSeries().firstWhere(
+        (s) => s.id == annotation.seriesId,
+        orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
+      );
+
+      // Add or update annotation
+      final existingIndex = series.annotations.indexWhere((a) => a.id == annotation.id);
+      if (existingIndex >= 0) {
+        series.annotations[existingIndex] = annotation;
+        print('   ✅ Updated existing annotation');
+      } else {
+        series.annotations.add(annotation);
+        print('   ✅ Added new annotation');
+      }
+    });
+  }
+
+  /// Removes a PointAnnotation from the specified series
+  void _removePointAnnotationFromSeries(String seriesId, String annotationId) {
+    print('🗑️ [BravenChart] _removePointAnnotationFromSeries:');
+    print('   - seriesId: $seriesId');
+    print('   - annotationId: $annotationId');
+
+    setState(() {
+      final series = _getAllSeries().firstWhere(
+        (s) => s.id == seriesId,
+        orElse: () => throw StateError('Series $seriesId not found'),
+      );
+
+      series.annotations.removeWhere((a) => a.id == annotationId);
+      print('   ✅ Removed annotation');
+    });
   }
 
   /// Finds the nearest data point to a screen position.
