@@ -5222,9 +5222,7 @@ class _AnnotationOverlay extends StatelessWidget {
         clampedHeight: clampedHeight,
         interactiveAnnotations: interactiveAnnotations,
         onAnnotationTap: onAnnotationTap,
-        onAnnotationUpdate: onAnnotationUpdate != null 
-          ? (updated) => onAnnotationUpdate!(updated)
-          : null,
+        onAnnotationUpdate: onAnnotationUpdate != null ? (updated) => onAnnotationUpdate!(updated) : null,
         dataToScreenPoint: dataToScreenPoint,
       ),
     );
@@ -5596,6 +5594,15 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   /// Whether mouse is hovering over right handle
   bool _hoveringRightHandle = false;
 
+  /// Position where drag started (in local coordinates)
+  double? _dragStartX;
+
+  /// Original startX value when drag began
+  double? _originalStartX;
+
+  /// Original endX value when drag began
+  double? _originalEndX;
+
   /// Size of the resize handles (width of the draggable area)
   static const double _handleSize = 8.0;
 
@@ -5614,9 +5621,7 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
           // Main range container
           Positioned.fill(
             child: GestureDetector(
-              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null
-                  ? () => widget.onAnnotationTap!(widget.annotation)
-                  : null,
+              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
               child: Container(
                 decoration: BoxDecoration(
                   color: widget.annotation.fillColor,
@@ -5628,9 +5633,7 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                       : null,
                 ),
                 // Render label if provided
-                child: widget.annotation.label != null
-                    ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight)
-                    : null,
+                child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
               ),
             ),
           ),
@@ -5643,21 +5646,30 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               bottom: 0,
               width: _handleSize,
               child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
                 onEnter: (_) => setState(() => _hoveringLeftHandle = true),
                 onExit: (_) => setState(() => _hoveringLeftHandle = false),
-                child: GestureDetector(
-                  onPanStart: (_) => _startDrag('left'),
-                  onPanUpdate: (details) => _updateDrag(details.delta.dx, 'left'),
-                  onPanEnd: (_) => _endDrag(),
+                child: Listener(
+                  onPointerDown: (event) => _startDrag('left', event.localPosition.dx),
+                  onPointerMove: (event) {
+                    if (_draggingEdge == 'left') {
+                      _updateDrag(event.localPosition.dx, 'left');
+                    }
+                  },
+                  onPointerUp: (event) {
+                    if (_draggingEdge == 'left') {
+                      _endDrag();
+                    }
+                  },
                   child: Container(
                     color: Colors.transparent, // Invisible hit area
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
                         decoration: BoxDecoration(
-                          color: _hoveringLeftHandle || _draggingEdge == 'left'
-                              ? Colors.blue.withOpacity(0.8)
-                              : Colors.blue.withOpacity(0.4),
+                          color: _hoveringLeftHandle || _draggingEdge == 'left' 
+                            ? Colors.blue.withOpacity(0.8) 
+                            : Colors.blue.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
@@ -5675,21 +5687,30 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               bottom: 0,
               width: _handleSize,
               child: MouseRegion(
+                cursor: SystemMouseCursors.resizeLeftRight,
                 onEnter: (_) => setState(() => _hoveringRightHandle = true),
                 onExit: (_) => setState(() => _hoveringRightHandle = false),
-                child: GestureDetector(
-                  onPanStart: (_) => _startDrag('right'),
-                  onPanUpdate: (details) => _updateDrag(details.delta.dx, 'right'),
-                  onPanEnd: (_) => _endDrag(),
+                child: Listener(
+                  onPointerDown: (event) => _startDrag('right', event.localPosition.dx),
+                  onPointerMove: (event) {
+                    if (_draggingEdge == 'right') {
+                      _updateDrag(event.localPosition.dx, 'right');
+                    }
+                  },
+                  onPointerUp: (event) {
+                    if (_draggingEdge == 'right') {
+                      _endDrag();
+                    }
+                  },
                   child: Container(
                     color: Colors.transparent, // Invisible hit area
                     child: Center(
                       child: Container(
                         width: _handleIndicatorWidth,
                         decoration: BoxDecoration(
-                          color: _hoveringRightHandle || _draggingEdge == 'right'
-                              ? Colors.blue.withOpacity(0.8)
-                              : Colors.blue.withOpacity(0.4),
+                          color: _hoveringRightHandle || _draggingEdge == 'right' 
+                            ? Colors.blue.withOpacity(0.8) 
+                            : Colors.blue.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
                         ),
                       ),
@@ -5712,17 +5733,27 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   }
 
   /// Starts dragging an edge
-  void _startDrag(String edge) {
+  void _startDrag(String edge, double localX) {
     setState(() {
       _draggingEdge = edge;
+      _dragStartX = localX;
+      _originalStartX = widget.annotation.startX;
+      _originalEndX = widget.annotation.endX;
     });
   }
 
-  /// Updates the range based on drag delta
-  void _updateDrag(double deltaX, String edge) {
+  /// Updates the range based on current drag position
+  void _updateDrag(double currentX, String edge) {
     if (widget.annotation.startX == null || widget.annotation.endX == null) {
       return; // Can't resize infinite ranges
     }
+
+    if (_dragStartX == null || _originalStartX == null || _originalEndX == null) {
+      return; // Drag not properly initialized
+    }
+
+    // Calculate the delta from drag start
+    final deltaX = currentX - _dragStartX!;
 
     // Convert screen delta to data coordinate delta
     // Screen X increases left-to-right, data X increases left-to-right (same direction)
@@ -5732,8 +5763,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     final dataDelta = deltaX * dataPerPixel;
 
     // Calculate new range based on which edge is being dragged
-    double newStartX = widget.annotation.startX!;
-    double newEndX = widget.annotation.endX!;
+    double newStartX = _originalStartX!;
+    double newEndX = _originalEndX!;
 
     if (edge == 'left') {
       newStartX += dataDelta;
@@ -5763,6 +5794,9 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   void _endDrag() {
     setState(() {
       _draggingEdge = null;
+      _dragStartX = null;
+      _originalStartX = null;
+      _originalEndX = null;
     });
   }
 
@@ -5804,9 +5838,7 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
           decoration: BoxDecoration(
             color: annotation.style.backgroundColor ?? Colors.white.withOpacity(0.9),
             borderRadius: annotation.style.borderRadius ?? BorderRadius.circular(4),
-            border: annotation.style.borderColor != null
-                ? Border.all(color: annotation.style.borderColor!, width: 1)
-                : null,
+            border: annotation.style.borderColor != null ? Border.all(color: annotation.style.borderColor!, width: 1) : null,
           ),
           child: Text(annotation.label!, style: annotation.style.textStyle),
         ),
