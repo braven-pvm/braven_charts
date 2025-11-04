@@ -26,6 +26,7 @@ class RangeAnnotation extends ChartAnnotation {
   /// The [fillColor] creates a filled rectangle within the range.
   /// The [borderColor] draws a border around the range.
   /// The [labelPosition] determines where the label text appears.
+  /// The [snapToValue] enables snapping to nearest data point values when dragging.
   ///
   /// Throws [AssertionError] if startX >= endX or startY >= endY when both are provided.
   RangeAnnotation({
@@ -35,6 +36,7 @@ class RangeAnnotation extends ChartAnnotation {
     super.allowDragging,
     super.allowEditing,
     super.zIndex,
+    super.snapToValue,
     this.startX,
     this.endX,
     this.startY,
@@ -96,6 +98,7 @@ class RangeAnnotation extends ChartAnnotation {
     bool? allowDragging,
     bool? allowEditing,
     int? zIndex,
+    bool? snapToValue,
     double? startX,
     double? endX,
     double? startY,
@@ -111,6 +114,7 @@ class RangeAnnotation extends ChartAnnotation {
       allowDragging: allowDragging ?? this.allowDragging,
       allowEditing: allowEditing ?? this.allowEditing,
       zIndex: zIndex ?? this.zIndex,
+      snapToValue: snapToValue ?? this.snapToValue,
       startX: startX ?? this.startX,
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
@@ -131,6 +135,7 @@ class RangeAnnotation extends ChartAnnotation {
         other.allowDragging == allowDragging &&
         other.allowEditing == allowEditing &&
         other.zIndex == zIndex &&
+        other.snapToValue == snapToValue &&
         other.startX == startX &&
         other.endX == endX &&
         other.startY == startY &&
@@ -148,6 +153,7 @@ class RangeAnnotation extends ChartAnnotation {
         allowDragging,
         allowEditing,
         zIndex,
+        snapToValue,
         startX,
         endX,
         startY,

@@ -24,6 +24,7 @@ abstract class ChartAnnotation {
   /// The [allowDragging] flag enables interactive repositioning.
   /// The [allowEditing] flag enables interactive editing.
   /// The [zIndex] determines the rendering order (higher values render on top).
+  /// The [snapToValue] enables snapping to nearest data point values when dragging.
   ChartAnnotation({
     String? id,
     this.label,
@@ -31,6 +32,7 @@ abstract class ChartAnnotation {
     this.allowDragging = false,
     this.allowEditing = false,
     this.zIndex = 0,
+    this.snapToValue = false,
   }) : id = id ?? 'annotation_${_annotationIdCounter++}';
 
   /// Unique identifier for this annotation.
@@ -66,6 +68,24 @@ abstract class ChartAnnotation {
   /// annotations with lower values.
   final int zIndex;
 
+  /// Whether to snap annotation values to nearest data point values when dragging.
+  ///
+  /// When true, dragging the annotation will snap its position to the nearest
+  /// actual data point values on the chart axes. This is useful for range
+  /// annotations that should align with specific data values rather than
+  /// arbitrary positions.
+  ///
+  /// Example:
+  /// ```dart
+  /// RangeAnnotation(
+  ///   startX: 2.0,
+  ///   endX: 5.0,
+  ///   allowDragging: true,
+  ///   snapToValue: true,  // Snap to integer x-values when dragging
+  /// )
+  /// ```
+  final bool snapToValue;
+
   /// Creates a copy of this annotation.
   ///
   /// Subclasses must implement this method to support annotation updates.
@@ -80,7 +100,8 @@ abstract class ChartAnnotation {
         other.style == style &&
         other.allowDragging == allowDragging &&
         other.allowEditing == allowEditing &&
-        other.zIndex == zIndex;
+        other.zIndex == zIndex &&
+        other.snapToValue == snapToValue;
   }
 
   @override
@@ -91,5 +112,6 @@ abstract class ChartAnnotation {
         allowDragging,
         allowEditing,
         zIndex,
+        snapToValue,
       );
 }
