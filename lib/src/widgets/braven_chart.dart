@@ -1894,11 +1894,22 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 onAnnotationTap: widget.onAnnotationTap,
                 onAnnotationDragged: widget.onAnnotationDragged,
                 onAnnotationUpdate: (updatedAnnotation) {
-                  // Update the annotation in the controller
+                  // Update the annotation in the controller (if it exists there)
                   final controller = _getController();
-                  if (controller != null) {
+                  if (controller != null && controller.getAnnotation(updatedAnnotation.id) != null) {
                     controller.updateAnnotation(updatedAnnotation.id, updatedAnnotation);
                   }
+
+                  // ALSO update series-level annotations (FIX: handle both locations)
+                  setState(() {
+                    for (final series in widget.series) {
+                      final index = series.annotations.indexWhere((a) => a.id == updatedAnnotation.id);
+                      if (index != -1) {
+                        series.annotations[index] = updatedAnnotation;
+                        break; // Found and updated, no need to check other series
+                      }
+                    }
+                  });
                 },
                 series: _getAllSeries(),
                 chartRect: _cachedChartRect,
@@ -2290,6 +2301,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
         // Wrap in MouseRegion for hover detection
         interactiveWidget = MouseRegion(
+          opaque: false, // Allow child MouseRegions (annotation handles) to receive events
           onEnter: (_) {
             // Mouse entered chart area - request focus for keyboard interaction
             if (config.keyboard.enabled && !_focusNode.hasFocus) {
@@ -5687,36 +5699,36 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                       setState(() => _hoveringLeftHandle = false);
                     },
                     child: Listener(
-                  onPointerDown: (event) {
-                    print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                    _startDrag('left', event.localPosition.dx);
-                  },
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'left') {
-                      print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                      _updateDrag(event.localPosition.dx, 'left');
-                    }
-                  },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'left') {
-                      print('👆 LEFT HANDLE: Pointer UP');
-                      _endDrag();
-                    }
-                  },
-                  child: Container(
-                    color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
-                    child: Center(
+                      onPointerDown: (event) {
+                        print('👇 LEFT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                        _startDrag('left', event.localPosition.dx);
+                      },
+                      onPointerMove: (event) {
+                        if (_draggingEdge == 'left') {
+                          print('👆 LEFT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                          _updateDrag(event.localPosition.dx, 'left');
+                        }
+                      },
+                      onPointerUp: (event) {
+                        if (_draggingEdge == 'left') {
+                          print('👆 LEFT HANDLE: Pointer UP');
+                          _endDrag();
+                        }
+                      },
                       child: Container(
-                        width: _handleIndicatorWidth,
-                        height: double.infinity, // Fill the full height
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
-                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                        color: Colors.red.withOpacity(0.3), // DEBUG: Changed from transparent to red for visibility
+                        child: Center(
+                          child: Container(
+                            width: _handleIndicatorWidth,
+                            height: double.infinity, // Fill the full height
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.9), // DEBUG: Changed from blue to red for visibility
+                              borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
                   );
                 },
               ),
@@ -5743,36 +5755,36 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                       setState(() => _hoveringRightHandle = false);
                     },
                     child: Listener(
-                  onPointerDown: (event) {
-                    print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
-                    _startDrag('right', event.localPosition.dx);
-                  },
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'right') {
-                      print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
-                      _updateDrag(event.localPosition.dx, 'right');
-                    }
-                  },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'right') {
-                      print('👆 RIGHT HANDLE: Pointer UP');
-                      _endDrag();
-                    }
-                  },
-                  child: Container(
-                    color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
-                    child: Center(
+                      onPointerDown: (event) {
+                        print('👇 RIGHT HANDLE: Pointer DOWN - button: ${event.buttons}, position: ${event.localPosition}');
+                        _startDrag('right', event.localPosition.dx);
+                      },
+                      onPointerMove: (event) {
+                        if (_draggingEdge == 'right') {
+                          print('👆 RIGHT HANDLE: Pointer MOVE - dragging, position: ${event.localPosition.dx}');
+                          _updateDrag(event.localPosition.dx, 'right');
+                        }
+                      },
+                      onPointerUp: (event) {
+                        if (_draggingEdge == 'right') {
+                          print('👆 RIGHT HANDLE: Pointer UP');
+                          _endDrag();
+                        }
+                      },
                       child: Container(
-                        width: _handleIndicatorWidth,
-                        height: double.infinity, // Fill the full height
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
-                          borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                        color: Colors.green.withOpacity(0.3), // DEBUG: Changed from transparent to green for visibility
+                        child: Center(
+                          child: Container(
+                            width: _handleIndicatorWidth,
+                            height: double.infinity, // Fill the full height
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.9), // DEBUG: Changed from blue to green for visibility
+                              borderRadius: BorderRadius.circular(_handleIndicatorWidth / 2),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
                   );
                 },
               ),
