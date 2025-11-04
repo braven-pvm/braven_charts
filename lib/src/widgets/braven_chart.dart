@@ -771,7 +771,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   final FocusNode _focusNode = FocusNode();
 
   /// Tracks if any annotation is currently being dragged (for cursor management).
-  bool _isAnnotationDragging = false;
+  /// Tracks if any annotation is currently being dragged (for cursor management).
+  String? _annotationDraggingEdge; // 'left', 'right', 'top', 'bottom', or null
 
   /// Animation controller for smooth zoom transitions.
   AnimationController? _zoomAnimationController;
@@ -1914,9 +1915,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     }
                   });
                 },
-                onDragStateChanged: (isDragging) {
+                onDragStateChanged: (edge) {
                   setState(() {
-                    _isAnnotationDragging = isDragging;
+                    _annotationDraggingEdge = edge;
                   });
                 },
                 series: _getAllSeries(),
@@ -2170,8 +2171,16 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     }
 
     // Wrap entire chart in MouseRegion to maintain resize cursor during annotation drag
+    // Choose cursor based on which edge is being dragged
+    MouseCursor cursor = MouseCursor.defer;
+    if (_annotationDraggingEdge == 'left' || _annotationDraggingEdge == 'right') {
+      cursor = SystemMouseCursors.resizeLeftRight;
+    } else if (_annotationDraggingEdge == 'top' || _annotationDraggingEdge == 'bottom') {
+      cursor = SystemMouseCursors.resizeUpDown;
+    }
+
     return MouseRegion(
-      cursor: _isAnnotationDragging ? SystemMouseCursors.resizeLeftRight : MouseCursor.defer,
+      cursor: cursor,
       child: chartWidget,
     );
   }
@@ -4998,7 +5007,7 @@ class _AnnotationOverlay extends StatelessWidget {
   final Offset titleOffset;
   final ZoomPanState zoomPanState;
   final Offset Function(ChartDataPoint point, Rect chartRect, _DataBounds bounds) dataToScreenPoint;
-  final void Function(bool isDragging)? onDragStateChanged;
+  final void Function(String? edge)? onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
 
   @override
   Widget build(BuildContext context) {
@@ -5608,60 +5617,71 @@ class _RangeAnnotationWidget extends StatefulWidget {
   final void Function(ChartAnnotation)? onAnnotationTap;
   final void Function(RangeAnnotation)? onAnnotationUpdate;
   final Offset Function(ChartDataPoint, Rect, _DataBounds) dataToScreenPoint;
-  final void Function(bool isDragging)? onDragStateChanged;
+  final void Function(String? edge)? onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
 
   @override
   State<_RangeAnnotationWidget> createState() => _RangeAnnotationWidgetState();
 }
 
 class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
-  /// Which edge is being dragged (null = none, 'left' = left edge, 'right' = right edge)
+  /// Which edge is being dragged (null = none, 'left'/'right' for X-axis, 'top'/'bottom' for Y-axis)
   String? _draggingEdge;
 
-  /// Whether mouse is hovering over left handle
+  /// Whether mouse is hovering over left handle (X-axis)
   bool _hoveringLeftHandle = false;
 
-  /// Whether mouse is hovering over right handle
+  /// Whether mouse is hovering over right handle (X-axis)
   bool _hoveringRightHandle = false;
+
+  /// Whether mouse is hovering over top handle (Y-axis)
+  bool _hoveringTopHandle = false;
+
+  /// Whether mouse is hovering over bottom handle (Y-axis)
+  bool _hoveringBottomHandle = false;
 
   /// Position where drag started (in local coordinates)
   double? _dragStartX;
+  double? _dragStartY;
 
-  /// Original startX value when drag began
+  /// Original values when drag began
   double? _originalStartX;
-
-  /// Original endX value when drag began
   double? _originalEndX;
+  double? _originalStartY;
+  double? _originalEndY;
 
   /// Size of the resize handles (width of the draggable hit area)
   static const double _handleHitWidth = 20.0;
 
-  /// Extended mouse region size (to maintain cursor during drag)
-  static const double _extendedMouseRegionSize = 10000.0;
-
   @override
   Widget build(BuildContext context) {
-    // Only show handles if annotation has explicit X range (not infinite)
+    // Check which type of range this is
     final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
+    final hasExplicitYRange = widget.annotation.startY != null && widget.annotation.endY != null;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         // Main range container with custom border drawing
+        // CRITICAL: Wrap GestureDetector/CustomPaint in IgnorePointer so visual elements don't block hit zones from other annotations
         Positioned.fill(
-          child: GestureDetector(
-            onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
-            child: CustomPaint(
-              painter: _RangeAnnotationPainter(
-                fillColor: widget.annotation.fillColor,
-                borderColor: widget.annotation.borderColor,
-                borderWidth: widget.annotation.style.borderWidth,
-                leftBorderHover: _hoveringLeftHandle || _draggingEdge == 'left',
-                rightBorderHover: _hoveringRightHandle || _draggingEdge == 'right',
-                hasExplicitXRange: hasExplicitXRange,
-                isInteractive: widget.interactiveAnnotations,
+          child: IgnorePointer(
+            child: GestureDetector(
+              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
+              child: CustomPaint(
+                painter: _RangeAnnotationPainter(
+                  fillColor: widget.annotation.fillColor,
+                  borderColor: widget.annotation.borderColor,
+                  borderWidth: widget.annotation.style.borderWidth,
+                  leftBorderHover: _hoveringLeftHandle || _draggingEdge == 'left',
+                  rightBorderHover: _hoveringRightHandle || _draggingEdge == 'right',
+                  topBorderHover: _hoveringTopHandle || _draggingEdge == 'top',
+                  bottomBorderHover: _hoveringBottomHandle || _draggingEdge == 'bottom',
+                  hasExplicitXRange: hasExplicitXRange,
+                  hasExplicitYRange: hasExplicitYRange,
+                  isInteractive: widget.interactiveAnnotations,
+                ),
+                child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
               ),
-              child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
             ),
           ),
         ),
@@ -5689,11 +5709,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
                   print('🎯 Left handle pointer down');
-                  _startDrag('left', event.localPosition.dx);
+                  _startDrag('left', event.localPosition.dx, null);
                 },
                 onPointerMove: (event) {
                   if (_draggingEdge == 'left') {
-                    _updateDrag(event.localPosition.dx, 'left');
+                    _updateDrag(event.localPosition.dx, null, 'left');
                   }
                 },
                 onPointerUp: (event) {
@@ -5729,11 +5749,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
                   print('🎯 Right handle pointer down');
-                  _startDrag('right', event.localPosition.dx);
+                  _startDrag('right', event.localPosition.dx, null);
                 },
                 onPointerMove: (event) {
                   if (_draggingEdge == 'right') {
-                    _updateDrag(event.localPosition.dx, 'right');
+                    _updateDrag(event.localPosition.dx, null, 'right');
                   }
                 },
                 onPointerUp: (event) {
@@ -5745,82 +5765,216 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               ),
             ),
           ),
+
+        // Top boundary hit zone (invisible, wide area for easy dragging)
+        if (hasExplicitYRange && widget.interactiveAnnotations)
+          Positioned(
+            top: -_handleHitWidth / 2,
+            left: 0,
+            right: 0,
+            height: _handleHitWidth,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeUpDown,
+              onEnter: (_) {
+                print('🔵 Top handle ENTER event - _draggingEdge=$_draggingEdge');
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringTopHandle = true);
+                  print('   ✅ Set _hoveringTopHandle = true');
+                }
+              },
+              onExit: (_) {
+                print('🔴 Top handle EXIT event - _draggingEdge=$_draggingEdge');
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringTopHandle = false);
+                  print('   ✅ Set _hoveringTopHandle = false');
+                }
+              },
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) {
+                  print('🎯 Top handle pointer down');
+                  _startDrag('top', null, event.localPosition.dy);
+                },
+                onPointerMove: (event) {
+                  if (_draggingEdge == 'top') {
+                    _updateDrag(null, event.localPosition.dy, 'top');
+                  }
+                },
+                onPointerUp: (event) {
+                  print('🎯 Top handle pointer up');
+                  if (_draggingEdge == 'top') {
+                    _endDrag();
+                  }
+                },
+              ),
+            ),
+          ),
+
+        // Bottom boundary hit zone (invisible, wide area for easy dragging)
+        if (hasExplicitYRange && widget.interactiveAnnotations)
+          Positioned(
+            bottom: -_handleHitWidth / 2,
+            left: 0,
+            right: 0,
+            height: _handleHitWidth,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeUpDown,
+              onEnter: (_) {
+                print('🔵 Bottom handle ENTER event - _draggingEdge=$_draggingEdge');
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringBottomHandle = true);
+                  print('   ✅ Set _hoveringBottomHandle = true');
+                }
+              },
+              onExit: (_) {
+                print('🔴 Bottom handle EXIT event - _draggingEdge=$_draggingEdge');
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringBottomHandle = false);
+                  print('   ✅ Set _hoveringBottomHandle = false');
+                }
+              },
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) {
+                  print('🎯 Bottom handle pointer down');
+                  _startDrag('bottom', null, event.localPosition.dy);
+                },
+                onPointerMove: (event) {
+                  if (_draggingEdge == 'bottom') {
+                    _updateDrag(null, event.localPosition.dy, 'bottom');
+                  }
+                },
+                onPointerUp: (event) {
+                  print('🎯 Bottom handle pointer up');
+                  if (_draggingEdge == 'bottom') {
+                    _endDrag();
+                  }
+                },
+              ),
+            ),
+          ),
       ],
     );
   }
 
   /// Starts dragging an edge
-  void _startDrag(String edge, double localX) {
-    print('🎯 _startDrag called: edge=$edge, localX=$localX');
+  void _startDrag(String edge, double? localX, double? localY) {
+    print('🎯 _startDrag called: edge=$edge, localX=$localX, localY=$localY');
     setState(() {
       _draggingEdge = edge;
-      _dragStartX = localX;
-      _originalStartX = widget.annotation.startX;
-      _originalEndX = widget.annotation.endX;
+      if (edge == 'left' || edge == 'right') {
+        _dragStartX = localX;
+        _originalStartX = widget.annotation.startX;
+        _originalEndX = widget.annotation.endX;
+      } else if (edge == 'top' || edge == 'bottom') {
+        _dragStartY = localY;
+        _originalStartY = widget.annotation.startY;
+        _originalEndY = widget.annotation.endY;
+      }
     });
     // Notify parent chart that dragging started
-    widget.onDragStateChanged?.call(true);
-    print('   State updated: _draggingEdge=$_draggingEdge, _dragStartX=$_dragStartX');
+    widget.onDragStateChanged?.call(edge);
+    print('   State updated: _draggingEdge=$_draggingEdge');
   }
 
   /// Updates the range based on current drag position
-  void _updateDrag(double currentX, String edge) {
-    print('📍 _updateDrag called: currentX=$currentX, edge=$edge');
+  void _updateDrag(double? currentX, double? currentY, String edge) {
+    print('📍 _updateDrag called: currentX=$currentX, currentY=$currentY, edge=$edge');
 
-    if (widget.annotation.startX == null || widget.annotation.endX == null) {
-      print('   ❌ Skipped: infinite range');
-      return; // Can't resize infinite ranges
-    }
-
-    if (_dragStartX == null || _originalStartX == null || _originalEndX == null) {
-      print('   ❌ Skipped: drag not initialized');
-      return; // Drag not properly initialized
-    }
-
-    // Calculate the delta from drag start
-    final deltaX = currentX - _dragStartX!;
-
-    // Convert screen delta to data coordinate delta
-    // Screen X increases left-to-right, data X increases left-to-right (same direction)
-    final xRange = widget.bounds.maxX - widget.bounds.minX;
-    final screenWidth = widget.chartRect.width;
-    final dataPerPixel = xRange / screenWidth;
-    final dataDelta = deltaX * dataPerPixel;
-
-    // Calculate new range based on which edge is being dragged
-    double newStartX = _originalStartX!;
-    double newEndX = _originalEndX!;
-
-    if (edge == 'left') {
-      newStartX += dataDelta;
-      // Prevent crossing (left must stay left of right)
-      if (newStartX >= newEndX) {
-        newStartX = newEndX - (xRange * 0.01); // Maintain minimum 1% width
+    if (edge == 'left' || edge == 'right') {
+      // Handle X-axis dragging
+      if (widget.annotation.startX == null || widget.annotation.endX == null) {
+        print('   ❌ Skipped: infinite X range');
+        return;
       }
-    } else if (edge == 'right') {
-      newEndX += dataDelta;
-      // Prevent crossing (right must stay right of left)
-      if (newEndX <= newStartX) {
-        newEndX = newStartX + (xRange * 0.01); // Maintain minimum 1% width
+
+      if (_dragStartX == null || _originalStartX == null || _originalEndX == null || currentX == null) {
+        print('   ❌ Skipped: X drag not initialized');
+        return;
       }
+
+      final deltaX = currentX - _dragStartX!;
+      final xRange = widget.bounds.maxX - widget.bounds.minX;
+      final screenWidth = widget.chartRect.width;
+      final dataPerPixel = xRange / screenWidth;
+      final dataDelta = deltaX * dataPerPixel;
+
+      double newStartX = _originalStartX!;
+      double newEndX = _originalEndX!;
+
+      if (edge == 'left') {
+        newStartX += dataDelta;
+        if (newStartX >= newEndX) {
+          newStartX = newEndX - (xRange * 0.01);
+        }
+      } else if (edge == 'right') {
+        newEndX += dataDelta;
+        if (newEndX <= newStartX) {
+          newEndX = newStartX + (xRange * 0.01);
+        }
+      }
+
+      if (widget.annotation.snapToValue) {
+        newStartX = _snapToNearestValue(newStartX);
+        newEndX = _snapToNearestValue(newEndX);
+      }
+
+      final updatedAnnotation = widget.annotation.copyWith(
+        startX: newStartX,
+        endX: newEndX,
+      );
+
+      print('   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX');
+      widget.onAnnotationUpdate?.call(updatedAnnotation);
+    } else if (edge == 'top' || edge == 'bottom') {
+      // Handle Y-axis dragging
+      if (widget.annotation.startY == null || widget.annotation.endY == null) {
+        print('   ❌ Skipped: infinite Y range');
+        return;
+      }
+
+      if (_dragStartY == null || _originalStartY == null || _originalEndY == null || currentY == null) {
+        print('   ❌ Skipped: Y drag not initialized');
+        return;
+      }
+
+      final deltaY = currentY - _dragStartY!;
+      final yRange = widget.bounds.maxY - widget.bounds.minY;
+      final screenHeight = widget.chartRect.height;
+      final dataPerPixel = yRange / screenHeight;
+      // Y-axis is inverted: screen Y increases downward, data Y increases upward
+      final dataDelta = -deltaY * dataPerPixel;
+
+      double newStartY = _originalStartY!;
+      double newEndY = _originalEndY!;
+
+      if (edge == 'top') {
+        // Top edge controls the higher Y value (endY)
+        newEndY += dataDelta;
+        if (newEndY <= newStartY) {
+          newEndY = newStartY + (yRange * 0.01);
+        }
+      } else if (edge == 'bottom') {
+        // Bottom edge controls the lower Y value (startY)
+        newStartY += dataDelta;
+        if (newStartY >= newEndY) {
+          newStartY = newEndY - (yRange * 0.01);
+        }
+      }
+
+      if (widget.annotation.snapToValue) {
+        newStartY = _snapToNearestValue(newStartY);
+        newEndY = _snapToNearestValue(newEndY);
+      }
+
+      final updatedAnnotation = widget.annotation.copyWith(
+        startY: newStartY,
+        endY: newEndY,
+      );
+
+      print('   ✅ Calling onAnnotationUpdate: newStartY=$newStartY, newEndY=$newEndY');
+      widget.onAnnotationUpdate?.call(updatedAnnotation);
     }
-
-    // Apply snap-to-value if enabled
-    if (widget.annotation.snapToValue) {
-      newStartX = _snapToNearestValue(newStartX);
-      newEndX = _snapToNearestValue(newEndX);
-    }
-
-    // Create updated annotation
-    final updatedAnnotation = widget.annotation.copyWith(
-      startX: newStartX,
-      endX: newEndX,
-    );
-
-    print('   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX');
-
-    // Notify parent
-    widget.onAnnotationUpdate?.call(updatedAnnotation);
   }
 
   /// Ends dragging
@@ -5829,11 +5983,19 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     setState(() {
       _draggingEdge = null;
       _dragStartX = null;
+      _dragStartY = null;
       _originalStartX = null;
       _originalEndX = null;
+      _originalStartY = null;
+      _originalEndY = null;
+      // Reset all hover states so borders return to normal
+      _hoveringLeftHandle = false;
+      _hoveringRightHandle = false;
+      _hoveringTopHandle = false;
+      _hoveringBottomHandle = false;
     });
     // Notify parent chart that dragging ended
-    widget.onDragStateChanged?.call(false);
+    widget.onDragStateChanged?.call(null);
   }
 
   /// Snaps a value to the nearest increment based on the annotation's snapIncrement.
@@ -5904,7 +6066,10 @@ class _RangeAnnotationPainter extends CustomPainter {
     required this.borderWidth,
     required this.leftBorderHover,
     required this.rightBorderHover,
+    required this.topBorderHover,
+    required this.bottomBorderHover,
     required this.hasExplicitXRange,
+    required this.hasExplicitYRange,
     required this.isInteractive,
   });
 
@@ -5913,11 +6078,20 @@ class _RangeAnnotationPainter extends CustomPainter {
   final double borderWidth;
   final bool leftBorderHover;
   final bool rightBorderHover;
+  final bool topBorderHover;
+  final bool bottomBorderHover;
   final bool hasExplicitXRange;
+  final bool hasExplicitYRange;
   final bool isInteractive;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Debug print to see if painter is receiving hover states
+    if (topBorderHover || bottomBorderHover || leftBorderHover || rightBorderHover) {
+      print('🎨 PAINTER: topHover=$topBorderHover, bottomHover=$bottomBorderHover, leftHover=$leftBorderHover, rightHover=$rightBorderHover');
+      print('   hasExplicitYRange=$hasExplicitYRange, isInteractive=$isInteractive');
+    }
+
     // Draw fill
     if (fillColor != null) {
       final fillPaint = Paint()
@@ -5928,17 +6102,41 @@ class _RangeAnnotationPainter extends CustomPainter {
 
     // Draw borders
     if (borderColor != null) {
-      // Top border
-      final topPaint = Paint()
-        ..color = borderColor!
-        ..strokeWidth = borderWidth
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(const Offset(0, 0), Offset(size.width, 0), topPaint);
+      // Top border (special styling if interactive Y-range and hovering)
+      if (hasExplicitYRange && isInteractive && topBorderHover) {
+        final topPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = 3.0 // Thicker when hovering
+          ..style = PaintingStyle.stroke;
 
-      // Bottom border
-      canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), topPaint);
+        // Draw dashed line
+        _drawDashedLine(canvas, const Offset(0, 0), Offset(size.width, 0), topPaint, dashLength: 8, gapLength: 4);
+      } else {
+        final topPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = borderWidth
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(const Offset(0, 0), Offset(size.width, 0), topPaint);
+      }
 
-      // Left border (special styling if interactive and hovering)
+      // Bottom border (special styling if interactive Y-range and hovering)
+      if (hasExplicitYRange && isInteractive && bottomBorderHover) {
+        final bottomPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = 3.0 // Thicker when hovering
+          ..style = PaintingStyle.stroke;
+
+        // Draw dashed line
+        _drawDashedLine(canvas, Offset(0, size.height), Offset(size.width, size.height), bottomPaint, dashLength: 8, gapLength: 4);
+      } else {
+        final bottomPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = borderWidth
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), bottomPaint);
+      }
+
+      // Left border (special styling if interactive X-range and hovering)
       if (hasExplicitXRange && isInteractive && leftBorderHover) {
         final leftPaint = Paint()
           ..color = borderColor!
@@ -5955,7 +6153,7 @@ class _RangeAnnotationPainter extends CustomPainter {
         canvas.drawLine(const Offset(0, 0), Offset(0, size.height), leftPaint);
       }
 
-      // Right border (special styling if interactive and hovering)
+      // Right border (special styling if interactive X-range and hovering)
       if (hasExplicitXRange && isInteractive && rightBorderHover) {
         final rightPaint = Paint()
           ..color = borderColor!
@@ -5992,6 +6190,8 @@ class _RangeAnnotationPainter extends CustomPainter {
   bool shouldRepaint(_RangeAnnotationPainter oldDelegate) {
     return leftBorderHover != oldDelegate.leftBorderHover ||
         rightBorderHover != oldDelegate.rightBorderHover ||
+        topBorderHover != oldDelegate.topBorderHover ||
+        bottomBorderHover != oldDelegate.bottomBorderHover ||
         fillColor != oldDelegate.fillColor ||
         borderColor != oldDelegate.borderColor ||
         borderWidth != oldDelegate.borderWidth;
