@@ -46,14 +46,24 @@ class _TestScreenState extends State<TestScreen> {
                 color: Colors.blue,
                 annotations: [
                   RangeAnnotation(
-                    id: 'test_range',
-                    label: 'Test Range (Hover to See Handles)',
+                    id: 'test_range_x',
+                    label: 'X Range',
                     startX: 3,
                     endX: 7,
-                    fillColor: Colors.blue.withAlpha(50),
+                    fillColor: Colors.blue.withValues(alpha: 0.2),
                     borderColor: Colors.blue,
                     snapToValue: true,
                     snapIncrement: 1.0,
+                  ),
+                  RangeAnnotation(
+                    id: 'test_range_y',
+                    label: 'Y Range',
+                    startY: 6,
+                    endY: 14,
+                    fillColor: Colors.green.withValues(alpha: 0.2),
+                    borderColor: Colors.green,
+                    snapToValue: true,
+                    snapIncrement: 2.0,
                   ),
                 ],
               ),
@@ -61,6 +71,10 @@ class _TestScreenState extends State<TestScreen> {
             width: 800,
             height: 400,
             interactiveAnnotations: true,
+            interactionConfig: InteractionConfig(
+              enablePan: true,
+              en
+            ),
           ),
         ),
       ),
