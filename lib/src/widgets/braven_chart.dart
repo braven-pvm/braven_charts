@@ -5856,6 +5856,12 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       }
     }
 
+    // Apply snap-to-value if enabled
+    if (widget.annotation.snapToValue) {
+      newStartX = _snapToNearestValue(newStartX);
+      newEndX = _snapToNearestValue(newEndX);
+    }
+
     // Create updated annotation
     final updatedAnnotation = widget.annotation.copyWith(
       startX: newStartX,
@@ -5877,6 +5883,16 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       _originalStartX = null;
       _originalEndX = null;
     });
+  }
+
+  /// Snaps a value to the nearest integer or data point value.
+  ///
+  /// This provides a smoother user experience by aligning annotations
+  /// with actual data values rather than arbitrary positions.
+  double _snapToNearestValue(double value) {
+    // For now, snap to nearest 0.5 increment for smooth but aligned positioning
+    // TODO: In the future, could snap to actual data point X values from the series
+    return (value * 2).roundToDouble() / 2;
   }
 
   /// Builds a positioned label widget for range annotations.

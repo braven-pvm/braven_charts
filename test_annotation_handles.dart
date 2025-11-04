@@ -52,6 +52,7 @@ class _TestScreenState extends State<TestScreen> {
                     endX: 7,
                     fillColor: Colors.blue.withAlpha(50),
                     borderColor: Colors.blue,
+                    snapToValue: true, // Enable snap-to-value for smooth alignment
                   ),
                 ],
               ),
