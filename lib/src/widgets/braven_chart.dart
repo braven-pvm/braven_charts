@@ -2145,7 +2145,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       chartWidget = ValueListenableBuilder<ChartMode>(
         valueListenable: _chartMode,
         builder: (context, currentMode, child) {
-          // Interactive mode: Full interaction system enabled
+          // FIX: When streamingConfig is null, chart is ALWAYS in interactive mode (line 863)
+          // So we should never hit the fallback - if we do, it's a bug.
+          // The correct logic: wrap with full interaction system when in interactive mode.
           if (currentMode == ChartMode.interactive) {
             return _wrapWithInteractionSystem(child!);
           }
@@ -2153,12 +2155,17 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           // Streaming mode: Minimal interaction detector for FR-004 (pause on first interaction)
           // Wraps chart with lightweight listeners that ONLY trigger mode switch
           // Full interaction system disabled per FR-005
-          if (widget.streamingConfig != null) {
+          // CRITICAL: This branch only executes when streamingConfig exists
+          if (widget.streamingConfig != null && currentMode == ChartMode.streaming) {
             return _wrapWithStreamingModeInteractionDetector(child!);
           }
 
-          // No streaming config: return chart without handlers
-          return child!;
+          // Fallback: Should never reach here unless mode/config mismatch
+          // If no streamingConfig, mode should always be interactive (see line 863)
+          // Log error and wrap with interaction system as safeguard
+          debugPrint('🔴 WARNING: Unexpected chart mode state: $currentMode with streamingConfig=${widget.streamingConfig != null}');
+          debugPrint('🟢 Applying fallback: wrapping with FULL interaction system');
+          return _wrapWithInteractionSystem(child!);
         },
         child: chartWidget,
       );
@@ -2764,6 +2771,8 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Handles right-click events to show annotation context menu
   void _handleRightClick(TapDownDetails details) {
     if (!mounted || !widget.interactiveAnnotations) return;
+
+    debugPrint('🟢 Proceeding to show context menu...');
 
     // CRITICAL: Subtract title offset because:
     // - GestureDetector is at widget top (includes title)
@@ -5708,6 +5717,10 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
+                  // CRITICAL: Only handle left mouse button (primary button)
+                  // Let right-clicks pass through to GestureDetector for context menu
+                  if (event.buttons != 1) return;
+
                   print('🎯 Left handle pointer down');
                   _startDrag('left', event.localPosition.dx, null);
                 },
@@ -5748,6 +5761,10 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
+                  // CRITICAL: Only handle left mouse button (primary button)
+                  // Let right-clicks pass through to GestureDetector for context menu
+                  if (event.buttons != 1) return;
+
                   print('🎯 Right handle pointer down');
                   _startDrag('right', event.localPosition.dx, null);
                 },
@@ -5792,6 +5809,10 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
+                  // CRITICAL: Only handle left mouse button (primary button)
+                  // Let right-clicks pass through to GestureDetector for context menu
+                  if (event.buttons != 1) return;
+
                   print('🎯 Top handle pointer down');
                   _startDrag('top', null, event.localPosition.dy);
                 },
@@ -5836,6 +5857,10 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (event) {
+                  // CRITICAL: Only handle left mouse button (primary button)
+                  // Let right-clicks pass through to GestureDetector for context menu
+                  if (event.buttons != 1) return;
+
                   print('🎯 Bottom handle pointer down');
                   _startDrag('bottom', null, event.localPosition.dy);
                 },
