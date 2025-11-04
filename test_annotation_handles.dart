@@ -53,6 +53,7 @@ class _TestScreenState extends State<TestScreen> {
                     fillColor: Colors.blue.withAlpha(50),
                     borderColor: Colors.blue,
                     snapToValue: true, // Enable snap-to-value for smooth alignment
+                    snapIncrement: 1.0, // Snap to whole numbers (1, 2, 3...)
                   ),
                 ],
               ),

@@ -25,6 +25,7 @@ abstract class ChartAnnotation {
   /// The [allowEditing] flag enables interactive editing.
   /// The [zIndex] determines the rendering order (higher values render on top).
   /// The [snapToValue] enables snapping to nearest data point values when dragging.
+  /// The [snapIncrement] controls the snap granularity (e.g., 0.5, 1.0, 10.0).
   ChartAnnotation({
     String? id,
     this.label,
@@ -33,6 +34,7 @@ abstract class ChartAnnotation {
     this.allowEditing = false,
     this.zIndex = 0,
     this.snapToValue = false,
+    this.snapIncrement = 0.5,
   }) : id = id ?? 'annotation_${_annotationIdCounter++}';
 
   /// Unique identifier for this annotation.
@@ -86,6 +88,28 @@ abstract class ChartAnnotation {
   /// ```
   final bool snapToValue;
 
+  /// The increment to snap to when [snapToValue] is enabled.
+  ///
+  /// Controls the granularity of snapping. For example:
+  /// - 0.1: Snap to tenths (2.3, 2.4, 2.5)
+  /// - 0.5: Snap to halves (2.0, 2.5, 3.0) - default
+  /// - 1.0: Snap to integers (2, 3, 4)
+  /// - 10.0: Snap to tens (10, 20, 30)
+  ///
+  /// Only used when [snapToValue] is true.
+  ///
+  /// Example:
+  /// ```dart
+  /// RangeAnnotation(
+  ///   startX: 2.0,
+  ///   endX: 5.0,
+  ///   allowDragging: true,
+  ///   snapToValue: true,
+  ///   snapIncrement: 1.0,  // Snap to whole numbers
+  /// )
+  /// ```
+  final double snapIncrement;
+
   /// Creates a copy of this annotation.
   ///
   /// Subclasses must implement this method to support annotation updates.
@@ -101,7 +125,8 @@ abstract class ChartAnnotation {
         other.allowDragging == allowDragging &&
         other.allowEditing == allowEditing &&
         other.zIndex == zIndex &&
-        other.snapToValue == snapToValue;
+        other.snapToValue == snapToValue &&
+        other.snapIncrement == snapIncrement;
   }
 
   @override
@@ -113,5 +138,6 @@ abstract class ChartAnnotation {
         allowEditing,
         zIndex,
         snapToValue,
+        snapIncrement,
       );
 }

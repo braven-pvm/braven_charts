@@ -27,6 +27,7 @@ class RangeAnnotation extends ChartAnnotation {
   /// The [borderColor] draws a border around the range.
   /// The [labelPosition] determines where the label text appears.
   /// The [snapToValue] enables snapping to nearest data point values when dragging.
+  /// The [snapIncrement] controls the snap granularity when snapToValue is enabled.
   ///
   /// Throws [AssertionError] if startX >= endX or startY >= endY when both are provided.
   RangeAnnotation({
@@ -37,6 +38,7 @@ class RangeAnnotation extends ChartAnnotation {
     super.allowEditing,
     super.zIndex,
     super.snapToValue,
+    super.snapIncrement,
     this.startX,
     this.endX,
     this.startY,
@@ -99,6 +101,7 @@ class RangeAnnotation extends ChartAnnotation {
     bool? allowEditing,
     int? zIndex,
     bool? snapToValue,
+    double? snapIncrement,
     double? startX,
     double? endX,
     double? startY,
@@ -115,6 +118,7 @@ class RangeAnnotation extends ChartAnnotation {
       allowEditing: allowEditing ?? this.allowEditing,
       zIndex: zIndex ?? this.zIndex,
       snapToValue: snapToValue ?? this.snapToValue,
+      snapIncrement: snapIncrement ?? this.snapIncrement,
       startX: startX ?? this.startX,
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
@@ -136,6 +140,7 @@ class RangeAnnotation extends ChartAnnotation {
         other.allowEditing == allowEditing &&
         other.zIndex == zIndex &&
         other.snapToValue == snapToValue &&
+        other.snapIncrement == snapIncrement &&
         other.startX == startX &&
         other.endX == endX &&
         other.startY == startY &&
@@ -154,6 +159,7 @@ class RangeAnnotation extends ChartAnnotation {
         allowEditing,
         zIndex,
         snapToValue,
+        snapIncrement,
         startX,
         endX,
         startY,

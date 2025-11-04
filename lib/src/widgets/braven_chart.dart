@@ -5885,14 +5885,15 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     });
   }
 
-  /// Snaps a value to the nearest integer or data point value.
+  /// Snaps a value to the nearest increment based on the annotation's snapIncrement.
   ///
   /// This provides a smoother user experience by aligning annotations
-  /// with actual data values rather than arbitrary positions.
+  /// with specific value increments (e.g., 0.5, 1.0, 10.0) rather than
+  /// arbitrary positions.
   double _snapToNearestValue(double value) {
-    // For now, snap to nearest 0.5 increment for smooth but aligned positioning
-    // TODO: In the future, could snap to actual data point X values from the series
-    return (value * 2).roundToDouble() / 2;
+    final increment = widget.annotation.snapIncrement;
+    // TODO: In the future, could also snap to actual data point X values from the series
+    return (value / increment).roundToDouble() * increment;
   }
 
   /// Builds a positioned label widget for range annotations.
