@@ -770,6 +770,9 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
   /// Focus node for keyboard event handling.
   final FocusNode _focusNode = FocusNode();
 
+  /// Tracks if any annotation is currently being dragged (for cursor management).
+  bool _isAnnotationDragging = false;
+
   /// Animation controller for smooth zoom transitions.
   AnimationController? _zoomAnimationController;
 
@@ -1911,6 +1914,11 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                     }
                   });
                 },
+                onDragStateChanged: (isDragging) {
+                  setState(() {
+                    _isAnnotationDragging = isDragging;
+                  });
+                },
                 series: _getAllSeries(),
                 chartRect: _cachedChartRect,
                 titleOffset: _titleOffset,
@@ -2160,7 +2168,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
     if (kIsWeb) {
       BrowserContextMenu.disableContextMenu();
     }
-    return chartWidget;
+
+    // Wrap entire chart in MouseRegion to maintain resize cursor during annotation drag
+    return MouseRegion(
+      cursor: _isAnnotationDragging ? SystemMouseCursors.resizeLeftRight : MouseCursor.defer,
+      child: chartWidget,
+    );
   }
 
   /// Wraps the chart widget with interaction system components.
@@ -4972,6 +4985,7 @@ class _AnnotationOverlay extends StatelessWidget {
     required this.titleOffset,
     required this.zoomPanState,
     required this.dataToScreenPoint,
+    this.onDragStateChanged,
   });
 
   final List<ChartAnnotation> annotations;
@@ -4984,6 +4998,7 @@ class _AnnotationOverlay extends StatelessWidget {
   final Offset titleOffset;
   final ZoomPanState zoomPanState;
   final Offset Function(ChartDataPoint point, Rect chartRect, _DataBounds bounds) dataToScreenPoint;
+  final void Function(bool isDragging)? onDragStateChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -5236,6 +5251,7 @@ class _AnnotationOverlay extends StatelessWidget {
         onAnnotationTap: onAnnotationTap,
         onAnnotationUpdate: onAnnotationUpdate != null ? (updated) => onAnnotationUpdate!(updated) : null,
         dataToScreenPoint: dataToScreenPoint,
+        onDragStateChanged: onDragStateChanged,
       ),
     );
   }
@@ -5580,6 +5596,7 @@ class _RangeAnnotationWidget extends StatefulWidget {
     required this.onAnnotationTap,
     this.onAnnotationUpdate,
     required this.dataToScreenPoint,
+    this.onDragStateChanged,
   });
 
   final RangeAnnotation annotation;
@@ -5591,6 +5608,7 @@ class _RangeAnnotationWidget extends StatefulWidget {
   final void Function(ChartAnnotation)? onAnnotationTap;
   final void Function(RangeAnnotation)? onAnnotationUpdate;
   final Offset Function(ChartDataPoint, Rect, _DataBounds) dataToScreenPoint;
+  final void Function(bool isDragging)? onDragStateChanged;
 
   @override
   State<_RangeAnnotationWidget> createState() => _RangeAnnotationWidgetState();
@@ -5599,9 +5617,6 @@ class _RangeAnnotationWidget extends StatefulWidget {
 class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   /// Which edge is being dragged (null = none, 'left' = left edge, 'right' = right edge)
   String? _draggingEdge;
-
-  /// Whether mouse is hovering over the annotation
-  bool _hoveringAnnotation = false;
 
   /// Whether mouse is hovering over left handle
   bool _hoveringLeftHandle = false;
@@ -5618,159 +5633,120 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   /// Original endX value when drag began
   double? _originalEndX;
 
-  /// Size of the resize handles (width of the draggable area)
-  static const double _handleSize = 20.0;
+  /// Size of the resize handles (width of the draggable hit area)
+  static const double _handleHitWidth = 20.0;
 
-  /// Visual handle width (visible indicator)
-  static const double _handleVisualWidth = 4.0;
-
-  /// Handle height as fraction of annotation height
-  static const double _handleHeightFraction = 0.3;
+  /// Extended mouse region size (to maintain cursor during drag)
+  static const double _extendedMouseRegionSize = 10000.0;
 
   @override
   Widget build(BuildContext context) {
     // Only show handles if annotation has explicit X range (not infinite)
     final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
 
-    return MouseRegion(
-      cursor: _getCursor(),
-      onEnter: (_) => setState(() => _hoveringAnnotation = true),
-      onExit: (_) => setState(() => _hoveringAnnotation = false),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Main range container - positioned to leave space for handles on left/right
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main range container with custom border drawing
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
+            child: CustomPaint(
+              painter: _RangeAnnotationPainter(
+                fillColor: widget.annotation.fillColor,
+                borderColor: widget.annotation.borderColor,
+                borderWidth: widget.annotation.style.borderWidth,
+                leftBorderHover: _hoveringLeftHandle || _draggingEdge == 'left',
+                rightBorderHover: _hoveringRightHandle || _draggingEdge == 'right',
+                hasExplicitXRange: hasExplicitXRange,
+                isInteractive: widget.interactiveAnnotations,
+              ),
+              child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
+            ),
+          ),
+        ),
+
+        // Left boundary hit zone (invisible, wide area for easy dragging)
+        if (hasExplicitXRange && widget.interactiveAnnotations)
           Positioned(
-            left: hasExplicitXRange && widget.interactiveAnnotations ? _handleSize : 0,
-            right: hasExplicitXRange && widget.interactiveAnnotations ? _handleSize : 0,
+            left: -_handleHitWidth / 2,
             top: 0,
             bottom: 0,
-            child: GestureDetector(
-              onTap: widget.interactiveAnnotations && widget.onAnnotationTap != null ? () => widget.onAnnotationTap!(widget.annotation) : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: widget.annotation.fillColor,
-                  border: widget.annotation.borderColor != null
-                      ? Border.all(
-                          color: widget.annotation.borderColor!,
-                          width: widget.annotation.style.borderWidth,
-                        )
-                      : null,
-                ),
-                // Render label if provided
-                child: widget.annotation.label != null ? _buildRangeLabel(widget.annotation, widget.clampedWidth, widget.clampedHeight) : null,
+            width: _handleHitWidth,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeLeftRight,
+              onEnter: (_) {
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringLeftHandle = true);
+                }
+              },
+              onExit: (_) {
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringLeftHandle = false);
+                }
+              },
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) {
+                  print('🎯 Left handle pointer down');
+                  _startDrag('left', event.localPosition.dx);
+                },
+                onPointerMove: (event) {
+                  if (_draggingEdge == 'left') {
+                    _updateDrag(event.localPosition.dx, 'left');
+                  }
+                },
+                onPointerUp: (event) {
+                  print('🎯 Left handle pointer up');
+                  if (_draggingEdge == 'left') {
+                    _endDrag();
+                  }
+                },
               ),
             ),
           ),
 
-          // Left resize handle (only if explicit X range and interactive)
-          if (hasExplicitXRange && widget.interactiveAnnotations)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) => setState(() => _hoveringLeftHandle = true),
-                onExit: (_) => setState(() => _hoveringLeftHandle = false),
-                child: Listener(
-                  onPointerDown: (event) => _startDrag('left', event.localPosition.dx),
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'left') {
-                      _updateDrag(event.localPosition.dx, 'left');
-                    }
-                  },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'left') {
-                      _endDrag();
-                    }
-                  },
-                  child: AnimatedOpacity(
-                    opacity: (_hoveringAnnotation || _hoveringLeftHandle || _draggingEdge == 'left') ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 150),
-                    child: Center(
-                      child: Container(
-                        width: _handleVisualWidth,
-                        height: widget.clampedHeight * _handleHeightFraction,
-                        decoration: BoxDecoration(
-                          color: _hoveringLeftHandle || _draggingEdge == 'left' ? Colors.blue.shade700 : Colors.blue.shade400,
-                          borderRadius: BorderRadius.circular(_handleVisualWidth / 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+        // Right boundary hit zone (invisible, wide area for easy dragging)
+        if (hasExplicitXRange && widget.interactiveAnnotations)
+          Positioned(
+            right: -_handleHitWidth / 2,
+            top: 0,
+            bottom: 0,
+            width: _handleHitWidth,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeLeftRight,
+              onEnter: (_) {
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringRightHandle = true);
+                }
+              },
+              onExit: (_) {
+                if (_draggingEdge == null) {
+                  setState(() => _hoveringRightHandle = false);
+                }
+              },
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (event) {
+                  print('🎯 Right handle pointer down');
+                  _startDrag('right', event.localPosition.dx);
+                },
+                onPointerMove: (event) {
+                  if (_draggingEdge == 'right') {
+                    _updateDrag(event.localPosition.dx, 'right');
+                  }
+                },
+                onPointerUp: (event) {
+                  print('🎯 Right handle pointer up');
+                  if (_draggingEdge == 'right') {
+                    _endDrag();
+                  }
+                },
               ),
             ),
-
-          // Right resize handle (only if explicit X range and interactive)
-          if (hasExplicitXRange && widget.interactiveAnnotations)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: _handleSize,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeLeftRight,
-                onEnter: (_) => setState(() => _hoveringRightHandle = true),
-                onExit: (_) => setState(() => _hoveringRightHandle = false),
-                child: Listener(
-                  onPointerDown: (event) => _startDrag('right', event.localPosition.dx),
-                  onPointerMove: (event) {
-                    if (_draggingEdge == 'right') {
-                      _updateDrag(event.localPosition.dx, 'right');
-                    }
-                  },
-                  onPointerUp: (event) {
-                    if (_draggingEdge == 'right') {
-                      _endDrag();
-                    }
-                  },
-                  child: AnimatedOpacity(
-                    opacity: (_hoveringAnnotation || _hoveringRightHandle || _draggingEdge == 'right') ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 150),
-                    child: Center(
-                      child: Container(
-                        width: _handleVisualWidth,
-                        height: widget.clampedHeight * _handleHeightFraction,
-                        decoration: BoxDecoration(
-                          color: _hoveringRightHandle || _draggingEdge == 'right' 
-                              ? Colors.blue.shade700 
-                              : Colors.blue.shade400,
-                          borderRadius: BorderRadius.circular(_handleVisualWidth / 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
-  }
-
-  /// Gets the appropriate cursor based on hover state
-  MouseCursor _getCursor() {
-    if (_hoveringLeftHandle || _hoveringRightHandle || _draggingEdge != null) {
-      return SystemMouseCursors.resizeLeftRight;
-    }
-    return SystemMouseCursors.basic;
   }
 
   /// Starts dragging an edge
@@ -5782,6 +5758,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       _originalStartX = widget.annotation.startX;
       _originalEndX = widget.annotation.endX;
     });
+    // Notify parent chart that dragging started
+    widget.onDragStateChanged?.call(true);
     print('   State updated: _draggingEdge=$_draggingEdge, _dragStartX=$_dragStartX');
   }
 
@@ -5854,6 +5832,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       _originalStartX = null;
       _originalEndX = null;
     });
+    // Notify parent chart that dragging ended
+    widget.onDragStateChanged?.call(false);
   }
 
   /// Snaps a value to the nearest increment based on the annotation's snapIncrement.
@@ -5915,6 +5895,108 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
 }
 
 // ==================== ANNOTATION PAINTERS ====================
+
+/// Custom painter for range annotation borders with interactive styling.
+class _RangeAnnotationPainter extends CustomPainter {
+  _RangeAnnotationPainter({
+    required this.fillColor,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.leftBorderHover,
+    required this.rightBorderHover,
+    required this.hasExplicitXRange,
+    required this.isInteractive,
+  });
+
+  final Color? fillColor;
+  final Color? borderColor;
+  final double borderWidth;
+  final bool leftBorderHover;
+  final bool rightBorderHover;
+  final bool hasExplicitXRange;
+  final bool isInteractive;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Draw fill
+    if (fillColor != null) {
+      final fillPaint = Paint()
+        ..color = fillColor!
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(Offset.zero & size, fillPaint);
+    }
+
+    // Draw borders
+    if (borderColor != null) {
+      // Top border
+      final topPaint = Paint()
+        ..color = borderColor!
+        ..strokeWidth = borderWidth
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(const Offset(0, 0), Offset(size.width, 0), topPaint);
+
+      // Bottom border
+      canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), topPaint);
+
+      // Left border (special styling if interactive and hovering)
+      if (hasExplicitXRange && isInteractive && leftBorderHover) {
+        final leftPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = 3.0 // Thicker when hovering
+          ..style = PaintingStyle.stroke;
+
+        // Draw dashed line
+        _drawDashedLine(canvas, const Offset(0, 0), Offset(0, size.height), leftPaint, dashLength: 8, gapLength: 4);
+      } else {
+        final leftPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = borderWidth
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(const Offset(0, 0), Offset(0, size.height), leftPaint);
+      }
+
+      // Right border (special styling if interactive and hovering)
+      if (hasExplicitXRange && isInteractive && rightBorderHover) {
+        final rightPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = 3.0 // Thicker when hovering
+          ..style = PaintingStyle.stroke;
+
+        // Draw dashed line
+        _drawDashedLine(canvas, Offset(size.width, 0), Offset(size.width, size.height), rightPaint, dashLength: 8, gapLength: 4);
+      } else {
+        final rightPaint = Paint()
+          ..color = borderColor!
+          ..strokeWidth = borderWidth
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(Offset(size.width, 0), Offset(size.width, size.height), rightPaint);
+      }
+    }
+  }
+
+  /// Helper to draw dashed lines
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, {required double dashLength, required double gapLength}) {
+    final totalDistance = (end - start).distance;
+    final dashCount = (totalDistance / (dashLength + gapLength)).floor();
+
+    final direction = (end - start) / totalDistance;
+
+    for (int i = 0; i < dashCount; i++) {
+      final dashStart = start + direction * (i * (dashLength + gapLength));
+      final dashEnd = start + direction * (i * (dashLength + gapLength) + dashLength);
+      canvas.drawLine(dashStart, dashEnd, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RangeAnnotationPainter oldDelegate) {
+    return leftBorderHover != oldDelegate.leftBorderHover ||
+        rightBorderHover != oldDelegate.rightBorderHover ||
+        fillColor != oldDelegate.fillColor ||
+        borderColor != oldDelegate.borderColor ||
+        borderWidth != oldDelegate.borderWidth;
+  }
+}
 
 /// Custom painter for marker shapes.
 class _MarkerPainter extends CustomPainter {
