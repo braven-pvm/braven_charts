@@ -28,34 +28,33 @@ class AnnotationsComprehensiveScreen extends StatefulWidget {
 }
 
 class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiveScreen> {
-  // Sample data with annotations attached directly to the series (NEW PATTERN)
-  late ChartSeries _timeSeries;
-
-  ChartAnnotation? _selectedAnnotation;
-
-  // Event tracking
-  final List<String> _eventLog = [];
-  int _eventCount = 0;
-
   // View state
   ChartType _chartType = ChartType.line;
-  bool _showGrid = true;
-  bool _interactiveAnnotations = true;
 
   // Creation state
   String _creationType = 'text';
-  final _textController = TextEditingController(text: 'New Annotation');
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDefaultAnnotations();
-  }
+  int _eventCount = 0;
+  // Event tracking
+  final List<String> _eventLog = [];
+
+  bool _interactiveAnnotations = true;
+  ChartAnnotation? _selectedAnnotation;
+  bool _showGrid = true;
+  final _textController = TextEditingController(text: 'New Annotation');
+  // Sample data with annotations attached directly to the series (NEW PATTERN)
+  late ChartSeries _timeSeries;
 
   @override
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDefaultAnnotations();
   }
 
   /// Helper to get all annotations from the series
@@ -401,108 +400,6 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
       _selectedAnnotation = null;
     });
     _logEvent('STRESS TEST: Created 500 annotations (100 of each type)');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('📊 Annotation Comprehensive Showcase'),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'Help',
-            onPressed: () => _showHelp(context),
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          // Main chart area
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                _buildStatusBar(),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: BravenChart(
-                          key: ValueKey('chart_${_annotations.length}'),
-                          chartType: _chartType,
-                          series: [_timeSeries], // Annotations now attached to series!
-                          title: 'Interactive Annotation Demo (Series-Level Annotations)',
-                          theme: ChartTheme.defaultLight,
-                          interactionConfig: const InteractionConfig(
-                            enabled: true,
-                            enableZoom: true,
-                            enablePan: true,
-                          ),
-                          onAnnotationTap: _interactiveAnnotations
-                              ? (annotation) {
-                                  setState(() {
-                                    _selectedAnnotation = annotation;
-                                  });
-                                  _logEvent('TAP: ${annotation.runtimeType} [${annotation.id}]');
-                                }
-                              : null,
-                          onAnnotationDragged: _interactiveAnnotations
-                              ? (annotation, newPosition) {
-                                  _logEvent('DRAG: ${annotation.runtimeType} to $newPosition');
-                                }
-                              : null,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _buildQuickActions(),
-              ],
-            ),
-          ),
-
-          // Right panel - Controls
-          Container(
-            width: 380,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                left: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildCreationSection(),
-                        const Divider(height: 32),
-                        _buildAnnotationList(),
-                        const Divider(height: 32),
-                        if (_selectedAnnotation != null) ...[
-                          _buildEditorSection(),
-                          const Divider(height: 32),
-                        ],
-                        _buildEventLog(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildStatusBar() {
@@ -1099,5 +996,107 @@ class _AnnotationsComprehensiveScreenState extends State<AnnotationsComprehensiv
       points.add(ChartDataPoint(x: x, y: y));
     }
     return points;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('📊 Annotation Comprehensive Showcase'),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Help',
+            onPressed: () => _showHelp(context),
+          ),
+        ],
+      ),
+      body: Row(
+        children: [
+          // Main chart area
+          Expanded(
+            flex: 3,
+            child: Column(
+              children: [
+                _buildStatusBar(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Card(
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: BravenChart(
+                          key: ValueKey('chart_${_annotations.length}'),
+                          chartType: _chartType,
+                          series: [_timeSeries], // Annotations now attached to series!
+                          title: 'Interactive Annotation Demo (Series-Level Annotations)',
+                          theme: ChartTheme.defaultLight,
+                          interactionConfig: const InteractionConfig(
+                            enabled: true,
+                            enableZoom: true,
+                            enablePan: true,
+                          ),
+                          onAnnotationTap: _interactiveAnnotations
+                              ? (annotation) {
+                                  setState(() {
+                                    _selectedAnnotation = annotation;
+                                  });
+                                  _logEvent('TAP: ${annotation.runtimeType} [${annotation.id}]');
+                                }
+                              : null,
+                          onAnnotationDragged: _interactiveAnnotations
+                              ? (annotation, newPosition) {
+                                  _logEvent('DRAG: ${annotation.runtimeType} to $newPosition');
+                                }
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                _buildQuickActions(),
+              ],
+            ),
+          ),
+
+          // Right panel - Controls
+          Container(
+            width: 380,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(
+                left: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildCreationSection(),
+                        const Divider(height: 32),
+                        _buildAnnotationList(),
+                        const Divider(height: 32),
+                        if (_selectedAnnotation != null) ...[
+                          _buildEditorSection(),
+                          const Divider(height: 32),
+                        ],
+                        _buildEventLog(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
