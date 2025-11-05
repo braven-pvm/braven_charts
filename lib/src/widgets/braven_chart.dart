@@ -2145,10 +2145,13 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
       chartWidget = ValueListenableBuilder<ChartMode>(
         valueListenable: _chartMode,
         builder: (context, currentMode, child) {
+          debugPrint('🔵 ValueListenableBuilder build - mode=$currentMode');
+
           // FIX: When streamingConfig is null, chart is ALWAYS in interactive mode (line 863)
           // So we should never hit the fallback - if we do, it's a bug.
           // The correct logic: wrap with full interaction system when in interactive mode.
           if (currentMode == ChartMode.interactive) {
+            debugPrint('🔵 Returning _wrapWithInteractionSystem');
             return _wrapWithInteractionSystem(child!);
           }
 
@@ -2363,96 +2366,25 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           child: interactiveWidget,
         );
 
-        // Wrap with Listener for scroll/middle-mouse events
-        interactiveWidget = Listener(
-          // Handle scroll events with modifier keys
-          onPointerSignal: (signal) {
-            if (signal is PointerScrollEvent) {
-              // Use manual state tracking for modifiers (web-compatible)
-              // HardwareKeyboard.instance doesn't work reliably in Flutter Web
-              final isShiftPressed = _isShiftPressed;
-
-              if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
-                // T030: Pause streaming on zoom (FR-004) or reset timer if already paused (FR-008)
-                _pauseStreaming();
-
-                // SHIFT + Scroll → Zoom at cursor position
-                final scrollDelta = signal.scrollDelta.dy;
-                // Zoom in when scrolling up (negative delta), zoom out when scrolling down
-                final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
-
-                final oldState = _interactionStateNotifier.value.zoomPanState;
-                final newZoomPanState = _zoomPanController!.zoom(oldState, zoomFactor: zoomFactor, focalPoint: signal.localPosition);
-
-                // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
-                // Throttling these makes interactions feel broken
-                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: newZoomPanState);
-
-                // Invoke zoom callback with NEW state
-                config.onZoomChanged?.call(newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
-
-                // Invoke viewport callback (visible bounds changed due to zoom)
-                _invokeViewportCallback();
-              }
-              // If no SHIFT modifier, don't handle - allows default page scroll
-              // This is CRITICAL for web UX - page must scroll normally without modifier
-            }
-          },
-
-          // Handle middle-mouse button pan (PRIMARY pan method)
-          onPointerDown: (event) {
-            if (event.buttons == kMiddleMouseButton && config.enablePan) {
-              // T030: Pause streaming on pan start (FR-004) or reset timer if already paused (FR-008)
-              _pauseStreaming();
-
-              _isPanningWithMiddleMouse = true;
-              _panStartPosition = event.localPosition;
-            }
-          },
-
-          onPointerMove: (event) {
-            if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
-              // Reset timer on continued panning (FR-008)
-              _resetAutoResumeTimer();
-
-              final delta = event.localPosition - _panStartPosition!;
-
-              final newZoomPanState = _zoomPanController!.pan(_interactionStateNotifier.value.zoomPanState, delta);
-
-              // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
-              final clampedState = _clampPanOffset(newZoomPanState);
-
-              // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
-              _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: clampedState);
-
-              _panStartPosition = event.localPosition;
-
-              // Invoke pan callback with NEW state
-              config.onPanChanged?.call(clampedState.panOffset);
-
-              // Invoke viewport callback
-              _invokeViewportCallback();
-            }
-          },
-
-          onPointerUp: (event) {
-            if (_isPanningWithMiddleMouse) {
-              _isPanningWithMiddleMouse = false;
-              _panStartPosition = null;
-            }
-          },
-
-          child: interactiveWidget,
-        );
-
-        // Wrap with GestureDetector for tap/long-press/pan/pinch
+        // CRITICAL FIX: Wrap with GestureDetector BEFORE Listener
+        // GestureDetector must be OUTER layer to receive events first for right-click handling
+        // Widget tree order: GestureDetector → Listener → MouseRegion → chart
+        // This ensures right-clicks reach GestureDetector before Listener can interfere
         interactiveWidget = GestureDetector(
+          // CRITICAL: Use opaque behavior so GestureDetector claims ALL events
+          // This prevents Listener below from participating in hit testing for right-clicks
+          behavior: HitTestBehavior.opaque,
+
           // Handle right-click for annotation context menu
           onSecondaryTapDown: (details) {
+            debugPrint('🔴 GestureDetector.onSecondaryTapDown FIRED at ${details.localPosition}');
+            debugPrint('🔴 widget.interactiveAnnotations = ${widget.interactiveAnnotations}');
+            debugPrint('🔴 mounted = $mounted');
             _handleRightClick(details);
           },
           // Consume the secondary tap to prevent browser context menu
           onSecondaryTap: () {
+            debugPrint('🔴 GestureDetector.onSecondaryTap FIRED');
             // Event consumed - prevents default browser context menu
           },
 
@@ -2496,7 +2428,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           },
 
           // Use scale gestures ONLY for pinch-to-zoom (multi-touch)
-          // Pan is handled separately via middle-mouse button in Listener widget above
+          // Pan is handled separately via middle-mouse button in Listener widget below
           onScaleStart: config.enableZoom && _zoomPanController != null
               ? (details) {
                   // T030: Pause streaming on zoom gesture (FR-004)
@@ -2509,7 +2441,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
           onScaleUpdate: config.enableZoom && _zoomPanController != null
               ? (details) {
                   // ONLY handle pinch-to-zoom here (multi-touch zoom)
-                  // Pan is handled separately via middle-mouse in Listener widget above
+                  // Pan is handled separately via middle-mouse in Listener widget below
 
                   // Handle pinch-to-zoom (when scale changes with multi-touch)
                   if (details.scale != 1.0 && details.pointerCount >= 2) {
@@ -2552,8 +2484,104 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
                 }
               : null,
 
-          child: interactiveWidget,
-        );
+          // CRITICAL: Listener is now CHILD of GestureDetector (inner layer)
+          // This allows GestureDetector to handle right-clicks BEFORE Listener sees the event
+          child: Listener(
+            // CRITICAL: Use opaque + early return instead of translucent
+            // opaque means: Listener handles events it responds to (middle-mouse), blocks others from below
+            // BUT with early return for non-middle-mouse, those events don't actually get handled
+            // This allows GestureDetector above to handle them instead
+            behavior: HitTestBehavior.opaque,
+
+            // Handle scroll events with modifier keys
+            onPointerSignal: (signal) {
+              if (signal is PointerScrollEvent) {
+                // Use manual state tracking for modifiers (web-compatible)
+                // HardwareKeyboard.instance doesn't work reliably in Flutter Web
+                final isShiftPressed = _isShiftPressed;
+
+                if (config.enableZoom && _zoomPanController != null && isShiftPressed) {
+                  // T030: Pause streaming on zoom (FR-004) or reset timer if already paused (FR-008)
+                  _pauseStreaming();
+
+                  // SHIFT + Scroll → Zoom at cursor position
+                  final scrollDelta = signal.scrollDelta.dy;
+                  // Zoom in when scrolling up (negative delta), zoom out when scrolling down
+                  final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
+
+                  final oldState = _interactionStateNotifier.value.zoomPanState;
+                  final newZoomPanState = _zoomPanController!.zoom(oldState, zoomFactor: zoomFactor, focalPoint: signal.localPosition);
+
+                  // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
+                  // Throttling these makes interactions feel broken
+                  _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: newZoomPanState);
+
+                  // Invoke zoom callback with NEW state
+                  config.onZoomChanged?.call(newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
+
+                  // Invoke viewport callback (visible bounds changed due to zoom)
+                  _invokeViewportCallback();
+                }
+                // If no SHIFT modifier, don't handle - allows default page scroll
+                // This is CRITICAL for web UX - page must scroll normally without modifier
+              }
+            },
+
+            // Handle middle-mouse button pan (PRIMARY pan method)
+            onPointerDown: (event) {
+              debugPrint('🟣 MAIN CHART Listener.onPointerDown - button=${event.buttons}');
+              // CRITICAL: Only handle middle mouse button
+              // Let other buttons (left=1, right=2) pass through to GestureDetector below
+              if (event.buttons != kMiddleMouseButton) {
+                debugPrint('   ➡️ NOT middle button - returning early to pass through');
+                return;
+              }
+
+              debugPrint('   ✅ Middle button - HANDLING pan');
+              if (config.enablePan) {
+                // T030: Pause streaming on pan start (FR-004) or reset timer if already paused (FR-008)
+                _pauseStreaming();
+
+                _isPanningWithMiddleMouse = true;
+                _panStartPosition = event.localPosition;
+              }
+            },
+
+            onPointerMove: (event) {
+              if (_isPanningWithMiddleMouse && _panStartPosition != null && _zoomPanController != null) {
+                // Reset timer on continued panning (FR-008)
+                _resetAutoResumeTimer();
+
+                final delta = event.localPosition - _panStartPosition!;
+
+                final newZoomPanState = _zoomPanController!.pan(_interactionStateNotifier.value.zoomPanState, delta);
+
+                // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
+                final clampedState = _clampPanOffset(newZoomPanState);
+
+                // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
+                _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(zoomPanState: clampedState);
+
+                _panStartPosition = event.localPosition;
+
+                // Invoke pan callback with NEW state
+                config.onPanChanged?.call(clampedState.panOffset);
+
+                // Invoke viewport callback
+                _invokeViewportCallback();
+              }
+            },
+
+            onPointerUp: (event) {
+              if (_isPanningWithMiddleMouse) {
+                _isPanningWithMiddleMouse = false;
+                _panStartPosition = null;
+              }
+            },
+
+            child: interactiveWidget,
+          ),
+        ); // End of GestureDetector (wraps Listener)
 
         // Wrap with Focus for keyboard navigation
         if (config.keyboard.enabled) {
@@ -2770,7 +2798,12 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
 
   /// Handles right-click events to show annotation context menu
   void _handleRightClick(TapDownDetails details) {
-    if (!mounted || !widget.interactiveAnnotations) return;
+    debugPrint('🟡 _handleRightClick CALLED - mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}');
+
+    if (!mounted || !widget.interactiveAnnotations) {
+      debugPrint('🔴 EARLY RETURN: mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}');
+      return;
+    }
 
     debugPrint('🟢 Proceeding to show context menu...');
 
@@ -5254,22 +5287,29 @@ class _AnnotationOverlay extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    // CRITICAL: Add padding to allow handle hit zones to extend outside annotation bounds
+    // Handles extend 10px beyond edges, so we need at least 10px padding on all sides
+    const handlePadding = 10.0;
+
     return Positioned(
-      left: clampedLeft,
-      top: clampedTop,
-      width: clampedWidth,
-      height: clampedHeight,
-      child: _RangeAnnotationWidget(
-        annotation: annotation,
-        chartRect: chartRect!,
-        bounds: bounds,
-        clampedWidth: clampedWidth,
-        clampedHeight: clampedHeight,
-        interactiveAnnotations: interactiveAnnotations,
-        onAnnotationTap: onAnnotationTap,
-        onAnnotationUpdate: onAnnotationUpdate != null ? (updated) => onAnnotationUpdate!(updated) : null,
-        dataToScreenPoint: dataToScreenPoint,
-        onDragStateChanged: onDragStateChanged,
+      left: clampedLeft - handlePadding,
+      top: clampedTop - handlePadding,
+      width: clampedWidth + (handlePadding * 2),
+      height: clampedHeight + (handlePadding * 2),
+      child: Padding(
+        padding: const EdgeInsets.all(handlePadding),
+        child: _RangeAnnotationWidget(
+          annotation: annotation,
+          chartRect: chartRect!,
+          bounds: bounds,
+          clampedWidth: clampedWidth,
+          clampedHeight: clampedHeight,
+          interactiveAnnotations: interactiveAnnotations,
+          onAnnotationTap: onAnnotationTap,
+          onAnnotationUpdate: onAnnotationUpdate != null ? (updated) => onAnnotationUpdate!(updated) : null,
+          dataToScreenPoint: dataToScreenPoint,
+          onDragStateChanged: onDragStateChanged,
+        ),
       ),
     );
   }
@@ -5667,6 +5707,15 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     final hasExplicitXRange = widget.annotation.startX != null && widget.annotation.endX != null;
     final hasExplicitYRange = widget.annotation.startY != null && widget.annotation.endY != null;
 
+    // DEBUG: Print annotation properties to verify
+    print('🔍 RangeAnnotationWidget.build - id=${widget.annotation.id}');
+    print('   allowEditing=${widget.annotation.allowEditing}');
+    print('   allowDragging=${widget.annotation.allowDragging}');
+    print('   interactiveAnnotations=${widget.interactiveAnnotations}');
+    print('   hasExplicitXRange=$hasExplicitXRange');
+    print('   hasExplicitYRange=$hasExplicitYRange');
+    print('   Handles will show: ${(hasExplicitXRange || hasExplicitYRange) && widget.interactiveAnnotations && widget.annotation.allowEditing}');
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -5696,32 +5745,42 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
         ),
 
         // Left boundary hit zone (invisible, wide area for easy dragging)
-        if (hasExplicitXRange && widget.interactiveAnnotations)
+        if (hasExplicitXRange && widget.interactiveAnnotations && widget.annotation.allowEditing)
           Positioned(
             left: -_handleHitWidth / 2,
             top: 0,
             bottom: 0,
             width: _handleHitWidth,
             child: MouseRegion(
+              // CRITICAL: Must use translucent to allow unhandled events to pass through
+              // Without this, MouseRegion blocks ALL pointer events including right-click/middle-click
+              hitTestBehavior: HitTestBehavior.translucent,
               cursor: SystemMouseCursors.resizeLeftRight,
               onEnter: (_) {
+                print('🟣 LEFT HANDLE MouseRegion ENTER');
                 if (_draggingEdge == null) {
                   setState(() => _hoveringLeftHandle = true);
                 }
               },
               onExit: (_) {
+                print('🟣 LEFT HANDLE MouseRegion EXIT');
                 if (_draggingEdge == null) {
                   setState(() => _hoveringLeftHandle = false);
                 }
               },
               child: Listener(
-                behavior: HitTestBehavior.translucent,
+                // CRITICAL: Use opaque so we ONLY handle left-click drag, everything else passes through
+                behavior: HitTestBehavior.opaque,
                 onPointerDown: (event) {
+                  print('🟠 LEFT HANDLE Listener.onPointerDown - button=${event.buttons}');
                   // CRITICAL: Only handle left mouse button (primary button)
-                  // Let right-clicks pass through to GestureDetector for context menu
-                  if (event.buttons != 1) return;
+                  // Let right-clicks, middle-clicks pass through to GestureDetector for context menu and panning
+                  if (event.buttons != 1) {
+                    print('   ➡️ NOT button 1 - returning early to pass through');
+                    return;
+                  }
 
-                  print('🎯 Left handle pointer down');
+                  print('🎯 Left handle pointer down - HANDLING');
                   _startDrag('left', event.localPosition.dx, null);
                 },
                 onPointerMove: (event) {
@@ -5740,13 +5799,16 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
           ),
 
         // Right boundary hit zone (invisible, wide area for easy dragging)
-        if (hasExplicitXRange && widget.interactiveAnnotations)
+        if (hasExplicitXRange && widget.interactiveAnnotations && widget.annotation.allowEditing)
           Positioned(
             right: -_handleHitWidth / 2,
             top: 0,
             bottom: 0,
             width: _handleHitWidth,
             child: MouseRegion(
+              // CRITICAL: Must use translucent to allow unhandled events to pass through
+              // Without this, MouseRegion blocks ALL pointer events including right-click/middle-click
+              hitTestBehavior: HitTestBehavior.translucent,
               cursor: SystemMouseCursors.resizeLeftRight,
               onEnter: (_) {
                 if (_draggingEdge == null) {
@@ -5759,10 +5821,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 }
               },
               child: Listener(
-                behavior: HitTestBehavior.translucent,
+                // CRITICAL: Use opaque so we ONLY handle left-click drag, everything else passes through
+                behavior: HitTestBehavior.opaque,
                 onPointerDown: (event) {
                   // CRITICAL: Only handle left mouse button (primary button)
-                  // Let right-clicks pass through to GestureDetector for context menu
+                  // Let right-clicks, middle-clicks pass through to GestureDetector for context menu and panning
                   if (event.buttons != 1) return;
 
                   print('🎯 Right handle pointer down');
@@ -5784,13 +5847,16 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
           ),
 
         // Top boundary hit zone (invisible, wide area for easy dragging)
-        if (hasExplicitYRange && widget.interactiveAnnotations)
+        if (hasExplicitYRange && widget.interactiveAnnotations && widget.annotation.allowEditing)
           Positioned(
             top: -_handleHitWidth / 2,
             left: 0,
             right: 0,
             height: _handleHitWidth,
             child: MouseRegion(
+              // CRITICAL: Must use translucent to allow unhandled events to pass through
+              // Without this, MouseRegion blocks ALL pointer events including right-click/middle-click
+              hitTestBehavior: HitTestBehavior.translucent,
               cursor: SystemMouseCursors.resizeUpDown,
               onEnter: (_) {
                 print('🔵 Top handle ENTER event - _draggingEdge=$_draggingEdge');
@@ -5807,10 +5873,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 }
               },
               child: Listener(
-                behavior: HitTestBehavior.translucent,
+                // CRITICAL: Use opaque so we ONLY handle left-click drag, everything else passes through
+                behavior: HitTestBehavior.opaque,
                 onPointerDown: (event) {
                   // CRITICAL: Only handle left mouse button (primary button)
-                  // Let right-clicks pass through to GestureDetector for context menu
+                  // Let right-clicks, middle-clicks pass through to GestureDetector for context menu and panning
                   if (event.buttons != 1) return;
 
                   print('🎯 Top handle pointer down');
@@ -5832,13 +5899,16 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
           ),
 
         // Bottom boundary hit zone (invisible, wide area for easy dragging)
-        if (hasExplicitYRange && widget.interactiveAnnotations)
+        if (hasExplicitYRange && widget.interactiveAnnotations && widget.annotation.allowEditing)
           Positioned(
             bottom: -_handleHitWidth / 2,
             left: 0,
             right: 0,
             height: _handleHitWidth,
             child: MouseRegion(
+              // CRITICAL: Must use translucent to allow unhandled events to pass through
+              // Without this, MouseRegion blocks ALL pointer events including right-click/middle-click
+              hitTestBehavior: HitTestBehavior.translucent,
               cursor: SystemMouseCursors.resizeUpDown,
               onEnter: (_) {
                 print('🔵 Bottom handle ENTER event - _draggingEdge=$_draggingEdge');
@@ -5855,10 +5925,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 }
               },
               child: Listener(
-                behavior: HitTestBehavior.translucent,
+                // CRITICAL: Use opaque so we ONLY handle left-click drag, everything else passes through
+                behavior: HitTestBehavior.opaque,
                 onPointerDown: (event) {
                   // CRITICAL: Only handle left mouse button (primary button)
-                  // Let right-clicks pass through to GestureDetector for context menu
+                  // Let right-clicks, middle-clicks pass through to GestureDetector for context menu and panning
                   if (event.buttons != 1) return;
 
                   print('🎯 Bottom handle pointer down');

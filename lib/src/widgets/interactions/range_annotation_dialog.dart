@@ -700,6 +700,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       fillColor: _fillColor,
       borderColor: _borderColor,
       labelPosition: _labelPosition,
+      // allowDragging and allowEditing default to true for RangeAnnotation
     );
 
     Navigator.of(context).pop(annotation);

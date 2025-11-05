@@ -28,14 +28,16 @@ class RangeAnnotation extends ChartAnnotation {
   /// The [labelPosition] determines where the label text appears.
   /// The [snapToValue] enables snapping to nearest data point values when dragging.
   /// The [snapIncrement] controls the snap granularity when snapToValue is enabled.
+  /// The [allowDragging] enables dragging to reposition (defaults to true for RangeAnnotation).
+  /// The [allowEditing] enables resizing via drag handles (defaults to true for RangeAnnotation).
   ///
   /// Throws [AssertionError] if startX >= endX or startY >= endY when both are provided.
   RangeAnnotation({
     super.id,
     super.label,
     super.style,
-    super.allowDragging,
-    super.allowEditing,
+    super.allowDragging = true, // Default to true for RangeAnnotation
+    super.allowEditing = true, // Default to true for RangeAnnotation
     super.zIndex,
     super.snapToValue,
     super.snapIncrement,

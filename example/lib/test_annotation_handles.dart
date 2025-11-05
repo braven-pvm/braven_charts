@@ -34,46 +34,50 @@ class _TestScreenState extends State<TestScreen> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: BravenChart(
-            chartType: ChartType.line,
-            series: [
-              ChartSeries(
-                id: 'test',
-                points: List.generate(
-                  10,
-                  (i) => ChartDataPoint(x: i.toDouble(), y: (i * 2).toDouble()),
+          child: SizedBox.expand(
+            child: BravenChart(
+              chartType: ChartType.line,
+              series: [
+                ChartSeries(
+                  id: 'test',
+                  points: List.generate(
+                    10,
+                    (i) => ChartDataPoint(x: i.toDouble(), y: (i * 2).toDouble()),
+                  ),
+                  color: Colors.blue,
+                  annotations: [
+                    RangeAnnotation(
+                      id: 'test_range_x',
+                      label: 'X Range',
+                      startX: 3,
+                      endX: 7,
+                      fillColor: Colors.blue.withValues(alpha: 0.2),
+                      borderColor: Colors.blue,
+                      snapToValue: true,
+                      snapIncrement: 1.0,
+                    ),
+                    RangeAnnotation(
+                      allowEditing: true,
+                      id: 'test_range_y',
+                      label: 'Y Range',
+                      startY: 6,
+                      endY: 14,
+                      fillColor: Colors.green.withValues(alpha: 0.2),
+                      borderColor: Colors.green,
+                      snapToValue: true,
+                      snapIncrement: 2.0,
+                    ),
+                  ],
                 ),
-                color: Colors.blue,
-                annotations: [
-                  RangeAnnotation(
-                    id: 'test_range_x',
-                    label: 'X Range',
-                    startX: 3,
-                    endX: 7,
-                    fillColor: Colors.blue.withValues(alpha: 0.2),
-                    borderColor: Colors.blue,
-                    snapToValue: true,
-                    snapIncrement: 1.0,
-                  ),
-                  RangeAnnotation(
-                    id: 'test_range_y',
-                    label: 'Y Range',
-                    startY: 6,
-                    endY: 14,
-                    fillColor: Colors.green.withValues(alpha: 0.2),
-                    borderColor: Colors.green,
-                    snapToValue: true,
-                    snapIncrement: 2.0,
-                  ),
-                ],
+              ],
+              width: 800,
+              height: 600,
+              interactiveAnnotations: true,
+              interactionConfig: const InteractionConfig(
+                enablePan: true,
+                enableZoom: true,
+                enabled: true,
               ),
-            ],
-            width: 800,
-            height: 400,
-            interactiveAnnotations: true,
-            interactionConfig: InteractionConfig(
-              enablePan: true,
-              en
             ),
           ),
         ),
