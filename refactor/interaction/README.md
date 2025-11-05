@@ -137,26 +137,28 @@ All 15 conflict scenarios from `CONFLICT_RESOLUTION_TABLE.md` are implemented:
 
 4. **Test Elements**
    - ✅ SimulatedDatapoint with tooltip support
-
-### 🟡 In Progress
+   - ✅ SimulatedAnnotation with resize handles (8 handles: corners + midpoints)
+   - ✅ SimulatedSeries with line rendering and hit testing
 
 5. **Custom Recognizers**
-   - ⏳ PriorityPanRecognizer (coordinator-integrated)
-   - ⏳ PriorityTapRecognizer (coordinator-integrated)
+   - ✅ ContextAwareGestureRecognizer base class
+   - ✅ PriorityPanGestureRecognizer (middle-click exclusive pan)
+   - ✅ PriorityTapGestureRecognizer (left-click selection with Ctrl multi-select)
 
-6. **Additional Test Elements**
-   - ⏳ SimulatedAnnotation (with resize handles)
-   - ⏳ SimulatedSeries (line path)
+6. **Unit Tests**
+   - ✅ QuadTree operations (17 tests, all passing)
+
+### 🟡 In Progress
 
 7. **Widget Layer**
    - ⏳ PrototypeChart widget (RenderObject + overlays)
 
 ### ⏸️ Not Started
 
-8. **Unit Tests**
+8. **Additional Unit Tests**
    - ⏸️ Coordinator state transitions
-   - ⏸️ QuadTree operations
    - ⏸️ Priority resolution logic
+   - ⏸️ Recognizer conflict handling
 
 9. **Widget Tests**
    - ⏸️ All 15 conflict scenarios
