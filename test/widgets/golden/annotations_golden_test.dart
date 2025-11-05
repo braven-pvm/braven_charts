@@ -44,8 +44,7 @@ void main() {
                     text: 'Important Note',
                     position: const Offset(200, 100),
                     style: AnnotationStyle(
-                      fontSize: 14,
-                      textColor: Colors.blue,
+                      textStyle: const TextStyle(fontSize: 14, color: Colors.blue),
                       backgroundColor: Colors.blue.withOpacity(0.1),
                     ),
                   ),
@@ -83,7 +82,7 @@ void main() {
                     markerShape: MarkerShape.star,
                     markerSize: 12,
                     style: AnnotationStyle(
-                      textColor: Colors.red,
+                      textStyle: const TextStyle(color: Colors.red),
                       backgroundColor: Colors.red.withOpacity(0.1),
                     ),
                   ),
@@ -137,8 +136,7 @@ void main() {
       );
     });
 
-    testWidgets('ThresholdAnnotation horizontal golden',
-        (WidgetTester tester) async {
+    testWidgets('ThresholdAnnotation horizontal golden', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -174,8 +172,7 @@ void main() {
       );
     });
 
-    testWidgets('ThresholdAnnotation vertical golden',
-        (WidgetTester tester) async {
+    testWidgets('ThresholdAnnotation vertical golden', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -289,7 +286,7 @@ void main() {
                     markerSize: 12,
                     zIndex: 10,
                     style: const AnnotationStyle(
-                      textColor: Colors.green,
+                      textStyle: TextStyle(color: Colors.green),
                     ),
                   ),
                 ],
