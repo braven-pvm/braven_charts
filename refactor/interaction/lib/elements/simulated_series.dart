@@ -125,8 +125,7 @@ class SimulatedSeries extends ChartElement {
     }
 
     // Parameter t represents position along segment (0 = start, 1 = end)
-    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
-        (dx * dx + dy * dy);
+    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) / (dx * dx + dy * dy);
 
     // Clamp t to [0, 1] to stay on segment
     final tClamped = t.clamp(0.0, 1.0);
