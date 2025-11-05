@@ -47,10 +47,7 @@ class ChartController extends ChangeNotifier {
   ///
   /// Throws [AssertionError] if coordinates are NaN or infinity.
   void addPoint(String seriesId, ChartDataPoint point) {
-    assert(
-      point.x.isFinite && point.y.isFinite,
-      'Cannot add point with NaN or infinity coordinates',
-    );
+    assert(point.x.isFinite && point.y.isFinite, 'Cannot add point with NaN or infinity coordinates');
 
     final series = _seriesData.putIfAbsent(seriesId, () => []);
     series.add(point);
@@ -89,16 +86,15 @@ class ChartController extends ChangeNotifier {
   /// Returns a new map instance to prevent external modification.
   /// Each series list is also copied.
   Map<String, List<ChartDataPoint>> getAllSeries() {
-    return Map.fromEntries(
-      _seriesData.entries.map(
-        (entry) => MapEntry(entry.key, List.from(entry.value)),
-      ),
-    );
+    return Map.fromEntries(_seriesData.entries.map((entry) => MapEntry(entry.key, List.from(entry.value))));
   }
 
   // ========== Annotation Management Methods ==========
 
-  /// Adds an annotation to the chart.
+  /// Adds a chart-level annotation.
+  ///
+  /// Supports TextAnnotation, RangeAnnotation, and ThresholdAnnotation at chart level.
+  /// For series-specific annotations (Point, Trend), add them to ChartSeries.annotations.
   ///
   /// Returns the annotation's ID. If the annotation already has an ID,
   /// that ID is used. Otherwise, a new ID is auto-generated.
@@ -123,8 +119,9 @@ class ChartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates an existing annotation.
+  /// Updates an existing chart-level annotation.
   ///
+  /// Supports TextAnnotation, RangeAnnotation, and ThresholdAnnotation at chart level.
   /// Throws [StateError] if the annotation doesn't exist.
   /// Notifies listeners after the update.
   void updateAnnotation(String id, ChartAnnotation annotation) {
@@ -136,12 +133,12 @@ class ChartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns an annotation by ID, or null if not found.
+  /// Returns a chart-level annotation by ID, or null if not found.
   ChartAnnotation? getAnnotation(String id) {
     return _annotations[id];
   }
 
-  /// Returns a copy of all annotations as a list.
+  /// Returns a copy of all chart-level annotations as a list.
   ///
   /// Returns a new list instance to prevent external modification.
   List<ChartAnnotation> getAllAnnotations() {

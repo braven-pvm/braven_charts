@@ -6,29 +6,39 @@ import 'chart_annotation.dart';
 
 /// A text annotation that displays text at a specific screen position.
 ///
-/// TextAnnotation allows placing arbitrary text labels anywhere on the chart
-/// using screen coordinates (Offset). The [anchor] property controls how the
-/// text is positioned relative to the [position] point.
+/// **Screen-Coordinate Positioning:**
+/// TextAnnotation uses [position] (Offset) for static screen placement.
+/// - Text stays fixed at screen coordinates regardless of zoom/pan
+/// - Example: Chart title overlay, watermark, static labels
 ///
-/// Example:
+/// **For Data-Anchored Text:**
+/// Use [PointAnnotation] instead - it supports labels anchored to data points
+/// that move with zoom/pan operations.
+///
+/// **Example:**
 /// ```dart
+/// // Screen-coordinate mode (static position)
 /// TextAnnotation(
-///   id: 'label1',
-///   text: 'Important Event',
+///   id: 'title',
+///   text: 'Sales Data',
 ///   position: Offset(100, 50),
 ///   anchor: AnnotationAnchor.topLeft,
 /// )
 /// ```
 class TextAnnotation extends ChartAnnotation {
-  /// Creates a text annotation.
+  /// Creates a text annotation at a screen position.
   ///
-  /// The [text] is the content to display.
-  /// The [position] is the screen coordinate where the text is anchored.
-  /// The [anchor] determines how the text aligns relative to [position].
-  /// The [backgroundColor] is optional and creates a filled background.
-  /// The [borderColor] is optional and draws a border around the text.
+  /// **Required parameters:**
+  /// - [text]: The content to display
+  /// - [position]: Screen coordinate where text is anchored
   ///
-  /// Throws [AssertionError] if [position] has negative coordinates.
+  /// **Optional styling:**
+  /// - [anchor]: How text aligns relative to position (default: topLeft)
+  /// - [backgroundColor]: Optional background fill color
+  /// - [borderColor]: Optional border color
+  ///
+  /// **Validation:**
+  /// - [position] must have non-negative coordinates
   TextAnnotation({
     super.id,
     super.label,
@@ -51,6 +61,7 @@ class TextAnnotation extends ChartAnnotation {
 
   /// The screen position where this annotation is anchored.
   ///
+  /// Text is placed at this fixed screen location regardless of zoom/pan.
   /// Must have non-negative dx and dy values.
   final Offset position;
 

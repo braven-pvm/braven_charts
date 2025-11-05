@@ -233,17 +233,26 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
       }
 
       setState(() {
+        // Note: TextAnnotation now uses screen coordinates only.
+        // For data-anchored annotations, use PointAnnotation within ChartSeries.annotations.
+        // Here we add a simple screen-coordinate label for demonstration.
         _controllerDemo.addAnnotation(
-          PointAnnotation(
+          TextAnnotation(
             id: 'peak_${DateTime.now().millisecondsSinceEpoch}',
-            label: 'Peak: ${maxY.toStringAsFixed(1)}',
-            seriesId: 'controlled',
-            dataPointIndex: maxIndex,
-            markerShape: MarkerShape.star,
-            markerSize: 14,
+            text: '⭐ Peak: ${maxY.toStringAsFixed(1)} (index: $maxIndex)',
+            position: const Offset(200, 50), // Fixed screen position
+            anchor: AnnotationAnchor.topLeft,
             style: const AnnotationStyle(
-              textColor: Colors.orange,
+              textStyle: TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              backgroundColor: Colors.white,
               borderColor: Colors.orange,
+              borderWidth: 2,
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             ),
           ),
         );

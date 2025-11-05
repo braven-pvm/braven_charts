@@ -1,11 +1,12 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter/material.dart';
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
 import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
-import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/src/foundation/type_system/chart_error.dart';
+import 'package:braven_charts/src/foundation/type_system/chart_result.dart';
+import 'package:braven_charts/src/widgets/annotations/chart_annotation.dart';
+import 'package:flutter/material.dart';
 
 /// Rendering style hints for series visualization.
 enum SeriesStyle {
@@ -34,6 +35,22 @@ enum SeriesStyle {
 /// );
 /// ```
 class ChartSeries {
+  /// Creates a chart series with required id and points.
+  ///
+  /// [id] must not be empty.
+  /// [points] can be empty but must not be null.
+  /// If [isXOrdered] is true, points should be sorted by x-value.
+  ChartSeries({
+    required this.id,
+    this.name,
+    required this.points,
+    this.color,
+    this.style,
+    this.isXOrdered = false,
+    this.metadata,
+    this.annotations = const [],
+  }) : assert(id.isNotEmpty, 'id must not be empty');
+
   /// Unique identifier for the series.
   final String id;
 
@@ -55,24 +72,37 @@ class ChartSeries {
   /// Optional custom metadata.
   final Map<String, dynamic>? metadata;
 
+  /// Annotations specific to this series.
+  ///
+  /// **Preferred Pattern**: Attach annotations directly to the series they reference.
+  /// This provides better encapsulation and eliminates the need for `seriesId` lookups.
+  ///
+  /// Example:
+  /// ```dart
+  /// ChartSeries(
+  ///   id: 'temperature',
+  ///   points: [...],
+  ///   annotations: [
+  ///     TrendAnnotation(
+  ///       id: 'temp_trend',
+  ///       trendType: TrendType.linear,
+  ///     ),
+  ///     ThresholdAnnotation(
+  ///       id: 'target',
+  ///       value: 28.0,
+  ///     ),
+  ///   ],
+  /// )
+  /// ```
+  ///
+  /// **Migration Note**: Chart-level annotations (BravenChart.annotations) are still
+  /// supported for backwards compatibility and global annotations that don't belong
+  /// to a specific series.
+  final List<ChartAnnotation> annotations;
+
   // Cached computed properties
   dr.DataRange? _xRange;
   dr.DataRange? _yRange;
-
-  /// Creates a chart series with required id and points.
-  ///
-  /// [id] must not be empty.
-  /// [points] can be empty but must not be null.
-  /// If [isXOrdered] is true, points should be sorted by x-value.
-  ChartSeries({
-    required this.id,
-    this.name,
-    required this.points,
-    this.color,
-    this.style,
-    this.isXOrdered = false,
-    this.metadata,
-  }) : assert(id.isNotEmpty, 'id must not be empty');
 
   /// Returns true if the series has no data points.
   bool get isEmpty => points.isEmpty;
@@ -182,6 +212,7 @@ class ChartSeries {
     SeriesStyle? style,
     bool? isXOrdered,
     Map<String, dynamic>? metadata,
+    List<ChartAnnotation>? annotations,
   }) {
     return ChartSeries(
       id: id ?? this.id,
@@ -191,6 +222,7 @@ class ChartSeries {
       style: style ?? this.style,
       isXOrdered: isXOrdered ?? this.isXOrdered,
       metadata: metadata ?? this.metadata,
+      annotations: annotations ?? this.annotations,
     );
   }
 
