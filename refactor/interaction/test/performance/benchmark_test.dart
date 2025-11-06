@@ -10,7 +10,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:interaction_prototype/elements/simulated_datapoint.dart';
 import 'package:interaction_prototype/rendering/spatial_index.dart';
@@ -160,8 +159,7 @@ void main() {
 
       // Verify scaling is better than linear (roughly logarithmic)
       final ratio5000to100 = timings[5000]! / timings[100]!;
-      expect(ratio5000to100, lessThan(10), 
-        reason: 'Query time should scale logarithmically, not linearly (ratio: $ratio5000to100)');
+      expect(ratio5000to100, lessThan(10), reason: 'Query time should scale logarithmically, not linearly (ratio: $ratio5000to100)');
     });
   });
 
@@ -193,8 +191,7 @@ void main() {
 
       // Initial build can take longer (includes framework setup)
       // Subsequent frames should be within 16.67ms budget
-      expect(elapsedMs, lessThan(200), 
-        reason: 'Widget build took ${elapsedMs}ms (expected <200ms for initial build)');
+      expect(elapsedMs, lessThan(200), reason: 'Widget build took ${elapsedMs}ms (expected <200ms for initial build)');
       debugPrint('✓ Widget build with 100 elements: ${elapsedMs}ms');
     });
 
@@ -233,8 +230,7 @@ void main() {
       stopwatch.stop();
       final avgMs = stopwatch.elapsedMilliseconds / 10.0;
 
-      expect(avgMs, lessThan(17), 
-        reason: 'Avg rebuild took ${avgMs.toStringAsFixed(2)}ms (expected <16.67ms)');
+      expect(avgMs, lessThan(17), reason: 'Avg rebuild took ${avgMs.toStringAsFixed(2)}ms (expected <16.67ms)');
       debugPrint('✓ Widget rapid rebuilds: ${avgMs.toStringAsFixed(2)}ms average');
     });
 
@@ -269,8 +265,7 @@ void main() {
       stopwatch.stop();
       final avgMs = stopwatch.elapsedMilliseconds / 20.0;
 
-      expect(avgMs, lessThan(17), 
-        reason: 'Avg interaction took ${avgMs.toStringAsFixed(2)}ms (expected <16.67ms)');
+      expect(avgMs, lessThan(17), reason: 'Avg interaction took ${avgMs.toStringAsFixed(2)}ms (expected <16.67ms)');
       debugPrint('✓ Widget interactions with 200 elements: ${avgMs.toStringAsFixed(2)}ms average');
     });
   });
@@ -381,8 +376,7 @@ void main() {
       final totalMs = stopwatch.elapsedMilliseconds;
       final avgMs = totalMs / 50.0;
 
-      expect(avgMs, lessThan(17), 
-        reason: 'Avg gesture handling took ${avgMs.toStringAsFixed(2)}ms');
+      expect(avgMs, lessThan(17), reason: 'Avg gesture handling took ${avgMs.toStringAsFixed(2)}ms');
       debugPrint('✓ Stress test: 50 rapid gestures handled in ${totalMs}ms (${avgMs.toStringAsFixed(2)}ms avg)');
     });
   });

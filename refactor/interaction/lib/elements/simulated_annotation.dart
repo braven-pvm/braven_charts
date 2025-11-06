@@ -3,10 +3,12 @@
 
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Colors;
 
 import '../core/chart_element.dart';
+import '../core/element_types.dart';
+import '../core/hit_test_strategy.dart';
+import 'resize_handle_element.dart';
 
 /// Simulated annotation element for testing.
 ///
@@ -61,10 +63,9 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   Rect get bounds => _bounds;
 
   @override
-  int get priority => 8; // HIGH priority (per conflict resolution)
+  ChartElementType get elementType => ChartElementType.annotation;
 
-  @override
-  String get elementType => 'annotation';
+  // Priority derived from elementType (6 - MEDIUM priority)
 
   @override
   bool get isSelectable => true;
@@ -106,13 +107,13 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   /// Gets all resize handle positions.
   ///
   /// Returns 8 handles: corners (TL, TR, BL, BR) + midpoints (T, R, B, L).
+  /// **DEPRECATED**: Use createResizeHandleElements() instead.
   List<({String id, Offset center, ResizeDirection direction})> getResizeHandles() {
     final left = _bounds.left;
     final right = _bounds.right;
     final top = _bounds.top;
     final bottom = _bounds.bottom;
-    final centerX = _bounds.center.dx;
-    final centerY = _bounds.center.dy;
+    final center = _bounds.center;
 
     return [
       // Corners
@@ -121,53 +122,122 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
       (id: 'bl', center: Offset(left, bottom), direction: ResizeDirection.bottomLeft),
       (id: 'br', center: Offset(right, bottom), direction: ResizeDirection.bottomRight),
       // Midpoints
-      (id: 't', center: Offset(centerX, top), direction: ResizeDirection.top),
-      (id: 'r', center: Offset(right, centerY), direction: ResizeDirection.right),
-      (id: 'b', center: Offset(centerX, bottom), direction: ResizeDirection.bottom),
-      (id: 'l', center: Offset(left, centerY), direction: ResizeDirection.left),
+      (id: 't', center: Offset(center.dx, top), direction: ResizeDirection.top),
+      (id: 'r', center: Offset(right, center.dy), direction: ResizeDirection.right),
+      (id: 'b', center: Offset(center.dx, bottom), direction: ResizeDirection.bottom),
+      (id: 'l', center: Offset(left, center.dy), direction: ResizeDirection.left),
     ];
   }
 
-  /// Hit tests for resize handles.
+  /// Creates ResizeHandleElement instances for this annotation.
   ///
-  /// Returns the handle ID and direction if hit, null otherwise.
-  ({String handleId, ResizeDirection direction})? hitTestHandle(Offset position) {
-    if (!isSelected) return null; // Handles only visible when selected
+  /// These are separate ChartElements with priority 7 that participate
+  /// in the unified hit-testing system. This ensures datapoints (priority 9)
+  /// win over resize handles when they overlap.
+  ///
+  /// Returns list of 8 handle elements for the QuadTree.
+  List<ResizeHandleElement> createResizeHandleElements() {
+    const handleSize = 8.0; // 8px × 8px hit target
+    final halfSize = handleSize / 2;
 
-    final handles = getResizeHandles();
-    for (final handle in handles) {
-      final distance = (position - handle.center).distance;
-      if (distance <= handleHitRadius) {
-        return (handleId: handle.id, direction: handle.direction);
-      }
+    final left = _bounds.left;
+    final right = _bounds.right;
+    final top = _bounds.top;
+    final bottom = _bounds.bottom;
+
+    return [
+      // Corners
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.topLeft,
+        bounds: Rect.fromCenter(center: Offset(left, top), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.topRight,
+        bounds: Rect.fromCenter(center: Offset(right, top), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottomLeft,
+        bounds: Rect.fromCenter(center: Offset(left, bottom), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottomRight,
+        bounds: Rect.fromCenter(center: Offset(right, bottom), width: handleSize, height: handleSize),
+      ),
+      // Edges (use continuous zones along the edge)
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.top,
+        bounds: Rect.fromLTRB(left + halfSize, top - halfSize, right - halfSize, top + halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.right,
+        bounds: Rect.fromLTRB(right - halfSize, top + halfSize, right + halfSize, bottom - halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottom,
+        bounds: Rect.fromLTRB(left + halfSize, bottom - halfSize, right - halfSize, bottom + halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.left,
+        bounds: Rect.fromLTRB(left - halfSize, top + halfSize, left + halfSize, bottom - halfSize),
+      ),
+    ];
+  }
+
+  /// Hit tests for resize handles using continuous edge zones.
+  ///
+  /// Returns the resize direction if hit on edge/corner, null otherwise.
+  ///
+  /// **Note**: Edges are always hittable for interaction (selection/resize),
+  /// even when not selected. Uses continuous 8px edge zones instead of discrete handles.
+  ResizeDirection? hitTestHandle(Offset position) {
+    // Use RectangleHitStrategy with continuous edge zones
+    final strategy = RectangleHitStrategy(
+      bounds: _bounds,
+      edgeWidth: 8.0,
+      enabledZones: {HitZone.edges},
+    );
+
+    // Check if position is on edge
+    if (strategy.isOnEdge(position)) {
+      return strategy.getResizeDirection(position);
     }
+
     return null;
   }
 
   @override
   bool hitTest(Offset position) {
-    // Check handles first (higher priority)
-    if (hitTestHandle(position) != null) {
-      return true;
-    }
+    // Use RectangleHitStrategy for both edges and body
+    final strategy = RectangleHitStrategy(
+      bounds: _bounds,
+      edgeWidth: 8.0,
+      enabledZones: {HitZone.edges, HitZone.body},
+    );
 
-    // Then check annotation body
-    return _bounds.contains(position);
+    return strategy.test(position);
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw background
+    // Draw background with transparency so you can see elements behind
     final bgPaint = Paint()
-      ..color = backgroundColor
+      ..color = backgroundColor.withOpacity(0.25) // Much more transparent
       ..style = PaintingStyle.fill;
     canvas.drawRect(_bounds, bgPaint);
 
     // Draw border (thicker if selected)
     final borderPaint = Paint()
-      ..color = isSelected ? borderColor : borderColor.withOpacity(0.5)
+      ..color = isSelected ? borderColor : borderColor.withOpacity(0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? 2.0 : 1.0;
+      ..strokeWidth = isSelected ? 2.5 : 1.5;
     canvas.drawRect(_bounds, borderPaint);
 
     // Draw hover indicator
@@ -202,10 +272,6 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
     }
 
     // TODO: Draw text (needs TextPainter - skip for Phase 0)
-    // For Phase 0, we'll just draw a simple placeholder
-    if (text.isNotEmpty) {
-      debugPrint('Annotation text: $text (rendering not implemented in Phase 0)');
-    }
   }
 
   // ============================================================================
@@ -215,25 +281,21 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   @override
   void onSelect() {
     isSelected = true;
-    debugPrint('[SimulatedAnnotation] Selected: $id');
   }
 
   @override
   void onDeselect() {
     isSelected = false;
-    debugPrint('[SimulatedAnnotation] Deselected: $id');
   }
 
   @override
   void onHoverEnter() {
     isHovered = true;
-    debugPrint('[SimulatedAnnotation] Hover enter: $id');
   }
 
   @override
   void onHoverExit() {
     isHovered = false;
-    debugPrint('[SimulatedAnnotation] Hover exit: $id');
   }
 
   @override
@@ -241,16 +303,4 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
 
   @override
   String toString() => 'SimulatedAnnotation(id: $id, bounds: $_bounds, text: "$text")';
-}
-
-/// Resize direction for annotation handles.
-enum ResizeDirection {
-  topLeft,
-  topRight,
-  bottomLeft,
-  bottomRight,
-  top,
-  right,
-  bottom,
-  left,
 }

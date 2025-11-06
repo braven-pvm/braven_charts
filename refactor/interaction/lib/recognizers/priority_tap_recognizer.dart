@@ -58,6 +58,9 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
   /// Whether we've claimed the selecting mode.
   bool _hasClaimedMode = false;
 
+  /// Guard to prevent recursive cleanup.
+  bool _isCleaningUp = false;
+
   /// Maximum allowed movement for a tap (px).
   static const double _kTapSlop = 18.0;
 
@@ -152,6 +155,13 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
   }
 
   void _cleanup() {
+    // Guard against recursive cleanup (didStopTrackingLastPointer calls this)
+    if (_isCleaningUp) {
+      return;
+    }
+
+    _isCleaningUp = true;
+
     if (_activePointer != null) {
       stopTrackingPointer(_activePointer!);
     }
@@ -159,9 +169,15 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
     _downPosition = null;
 
     if (_hasClaimedMode) {
-      handleGestureRejected();
+      if (coordinator.currentMode == InteractionMode.boxSelecting) {
+        // Skip release because we've transitioned to box select
+      } else {
+        handleGestureRejected();
+      }
       _hasClaimedMode = false;
     }
+
+    _isCleaningUp = false;
   }
 
   // ============================================================================

@@ -6,7 +6,6 @@
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:interaction_prototype/core/chart_element.dart';
 import 'package:interaction_prototype/elements/simulated_annotation.dart';
@@ -443,7 +442,7 @@ void main() {
 
     testWidgets('handles widget rebuild with element changes', (tester) async {
       final point1 = SimulatedDatapoint(id: 'point_1', center: const Offset(100, 100));
-      
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
