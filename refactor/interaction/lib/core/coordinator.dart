@@ -32,6 +32,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Set of all currently selected elements.
   final Set<ChartElement> _selectedElements = {};
 
+  /// Set of elements in preview selection (during box drag, before commit).
+  final Set<ChartElement> _previewSelection = {};
+
   /// Currently hovered element (if any).
   ChartElement? _hoveredElement;
 
@@ -59,6 +62,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
   /// All currently selected elements.
   Set<ChartElement> get selectedElements => Set.unmodifiable(_selectedElements);
+
+  /// Elements in preview selection (during box drag, before commit).
+  Set<ChartElement> get previewSelectedElements => Set.unmodifiable(_previewSelection);
 
   /// Currently hovered element.
   ChartElement? get hoveredElement => _hoveredElement;
@@ -135,7 +141,6 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       return; // No change
     }
 
-    final oldMode = _currentMode;
     _currentMode = mode;
     _activeElement = element;
 
@@ -146,7 +151,6 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       _boxSelectionRect = null;
     }
 
-    debugPrint('[Coordinator] Mode changed: ${oldMode.description} → ${mode.description}');
     notifyListeners();
   }
 
@@ -306,11 +310,32 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates preview selection set with elements currently in the box.
+  ///
+  /// This provides live visual feedback during box drag without committing
+  /// to actual selection until pointer up.
+  ///
+  /// [elements] are the elements currently intersecting the box selection rect.
+  void updatePreviewSelection(Set<ChartElement> elements) {
+    _previewSelection.clear();
+    _previewSelection.addAll(elements);
+    notifyListeners();
+  }
+
+  /// Clears preview selection.
+  ///
+  /// Called when box selection is committed or cancelled.
+  void clearPreviewSelection() {
+    _previewSelection.clear();
+    notifyListeners();
+  }
+
   /// Ends the current interaction.
   void endInteraction() {
     _interactionStartPosition = null;
     _interactionStartElement = null;
     _boxSelectionRect = null;
+    clearPreviewSelection(); // Clear preview when interaction ends
   }
 
   // ============================================================================

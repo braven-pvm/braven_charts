@@ -3,6 +3,8 @@
 
 import 'dart:ui';
 
+import 'element_types.dart';
+
 /// Base interface for all interactive chart elements.
 ///
 /// This unified interface allows the rendering and interaction systems to handle
@@ -25,23 +27,22 @@ abstract class ChartElement {
   /// - Coarse hit testing before precise [hitTest]
   Rect get bounds;
 
+  /// Element type identifier for type-safe behavior and conflict resolution.
+  ///
+  /// **Performance**: Enum comparison is faster than string comparison
+  /// (integer comparison vs memcmp).
+  ChartElementType get elementType;
+
   /// Priority level for conflict resolution.
   ///
-  /// Priority mapping from CONFLICT_RESOLUTION_TABLE.md:
-  /// - 9: Resize handles (annotation_resize_handle)
-  /// - 7: Annotations (trend/selectable types)
-  /// - 6: Datapoints
-  /// - 4: Series lines
-  /// - 0: Passive elements (crosshair)
+  /// Default implementation derives priority from element type.
+  /// Override if element needs dynamic priority based on state
+  /// (e.g., annotation edges vs body).
+  ///
+  /// See [ElementPriority] for the complete hierarchy.
   ///
   /// Higher values win conflicts when elements overlap.
-  int get priority;
-
-  /// Element type identifier for type-specific behavior.
-  ///
-  /// Examples: 'datapoint', 'annotation_text', 'annotation_trend',
-  ///           'annotation_resize_handle', 'series_line', 'crosshair'
-  String get elementType;
+  int get priority => ElementPriority.forType(elementType);
 
   /// Whether this element is currently selected.
   bool get isSelected;

@@ -3,9 +3,9 @@
 
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import '../core/chart_element.dart';
+import '../core/element_types.dart';
+import '../core/hit_test_strategy.dart';
 
 /// Simulated datapoint element for testing.
 ///
@@ -46,10 +46,9 @@ class SimulatedDatapoint extends ChartElement with TooltipElement {
   Rect get bounds => Rect.fromCircle(center: center, radius: radius);
 
   @override
-  int get priority => 6; // Per conflict resolution scenario 2
+  ChartElementType get elementType => ChartElementType.datapoint;
 
-  @override
-  String get elementType => 'datapoint';
+  // Priority derived from elementType (7 - HIGH priority)
 
   @override
   bool get isSelectable => true;
@@ -60,9 +59,12 @@ class SimulatedDatapoint extends ChartElement with TooltipElement {
   @override
   bool hitTest(Offset position) {
     // Per conflict resolution scenario 5: hit radius = 10px for interaction
+    // Uses PointHitStrategy for center-based circular hit-zone
     const hitRadius = 10.0;
-    final distance = (position - center).distance;
-    return distance <= hitRadius;
+    return PointHitStrategy(
+      center: center,
+      radius: hitRadius,
+    ).test(position);
   }
 
   @override
@@ -98,22 +100,22 @@ class SimulatedDatapoint extends ChartElement with TooltipElement {
 
   @override
   void onSelect() {
-    debugPrint('[Datapoint $id] Selected');
+    isSelected = true;
   }
 
   @override
   void onDeselect() {
-    debugPrint('[Datapoint $id] Deselected');
+    isSelected = false;
   }
 
   @override
   void onHoverEnter() {
-    debugPrint('[Datapoint $id] Hover enter');
+    isHovered = true;
   }
 
   @override
   void onHoverExit() {
-    debugPrint('[Datapoint $id] Hover exit');
+    isHovered = false;
   }
 
   @override

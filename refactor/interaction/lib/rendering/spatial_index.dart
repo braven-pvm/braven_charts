@@ -80,20 +80,21 @@ class QuadTree {
       _split();
     }
 
-    // Insert into appropriate child quadrant
-    // Use element's center to determine which quadrant
+    // Insert into ALL child quadrants that the element overlaps
+    // This ensures queries will find the element regardless of where they search
     if (isSplit) {
-      // Get element's center point
-      final center = element.bounds.center;
-      final midX = bounds.left + bounds.width / 2;
-      final midY = bounds.top + bounds.height / 2;
+      bool inserted = false;
 
-      // Determine quadrant index (0=TL, 1=TR, 2=BL, 3=BR)
-      int quadrant = 0;
-      if (center.dx >= midX) quadrant += 1; // Right
-      if (center.dy >= midY) quadrant += 2; // Bottom
+      // Check each child quadrant for overlap and insert if overlaps
+      for (final child in _children!) {
+        if (child.bounds.overlaps(element.bounds)) {
+          if (child.insert(element)) {
+            inserted = true;
+          }
+        }
+      }
 
-      return _children![quadrant].insert(element);
+      return inserted;
     }
 
     // At max depth and capacity - add to this node anyway
@@ -139,16 +140,14 @@ class QuadTree {
       ),
     ];
 
-    // Re-insert existing elements into appropriate children based on center point
-    final midX = bounds.left + bounds.width / 2;
-    final midY = bounds.top + bounds.height / 2;
-
+    // Re-insert existing elements into ALL overlapping children
+    // (not just the one containing the center)
     for (final element in _elements) {
-      final center = element.bounds.center;
-      int quadrant = 0;
-      if (center.dx >= midX) quadrant += 1; // Right
-      if (center.dy >= midY) quadrant += 2; // Bottom
-      _children![quadrant].insert(element);
+      for (final child in _children!) {
+        if (child.bounds.overlaps(element.bounds)) {
+          child.insert(element);
+        }
+      }
     }
     _elements.clear();
   }

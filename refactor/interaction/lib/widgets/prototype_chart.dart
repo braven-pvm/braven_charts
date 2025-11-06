@@ -1,9 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Interaction Architecture
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 import '../core/chart_element.dart';
 import '../core/coordinator.dart';
@@ -88,6 +86,9 @@ class _PrototypeChartState extends State<PrototypeChart> {
   late PriorityPanGestureRecognizer _panRecognizer;
   late PriorityTapGestureRecognizer _tapRecognizer;
 
+  // Mouse cursor state
+  MouseCursor _currentCursor = SystemMouseCursors.basic;
+
   @override
   void initState() {
     super.initState();
@@ -151,33 +152,26 @@ class _PrototypeChartState extends State<PrototypeChart> {
   }
 
   void _handleTapDown(TapDownDetails details) {
-    // Hit test to find element at tap position
-    final hitResult = _spatialIndex.queryNearest(details.localPosition);
-
-    if (hitResult != null) {
-      // Select or toggle based on Ctrl modifier
-      if (_coordinator.isCtrlPressed) {
-        _coordinator.toggleElementSelection(hitResult.element);
-      } else {
-        _coordinator.selectElement(hitResult.element);
-      }
-
-      widget.onElementSelected?.call(hitResult.element);
-    } else {
-      // Clicked empty space - clear selection if not Ctrl
-      if (!_coordinator.isCtrlPressed) {
-        final deselected = List.of(_coordinator.selectedElements);
-        _coordinator.clearSelection();
-
-        for (final element in deselected) {
-          widget.onElementDeselected?.call(element);
-        }
-      }
-    }
+    // NOTE: Selection logic has been moved to ChartRenderBox._handlePointerDown
+    // to ensure correct coordinate space usage. RenderBox uses event.localPosition
+    // which is in the correct coordinate space, whereas TapDownDetails.localPosition
+    // is in widget coordinate space and may differ due to transforms/padding.
+    //
+    // The RenderBox handler already performs hit-testing and selection with proper
+    // coordinates, so this handler should remain empty to avoid duplicate/conflicting
+    // selection logic.
   }
 
   void _handleTapUp(TapUpDetails details) {
     // Tap completed - selection already handled in tapDown
+  }
+
+  void _handleCursorChange(MouseCursor cursor) {
+    if (_currentCursor != cursor) {
+      setState(() {
+        _currentCursor = cursor;
+      });
+    }
   }
 
   @override
@@ -186,24 +180,26 @@ class _PrototypeChartState extends State<PrototypeChart> {
       color: widget.backgroundColor,
       child: Stack(
         children: [
-          // Main chart render area
-          RawGestureDetector(
-            gestures: {
-              PriorityPanGestureRecognizer:
-                  GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
-                () => _panRecognizer,
-                (recognizer) {},
+          // Main chart render area wrapped in MouseRegion for cursor control
+          MouseRegion(
+            cursor: _currentCursor,
+            child: RawGestureDetector(
+              gestures: {
+                PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
+                  () => _panRecognizer,
+                  (recognizer) {},
+                ),
+                PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
+                  () => _tapRecognizer,
+                  (recognizer) {},
+                ),
+              },
+              child: _ChartRenderWidget(
+                coordinator: _coordinator,
+                spatialIndex: _spatialIndex,
+                elements: widget.elements,
+                onCursorChange: _handleCursorChange,
               ),
-              PriorityTapGestureRecognizer:
-                  GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
-                () => _tapRecognizer,
-                (recognizer) {},
-              ),
-            },
-            child: _ChartRenderWidget(
-              coordinator: _coordinator,
-              spatialIndex: _spatialIndex,
-              elements: widget.elements,
             ),
           ),
 
@@ -226,25 +222,27 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.coordinator,
     required this.spatialIndex,
     required this.elements,
+    this.onCursorChange,
   });
 
   final ChartInteractionCoordinator coordinator;
   final QuadTree spatialIndex;
   final List<ChartElement> elements;
+  final void Function(MouseCursor cursor)? onCursorChange;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
     return ChartRenderBox(
       coordinator: coordinator,
       elements: elements,
+      onCursorChange: onCursorChange,
     );
   }
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
-    // ChartRenderBox fields are final, so we need to mark as needs paint
-    // when elements change (or recreate the render object)
-    renderObject.markNeedsPaint();
+    // Update elements reference to pick up selection state mutations
+    renderObject.updateElements(elements);
   }
 }
 
@@ -280,8 +278,7 @@ class _DebugOverlay extends StatelessWidget {
               '${coordinator.isShiftPressed ? "Shift " : ""}'
               '${coordinator.isAltPressed ? "Alt " : ""}',
             ),
-            if (coordinator.activeElement != null)
-              Text('Active: ${coordinator.activeElement!.id}'),
+            if (coordinator.activeElement != null) Text('Active: ${coordinator.activeElement!.id}'),
           ],
         ),
       ),

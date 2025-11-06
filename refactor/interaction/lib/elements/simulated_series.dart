@@ -3,9 +3,9 @@
 
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import '../core/chart_element.dart';
+import '../core/element_types.dart';
+import '../core/hit_test_strategy.dart';
 
 /// Simulated series element for testing.
 ///
@@ -73,10 +73,9 @@ class SimulatedSeries extends ChartElement {
   }
 
   @override
-  int get priority => 5; // MEDIUM-LOW (per conflict resolution scenario 2)
+  ChartElementType get elementType => ChartElementType.series;
 
-  @override
-  String get elementType => 'series';
+  // Priority derived from elementType (7 - HIGH priority)
 
   @override
   bool get isSelectable => true;
@@ -98,45 +97,7 @@ class SimulatedSeries extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
-    if (points.length < 2) return false;
-
-    // Check distance to each line segment
-    for (int i = 0; i < points.length - 1; i++) {
-      final p1 = points[i];
-      final p2 = points[i + 1];
-
-      final distance = _distanceToLineSegment(position, p1, p2);
-      if (distance <= hitTolerance) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /// Calculates distance from a point to a line segment.
-  double _distanceToLineSegment(Offset point, Offset segStart, Offset segEnd) {
-    final dx = segEnd.dx - segStart.dx;
-    final dy = segEnd.dy - segStart.dy;
-
-    if (dx == 0 && dy == 0) {
-      // Segment is a point
-      return (point - segStart).distance;
-    }
-
-    // Parameter t represents position along segment (0 = start, 1 = end)
-    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) / (dx * dx + dy * dy);
-
-    // Clamp t to [0, 1] to stay on segment
-    final tClamped = t.clamp(0.0, 1.0);
-
-    // Find closest point on segment
-    final closest = Offset(
-      segStart.dx + tClamped * dx,
-      segStart.dy + tClamped * dy,
-    );
-
-    return (point - closest).distance;
+    return LineHitStrategy(points: points, tolerance: hitTolerance).test(position);
   }
 
   @override
@@ -188,25 +149,21 @@ class SimulatedSeries extends ChartElement {
   @override
   void onSelect() {
     isSelected = true;
-    debugPrint('[SimulatedSeries] Selected: $id (${points.length} points)');
   }
 
   @override
   void onDeselect() {
     isSelected = false;
-    debugPrint('[SimulatedSeries] Deselected: $id');
   }
 
   @override
   void onHoverEnter() {
     isHovered = true;
-    debugPrint('[SimulatedSeries] Hover enter: $id');
   }
 
   @override
   void onHoverExit() {
     isHovered = false;
-    debugPrint('[SimulatedSeries] Hover exit: $id');
   }
 
   @override
