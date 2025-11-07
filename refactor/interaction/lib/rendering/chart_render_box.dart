@@ -121,16 +121,18 @@ class ChartRenderBox extends RenderBox {
   // ==========================================================================
 
   /// Minimum zoom level (relative to original data range).
-  /// 0.1 = can zoom out to show 10x original data range.
-  static const double minZoomLevel = 0.1;
+  /// 1.0 = cannot zoom out beyond original view (no zoom out allowed).
+  static const double minZoomLevel = 1.0;
 
   /// Maximum zoom level (relative to original data range).
   /// 10.0 = can zoom in to show 1/10th of original data range.
   static const double maxZoomLevel = 10.0;
 
-  /// Minimum fraction of original data that must remain visible when panning.
-  /// 0.1 = at least 10% of original data range must be visible.
-  static const double minVisibleDataFraction = 0.1;
+  /// Maximum whitespace allowed beyond data boundaries when panning.
+  /// 0.1 = can pan until original data edge is 10% into viewport
+  /// (leaving maximum 90% of data visible, minimum 10% whitespace).
+  /// This is viewport-based, so it's independent of zoom level.
+  static const double maxWhitespaceFraction = 0.1;
 
   /// Public getter for plot width.
   double get plotWidth => _plotArea.width;
@@ -310,58 +312,86 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
-  /// Clamps a transform to enforce pan bounds (keep data visible).
+  /// Clamps a transform to enforce pan bounds (limit whitespace).
   ///
   /// **Constraints**:
-  /// - At least 10% of original data range must remain visible
+  /// - Original data boundaries can move OFF-SCREEN by up to 10% of viewport
+  /// - This ensures at least 90% of original data remains visible when fully panned
+  /// - Constraint is viewport-based (independent of zoom level)
   ///
   /// **Algorithm**:
-  /// 1. Check if panned viewport still overlaps original data by at least 10%
-  /// 2. If not, clamp viewport to maintain minimum overlap
+  /// 1. Convert original data boundaries to current plot coordinates
+  /// 2. Check if they've moved too far off-screen
+  /// 3. Clamp so they stay within allowed off-screen range
+  ///
+  /// **Example**: If viewport is 800px wide:
+  /// - Left edge can move to -80px (10% off-screen to left)
+  /// - Right edge can move to 880px (10% off-screen to right)
+  /// This ensures 90% of data stays visible.
   ChartTransform _clampPanBounds(ChartTransform transform) {
     if (_originalTransform == null) return transform;
 
-    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
-    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
+    // Calculate where original data boundaries would appear in the current viewport
+    // These are in plot coordinates (0 to plotWidth/plotHeight)
+    final originalLeft = transform.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
+    final originalRight = transform.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
+    final originalTop = transform.dataToPlot(0.0, _originalTransform!.dataYMax).dy; // inverted Y
+    final originalBottom = transform.dataToPlot(0.0, _originalTransform!.dataYMin).dy; // inverted Y
 
-    final minVisibleX = originalXRange * minVisibleDataFraction;
-    final minVisibleY = originalYRange * minVisibleDataFraction;
+    final plotWidth = transform.plotWidth;
+    final plotHeight = transform.plotHeight;
+
+    // How far off-screen edges can go (negative values = off-screen)
+    final minLeftEdge = -plotWidth * maxWhitespaceFraction; // Can go 10% off-screen to left
+    final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction); // Can go 10% off-screen to right
+    final minTopEdge = -plotHeight * maxWhitespaceFraction; // Can go 10% off-screen upward
+    final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction); // Can go 10% off-screen downward
 
     double newDataXMin = transform.dataXMin;
     double newDataXMax = transform.dataXMax;
     double newDataYMin = transform.dataYMin;
     double newDataYMax = transform.dataYMax;
 
-    // Clamp X bounds
-    // If panned too far right (data too far left)
-    if (newDataXMin > _originalTransform!.dataXMax - minVisibleX) {
-      final shift = newDataXMin - (_originalTransform!.dataXMax - minVisibleX);
-      newDataXMin -= shift;
-      newDataXMax -= shift;
-      debugPrint('🔒 Pan clamped: X too far right');
-    }
-    // If panned too far left (data too far right)
-    if (newDataXMax < _originalTransform!.dataXMin + minVisibleX) {
-      final shift = (_originalTransform!.dataXMin + minVisibleX) - newDataXMax;
-      newDataXMin += shift;
-      newDataXMax += shift;
-      debugPrint('🔒 Pan clamped: X too far left');
+    // Clamp X bounds (left edge can't go too far left/off-screen)
+    if (originalLeft < minLeftEdge) {
+      // Original left edge is too far off-screen to the left - shift data range right
+      final excessPlot = minLeftEdge - originalLeft;
+      final excessData = excessPlot * transform.dataPerPixelX;
+      newDataXMin += excessData;
+      newDataXMax += excessData;
+      debugPrint('🔒 Pan clamped: Left edge at ${originalLeft.toStringAsFixed(1)}px < min ${minLeftEdge.toStringAsFixed(1)}px');
     }
 
-    // Clamp Y bounds
-    // If panned too far down (data too far up)
-    if (newDataYMin > _originalTransform!.dataYMax - minVisibleY) {
-      final shift = newDataYMin - (_originalTransform!.dataYMax - minVisibleY);
-      newDataYMin -= shift;
-      newDataYMax -= shift;
-      debugPrint('🔒 Pan clamped: Y too far down');
+    // Clamp X bounds (right edge can't go too far right/off-screen)
+    if (originalRight > maxRightEdge) {
+      // Original right edge is too far off-screen to the right - shift data range left
+      final excessPlot = originalRight - maxRightEdge;
+      final excessData = excessPlot * transform.dataPerPixelX;
+      newDataXMin -= excessData;
+      newDataXMax -= excessData;
+      debugPrint('🔒 Pan clamped: Right edge at ${originalRight.toStringAsFixed(1)}px > max ${maxRightEdge.toStringAsFixed(1)}px');
     }
-    // If panned too far up (data too far down)
-    if (newDataYMax < _originalTransform!.dataYMin + minVisibleY) {
-      final shift = (_originalTransform!.dataYMin + minVisibleY) - newDataYMax;
-      newDataYMin += shift;
-      newDataYMax += shift;
-      debugPrint('🔒 Pan clamped: Y too far up');
+
+    // Clamp Y bounds (top edge can't go too far up/off-screen)
+    if (originalTop < minTopEdge) {
+      // Original top edge is too far off-screen upward - shift data range down
+      final excessPlot = minTopEdge - originalTop;
+      final excessData = excessPlot * transform.dataPerPixelY;
+      // Y is inverted, so shifting "down" in plot means decreasing data values
+      newDataYMin -= excessData;
+      newDataYMax -= excessData;
+      debugPrint('🔒 Pan clamped: Top edge at ${originalTop.toStringAsFixed(1)}px < min ${minTopEdge.toStringAsFixed(1)}px');
+    }
+
+    // Clamp Y bounds (bottom edge can't go too far down/off-screen)
+    if (originalBottom > maxBottomEdge) {
+      // Original bottom edge is too far off-screen downward - shift data range up
+      final excessPlot = originalBottom - maxBottomEdge;
+      final excessData = excessPlot * transform.dataPerPixelY;
+      // Y is inverted, so shifting "up" in plot means increasing data values
+      newDataYMin += excessData;
+      newDataYMax += excessData;
+      debugPrint('🔒 Pan clamped: Bottom edge at ${originalBottom.toStringAsFixed(1)}px > max ${maxBottomEdge.toStringAsFixed(1)}px');
     }
 
     return ChartTransform(
