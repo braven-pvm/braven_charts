@@ -355,28 +355,63 @@ class ChartRenderBox extends RenderBox {
     final currentZoomX = originalXRange / currentXRange;
     final currentZoomY = originalYRange / currentYRange;
 
-    // At high zoom (>2x), use current viewport boundaries instead of original data boundaries
-    // This prevents infinite panning while allowing reasonable exploration
-    final useCurrentViewport = currentZoomX > 2.0 || currentZoomY > 2.0;
+    // At high zoom (>2x), use a different constraint strategy:
+    // Instead of tracking original boundaries, limit how far viewport center can drift
+    // from original data center. This creates a "roaming radius" constraint.
+    final useRoamingRadius = currentZoomX > 2.0 || currentZoomY > 2.0;
 
-    double originalLeft, originalRight, originalTop, originalBottom;
-    
-    if (useCurrentViewport) {
-      // High zoom: track current viewport edges (left edge = 0, right edge = plotWidth)
-      // We want to prevent panning when we already have substantial whitespace
-      originalLeft = 0.0;
-      originalRight = plotWidth;
-      originalTop = 0.0;
-      originalBottom = plotHeight;
-    } else {
-      // Low zoom: track original data boundaries to keep them visible
-      originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
-      originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
-      originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
-      originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
+    if (useRoamingRadius) {
+      // High zoom strategy: constrain viewport center to stay within roaming radius
+      // Calculate original data center
+      final originalCenterX = (_originalTransform!.dataXMin + _originalTransform!.dataXMax) / 2;
+      final originalCenterY = (_originalTransform!.dataYMin + _originalTransform!.dataYMax) / 2;
+      
+      // Calculate current viewport center in data space
+      final currentCenterX = (_transform!.dataXMin + _transform!.dataXMax) / 2;
+      final currentCenterY = (_transform!.dataYMin + _transform!.dataYMax) / 2;
+      
+      // Maximum roaming distance = 2x the original data range
+      // This allows exploring well beyond original boundaries but prevents infinite drift
+      final maxRoamX = originalXRange * 2.0;
+      final maxRoamY = originalYRange * 2.0;
+      
+      // Current distance from original center
+      final currentOffsetX = currentCenterX - originalCenterX;
+      final currentOffsetY = currentCenterY - originalCenterY;
+      
+      debugPrint('🔍 ROAMING: offset=($currentOffsetX, $currentOffsetY), max=($maxRoamX, $maxRoamY), zoom=${currentZoomX.toStringAsFixed(1)}x');
+      
+      // Clamp pan based on roaming limits
+      // Convert requested pan from plot space to data space
+      final dataDx = requestedDx * _transform!.dataPerPixelX;
+      final dataDy = requestedDy * _transform!.dataPerPixelY;
+      
+      // Calculate what the new offset would be
+      final newOffsetX = currentOffsetX + dataDx;
+      final newOffsetY = currentOffsetY + dataDy;
+      
+      // Clamp to roaming radius
+      final clampedOffsetX = newOffsetX.clamp(-maxRoamX, maxRoamX);
+      final clampedOffsetY = newOffsetY.clamp(-maxRoamY, maxRoamY);
+      
+      // Calculate how much we can actually move
+      final allowedDataDx = clampedOffsetX - currentOffsetX;
+      final allowedDataDy = clampedOffsetY - currentOffsetY;
+      
+      // Convert back to plot space
+      final allowedPlotDx = allowedDataDx / _transform!.dataPerPixelX;
+      final allowedPlotDy = allowedDataDy / _transform!.dataPerPixelY;
+      
+      debugPrint('🔍 ROAM CLAMP: requested=($requestedDx, $requestedDy) → allowed=($allowedPlotDx, $allowedPlotDy)');
+      
+      return (allowedPlotDx, allowedPlotDy);
     }
 
-    // Allowed bounds for data edges (with whitespace)
+    // Low zoom: track original data boundaries to keep them visible
+    final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
+    final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
+    final originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
+    final originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;    // Allowed bounds for data edges (with whitespace)
     final minLeftEdge = -plotWidth * maxWhitespaceFraction;
     final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);
     final minTopEdge = -plotHeight * maxWhitespaceFraction;
@@ -392,7 +427,7 @@ class ChartRenderBox extends RenderBox {
     final leftMargin = originalLeft - minLeftEdge;
     final rightMargin = maxRightEdge - originalRight;
 
-    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy), zoom=${currentZoomX.toStringAsFixed(1)}x, mode=${useCurrentViewport ? "viewport" : "original"}');
+    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy), zoom=${currentZoomX.toStringAsFixed(1)}x, mode=original');
     debugPrint('🔍 EDGES: L=$originalLeft/$minLeftEdge, R=$originalRight/$maxRightEdge');
     debugPrint('🔍 MARGINS: left=$leftMargin, right=$rightMargin');
 
