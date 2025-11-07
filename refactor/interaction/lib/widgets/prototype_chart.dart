@@ -2,7 +2,9 @@
 // Phase 0 Prototype - Interaction Architecture
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../axis/axis.dart' as chart_axis;
 import '../core/chart_element.dart';
 import '../core/coordinator.dart';
 import '../recognizers/priority_pan_recognizer.dart';
@@ -32,8 +34,11 @@ import '../rendering/spatial_index.dart';
 class PrototypeChart extends StatefulWidget {
   const PrototypeChart({
     super.key,
-    required this.elements,
-    this.chartBounds = const Rect.fromLTWH(0, 0, 800, 600),
+    this.elements,
+    this.elementGenerator,
+    required this.chartBounds,
+    this.xAxis,
+    this.yAxis,
     this.onElementSelected,
     this.onElementDeselected,
     this.onPanStart,
@@ -42,13 +47,45 @@ class PrototypeChart extends StatefulWidget {
     this.onZoom,
     this.backgroundColor = Colors.white,
     this.showDebugInfo = false,
-  });
+  }) : assert(
+          (elements != null) != (elementGenerator != null),
+          'Must provide either elements or elementGenerator, not both',
+        );
 
-  /// Elements to display in the chart.
-  final List<ChartElement> elements;
+  /// Elements to display in the chart (static - no zoom/pan support).
+  ///
+  /// Use this for simple charts that don't need zoom/pan.
+  /// For zoom/pan support, use [elementGenerator] instead.
+  final List<ChartElement>? elements;
+
+  /// Element generator callback (for zoom/pan support).
+  ///
+  /// Called with current transform to generate elements in plot space.
+  /// Chart will call this on initial render and whenever zoom/pan occurs.
+  ///
+  /// **Example**:
+  /// ```dart
+  /// elementGenerator: (transform) {
+  ///   // Define data in data space
+  ///   final dataPoints = [(1000.0, 100.0), ...];
+  ///
+  ///   // Convert to plot space
+  ///   final plotPoints = transform.dataPointsToPlot(dataPoints);
+  ///
+  ///   // Create elements
+  ///   return [SeriesElement(points: plotPoints, ...)];
+  /// }
+  /// ```
+  final ElementGenerator? elementGenerator;
 
   /// Chart coordinate bounds.
   final Rect chartBounds;
+
+  /// Optional X-axis.
+  final chart_axis.Axis? xAxis;
+
+  /// Optional Y-axis.
+  final chart_axis.Axis? yAxis;
 
   /// Called when an element is selected.
   final void Function(ChartElement element)? onElementSelected;
@@ -88,6 +125,9 @@ class _PrototypeChartState extends State<PrototypeChart> {
 
   // Mouse cursor state
   MouseCursor _currentCursor = SystemMouseCursors.basic;
+
+  // Key for accessing ChartRenderBox
+  final GlobalKey _renderBoxKey = GlobalKey();
 
   @override
   void initState() {
@@ -140,8 +180,12 @@ class _PrototypeChartState extends State<PrototypeChart> {
 
   void _rebuildSpatialIndex() {
     _spatialIndex.clear();
-    for (final element in widget.elements) {
-      _spatialIndex.insert(element);
+    // Only rebuild from widget.elements if provided
+    // If elementGenerator is used, RenderBox will handle spatial index
+    if (widget.elements != null) {
+      for (final element in widget.elements!) {
+        _spatialIndex.insert(element);
+      }
     }
   }
 
@@ -174,43 +218,135 @@ class _PrototypeChartState extends State<PrototypeChart> {
     }
   }
 
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      // Handle zoom keys (+, -, numpad +, numpad -)
+      if (event.logicalKey == LogicalKeyboardKey.equal || // = key (+ requires shift, but we accept both)
+          event.logicalKey == LogicalKeyboardKey.add || // Numpad + (alternative name)
+          event.logicalKey == LogicalKeyboardKey.numpadAdd || // Numpad + (primary name)
+          event.logicalKey == LogicalKeyboardKey.minus || // - key
+          event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+        // Numpad -
+        final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        if (renderBox != null) {
+          const double zoomStep = 1.2; // 20% zoom per key press
+          final bool isZoomIn = event.logicalKey == LogicalKeyboardKey.equal ||
+              event.logicalKey == LogicalKeyboardKey.add ||
+              event.logicalKey == LogicalKeyboardKey.numpadAdd;
+          final double zoomFactor = isZoomIn ? zoomStep : 1.0 / zoomStep;
+
+          // Apply zoom directly (no animation - keeps it responsive for repeated presses)
+          renderBox.zoomChart(zoomFactor);
+          debugPrint('⌨️ Keyboard zoom: ${zoomFactor > 1 ? "IN" : "OUT"}');
+        }
+      }
+      // Handle arrow key panning
+      else if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown ||
+          event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        if (renderBox != null) {
+          // Pan by 10% of plot area per key press
+          final plotWidth = renderBox.plotWidth;
+          final plotHeight = renderBox.plotHeight;
+
+          if (plotWidth > 0 && plotHeight > 0) {
+            final panStepX = plotWidth * 0.1;
+            final panStepY = plotHeight * 0.1;
+
+            double dx = 0.0;
+            double dy = 0.0;
+
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              dx = -panStepX; // Pan view left (show more data on left)
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+              dx = panStepX; // Pan view right (show more data on right)
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+              dy = -panStepY; // Pan view up (show more data above)
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              dy = panStepY; // Pan view down (show more data below)
+            }
+
+            renderBox.panChart(dx, dy);
+            debugPrint('⌨️ Arrow key pan: ${event.logicalKey.keyLabel}');
+          }
+        }
+      }
+      // Track modifier keys
+      else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        _coordinator.addModifierKey(LogicalKeyboardKey.shift);
+        debugPrint('✓ Shift pressed - zoom enabled');
+      } else if (event.logicalKey == LogicalKeyboardKey.controlLeft || event.logicalKey == LogicalKeyboardKey.controlRight) {
+        _coordinator.addModifierKey(LogicalKeyboardKey.control);
+      } else if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
+        _coordinator.addModifierKey(LogicalKeyboardKey.alt);
+      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft || event.logicalKey == LogicalKeyboardKey.metaRight) {
+        _coordinator.addModifierKey(LogicalKeyboardKey.meta);
+      }
+    } else if (event is KeyUpEvent) {
+      // Release modifier keys
+      if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
+        debugPrint('✗ Shift released - zoom disabled');
+      } else if (event.logicalKey == LogicalKeyboardKey.controlLeft || event.logicalKey == LogicalKeyboardKey.controlRight) {
+        _coordinator.removeModifierKey(LogicalKeyboardKey.control);
+      } else if (event.logicalKey == LogicalKeyboardKey.altLeft || event.logicalKey == LogicalKeyboardKey.altRight) {
+        _coordinator.removeModifierKey(LogicalKeyboardKey.alt);
+      } else if (event.logicalKey == LogicalKeyboardKey.metaLeft || event.logicalKey == LogicalKeyboardKey.metaRight) {
+        _coordinator.removeModifierKey(LogicalKeyboardKey.meta);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: widget.backgroundColor,
-      child: Stack(
-        children: [
-          // Main chart render area wrapped in MouseRegion for cursor control
-          MouseRegion(
-            cursor: _currentCursor,
-            child: RawGestureDetector(
-              gestures: {
-                PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
-                  () => _panRecognizer,
-                  (recognizer) {},
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        _handleKeyEvent(event);
+        return KeyEventResult.handled;
+      },
+      child: Container(
+        color: widget.backgroundColor,
+        child: Stack(
+          children: [
+            // Main chart render area wrapped in MouseRegion for cursor control
+            MouseRegion(
+              cursor: _currentCursor,
+              child: RawGestureDetector(
+                gestures: {
+                  PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
+                    () => _panRecognizer,
+                    (recognizer) {},
+                  ),
+                  PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
+                    () => _tapRecognizer,
+                    (recognizer) {},
+                  ),
+                },
+                child: _ChartRenderWidget(
+                  key: _renderBoxKey,
+                  coordinator: _coordinator,
+                  spatialIndex: _spatialIndex,
+                  elements: widget.elements,
+                  elementGenerator: widget.elementGenerator,
+                  xAxis: widget.xAxis,
+                  yAxis: widget.yAxis,
+                  onCursorChange: _handleCursorChange,
                 ),
-                PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
-                  () => _tapRecognizer,
-                  (recognizer) {},
-                ),
-              },
-              child: _ChartRenderWidget(
-                coordinator: _coordinator,
-                spatialIndex: _spatialIndex,
-                elements: widget.elements,
-                onCursorChange: _handleCursorChange,
               ),
             ),
-          ),
 
-          // Debug overlay (if enabled)
-          if (widget.showDebugInfo)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: _DebugOverlay(coordinator: _coordinator),
-            ),
-        ],
+            // Debug overlay (if enabled)
+            if (widget.showDebugInfo)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: _DebugOverlay(coordinator: _coordinator),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -219,15 +355,22 @@ class _PrototypeChartState extends State<PrototypeChart> {
 /// Widget that wraps ChartRenderBox.
 class _ChartRenderWidget extends LeafRenderObjectWidget {
   const _ChartRenderWidget({
+    super.key,
     required this.coordinator,
     required this.spatialIndex,
-    required this.elements,
+    this.elements,
+    this.elementGenerator,
+    this.xAxis,
+    this.yAxis,
     this.onCursorChange,
-  });
+  }) : assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both');
 
   final ChartInteractionCoordinator coordinator;
   final QuadTree spatialIndex;
-  final List<ChartElement> elements;
+  final List<ChartElement>? elements;
+  final ElementGenerator? elementGenerator;
+  final chart_axis.Axis? xAxis;
+  final chart_axis.Axis? yAxis;
   final void Function(MouseCursor cursor)? onCursorChange;
 
   @override
@@ -235,14 +378,23 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     return ChartRenderBox(
       coordinator: coordinator,
       elements: elements,
+      elementGenerator: elementGenerator,
       onCursorChange: onCursorChange,
-    );
+    )
+      ..setXAxis(xAxis)
+      ..setYAxis(yAxis);
   }
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
     // Update elements reference to pick up selection state mutations
-    renderObject.updateElements(elements);
+    if (elements != null) {
+      renderObject.updateElements(elements!);
+    }
+    // Update axes
+    renderObject
+      ..setXAxis(xAxis)
+      ..setYAxis(yAxis);
   }
 }
 
