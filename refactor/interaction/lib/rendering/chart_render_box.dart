@@ -212,19 +212,20 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
-    // Apply pan tentatively
-    final tentativeTransform = _transform!.pan(plotDx, plotDy);
+    // Clamp pan delta BEFORE applying (prevents overshoot/snap-back)
+    final (clampedDx, clampedDy) = _clampPanDelta(plotDx, plotDy);
 
-    // Clamp to pan bounds (keep data visible)
-    final clampedTransform = _clampPanBounds(tentativeTransform);
-
-    // Apply clamped pan
-    _transform = clampedTransform;
+    // Apply constrained pan (won't violate boundaries)
+    _transform = _transform!.pan(clampedDx, clampedDy);
 
     // Regenerate elements
     _rebuildElementsWithTransform();
 
-    debugPrint('🔄 Programmatic pan: dx=$plotDx, dy=$plotDy');
+    if (clampedDx != plotDx || clampedDy != plotDy) {
+      debugPrint('� Pan constrained: requested=($plotDx, $plotDy) → allowed=($clampedDx, $clampedDy)');
+    } else {
+      debugPrint('🔄 Pan applied: dx=$plotDx, dy=$plotDy');
+    }
   }
 
   /// Reset view to original zoom/pan state.
@@ -328,90 +329,131 @@ class ChartRenderBox extends RenderBox {
   /// - Left edge can move to -80px (10% off-screen to left)
   /// - Right edge can move to 880px (10% off-screen to right)
   /// This ensures 90% of data stays visible.
-  ChartTransform _clampPanBounds(ChartTransform transform) {
-    if (_originalTransform == null) return transform;
 
-    final plotWidth = transform.plotWidth;
-    final plotHeight = transform.plotHeight;
+  /// Clamp pan delta to prevent violating boundaries.
+  ///
+  /// **Strategy**: Calculate maximum allowed delta in each direction,
+  /// then clamp requested delta to stay within those limits.
+  /// This prevents overshoot, making pan feel like hitting a wall.
+  (double, double) _clampPanDelta(double requestedDx, double requestedDy) {
+    if (_originalTransform == null || _transform == null) {
+      return (requestedDx, requestedDy);
+    }
 
-    // Current data range size (must be preserved)
-    final currentXRange = transform.dataXMax - transform.dataXMin;
-    final currentYRange = transform.dataYMax - transform.dataYMin;
+    final plotWidth = _transform!.plotWidth;
+    final plotHeight = _transform!.plotHeight;
+    final currentXRange = _transform!.dataXMax - _transform!.dataXMin;
+    final currentYRange = _transform!.dataYMax - _transform!.dataYMin;
 
-    // Calculate where original data boundaries would appear in the current viewport
-    final originalLeft = transform.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
-    final originalRight = transform.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
-    final originalTop = transform.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
-    final originalBottom = transform.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
+    // Where original data boundaries currently appear
+    final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
+    final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
+    final originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
+    final originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
 
-    // How far off-screen edges can go
+    // Allowed bounds
     final minLeftEdge = -plotWidth * maxWhitespaceFraction;
     final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);
     final minTopEdge = -plotHeight * maxWhitespaceFraction;
     final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction);
 
-    // Start with current transform
-    double newDataXMin = transform.dataXMin;
-    double newDataXMax = transform.dataXMax;
-    double newDataYMin = transform.dataYMin;
-    double newDataYMax = transform.dataYMax;
-
-    // Check if constraints are satisfiable (both edges can be within bounds simultaneously)
-    // Calculate the required data range to fit both constraints
+    // Check satisfiability (at high zoom, can't enforce both edges)
     final requiredXRange = (_originalTransform!.dataXMax - _originalTransform!.dataXMin) * (maxRightEdge - minLeftEdge) / plotWidth;
     final requiredYRange = (_originalTransform!.dataYMax - _originalTransform!.dataYMin) * (maxBottomEdge - minTopEdge) / plotHeight;
 
-    final xConstraintsSatisfiable = currentXRange <= requiredXRange;
-    final yConstraintsSatisfiable = currentYRange <= requiredYRange;
+    double clampedDx = requestedDx;
+    double clampedDy = requestedDy;
 
-    // Clamp X axis - only clamp if panning beyond limit AND constraints are satisfiable
-    if (xConstraintsSatisfiable && originalLeft < minLeftEdge) {
-      // Calculate what dataXMin should be to place original left edge at minLeftEdge
-      // Solve: (originalDataXMin - newDataXMin) / currentXRange * plotWidth = minLeftEdge
-      // newDataXMin = originalDataXMin - (minLeftEdge / plotWidth * currentXRange)
-      newDataXMin = _originalTransform!.dataXMin - (minLeftEdge / plotWidth * currentXRange);
-      newDataXMax = newDataXMin + currentXRange;
-      debugPrint(
-          '🔒 Pan clamped LEFT: edge=${originalLeft.toStringAsFixed(1)}px, limit=${minLeftEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
-    } else if (xConstraintsSatisfiable && originalRight > maxRightEdge) {
-      // Calculate what dataXMax should be to place original right edge at maxRightEdge
-      // Solve: (originalDataXMax - newDataXMin) / currentXRange * plotWidth = maxRightEdge
-      // newDataXMin = originalDataXMax - (maxRightEdge / plotWidth * currentXRange)
-      newDataXMin = _originalTransform!.dataXMax - (maxRightEdge / plotWidth * currentXRange);
-      newDataXMax = newDataXMin + currentXRange;
-      debugPrint(
-          '🔒 Pan clamped RIGHT: edge=${originalRight.toStringAsFixed(1)}px, limit=${maxRightEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
+    // X constraints (only if satisfiable)
+    if (currentXRange <= requiredXRange) {
+      // Calculate how far from limit each edge is
+      // Positive = edge is inside allowed zone (has room)
+      // Negative = edge is past limit (needs to move back)
+      final leftMargin = originalLeft - minLeftEdge; // How much room left edge has
+      final rightMargin = maxRightEdge - originalRight; // How much room right edge has
+
+      // Positive dx = pan right (right edge moves right, left edge moves left)
+      if (requestedDx > 0) {
+        // Panning right
+        // Check if this direction helps recovery (improves right margin when it's negative)
+        final improvesRight = rightMargin < 0; // Rightward pan brings right edge back
+
+        if (improvesRight) {
+          // Allow recovery - panning toward valid state
+          clampedDx = requestedDx;
+          debugPrint('✓ X: Allowing rightward recovery (right=${rightMargin.toStringAsFixed(1)} → ${(rightMargin - requestedDx).toStringAsFixed(1)})');
+        } else if (rightMargin <= 0) {
+          // Right edge at/past limit - block further rightward movement
+          clampedDx = 0;
+          debugPrint('🔒 X: Blocked rightward - right margin ${rightMargin.toStringAsFixed(1)}');
+        } else {
+          // Right edge has room - allow movement up to margin
+          clampedDx = requestedDx.clamp(0, rightMargin);
+        }
+      } else if (requestedDx < 0) {
+        // Panning left
+        // Check if this direction helps recovery (improves left margin when it's negative)
+        final improvesLeft = leftMargin < 0; // Leftward pan brings left edge back
+
+        if (improvesLeft) {
+          // Allow recovery - panning toward valid state
+          clampedDx = requestedDx;
+          debugPrint('✓ X: Allowing leftward recovery (left=${leftMargin.toStringAsFixed(1)} → ${(leftMargin - requestedDx).toStringAsFixed(1)})');
+        } else if (leftMargin <= 0) {
+          // Left edge at/past limit - block further leftward movement
+          clampedDx = 0;
+          debugPrint('🔒 X: Blocked leftward - left margin ${leftMargin.toStringAsFixed(1)}');
+        } else {
+          // Left edge has room - allow movement up to margin
+          clampedDx = requestedDx.clamp(-leftMargin, 0);
+        }
+      }
     }
 
-    // Clamp Y axis - only clamp if panning beyond limit AND constraints are satisfiable
-    if (yConstraintsSatisfiable && originalTop < minTopEdge) {
-      // Calculate what dataYMax should be to place original top edge at minTopEdge
-      // Y is inverted: plotY = (dataYMax - dataY) / currentYRange * plotHeight
-      // Solve: (newDataYMax - originalDataYMax) / currentYRange * plotHeight = minTopEdge
-      // newDataYMax = originalDataYMax + (minTopEdge / plotHeight * currentYRange)
-      newDataYMax = _originalTransform!.dataYMax + (minTopEdge / plotHeight * currentYRange);
-      newDataYMin = newDataYMax - currentYRange;
-      debugPrint(
-          '🔒 Pan clamped TOP: edge=${originalTop.toStringAsFixed(1)}px, limit=${minTopEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
-    } else if (yConstraintsSatisfiable && originalBottom > maxBottomEdge) {
-      // Calculate what dataYMin should be to place original bottom edge at maxBottomEdge
-      // Solve: (newDataYMax - originalDataYMin) / currentYRange * plotHeight = maxBottomEdge
-      // newDataYMax = originalDataYMin + (maxBottomEdge / plotHeight * currentYRange)
-      newDataYMax = _originalTransform!.dataYMin + (maxBottomEdge / plotHeight * currentYRange);
-      newDataYMin = newDataYMax - currentYRange;
-      debugPrint(
-          '🔒 Pan clamped BOTTOM: edge=${originalBottom.toStringAsFixed(1)}px, limit=${maxBottomEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
+    // Y constraints (only if satisfiable)
+    if (currentYRange <= requiredYRange) {
+      final topMargin = originalTop - minTopEdge;
+      final bottomMargin = maxBottomEdge - originalBottom;
+
+      // Positive dy = pan down (bottom edge moves down, top edge moves up)
+      if (requestedDy > 0) {
+        // Panning down
+        // Check if this direction helps recovery (improves bottom margin when it's negative)
+        final improvesBottom = bottomMargin < 0; // Downward pan brings bottom edge back
+
+        if (improvesBottom) {
+          // Allow recovery - panning toward valid state
+          clampedDy = requestedDy;
+          debugPrint('✓ Y: Allowing downward recovery (bottom=${bottomMargin.toStringAsFixed(1)} → ${(bottomMargin - requestedDy).toStringAsFixed(1)})');
+        } else if (bottomMargin <= 0) {
+          // Bottom edge at/past limit - block further downward movement
+          clampedDy = 0;
+          debugPrint('🔒 Y: Blocked downward - bottom margin ${bottomMargin.toStringAsFixed(1)}');
+        } else {
+          // Bottom edge has room - allow movement up to margin
+          clampedDy = requestedDy.clamp(0, bottomMargin);
+        }
+      } else if (requestedDy < 0) {
+        // Panning up
+        // Check if this direction helps recovery (improves top margin when it's negative)
+        final improvesTop = topMargin < 0; // Upward pan brings top edge back
+
+        if (improvesTop) {
+          // Allow recovery - panning toward valid state
+          clampedDy = requestedDy;
+          debugPrint('✓ Y: Allowing upward recovery (top=${topMargin.toStringAsFixed(1)} → ${(topMargin + requestedDy).toStringAsFixed(1)})');
+        } else if (topMargin <= 0) {
+          // Top edge at/past limit - block further upward movement
+          clampedDy = 0;
+          debugPrint('🔒 Y: Blocked upward - top margin ${topMargin.toStringAsFixed(1)}');
+        } else {
+          // Top edge has room - allow movement up to margin
+          clampedDy = requestedDy.clamp(-topMargin, 0);
+        }
+      }
     }
 
-    return ChartTransform(
-      dataXMin: newDataXMin,
-      dataXMax: newDataXMax,
-      dataYMin: newDataYMin,
-      dataYMax: newDataYMax,
-      plotWidth: transform.plotWidth,
-      plotHeight: transform.plotHeight,
-      invertY: transform.invertY,
-    );
+    return (clampedDx, clampedDy);
   }
 
   // ============================================================================
@@ -856,10 +898,12 @@ class ChartRenderBox extends RenderBox {
         // Convert widget delta to plot space (widget space -> plot space is just offset removal)
         final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
 
-        // Apply pan to transform with constraints
+        // Clamp pan delta BEFORE applying (prevents overshoot/snap-back)
+        final (clampedDx, clampedDy) = _clampPanDelta(-plotDelta.dx, -plotDelta.dy);
+
+        // Apply constrained pan (won't violate boundaries)
         // PERFORMANCE: Only update transform during drag, defer element regeneration until pointer up
-        final tentativeTransform = _transform!.pan(-plotDelta.dx, -plotDelta.dy);
-        _transform = _clampPanBounds(tentativeTransform);
+        _transform = _transform!.pan(clampedDx, clampedDy);
 
         // Update last position for next move event
         _lastPanPosition = position;
@@ -867,7 +911,11 @@ class ChartRenderBox extends RenderBox {
         // Just repaint (no element regeneration during drag for performance)
         markNeedsPaint();
 
-        debugPrint('🖱️ Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta (deferred regen)');
+        if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
+          debugPrint('🔒 Pan constrained: requested=${Offset(-plotDelta.dx, -plotDelta.dy)} → allowed=${Offset(clampedDx, clampedDy)}');
+        } else {
+          debugPrint('🖱️ Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta (deferred regen)');
+        }
       }
       return;
     }
