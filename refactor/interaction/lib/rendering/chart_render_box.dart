@@ -107,6 +107,31 @@ class ChartRenderBox extends RenderBox {
   /// Elements are stored in PLOT space, transform is used for viewport changes.
   ChartTransform? _transform;
 
+  /// Original transform state (for reset functionality and constraint calculations).
+  ///
+  /// Captured during first performLayout() and preserved throughout chart lifetime.
+  /// Used to:
+  /// - Calculate current zoom level relative to original
+  /// - Enforce pan bounds (keep data visible)
+  /// - Reset view to original state
+  ChartTransform? _originalTransform;
+
+  // ==========================================================================
+  // Zoom/Pan Constraints
+  // ==========================================================================
+
+  /// Minimum zoom level (relative to original data range).
+  /// 0.1 = can zoom out to show 10x original data range.
+  static const double minZoomLevel = 0.1;
+
+  /// Maximum zoom level (relative to original data range).
+  /// 10.0 = can zoom in to show 1/10th of original data range.
+  static const double maxZoomLevel = 10.0;
+
+  /// Minimum fraction of original data that must remain visible when panning.
+  /// 0.1 = at least 10% of original data range must be visible.
+  static const double minVisibleDataFraction = 0.1;
+
   /// Public getter for plot width.
   double get plotWidth => _plotArea.width;
 
@@ -150,16 +175,22 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void zoomChart(double factor, {Offset? plotCenter}) {
-    if (_transform == null || _elementGenerator == null) {
-      debugPrint('⚠️ Cannot zoom: transform or elementGenerator not available');
+    if (_transform == null || _elementGenerator == null || _originalTransform == null) {
+      debugPrint('⚠️ Cannot zoom: transform, elementGenerator, or originalTransform not available');
       return;
     }
 
     // Use plot center if not specified
     final center = plotCenter ?? Offset(_plotArea.width / 2, _plotArea.height / 2);
 
-    // Apply zoom
-    _transform = _transform!.zoom(factor, center);
+    // Apply zoom tentatively
+    final tentativeTransform = _transform!.zoom(factor, center);
+
+    // Clamp zoom to min/max levels
+    final clampedTransform = _clampZoomLevel(tentativeTransform);
+
+    // Apply clamped zoom
+    _transform = clampedTransform;
 
     // Regenerate elements
     _rebuildElementsWithTransform();
@@ -174,18 +205,174 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void panChart(double plotDx, double plotDy) {
-    if (_transform == null || _elementGenerator == null) {
-      debugPrint('⚠️ Cannot pan: transform or elementGenerator not available');
+    if (_transform == null || _elementGenerator == null || _originalTransform == null) {
+      debugPrint('⚠️ Cannot pan: transform, elementGenerator, or originalTransform not available');
       return;
     }
 
-    // Apply pan
-    _transform = _transform!.pan(plotDx, plotDy);
+    // Apply pan tentatively
+    final tentativeTransform = _transform!.pan(plotDx, plotDy);
+
+    // Clamp to pan bounds (keep data visible)
+    final clampedTransform = _clampPanBounds(tentativeTransform);
+
+    // Apply clamped pan
+    _transform = clampedTransform;
 
     // Regenerate elements
     _rebuildElementsWithTransform();
 
     debugPrint('🔄 Programmatic pan: dx=$plotDx, dy=$plotDy');
+  }
+
+  /// Reset view to original zoom/pan state.
+  void resetView() {
+    if (_originalTransform == null || _elementGenerator == null) {
+      debugPrint('⚠️ Cannot reset: originalTransform or elementGenerator not available');
+      return;
+    }
+
+    // Restore original data ranges, preserve current plot dimensions
+    _transform = _originalTransform!.copyWith(
+      plotWidth: _plotArea.width,
+      plotHeight: _plotArea.height,
+    );
+
+    // Regenerate elements
+    _rebuildElementsWithTransform();
+
+    debugPrint('🔄 View reset to original');
+  }
+
+  // ============================================================================
+  // Zoom/Pan Constraint Helpers
+  // ============================================================================
+
+  /// Clamps a transform to enforce min/max zoom levels.
+  ///
+  /// **Constraints**:
+  /// - Min zoom: 0.1x (can zoom out to show 10x original data)
+  /// - Max zoom: 10.0x (can zoom in to show 1/10th original data)
+  ///
+  /// **Algorithm**:
+  /// 1. Calculate current zoom level: original_range / current_range
+  /// 2. If zoom exceeds limits, scale ranges back to limit
+  /// 3. Preserve center point of current viewport
+  ChartTransform _clampZoomLevel(ChartTransform transform) {
+    if (_originalTransform == null) return transform;
+
+    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
+    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
+
+    final currentXRange = transform.dataXMax - transform.dataXMin;
+    final currentYRange = transform.dataYMax - transform.dataYMin;
+
+    // Calculate current zoom levels
+    final currentZoomX = originalXRange / currentXRange;
+    final currentZoomY = originalYRange / currentYRange;
+
+    // Check if clamping needed
+    bool needsClampX = currentZoomX < minZoomLevel || currentZoomX > maxZoomLevel;
+    bool needsClampY = currentZoomY < minZoomLevel || currentZoomY > maxZoomLevel;
+
+    if (!needsClampX && !needsClampY) {
+      return transform; // No clamping needed
+    }
+
+    // Clamp zoom levels
+    final clampedZoomX = currentZoomX.clamp(minZoomLevel, maxZoomLevel);
+    final clampedZoomY = currentZoomY.clamp(minZoomLevel, maxZoomLevel);
+
+    // Calculate new ranges from clamped zoom
+    final newXRange = originalXRange / clampedZoomX;
+    final newYRange = originalYRange / clampedZoomY;
+
+    // Preserve center of current viewport
+    final centerX = (transform.dataXMin + transform.dataXMax) / 2;
+    final centerY = (transform.dataYMin + transform.dataYMax) / 2;
+
+    // Calculate new bounds centered on viewport center
+    final newDataXMin = centerX - newXRange / 2;
+    final newDataXMax = centerX + newXRange / 2;
+    final newDataYMin = centerY - newYRange / 2;
+    final newDataYMax = centerY + newYRange / 2;
+
+    debugPrint('🔒 Zoom clamped: X=$currentZoomX→$clampedZoomX, Y=$currentZoomY→$clampedZoomY');
+
+    return ChartTransform(
+      dataXMin: newDataXMin,
+      dataXMax: newDataXMax,
+      dataYMin: newDataYMin,
+      dataYMax: newDataYMax,
+      plotWidth: transform.plotWidth,
+      plotHeight: transform.plotHeight,
+      invertY: transform.invertY,
+    );
+  }
+
+  /// Clamps a transform to enforce pan bounds (keep data visible).
+  ///
+  /// **Constraints**:
+  /// - At least 10% of original data range must remain visible
+  ///
+  /// **Algorithm**:
+  /// 1. Check if panned viewport still overlaps original data by at least 10%
+  /// 2. If not, clamp viewport to maintain minimum overlap
+  ChartTransform _clampPanBounds(ChartTransform transform) {
+    if (_originalTransform == null) return transform;
+
+    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
+    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
+
+    final minVisibleX = originalXRange * minVisibleDataFraction;
+    final minVisibleY = originalYRange * minVisibleDataFraction;
+
+    double newDataXMin = transform.dataXMin;
+    double newDataXMax = transform.dataXMax;
+    double newDataYMin = transform.dataYMin;
+    double newDataYMax = transform.dataYMax;
+
+    // Clamp X bounds
+    // If panned too far right (data too far left)
+    if (newDataXMin > _originalTransform!.dataXMax - minVisibleX) {
+      final shift = newDataXMin - (_originalTransform!.dataXMax - minVisibleX);
+      newDataXMin -= shift;
+      newDataXMax -= shift;
+      debugPrint('🔒 Pan clamped: X too far right');
+    }
+    // If panned too far left (data too far right)
+    if (newDataXMax < _originalTransform!.dataXMin + minVisibleX) {
+      final shift = (_originalTransform!.dataXMin + minVisibleX) - newDataXMax;
+      newDataXMin += shift;
+      newDataXMax += shift;
+      debugPrint('🔒 Pan clamped: X too far left');
+    }
+
+    // Clamp Y bounds
+    // If panned too far down (data too far up)
+    if (newDataYMin > _originalTransform!.dataYMax - minVisibleY) {
+      final shift = newDataYMin - (_originalTransform!.dataYMax - minVisibleY);
+      newDataYMin -= shift;
+      newDataYMax -= shift;
+      debugPrint('🔒 Pan clamped: Y too far down');
+    }
+    // If panned too far up (data too far down)
+    if (newDataYMax < _originalTransform!.dataYMin + minVisibleY) {
+      final shift = (_originalTransform!.dataYMin + minVisibleY) - newDataYMax;
+      newDataYMin += shift;
+      newDataYMax += shift;
+      debugPrint('🔒 Pan clamped: Y too far up');
+    }
+
+    return ChartTransform(
+      dataXMin: newDataXMin,
+      dataXMax: newDataXMax,
+      dataYMin: newDataYMin,
+      dataYMax: newDataYMax,
+      plotWidth: transform.plotWidth,
+      plotHeight: transform.plotHeight,
+      invertY: transform.invertY,
+    );
   }
 
   // ============================================================================
@@ -318,6 +505,10 @@ class ChartRenderBox extends RenderBox {
           plotHeight: _plotArea.height,
           invertY: true, // Standard chart convention (Y=0 at bottom)
         );
+
+        // Capture original transform for reset and constraint calculations
+        _originalTransform = _transform;
+        debugPrint('📸 Original transform captured: dataX=${_xAxis!.dataMin}..${_xAxis!.dataMax}, dataY=${_yAxis!.dataMin}..${_yAxis!.dataMax}');
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
         // only update plot dimensions if they changed
@@ -619,16 +810,17 @@ class ChartRenderBox extends RenderBox {
     if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
       debugPrint(
           '🖱️ Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}');
-      if (_lastPanPosition != null && _transform != null) {
+      if (_lastPanPosition != null && _transform != null && _originalTransform != null) {
         // Calculate delta in widget space
         final widgetDelta = position - _lastPanPosition!;
 
         // Convert widget delta to plot space (widget space -> plot space is just offset removal)
         final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
 
-        // Apply pan to transform (note: negative delta because dragging right should pan view right)
+        // Apply pan to transform with constraints
         // PERFORMANCE: Only update transform during drag, defer element regeneration until pointer up
-        _transform = _transform!.pan(-plotDelta.dx, -plotDelta.dy);
+        final tentativeTransform = _transform!.pan(-plotDelta.dx, -plotDelta.dy);
+        _transform = _clampPanBounds(tentativeTransform);
 
         // Update last position for next move event
         _lastPanPosition = position;
@@ -775,7 +967,7 @@ class ChartRenderBox extends RenderBox {
 
   void _handlePointerScroll(PointerScrollEvent event, Offset position) {
     // Check for Shift modifier to trigger zoom
-    if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null) {
+    if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null && _originalTransform != null) {
       // Claim zooming mode
       coordinator.claimMode(InteractionMode.zooming);
 
@@ -791,8 +983,9 @@ class ChartRenderBox extends RenderBox {
       // Convert cursor position (widget space) to plot space
       final Offset plotPosition = widgetToPlot(position);
 
-      // Apply zoom centered on cursor position
-      _transform = _transform!.zoom(zoomFactor, plotPosition);
+      // Apply zoom centered on cursor position with constraints
+      final tentativeTransform = _transform!.zoom(zoomFactor, plotPosition);
+      _transform = _clampZoomLevel(tentativeTransform);
 
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();

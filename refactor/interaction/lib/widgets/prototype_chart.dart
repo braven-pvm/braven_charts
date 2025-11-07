@@ -220,8 +220,16 @@ class _PrototypeChartState extends State<PrototypeChart> {
 
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
+      // Handle reset view (Home key or R key)
+      if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
+        final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        if (renderBox != null) {
+          renderBox.resetView();
+          debugPrint('⌨️ View reset to original');
+        }
+      }
       // Handle zoom keys (+, -, numpad +, numpad -)
-      if (event.logicalKey == LogicalKeyboardKey.equal || // = key (+ requires shift, but we accept both)
+      else if (event.logicalKey == LogicalKeyboardKey.equal || // = key (+ requires shift, but we accept both)
           event.logicalKey == LogicalKeyboardKey.add || // Numpad + (alternative name)
           event.logicalKey == LogicalKeyboardKey.numpadAdd || // Numpad + (primary name)
           event.logicalKey == LogicalKeyboardKey.minus || // - key
