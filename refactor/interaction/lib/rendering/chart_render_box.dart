@@ -356,37 +356,37 @@ class ChartRenderBox extends RenderBox {
     double newDataYMin = transform.dataYMin;
     double newDataYMax = transform.dataYMax;
 
-    // Clamp X axis
+    // Clamp X axis - only clamp if panning beyond limit
     if (originalLeft < minLeftEdge) {
-      // Left edge too far off - shift current viewport right in data space
-      final excessPlot = minLeftEdge - originalLeft;
-      final excessData = excessPlot * transform.dataPerPixelX;
-      newDataXMin = transform.dataXMin + excessData;
+      // Left edge went too far left - need to shift viewport right in data space
+      final plotShift = minLeftEdge - originalLeft; // positive number (shifting right)
+      final dataShift = plotShift * transform.dataPerPixelX; // convert plot pixels to data units
+      newDataXMin = transform.dataXMin + dataShift;
       newDataXMax = newDataXMin + currentXRange;
       debugPrint('🔒 Pan clamped: Left edge at ${originalLeft.toStringAsFixed(1)}px < min ${minLeftEdge.toStringAsFixed(1)}px');
     } else if (originalRight > maxRightEdge) {
-      // Right edge too far off - shift current viewport left in data space
-      final excessPlot = originalRight - maxRightEdge;
-      final excessData = excessPlot * transform.dataPerPixelX;
-      newDataXMax = transform.dataXMax - excessData;
-      newDataXMin = newDataXMax - currentXRange;
+      // Right edge went too far right - need to shift viewport left in data space
+      final plotShift = originalRight - maxRightEdge; // positive number (excess)
+      final dataShift = plotShift * transform.dataPerPixelX; // convert plot pixels to data units
+      newDataXMin = transform.dataXMin - dataShift; // shift left in data space
+      newDataXMax = newDataXMin + currentXRange;
       debugPrint('🔒 Pan clamped: Right edge at ${originalRight.toStringAsFixed(1)}px > max ${maxRightEdge.toStringAsFixed(1)}px');
     }
 
-    // Clamp Y axis
+    // Clamp Y axis - only clamp if panning beyond limit
     if (originalTop < minTopEdge) {
-      // Top edge too far off - shift current viewport down in data space
-      final excessPlot = minTopEdge - originalTop;
-      final excessData = excessPlot * transform.dataPerPixelY;
-      newDataYMax = transform.dataYMax - excessData;
+      // Top edge went too far up - need to shift viewport down in data space
+      final plotShift = minTopEdge - originalTop; // positive number (shifting down)
+      final dataShift = plotShift * transform.dataPerPixelY; // convert plot pixels to data units
+      newDataYMax = transform.dataYMax - dataShift; // Y is inverted: shift down = decrease max
       newDataYMin = newDataYMax - currentYRange;
       debugPrint('🔒 Pan clamped: Top edge at ${originalTop.toStringAsFixed(1)}px < min ${minTopEdge.toStringAsFixed(1)}px');
     } else if (originalBottom > maxBottomEdge) {
-      // Bottom edge too far off - shift current viewport up in data space
-      final excessPlot = originalBottom - maxBottomEdge;
-      final excessData = excessPlot * transform.dataPerPixelY;
-      newDataYMin = transform.dataYMin + excessData;
-      newDataYMax = newDataYMin + currentYRange;
+      // Bottom edge went too far down - need to shift viewport up in data space
+      final plotShift = originalBottom - maxBottomEdge; // positive number (excess)
+      final dataShift = plotShift * transform.dataPerPixelY; // convert plot pixels to data units
+      newDataYMax = transform.dataYMax + dataShift; // Y is inverted: shift up = increase max
+      newDataYMin = newDataYMax - currentYRange;
       debugPrint('🔒 Pan clamped: Bottom edge at ${originalBottom.toStringAsFixed(1)}px > max ${maxBottomEdge.toStringAsFixed(1)}px');
     }
 
