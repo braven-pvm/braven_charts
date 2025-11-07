@@ -335,6 +335,10 @@ class ChartRenderBox extends RenderBox {
   /// **Strategy**: Calculate maximum allowed delta in each direction,
   /// then clamp requested delta to stay within those limits.
   /// This prevents overshoot, making pan feel like hitting a wall.
+  ///
+  /// **Zoom-Aware Constraints**:
+  /// - Low zoom (1x-2x): Track original data boundaries to keep them visible
+  /// - High zoom (>2x): Track current viewport to prevent excessive whitespace
   (double, double) _clampPanDelta(double requestedDx, double requestedDy) {
     if (_originalTransform == null || _transform == null) {
       return (requestedDx, requestedDy);
@@ -345,22 +349,32 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate current zoom level
     final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
+    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
     final currentXRange = _transform!.dataXMax - _transform!.dataXMin;
+    final currentYRange = _transform!.dataYMax - _transform!.dataYMin;
     final currentZoomX = originalXRange / currentXRange;
+    final currentZoomY = originalYRange / currentYRange;
 
-    // At high zoom (>2x), pan constraints become too restrictive because
-    // the original data boundaries are far outside the tiny zoomed viewport.
-    // Disable constraints when heavily zoomed.
-    if (currentZoomX > 2.0) {
-      debugPrint('🔍 High zoom detected ($currentZoomX x), skipping pan constraints');
-      return (requestedDx, requestedDy);
+    // At high zoom (>2x), use current viewport boundaries instead of original data boundaries
+    // This prevents infinite panning while allowing reasonable exploration
+    final useCurrentViewport = currentZoomX > 2.0 || currentZoomY > 2.0;
+
+    double originalLeft, originalRight, originalTop, originalBottom;
+    
+    if (useCurrentViewport) {
+      // High zoom: track current viewport edges (left edge = 0, right edge = plotWidth)
+      // We want to prevent panning when we already have substantial whitespace
+      originalLeft = 0.0;
+      originalRight = plotWidth;
+      originalTop = 0.0;
+      originalBottom = plotHeight;
+    } else {
+      // Low zoom: track original data boundaries to keep them visible
+      originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
+      originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
+      originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
+      originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
     }
-
-    // Where original data boundaries currently appear in plot space
-    final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
-    final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
-    final originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
-    final originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
 
     // Allowed bounds for data edges (with whitespace)
     final minLeftEdge = -plotWidth * maxWhitespaceFraction;
@@ -378,7 +392,7 @@ class ChartRenderBox extends RenderBox {
     final leftMargin = originalLeft - minLeftEdge;
     final rightMargin = maxRightEdge - originalRight;
 
-    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy)');
+    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy), zoom=${currentZoomX.toStringAsFixed(1)}x, mode=${useCurrentViewport ? "viewport" : "original"}');
     debugPrint('🔍 EDGES: L=$originalLeft/$minLeftEdge, R=$originalRight/$maxRightEdge');
     debugPrint('🔍 MARGINS: left=$leftMargin, right=$rightMargin');
 
