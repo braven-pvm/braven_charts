@@ -342,113 +342,174 @@ class ChartRenderBox extends RenderBox {
 
     final plotWidth = _transform!.plotWidth;
     final plotHeight = _transform!.plotHeight;
-    final currentXRange = _transform!.dataXMax - _transform!.dataXMin;
-    final currentYRange = _transform!.dataYMax - _transform!.dataYMin;
 
-    // Where original data boundaries currently appear
+    // Calculate current zoom level
+    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
+    final currentXRange = _transform!.dataXMax - _transform!.dataXMin;
+    final currentZoomX = originalXRange / currentXRange;
+
+    // At high zoom (>2x), pan constraints become too restrictive because
+    // the original data boundaries are far outside the tiny zoomed viewport.
+    // Disable constraints when heavily zoomed.
+    if (currentZoomX > 2.0) {
+      debugPrint('🔍 High zoom detected ($currentZoomX x), skipping pan constraints');
+      return (requestedDx, requestedDy);
+    }
+
+    // Where original data boundaries currently appear in plot space
     final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
     final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
     final originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
     final originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
 
-    // Allowed bounds
+    // Allowed bounds for data edges (with whitespace)
     final minLeftEdge = -plotWidth * maxWhitespaceFraction;
     final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);
     final minTopEdge = -plotHeight * maxWhitespaceFraction;
     final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction);
 
-    // Check satisfiability (at high zoom, can't enforce both edges)
-    final requiredXRange = (_originalTransform!.dataXMax - _originalTransform!.dataXMin) * (maxRightEdge - minLeftEdge) / plotWidth;
-    final requiredYRange = (_originalTransform!.dataYMax - _originalTransform!.dataYMin) * (maxBottomEdge - minTopEdge) / plotHeight;
-
     double clampedDx = requestedDx;
     double clampedDy = requestedDy;
 
-    // X constraints (only if satisfiable)
-    if (currentXRange <= requiredXRange) {
-      // Calculate how far from limit each edge is
-      // Positive = edge is inside allowed zone (has room)
-      // Negative = edge is past limit (needs to move back)
-      final leftMargin = originalLeft - minLeftEdge; // How much room left edge has
-      final rightMargin = maxRightEdge - originalRight; // How much room right edge has
+    // ========== X-AXIS CONSTRAINTS ==========
+    // Calculate how far from limit each edge is
+    // Positive = edge is inside allowed zone (has room to move further out)
+    // Negative = edge is past limit (needs to move back in)
+    final leftMargin = originalLeft - minLeftEdge;
+    final rightMargin = maxRightEdge - originalRight;
 
-      // Positive dx = pan right (right edge moves right, left edge moves left)
+    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy)');
+    debugPrint('🔍 EDGES: L=$originalLeft/$minLeftEdge, R=$originalRight/$maxRightEdge');
+    debugPrint('🔍 MARGINS: left=$leftMargin, right=$rightMargin');
+
+    // Check if both X edges are past their limits (over-zoomed case)
+    final bothXEdgesPastLimits = (leftMargin < 0) && (rightMargin < 0);
+
+    if (bothXEdgesPastLimits) {
+      // At extreme zoom, both edges are outside bounds
+      // ONLY allow panning that brings edges back toward center (recovery)
+      // Block panning that pushes edges further from center
+
+      // When both edges are past limits:
+      // - leftMargin < 0 means left edge is LEFT of allowed zone (too far left)
+      // - rightMargin < 0 means right edge is RIGHT of allowed zone (too far right)
+      // - To recover, need to move viewport TOWARD CENTER
+      // - Positive dx = pan right in plot = data moves LEFT = edges move toward center ✓
+      // - Negative dx = pan left in plot = data moves RIGHT = edges move away from center ✗
+
       if (requestedDx > 0) {
-        // Panning right
-        // Check if this direction helps recovery (improves right margin when it's negative)
-        final improvesRight = rightMargin < 0; // Rightward pan brings right edge back
+        // Panning right: data moves left, both edges move toward center (RECOVERY)
+        // Allow this, but clamp to avoid overcorrection
+        final maxRecoveryLeft = -leftMargin; // How far left edge needs to move right to reach limit
+        final maxRecoveryRight = -rightMargin; // How far right edge needs to move left to reach limit
+        // Use the smaller recovery distance to avoid overshooting
+        final maxRecovery = maxRecoveryLeft < maxRecoveryRight ? maxRecoveryLeft : maxRecoveryRight;
+        clampedDx = requestedDx.clamp(0, maxRecovery);
+      } else if (requestedDx < 0) {
+        // Panning left: data moves right, both edges move AWAY from center (WORSE)
+        // Block this completely
+        clampedDx = 0;
+      }
+    } else {
+      // Normal case: at least one edge is within bounds
+      // Apply standard directional constraints
 
-        if (improvesRight) {
-          // Allow recovery - panning toward valid state
-          clampedDx = requestedDx;
-          debugPrint('✓ X: Allowing rightward recovery (right=${rightMargin.toStringAsFixed(1)} → ${(rightMargin - requestedDx).toStringAsFixed(1)})');
-        } else if (rightMargin <= 0) {
-          // Right edge at/past limit - block further rightward movement
+      // CRITICAL UNDERSTANDING:
+      // - Pan RIGHT (+dx) → data moves RIGHT → originalLeft/Right plot positions move LEFT
+      // - Pan LEFT (-dx) → data moves LEFT → originalLeft/Right plot positions move RIGHT
+
+      if (requestedDx > 0) {
+        // Panning right: data moves right, so LEFT edge moves LEFT (toward left limit)
+        // Check if left edge would hit/exceed its limit
+        if (leftMargin < 0) {
+          // Left edge already past limit, panning right makes it worse - block
           clampedDx = 0;
-          debugPrint('🔒 X: Blocked rightward - right margin ${rightMargin.toStringAsFixed(1)}');
+        } else if (leftMargin == 0) {
+          // Left edge exactly at limit, block panning right
+          clampedDx = 0;
         } else {
-          // Right edge has room - allow movement up to margin
-          clampedDx = requestedDx.clamp(0, rightMargin);
+          // Left edge has room, clamp to not exceed limit
+          clampedDx = requestedDx.clamp(0, leftMargin);
         }
       } else if (requestedDx < 0) {
-        // Panning left
-        // Check if this direction helps recovery (improves left margin when it's negative)
-        final improvesLeft = leftMargin < 0; // Leftward pan brings left edge back
-
-        if (improvesLeft) {
-          // Allow recovery - panning toward valid state
-          clampedDx = requestedDx;
-          debugPrint('✓ X: Allowing leftward recovery (left=${leftMargin.toStringAsFixed(1)} → ${(leftMargin - requestedDx).toStringAsFixed(1)})');
-        } else if (leftMargin <= 0) {
-          // Left edge at/past limit - block further leftward movement
+        // Panning left: data moves left, so RIGHT edge moves RIGHT (toward right limit)
+        // Check if right edge would hit/exceed its limit
+        if (rightMargin < 0) {
+          // Right edge already past limit, panning left makes it worse - block
           clampedDx = 0;
-          debugPrint('🔒 X: Blocked leftward - left margin ${leftMargin.toStringAsFixed(1)}');
+        } else if (rightMargin == 0) {
+          // Right edge exactly at limit, block panning left
+          clampedDx = 0;
         } else {
-          // Left edge has room - allow movement up to margin
-          clampedDx = requestedDx.clamp(-leftMargin, 0);
+          // Right edge has room, clamp to not exceed limit
+          // Negative requestedDx, so clamp to -rightMargin (max left pan)
+          clampedDx = requestedDx.clamp(-rightMargin, 0);
         }
       }
     }
 
-    // Y constraints (only if satisfiable)
-    if (currentYRange <= requiredYRange) {
-      final topMargin = originalTop - minTopEdge;
-      final bottomMargin = maxBottomEdge - originalBottom;
+    // ========== Y-AXIS CONSTRAINTS ==========
+    final topMargin = originalTop - minTopEdge;
+    final bottomMargin = maxBottomEdge - originalBottom;
 
-      // Positive dy = pan down (bottom edge moves down, top edge moves up)
+    final bothYEdgesPastLimits = (topMargin < 0) && (bottomMargin < 0);
+
+    if (bothYEdgesPastLimits) {
+      // At extreme zoom, both edges are outside bounds
+      // Same logic as X-axis: allow recovery toward center only
+
+      // When both edges are past limits:
+      // - topMargin < 0 means top edge is ABOVE allowed zone (too far up)
+      // - bottomMargin < 0 means bottom edge is BELOW allowed zone (too far down)
+      // - To recover, need to move viewport TOWARD CENTER
+      // - Positive dy = pan down in plot = data moves UP = edges move toward center ✓
+      // - Negative dy = pan up in plot = data moves DOWN = edges move away from center ✗
+
       if (requestedDy > 0) {
-        // Panning down
-        // Check if this direction helps recovery (improves bottom margin when it's negative)
-        final improvesBottom = bottomMargin < 0; // Downward pan brings bottom edge back
+        // Panning down: data moves up, both edges move toward center (RECOVERY)
+        // Allow this, but clamp to avoid overcorrection
+        final maxRecoveryTop = -topMargin; // How far top edge needs to move down to reach limit
+        final maxRecoveryBottom = -bottomMargin; // How far bottom edge needs to move up to reach limit
+        // Use the smaller recovery distance
+        final maxRecovery = maxRecoveryTop < maxRecoveryBottom ? maxRecoveryTop : maxRecoveryBottom;
+        clampedDy = requestedDy.clamp(0, maxRecovery);
+      } else if (requestedDy < 0) {
+        // Panning up: data moves down, both edges move AWAY from center (WORSE)
+        // Block this completely
+        clampedDy = 0;
+      }
+    } else {
+      // Normal case: at least one edge is within bounds
 
-        if (improvesBottom) {
-          // Allow recovery - panning toward valid state
-          clampedDy = requestedDy;
-          debugPrint('✓ Y: Allowing downward recovery (bottom=${bottomMargin.toStringAsFixed(1)} → ${(bottomMargin - requestedDy).toStringAsFixed(1)})');
-        } else if (bottomMargin <= 0) {
-          // Bottom edge at/past limit - block further downward movement
+      // CRITICAL UNDERSTANDING (Y-AXIS):
+      // - Pan DOWN (+dy) → data moves DOWN → originalTop/Bottom plot positions move UP
+      // - Pan UP (-dy) → data moves UP → originalTop/Bottom plot positions move DOWN
+
+      if (requestedDy > 0) {
+        // Panning down: data moves down, so TOP edge moves UP (toward top limit)
+        // Check if top edge would hit/exceed its limit
+        if (topMargin < 0) {
+          // Top edge already past limit, panning down makes it worse - block
           clampedDy = 0;
-          debugPrint('🔒 Y: Blocked downward - bottom margin ${bottomMargin.toStringAsFixed(1)}');
+        } else if (topMargin == 0) {
+          // Top edge exactly at limit, block panning down
+          clampedDy = 0;
         } else {
-          // Bottom edge has room - allow movement up to margin
-          clampedDy = requestedDy.clamp(0, bottomMargin);
+          // Top edge has room, clamp to not exceed limit
+          clampedDy = requestedDy.clamp(0, topMargin);
         }
       } else if (requestedDy < 0) {
-        // Panning up
-        // Check if this direction helps recovery (improves top margin when it's negative)
-        final improvesTop = topMargin < 0; // Upward pan brings top edge back
-
-        if (improvesTop) {
-          // Allow recovery - panning toward valid state
-          clampedDy = requestedDy;
-          debugPrint('✓ Y: Allowing upward recovery (top=${topMargin.toStringAsFixed(1)} → ${(topMargin + requestedDy).toStringAsFixed(1)})');
-        } else if (topMargin <= 0) {
-          // Top edge at/past limit - block further upward movement
+        // Panning up: data moves up, so BOTTOM edge moves DOWN (toward bottom limit)
+        // Check if bottom edge would hit/exceed its limit
+        if (bottomMargin < 0) {
+          // Bottom edge already past limit, panning up makes it worse - block
           clampedDy = 0;
-          debugPrint('🔒 Y: Blocked upward - top margin ${topMargin.toStringAsFixed(1)}');
+        } else if (bottomMargin == 0) {
+          // Bottom edge exactly at limit, block panning up
+          clampedDy = 0;
         } else {
-          // Top edge has room - allow movement up to margin
-          clampedDy = requestedDy.clamp(-topMargin, 0);
+          // Bottom edge has room, clamp to not exceed limit
+          clampedDy = requestedDy.clamp(-bottomMargin, 0);
         }
       }
     }
