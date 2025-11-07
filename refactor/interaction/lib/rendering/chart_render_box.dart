@@ -331,66 +331,66 @@ class ChartRenderBox extends RenderBox {
   ChartTransform _clampPanBounds(ChartTransform transform) {
     if (_originalTransform == null) return transform;
 
-    // Calculate where original data boundaries would appear in the current viewport
-    // These are in plot coordinates (0 to plotWidth/plotHeight)
-    final originalLeft = transform.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
-    final originalRight = transform.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
-    final originalTop = transform.dataToPlot(0.0, _originalTransform!.dataYMax).dy; // inverted Y
-    final originalBottom = transform.dataToPlot(0.0, _originalTransform!.dataYMin).dy; // inverted Y
-
     final plotWidth = transform.plotWidth;
     final plotHeight = transform.plotHeight;
+    
+    // Current data range size (must be preserved)
+    final currentXRange = transform.dataXMax - transform.dataXMin;
+    final currentYRange = transform.dataYMax - transform.dataYMin;
 
-    // How far off-screen edges can go (negative values = off-screen)
-    final minLeftEdge = -plotWidth * maxWhitespaceFraction; // Can go 10% off-screen to left
-    final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction); // Can go 10% off-screen to right
-    final minTopEdge = -plotHeight * maxWhitespaceFraction; // Can go 10% off-screen upward
-    final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction); // Can go 10% off-screen downward
+    // Calculate where original data boundaries would appear in the current viewport
+    final originalLeft = transform.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
+    final originalRight = transform.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
+    final originalTop = transform.dataToPlot(0.0, _originalTransform!.dataYMax).dy; 
+    final originalBottom = transform.dataToPlot(0.0, _originalTransform!.dataYMin).dy;
 
+    // How far off-screen edges can go
+    final minLeftEdge = -plotWidth * maxWhitespaceFraction;
+    final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);
+    final minTopEdge = -plotHeight * maxWhitespaceFraction;
+    final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction);
+
+    // Start with current transform
     double newDataXMin = transform.dataXMin;
     double newDataXMax = transform.dataXMax;
     double newDataYMin = transform.dataYMin;
     double newDataYMax = transform.dataYMax;
 
-    // Clamp X bounds (left edge can't go too far left/off-screen)
+    // Clamp X axis
     if (originalLeft < minLeftEdge) {
-      // Original left edge is too far off-screen to the left - shift data range right
-      final excessPlot = minLeftEdge - originalLeft;
-      final excessData = excessPlot * transform.dataPerPixelX;
-      newDataXMin += excessData;
-      newDataXMax += excessData;
+      // Left edge too far off - need to shift viewport right in data space
+      final clampedLeft = minLeftEdge;
+      final dataAtClampedLeft = transform.plotToData(clampedLeft, 0.0).dx;
+      final shift = dataAtClampedLeft - _originalTransform!.dataXMin;
+      newDataXMin = _originalTransform!.dataXMin + shift;
+      newDataXMax = newDataXMin + currentXRange;
       debugPrint('🔒 Pan clamped: Left edge at ${originalLeft.toStringAsFixed(1)}px < min ${minLeftEdge.toStringAsFixed(1)}px');
-    }
-
-    // Clamp X bounds (right edge can't go too far right/off-screen)
-    if (originalRight > maxRightEdge) {
-      // Original right edge is too far off-screen to the right - shift data range left
-      final excessPlot = originalRight - maxRightEdge;
-      final excessData = excessPlot * transform.dataPerPixelX;
-      newDataXMin -= excessData;
-      newDataXMax -= excessData;
+    } else if (originalRight > maxRightEdge) {
+      // Right edge too far off - need to shift viewport left in data space
+      final clampedRight = maxRightEdge;
+      final dataAtClampedRight = transform.plotToData(clampedRight, 0.0).dx;
+      final shift = dataAtClampedRight - _originalTransform!.dataXMax;
+      newDataXMax = _originalTransform!.dataXMax + shift;
+      newDataXMin = newDataXMax - currentXRange;
       debugPrint('🔒 Pan clamped: Right edge at ${originalRight.toStringAsFixed(1)}px > max ${maxRightEdge.toStringAsFixed(1)}px');
     }
 
-    // Clamp Y bounds (top edge can't go too far up/off-screen)
+    // Clamp Y axis
     if (originalTop < minTopEdge) {
-      // Original top edge is too far off-screen upward - shift data range down
-      final excessPlot = minTopEdge - originalTop;
-      final excessData = excessPlot * transform.dataPerPixelY;
-      // Y is inverted, so shifting "down" in plot means decreasing data values
-      newDataYMin -= excessData;
-      newDataYMax -= excessData;
+      // Top edge too far off - need to shift viewport down in data space
+      final clampedTop = minTopEdge;
+      final dataAtClampedTop = transform.plotToData(0.0, clampedTop).dy;
+      final shift = dataAtClampedTop - _originalTransform!.dataYMax;
+      newDataYMax = _originalTransform!.dataYMax + shift;
+      newDataYMin = newDataYMax - currentYRange;
       debugPrint('🔒 Pan clamped: Top edge at ${originalTop.toStringAsFixed(1)}px < min ${minTopEdge.toStringAsFixed(1)}px');
-    }
-
-    // Clamp Y bounds (bottom edge can't go too far down/off-screen)
-    if (originalBottom > maxBottomEdge) {
-      // Original bottom edge is too far off-screen downward - shift data range up
-      final excessPlot = originalBottom - maxBottomEdge;
-      final excessData = excessPlot * transform.dataPerPixelY;
-      // Y is inverted, so shifting "up" in plot means increasing data values
-      newDataYMin += excessData;
-      newDataYMax += excessData;
+    } else if (originalBottom > maxBottomEdge) {
+      // Bottom edge too far off - need to shift viewport up in data space
+      final clampedBottom = maxBottomEdge;
+      final dataAtClampedBottom = transform.plotToData(0.0, clampedBottom).dy;
+      final shift = dataAtClampedBottom - _originalTransform!.dataYMin;
+      newDataYMin = _originalTransform!.dataYMin + shift;
+      newDataYMax = newDataYMin + currentYRange;
       debugPrint('🔒 Pan clamped: Bottom edge at ${originalBottom.toStringAsFixed(1)}px > max ${maxBottomEdge.toStringAsFixed(1)}px');
     }
 
