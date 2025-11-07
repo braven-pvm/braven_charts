@@ -356,39 +356,51 @@ class ChartRenderBox extends RenderBox {
     double newDataYMin = transform.dataYMin;
     double newDataYMax = transform.dataYMax;
 
-    // Clamp X axis - only clamp if panning beyond limit
-    if (originalLeft < minLeftEdge) {
+    // Check if constraints are satisfiable (both edges can be within bounds simultaneously)
+    // Calculate the required data range to fit both constraints
+    final requiredXRange = (_originalTransform!.dataXMax - _originalTransform!.dataXMin) * (maxRightEdge - minLeftEdge) / plotWidth;
+    final requiredYRange = (_originalTransform!.dataYMax - _originalTransform!.dataYMin) * (maxBottomEdge - minTopEdge) / plotHeight;
+
+    final xConstraintsSatisfiable = currentXRange <= requiredXRange;
+    final yConstraintsSatisfiable = currentYRange <= requiredYRange;
+
+    // Clamp X axis - only clamp if panning beyond limit AND constraints are satisfiable
+    if (xConstraintsSatisfiable && originalLeft < minLeftEdge) {
       // Calculate what dataXMin should be to place original left edge at minLeftEdge
       // Solve: (originalDataXMin - newDataXMin) / currentXRange * plotWidth = minLeftEdge
       // newDataXMin = originalDataXMin - (minLeftEdge / plotWidth * currentXRange)
       newDataXMin = _originalTransform!.dataXMin - (minLeftEdge / plotWidth * currentXRange);
       newDataXMax = newDataXMin + currentXRange;
-      debugPrint('🔒 Pan clamped LEFT: edge=${originalLeft.toStringAsFixed(1)}px, limit=${minLeftEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
-    } else if (originalRight > maxRightEdge) {
+      debugPrint(
+          '🔒 Pan clamped LEFT: edge=${originalLeft.toStringAsFixed(1)}px, limit=${minLeftEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
+    } else if (xConstraintsSatisfiable && originalRight > maxRightEdge) {
       // Calculate what dataXMax should be to place original right edge at maxRightEdge
       // Solve: (originalDataXMax - newDataXMin) / currentXRange * plotWidth = maxRightEdge
       // newDataXMin = originalDataXMax - (maxRightEdge / plotWidth * currentXRange)
       newDataXMin = _originalTransform!.dataXMax - (maxRightEdge / plotWidth * currentXRange);
       newDataXMax = newDataXMin + currentXRange;
-      debugPrint('🔒 Pan clamped RIGHT: edge=${originalRight.toStringAsFixed(1)}px, limit=${maxRightEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
+      debugPrint(
+          '🔒 Pan clamped RIGHT: edge=${originalRight.toStringAsFixed(1)}px, limit=${maxRightEdge.toStringAsFixed(1)}px, currentRange=$currentXRange, newMin=$newDataXMin');
     }
 
-    // Clamp Y axis - only clamp if panning beyond limit
-    if (originalTop < minTopEdge) {
+    // Clamp Y axis - only clamp if panning beyond limit AND constraints are satisfiable
+    if (yConstraintsSatisfiable && originalTop < minTopEdge) {
       // Calculate what dataYMax should be to place original top edge at minTopEdge
       // Y is inverted: plotY = (dataYMax - dataY) / currentYRange * plotHeight
       // Solve: (newDataYMax - originalDataYMax) / currentYRange * plotHeight = minTopEdge
       // newDataYMax = originalDataYMax + (minTopEdge / plotHeight * currentYRange)
       newDataYMax = _originalTransform!.dataYMax + (minTopEdge / plotHeight * currentYRange);
       newDataYMin = newDataYMax - currentYRange;
-      debugPrint('🔒 Pan clamped TOP: edge=${originalTop.toStringAsFixed(1)}px, limit=${minTopEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
-    } else if (originalBottom > maxBottomEdge) {
+      debugPrint(
+          '🔒 Pan clamped TOP: edge=${originalTop.toStringAsFixed(1)}px, limit=${minTopEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
+    } else if (yConstraintsSatisfiable && originalBottom > maxBottomEdge) {
       // Calculate what dataYMin should be to place original bottom edge at maxBottomEdge
       // Solve: (newDataYMax - originalDataYMin) / currentYRange * plotHeight = maxBottomEdge
       // newDataYMax = originalDataYMin + (maxBottomEdge / plotHeight * currentYRange)
       newDataYMax = _originalTransform!.dataYMin + (maxBottomEdge / plotHeight * currentYRange);
       newDataYMin = newDataYMax - currentYRange;
-      debugPrint('🔒 Pan clamped BOTTOM: edge=${originalBottom.toStringAsFixed(1)}px, limit=${maxBottomEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
+      debugPrint(
+          '🔒 Pan clamped BOTTOM: edge=${originalBottom.toStringAsFixed(1)}px, limit=${maxBottomEdge.toStringAsFixed(1)}px, currentRange=$currentYRange, newMax=$newDataYMax');
     }
 
     return ChartTransform(
