@@ -5,6 +5,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../axis/axis.dart' as chart_axis;
+import '../axis/axis_renderer.dart';
 import '../core/chart_element.dart';
 import '../core/coordinator.dart';
 import '../core/element_types.dart';
@@ -12,7 +14,12 @@ import '../core/hit_test_strategy.dart';
 import '../core/interaction_mode.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/simulated_annotation.dart';
+import '../transforms/chart_transform.dart';
 import 'spatial_index.dart';
+
+/// Callback for generating chart elements based on current transform.
+/// Used for zoom/pan to regenerate elements from original data coordinates.
+typedef ElementGenerator = List<ChartElement> Function(ChartTransform transform);
 
 /// Custom RenderBox for high-performance chart rendering and interaction.
 ///
@@ -35,11 +42,13 @@ class ChartRenderBox extends RenderBox {
   ChartRenderBox({
     required this.coordinator,
     List<ChartElement>? elements,
+    ElementGenerator? elementGenerator,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
     this.onCursorChange,
-  }) {
+  })  : _elementGenerator = elementGenerator,
+        assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
 
@@ -52,6 +61,10 @@ class ChartRenderBox extends RenderBox {
   /// mutates when calling element.onSelect()/onDeselect(), so that
   /// isSelected state changes are reflected during paint().
   List<ChartElement> _elements = [];
+
+  /// Optional callback for generating elements from current transform.
+  /// If provided, elements will be regenerated on zoom/pan operations.
+  final ElementGenerator? _elementGenerator;
 
   /// Interaction coordinator for conflict resolution.
   final ChartInteractionCoordinator coordinator;
@@ -76,6 +89,30 @@ class ChartRenderBox extends RenderBox {
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
+  /// Last pan position (for calculating delta during middle-button drag).
+  Offset? _lastPanPosition;
+
+  /// X-axis for the chart (optional).
+  chart_axis.Axis? _xAxis;
+
+  /// Y-axis for the chart (optional).
+  chart_axis.Axis? _yAxis;
+
+  /// Plot area where chart elements are rendered (excluding axis space).
+  Rect _plotArea = Rect.zero;
+
+  /// Coordinate transform for Data ↔ Plot conversion.
+  ///
+  /// Created during layout based on data ranges and plot area dimensions.
+  /// Elements are stored in PLOT space, transform is used for viewport changes.
+  ChartTransform? _transform;
+
+  /// Public getter for plot width.
+  double get plotWidth => _plotArea.width;
+
+  /// Public getter for plot height.
+  double get plotHeight => _plotArea.height;
+
   /// Updates the list of chart elements.
   ///
   /// Rebuilds the spatial index with new elements.
@@ -87,12 +124,104 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
-  /// Rebuilds the QuadTree spatial index from current elements.
-  void _rebuildSpatialIndex() {
-    if (!hasSize) return;
+  /// Sets the X-axis for the chart.
+  ///
+  /// Triggers layout and paint when axis is changed.
+  void setXAxis(chart_axis.Axis? axis) {
+    if (_xAxis == axis) return;
+    _xAxis = axis;
+    markNeedsLayout();
+  }
 
+  /// Sets the Y-axis for the chart.
+  ///
+  /// Triggers layout and paint when axis is changed.
+  void setYAxis(chart_axis.Axis? axis) {
+    if (_yAxis == axis) return;
+    _yAxis = axis;
+    markNeedsLayout();
+  }
+
+  /// Programmatically zoom the chart.
+  ///
+  /// **Parameters**:
+  /// - `factor`: Zoom factor (> 1.0 = zoom in, < 1.0 = zoom out)
+  /// - `plotCenter`: Center point in plot space (if null, uses plot center)
+  ///
+  /// Only works when using elementGenerator (for element regeneration).
+  void zoomChart(double factor, {Offset? plotCenter}) {
+    if (_transform == null || _elementGenerator == null) {
+      debugPrint('⚠️ Cannot zoom: transform or elementGenerator not available');
+      return;
+    }
+
+    // Use plot center if not specified
+    final center = plotCenter ?? Offset(_plotArea.width / 2, _plotArea.height / 2);
+
+    // Apply zoom
+    _transform = _transform!.zoom(factor, center);
+
+    // Regenerate elements
+    _rebuildElementsWithTransform();
+
+    debugPrint('🔍 Keyboard zoom: factor=$factor, center=$center');
+  }
+
+  /// Programmatically pan the chart.
+  ///
+  /// **Parameters**:
+  /// - `plotDx`, `plotDy`: Pan delta in plot pixels
+  ///
+  /// Only works when using elementGenerator (for element regeneration).
+  void panChart(double plotDx, double plotDy) {
+    if (_transform == null || _elementGenerator == null) {
+      debugPrint('⚠️ Cannot pan: transform or elementGenerator not available');
+      return;
+    }
+
+    // Apply pan
+    _transform = _transform!.pan(plotDx, plotDy);
+
+    // Regenerate elements
+    _rebuildElementsWithTransform();
+
+    debugPrint('🔄 Programmatic pan: dx=$plotDx, dy=$plotDy');
+  }
+
+  // ============================================================================
+  // Coordinate Space Conversion (Widget ↔ Plot)
+  // ============================================================================
+
+  /// Converts widget coordinates to plot coordinates.
+  ///
+  /// Widget coordinates include axis areas, plot coordinates are relative
+  /// to the plot area (0,0 at top-left of plot area).
+  Offset widgetToPlot(Offset widgetPosition) {
+    return Offset(
+      widgetPosition.dx - _plotArea.left,
+      widgetPosition.dy - _plotArea.top,
+    );
+  }
+
+  /// Converts plot coordinates to widget coordinates.
+  ///
+  /// Inverse of widgetToPlot().
+  Offset plotToWidget(Offset plotPosition) {
+    return Offset(
+      plotPosition.dx + _plotArea.left,
+      plotPosition.dy + _plotArea.top,
+    );
+  }
+
+  /// Rebuilds the QuadTree spatial index from current elements.
+  ///
+  /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
+  void _rebuildSpatialIndex() {
+    if (!hasSize || _plotArea.isEmpty) return;
+
+    // QuadTree bounds = plot area (in plot space, not widget space)
     _spatialIndex = QuadTree(
-      bounds: Offset.zero & size,
+      bounds: Offset.zero & _plotArea.size,
       maxElementsPerNode: 4,
       maxDepth: 8,
     );
@@ -111,16 +240,103 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
+  /// Rebuilds elements using the element generator with current transform.
+  ///
+  /// Called after zoom/pan operations to regenerate elements from original
+  /// data coordinates using the updated transform.
+  void _rebuildElementsWithTransform() {
+    if (_elementGenerator == null || _transform == null) return;
+
+    // Generate new elements using current transform
+    _elements = _elementGenerator!(_transform!);
+
+    // Rebuild spatial index with new elements
+    _rebuildSpatialIndex();
+
+    // Mark for repaint to show updated elements
+    markNeedsPaint();
+  }
+
   // ============================================================================
   // Layout
   // ============================================================================
 
   @override
   void performLayout() {
-    // Chart takes all available space
-    size = constraints.biggest;
+    // Chart respects parent constraints
+    // Use constrain() to handle both bounded and unbounded constraints
+    size = constraints.constrain(
+      constraints.isTight
+          ? constraints.smallest
+          : Size(
+              constraints.hasBoundedWidth ? constraints.maxWidth : 800,
+              constraints.hasBoundedHeight ? constraints.maxHeight : 600,
+            ),
+    );
 
-    // Rebuild spatial index when size changes
+    // Calculate plot area (reserve space for axes)
+    // Default margins if no axes
+    double leftMargin = 10;
+    double rightMargin = 10;
+    double topMargin = 10;
+    double bottomMargin = 10;
+
+    // Reserve space for Y-axis (left side)
+    if (_yAxis != null) {
+      leftMargin = 60; // Space for Y-axis labels + axis label + padding
+    }
+
+    // Reserve space for X-axis (bottom)
+    if (_xAxis != null) {
+      bottomMargin = 50; // Space for X-axis labels + axis label + padding
+    }
+
+    // Calculate plot area
+    _plotArea = Rect.fromLTRB(
+      leftMargin,
+      topMargin,
+      size.width - rightMargin,
+      size.height - bottomMargin,
+    );
+
+    // Update axis pixel ranges to match plot area
+    _xAxis?.updatePixelRange(_plotArea.left, _plotArea.right);
+    _yAxis?.updatePixelRange(_plotArea.top, _plotArea.bottom);
+
+    // Create/update coordinate transform
+    // Transform handles Data ↔ Plot conversion based on axis data ranges
+    if (_xAxis != null && _yAxis != null) {
+      // Only create initial transform if none exists, otherwise preserve zoom/pan state
+      if (_transform == null) {
+        // First time: create transform from axis data ranges
+        _transform = ChartTransform(
+          dataXMin: _xAxis!.dataMin,
+          dataXMax: _xAxis!.dataMax,
+          dataYMin: _yAxis!.dataMin,
+          dataYMax: _yAxis!.dataMax,
+          plotWidth: _plotArea.width,
+          plotHeight: _plotArea.height,
+          invertY: true, // Standard chart convention (Y=0 at bottom)
+        );
+      } else {
+        // Subsequent layouts: preserve current data ranges (zoom/pan state),
+        // only update plot dimensions if they changed
+        if (_transform!.plotWidth != _plotArea.width || _transform!.plotHeight != _plotArea.height) {
+          _transform = _transform!.copyWith(
+            plotWidth: _plotArea.width,
+            plotHeight: _plotArea.height,
+          );
+        }
+      }
+
+      // If using element generator, regenerate elements with new transform
+      if (_elementGenerator != null) {
+        _rebuildElementsWithTransform();
+        return; // _rebuildElementsWithTransform already rebuilds spatial index
+      }
+    }
+
+    // Rebuild spatial index when size changes (for static elements)
     _rebuildSpatialIndex();
   }
 
@@ -147,26 +363,33 @@ class ChartRenderBox extends RenderBox {
   /// Uses QuadTree for O(log n) spatial query, then performs precise hit
   /// testing and priority-based conflict resolution.
   ///
+  /// **Coordinate Conversion**: Position is in widget space, converted to
+  /// plot space before querying QuadTree (which operates in plot space).
+  ///
   /// Returns the element with highest priority that passes hitTest(), or null.
   ///
   /// **Conflict Resolution** (per CONFLICT_RESOLUTION_TABLE.md):
   /// - Query QuadTree for candidate elements at position
   /// - Filter to elements that pass precise hitTest()
   /// - Return highest priority element
-  ChartElement? hitTestElements(Offset position) {
+  ChartElement? hitTestElements(Offset widgetPosition) {
     if (_spatialIndex == null) return null;
 
-    // Query spatial index for candidate elements
+    // Convert widget coordinates to plot coordinates
+    final plotPosition = widgetToPlot(widgetPosition);
+
+    // Query spatial index for candidate elements (in plot space)
     // Use 18px radius to account for edge zones that extend 8px outside bounds
     // (10px base tolerance + 8px max edge width = 18px total)
     // NOTE: QuadTree now inserts elements into ALL overlapping quadrants,
     // so this smaller radius is sufficient (previously needed 50px due to center-only insertion bug)
-    final candidates = _spatialIndex!.query(position, radius: 18);
+    final candidates = _spatialIndex!.query(plotPosition, radius: 18);
 
     if (candidates.isEmpty) return null;
 
     // Filter to elements that pass precise hit test
-    final hits = candidates.where((e) => e.hitTest(position)).toList();
+    // Elements use plot coordinates, so pass plot position
+    final hits = candidates.where((e) => e.hitTest(plotPosition)).toList();
 
     if (hits.isEmpty) return null;
 
@@ -177,15 +400,23 @@ class ChartRenderBox extends RenderBox {
 
   /// Finds all elements within a rectangular region (for box select).
   ///
+  /// **Coordinate Conversion**: Rect is in widget space, converted to plot
+  /// space before querying QuadTree.
+  ///
   /// Per conflict resolution scenario 14: Box select only captures datapoints.
-  List<ChartElement> hitTestRect(Rect rect) {
+  List<ChartElement> hitTestRect(Rect widgetRect) {
     if (_spatialIndex == null) return [];
 
-    final candidates = _spatialIndex!.queryRect(rect);
+    // Convert widget rect to plot rect
+    final plotTopLeft = widgetToPlot(widgetRect.topLeft);
+    final plotBottomRight = widgetToPlot(widgetRect.bottomRight);
+    final plotRect = Rect.fromPoints(plotTopLeft, plotBottomRight);
+
+    final candidates = _spatialIndex!.queryRect(plotRect);
 
     // Filter to datapoints only (per conflict resolution)
-    // and elements whose center is inside rect
-    return candidates.where((e) => e.elementType == ChartElementType.datapoint && rect.contains(e.bounds.center)).toList();
+    // and elements whose center is inside rect (in plot space)
+    return candidates.where((e) => e.elementType == ChartElementType.datapoint && plotRect.contains(e.bounds.center)).toList();
   }
 
   /// Hit tests for resize handles on annotations.
@@ -315,6 +546,7 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
+    debugPrint('🖱️ PointerDown: buttons=${event.buttons} (middle=$kMiddleMouseButton, primary=$kPrimaryMouseButton)');
     coordinator.startInteraction(position, element: hitElement);
 
     // Check if we hit a resize handle (priority 7)
@@ -339,7 +571,11 @@ class ChartRenderBox extends RenderBox {
     // Per conflict resolution: Different buttons have different behaviors
     if (event.buttons == kMiddleMouseButton) {
       // Middle-click: EXCLUSIVELY pan (per scenario 6)
+      debugPrint('🖱️ Middle button DOWN detected at $position');
       coordinator.claimMode(InteractionMode.panning);
+      // Store initial pan position in widget space
+      _lastPanPosition = position;
+      debugPrint('🖱️ Pan mode claimed, _lastPanPosition set to $position');
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
@@ -381,8 +617,27 @@ class ChartRenderBox extends RenderBox {
 
     // Middle-button drag = pan (per conflict resolution scenario 6)
     if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
-      // Pan logic would go here in production
-      // For prototype, just track the mode
+      debugPrint(
+          '🖱️ Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}');
+      if (_lastPanPosition != null && _transform != null) {
+        // Calculate delta in widget space
+        final widgetDelta = position - _lastPanPosition!;
+
+        // Convert widget delta to plot space (widget space -> plot space is just offset removal)
+        final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
+
+        // Apply pan to transform (note: negative delta because dragging right should pan view right)
+        // PERFORMANCE: Only update transform during drag, defer element regeneration until pointer up
+        _transform = _transform!.pan(-plotDelta.dx, -plotDelta.dy);
+
+        // Update last position for next move event
+        _lastPanPosition = position;
+
+        // Just repaint (no element regeneration during drag for performance)
+        markNeedsPaint();
+
+        debugPrint('🖱️ Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta (deferred regen)');
+      }
       return;
     }
 
@@ -448,6 +703,15 @@ class ChartRenderBox extends RenderBox {
     _resizingAnnotation = null;
     _resizeStartBounds = null;
 
+    // Clear pan state and regenerate elements if we were panning
+    // (Elements were not regenerated during drag for performance)
+    final wasPanning = coordinator.currentMode == InteractionMode.panning;
+    _lastPanPosition = null;
+    if (wasPanning && _elementGenerator != null) {
+      _rebuildElementsWithTransform();
+      debugPrint('🔄 Pan ended - regenerated elements with final transform');
+    }
+
     // Clear cursor position
     _cursorPosition = null;
 
@@ -510,17 +774,51 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerScroll(PointerScrollEvent event, Offset position) {
-    // Scroll events = zoom (per conflict resolution)
-    // Modifiers affect zoom behavior (Ctrl = horizontal, Shift = vertical)
-    // For prototype, just track the mode
-    coordinator.claimMode(InteractionMode.zooming);
+    // Check for Shift modifier to trigger zoom
+    if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null) {
+      // Claim zooming mode
+      coordinator.claimMode(InteractionMode.zooming);
 
-    // Release zoom mode after short delay (zoom is instant, not continuous)
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (coordinator.currentMode == InteractionMode.zooming) {
-        coordinator.releaseMode();
-      }
-    });
+      // Calculate zoom factor from scroll delta
+      // Positive scrollDelta.dy = scroll down = zoom out
+      // Negative scrollDelta.dy = scroll up = zoom in
+      final double scrollAmount = event.scrollDelta.dy;
+      const double zoomSensitivity = 0.001; // Adjust for comfortable zoom speed
+      final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
+
+      debugPrint('🔍 ZOOM: factor=$zoomFactor, scrollDelta=${event.scrollDelta.dy}');
+
+      // Convert cursor position (widget space) to plot space
+      final Offset plotPosition = widgetToPlot(position);
+
+      // Apply zoom centered on cursor position
+      _transform = _transform!.zoom(zoomFactor, plotPosition);
+
+      // Regenerate elements with new transform
+      _rebuildElementsWithTransform();
+
+      debugPrint('🔍 Transform updated: dataX=${_transform!.dataXMin}..${_transform!.dataXMax}');
+
+      // Release zoom mode after short delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (coordinator.currentMode == InteractionMode.zooming) {
+          coordinator.releaseMode();
+        }
+      });
+    } else {
+      debugPrint(
+          '⚠️ Scroll without zoom: shift=${coordinator.isShiftPressed}, transform=${_transform != null}, generator=${_elementGenerator != null}');
+
+      // Without Shift, just claim mode for compatibility
+      coordinator.claimMode(InteractionMode.zooming);
+
+      // Release zoom mode after short delay (zoom is instant, not continuous)
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (coordinator.currentMode == InteractionMode.zooming) {
+          coordinator.releaseMode();
+        }
+      });
+    }
   }
 
   // ============================================================================
@@ -539,12 +837,33 @@ class ChartRenderBox extends RenderBox {
       Paint()..color = const Color(0xFFFFFFFF),
     );
 
+    // Paint axes (behind all chart elements)
+    if (_xAxis != null) {
+      AxisRenderer(_xAxis!).paint(canvas, size, _plotArea);
+    }
+    if (_yAxis != null) {
+      AxisRenderer(_yAxis!).paint(canvas, size, _plotArea);
+    }
+
+    // Clip canvas to plot area to prevent elements from rendering over axes
+    // Elements are positioned in plot space, but painting happens in widget space
+    canvas.save();
+    canvas.translate(_plotArea.left, _plotArea.top);
+    canvas.clipRect(Offset.zero & _plotArea.size);
+
     // Paint all elements (in order: lowest to highest priority)
+    // Elements are in plot space, so no coordinate conversion needed during paint
     final sortedElements = _elements.toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
     for (final element in sortedElements) {
-      element.paint(canvas, size);
+      element.paint(canvas, _plotArea.size);
     }
+
+    canvas.restore(); // Restore canvas state (removes clipping and translation from plot area)
+
+    // Paint overlays in widget space (crosshair, selection box, preview indicators)
+    // These are painted AFTER plot elements but BEFORE final canvas.restore()
+    // so they appear in widget coordinates with the initial offset applied
 
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
@@ -553,25 +872,26 @@ class ChartRenderBox extends RenderBox {
       for (final element in previewElements) {
         // Only draw preview for elements that aren't already selected
         if (!element.isSelected && element.elementType == ChartElementType.datapoint) {
-          final bounds = element.bounds;
-          final center = bounds.center;
-          final radius = bounds.width / 2;
+          // Convert plot bounds to widget bounds for preview rendering
+          final plotBounds = element.bounds;
+          final widgetCenter = plotToWidget(plotBounds.center);
+          final radius = plotBounds.width / 2;
 
           // Draw dashed preview ring (different from solid selection ring)
           final previewPaint = Paint()
             ..color = const Color(0x8000AAFF) // Semi-transparent blue
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
-          canvas.drawCircle(center, radius + 3, previewPaint);
+          canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
         }
       }
     }
 
-    // Paint box selection rectangle if active
+    // Paint box selection rectangle if active (in widget space)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       final boxRect = coordinator.boxSelectionRect;
       if (boxRect != null) {
-        // Draw selection rectangle
+        // boxRect is already in widget space, draw it directly
         canvas.drawRect(
           boxRect,
           Paint()
@@ -588,7 +908,7 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
-    // Draw crosshair at cursor position (always visible when cursor is over chart)
+    // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
     if (cursorPos != null) {
       final crosshairPaint = Paint()
@@ -596,14 +916,14 @@ class ChartRenderBox extends RenderBox {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
 
-      // Horizontal line
+      // Horizontal line across entire widget
       canvas.drawLine(
         Offset(0, cursorPos.dy),
         Offset(size.width, cursorPos.dy),
         crosshairPaint,
       );
 
-      // Vertical line
+      // Vertical line across entire widget
       canvas.drawLine(
         Offset(cursorPos.dx, 0),
         Offset(cursorPos.dx, size.height),
@@ -611,7 +931,7 @@ class ChartRenderBox extends RenderBox {
       );
     }
 
-    canvas.restore();
+    canvas.restore(); // Final restore (removes initial offset translation)
   }
 
   // ============================================================================

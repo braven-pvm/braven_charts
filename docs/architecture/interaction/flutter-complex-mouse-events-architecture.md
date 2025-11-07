@@ -9,9 +9,11 @@
 3. [Solution 1: Custom Gesture Recognizers with Context-Aware Logic](#solution-1-custom-gesture-recognizers-with-context-aware-logic)
 4. [Solution 2: Custom RenderObject Approach](#solution-2-custom-renderobject-approach)
 5. [Handling All Mouse Event Types](#handling-all-mouse-event-types)
-6. [Architecture Patterns from Production Chart Libraries](#architecture-patterns-from-production-chart-libraries)
-7. [Performance Optimization for Large-Scale Interactive Elements](#performance-optimization-for-large-scale-interactive-elements)
-8. [Complete Architecture Example](#complete-architecture-example)
+6. [Mouse Cursor Management for Interactive Charts](#mouse-cursor-management-for-interactive-charts)
+7. [Coordinate Transformation: The Foundation for Zoom and Pan](#coordinate-transformation-the-foundation-for-zoom-and-pan)
+8. [Architecture Patterns from Production Chart Libraries](#architecture-patterns-from-production-chart-libraries)
+9. [Performance Optimization for Large-Scale Interactive Elements](#performance-optimization-for-large-scale-interactive-elements)
+10. [Complete Architecture Example](#complete-architecture-example)
 
 ## Understanding Flutter's Hit Testing and Gesture Arena
 
@@ -20,7 +22,7 @@
 Flutter's hit testing operates through a **two-phase process** that's fundamentally different from traditional event bubbling:
 
 1. **Downward traversal**: When a pointer touches the screen, Flutter traverses from the render tree root to leaves, testing each node to build a `HitTestResult` containing all widgets intersecting the touch point
-2. **Reverse paint order**: Results are in reverse paint order—the deepest (topmost visually) widget is tested first
+2. **Reverse paint order**: Results are in reverse paint orderâ€”the deepest (topmost visually) widget is tested first
 
 **Critical insight**: In a Stack, the last child (visually on top) is tested first, and if it returns true from `hitTest()`, lower widgets may not be tested at all depending on `HitTestBehavior`.
 
@@ -30,7 +32,7 @@ Source: [Flutter gesture documentation](https://docs.flutter.dev/ui/interactivit
 
 The three behaviors are frequently misunderstood:
 
-- **`HitTestBehavior.opaque`**: The widget participates in hit testing across its entire bounds AND prevents widgets behind it from being tested. **Common misconception**: It does NOT block children—children still receive events normally.
+- **`HitTestBehavior.opaque`**: The widget participates in hit testing across its entire bounds AND prevents widgets behind it from being tested. **Common misconception**: It does NOT block childrenâ€”children still receive events normally.
   
 - **`HitTestBehavior.translucent`**: The widget participates AND allows widgets behind it to also be tested. Both enter the gesture arena.
 
@@ -57,18 +59,18 @@ Source: [Flutter gesture arena deep dive](https://medium.com/flutter-community/f
 When you have:
 ```
 Chart background (wants pan/zoom)
-└── Datapoint overlay (wants tap)
-    └── Annotation handle (wants drag)
+â””â”€â”€ Datapoint overlay (wants tap)
+    â””â”€â”€ Annotation handle (wants drag)
 ```
 
-All three widgets create gesture recognizers that enter the arena. The annotation handle's recognizer enters first and wins, preventing the datapoint tap and background pan from firing—even when you tap empty space near the annotation.
+All three widgets create gesture recognizers that enter the arena. The annotation handle's recognizer enters first and wins, preventing the datapoint tap and background pan from firingâ€”even when you tap empty space near the annotation.
 
 ## The Core Problem: Why Events Conflict
 
 ### Scenario 1: Nested GestureDetectors
 
 ```dart
-// ❌ PROBLEM: Child always wins, parent never fires
+// âŒ PROBLEM: Child always wins, parent never fires
 Stack(
   children: [
     GestureDetector(
@@ -95,7 +97,7 @@ For a chart with:
 - Crosshair drag to move
 - Right-click context menu
 
-All four interaction types compete, and whichever recognizer enters the arena first wins—even if it's not the most appropriate for the user's intent.
+All four interaction types compete, and whichever recognizer enters the arena first winsâ€”even if it's not the most appropriate for the user's intent.
 
 **This is exactly your "fixing one breaks another" problem.**
 
@@ -748,7 +750,7 @@ Source: [Stack Overflow: explicit cursor changes](https://stackoverflow.com/ques
 #### The Problem
 
 ```dart
-// ❌ WRONG - cursor reverts to basic during drag
+// âŒ WRONG - cursor reverts to basic during drag
 Draggable(
   feedback: MouseRegion(
     cursor: SystemMouseCursors.grabbing,
@@ -768,7 +770,7 @@ The cursor reverts because by default, Draggable's feedback ignores pointer even
 Set `ignoringFeedbackPointer: false`:
 
 ```dart
-// ✅ CORRECT - cursor stays grabbing during drag
+// âœ… CORRECT - cursor stays grabbing during drag
 Draggable(
   ignoringFeedbackPointer: false, // Critical!
   feedback: MouseRegion(
@@ -1141,10 +1143,10 @@ class _ChartState extends State<Chart> {
 
 3. **Feedback Loop**:
    ```
-   Hover → grab
-   Mouse down → grabbing
-   Drag → keep grabbing
-   Mouse up → back to grab (if still hovering) or basic
+   Hover â†’ grab
+   Mouse down â†’ grabbing
+   Drag â†’ keep grabbing
+   Mouse up â†’ back to grab (if still hovering) or basic
    ```
 
 4. **Overlapping Elements**: Higher-priority elements (smaller, more specific) should set cursor first
@@ -1264,6 +1266,885 @@ class _InteractiveChartState extends State<InteractiveChart> {
       default:
         return SystemMouseCursors.basic;
     }
+  }
+}
+```
+
+## Coordinate Transformation: The Foundation for Zoom and Pan
+
+### The Core Challenge
+
+When you introduce zoom and pan, you create **two coordinate spaces** that must be synchronized:
+
+1. **Screen Space**: Where the mouse pointer is (pixels on the device screen)
+2. **Data Space**: Where your chart data lives (actual data values like time, price, etc.)
+
+**The problem**: After zooming/panning, a datapoint at data coordinates `(100, 50)` might render at screen coordinates `(250, 150)`. But hit testing receives screen coordinates, and you need to determine which data element was hit.
+
+**The solution**: Maintain a bidirectional transformation matrix that converts between these spaces.
+
+### Transformation Architecture
+
+```dart
+class ChartTransform {
+  // The viewport in data space coordinates
+  Rect _dataViewport;
+  
+  // The rendering area in screen space coordinates  
+  Rect _screenViewport;
+  
+  // Cached transformation values for performance
+  double _scaleX = 1.0;
+  double _scaleY = 1.0;
+  double _translateX = 0.0;
+  double _translateY = 0.0;
+  
+  ChartTransform({
+    required Rect dataViewport,
+    required Rect screenViewport,
+  }) : _dataViewport = dataViewport,
+       _screenViewport = screenViewport {
+    _updateTransform();
+  }
+  
+  void _updateTransform() {
+    // Calculate scale factors
+    _scaleX = _screenViewport.width / _dataViewport.width;
+    _scaleY = _screenViewport.height / _dataViewport.height;
+    
+    // Calculate translation offsets
+    _translateX = _screenViewport.left - (_dataViewport.left * _scaleX);
+    _translateY = _screenViewport.top - (_dataViewport.top * _scaleY);
+  }
+  
+  /// Convert data coordinates to screen coordinates
+  Offset dataToScreen(Offset dataPoint) {
+    return Offset(
+      dataPoint.dx * _scaleX + _translateX,
+      dataPoint.dy * _scaleY + _translateY,
+    );
+  }
+  
+  /// Convert screen coordinates to data coordinates
+  Offset screenToData(Offset screenPoint) {
+    return Offset(
+      (screenPoint.dx - _translateX) / _scaleX,
+      (screenPoint.dy - _translateY) / _scaleY,
+    );
+  }
+  
+  /// Convert data rect to screen rect
+  Rect dataRectToScreen(Rect dataRect) {
+    final topLeft = dataToScreen(dataRect.topLeft);
+    final bottomRight = dataToScreen(dataRect.bottomRight);
+    return Rect.fromPoints(topLeft, bottomRight);
+  }
+  
+  /// Convert screen rect to data rect
+  Rect screenRectToData(Rect screenRect) {
+    final topLeft = screenToData(screenRect.topLeft);
+    final bottomRight = screenToData(screenRect.bottomRight);
+    return Rect.fromPoints(topLeft, bottomRight);
+  }
+  
+  /// Get current zoom level (1.0 = no zoom)
+  double get zoomX => _scaleX;
+  double get zoomY => _scaleY;
+  
+  /// Get the visible data viewport
+  Rect get dataViewport => _dataViewport;
+  
+  /// Update the data viewport (for pan/zoom)
+  void setDataViewport(Rect newViewport) {
+    _dataViewport = newViewport;
+    _updateTransform();
+  }
+  
+  /// Pan by delta in screen pixels
+  void panByScreenDelta(Offset screenDelta) {
+    // Convert screen delta to data delta
+    final dataDelta = Offset(
+      screenDelta.dx / _scaleX,
+      screenDelta.dy / _scaleY,
+    );
+    
+    // Shift the data viewport
+    _dataViewport = _dataViewport.shift(-dataDelta);
+    _updateTransform();
+  }
+  
+  /// Zoom around a specific screen point (like mouse position)
+  void zoomAroundScreenPoint(Offset screenPoint, double zoomFactor) {
+    // Convert screen point to data space
+    final dataPoint = screenToData(screenPoint);
+    
+    // Calculate new viewport dimensions
+    final newWidth = _dataViewport.width / zoomFactor;
+    final newHeight = _dataViewport.height / zoomFactor;
+    
+    // Keep the data point under the mouse in the same screen location
+    final newLeft = dataPoint.dx - (dataPoint.dx - _dataViewport.left) / zoomFactor;
+    final newTop = dataPoint.dy - (dataPoint.dy - _dataViewport.top) / zoomFactor;
+    
+    _dataViewport = Rect.fromLTWH(newLeft, newTop, newWidth, newHeight);
+    _updateTransform();
+  }
+  
+  /// Zoom to fit all data
+  void zoomToFit(Rect dataBounds, {double padding = 0.1}) {
+    final paddedBounds = dataBounds.inflate(
+      dataBounds.width * padding
+    );
+    _dataViewport = paddedBounds;
+    _updateTransform();
+  }
+  
+  ChartTransform copyWith({Rect? dataViewport, Rect? screenViewport}) {
+    return ChartTransform(
+      dataViewport: dataViewport ?? _dataViewport,
+      screenViewport: screenViewport ?? _screenViewport,
+    );
+  }
+}
+```
+
+Source: [Coordinate transformations in graphics](https://en.wikipedia.org/wiki/Transformation_matrix)
+
+### Integration with RenderObject Hit Testing
+
+**Critical insight**: Hit testing receives screen coordinates, but your spatial index (QuadTree) stores data coordinates. You must transform between them:
+
+```dart
+class ChartRenderBox extends RenderBox {
+  final QuadTree _spatialIndex; // Stores data coordinates
+  final ChartTransform _transform;
+  
+  ChartRenderBox(this._state, Rect dataBounds)
+    : _spatialIndex = QuadTree(boundary: dataBounds, capacity: 24),
+      _transform = ChartTransform(
+        dataViewport: dataBounds,
+        screenViewport: Rect.fromLTWH(0, 0, 800, 600), // Updated in performLayout
+      );
+  
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!size.contains(position)) return false;
+    
+    // Convert screen position to data space for spatial query
+    final dataPosition = _transform.screenToData(position);
+    
+    // Query in data space with tolerance
+    final tolerance = 10.0 / _transform.zoomX; // Scale tolerance by zoom
+    final queryRect = Rect.fromCenter(
+      center: dataPosition,
+      width: tolerance * 2,
+      height: tolerance * 2,
+    );
+    
+    final candidates = _spatialIndex.query(queryRect);
+    
+    if (candidates.isNotEmpty) {
+      result.add(BoxHitTestEntry(this, position));
+      return true;
+    }
+    
+    // Accept for background pan even if no elements hit
+    result.add(BoxHitTestEntry(this, position));
+    return true;
+  }
+  
+  @override
+  void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
+    final screenPosition = entry.localPosition;
+    
+    if (event is PointerDownEvent) {
+      if (event.buttons == kSecondaryMouseButton) {
+        _handleContextMenu(screenPosition);
+      } else {
+        _handleDown(screenPosition);
+      }
+    } else if (event is PointerMoveEvent) {
+      _handleMove(screenPosition, event);
+    } else if (event is PointerUpEvent) {
+      _handleUp(screenPosition);
+    } else if (event is PointerSignalEvent && event is PointerScrollEvent) {
+      _handleScroll(screenPosition, event.scrollDelta);
+    }
+  }
+  
+  void _handleDown(Offset screenPosition) {
+    final element = _findElementAt(screenPosition);
+    if (element != null) {
+      _state.selectElement(element);
+    } else {
+      // Start pan - store the initial screen position
+      _state.startPan(screenPosition);
+    }
+  }
+  
+  void _handleMove(Offset screenPosition, PointerMoveEvent event) {
+    if (_state.isPanning) {
+      // Pan by the screen delta
+      final delta = event.delta;
+      _transform.panByScreenDelta(delta);
+      _state.notifyPanned();
+      markNeedsPaint();
+    } else if (_state.isDraggingElement) {
+      // When dragging an element, convert screen delta to data delta
+      final dataDelta = Offset(
+        event.delta.dx / _transform.zoomX,
+        event.delta.dy / _transform.zoomY,
+      );
+      _state.updateDraggedElement(dataDelta);
+      markNeedsPaint();
+    }
+  }
+  
+  void _handleScroll(Offset screenPosition, Offset scrollDelta) {
+    // Determine zoom factor from scroll
+    final zoomFactor = 1.0 + (scrollDelta.dy * 0.001);
+    
+    // Zoom around the mouse position
+    _transform.zoomAroundScreenPoint(screenPosition, zoomFactor);
+    markNeedsPaint();
+  }
+  
+  ChartElement? _findElementAt(Offset screenPosition) {
+    // Convert to data space
+    final dataPosition = _transform.screenToData(screenPosition);
+    
+    // Query spatial index in data space
+    final tolerance = 10.0 / _transform.zoomX; // Hit tolerance in data space
+    final queryRect = Rect.fromCenter(
+      center: dataPosition,
+      width: tolerance * 2,
+      height: tolerance * 2,
+    );
+    
+    final candidates = _spatialIndex.query(queryRect);
+    
+    // Check each candidate - elements store data coordinates
+    for (final id in candidates) {
+      final element = _state.getElement(id);
+      
+      // Element has data coordinates, check distance in data space
+      final distance = (element.dataPosition - dataPosition).distance;
+      if (distance <= tolerance) {
+        return element;
+      }
+    }
+    return null;
+  }
+  
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final canvas = context.canvas;
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    
+    // Calculate visible data viewport
+    final visibleDataRect = _transform.dataViewport;
+    
+    // Query only visible elements from spatial index (in data space)
+    final visibleIds = _spatialIndex.query(visibleDataRect);
+    
+    // Draw elements, converting their data coords to screen coords
+    for (final id in visibleIds) {
+      final element = _state.getElement(id);
+      final screenPos = _transform.dataToScreen(element.dataPosition);
+      
+      // Draw at screen position
+      _drawElement(canvas, element, screenPos);
+    }
+    
+    canvas.restore();
+  }
+  
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    
+    // Update screen viewport when size changes
+    _transform.setScreenViewport(Rect.fromLTWH(0, 0, size.width, size.height));
+  }
+}
+```
+
+### Zoom and Pan State Management
+
+```dart
+enum ChartInteractionMode {
+  idle,
+  panning,
+  selecting,
+  draggingElement,
+  zooming,
+}
+
+class ChartState extends ChangeNotifier {
+  ChartInteractionMode _mode = ChartInteractionMode.idle;
+  
+  // Pan state
+  Offset? _panStartPosition;
+  
+  // Zoom constraints
+  double _minZoom = 0.1;
+  double _maxZoom = 10.0;
+  
+  // Data bounds (never changes)
+  final Rect _fullDataBounds;
+  
+  // Current viewport in data space
+  Rect _currentDataViewport;
+  
+  ChartState({required Rect dataBounds})
+    : _fullDataBounds = dataBounds,
+      _currentDataViewport = dataBounds;
+  
+  bool get isPanning => _mode == ChartInteractionMode.panning;
+  bool get isDraggingElement => _mode == ChartInteractionMode.draggingElement;
+  
+  void startPan(Offset screenPosition) {
+    _panStartPosition = screenPosition;
+    _mode = ChartInteractionMode.panning;
+    notifyListeners();
+  }
+  
+  void notifyPanned() {
+    notifyListeners();
+  }
+  
+  void endPan() {
+    _panStartPosition = null;
+    _mode = ChartInteractionMode.idle;
+    notifyListeners();
+  }
+  
+  void zoom(double factor, {Rect? limits}) {
+    // Apply zoom constraints
+    final currentZoom = _fullDataBounds.width / _currentDataViewport.width;
+    final newZoom = (currentZoom * factor).clamp(_minZoom, _maxZoom);
+    final actualFactor = newZoom / currentZoom;
+    
+    // Update viewport
+    final center = _currentDataViewport.center;
+    final newWidth = _currentDataViewport.width / actualFactor;
+    final newHeight = _currentDataViewport.height / actualFactor;
+    
+    _currentDataViewport = Rect.fromCenter(
+      center: center,
+      width: newWidth,
+      height: newHeight,
+    );
+    
+    // Constrain to data bounds
+    _constrainViewport(limits);
+    notifyListeners();
+  }
+  
+  void _constrainViewport(Rect? limits) {
+    final bounds = limits ?? _fullDataBounds;
+    
+    // Don't allow panning beyond data bounds
+    double left = _currentDataViewport.left;
+    double top = _currentDataViewport.top;
+    double right = _currentDataViewport.right;
+    double bottom = _currentDataViewport.bottom;
+    
+    if (left < bounds.left) {
+      final shift = bounds.left - left;
+      left += shift;
+      right += shift;
+    }
+    if (right > bounds.right) {
+      final shift = right - bounds.right;
+      left -= shift;
+      right -= shift;
+    }
+    if (top < bounds.top) {
+      final shift = bounds.top - top;
+      top += shift;
+      bottom += shift;
+    }
+    if (bottom > bounds.bottom) {
+      final shift = bottom - bounds.bottom;
+      top -= shift;
+      bottom -= shift;
+    }
+    
+    _currentDataViewport = Rect.fromLTRB(left, top, right, bottom);
+  }
+  
+  void resetZoom() {
+    _currentDataViewport = _fullDataBounds;
+    notifyListeners();
+  }
+}
+```
+
+### Overlay Widget Positioning with Transforms
+
+**Critical issue**: Positioned overlay widgets (like annotation handles) need to update their screen positions when zoom/pan changes:
+
+```dart
+class ChartWithOverlays extends StatefulWidget {
+  @override
+  State<ChartWithOverlays> createState() => _ChartWithOverlaysState();
+}
+
+class _ChartWithOverlaysState extends State<ChartWithOverlays> {
+  final ChartState _state = ChartState(dataBounds: Rect.fromLTWH(0, 0, 100, 100));
+  late ChartTransform _transform;
+  
+  @override
+  void initState() {
+    super.initState();
+    _transform = ChartTransform(
+      dataViewport: _state._currentDataViewport,
+      screenViewport: Rect.fromLTWH(0, 0, 800, 600),
+    );
+    
+    // Listen to state changes to update transform
+    _state.addListener(_updateTransform);
+  }
+  
+  void _updateTransform() {
+    setState(() {
+      _transform.setDataViewport(_state._currentDataViewport);
+    });
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Update screen viewport on layout
+        _transform.setScreenViewport(
+          Rect.fromLTWH(0, 0, constraints.maxWidth, constraints.maxHeight)
+        );
+        
+        return ListenableBuilder(
+          listenable: _state,
+          builder: (context, _) {
+            return Stack(
+              children: [
+                // Base chart with transform
+                ChartWidget(
+                  state: _state,
+                  transform: _transform,
+                ),
+                
+                // Positioned overlays - convert data coords to screen coords
+                ..._buildAnnotationHandles(),
+                
+                // Non-transformed overlays (like crosshair)
+                if (_state.showCrosshair)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: CrosshairPainter(_state.crosshairPosition),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  List<Widget> _buildAnnotationHandles() {
+    return _state.annotations.map((annotation) {
+      // Convert annotation's DATA coordinates to SCREEN coordinates
+      final screenPos = _transform.dataToScreen(annotation.dataPosition);
+      
+      return Positioned(
+        left: screenPos.dx - 8,
+        top: screenPos.dy - 8,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.move,
+          child: GestureDetector(
+            onPanStart: (_) => _state.startDragAnnotation(annotation),
+            onPanUpdate: (details) {
+              // Convert screen delta to data delta
+              final dataDelta = Offset(
+                details.delta.dx / _transform.zoomX,
+                details.delta.dy / _transform.zoomY,
+              );
+              _state.updateAnnotationPosition(dataDelta);
+            },
+            onPanEnd: (_) => _state.endDragAnnotation(),
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.blue),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+  
+  @override
+  void dispose() {
+    _state.removeListener(_updateTransform);
+    super.dispose();
+  }
+}
+```
+
+### Advanced: Momentum Panning
+
+For better UX, implement momentum-based panning (fling gesture):
+
+```dart
+class ChartRenderBox extends RenderBox {
+  AnimationController? _panMomentumController;
+  Offset _panVelocity = Offset.zero;
+  Offset _lastPanPosition = Offset.zero;
+  DateTime _lastPanTime = DateTime.now();
+  
+  void _handlePanStart(Offset position) {
+    _panMomentumController?.stop();
+    _lastPanPosition = position;
+    _lastPanTime = DateTime.now();
+    _panVelocity = Offset.zero;
+  }
+  
+  void _handlePanUpdate(Offset position, Offset delta) {
+    final now = DateTime.now();
+    final elapsed = now.difference(_lastPanTime).inMilliseconds;
+    
+    if (elapsed > 0) {
+      // Calculate velocity
+      _panVelocity = Offset(
+        delta.dx / elapsed * 1000,
+        delta.dy / elapsed * 1000,
+      );
+    }
+    
+    _lastPanPosition = position;
+    _lastPanTime = now;
+    
+    // Apply pan
+    _transform.panByScreenDelta(delta);
+    markNeedsPaint();
+  }
+  
+  void _handlePanEnd() {
+    final velocityMagnitude = _panVelocity.distance;
+    
+    // Only apply momentum if velocity is significant
+    if (velocityMagnitude > 100) {
+      _startMomentumPan(_panVelocity);
+    }
+  }
+  
+  void _startMomentumPan(Offset velocity) {
+    _panMomentumController?.dispose();
+    _panMomentumController = AnimationController(
+      vsync: this, // Assumes RenderBox has TickerProviderStateMixin
+      duration: Duration(milliseconds: 500),
+    );
+    
+    final curve = Curves.decelerate;
+    
+    _panMomentumController!.addListener(() {
+      final t = curve.transform(_panMomentumController!.value);
+      final damping = 1.0 - t;
+      
+      final delta = Offset(
+        velocity.dx * damping * 0.016, // Assume 60fps
+        velocity.dy * damping * 0.016,
+      );
+      
+      _transform.panByScreenDelta(delta);
+      markNeedsPaint();
+    });
+    
+    _panMomentumController!.forward();
+  }
+}
+```
+
+### Zoom Constraints and Boundaries
+
+Prevent zooming too far in/out or panning beyond data bounds:
+
+```dart
+class ChartTransform {
+  final Rect _dataBounds; // The full extent of all data
+  double _minZoomLevel = 0.1;
+  double _maxZoomLevel = 10.0;
+  
+  void setZoomConstraints({double? minZoom, double? maxZoom}) {
+    _minZoomLevel = minZoom ?? _minZoomLevel;
+    _maxZoomLevel = maxZoom ?? _maxZoomLevel;
+  }
+  
+  void zoomAroundScreenPoint(Offset screenPoint, double zoomFactor) {
+    // Calculate desired zoom level
+    final currentZoom = _dataBounds.width / _dataViewport.width;
+    final targetZoom = (currentZoom * zoomFactor).clamp(_minZoomLevel, _maxZoomLevel);
+    final actualFactor = targetZoom / currentZoom;
+    
+    if ((actualFactor - 1.0).abs() < 0.001) return; // No change
+    
+    // Convert screen point to data space
+    final dataPoint = screenToData(screenPoint);
+    
+    // Calculate new viewport dimensions
+    final newWidth = _dataViewport.width / actualFactor;
+    final newHeight = _dataViewport.height / actualFactor;
+    
+    // Keep the data point under the mouse in the same screen location
+    final newLeft = dataPoint.dx - (dataPoint.dx - _dataViewport.left) / actualFactor;
+    final newTop = dataPoint.dy - (dataPoint.dy - _dataViewport.top) / actualFactor;
+    
+    _dataViewport = Rect.fromLTWH(newLeft, newTop, newWidth, newHeight);
+    
+    // Constrain to data bounds
+    _constrainViewportToBounds();
+    _updateTransform();
+  }
+  
+  void panByScreenDelta(Offset screenDelta) {
+    // Convert screen delta to data delta
+    final dataDelta = Offset(
+      screenDelta.dx / _scaleX,
+      screenDelta.dy / _scaleY,
+    );
+    
+    // Shift the data viewport
+    _dataViewport = _dataViewport.shift(-dataDelta);
+    
+    // Constrain to bounds
+    _constrainViewportToBounds();
+    _updateTransform();
+  }
+  
+  void _constrainViewportToBounds() {
+    double left = _dataViewport.left;
+    double top = _dataViewport.top;
+    double width = _dataViewport.width;
+    double height = _dataViewport.height;
+    
+    // Don't allow viewport to go outside data bounds
+    if (left < _dataBounds.left) {
+      left = _dataBounds.left;
+    }
+    if (top < _dataBounds.top) {
+      top = _dataBounds.top;
+    }
+    if (left + width > _dataBounds.right) {
+      left = _dataBounds.right - width;
+    }
+    if (top + height > _dataBounds.bottom) {
+      top = _dataBounds.bottom - height;
+    }
+    
+    // If viewport is larger than bounds (zoomed out too far), center it
+    if (width > _dataBounds.width) {
+      left = _dataBounds.left - (width - _dataBounds.width) / 2;
+    }
+    if (height > _dataBounds.height) {
+      top = _dataBounds.top - (height - _dataBounds.height) / 2;
+    }
+    
+    _dataViewport = Rect.fromLTWH(left, top, width, height);
+  }
+}
+```
+
+### Performance: Culling Off-Screen Elements
+
+With zoom, most elements may be off-screen. Use the transform to efficiently cull:
+
+```dart
+@override
+void paint(PaintingContext context, Offset offset) {
+  final canvas = context.canvas;
+  canvas.save();
+  canvas.translate(offset.dx, offset.dy);
+  
+  // Get visible data viewport with slight padding for smooth panning
+  final visibleDataRect = _transform.dataViewport.inflate(
+    _transform.dataViewport.width * 0.1 // 10% padding
+  );
+  
+  // Query only elements in visible data space
+  final visibleIds = _spatialIndex.query(visibleDataRect);
+  
+  // Only draw visible elements
+  for (final id in visibleIds) {
+    final element = _state.getElement(id);
+    final screenPos = _transform.dataToScreen(element.dataPosition);
+    
+    // Additional screen-space culling for precision
+    if (_screenViewport.inflate(20).contains(screenPos)) {
+      _drawElement(canvas, element, screenPos);
+    }
+  }
+  
+  canvas.restore();
+}
+```
+
+### Zoom/Pan Best Practices Summary
+
+1. **Two coordinate spaces**: Always maintain data space (unchanged) and screen space (transforms applied)
+2. **Store in data space**: Keep all element positions in data coordinates in the spatial index
+3. **Transform for rendering**: Convert data coords to screen coords only during paint
+4. **Transform for hit testing**: Convert screen coords to data coords for spatial queries
+5. **Scale hit tolerance**: Divide screen-space hit tolerance by zoom level to maintain consistent data-space tolerance
+6. **Constrain viewport**: Prevent panning/zooming beyond reasonable bounds
+7. **Update overlays**: Positioned widgets must recalculate screen positions on every transform change
+8. **Momentum for UX**: Implement fling gestures for natural panning feel
+9. **Cull aggressively**: Use the transform's visible data rect to query only what's on screen
+
+### Complete Zoom/Pan Integration Example
+
+```dart
+class ChartWidget extends LeafRenderObjectWidget {
+  final ChartState state;
+  final ChartTransform transform;
+  
+  const ChartWidget({
+    required this.state,
+    required this.transform,
+  });
+  
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return ChartRenderBox(state, transform);
+  }
+  
+  @override
+  void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
+    renderObject
+      ..state = state
+      ..transform = transform
+      ..markNeedsPaint();
+  }
+}
+
+class ChartRenderBox extends RenderBox {
+  ChartState _state;
+  ChartTransform _transform;
+  final QuadTree _spatialIndex;
+  
+  bool _isPanning = false;
+  Offset _lastPanPosition = Offset.zero;
+  
+  ChartRenderBox(this._state, this._transform)
+    : _spatialIndex = QuadTree(
+        boundary: _transform._dataBounds,
+        capacity: 24,
+      );
+  
+  set state(ChartState value) {
+    if (_state == value) return;
+    _state = value;
+  }
+  
+  set transform(ChartTransform value) {
+    if (_transform == value) return;
+    _transform = value;
+  }
+  
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!size.contains(position)) return false;
+    result.add(BoxHitTestEntry(this, position));
+    return true;
+  }
+  
+  @override
+  void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
+    final screenPosition = entry.localPosition;
+    
+    if (event is PointerDownEvent) {
+      final element = _findElementAt(screenPosition);
+      if (element != null) {
+        _state.selectElement(element);
+      } else if (event.buttons == kPrimaryMouseButton) {
+        _isPanning = true;
+        _lastPanPosition = screenPosition;
+      }
+    } else if (event is PointerMoveEvent) {
+      if (_isPanning) {
+        final delta = screenPosition - _lastPanPosition;
+        _transform.panByScreenDelta(delta);
+        _lastPanPosition = screenPosition;
+        markNeedsPaint();
+      }
+    } else if (event is PointerUpEvent) {
+      _isPanning = false;
+    } else if (event is PointerSignalEvent && event is PointerScrollEvent) {
+      final zoomFactor = 1.0 - (event.scrollDelta.dy * 0.001);
+      _transform.zoomAroundScreenPoint(screenPosition, zoomFactor);
+      markNeedsPaint();
+    }
+  }
+  
+  ChartElement? _findElementAt(Offset screenPosition) {
+    final dataPosition = _transform.screenToData(screenPosition);
+    final tolerance = 10.0 / _transform.zoomX;
+    
+    final queryRect = Rect.fromCenter(
+      center: dataPosition,
+      width: tolerance * 2,
+      height: tolerance * 2,
+    );
+    
+    final candidates = _spatialIndex.query(queryRect);
+    
+    for (final id in candidates) {
+      final element = _state.getElement(id);
+      final distance = (element.dataPosition - dataPosition).distance;
+      if (distance <= tolerance) {
+        return element;
+      }
+    }
+    return null;
+  }
+  
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final canvas = context.canvas;
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    
+    // Cull to visible viewport
+    final visibleDataRect = _transform.dataViewport.inflate(
+      _transform.dataViewport.width * 0.1
+    );
+    final visibleIds = _spatialIndex.query(visibleDataRect);
+    
+    // Draw visible elements
+    for (final id in visibleIds) {
+      final element = _state.getElement(id);
+      final screenPos = _transform.dataToScreen(element.dataPosition);
+      
+      canvas.drawCircle(
+        screenPos,
+        4.0,
+        Paint()..color = Colors.blue,
+      );
+    }
+    
+    canvas.restore();
+  }
+  
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    _transform.setScreenViewport(Rect.fromLTWH(0, 0, size.width, size.height));
   }
 }
 ```
@@ -1486,7 +2367,7 @@ Source: [RepaintBoundary documentation](https://api.flutter.dev/flutter/widgets/
 ### Anti-Pattern: Wrapping CustomPaint in Builders
 
 ```dart
-// ❌ WRONG - rebuilds widget tree every frame
+// âŒ WRONG - rebuilds widget tree every frame
 AnimatedBuilder(
   animation: controller,
   builder: (context, _) => CustomPaint(
@@ -1494,7 +2375,7 @@ AnimatedBuilder(
   ),
 )
 
-// ✅ CORRECT - only repaints, no widget rebuild
+// âœ… CORRECT - only repaints, no widget rebuild
 CustomPaint(
   painter: ChartPainter(repaint: controller),
 )
@@ -1512,13 +2393,13 @@ Source: [CustomPaint performance](https://github.com/flutter/flutter/issues/7206
 
 ```
 Chart (Custom RenderBox)
-├── Handles all pointer events
-├── Uses QuadTree for spatial queries
-├── Batched GPU rendering
-└── Positioned overlay widgets
-    ├── Draggable annotation handles
-    ├── Context menu (AbsorbPointer)
-    └── Crosshair (IgnorePointer)
+â”œâ”€â”€ Handles all pointer events
+â”œâ”€â”€ Uses QuadTree for spatial queries
+â”œâ”€â”€ Batched GPU rendering
+â””â”€â”€ Positioned overlay widgets
+    â”œâ”€â”€ Draggable annotation handles
+    â”œâ”€â”€ Context menu (AbsorbPointer)
+    â””â”€â”€ Crosshair (IgnorePointer)
 ```
 
 ### Base Layer: Custom RenderBox
@@ -1784,6 +2665,14 @@ class ChartState extends ChangeNotifier {
 
 7. **State coordination** - Use explicit interaction modes to prevent "fixing one breaks another"
 
+8. **Two coordinate spaces are essential** - Maintain data space (unchanging) and screen space (after transforms). Store elements in data space, transform only for rendering.
+
+9. **Hit testing with zoom** - Convert screen coordinates to data coordinates, scale hit tolerance by zoom level to maintain consistent interaction distance
+
+10. **Positioned overlays must update** - When zoom/pan changes, recalculate all overlay widget positions from data coords to screen coords
+
+11. **Cursor feedback with transforms** - Maintain cursor state based on interaction mode (grab → grabbing → grab transition) independent of coordinate transforms
+
 ## Additional Resources
 
 - [Flutter gesture documentation](https://docs.flutter.dev/ui/interactivity/gestures)
@@ -1795,4 +2684,4 @@ class ChartState extends ChangeNotifier {
 
 ---
 
-**For your complex charting package**: Start with a custom RenderObject for the base chart handling all pointer events with QuadTree spatial indexing. Add positioned overlay widgets with MouseRegion for high-priority interactions like annotation dragging. Use explicit state management with interaction modes to coordinate which gesture is active. This architecture scales to hundreds of interactive elements while preventing the "fixing one event breaks another" problem.
+**For your complex charting package**: Start with a custom RenderObject for the base chart handling all pointer events with QuadTree spatial indexing. Add positioned overlay widgets with MouseRegion for high-priority interactions like annotation dragging. Use explicit state management with interaction modes to coordinate which gesture is active. Implement a `ChartTransform` class to manage the bidirectional conversion between data space and screen space, storing all elements in data coordinates and transforming only during rendering and hit testing. Scale hit tolerance by zoom level to maintain consistent interaction feel. This architecture scales to hundreds of interactive elements with zoom/pan while preventing the "fixing one event breaks another" problem.
