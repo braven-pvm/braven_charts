@@ -313,257 +313,84 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
-  /// Clamps a transform to enforce pan bounds (limit whitespace).
+  /// Clamps pan delta to enforce viewport bounds (limit whitespace).
   ///
-  /// **Constraints**:
-  /// - Original data boundaries can move OFF-SCREEN by up to 10% of viewport
-  /// - This ensures at least 90% of original data remains visible when fully panned
-  /// - Constraint is viewport-based (independent of zoom level)
+  /// **Correct Viewport Position Constraint Algorithm**:
+  ///
+  /// **Core Concept**: Track WHERE THE VIEWPORT IS in data space, not where
+  /// original boundaries appear in viewport. This makes constraints zoom-independent.
   ///
   /// **Algorithm**:
-  /// 1. Convert original data boundaries to current plot coordinates
-  /// 2. Check if they've moved too far off-screen
-  /// 3. Clamp so they stay within allowed off-screen range
+  /// 1. Convert requested plot delta to data delta
+  /// 2. Calculate tentative new viewport position (dataXMin, dataYMin)
+  /// 3. Calculate max allowed whitespace in data space (zoom-aware)
+  /// 4. Calculate allowed bounds for viewport position
+  /// 5. Clamp tentative position to allowed bounds
+  /// 6. Calculate actual movement and convert back to plot delta
   ///
-  /// **Example**: If viewport is 800px wide:
-  /// - Left edge can move to -80px (10% off-screen to left)
-  /// - Right edge can move to 880px (10% off-screen to right)
-  /// This ensures 90% of data stays visible.
-
-  /// Clamp pan delta to prevent violating boundaries.
+  /// **Constraint**: Viewport can show up to 10% whitespace beyond original data.
+  /// - Example at 1x zoom (800px plot, 1000 data range):
+  ///   maxWhitespace = 800 * 0.1 * (1000/800) = 100 data units
+  /// - Example at 2x zoom (800px plot, 500 data range):
+  ///   maxWhitespace = 800 * 0.1 * (500/800) = 50 data units
   ///
-  /// **Strategy**: Calculate maximum allowed delta in each direction,
-  /// then clamp requested delta to stay within those limits.
-  /// This prevents overshoot, making pan feel like hitting a wall.
-  ///
-  /// **Zoom-Aware Constraints**:
-  /// - Low zoom (1x-2x): Track original data boundaries to keep them visible
-  /// - High zoom (>2x): Track current viewport to prevent excessive whitespace
-  (double, double) _clampPanDelta(double requestedDx, double requestedDy) {
+  /// **Result**: Consistent 10% whitespace at ALL zoom levels. Zoom-independent!
+  (double, double) _clampPanDelta(double requestedPlotDx, double requestedPlotDy) {
     if (_originalTransform == null || _transform == null) {
-      return (requestedDx, requestedDy);
+      return (requestedPlotDx, requestedPlotDy);
     }
 
-    final plotWidth = _transform!.plotWidth;
-    final plotHeight = _transform!.plotHeight;
+    // 1. Convert requested plot delta to data space
+    // CRITICAL: Match the inversion logic in ChartTransform.pan()!
+    final dataPerPixelX = _transform!.dataPerPixelX;
+    final dataPerPixelY = _transform!.dataPerPixelY;
+    final requestedDataDx = requestedPlotDx * dataPerPixelX;
+    final requestedDataDy = _transform!.invertY
+        ? -requestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
+        : requestedPlotDy * dataPerPixelY;
 
-    // Calculate current zoom level
-    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
-    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
-    final currentXRange = _transform!.dataXMax - _transform!.dataXMin;
-    final currentYRange = _transform!.dataYMax - _transform!.dataYMin;
-    final currentZoomX = originalXRange / currentXRange;
-    final currentZoomY = originalYRange / currentYRange;
+    // 2. Calculate tentative new viewport position in data space
+    final tentativeDataXMin = _transform!.dataXMin + requestedDataDx;
+    final tentativeDataYMin = _transform!.dataYMin + requestedDataDy;
 
-    // At high zoom (>2x), use a different constraint strategy:
-    // Instead of tracking original boundaries, limit how far viewport center can drift
-    // from original data center. This creates a "roaming radius" constraint.
-    final useRoamingRadius = currentZoomX > 2.0 || currentZoomY > 2.0;
+    // 3. Calculate maximum allowed whitespace in data space (zoom-aware!)
+    // At 1x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange / plotWidth) = originalRange * 0.1
+    // At 2x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange/2 / plotWidth) = originalRange * 0.05
+    // This ensures 10% whitespace in VIEWPORT, which scales correctly with zoom
+    final maxWhitespaceDataX = _transform!.plotWidth * maxWhitespaceFraction * dataPerPixelX;
+    final maxWhitespaceDataY = _transform!.plotHeight * maxWhitespaceFraction * dataPerPixelY;
 
-    if (useRoamingRadius) {
-      // High zoom strategy: constrain viewport center to stay within roaming radius
-      // Calculate original data center
-      final originalCenterX = (_originalTransform!.dataXMin + _originalTransform!.dataXMax) / 2;
-      final originalCenterY = (_originalTransform!.dataYMin + _originalTransform!.dataYMax) / 2;
-      
-      // Calculate current viewport center in data space
-      final currentCenterX = (_transform!.dataXMin + _transform!.dataXMax) / 2;
-      final currentCenterY = (_transform!.dataYMin + _transform!.dataYMax) / 2;
-      
-      // Maximum roaming distance = 2x the original data range
-      // This allows exploring well beyond original boundaries but prevents infinite drift
-      final maxRoamX = originalXRange * 2.0;
-      final maxRoamY = originalYRange * 2.0;
-      
-      // Current distance from original center
-      final currentOffsetX = currentCenterX - originalCenterX;
-      final currentOffsetY = currentCenterY - originalCenterY;
-      
-      debugPrint('🔍 ROAMING: offset=($currentOffsetX, $currentOffsetY), max=($maxRoamX, $maxRoamY), zoom=${currentZoomX.toStringAsFixed(1)}x');
-      
-      // Clamp pan based on roaming limits
-      // Convert requested pan from plot space to data space
-      final dataDx = requestedDx * _transform!.dataPerPixelX;
-      final dataDy = requestedDy * _transform!.dataPerPixelY;
-      
-      // Calculate what the new offset would be
-      final newOffsetX = currentOffsetX + dataDx;
-      final newOffsetY = currentOffsetY + dataDy;
-      
-      // Clamp to roaming radius
-      final clampedOffsetX = newOffsetX.clamp(-maxRoamX, maxRoamX);
-      final clampedOffsetY = newOffsetY.clamp(-maxRoamY, maxRoamY);
-      
-      // Calculate how much we can actually move
-      final allowedDataDx = clampedOffsetX - currentOffsetX;
-      final allowedDataDy = clampedOffsetY - currentOffsetY;
-      
-      // Convert back to plot space
-      final allowedPlotDx = allowedDataDx / _transform!.dataPerPixelX;
-      final allowedPlotDy = allowedDataDy / _transform!.dataPerPixelY;
-      
-      debugPrint('🔍 ROAM CLAMP: requested=($requestedDx, $requestedDy) → allowed=($allowedPlotDx, $allowedPlotDy)');
-      
-      return (allowedPlotDx, allowedPlotDy);
+    // 4. Calculate allowed bounds for viewport position
+    // Viewport left edge (dataXMin) can range from:
+    //   - Minimum: originalDataXMin - maxWhitespace (show whitespace on left)
+    //   - Maximum: originalDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
+    final minAllowedDataXMin = _originalTransform!.dataXMin - maxWhitespaceDataX;
+    final maxAllowedDataXMin = _originalTransform!.dataXMax - _transform!.dataXRange + maxWhitespaceDataX;
+
+    final minAllowedDataYMin = _originalTransform!.dataYMin - maxWhitespaceDataY;
+    final maxAllowedDataYMin = _originalTransform!.dataYMax - _transform!.dataYRange + maxWhitespaceDataY;
+
+    // 5. Clamp tentative viewport position to allowed bounds
+    final clampedDataXMin = tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin);
+    final clampedDataYMin = tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin);
+
+    // 6. Calculate actual movement allowed and convert back to plot space
+    // CRITICAL: Reverse the inversion applied in step 1!
+    final actualDataDx = clampedDataXMin - _transform!.dataXMin;
+    final actualDataDy = clampedDataYMin - _transform!.dataYMin;
+
+    final actualPlotDx = actualDataDx / dataPerPixelX;
+    final actualPlotDy = _transform!.invertY
+        ? -actualDataDy / dataPerPixelY // Reverse Y inversion
+        : actualDataDy / dataPerPixelY;
+
+    // Debug output (optional - can be removed in production)
+    if (actualPlotDx != requestedPlotDx || actualPlotDy != requestedPlotDy) {
+      debugPrint('🔒 PAN CONSTRAINED: requested=($requestedPlotDx, $requestedPlotDy) → '
+          'allowed=($actualPlotDx, $actualPlotDy)');
     }
 
-    // Low zoom: track original data boundaries to keep them visible
-    final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
-    final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).dx;
-    final originalTop = _transform!.dataToPlot(0.0, _originalTransform!.dataYMax).dy;
-    final originalBottom = _transform!.dataToPlot(0.0, _originalTransform!.dataYMin).dy;    // Allowed bounds for data edges (with whitespace)
-    final minLeftEdge = -plotWidth * maxWhitespaceFraction;
-    final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);
-    final minTopEdge = -plotHeight * maxWhitespaceFraction;
-    final maxBottomEdge = plotHeight * (1.0 + maxWhitespaceFraction);
-
-    double clampedDx = requestedDx;
-    double clampedDy = requestedDy;
-
-    // ========== X-AXIS CONSTRAINTS ==========
-    // Calculate how far from limit each edge is
-    // Positive = edge is inside allowed zone (has room to move further out)
-    // Negative = edge is past limit (needs to move back in)
-    final leftMargin = originalLeft - minLeftEdge;
-    final rightMargin = maxRightEdge - originalRight;
-
-    debugPrint('🔍 CLAMP: requested=($requestedDx, $requestedDy), zoom=${currentZoomX.toStringAsFixed(1)}x, mode=original');
-    debugPrint('🔍 EDGES: L=$originalLeft/$minLeftEdge, R=$originalRight/$maxRightEdge');
-    debugPrint('🔍 MARGINS: left=$leftMargin, right=$rightMargin');
-
-    // Check if both X edges are past their limits (over-zoomed case)
-    final bothXEdgesPastLimits = (leftMargin < 0) && (rightMargin < 0);
-
-    if (bothXEdgesPastLimits) {
-      // At extreme zoom, both edges are outside bounds
-      // ONLY allow panning that brings edges back toward center (recovery)
-      // Block panning that pushes edges further from center
-
-      // When both edges are past limits:
-      // - leftMargin < 0 means left edge is LEFT of allowed zone (too far left)
-      // - rightMargin < 0 means right edge is RIGHT of allowed zone (too far right)
-      // - To recover, need to move viewport TOWARD CENTER
-      // - Positive dx = pan right in plot = data moves LEFT = edges move toward center ✓
-      // - Negative dx = pan left in plot = data moves RIGHT = edges move away from center ✗
-
-      if (requestedDx > 0) {
-        // Panning right: data moves left, both edges move toward center (RECOVERY)
-        // Allow this, but clamp to avoid overcorrection
-        final maxRecoveryLeft = -leftMargin; // How far left edge needs to move right to reach limit
-        final maxRecoveryRight = -rightMargin; // How far right edge needs to move left to reach limit
-        // Use the smaller recovery distance to avoid overshooting
-        final maxRecovery = maxRecoveryLeft < maxRecoveryRight ? maxRecoveryLeft : maxRecoveryRight;
-        clampedDx = requestedDx.clamp(0, maxRecovery);
-      } else if (requestedDx < 0) {
-        // Panning left: data moves right, both edges move AWAY from center (WORSE)
-        // Block this completely
-        clampedDx = 0;
-      }
-    } else {
-      // Normal case: at least one edge is within bounds
-      // Apply standard directional constraints
-
-      // CRITICAL UNDERSTANDING:
-      // - Pan RIGHT (+dx) → data moves RIGHT → originalLeft/Right plot positions move LEFT
-      // - Pan LEFT (-dx) → data moves LEFT → originalLeft/Right plot positions move RIGHT
-
-      if (requestedDx > 0) {
-        // Panning right: data moves right, so LEFT edge moves LEFT (toward left limit)
-        // Check if left edge would hit/exceed its limit
-        if (leftMargin < 0) {
-          // Left edge already past limit, panning right makes it worse - block
-          clampedDx = 0;
-        } else if (leftMargin == 0) {
-          // Left edge exactly at limit, block panning right
-          clampedDx = 0;
-        } else {
-          // Left edge has room, clamp to not exceed limit
-          clampedDx = requestedDx.clamp(0, leftMargin);
-        }
-      } else if (requestedDx < 0) {
-        // Panning left: data moves left, so RIGHT edge moves RIGHT (toward right limit)
-        // Check if right edge would hit/exceed its limit
-        if (rightMargin < 0) {
-          // Right edge already past limit, panning left makes it worse - block
-          clampedDx = 0;
-        } else if (rightMargin == 0) {
-          // Right edge exactly at limit, block panning left
-          clampedDx = 0;
-        } else {
-          // Right edge has room, clamp to not exceed limit
-          // Negative requestedDx, so clamp to -rightMargin (max left pan)
-          clampedDx = requestedDx.clamp(-rightMargin, 0);
-        }
-      }
-    }
-
-    // ========== Y-AXIS CONSTRAINTS ==========
-    final topMargin = originalTop - minTopEdge;
-    final bottomMargin = maxBottomEdge - originalBottom;
-
-    final bothYEdgesPastLimits = (topMargin < 0) && (bottomMargin < 0);
-
-    if (bothYEdgesPastLimits) {
-      // At extreme zoom, both edges are outside bounds
-      // Same logic as X-axis: allow recovery toward center only
-
-      // When both edges are past limits:
-      // - topMargin < 0 means top edge is ABOVE allowed zone (too far up)
-      // - bottomMargin < 0 means bottom edge is BELOW allowed zone (too far down)
-      // - To recover, need to move viewport TOWARD CENTER
-      // - Positive dy = pan down in plot = data moves UP = edges move toward center ✓
-      // - Negative dy = pan up in plot = data moves DOWN = edges move away from center ✗
-
-      if (requestedDy > 0) {
-        // Panning down: data moves up, both edges move toward center (RECOVERY)
-        // Allow this, but clamp to avoid overcorrection
-        final maxRecoveryTop = -topMargin; // How far top edge needs to move down to reach limit
-        final maxRecoveryBottom = -bottomMargin; // How far bottom edge needs to move up to reach limit
-        // Use the smaller recovery distance
-        final maxRecovery = maxRecoveryTop < maxRecoveryBottom ? maxRecoveryTop : maxRecoveryBottom;
-        clampedDy = requestedDy.clamp(0, maxRecovery);
-      } else if (requestedDy < 0) {
-        // Panning up: data moves down, both edges move AWAY from center (WORSE)
-        // Block this completely
-        clampedDy = 0;
-      }
-    } else {
-      // Normal case: at least one edge is within bounds
-
-      // CRITICAL UNDERSTANDING (Y-AXIS):
-      // - Pan DOWN (+dy) → data moves DOWN → originalTop/Bottom plot positions move UP
-      // - Pan UP (-dy) → data moves UP → originalTop/Bottom plot positions move DOWN
-
-      if (requestedDy > 0) {
-        // Panning down: data moves down, so TOP edge moves UP (toward top limit)
-        // Check if top edge would hit/exceed its limit
-        if (topMargin < 0) {
-          // Top edge already past limit, panning down makes it worse - block
-          clampedDy = 0;
-        } else if (topMargin == 0) {
-          // Top edge exactly at limit, block panning down
-          clampedDy = 0;
-        } else {
-          // Top edge has room, clamp to not exceed limit
-          clampedDy = requestedDy.clamp(0, topMargin);
-        }
-      } else if (requestedDy < 0) {
-        // Panning up: data moves up, so BOTTOM edge moves DOWN (toward bottom limit)
-        // Check if bottom edge would hit/exceed its limit
-        if (bottomMargin < 0) {
-          // Bottom edge already past limit, panning up makes it worse - block
-          clampedDy = 0;
-        } else if (bottomMargin == 0) {
-          // Bottom edge exactly at limit, block panning up
-          clampedDy = 0;
-        } else {
-          // Bottom edge has room, clamp to not exceed limit
-          clampedDy = requestedDy.clamp(-bottomMargin, 0);
-        }
-      }
-    }
-
-    return (clampedDx, clampedDy);
+    return (actualPlotDx, actualPlotDy);
   }
 
   // ============================================================================
