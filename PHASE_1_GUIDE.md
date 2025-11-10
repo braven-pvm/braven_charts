@@ -6,10 +6,34 @@
 
 ---
 
+## ⚠️ **IMPORTANT: USE DETAILED PLAN**
+
+**This is a QUICK REFERENCE guide only.**
+
+**For COMPLETE, UNAMBIGUOUS instructions, read:**
+📄 **`PHASE_1_DETAILED_PLAN.md`** (25 pages, zero ambiguity)
+
+The detailed plan includes:
+- ✅ Complete field inventory (all 10 fields enumerated)
+- ✅ Exhaustive method checklist (26+ methods listed)
+- ✅ Line-by-line migration instructions
+- ✅ Exact PowerShell commands for file operations
+- ✅ Import fix instructions
+- ✅ Verification steps at each stage
+- ✅ Troubleshooting guide
+- ✅ Performance benchmarks
+- ✅ Success criteria
+
+**Use this guide for quick reference during implementation.**  
+**Use PHASE_1_DETAILED_PLAN.md for step-by-step execution.**
+
+---
+
 ## Pre-Implementation Checklist
 
 Before starting Phase 1, ensure:
 
+- [ ] Read `PHASE_1_DETAILED_PLAN.md` completely (45 minutes)
 - [ ] Analysis documents reviewed (`CORE_INTERACTION_REFACTOR_ANALYSIS.md`, `REFACTOR_SUMMARY.md`)
 - [ ] Branch confirmed: `core-interaction-refactor` ✅
 - [ ] Baseline test suite established (capture current functionality)
