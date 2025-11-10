@@ -1,6 +1,6 @@
-# Core Interaction System Refactor Documentation
+# Production Integration Documentation
 
-**Project**: braven_charts v2.0 Core Interaction Refactor  
+**Project**: braven_charts v2.0 Core Interaction System Refactor  
 **Branch**: `core-interaction-refactor`  
 **Baseline Tag**: `v2.0-pre-core-refactor`  
 **Status**: Phase 1 Ready to Execute  
@@ -9,7 +9,9 @@
 
 ## 📚 Documentation Overview
 
-This directory contains all documentation for the core interaction system refactor - the process of integrating the proven prototype interaction system from `refactor/interaction` into the main charting package at `lib/src`.
+This directory contains production integration documentation for migrating the validated prototype from `refactor/interaction` into the main library at `lib/src`.
+
+**Prototype Documentation**: See [`../prototype/`](../prototype/) for complete prototype development history (14 files, ~6,900 lines).
 
 ### Reading Order
 
@@ -17,11 +19,11 @@ Read these documents in the following order for complete understanding:
 
 | # | Document | Lines | Time | Purpose | Status |
 |---|----------|-------|------|---------|--------|
-| 1 | **[02-SUMMARY.md](02-SUMMARY.md)** | 436 | 15 min | Executive overview, "swap the engine" strategy | ✅ Complete |
-| 2 | **[01-ANALYSIS.md](01-ANALYSIS.md)** | 932 | 30 min | Complete technical deep-dive, architecture comparison | ✅ Complete |
-| 3 | **[03-PHASE_1_DETAILED_PLAN.md](03-PHASE_1_DETAILED_PLAN.md)** ⭐ | 1,148 | 45 min | **CRITICAL** - Zero-ambiguity implementation plan | ✅ Complete |
-| 4 | **[04-PHASE_1_QUICK_GUIDE.md](04-PHASE_1_QUICK_GUIDE.md)** | 602 | Quick Ref | Quick reference during implementation | ✅ Complete |
-| 5 | **[05-PHASE_1_CHECKLIST.md](05-PHASE_1_CHECKLIST.md)** ✅ | 657 | Ongoing | Print and check off tasks during implementation | ✅ Complete |
+| 1 | **[02-EXECUTIVE_SUMMARY.md](02-EXECUTIVE_SUMMARY.md)** | 436 | 15 min | Executive overview, "swap the engine" strategy | ✅ Complete |
+| 2 | **[01-TECHNICAL_ANALYSIS.md](01-TECHNICAL_ANALYSIS.md)** | 932 | 30 min | Complete technical deep-dive, architecture comparison | ✅ Complete |
+| 3 | **[03-PHASE_1_IMPLEMENTATION_PLAN.md](03-PHASE_1_IMPLEMENTATION_PLAN.md)** ⭐ | 1,148 | 45 min | **CRITICAL** - Zero-ambiguity implementation plan | ✅ Complete |
+| 4 | **[04-QUICK_REFERENCE.md](04-QUICK_REFERENCE.md)** | 602 | Quick Ref | Quick reference during implementation | ✅ Complete |
+| 5 | **[05-IMPLEMENTATION_CHECKLIST.md](05-IMPLEMENTATION_CHECKLIST.md)** ✅ | 657 | Ongoing | Print and check off tasks during implementation | ✅ Complete |
 | 6 | **[06-PHASE_2_3_PLANS.md](06-PHASE_2_3_PLANS.md)** | 164 | 5 min | Future phases overview (detailed plans TBD) | 📋 Placeholder |
 
 **Total**: 4,630 lines of comprehensive, zero-ambiguity documentation
@@ -31,14 +33,14 @@ Read these documents in the following order for complete understanding:
 ## 🎯 Quick Start
 
 ### For First-Time Readers
-1. Read **02-SUMMARY.md** (15 minutes) - Understand the "what" and "why"
-2. Read **01-ANALYSIS.md** (30 minutes) - Understand the "how" and technical details
-3. Read **03-PHASE_1_DETAILED_PLAN.md** (45 minutes) - Understand exact implementation steps
+1. Read **02-EXECUTIVE_SUMMARY.md** (15 minutes) - Understand the "what" and "why"
+2. Read **01-TECHNICAL_ANALYSIS.md** (30 minutes) - Understand the "how" and technical details
+3. Read **03-PHASE_1_IMPLEMENTATION_PLAN.md** (45 minutes) - Understand exact implementation steps
 
 ### For Implementation
-1. **Print** [05-PHASE_1_CHECKLIST.md](05-PHASE_1_CHECKLIST.md) (physical copy recommended)
-2. **Read completely** [03-PHASE_1_DETAILED_PLAN.md](03-PHASE_1_DETAILED_PLAN.md) before coding
-3. **Use during coding** [04-PHASE_1_QUICK_GUIDE.md](04-PHASE_1_QUICK_GUIDE.md) as quick reference
+1. **Print** [05-IMPLEMENTATION_CHECKLIST.md](05-IMPLEMENTATION_CHECKLIST.md) (physical copy recommended)
+2. **Read completely** [03-PHASE_1_IMPLEMENTATION_PLAN.md](03-PHASE_1_IMPLEMENTATION_PLAN.md) before coding
+3. **Use during coding** [04-QUICK_REFERENCE.md](04-QUICK_REFERENCE.md) as quick reference
 4. **Check off tasks** on printed checklist as you complete them
 5. **Commit at each commit point** (6 commit points throughout Phase 1)
 
@@ -46,7 +48,7 @@ Read these documents in the following order for complete understanding:
 
 ## 📖 Document Descriptions
 
-### 01-ANALYSIS.md (Deep-Dive Analysis)
+### 01-TECHNICAL_ANALYSIS.md (Deep-Dive Analysis)
 **Complete technical analysis of the refactor project.**
 
 **Contents**:
