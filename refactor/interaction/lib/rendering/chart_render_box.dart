@@ -194,6 +194,9 @@ class ChartRenderBox extends RenderBox {
     // Apply clamped zoom
     _transform = clampedTransform;
 
+    // Update axes to reflect new viewport
+    _updateAxesFromTransform();
+
     // Regenerate elements
     _rebuildElementsWithTransform();
 
@@ -218,6 +221,9 @@ class ChartRenderBox extends RenderBox {
     // Apply constrained pan (won't violate boundaries)
     _transform = _transform!.pan(clampedDx, clampedDy);
 
+    // Update axes to reflect new viewport
+    _updateAxesFromTransform();
+
     // Regenerate elements
     _rebuildElementsWithTransform();
 
@@ -241,10 +247,31 @@ class ChartRenderBox extends RenderBox {
       plotHeight: _plotArea.height,
     );
 
+    // Update axes to reflect reset viewport
+    _updateAxesFromTransform();
+
     // Regenerate elements
     _rebuildElementsWithTransform();
 
     debugPrint('🔄 View reset to original');
+  }
+
+  /// Updates axes to reflect the current transform's data ranges.
+  ///
+  /// Called after zoom/pan operations to keep axis labels synchronized
+  /// with the visible viewport. The reference implementation does this
+  /// dynamically during paint, but our prototype uses a separate Axis
+  /// class that needs explicit updates.
+  void _updateAxesFromTransform() {
+    if (_transform == null) return;
+
+    // Update X-axis with current viewport's X range
+    _xAxis?.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
+
+    // Update Y-axis with current viewport's Y range
+    _yAxis?.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
+
+    debugPrint('📏 Axes updated: X=[${_transform!.dataXMin}, ${_transform!.dataXMax}], Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
   }
 
   // ============================================================================
@@ -840,6 +867,7 @@ class ChartRenderBox extends RenderBox {
 
         // Apply constrained pan (won't violate boundaries)
         // PERFORMANCE: Only update transform during drag, defer element regeneration until pointer up
+        // Axes will be updated just-in-time during paint() for smooth live updates
         _transform = _transform!.pan(clampedDx, clampedDy);
 
         // Update last position for next move event
@@ -924,6 +952,9 @@ class ChartRenderBox extends RenderBox {
     final wasPanning = coordinator.currentMode == InteractionMode.panning;
     _lastPanPosition = null;
     if (wasPanning && _elementGenerator != null) {
+      // Update axes after panning completes
+      _updateAxesFromTransform();
+
       _rebuildElementsWithTransform();
       debugPrint('🔄 Pan ended - regenerated elements with final transform');
     }
@@ -1011,6 +1042,9 @@ class ChartRenderBox extends RenderBox {
       final tentativeTransform = _transform!.zoom(zoomFactor, plotPosition);
       _transform = _clampZoomLevel(tentativeTransform);
 
+      // Update axes to reflect new viewport
+      _updateAxesFromTransform();
+
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();
 
@@ -1053,6 +1087,13 @@ class ChartRenderBox extends RenderBox {
       Offset.zero & size,
       Paint()..color = const Color(0xFFFFFFFF),
     );
+
+    // Update axes to match current viewport JUST-IN-TIME before painting
+    // This ensures axes always reflect the latest transform state during every paint
+    if (_transform != null) {
+      _xAxis?.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
+      _yAxis?.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
+    }
 
     // Paint axes (behind all chart elements)
     if (_xAxis != null) {
@@ -1146,9 +1187,115 @@ class ChartRenderBox extends RenderBox {
         Offset(cursorPos.dx, size.height),
         crosshairPaint,
       );
+
+      // Draw coordinate labels (showing both screen and data coordinates)
+      _drawCrosshairLabels(canvas, size, cursorPos);
     }
 
     canvas.restore(); // Final restore (removes initial offset translation)
+  }
+
+  /// Draws coordinate labels for the crosshair showing screen and data coordinates.
+  ///
+  /// Displays:
+  /// - X label at bottom of plot area showing data coordinate
+  /// - Y label at left of plot area showing data coordinate
+  void _drawCrosshairLabels(Canvas canvas, Size size, Offset cursorPos) {
+    if (_transform == null) return;
+
+    // Convert cursor position (widget space) to plot space for data coordinate calculation
+    final plotPos = widgetToPlot(cursorPos);
+
+    // Convert plot coordinates to data coordinates
+    final dataPos = _transform!.plotToData(plotPos.dx, plotPos.dy);
+    final dataX = dataPos.dx;
+    final dataY = dataPos.dy;
+
+    final textStyle = const TextStyle(
+      color: Color(0xFF000000),
+      fontSize: 10,
+      backgroundColor: Color(0xF0FFFFFF), // Almost opaque white
+    );
+
+    const labelPadding = 4.0;
+    final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
+
+    // X coordinate label (positioned at bottom of chart area)
+    final xDisplayValue = _formatDataValue(dataX);
+    final xTextPainter = TextPainter(
+      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Position label inside chart area (just above bottom edge)
+    var xLabelX = cursorPos.dx - xTextPainter.width / 2;
+    final xLabelY = _plotArea.bottom - xTextPainter.height - 8;
+
+    // Clamp X position to keep label within plot bounds
+    xLabelX = xLabelX.clamp(
+      _plotArea.left + labelPadding,
+      _plotArea.right - xTextPainter.width - labelPadding,
+    );
+
+    // Draw background
+    final xBgRect = Rect.fromLTWH(
+      xLabelX - labelPadding,
+      xLabelY - labelPadding,
+      xTextPainter.width + labelPadding * 2,
+      xTextPainter.height + labelPadding * 2,
+    );
+    canvas.drawRect(xBgRect, labelBackgroundPaint);
+
+    // Draw text
+    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+
+    // Y coordinate label (positioned at left of chart area)
+    final yDisplayValue = _formatDataValue(dataY);
+    final yTextPainter = TextPainter(
+      text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Position label inside chart area (just right of left edge)
+    final yLabelX = _plotArea.left + 8;
+    var yLabelY = cursorPos.dy - yTextPainter.height / 2;
+
+    // Clamp Y position to keep label within plot bounds
+    yLabelY = yLabelY.clamp(
+      _plotArea.top + labelPadding,
+      _plotArea.bottom - yTextPainter.height - labelPadding,
+    );
+
+    // Draw background
+    final yBgRect = Rect.fromLTWH(
+      yLabelX - labelPadding,
+      yLabelY - labelPadding,
+      yTextPainter.width + labelPadding * 2,
+      yTextPainter.height + labelPadding * 2,
+    );
+    canvas.drawRect(yBgRect, labelBackgroundPaint);
+
+    // Draw text
+    yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
+  }
+
+  /// Formats data values for display (same logic as axis labels).
+  String _formatDataValue(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
   }
 
   // ============================================================================
