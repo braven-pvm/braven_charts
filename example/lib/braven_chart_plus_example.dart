@@ -5,7 +5,6 @@
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
-import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 
@@ -219,7 +218,6 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: BravenChartPlus(
-                    chartType: ChartType.line,
                     series: _createSampleData(),
                     theme: _selectedTheme,
                     backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
