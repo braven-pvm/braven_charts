@@ -190,9 +190,13 @@ class _PrototypeChartState extends State<PrototypeChart> {
   }
 
   void _onCoordinatorChanged() {
-    setState(() {
-      // Rebuild when coordinator state changes
-    });
+    // CRITICAL FIX: Only call setState() if debug overlay is visible!
+    // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
+    // so we don't need setState() for cursor movement.
+    // setState() triggers expensive widget tree rebuilds.
+    if (widget.showDebugInfo) {
+      setState(() {});
+    }
   }
 
   void _handleTapDown(TapDownDetails details) {

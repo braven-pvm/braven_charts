@@ -27,6 +27,8 @@ class SimulatedSeries extends ChartElement {
     this.strokeWidth = 2.0,
     this.isSelected = false,
     this.isHovered = false,
+    this.useBezier = false,
+    this.tension = 0.3,
   });
 
   @override
@@ -37,6 +39,8 @@ class SimulatedSeries extends ChartElement {
 
   final Color color;
   final double strokeWidth;
+  final bool useBezier;
+  final double tension;
 
   @override
   bool isSelected;
@@ -90,6 +94,8 @@ class SimulatedSeries extends ChartElement {
       points: points,
       color: color,
       strokeWidth: strokeWidth,
+      useBezier: useBezier,
+      tension: tension,
       isSelected: isSelected ?? this.isSelected,
       isHovered: isHovered ?? this.isHovered,
     );
@@ -122,8 +128,28 @@ class SimulatedSeries extends ChartElement {
     // Draw line segments
     final path = Path();
     path.moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
+
+    if (useBezier && points.length > 2) {
+      // Draw bezier curves between points
+      for (int i = 0; i < points.length - 1; i++) {
+        final p0 = i > 0 ? points[i - 1] : points[i];
+        final p1 = points[i];
+        final p2 = points[i + 1];
+        final p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+        // Calculate control points using Catmull-Rom spline
+        final cp1x = p1.dx + (p2.dx - p0.dx) / 6 * tension;
+        final cp1y = p1.dy + (p2.dy - p0.dy) / 6 * tension;
+        final cp2x = p2.dx - (p3.dx - p1.dx) / 6 * tension;
+        final cp2y = p2.dy - (p3.dy - p1.dy) / 6 * tension;
+
+        path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
+      }
+    } else {
+      // Draw simple lines
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
     }
 
     canvas.drawPath(path, paint);

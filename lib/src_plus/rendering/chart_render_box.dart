@@ -9,6 +9,7 @@ import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/resize_handle_element.dart';
+import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
@@ -69,6 +70,10 @@ class ChartRenderBox extends RenderBox {
   /// If provided, elements will be regenerated on zoom/pan operations.
   ElementGenerator? _elementGenerator;
 
+  /// Version number to track when element generator actually changed.
+  /// Only regenerate elements when this version increments.
+  int _elementGeneratorVersion = 0;
+
   /// Current theme for the chart (colors, styles, etc.)
   ChartTheme? _theme;
 
@@ -103,6 +108,13 @@ class ChartRenderBox extends RenderBox {
 
   /// Y-axis for the chart (optional).
   chart_axis.Axis? _yAxis;
+
+  /// Last axes range values for change detection.
+  /// Only update axes when these values actually change to avoid unnecessary tick regeneration.
+  double? _lastXMin;
+  double? _lastXMax;
+  double? _lastYMin;
+  double? _lastYMax;
 
   /// Plot area where chart elements are rendered (excluding axis space).
   Rect _plotArea = Rect.zero;
@@ -226,17 +238,24 @@ class ChartRenderBox extends RenderBox {
 
   /// Updates the element generator function.
   ///
-  /// Regenerates elements using the new generator if transform is available.
-  void setElementGenerator(ElementGenerator? generator) {
-    debugPrint('🔄 setElementGenerator called: hasTransform=${_transform != null}');
-    // NOTE: Don't check if generator == _elementGenerator!
-    // Closures are never equal even if functionally identical,
-    // so we must always update and regenerate when called.
+  /// Only regenerates elements if the version number has changed.
+  /// This prevents unnecessary regeneration when parent widgets rebuild
+  /// without actual data/theme changes.
+  void setElementGenerator(ElementGenerator? generator, int version) {
+    debugPrint('🔄 setElementGenerator called: version=$version, lastVersion=$_elementGeneratorVersion, hasTransform=${_transform != null}');
+
+    // Only update if version changed (indicates real data/theme change)
+    if (_elementGeneratorVersion == version && _elementGenerator != null) {
+      debugPrint('⏭️  Version unchanged, skipping regeneration');
+      return;
+    }
+
     _elementGenerator = generator;
+    _elementGeneratorVersion = version;
 
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
-      debugPrint('🎨 Regenerating elements due to generator change (likely theme change)');
+      debugPrint('🎨 Regenerating elements due to generator change (version $version)');
       _rebuildElementsWithTransform();
     }
   }
@@ -304,8 +323,12 @@ class ChartRenderBox extends RenderBox {
     // Update axes to reflect new viewport
     _updateAxesFromTransform();
 
-    // Regenerate elements
-    _rebuildElementsWithTransform();
+    // NOTE: Element regeneration is deferred until pan ends for performance
+    // See _handlePointerUp for the final regeneration
+    // _rebuildElementsWithTransform();  // REMOVED - was causing massive slowdown during pan
+
+    // Mark for repaint (will paint existing elements with new transform)
+    markNeedsPaint();
 
     if (clampedDx != plotDx || clampedDy != plotDy) {
       debugPrint(' Pan constrained: requested=($plotDx, $plotDy) to allowed=($clampedDx, $clampedDy)');
@@ -342,13 +365,35 @@ class ChartRenderBox extends RenderBox {
   void _updateAxesFromTransform() {
     if (_transform == null) return;
 
-    // Update X-axis with current viewport's X range
-    _xAxis?.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
+    // Get current transform range values
+    final currentXMin = _transform!.dataXMin;
+    final currentXMax = _transform!.dataXMax;
+    final currentYMin = _transform!.dataYMin;
+    final currentYMax = _transform!.dataYMax;
 
-    // Update Y-axis with current viewport's Y range
-    _yAxis?.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
+    // Check if X-axis range changed
+    final xChanged = _lastXMin != currentXMin || _lastXMax != currentXMax;
 
-    debugPrint(' Axes updated: X=[${_transform!.dataXMin}, ${_transform!.dataXMax}], Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+    // Check if Y-axis range changed
+    final yChanged = _lastYMin != currentYMin || _lastYMax != currentYMax;
+
+    // Only update X-axis if its range actually changed
+    if (xChanged && _xAxis != null) {
+      _xAxis!.updateDataRange(currentXMin, currentXMax);
+      _lastXMin = currentXMin;
+      _lastXMax = currentXMax;
+      // debugPrint('🔄 X-axis updated: [$currentXMin, $currentXMax]');
+    }
+
+    // Only update Y-axis if its range actually changed
+    if (yChanged && _yAxis != null) {
+      _yAxis!.updateDataRange(currentYMin, currentYMax);
+      _lastYMin = currentYMin;
+      _lastYMax = currentYMax;
+      // debugPrint('🔄 Y-axis updated: [$currentYMin, $currentYMax]');
+    }
+
+    // debugPrint if either changed: ' Axes updated: X=[$currentXMin, $currentXMax], Y=[$currentYMin, $currentYMax]'
   }
 
   // ============================================================================
@@ -620,6 +665,12 @@ class ChartRenderBox extends RenderBox {
         // Capture original transform for reset and constraint calculations
         _originalTransform = _transform;
         debugPrint(' Original transform captured: dataX=${_xAxis!.dataMin}..${_xAxis!.dataMax}, dataY=${_yAxis!.dataMin}..${_yAxis!.dataMax}');
+
+        // Generate initial elements now that we have a transform
+        if (_elementGenerator != null) {
+          debugPrint('🎨 Generating initial elements in performLayout');
+          _rebuildElementsWithTransform();
+        }
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
         // only update plot dimensions if they changed
@@ -627,19 +678,11 @@ class ChartRenderBox extends RenderBox {
           _transform = _transform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
         }
       }
-
-      // If using element generator, regenerate elements with new transform
-      if (_elementGenerator != null) {
-        _rebuildElementsWithTransform();
-        return; // _rebuildElementsWithTransform already rebuilds spatial index
-      }
     }
 
-    // Rebuild spatial index when size changes (for static elements)
+    // Rebuild spatial index when size changes (for static elements or after transform updates)
     _rebuildSpatialIndex();
-  }
-
-  // ============================================================================
+  } // ============================================================================
   // Hit Testing
   // ============================================================================
 
@@ -876,17 +919,17 @@ class ChartRenderBox extends RenderBox {
 
     // Middle-button drag = pan (per conflict resolution scenario 6)
     if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
-      debugPrint(
-        ' Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}',
-      );
+      // debugPrint(
+      //   ' Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}',
+      // );
       if (_lastPanPosition != null && _transform != null && _originalTransform != null) {
-        // Calculate delta in widget space
-        final widgetDelta = position - _lastPanPosition!;
+        // Calculate delta in widget space (for debugging if needed)
+        // final widgetDelta = position - _lastPanPosition!;
 
         // Convert widget delta to plot space (widget space -> plot space is just offset removal)
         final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
 
-        debugPrint(' BEFORE CLAMP: position=$position, lastPos=$_lastPanPosition, plotDelta=$plotDelta');
+        // debugPrint(' BEFORE CLAMP: position=$position, lastPos=$_lastPanPosition, plotDelta=$plotDelta');
 
         // Clamp pan delta BEFORE applying (prevents overshoot/snap-back)
         final (clampedDx, clampedDy) = _clampPanDelta(-plotDelta.dx, -plotDelta.dy);
@@ -897,22 +940,21 @@ class ChartRenderBox extends RenderBox {
         // Update axes to match new transform
         _updateAxesFromTransform();
 
-        // Regenerate elements with new transform for live visual feedback
-        if (_elementGenerator != null) {
-          _rebuildElementsWithTransform();
-        }
+        // DO NOT regenerate elements during pan - just update transform
+        // Elements will use the updated _transform during paint() for coordinate conversion
+        // Regeneration happens in _handlePointerUp when pan ends
 
         // Update last position for next move event
         _lastPanPosition = position;
 
-        // Repaint with updated elements
+        // Repaint with updated transform (elements use _transform during paint)
         markNeedsPaint();
 
-        if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
-          debugPrint(' Pan constrained: requested=${Offset(-plotDelta.dx, -plotDelta.dy)} to allowed=${Offset(clampedDx, clampedDy)}');
-        } else {
-          debugPrint(' Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta');
-        }
+        // if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
+        //   debugPrint(' Pan constrained: requested=${Offset(-plotDelta.dx, -plotDelta.dy)} to allowed=${Offset(clampedDx, clampedDy)}');
+        // } else {
+        //   debugPrint(' Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta');
+        // }
       }
       return;
     }
@@ -1119,12 +1161,9 @@ class ChartRenderBox extends RenderBox {
     final backgroundColor = _theme?.backgroundColor ?? const Color(0xFFFFFFFF);
     canvas.drawRect(Offset.zero & size, Paint()..color = backgroundColor);
 
-    // Update axes to match current viewport JUST-IN-TIME before painting
-    // This ensures axes always reflect the latest transform state during every paint
-    if (_transform != null) {
-      _xAxis?.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
-      _yAxis?.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-    }
+    // Axes are updated via _updateAxesFromTransform() when transform ACTUALLY changes
+    // (during pan, zoom, performLayout, etc.) - NOT on every paint!
+    // This avoids unnecessary tick regeneration during crosshair hover.
 
     // Paint axes (behind all chart elements)
     if (_xAxis != null) {
@@ -1142,9 +1181,17 @@ class ChartRenderBox extends RenderBox {
 
     // Paint all elements (in order: lowest to highest priority)
     // Elements are in plot space, so no coordinate conversion needed during paint
+    // SeriesElements receive current transform for dynamic coordinate conversion during pan/zoom
     final sortedElements = _elements.toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
     for (final element in sortedElements) {
+      // Update transform for SeriesElement before painting (enables path caching!)
+      if (element is SeriesElement && _transform != null) {
+        // CRITICAL FIX: Update transform BEFORE painting, don't create new element!
+        // This allows SeriesElement to cache paths and only regenerate when transform changes.
+        // Creating new element would invalidate cache on every paint (60fps regeneration).
+        element.updateTransform(_transform!);
+      }
       element.paint(canvas, _plotArea.size);
     }
 

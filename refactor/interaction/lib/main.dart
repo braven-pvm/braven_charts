@@ -101,6 +101,117 @@ class _PrototypeHomePageState extends State<PrototypeHomePage> {
       strokeWidth: 2.0,
     ));
 
+    // Series 4: Bezier curve (to test interpolation performance)
+    final series4DataPoints = <Offset>[];
+    for (int i = 0; i < 30; i++) {
+      final dataX = dataXMin + (i / 29.0) * (dataXMax - dataXMin);
+      final dataY = 90.0 + 25.0 * math.cos(i * 0.4); // Cosine wave
+      series4DataPoints.add(Offset(dataX, dataY));
+    }
+    final series4PlotPoints = transform.dataPointsToPlot(series4DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_4_bezier',
+      points: series4PlotPoints,
+      color: Colors.orange.withOpacity(0.7),
+      strokeWidth: 2.5,
+      useBezier: true,
+      tension: 0.4,
+    ));
+
+    // *** ADDED SERIES 5-10 TO TEST PERFORMANCE THRESHOLD ***
+
+    // Series 5: Another sine wave (offset)
+    final series5DataPoints = <Offset>[];
+    for (int i = 0; i < 28; i++) {
+      final dataX = dataXMin + (i / 27.0) * (dataXMax - dataXMin);
+      final dataY = 110.0 + 18.0 * math.sin(i * 0.35 + 1.0);
+      series5DataPoints.add(Offset(dataX, dataY));
+    }
+    final series5PlotPoints = transform.dataPointsToPlot(series5DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_5',
+      points: series5PlotPoints,
+      color: Colors.red.withOpacity(0.7),
+      strokeWidth: 2.5,
+    ));
+
+    // Series 6: Inverted trend
+    final series6DataPoints = <Offset>[];
+    for (int i = 0; i < 22; i++) {
+      final dataX = dataXMin + (i / 21.0) * (dataXMax - dataXMin);
+      final dataY = 130.0 - (i / 21.0) * 50.0; // Downward trend
+      series6DataPoints.add(Offset(dataX, dataY));
+    }
+    final series6PlotPoints = transform.dataPointsToPlot(series6DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_6',
+      points: series6PlotPoints,
+      color: Colors.teal.withOpacity(0.7),
+      strokeWidth: 2.0,
+    ));
+
+    // Series 7: Zigzag pattern
+    final series7DataPoints = <Offset>[];
+    for (int i = 0; i < 26; i++) {
+      final dataX = dataXMin + (i / 25.0) * (dataXMax - dataXMin);
+      final dataY = 95.0 + (i % 2 == 0 ? 15.0 : -15.0);
+      series7DataPoints.add(Offset(dataX, dataY));
+    }
+    final series7PlotPoints = transform.dataPointsToPlot(series7DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_7',
+      points: series7PlotPoints,
+      color: Colors.pink.withOpacity(0.7),
+      strokeWidth: 2.5,
+    ));
+
+    // Series 8: Bezier curve 2
+    final series8DataPoints = <Offset>[];
+    for (int i = 0; i < 30; i++) {
+      final dataX = dataXMin + (i / 29.0) * (dataXMax - dataXMin);
+      final dataY = 70.0 + 30.0 * math.sin(i * 0.25);
+      series8DataPoints.add(Offset(dataX, dataY));
+    }
+    final series8PlotPoints = transform.dataPointsToPlot(series8DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_8_bezier',
+      points: series8PlotPoints,
+      color: Colors.cyan.withOpacity(0.7),
+      strokeWidth: 2.0,
+      useBezier: true,
+      tension: 0.5,
+    ));
+
+    // Series 9: Double frequency wave
+    final series9DataPoints = <Offset>[];
+    for (int i = 0; i < 32; i++) {
+      final dataX = dataXMin + (i / 31.0) * (dataXMax - dataXMin);
+      final dataY = 105.0 + 12.0 * math.sin(i * 0.6);
+      series9DataPoints.add(Offset(dataX, dataY));
+    }
+    final series9PlotPoints = transform.dataPointsToPlot(series9DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_9',
+      points: series9PlotPoints,
+      color: Colors.amber.withOpacity(0.7),
+      strokeWidth: 2.5,
+    ));
+
+    // Series 10: Flat line at top
+    final series10DataPoints = <Offset>[];
+    for (int i = 0; i < 20; i++) {
+      final dataX = dataXMin + (i / 19.0) * (dataXMax - dataXMin);
+      final dataY = 135.0 + (i % 5) * 2.0;
+      series10DataPoints.add(Offset(dataX, dataY));
+    }
+    final series10PlotPoints = transform.dataPointsToPlot(series10DataPoints);
+    elements.add(SimulatedSeries(
+      id: 'series_10',
+      points: series10PlotPoints,
+      color: Colors.lime.withOpacity(0.7),
+      strokeWidth: 2.0,
+    ));
+
     // Create dense clusters of datapoints (in DATA space)
     // Cluster 1: Top-left area (low time, high price)
     for (int i = 0; i < 15; i++) {
