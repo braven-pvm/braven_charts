@@ -28,14 +28,22 @@ class SeriesElement implements ChartElement {
     this.isHovered = false,
     this.strokeWidth = 2.0,
     this.themeColor,
-  }) {
+  }) : _currentTransform = transform {
     _computeBounds();
   }
 
   final ChartSeries series;
-  final ChartTransform transform;
+  final ChartTransform transform; // Initial transform for bounds computation
+  ChartTransform _currentTransform; // Current transform for painting
   final double strokeWidth;
   final Color? themeColor;
+
+  /// Update the current transform before painting (for real-time pan/zoom).
+  /// This allows path caching to work - transform stored at construction stays fixed,
+  /// but _currentTransform updates on every paint.
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
 
   @override
   final bool isSelected;
@@ -44,6 +52,11 @@ class SeriesElement implements ChartElement {
   final bool isHovered;
 
   late Rect _bounds;
+
+  // Cache the rendered path to avoid recalculating on every paint
+  Path? _cachedPath;
+  List<Offset>? _cachedTransformedPoints;
+  late ChartTransform _cachedTransform;
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   void _computeBounds() {
@@ -170,36 +183,47 @@ class SeriesElement implements ChartElement {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // PRE-TRANSFORM all points ONCE to avoid redundant calculations
-    final transformedPoints = series.points.map((p) => transform.dataToPlot(p.x, p.y)).toList();
+    // Check if we need to regenerate the path (transform changed or no cache)
+    final needsRegeneration = _cachedPath == null || _cachedTransform != _currentTransform;
 
-    final path = Path();
-    if (transformedPoints.isEmpty) return;
-    path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+    if (needsRegeneration) {
+      // PRE-TRANSFORM all points ONCE to avoid redundant calculations
+      final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
-    // Draw line with configured interpolation using cached transforms
-    switch (series.interpolation) {
-      case LineInterpolation.linear:
-        for (int i = 1; i < transformedPoints.length; i++) {
-          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
-        }
-        break;
-      case LineInterpolation.bezier:
-        _addBezierToPath(path, transformedPoints, series.tension);
-        break;
-      case LineInterpolation.stepped:
-        _addSteppedToPath(path, transformedPoints);
-        break;
-      case LineInterpolation.monotone:
-        _addMonotoneToPath(path, transformedPoints);
-        break;
+      final path = Path();
+      if (transformedPoints.isEmpty) return;
+      path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+
+      // Draw line with configured interpolation using cached transforms
+      switch (series.interpolation) {
+        case LineInterpolation.linear:
+          for (int i = 1; i < transformedPoints.length; i++) {
+            path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+          }
+          break;
+        case LineInterpolation.bezier:
+          _addBezierToPath(path, transformedPoints, series.tension);
+          break;
+        case LineInterpolation.stepped:
+          _addSteppedToPath(path, transformedPoints);
+          break;
+        case LineInterpolation.monotone:
+          _addMonotoneToPath(path, transformedPoints);
+          break;
+      }
+
+      // Cache the generated path, transformed points, and transform
+      _cachedPath = path;
+      _cachedTransformedPoints = transformedPoints;
+      _cachedTransform = _currentTransform;
     }
 
-    canvas.drawPath(path, paint);
+    // Paint using the cached path (no regeneration on hover!)
+    canvas.drawPath(_cachedPath!, paint);
 
-    // Draw data point markers if enabled (reuse cached transforms!)
-    if (series.showDataPointMarkers) {
-      _paintDataPointMarkers(canvas, transformedPoints, series.dataPointMarkerRadius, baseColor);
+    // Draw data point markers if enabled (use cached transforms!)
+    if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
+      _paintDataPointMarkers(canvas, _cachedTransformedPoints!, series.dataPointMarkerRadius, baseColor);
     }
   }
 
@@ -213,7 +237,7 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
+      final plotPos = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(plotPos, series.markerRadius, pointPaint);
     }
   }
@@ -222,13 +246,13 @@ class SeriesElement implements ChartElement {
     if (series.points.isEmpty) return;
 
     // PRE-TRANSFORM all points ONCE
-    final transformedPoints = series.points.map((p) => transform.dataToPlot(p.x, p.y)).toList();
+    final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
     final path = Path();
     final firstPlot = transformedPoints.first;
 
     // Start from x-axis (bottom of plot area)
-    path.moveTo(firstPlot.dx, transform.plotHeight);
+    path.moveTo(firstPlot.dx, _currentTransform.plotHeight);
     path.lineTo(firstPlot.dx, firstPlot.dy);
 
     // Build fill path through points using configured interpolation
@@ -251,7 +275,7 @@ class SeriesElement implements ChartElement {
 
     // Close to x-axis
     final lastPlot = transformedPoints.last;
-    path.lineTo(lastPlot.dx, transform.plotHeight);
+    path.lineTo(lastPlot.dx, _currentTransform.plotHeight);
     path.close();
 
     // Fill area
@@ -310,13 +334,13 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      final zeroY = transform.dataToPlot(point.x, 0).dy;
+      final plotPos = _currentTransform.dataToPlot(point.x, point.y);
+      final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
 
       // Calculate bar width based on configuration
       double barWidth;
       if (series.barWidthPixels != null) {
-        barWidth = series.barWidthPixels! / transform.dataPerPixelX;
+        barWidth = series.barWidthPixels! / _currentTransform.dataPerPixelX;
         barWidth = barWidth.clamp(series.minWidth, series.maxWidth);
       } else {
         final spacingInPixels = _calculateXAxisSpacing(series.points);
@@ -330,7 +354,7 @@ class SeriesElement implements ChartElement {
   }
 
   double _calculateXAxisSpacing(List<ChartDataPoint> points) {
-    if (points.length == 1) return transform.plotWidth * 0.6;
+    if (points.length == 1) return _currentTransform.plotWidth * 0.6;
 
     double minXSpacing = double.infinity;
     for (int i = 0; i < points.length - 1; i++) {
@@ -341,7 +365,7 @@ class SeriesElement implements ChartElement {
     }
 
     if (minXSpacing != double.infinity) {
-      return minXSpacing / transform.dataPerPixelX;
+      return minXSpacing / _currentTransform.dataPerPixelX;
     }
     return 40.0;
   }

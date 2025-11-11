@@ -43,12 +43,13 @@ class DataConverter {
     ChartTheme? theme,
     double strokeWidth = 2.0,
   }) {
-    print(' DataConverter: theme=$theme, seriesColors=${theme?.seriesColors}');
+    // Silent mode - this is called on every mouse movement during pan
+    // print(' DataConverter: theme=$theme, seriesColors=${theme?.seriesColors}');
     return series.asMap().entries.map((entry) {
       final index = entry.key;
       final s = entry.value;
       final themeColor = theme?.seriesColors[index % theme.seriesColors.length];
-      print('   Series[$index] "${s.name}": themeColor=$themeColor, seriesColor=${s.color}');
+      // print('   Series[$index] "${s.name}": themeColor=$themeColor, seriesColor=${s.color}');
       return SeriesElement(series: s, transform: transform, strokeWidth: strokeWidth, themeColor: themeColor);
     }).toList();
   }

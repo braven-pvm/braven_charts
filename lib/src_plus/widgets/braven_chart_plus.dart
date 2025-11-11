@@ -71,6 +71,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Element generator function for pan/zoom regeneration
   List<ChartElement> Function(ChartTransform)? _elementGenerator;
 
+  // Generation counter to track when elements actually need regeneration
+  // Only incremented in _rebuildElements when series/theme change
+  int _elementGeneratorVersion = 0;
+
   chart_axis.Axis? _xAxis;
   chart_axis.Axis? _yAxis;
 
@@ -169,14 +173,26 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create element generator function
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
-      debugPrint('🔧 Element generator executing with theme: ${widget.theme?.seriesColors}');
+      final seriesIds = widget.series.map((s) => s.id).join(', ');
+      debugPrint('🔧 Element generator executing for series: [$seriesIds]');
       return DataConverter.seriesToElements(series: widget.series, transform: transform, theme: widget.theme, strokeWidth: 2.0);
     };
 
-    debugPrint('✅ _rebuildElements complete, new generator created');
+    // Increment version to signal that regeneration is needed
+    _elementGeneratorVersion++;
+
+    debugPrint('✅ _rebuildElements complete, new generator created (version $_elementGeneratorVersion)');
   }
 
-  void _onCoordinatorChanged() => setState(() {});
+  void _onCoordinatorChanged() {
+    // CRITICAL FIX: Only call setState() if debug overlay is visible!
+    // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
+    // so we don't need setState() for cursor movement.
+    // setState() triggers expensive widget tree rebuilds.
+    if (widget.showDebugInfo) {
+      setState(() {});
+    }
+  }
 
   void _handlePanStart(DragStartDetails details) {
     // Request focus on pan start to enable keyboard controls
@@ -264,6 +280,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🏗️  BravenChartPlus.build() called');
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
@@ -309,6 +326,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         coordinator: _coordinator,
                         spatialIndex: _spatialIndex,
                         elementGenerator: _elementGenerator,
+                        elementGeneratorVersion: _elementGeneratorVersion,
                         xAxis: _xAxis,
                         yAxis: _yAxis,
                         theme: widget.theme,
@@ -333,6 +351,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.coordinator,
     required this.spatialIndex,
     this.elementGenerator,
+    required this.elementGeneratorVersion,
     this.xAxis,
     this.yAxis,
     this.theme,
@@ -342,6 +361,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final ChartInteractionCoordinator coordinator;
   final QuadTree spatialIndex;
   final List<ChartElement> Function(ChartTransform)? elementGenerator;
+  final int elementGeneratorVersion;
   final chart_axis.Axis? xAxis;
   final chart_axis.Axis? yAxis;
   final ChartTheme? theme;
@@ -356,9 +376,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
-    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called');
+    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called (version $elementGeneratorVersion)');
     renderObject
-      ..setElementGenerator(elementGenerator)
+      ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
       ..setYAxis(yAxis)
       ..setTheme(theme);
