@@ -4,6 +4,7 @@
 import '../coordinates/chart_transform.dart';
 import '../elements/series_element.dart';
 import '../models/chart_series.dart';
+import '../models/chart_theme.dart';
 
 /// Converts ChartSeries data to SeriesElements for rendering.
 ///
@@ -32,21 +33,24 @@ class DataConverter {
   /// **Parameters**:
   /// - `series`: List of ChartSeries to convert
   /// - `transform`: Current ChartTransform for coordinate conversion
+  /// - `theme`: Optional ChartTheme for styling (if null, uses series colors)
   /// - `strokeWidth`: Line stroke width (default 2.0)
   ///
   /// **Returns**: List of SeriesElements ready for spatial index insertion
   static List<SeriesElement> seriesToElements({
     required List<ChartSeries> series,
     required ChartTransform transform,
+    ChartTheme? theme,
     double strokeWidth = 2.0,
   }) {
-    return series
-        .map((s) => SeriesElement(
-              series: s,
-              transform: transform,
-              strokeWidth: strokeWidth,
-            ))
-        .toList();
+    print(' DataConverter: theme=$theme, seriesColors=${theme?.seriesColors}');
+    return series.asMap().entries.map((entry) {
+      final index = entry.key;
+      final s = entry.value;
+      final themeColor = theme?.seriesColors[index % theme.seriesColors.length];
+      print('   Series[$index] "${s.name}": themeColor=$themeColor, seriesColor=${s.color}');
+      return SeriesElement(series: s, transform: transform, strokeWidth: strokeWidth, themeColor: themeColor);
+    }).toList();
   }
 
   /// Computes data bounds from all series.
@@ -57,12 +61,7 @@ class DataConverter {
   /// **Returns**: DataBounds with xMin, xMax, yMin, yMax
   static DataBounds computeDataBounds(List<ChartSeries> series) {
     if (series.isEmpty || series.every((s) => s.isEmpty)) {
-      return const DataBounds(
-        xMin: 0,
-        xMax: 1,
-        yMin: 0,
-        yMax: 1,
-      );
+      return const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
     }
 
     double xMin = double.infinity;
@@ -83,23 +82,13 @@ class DataConverter {
     final xPadding = (xMax - xMin) * 0.05;
     final yPadding = (yMax - yMin) * 0.05;
 
-    return DataBounds(
-      xMin: xMin - xPadding,
-      xMax: xMax + xPadding,
-      yMin: yMin - yPadding,
-      yMax: yMax + yPadding,
-    );
+    return DataBounds(xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding);
   }
 }
 
 /// Data bounds for chart viewport setup.
 class DataBounds {
-  const DataBounds({
-    required this.xMin,
-    required this.xMax,
-    required this.yMin,
-    required this.yMax,
-  });
+  const DataBounds({required this.xMin, required this.xMax, required this.yMin, required this.yMax});
 
   final double xMin;
   final double xMax;

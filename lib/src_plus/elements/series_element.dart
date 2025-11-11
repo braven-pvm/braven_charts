@@ -26,6 +26,7 @@ class SeriesElement implements ChartElement {
     this.isSelected = false,
     this.isHovered = false,
     this.strokeWidth = 2.0,
+    this.themeColor,
   }) {
     _computeBounds();
   }
@@ -33,6 +34,7 @@ class SeriesElement implements ChartElement {
   final ChartSeries series;
   final ChartTransform transform;
   final double strokeWidth;
+  final Color? themeColor;
 
   @override
   final bool isSelected;
@@ -64,12 +66,7 @@ class SeriesElement implements ChartElement {
 
     // Add padding for stroke width
     final padding = strokeWidth / 2;
-    _bounds = Rect.fromLTRB(
-      minX - padding,
-      minY - padding,
-      maxX + padding,
-      maxY + padding,
-    );
+    _bounds = Rect.fromLTRB(minX - padding, minY - padding, maxX + padding, maxY + padding);
   }
 
   @override
@@ -131,10 +128,7 @@ class SeriesElement implements ChartElement {
     final clampedT = t.clamp(0.0, 1.0);
 
     // Find closest point on segment
-    final closest = Offset(
-      segStart.dx + clampedT * dx,
-      segStart.dy + clampedT * dy,
-    );
+    final closest = Offset(segStart.dx + clampedT * dx, segStart.dy + clampedT * dy);
 
     return (point - closest).distance;
   }
@@ -143,13 +137,16 @@ class SeriesElement implements ChartElement {
   void paint(Canvas canvas, Size size) {
     if (series.isEmpty) return;
 
-    final color = series.color ?? const Color(0xFF2196F3);
+    // Use themeColor if provided, otherwise fall back to series color or default
+    final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
+    // DEBUG: Print color being used
+    print('   SeriesElement.paint "${series.name}": themeColor=$themeColor, seriesColor=${series.color}, baseColor=$baseColor');
     final paint = Paint()
       ..color = isSelected
-          ? color.withOpacity(1.0)
+          ? baseColor.withOpacity(1.0)
           : isHovered
-              ? color.withOpacity(0.8)
-              : color.withOpacity(0.7)
+          ? baseColor.withOpacity(0.8)
+          : baseColor.withOpacity(0.7)
       ..style = PaintingStyle.stroke
       ..strokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth
       ..strokeCap = StrokeCap.round
@@ -225,8 +222,9 @@ class SeriesElement implements ChartElement {
     path.close();
 
     // Fill area
+    final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
     final fillPaint = Paint()
-      ..color = (series.color ?? const Color(0xFF2196F3)).withOpacity(0.3)
+      ..color = baseColor.withOpacity(0.3)
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
@@ -242,12 +240,7 @@ class SeriesElement implements ChartElement {
       final plotPos = transform.dataToPlot(point.x, point.y);
       final zeroY = transform.dataToPlot(point.x, 0).dy;
 
-      final rect = Rect.fromLTRB(
-        plotPos.dx - barWidth / 2,
-        plotPos.dy,
-        plotPos.dx + barWidth / 2,
-        zeroY,
-      );
+      final rect = Rect.fromLTRB(plotPos.dx - barWidth / 2, plotPos.dy, plotPos.dx + barWidth / 2, zeroY);
       canvas.drawRect(rect, barPaint);
     }
   }

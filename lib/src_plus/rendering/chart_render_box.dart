@@ -15,6 +15,7 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../models/chart_theme.dart';
 import 'spatial_index.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -43,12 +44,14 @@ class ChartRenderBox extends RenderBox {
     required this.coordinator,
     List<ChartElement>? elements,
     ElementGenerator? elementGenerator,
+    ChartTheme? theme,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
     this.onCursorChange,
-  }) : _elementGenerator = elementGenerator,
-       assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
+  })  : _elementGenerator = elementGenerator,
+        _theme = theme,
+        assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
 
@@ -64,7 +67,10 @@ class ChartRenderBox extends RenderBox {
 
   /// Optional callback for generating elements from current transform.
   /// If provided, elements will be regenerated on zoom/pan operations.
-  final ElementGenerator? _elementGenerator;
+  ElementGenerator? _elementGenerator;
+
+  /// Current theme for the chart (colors, styles, etc.)
+  ChartTheme? _theme;
 
   /// Interaction coordinator for conflict resolution.
   final ChartInteractionCoordinator coordinator;
@@ -154,19 +160,85 @@ class ChartRenderBox extends RenderBox {
   /// Sets the X-axis for the chart.
   ///
   /// Triggers layout and paint when axis is changed.
+  /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setXAxis(chart_axis.Axis? axis) {
-    if (_xAxis == axis) return;
+    if (_xAxis == axis) {
+      debugPrint('🔄 setXAxis: Same axis reference, skipping');
+      return;
+    }
+
+    debugPrint('🔄 setXAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
+    if (axis != null) {
+      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
+    }
+    if (_transform != null) {
+      debugPrint('   Current transform: dataX=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
+    }
+
     _xAxis = axis;
+
+    // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
+    if (_transform != null && axis != null) {
+      axis.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
+      debugPrint('✅ setXAxis: Synced new axis to current viewport X=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
+    }
+
     markNeedsLayout();
   }
 
   /// Sets the Y-axis for the chart.
   ///
   /// Triggers layout and paint when axis is changed.
+  /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setYAxis(chart_axis.Axis? axis) {
-    if (_yAxis == axis) return;
+    if (_yAxis == axis) {
+      debugPrint('🔄 setYAxis: Same axis reference, skipping');
+      return;
+    }
+
+    debugPrint('🔄 setYAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
+    if (axis != null) {
+      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
+    }
+    if (_transform != null) {
+      debugPrint('   Current transform: dataY=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+    }
+
     _yAxis = axis;
+
+    // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
+    if (_transform != null && axis != null) {
+      axis.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
+      debugPrint('✅ setYAxis: Synced new axis to current viewport Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+    }
+
     markNeedsLayout();
+  }
+
+  /// Sets the theme for the chart.
+  ///
+  /// Updates colors for background, grid, axes, etc.
+  void setTheme(ChartTheme? theme) {
+    if (_theme == theme) return;
+    _theme = theme;
+    markNeedsPaint();
+  }
+
+  /// Updates the element generator function.
+  ///
+  /// Regenerates elements using the new generator if transform is available.
+  void setElementGenerator(ElementGenerator? generator) {
+    debugPrint('🔄 setElementGenerator called: hasTransform=${_transform != null}');
+    // NOTE: Don't check if generator == _elementGenerator!
+    // Closures are never equal even if functionally identical,
+    // so we must always update and regenerate when called.
+    _elementGenerator = generator;
+
+    // Regenerate elements with new generator if we have a transform
+    if (_transform != null && _elementGenerator != null) {
+      debugPrint('🎨 Regenerating elements due to generator change (likely theme change)');
+      _rebuildElementsWithTransform();
+    }
   }
 
   /// Programmatically zoom the chart.
@@ -177,8 +249,12 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void zoomChart(double factor, {Offset? plotCenter}) {
+    debugPrint(
+        '🔍 zoomChart called: factor=$factor, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
+
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(' Cannot zoom: transform, elementGenerator, or originalTransform not available');
+      debugPrint(
+          '❌ Cannot zoom: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
       return;
     }
 
@@ -200,7 +276,7 @@ class ChartRenderBox extends RenderBox {
     // Regenerate elements
     _rebuildElementsWithTransform();
 
-    debugPrint('🔍 Keyboard zoom: factor=$factor, center=$center');
+    debugPrint('✅ Keyboard zoom: factor=$factor, center=$center');
   }
 
   /// Programmatically pan the chart.
@@ -210,8 +286,12 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void panChart(double plotDx, double plotDy) {
+    debugPrint(
+        '🔄 panChart called: dx=$plotDx, dy=$plotDy, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
+
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(' Cannot pan: transform, elementGenerator, or originalTransform not available');
+      debugPrint(
+          '❌ Cannot pan: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
       return;
     }
 
@@ -230,7 +310,7 @@ class ChartRenderBox extends RenderBox {
     if (clampedDx != plotDx || clampedDy != plotDy) {
       debugPrint(' Pan constrained: requested=($plotDx, $plotDy) to allowed=($clampedDx, $clampedDy)');
     } else {
-      debugPrint(' Pan applied: dx=$plotDx, dy=$plotDy');
+      debugPrint('✅ Pan applied: dx=$plotDx, dy=$plotDy');
     }
   }
 
@@ -370,8 +450,7 @@ class ChartRenderBox extends RenderBox {
     final dataPerPixelY = _transform!.dataPerPixelY;
     final requestedDataDx = requestedPlotDx * dataPerPixelX;
     final requestedDataDy = _transform!.invertY
-        ? -requestedPlotDy *
-              dataPerPixelY // Invert Y movement (match pan() logic)
+        ? -requestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
         : requestedPlotDy * dataPerPixelY;
 
     // 2. Calculate tentative new viewport position in data space
@@ -406,8 +485,7 @@ class ChartRenderBox extends RenderBox {
 
     final actualPlotDx = actualDataDx / dataPerPixelX;
     final actualPlotDy = _transform!.invertY
-        ? -actualDataDy /
-              dataPerPixelY // Reverse Y inversion
+        ? -actualDataDy / dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
     // Debug output (optional - can be removed in production)
@@ -465,15 +543,17 @@ class ChartRenderBox extends RenderBox {
   /// Called after zoom/pan operations to regenerate elements from original
   /// data coordinates using the updated transform.
   void _rebuildElementsWithTransform() {
-    if (_elementGenerator == null || _transform == null) {
-      debugPrint(' REBUILD ELEMENTS SKIPPED: generator=${_elementGenerator != null}, transform=${_transform != null}');
+    final generator = _elementGenerator;
+    final transform = _transform;
+    if (generator == null || transform == null) {
+      debugPrint(' REBUILD ELEMENTS SKIPPED: generator=${generator != null}, transform=${transform != null}');
       return;
     }
 
     // Generate new elements using current transform
-    _elements = _elementGenerator(_transform!);
+    _elements = generator(transform);
     debugPrint(
-      ' ELEMENTS REGENERATED: count=${_elements.length}, dataX=${_transform!.dataXMin.toStringAsFixed(2)}..${_transform!.dataXMax.toStringAsFixed(2)}',
+      ' ELEMENTS REGENERATED: count=${_elements.length}, dataX=${transform.dataXMin.toStringAsFixed(2)}..${transform.dataXMax.toStringAsFixed(2)}',
     );
 
     // Rebuild spatial index with new elements
@@ -1035,8 +1115,9 @@ class ChartRenderBox extends RenderBox {
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
 
-    // Paint background
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFFFFFFFF));
+    // Paint background using theme color
+    final backgroundColor = _theme?.backgroundColor ?? const Color(0xFFFFFFFF);
+    canvas.drawRect(Offset.zero & size, Paint()..color = backgroundColor);
 
     // Update axes to match current viewport JUST-IN-TIME before painting
     // This ensures axes always reflect the latest transform state during every paint
@@ -1087,8 +1168,7 @@ class ChartRenderBox extends RenderBox {
 
           // Draw dashed preview ring (different from solid selection ring)
           final previewPaint = Paint()
-            ..color =
-                const Color(0x8000AAFF) // Semi-transparent blue
+            ..color = const Color(0x8000AAFF) // Semi-transparent blue
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
           canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
@@ -1121,8 +1201,7 @@ class ChartRenderBox extends RenderBox {
     final cursorPos = _cursorPosition;
     if (cursorPos != null) {
       final crosshairPaint = Paint()
-        ..color =
-            const Color(0x80666666) // Semi-transparent gray
+        ..color = const Color(0x80666666) // Semi-transparent gray
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
 

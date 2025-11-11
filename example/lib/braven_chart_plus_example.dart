@@ -38,6 +38,7 @@ class BravenChartPlusExamplePage extends StatefulWidget {
 
 class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage> {
   bool _showDebugInfo = true;
+  ChartTheme _selectedTheme = ChartTheme.light;
 
   // Sample data
   List<ChartSeries> _createSampleData() {
@@ -53,7 +54,7 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
           ChartDataPoint(x: 4, y: 160),
           ChartDataPoint(x: 5, y: 200),
         ],
-        color: Colors.blue,
+        // color: Colors.blue,  // REMOVED: Let theme provide colors
         isXOrdered: true,
       ),
       const ChartSeries(
@@ -67,7 +68,7 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
           ChartDataPoint(x: 4, y: 95),
           ChartDataPoint(x: 5, y: 120),
         ],
-        color: Colors.red,
+        // color: Colors.red,  // REMOVED: Let theme provide colors
         isXOrdered: true,
       ),
     ];
@@ -78,8 +79,30 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('BravenChartPlus - Phase 0 Test'),
+        title: const Text('BravenChartPlus - Phase 1 Test'),
         actions: [
+          // Theme selector dropdown
+          DropdownButton<ChartTheme>(
+            value: _selectedTheme,
+            items: const [
+              DropdownMenuItem(
+                value: ChartTheme.light,
+                child: Text('Light Theme'),
+              ),
+              DropdownMenuItem(
+                value: ChartTheme.dark,
+                child: Text('Dark Theme'),
+              ),
+            ],
+            onChanged: (theme) {
+              if (theme != null) {
+                setState(() {
+                  _selectedTheme = theme;
+                });
+              }
+            },
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: Icon(_showDebugInfo ? Icons.bug_report : Icons.bug_report_outlined),
             onPressed: () {
@@ -102,14 +125,14 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '🚧 Phase 0: Foundation Testing',
+                  '🎨 Phase 1: Real Data + Theming',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                const Text('✅ BravenChartPlus widget created (isolated from lib/src)'),
-                const Text('✅ Models copied (ChartSeries, ChartDataPoint, ChartTheme)'),
-                const Text('⏳ TODO: Convert ChartSeries → ChartElements'),
-                const Text('⏳ TODO: Render actual data points'),
+                const Text('✅ SeriesElement wrapper created'),
+                const Text('✅ Real ChartSeries data rendering'),
+                const Text('✅ ChartTheme system wired through widget chain'),
+                const Text('✅ Theme colors applied (change theme above!)'),
                 const SizedBox(height: 8),
                 Text(
                   'Debug Overlay: ${_showDebugInfo ? "ON" : "OFF"}',
@@ -133,8 +156,8 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
                   child: BravenChartPlus(
                     chartType: ChartType.line,
                     series: _createSampleData(),
-                    theme: ChartTheme.light,
-                    backgroundColor: Colors.white,
+                    theme: _selectedTheme,
+                    backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                     showDebugInfo: _showDebugInfo,
                   ),
                 ),
@@ -156,9 +179,10 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
                 ),
                 SizedBox(height: 4),
                 Text('• Try clicking/dragging (coordinator should respond)'),
-                Text('• Press R or Home to reset view'),
-                Text('• Hold Shift and check debug overlay'),
-                Text('• Pan with mouse/touch'),
+                Text('• Pan: Arrow keys or middle mouse drag'),
+                Text('• Zoom: +/- keys or Shift+MouseWheel'),
+                Text('• Reset: R or Home key'),
+                Text('• Switch theme using dropdown above'),
               ],
             ),
           ),
