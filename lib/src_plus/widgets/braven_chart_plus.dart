@@ -178,7 +178,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   void _onCoordinatorChanged() => setState(() {});
 
-  void _handlePanStart(DragStartDetails details) {}
+  void _handlePanStart(DragStartDetails details) {
+    // Request focus on pan start to enable keyboard controls
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+      debugPrint('🎯 Focus requested via pan start');
+    }
+  }
 
   void _handlePanUpdate(DragUpdateDetails details) {
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -186,7 +192,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handlePanEnd(DragEndDetails details) {}
-  void _handleTapDown(TapDownDetails details) {}
+
+  void _handleTapDown(TapDownDetails details) {
+    // Request focus on tap to enable keyboard controls
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+      debugPrint('🎯 Focus requested via tap');
+    }
+  }
+
   void _handleTapUp(TapUpDetails details) {}
 
   void _handleCursorChange(MouseCursor cursor) {
@@ -260,42 +274,51 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       child: Builder(
         builder: (context) {
           final hasFocus = _focusNode.hasFocus;
-          return Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: widget.backgroundColor,
-              border: hasFocus ? Border.all(color: Colors.blue, width: 2) : null,
-            ),
-            child: Stack(
-              children: [
-                MouseRegion(
-                  cursor: _currentCursor,
-                  child: RawGestureDetector(
-                    gestures: {
-                      PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
-                        () => _panRecognizer,
-                        (recognizer) {},
+          return MouseRegion(
+            // Request focus when mouse enters this chart (for keyboard controls)
+            onEnter: (_) {
+              if (!_focusNode.hasFocus) {
+                _focusNode.requestFocus();
+                debugPrint('🎯 Focus requested via mouse enter');
+              }
+            },
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                color: widget.backgroundColor,
+                border: hasFocus ? Border.all(color: Colors.blue, width: 2) : null,
+              ),
+              child: Stack(
+                children: [
+                  MouseRegion(
+                    cursor: _currentCursor,
+                    child: RawGestureDetector(
+                      gestures: {
+                        PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
+                          () => _panRecognizer,
+                          (recognizer) {},
+                        ),
+                        PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
+                          () => _tapRecognizer,
+                          (recognizer) {},
+                        ),
+                      },
+                      child: _ChartRenderWidget(
+                        key: _renderBoxKey,
+                        coordinator: _coordinator,
+                        spatialIndex: _spatialIndex,
+                        elementGenerator: _elementGenerator,
+                        xAxis: _xAxis,
+                        yAxis: _yAxis,
+                        theme: widget.theme,
+                        onCursorChange: _handleCursorChange,
                       ),
-                      PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
-                        () => _tapRecognizer,
-                        (recognizer) {},
-                      ),
-                    },
-                    child: _ChartRenderWidget(
-                      key: _renderBoxKey,
-                      coordinator: _coordinator,
-                      spatialIndex: _spatialIndex,
-                      elementGenerator: _elementGenerator,
-                      xAxis: _xAxis,
-                      yAxis: _yAxis,
-                      theme: widget.theme,
-                      onCursorChange: _handleCursorChange,
                     ),
                   ),
-                ),
-                if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
-              ],
+                  if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
+                ],
+              ),
             ),
           );
         },
