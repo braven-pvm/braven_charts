@@ -63,6 +63,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   late QuadTree _spatialIndex;
   late PriorityPanGestureRecognizer _panRecognizer;
   late PriorityTapGestureRecognizer _tapRecognizer;
+  late FocusNode _focusNode;
 
   MouseCursor _currentCursor = SystemMouseCursors.basic;
   final GlobalKey _renderBoxKey = GlobalKey();
@@ -77,13 +78,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void initState() {
     super.initState();
 
+    _focusNode = FocusNode();
     _coordinator = ChartInteractionCoordinator();
     _coordinator.addListener(_onCoordinatorChanged);
 
-    _spatialIndex = QuadTree(
-      bounds: const Rect.fromLTWH(0, 0, 800, 600),
-      maxElementsPerNode: 4,
-    );
+    _spatialIndex = QuadTree(bounds: const Rect.fromLTWH(0, 0, 800, 600), maxElementsPerNode: 4);
 
     _panRecognizer = PriorityPanGestureRecognizer(
       coordinator: _coordinator,
@@ -92,11 +91,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       onPanEnd: _handlePanEnd,
     );
 
-    _tapRecognizer = PriorityTapGestureRecognizer(
-      coordinator: _coordinator,
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-    );
+    _tapRecognizer = PriorityTapGestureRecognizer(coordinator: _coordinator, onTapDown: _handleTapDown, onTapUp: _handleTapUp);
 
     _rebuildElements();
   }
@@ -104,13 +99,27 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.series != oldWidget.series) {
+    debugPrint('🔄 didUpdateWidget: seriesChanged=${widget.series != oldWidget.series}, themeChanged=${widget.theme != oldWidget.theme}');
+    debugPrint('   oldTheme seriesColors: ${oldWidget.theme?.seriesColors}');
+    debugPrint('   newTheme seriesColors: ${widget.theme?.seriesColors}');
+    if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
+      debugPrint('🎨 Theme/Series changed! Calling _rebuildElements()');
       _rebuildElements();
+      // Request focus after rebuild to ensure keyboard events still work
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _focusNode.requestFocus();
+          debugPrint('🎯 Focus requested after theme/series change');
+        }
+      });
+    } else {
+      debugPrint('⚠️ NO CHANGE DETECTED - not rebuilding');
     }
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
@@ -119,17 +128,25 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _rebuildElements() {
+    debugPrint('📋 _rebuildElements called');
+    debugPrint('   Current theme: ${widget.theme}');
+    debugPrint('   Theme seriesColors: ${widget.theme?.seriesColors}');
+
     _spatialIndex.clear();
 
     // Compute data bounds from all series
     final dataBounds = DataConverter.computeDataBounds(widget.series);
 
-    // Create axes from data bounds
+    // Create axes from data bounds with theme colors
     _xAxis = chart_axis.Axis(
       config: AxisConfig(
         label: widget.xAxis?.label ?? 'X',
         orientation: AxisOrientation.horizontal,
         position: AxisPosition.bottom,
+        axisColor: widget.theme?.axisColor ?? Colors.black87,
+        gridColor: widget.theme?.gridColor ?? const Color(0xFFE0E0E0),
+        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
+        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
       ),
       dataMin: dataBounds.xMin,
       dataMax: dataBounds.xMax,
@@ -140,6 +157,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         label: widget.yAxis?.label ?? 'Y',
         orientation: AxisOrientation.vertical,
         position: AxisPosition.left,
+        axisColor: widget.theme?.axisColor ?? Colors.black87,
+        gridColor: widget.theme?.gridColor ?? const Color(0xFFE0E0E0),
+        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
+        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
       ),
       dataMin: dataBounds.yMin,
       dataMax: dataBounds.yMax,
@@ -148,12 +169,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create element generator function
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
-      return DataConverter.seriesToElements(
-        series: widget.series,
-        transform: transform,
-        strokeWidth: 2.0,
-      );
+      debugPrint('🔧 Element generator executing with theme: ${widget.theme?.seriesColors}');
+      return DataConverter.seriesToElements(series: widget.series, transform: transform, theme: widget.theme, strokeWidth: 2.0);
     };
+
+    debugPrint('✅ _rebuildElements complete, new generator created');
   }
 
   void _onCoordinatorChanged() => setState(() {});
@@ -176,40 +196,53 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleKeyEvent(KeyEvent event) {
+    debugPrint('⌨️ _handleKeyEvent: ${event.runtimeType}, key=${event.logicalKey}');
+
     if (event is KeyDownEvent) {
       final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      debugPrint('   RenderBox found: ${renderBox != null}');
+
       if (renderBox == null) return;
 
       // Reset view
       if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
+        debugPrint('   Calling resetView()');
         renderBox.resetView();
       }
       // Shift modifier for zoom
       else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        debugPrint('   Adding Shift modifier');
         _coordinator.addModifierKey(LogicalKeyboardKey.shift);
       }
       // Arrow keys for panning
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        debugPrint('   Arrow Left - calling panChart(-20, 0)');
         renderBox.panChart(-20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        debugPrint('   Arrow Right - calling panChart(20, 0)');
         renderBox.panChart(20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        debugPrint('   Arrow Up - calling panChart(0, -20)');
         renderBox.panChart(0.0, -20.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        debugPrint('   Arrow Down - calling panChart(0, 20)');
         renderBox.panChart(0.0, 20.0);
       }
       // Zoom in with + or = or numpad +
       else if (event.logicalKey == LogicalKeyboardKey.equal ||
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
+        debugPrint('   Zoom In key - calling zoomChart(1.1)');
         renderBox.zoomChart(1.1);
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+        debugPrint('   Zoom Out key - calling zoomChart(0.9)');
         renderBox.zoomChart(0.9);
       }
     } else if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        debugPrint('   Removing Shift modifier');
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
@@ -218,6 +251,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   Widget build(BuildContext context) {
     return Focus(
+      focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
         _handleKeyEvent(event);
@@ -225,7 +259,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       },
       child: Builder(
         builder: (context) {
-          final hasFocus = Focus.of(context).hasFocus;
+          final hasFocus = _focusNode.hasFocus;
           return Container(
             width: widget.width,
             height: widget.height,
@@ -255,16 +289,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                       elementGenerator: _elementGenerator,
                       xAxis: _xAxis,
                       yAxis: _yAxis,
+                      theme: widget.theme,
                       onCursorChange: _handleCursorChange,
                     ),
                   ),
                 ),
-                if (widget.showDebugInfo)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _DebugOverlay(coordinator: _coordinator),
-                  ),
+                if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
               ],
             ),
           );
@@ -282,6 +312,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.elementGenerator,
     this.xAxis,
     this.yAxis,
+    this.theme,
     this.onCursorChange,
   });
 
@@ -290,24 +321,24 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final List<ChartElement> Function(ChartTransform)? elementGenerator;
   final chart_axis.Axis? xAxis;
   final chart_axis.Axis? yAxis;
+  final ChartTheme? theme;
   final void Function(MouseCursor cursor)? onCursorChange;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return ChartRenderBox(
-      coordinator: coordinator,
-      elementGenerator: elementGenerator,
-      onCursorChange: onCursorChange,
-    )
+    return ChartRenderBox(coordinator: coordinator, elementGenerator: elementGenerator, theme: theme, onCursorChange: onCursorChange)
       ..setXAxis(xAxis)
       ..setYAxis(yAxis);
   }
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
+    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called');
     renderObject
+      ..setElementGenerator(elementGenerator)
       ..setXAxis(xAxis)
-      ..setYAxis(yAxis);
+      ..setYAxis(yAxis)
+      ..setTheme(theme);
   }
 }
 
@@ -320,16 +351,9 @@ class _DebugOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(4),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(4)),
       child: DefaultTextStyle(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontFamily: 'monospace',
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'monospace'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
