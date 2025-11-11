@@ -6,6 +6,7 @@ import 'dart:ui';
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/element_types.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 
 /// Wraps a ChartSeries as a ChartElement for the interaction system.
@@ -139,109 +140,267 @@ class SeriesElement implements ChartElement {
 
     // Use themeColor if provided, otherwise fall back to series color or default
     final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
-    // DEBUG: Print color being used
-    print('   SeriesElement.paint "${series.name}": themeColor=$themeColor, seriesColor=${series.color}, baseColor=$baseColor');
+
+    // Use exhaustive pattern matching on sealed type (Dart 3.0)
+    switch (series) {
+      case LineChartSeries():
+        _paintLineSeries(canvas, series as LineChartSeries, baseColor);
+        break;
+      case BarChartSeries():
+        _paintBarSeries(canvas, series as BarChartSeries, baseColor);
+        break;
+      case ScatterChartSeries():
+        _paintScatterSeries(canvas, series as ScatterChartSeries, baseColor);
+        break;
+      case AreaChartSeries():
+        _paintAreaSeries(canvas, series as AreaChartSeries, baseColor);
+        break;
+    }
+  }
+
+  void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
     final paint = Paint()
       ..color = isSelected
           ? baseColor.withOpacity(1.0)
           : isHovered
-          ? baseColor.withOpacity(0.8)
-          : baseColor.withOpacity(0.7)
+              ? baseColor.withOpacity(0.8)
+              : baseColor.withOpacity(0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth
+      ..strokeWidth = isSelected ? series.strokeWidth * 1.5 : series.strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Draw based on series style
-    switch (series.style ?? SeriesStyle.line) {
-      case SeriesStyle.line:
-        _paintLine(canvas, paint);
-        break;
-      case SeriesStyle.scatter:
-        _paintScatter(canvas, paint);
-        break;
-      case SeriesStyle.area:
-        _paintArea(canvas, paint);
-        break;
-      case SeriesStyle.bar:
-        _paintBar(canvas, paint);
-        break;
-    }
-  }
+    // PRE-TRANSFORM all points ONCE to avoid redundant calculations
+    final transformedPoints = series.points.map((p) => transform.dataToPlot(p.x, p.y)).toList();
 
-  void _paintLine(Canvas canvas, Paint paint) {
     final path = Path();
-    bool first = true;
+    if (transformedPoints.isEmpty) return;
+    path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
 
-    for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      if (first) {
-        path.moveTo(plotPos.dx, plotPos.dy);
-        first = false;
-      } else {
-        path.lineTo(plotPos.dx, plotPos.dy);
-      }
+    // Draw line with configured interpolation using cached transforms
+    switch (series.interpolation) {
+      case LineInterpolation.linear:
+        for (int i = 1; i < transformedPoints.length; i++) {
+          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
+      case LineInterpolation.bezier:
+        _addBezierToPath(path, transformedPoints, series.tension);
+        break;
+      case LineInterpolation.stepped:
+        _addSteppedToPath(path, transformedPoints);
+        break;
+      case LineInterpolation.monotone:
+        _addMonotoneToPath(path, transformedPoints);
+        break;
     }
 
     canvas.drawPath(path, paint);
-  }
 
-  void _paintScatter(Canvas canvas, Paint paint) {
-    final pointPaint = paint..style = PaintingStyle.fill;
-
-    final radius = strokeWidth * 2;
-
-    for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      canvas.drawCircle(plotPos, radius, pointPaint);
+    // Draw data point markers if enabled (reuse cached transforms!)
+    if (series.showDataPointMarkers) {
+      _paintDataPointMarkers(canvas, transformedPoints, series.dataPointMarkerRadius, baseColor);
     }
   }
 
-  void _paintArea(Canvas canvas, Paint paint) {
+  void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
+    final pointPaint = Paint()
+      ..color = isSelected
+          ? baseColor.withOpacity(1.0)
+          : isHovered
+              ? baseColor.withOpacity(0.8)
+              : baseColor.withOpacity(0.7)
+      ..style = PaintingStyle.fill;
+
+    for (final point in series.points) {
+      final plotPos = transform.dataToPlot(point.x, point.y);
+      canvas.drawCircle(plotPos, series.markerRadius, pointPaint);
+    }
+  }
+
+  void _paintAreaSeries(Canvas canvas, AreaChartSeries series, Color baseColor) {
     if (series.points.isEmpty) return;
 
+    // PRE-TRANSFORM all points ONCE
+    final transformedPoints = series.points.map((p) => transform.dataToPlot(p.x, p.y)).toList();
+
     final path = Path();
-    final firstPoint = series.points.first;
-    final firstPlot = transform.dataToPlot(firstPoint.x, firstPoint.y);
+    final firstPlot = transformedPoints.first;
 
     // Start from x-axis (bottom of plot area)
     path.moveTo(firstPlot.dx, transform.plotHeight);
     path.lineTo(firstPlot.dx, firstPlot.dy);
 
-    // Draw line through points
-    for (int i = 1; i < series.points.length; i++) {
-      final point = series.points[i];
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      path.lineTo(plotPos.dx, plotPos.dy);
+    // Build fill path through points using configured interpolation
+    switch (series.interpolation) {
+      case LineInterpolation.linear:
+        for (int i = 1; i < transformedPoints.length; i++) {
+          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
+      case LineInterpolation.bezier:
+        _addBezierToPath(path, transformedPoints, series.tension, startIndex: 1);
+        break;
+      case LineInterpolation.stepped:
+        _addSteppedToPath(path, transformedPoints, startIndex: 1);
+        break;
+      case LineInterpolation.monotone:
+        _addMonotoneToPath(path, transformedPoints, startIndex: 1);
+        break;
     }
 
     // Close to x-axis
-    final lastPoint = series.points.last;
-    final lastPlot = transform.dataToPlot(lastPoint.x, lastPoint.y);
+    final lastPlot = transformedPoints.last;
     path.lineTo(lastPlot.dx, transform.plotHeight);
     path.close();
 
     // Fill area
-    final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
     final fillPaint = Paint()
-      ..color = baseColor.withOpacity(0.3)
+      ..color = baseColor.withOpacity(series.fillOpacity)
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Draw line on top
-    _paintLine(canvas, paint);
+    // Draw line on top (reuse cached transforms!)
+    final linePaint = Paint()
+      ..color = isSelected
+          ? baseColor.withOpacity(1.0)
+          : isHovered
+              ? baseColor.withOpacity(0.8)
+              : baseColor.withOpacity(0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = isSelected ? series.strokeWidth * 1.5 : series.strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final linePath = Path();
+    linePath.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+
+    switch (series.interpolation) {
+      case LineInterpolation.linear:
+        for (int i = 1; i < transformedPoints.length; i++) {
+          linePath.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
+      case LineInterpolation.bezier:
+        _addBezierToPath(linePath, transformedPoints, series.tension);
+        break;
+      case LineInterpolation.stepped:
+        _addSteppedToPath(linePath, transformedPoints);
+        break;
+      case LineInterpolation.monotone:
+        _addMonotoneToPath(linePath, transformedPoints);
+        break;
+    }
+
+    canvas.drawPath(linePath, linePaint);
+
+    // Draw data point markers if enabled (reuse cached transforms!)
+    if (series.showDataPointMarkers) {
+      _paintDataPointMarkers(canvas, transformedPoints, series.dataPointMarkerRadius, baseColor);
+    }
   }
 
-  void _paintBar(Canvas canvas, Paint paint) {
-    const barWidth = 10.0; // TODO: Calculate from data density
-    final barPaint = paint..style = PaintingStyle.fill;
+  void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
+    final barPaint = Paint()
+      ..color = isSelected
+          ? baseColor.withOpacity(1.0)
+          : isHovered
+              ? baseColor.withOpacity(0.8)
+              : baseColor.withOpacity(0.7)
+      ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
       final plotPos = transform.dataToPlot(point.x, point.y);
       final zeroY = transform.dataToPlot(point.x, 0).dy;
 
+      // Calculate bar width based on configuration
+      double barWidth;
+      if (series.barWidthPixels != null) {
+        barWidth = series.barWidthPixels! / transform.dataPerPixelX;
+        barWidth = barWidth.clamp(series.minWidth, series.maxWidth);
+      } else {
+        final spacingInPixels = _calculateXAxisSpacing(series.points);
+        barWidth = spacingInPixels * series.barWidthPercent!;
+        barWidth = barWidth.clamp(series.minWidth, series.maxWidth);
+      }
+
       final rect = Rect.fromLTRB(plotPos.dx - barWidth / 2, plotPos.dy, plotPos.dx + barWidth / 2, zeroY);
       canvas.drawRect(rect, barPaint);
+    }
+  }
+
+  double _calculateXAxisSpacing(List<ChartDataPoint> points) {
+    if (points.length == 1) return transform.plotWidth * 0.6;
+
+    double minXSpacing = double.infinity;
+    for (int i = 0; i < points.length - 1; i++) {
+      final xSpacing = (points[i + 1].x - points[i].x).abs();
+      if (xSpacing > 0 && xSpacing < minXSpacing) {
+        minXSpacing = xSpacing;
+      }
+    }
+
+    if (minXSpacing != double.infinity) {
+      return minXSpacing / transform.dataPerPixelX;
+    }
+    return 40.0;
+  }
+
+  // ==================== OPTIMIZED INTERPOLATION METHODS ====================
+
+  /// Add bezier curves using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
+
+    final alpha = tension;
+
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      // Access pre-transformed points by index - NO TRANSFORMS IN LOOP!
+      final plot0 = transformedPoints[i > 0 ? i - 1 : i];
+      final plot1 = transformedPoints[i];
+      final plot2 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : i];
+      final plot3 = transformedPoints[i < transformedPoints.length - 2 ? i + 2 : i];
+
+      // Catmull-Rom to cubic bezier control points
+      final cp1x = plot1.dx + (plot2.dx - plot0.dx) * alpha / 6;
+      final cp1y = plot1.dy + (plot2.dy - plot0.dy) * alpha / 6;
+      final cp2x = plot2.dx - (plot3.dx - plot1.dx) * alpha / 6;
+      final cp2y = plot2.dy - (plot3.dy - plot1.dy) * alpha / 6;
+
+      path.cubicTo(cp1x, cp1y, cp2x, cp2y, plot2.dx, plot2.dy);
+    }
+  }
+
+  /// Add stepped lines using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _addSteppedToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
+
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      final prevPlot = transformedPoints[i - 1];
+      final currPlot = transformedPoints[i];
+
+      path.lineTo(currPlot.dx, prevPlot.dy);
+      path.lineTo(currPlot.dx, currPlot.dy);
+    }
+  }
+
+  /// Add monotone curves using PRE-TRANSFORMED points (currently uses linear)
+  void _addMonotoneToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
+
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+    }
+  }
+
+  /// Paint markers using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _paintDataPointMarkers(Canvas canvas, List<Offset> transformedPoints, double radius, Color baseColor) {
+    final markerPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
+
+    for (final plotPos in transformedPoints) {
+      canvas.drawCircle(plotPos, radius, markerPaint);
     }
   }
 
