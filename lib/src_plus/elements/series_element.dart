@@ -140,8 +140,6 @@ class SeriesElement implements ChartElement {
 
     // Use themeColor if provided, otherwise fall back to series color or default
     final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
-    // DEBUG: Print color being used
-    print('   SeriesElement.paint "${series.name}": themeColor=$themeColor, seriesColor=${series.color}, baseColor=$baseColor');
 
     // Use exhaustive pattern matching on sealed type (Dart 3.0)
     switch (series) {

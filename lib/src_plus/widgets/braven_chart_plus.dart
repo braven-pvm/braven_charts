@@ -96,21 +96,14 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    debugPrint('🔄 didUpdateWidget: seriesChanged=${widget.series != oldWidget.series}, themeChanged=${widget.theme != oldWidget.theme}');
-    debugPrint('   oldTheme seriesColors: ${oldWidget.theme?.seriesColors}');
-    debugPrint('   newTheme seriesColors: ${widget.theme?.seriesColors}');
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
-      debugPrint('🎨 Theme/Series changed! Calling _rebuildElements()');
       _rebuildElements();
       // Request focus after rebuild to ensure keyboard events still work
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _focusNode.requestFocus();
-          debugPrint('🎯 Focus requested after theme/series change');
         }
       });
-    } else {
-      debugPrint('⚠️ NO CHANGE DETECTED - not rebuilding');
     }
   }
 
@@ -125,10 +118,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _rebuildElements() {
-    debugPrint('📋 _rebuildElements called');
-    debugPrint('   Current theme: ${widget.theme}');
-    debugPrint('   Theme seriesColors: ${widget.theme?.seriesColors}');
-
     _spatialIndex.clear();
 
     // Compute data bounds from all series
@@ -166,11 +155,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create element generator function
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
-      debugPrint('🔧 Element generator executing with theme: ${widget.theme?.seriesColors}');
       return DataConverter.seriesToElements(series: widget.series, transform: transform, theme: widget.theme, strokeWidth: 2.0);
     };
-
-    debugPrint('✅ _rebuildElements complete, new generator created');
   }
 
   void _onCoordinatorChanged() => setState(() {});
@@ -193,53 +179,41 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    debugPrint('⌨️ _handleKeyEvent: ${event.runtimeType}, key=${event.logicalKey}');
-
     if (event is KeyDownEvent) {
       final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-      debugPrint('   RenderBox found: ${renderBox != null}');
 
       if (renderBox == null) return;
 
       // Reset view
       if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
-        debugPrint('   Calling resetView()');
         renderBox.resetView();
       }
       // Shift modifier for zoom
       else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-        debugPrint('   Adding Shift modifier');
         _coordinator.addModifierKey(LogicalKeyboardKey.shift);
       }
       // Arrow keys for panning
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        debugPrint('   Arrow Left - calling panChart(-20, 0)');
         renderBox.panChart(-20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        debugPrint('   Arrow Right - calling panChart(20, 0)');
         renderBox.panChart(20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        debugPrint('   Arrow Up - calling panChart(0, -20)');
         renderBox.panChart(0.0, -20.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        debugPrint('   Arrow Down - calling panChart(0, 20)');
         renderBox.panChart(0.0, 20.0);
       }
       // Zoom in with + or = or numpad +
       else if (event.logicalKey == LogicalKeyboardKey.equal ||
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
-        debugPrint('   Zoom In key - calling zoomChart(1.1)');
         renderBox.zoomChart(1.1);
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
-        debugPrint('   Zoom Out key - calling zoomChart(0.9)');
         renderBox.zoomChart(0.9);
       }
     } else if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-        debugPrint('   Removing Shift modifier');
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
@@ -330,7 +304,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
-    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called');
     renderObject
       ..setElementGenerator(elementGenerator)
       ..setXAxis(xAxis)
