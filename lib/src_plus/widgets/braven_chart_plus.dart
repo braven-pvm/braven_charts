@@ -14,7 +14,6 @@ import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
-import '../models/chart_type.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
 import '../utils/data_converter.dart';
@@ -33,7 +32,6 @@ import '../utils/data_converter.dart';
 class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,
-    required this.chartType,
     required this.series,
     this.theme,
     this.xAxis,
@@ -44,7 +42,6 @@ class BravenChartPlus extends StatefulWidget {
     this.showDebugInfo = false,
   });
 
-  final ChartType chartType;
   final List<ChartSeries> series;
   final ChartTheme? theme;
   final AxisConfig? xAxis;
