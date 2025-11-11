@@ -1,8 +1,6 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Axis System
 
-import 'package:flutter/foundation.dart' show debugPrint;
-
 import 'axis_config.dart';
 import 'linear_scale.dart';
 import 'tick.dart';
@@ -32,6 +30,27 @@ import 'tick_generator.dart';
 /// xAxis.updatePixelRange(60, 760);
 /// ```
 class Axis {
+  Axis({
+    required this.config,
+    required double dataMin,
+    required double dataMax,
+    double pixelMin = 0,
+    double pixelMax = 100,
+    this.labelFormatter,
+  }) {
+    // Create initial scale
+    scale = LinearScale(
+      dataMin: dataMin,
+      dataMax: dataMax,
+      pixelMin: pixelMin,
+      pixelMax: pixelMax,
+      invertY: config.orientation == AxisOrientation.vertical,
+    );
+
+    // Generate initial ticks
+    ticks = _generateTicks();
+  }
+
   /// Visual configuration.
   final AxisConfig config;
 
@@ -54,27 +73,6 @@ class Axis {
   double get pixelMin => scale.pixelMin;
   double get pixelMax => scale.pixelMax;
 
-  Axis({
-    required this.config,
-    required double dataMin,
-    required double dataMax,
-    double pixelMin = 0,
-    double pixelMax = 100,
-    this.labelFormatter,
-  }) {
-    // Create initial scale
-    scale = LinearScale(
-      dataMin: dataMin,
-      dataMax: dataMax,
-      pixelMin: pixelMin,
-      pixelMax: pixelMax,
-      invertY: config.orientation == AxisOrientation.vertical,
-    );
-
-    // Generate initial ticks
-    ticks = _generateTicks();
-  }
-
   /// Updates the visible data range (called when zooming/panning).
   ///
   /// Regenerates ticks for the new range.
@@ -85,7 +83,6 @@ class Axis {
     );
 
     ticks = _generateTicks();
-    debugPrint('   Axis ticks regenerated: ${ticks.length} ticks for range [$newDataMin, $newDataMax]');
   }
 
   /// Updates the pixel range (called when layout changes).

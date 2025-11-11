@@ -163,16 +163,7 @@ class ChartRenderBox extends RenderBox {
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setXAxis(chart_axis.Axis? axis) {
     if (_xAxis == axis) {
-      debugPrint('🔄 setXAxis: Same axis reference, skipping');
       return;
-    }
-
-    debugPrint('🔄 setXAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
-    if (axis != null) {
-      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
-    }
-    if (_transform != null) {
-      debugPrint('   Current transform: dataX=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
     }
 
     _xAxis = axis;
@@ -180,7 +171,6 @@ class ChartRenderBox extends RenderBox {
     // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
     if (_transform != null && axis != null) {
       axis.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
-      debugPrint('✅ setXAxis: Synced new axis to current viewport X=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
     }
 
     markNeedsLayout();
@@ -192,16 +182,7 @@ class ChartRenderBox extends RenderBox {
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setYAxis(chart_axis.Axis? axis) {
     if (_yAxis == axis) {
-      debugPrint('🔄 setYAxis: Same axis reference, skipping');
       return;
-    }
-
-    debugPrint('🔄 setYAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
-    if (axis != null) {
-      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
-    }
-    if (_transform != null) {
-      debugPrint('   Current transform: dataY=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
     }
 
     _yAxis = axis;
@@ -209,7 +190,6 @@ class ChartRenderBox extends RenderBox {
     // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
     if (_transform != null && axis != null) {
       axis.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-      debugPrint('✅ setYAxis: Synced new axis to current viewport Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
     }
 
     markNeedsLayout();
@@ -228,7 +208,6 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Regenerates elements using the new generator if transform is available.
   void setElementGenerator(ElementGenerator? generator) {
-    debugPrint('🔄 setElementGenerator called: hasTransform=${_transform != null}');
     // NOTE: Don't check if generator == _elementGenerator!
     // Closures are never equal even if functionally identical,
     // so we must always update and regenerate when called.
@@ -236,7 +215,6 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
-      debugPrint('🎨 Regenerating elements due to generator change (likely theme change)');
       _rebuildElementsWithTransform();
     }
   }
@@ -249,12 +227,7 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void zoomChart(double factor, {Offset? plotCenter}) {
-    debugPrint(
-        '🔍 zoomChart called: factor=$factor, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
-
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(
-          '❌ Cannot zoom: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
       return;
     }
 
@@ -275,8 +248,6 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
-
-    debugPrint('✅ Keyboard zoom: factor=$factor, center=$center');
   }
 
   /// Programmatically pan the chart.
@@ -286,12 +257,7 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void panChart(double plotDx, double plotDy) {
-    debugPrint(
-        '🔄 panChart called: dx=$plotDx, dy=$plotDy, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
-
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(
-          '❌ Cannot pan: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
       return;
     }
 
@@ -306,18 +272,11 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
-
-    if (clampedDx != plotDx || clampedDy != plotDy) {
-      debugPrint(' Pan constrained: requested=($plotDx, $plotDy) to allowed=($clampedDx, $clampedDy)');
-    } else {
-      debugPrint('✅ Pan applied: dx=$plotDx, dy=$plotDy');
-    }
   }
 
   /// Reset view to original zoom/pan state.
   void resetView() {
     if (_originalTransform == null || _elementGenerator == null) {
-      debugPrint(' Cannot reset: originalTransform or elementGenerator not available');
       return;
     }
 
@@ -329,8 +288,6 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
-
-    debugPrint(' View reset to original');
   }
 
   /// Updates axes to reflect the current transform's data ranges.
@@ -347,8 +304,6 @@ class ChartRenderBox extends RenderBox {
 
     // Update Y-axis with current viewport's Y range
     _yAxis?.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-
-    debugPrint(' Axes updated: X=[${_transform!.dataXMin}, ${_transform!.dataXMax}], Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
   }
 
   // ============================================================================
@@ -403,8 +358,6 @@ class ChartRenderBox extends RenderBox {
     final newDataXMax = centerX + newXRange / 2;
     final newDataYMin = centerY - newYRange / 2;
     final newDataYMax = centerY + newYRange / 2;
-
-    debugPrint(' Zoom clamped: X=$currentZoomX to $clampedZoomX, Y=$currentZoomY to $clampedZoomY');
 
     return ChartTransform(
       dataXMin: newDataXMin,
@@ -488,11 +441,6 @@ class ChartRenderBox extends RenderBox {
         ? -actualDataDy / dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
-    // Debug output (optional - can be removed in production)
-    if (actualPlotDx != requestedPlotDx || actualPlotDy != requestedPlotDy) {
-      debugPrint(' PAN CONSTRAINED: requested=($requestedPlotDx, $requestedPlotDy) to allowed=($actualPlotDx, $actualPlotDy)');
-    }
-
     return (actualPlotDx, actualPlotDy);
   }
 
@@ -546,15 +494,11 @@ class ChartRenderBox extends RenderBox {
     final generator = _elementGenerator;
     final transform = _transform;
     if (generator == null || transform == null) {
-      debugPrint(' REBUILD ELEMENTS SKIPPED: generator=${generator != null}, transform=${transform != null}');
       return;
     }
 
     // Generate new elements using current transform
     _elements = generator(transform);
-    debugPrint(
-      ' ELEMENTS REGENERATED: count=${_elements.length}, dataX=${transform.dataXMin.toStringAsFixed(2)}..${transform.dataXMax.toStringAsFixed(2)}',
-    );
 
     // Rebuild spatial index with new elements
     _rebuildSpatialIndex();
@@ -619,7 +563,6 @@ class ChartRenderBox extends RenderBox {
 
         // Capture original transform for reset and constraint calculations
         _originalTransform = _transform;
-        debugPrint(' Original transform captured: dataX=${_xAxis!.dataMin}..${_xAxis!.dataMax}, dataY=${_yAxis!.dataMin}..${_yAxis!.dataMax}');
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
         // only update plot dimensions if they changed
@@ -805,7 +748,6 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
-    debugPrint(' PointerDown: buttons=${event.buttons} (middle=$kMiddleMouseButton, primary=$kPrimaryMouseButton)');
     coordinator.startInteraction(position, element: hitElement);
 
     // Check if we hit a resize handle (priority 7)
@@ -830,11 +772,9 @@ class ChartRenderBox extends RenderBox {
     // Per conflict resolution: Different buttons have different behaviors
     if (event.buttons == kMiddleMouseButton) {
       // Middle-click: EXCLUSIVELY pan (per scenario 6)
-      debugPrint(' Middle button DOWN detected at $position');
       coordinator.claimMode(InteractionMode.panning);
       // Store initial pan position in widget space
       _lastPanPosition = position;
-      debugPrint(' Pan mode claimed, _lastPanPosition set to $position');
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
@@ -876,17 +816,9 @@ class ChartRenderBox extends RenderBox {
 
     // Middle-button drag = pan (per conflict resolution scenario 6)
     if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
-      debugPrint(
-        ' Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}',
-      );
       if (_lastPanPosition != null && _transform != null && _originalTransform != null) {
-        // Calculate delta in widget space
-        final widgetDelta = position - _lastPanPosition!;
-
         // Convert widget delta to plot space (widget space -> plot space is just offset removal)
         final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
-
-        debugPrint(' BEFORE CLAMP: position=$position, lastPos=$_lastPanPosition, plotDelta=$plotDelta');
 
         // Clamp pan delta BEFORE applying (prevents overshoot/snap-back)
         final (clampedDx, clampedDy) = _clampPanDelta(-plotDelta.dx, -plotDelta.dy);
@@ -907,12 +839,6 @@ class ChartRenderBox extends RenderBox {
 
         // Repaint with updated elements
         markNeedsPaint();
-
-        if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
-          debugPrint(' Pan constrained: requested=${Offset(-plotDelta.dx, -plotDelta.dy)} to allowed=${Offset(clampedDx, clampedDy)}');
-        } else {
-          debugPrint(' Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta');
-        }
       }
       return;
     }
@@ -988,7 +914,6 @@ class ChartRenderBox extends RenderBox {
       _updateAxesFromTransform();
 
       _rebuildElementsWithTransform();
-      debugPrint(' Pan ended - regenerated elements with final transform');
     }
 
     // Clear cursor position
@@ -1065,8 +990,6 @@ class ChartRenderBox extends RenderBox {
       const double zoomSensitivity = 0.001; // Adjust for comfortable zoom speed
       final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
 
-      debugPrint('🔍 ZOOM: factor=$zoomFactor, scrollDelta=${event.scrollDelta.dy}');
-
       // Convert cursor position (widget space) to plot space
       final Offset plotPosition = widgetToPlot(position);
 
@@ -1080,8 +1003,6 @@ class ChartRenderBox extends RenderBox {
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();
 
-      debugPrint('🔍 Transform updated: dataX=${_transform!.dataXMin}..${_transform!.dataXMax}');
-
       // Release zoom mode after short delay
       Future.delayed(const Duration(milliseconds: 100), () {
         if (coordinator.currentMode == InteractionMode.zooming) {
@@ -1089,10 +1010,6 @@ class ChartRenderBox extends RenderBox {
         }
       });
     } else {
-      debugPrint(
-        ' Scroll without zoom: shift=${coordinator.isShiftPressed}, transform=${_transform != null}, generator=${_elementGenerator != null}',
-      );
-
       // Without Shift, just claim mode for compatibility
       coordinator.claimMode(InteractionMode.zooming);
 
