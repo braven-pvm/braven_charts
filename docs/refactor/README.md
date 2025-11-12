@@ -2,17 +2,34 @@
 
 **Project**: braven_charts v2.0 Core Interaction System Refactor  
 **Branch**: `core-interaction-refactor`  
-**Status**: Phase 1 Planning Complete | Production Integration Ready
+**Status**: ⚠️ **SEE [CURRENT_STATUS.md](CURRENT_STATUS.md) FOR ACTUAL IMPLEMENTATION STATE** ⚠️
+
+---
+
+## 🚨 IMPORTANT: Current Status
+
+**The lib/src_plus/ implementation is MUCH MORE ADVANCED than these plans suggest.**
+
+👉 **Read [CURRENT_STATUS.md](CURRENT_STATUS.md) first** to understand what's actually been implemented.
+
+The Phase 1-3 plans in `core-interaction/` describe migrating `lib/src/` from CustomPainter to RenderBox.  
+However, `lib/src_plus/` **already has** a fully working RenderBox implementation with:
+- ✅ Complete interaction coordinator system
+- ✅ Pan/zoom constraints with dynamic axes
+- ✅ Performance optimizations (Picture caching, hit test throttling)
+- ✅ Sealed class series architecture
+- ✅ 60fps rendering with 7 series simultaneously
 
 ---
 
 ## 📋 Table of Contents
 
-1. [Documentation Overview](#documentation-overview)
-2. [Quick Start](#quick-start)
-3. [Prototype Development History](#prototype-development-history)
-4. [Production Integration Plans](#production-integration-plans)
-5. [Navigation Guide](#navigation-guide)
+1. [**CURRENT STATUS** 🚨](CURRENT_STATUS.md) ← **START HERE**
+2. [Documentation Overview](#documentation-overview)
+3. [Quick Start](#quick-start)
+4. [Prototype Development History](#prototype-development-history)
+5. [Production Integration Plans](#production-integration-plans)
+6. [Navigation Guide](#navigation-guide)
 
 ---
 
