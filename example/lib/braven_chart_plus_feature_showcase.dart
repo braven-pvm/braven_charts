@@ -4,6 +4,7 @@
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
+import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 
@@ -295,6 +296,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_interpolation'),
+                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'linear',
@@ -361,6 +363,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_types'),
+                chartType: ChartType.line,
                 series: const [
                   LineChartSeries(
                     id: 'line_1',
@@ -431,6 +434,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_constraints'),
+                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'data_1',
@@ -465,6 +469,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_axes'),
+                chartType: ChartType.line,
                 series: const [
                   LineChartSeries(
                     id: 'exponential',
@@ -509,6 +514,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_theming'),
+                chartType: ChartType.line,
                 series: const [
                   LineChartSeries(
                     id: 'theme_demo_1',
@@ -565,6 +571,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               ],
               child: BravenChartPlus(
                 key: const ValueKey('chart_performance'),
+                chartType: ChartType.line,
                 series: [
                   // 7 series to stress-test performance
                   ...List.generate(7, (i) {

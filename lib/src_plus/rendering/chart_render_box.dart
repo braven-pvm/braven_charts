@@ -1431,9 +1431,13 @@ class ChartRenderBox extends RenderBox {
     // Series elements have priority 8, so we filter by type instead
     final seriesElements = _elements.whereType<SeriesElement>().toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
-    // Paint each series
-    // NOTE: SeriesElement now receives transform in constructor, so no updateTransform() call needed
+    // Paint each series with current transform
     for (final series in seriesElements) {
+      if (_transform != null) {
+        // CRITICAL: Update transform before painting (enables path caching!)
+        // This allows SeriesElement to cache paths and only regenerate when transform changes.
+        series.updateTransform(_transform!);
+      }
       series.paint(canvas, size);
     }
   }
