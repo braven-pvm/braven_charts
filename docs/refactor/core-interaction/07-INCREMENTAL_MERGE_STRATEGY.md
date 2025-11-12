@@ -19,7 +19,75 @@
 - ✅ Clean prototype-to-production evolution path
 - ✅ Easy to compare old vs new implementations
 
-**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) below.
+**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../SPRINT_TASKS.md) below.
+
+---
+
+## 🔥 CRITICAL: Performance Divergence Event
+
+**Date**: During Sprint 2 (Theming System Implementation)  
+**Impact**: +25 hours unplanned work, timeline extended  
+**Status**: ✅ Resolved - Performance now excellent (60fps with 7 series)
+
+### What Happened
+
+During the implementation of the theming system (Phase 2, Feature 2), we encountered **massive performance issues**:
+- Frame render times spiked to 200-300ms (target: <16ms for 60fps)
+- UI became completely unresponsive during pan/zoom
+- Hit testing caused cascade failures
+- Memory leaks from Picture objects not being disposed
+
+### Divergence Timeline
+
+1. **Started**: Implementing runtime theme switching
+2. **Discovered**: Severe performance degradation with multiple charts
+3. **Diverted**: Paused feature work to debug performance
+4. **Invested**: ~25 hours of unplanned optimization work
+5. **Resolved**: Performance now exceeds targets
+6. **Resumed**: Back to feature porting (Sprint 3.2)
+
+### Performance Optimizations Completed
+
+| Optimization | Impact | Time Spent |
+|--------------|--------|------------|
+| Picture caching for chart canvas | ~17ms saved per frame | 4h |
+| Hit test throttling (50ms debounce) | Prevents cascade failures | 2h |
+| QuadTree spatial index optimization | O(log n) hit testing | 3h |
+| Pan/zoom constraint validation | 10% max whitespace, smooth UX | 4h |
+| Memory leak investigation | Fixed Picture disposal | 3h |
+| 5-chart stress test example | Validates performance claims | 2h |
+| Dynamic axis tick generation | Just-in-time ticks, no waste | 4h |
+| Focus management fix | Runtime theme switching works | 3h |
+
+**Total**: 25 hours of unplanned work
+
+### Performance Metrics Achieved
+
+- ✅ 60fps with 7 series (14ms average frame time)
+- ✅ <100ms to render 1000 data points
+- ✅ Smooth pan/zoom with no jank
+- ✅ No memory leaks (Picture objects properly disposed)
+- ✅ QuadTree O(log n) hit testing (vs O(n) before)
+
+### Lesson Learned
+
+**Performance issues can derail feature work.** Always include buffer time for unexpected optimization work.
+
+### Impact on Timeline
+
+- **Original Phase 2 Estimate**: 25-30 hours
+- **Actual Phase 2 Time Spent**: 22 hours (features) + 25 hours (performance) = 47 hours
+- **Variance**: +17 to +22 hours beyond original estimate
+
+### Re-Verification Required
+
+⚠️ **CRITICAL**: Theming system needs **re-verification** after ALL features are added.
+
+**Why**: Performance divergence happened during theming implementation. Must verify theming works correctly with ALL features once they're all ported (annotations, legends, markers, streaming, scrollbars).
+
+**See**: [Theming Re-Verification Tasks](../SPRINT_TASKS.md#️-critical-theming-re-verification-task) in SPRINT_TASKS.md
+
+**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../SPRINT_TASKS.md) below.
 
 ---
 
@@ -431,55 +499,96 @@ The implementation has delivered MORE than the original strategy planned:
 
 Based on current progress, recommended next features:
 
-### Immediate Priority (Next 2 weeks)
+**📋 See detailed sprint task breakdown in [SPRINT_TASKS.md](../SPRINT_TASKS.md)**
 
-**1. Complete Annotations System** (~6 hours)
+### Immediate Priority (Sprint 3.2 - Next 2-3 weeks)
+
+**1. Complete Annotations System** (~7 hours, 7 tasks)
 - Port 5 annotation types from BravenChart
 - PointAnnotation, RangeAnnotation, TextAnnotation, ThresholdAnnotation, TrendAnnotation
 - Test all annotation types with drag/resize
+- Test annotations with theming
+- **Current Progress**: 50% complete (basic infrastructure exists)
 
-**2. Add Legend Widget** (~4 hours)
+**2. Add Legend Widget** (~3 hours, 3 tasks)
 - Port Legend from BravenChart
 - Show/hide series functionality
 - Click to toggle series visibility
+- **Current Progress**: 0% complete
 
-**3. Add Streaming Support** (~6-8 hours)
+**3. Add Streaming Support** (~9.5 hours, 8 tasks)
 - Port BufferManager, StreamingConfig, StreamingController
 - Integrate with ChartTransform viewport
 - Test streaming + pan/zoom interaction
+- Add streaming example to example app
+- **Current Progress**: 0% complete
 
-### Medium Priority (Weeks 3-4)
-
-**4. Add Scrollbars** (~4-6 hours)
+**4. Add Scrollbars** (~7 hours, 6 tasks)
 - Port ChartScrollbar widget
-- Sync with ChartTransform viewport
-- Test scrollbar + pan/zoom interaction
+- Sync with ChartTransform viewport (two-way binding)
+- Test scrollbar + pan/zoom interaction (no conflicts)
+- **Current Progress**: 0% complete
 
-**5. Advanced Markers** (~2-3 hours)
-- Multiple marker shapes
+**5. Advanced Markers** (~1.5 hours, 2 tasks)
+- Multiple marker shapes (circle, square, triangle, diamond)
 - Marker configuration per series
+- **Current Progress**: 40% complete (tooltips done)
 
-### Phase 3: Polish (Week 5-6)
-
-**6. Feature Parity Audit**
-- Compare BravenChart vs BravenChartPlus feature lists
-- Port any missing features
-- Update documentation
-
-**7. Testing & Optimization**
-- Unit test coverage
-- Integration testing
-- Performance benchmarking
-- Bug fixes
-
-**8. Migration Guide**
-- Document differences
-- Migration steps
-- Breaking changes
-- Code examples
+**Sprint 3.2 Subtotal**: ~28 hours, 26 tasks remaining
 
 ---
 
+### Medium Priority (Sprint 4 - Weeks 4-6)
+
+**Phase 3: Feature Parity & Polish** (~30 hours, 8 tasks)
+
+**6. Feature Parity Audit** (~4 hours)
+- Compare BravenChart vs BravenChartPlus feature lists
+- Port any missing chart types (Candlestick, Bubble, etc.)
+- Port any missing interaction modes
+- Update documentation
+
+**7. Testing & Optimization** (~11 hours)
+- Unit test coverage
+- Integration testing
+- Performance benchmarking at scale (10+ charts, 10k+ points)
+- Bug fixes
+
+**8. Migration Guide** (~10 hours)
+- Document differences between BravenChart and BravenChartPlus
+- Migration steps and code examples
+- Breaking changes documentation
+- Update all example apps to use BravenChartPlus
+- Deprecate old BravenChart (add deprecation notices)
+
+**9. Theming Re-Verification** (~4 hours, 8 tasks) **⚠️ CRITICAL**
+- Re-test theming system after ALL features added
+- Verify theme changes update: series, axes, tooltips, annotations, legends, markers
+- Test runtime theme switching performance
+- Test theme changes with streaming data
+- **Why**: Performance divergence happened during theming implementation - must verify complete integration
+
+**Sprint 4 Subtotal**: ~30 hours, 8 major tasks
+
+---
+
+### Overall Remaining Work
+
+| Sprint | Focus | Tasks | Hours | Status |
+|--------|-------|-------|-------|--------|
+| Sprint 3.2 | Remaining Phase 2 Features | 26 | ~28h | 🔄 IN PROGRESS |
+| Sprint 4 | Phase 3 Feature Parity | 8 | ~30h | ❌ NOT STARTED |
+| Theming Re-Verification | Quality Assurance | 8 | ~4h | ❌ NOT STARTED |
+| **TOTAL REMAINING** | - | **42** | **~62h** | - |
+
+**Recommended Approach**: 
+1. Complete Sprint 3.2 features one at a time (start with Annotations)
+2. Test each feature thoroughly in example app
+3. Commit after each feature
+4. Update SPRINT_TASKS.md progress after each commit
+5. Move to Sprint 4 when all Phase 2 features complete
+
+---
 ## Timeline Revision
 
 ### Original Estimate (from 2025-11-10)
@@ -716,6 +825,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
 ## Timeline Estimate
 
+**⚠️ UPDATED TIMELINE (2025-11-12)** - Reflects performance divergence
+
+### Original Estimate
+
 **Phase 1 (Foundation)**: 1 day (8 hours)
 - Setup BravenChartPlus skeleton
 - Create example app
@@ -738,8 +851,34 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 - Documentation
 
 **Total**: 4-5 weeks (128-148 hours)
-
 **Conservative with buffer**: 6 weeks
+
+---
+
+### Revised Timeline (After Performance Divergence)
+
+| Phase | Original Est. | Actual Spent | Remaining | Notes |
+|-------|---------------|--------------|-----------|-------|
+| Phase 1: Foundation | 8h | ~25h | 0h | Over by 17h (added extra arch work) |
+| Phase 2: Features (planned) | 36-50h | ~22h | 0h | Completed: Series, Theming, partial Annotations/Markers |
+| **Performance Divergence** | **0h** | **~25h** | **0h** | **Unplanned optimization work** |
+| Phase 2: Remaining | - | 0h | ~29.5h | Annotations, Streaming, Scrollbars, Legends |
+| Phase 3: Feature Parity | 40h | 0h | ~30h | Audit, testing, migration guide |
+| **Theming Re-Verification** | **0h** | **0h** | **~4h** | **New requirement from divergence** |
+| **TOTAL** | **84-98h** | **72h** | **~63.5h** | **~135.5h total** |
+
+**Current Status**: Sprint 3 (Performance + Features)  
+**Time Invested**: 72 hours  
+**Remaining Work**: ~63.5 hours (~3-4 weeks)  
+**Revised Completion Target**: Mid-December 2025
+
+**Variance Analysis**:
+- Phase 1 over by 17h (architectural improvements)
+- Performance divergence added 25h (unplanned)
+- Theming re-verification added 4h (quality assurance)
+- Total increase: +46h over original estimate (+54% variance)
+
+**Lesson**: Always include contingency for performance optimization work. Architectural changes often reveal performance bottlenecks that require immediate attention.
 
 ---
 
