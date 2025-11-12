@@ -66,19 +66,30 @@
 
 ### Sprint 3.2: Remaining Phase 2 Features (IN PROGRESS 🔄)
 
-#### Feature 3: Annotations (50% complete)
+#### Feature 3: Annotations (0% complete - NOT IMPLEMENTED)
+
+⚠️ **CORRECTION**: Annotations are **NOT implemented** in `lib/src_plus/`. The `SimulatedAnnotation` class is only a prototype placeholder for testing interaction behavior, not a production annotation system.
+
+**What EXISTS**: `lib/src_plus/elements/simulated_annotation.dart` - Prototype for testing drag/resize/select interactions only
+
+**What NEEDS PORTING** from `lib/src/widgets/annotations/`:
+- `chart_annotation.dart` - Base class with id, label, style, dragging, editing, zIndex, snapping
+- `annotation_style.dart` - Visual styling (colors, borders, fonts)
+- 5 concrete annotation types:
 
 | Task | Status | Hours Est. | Priority | Assignee | Notes |
 |------|--------|-----------|----------|----------|-------|
-| Port PointAnnotation from BravenChart | ❌ TODO | 1.5h | HIGH | - | Markers at specific data points |
+| Port base ChartAnnotation + AnnotationStyle classes | ❌ TODO | 1.5h | HIGH | - | Foundation for all annotation types |
+| Port PointAnnotation from BravenChart | ❌ TODO | 1h | HIGH | - | Markers at specific data points |
 | Port RangeAnnotation from BravenChart | ❌ TODO | 1.5h | HIGH | - | Vertical/horizontal ranges |
 | Port TextAnnotation from BravenChart | ❌ TODO | 1h | HIGH | - | Floating text labels |
 | Port ThresholdAnnotation from BravenChart | ❌ TODO | 1h | MEDIUM | - | Horizontal threshold lines |
 | Port TrendAnnotation from BravenChart | ❌ TODO | 1h | MEDIUM | - | Trend lines with equations |
+| Integrate annotations with ChartRenderBox | ❌ TODO | 1h | HIGH | - | Add annotation rendering layer |
 | Test annotations with pan/zoom | ❌ TODO | 0.5h | HIGH | - | Ensure annotations transform correctly |
 | Test annotations with theming | ❌ TODO | 0.5h | MEDIUM | - | Verify colors update on theme change |
 
-**Feature 3 Subtotal**: 7 tasks, ~7 hours remaining
+**Feature 3 Subtotal**: 9 tasks, ~9 hours remaining (revised up from 7h)
 
 ---
 
@@ -133,13 +144,13 @@
 
 | Feature | Tasks | Tasks Done | Tasks Remaining | Hours Remaining |
 |---------|-------|------------|-----------------|-----------------|
-| Feature 3: Annotations | 7 | 0 | 7 | ~7h |
+| Feature 3: Annotations | 9 | 0 | 9 | ~9h |
 | Feature 4: Streaming | 8 | 0 | 8 | ~9.5h |
 | Feature 5: Scrollbars | 6 | 0 | 6 | ~7h |
 | Feature 7: Markers/Legends | 5 | 1 | 4 | ~6h |
-| **TOTAL** | **26** | **1** | **25** | **~29.5h** |
+| **TOTAL** | **28** | **1** | **27** | **~31.5h** |
 
-**Sprint 3 Total Remaining**: ~29.5 hours (Phase 2 features only)
+**Sprint 3 Total Remaining**: ~31.5 hours (Phase 2 features only, revised up from 29.5h)
 
 ---
 
@@ -192,13 +203,13 @@
 | Phase 1: Foundation | 20-25h | ~25h | 0h | ✅ COMPLETE |
 | Phase 2: Feature Porting (planned) | 25-30h | ~22h | -3h to -8h | 🔄 60% COMPLETE |
 | **Performance Divergence** | **0h** | **~25h** | **+25h** | ✅ COMPLETE |
-| Phase 2: Remaining Features | - | 0h | - | ❌ ~29.5h remaining |
+| Phase 2: Remaining Features | - | 0h | - | ❌ ~31.5h remaining (revised) |
 | Phase 3: Feature Parity | 20-30h | 0h | - | ❌ ~30h remaining |
 | Theming Re-Verification | 0h | 0h | - | ❌ ~4h remaining |
-| **TOTAL** | **65-85h** | **72h** | **-** | **~63.5h remaining** |
+| **TOTAL** | **65-85h** | **72h** | **-** | **~65.5h remaining** |
 
-**Revised Total Estimate**: ~135.5 hours (vs original 85 hours)  
-**Reason for Increase**: Performance optimization divergence (+25h), theming re-verification (+4h)
+**Revised Total Estimate**: ~137.5 hours (vs original 85 hours)  
+**Reason for Increase**: Performance optimization divergence (+25h), theming re-verification (+4h), annotation base class work (+2h)
 
 ### Feature Completion Status
 
@@ -206,7 +217,7 @@
 |---------|--------|----------|-----------------|
 | ✅ ChartSeries (sealed classes) | COMPLETE | 100% | 0 |
 | ✅ Theming (runtime switching) | COMPLETE | 100% | 0 (needs re-verification) |
-| 🔄 Annotations | IN PROGRESS | 50% | 7 tasks (~7h) |
+| ❌ Annotations | NOT STARTED | 0% | 9 tasks (~9h) - CORRECTED |
 | ❌ Streaming | NOT STARTED | 0% | 8 tasks (~9.5h) |
 | ❌ Scrollbars | NOT STARTED | 0% | 6 tasks (~7h) |
 | ✅ Chart Types | COMPLETE | 100% | 0 |
@@ -277,7 +288,9 @@
    - Sync with ChartTransform (two-way binding)
    - Test no conflicts with pan gestures
 
-**RECOMMENDED START**: Begin with **Annotations** (Feature 3) - completes partial work, enables richer data visualization
+**RECOMMENDED START**: Begin with **Legend Widget** (Feature 7) - quickest win (~3h), improves usability. Then tackle **Annotations** (Feature 3) or **Streaming** (Feature 4) based on priority.
+
+⚠️ **NOTE**: Annotations were incorrectly marked as "50% complete" in earlier documentation. They are 0% complete (only prototype test element exists).
 
 ---
 
