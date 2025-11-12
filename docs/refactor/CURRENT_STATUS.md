@@ -67,14 +67,15 @@
 | **SeriesElement** | ✅ Complete | `elements/series_element.dart` | Renders series with interpolation |
 | **SimulatedSeries** | ✅ Complete | `elements/simulated_series.dart` | Hit testing for series |
 | **SimulatedDataPoint** | ✅ Complete | `elements/simulated_datapoint.dart` | Individual point hit testing |
-| **SimulatedAnnotation** | ✅ Complete | `elements/simulated_annotation.dart` | Annotation rendering + hit testing |
+| **SimulatedAnnotation** | ⚠️ PROTOTYPE ONLY | `elements/simulated_annotation.dart` | **NOT PRODUCTION**: Test element for interaction only |
 | **ResizeHandleElement** | ✅ Complete | `elements/resize_handle_element.dart` | Annotation resize handles |
 
 **Key Achievements**:
 - ✅ Full element system with ChartElement interface
 - ✅ Precise hit testing for all element types
 - ✅ Selection/hover visual feedback
-- ✅ Annotation resizing with handles
+- ⚠️ **SimulatedAnnotation is NOT a production annotation system** - only for testing drag/resize/select behavior
+- ❌ **Real annotation system (5 types) NOT YET PORTED** from `lib/src/widgets/annotations/`
 
 ---
 
@@ -237,22 +238,26 @@ a4010b1 - docs: Comprehensive deep-dive analysis for core interaction refactor
 
 ## What's NOT in lib/src_plus (By Design)
 
-The following features from the original `lib/src/` library are **intentionally NOT implemented** in `lib/src_plus/` because it's a **prototype** focused on architecture validation:
+The following features from the original `lib/src/` library are **intentionally NOT implemented** in `lib/src_plus/` because it's still in **active development** following the incremental merge strategy:
 
-### Not Implemented (Intentional)
-- ❌ Real-time data streaming
+### Not Yet Implemented (Phase 2/3 Remaining Work)
+- ❌ **Real Annotation System** (5 types: PointAnnotation, RangeAnnotation, TextAnnotation, ThresholdAnnotation, TrendAnnotation)
+  * ⚠️ `SimulatedAnnotation` exists but is ONLY a prototype test element, NOT production-ready
+  * See: `lib/src/widgets/annotations/` for what needs to be ported (~9 hours work)
+- ❌ Real-time data streaming (BufferManager, StreamingController, StreamingConfig)
 - ❌ ChartController for programmatic control
-- ❌ Legend rendering
-- ❌ Complex annotation types (point, range, text, threshold, trend)
-- ❌ Scrollbar integration
+- ❌ Legend rendering (show/hide series functionality)
+- ❌ Scrollbar integration (ChartScrollbar widget)
 - ❌ Auto-scroll configuration
-- ❌ Keyboard shortcuts (beyond focus management)
+- ❌ Advanced keyboard shortcuts (beyond basic pan/zoom)
 - ❌ Context menus
-- ❌ Export functionality
-- ❌ Accessibility features
-- ❌ Unit test coverage
+- ❌ Export functionality (PNG, SVG, CSV)
+- ❌ Accessibility features (ARIA labels, screen reader support)
+- ❌ Comprehensive unit test coverage
 
-**Rationale**: The prototype validates the **interaction architecture**. Production features will be integrated according to Phase 1-3 plans in `docs/refactor/core-interaction/`.
+**Status**: See [SPRINT_TASKS.md](./SPRINT_TASKS.md) for detailed feature implementation roadmap (~65.5 hours remaining work).
+
+**Rationale**: Following **incremental merge strategy** from [07-INCREMENTAL_MERGE_STRATEGY.md](./core-interaction/07-INCREMENTAL_MERGE_STRATEGY.md). Features are being ported one at a time from `lib/src/` (BravenChart) to `lib/src_plus/` (BravenChartPlus), with testing after each addition.
 
 ---
 
