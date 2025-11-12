@@ -125,18 +125,18 @@
 
 ---
 
-#### Feature 7: Markers, Legends, Tooltips (40% complete)
+#### Feature 7: Markers, Legends, Tooltips (80% complete)
 
 | Task | Status | Hours Est. | Priority | Assignee | Notes |
 |------|--------|-----------|----------|----------|-------|
-| Port Legend widget from BravenChart | ❌ TODO | 2h | HIGH | - | Show/hide series functionality |
-| Connect Legend to BravenChartPlus | ❌ TODO | 1h | HIGH | - | Toggle series visibility |
-| Update chart when series hidden/shown | ❌ TODO | 1h | MEDIUM | - | Rebuild with subset of series |
+| Port Legend widget from BravenChart | ✅ DONE | 1.5h | HIGH | - | ChartLegend widget created, sealed class API |
+| Connect Legend to BravenChartPlus | ✅ DONE | 0.5h | HIGH | - | Example 7 in feature showcase |
+| Update chart when series hidden/shown | ✅ DONE | 0.5h | MEDIUM | - | State management via Set<String> hiddenSeriesIds |
 | Port advanced Marker shapes | ❌ TODO | 1.5h | MEDIUM | - | Circle, square, triangle, diamond |
 | Test markers with different chart types | ❌ TODO | 0.5h | LOW | - | Line, bar, scatter, area |
 | Tooltips already implemented | ✅ DONE | - | - | - | Completed in Sprint 2 |
 
-**Feature 7 Subtotal**: 5 tasks, ~6 hours remaining
+**Feature 7 Subtotal**: 5 tasks, ~2 hours remaining (Legend complete: 2.5h actual vs 4h estimated)
 
 ---
 
@@ -147,10 +147,10 @@
 | Feature 3: Annotations | 9 | 0 | 9 | ~9h |
 | Feature 4: Streaming | 8 | 0 | 8 | ~9.5h |
 | Feature 5: Scrollbars | 6 | 0 | 6 | ~7h |
-| Feature 7: Markers/Legends | 5 | 1 | 4 | ~6h |
-| **TOTAL** | **28** | **1** | **27** | **~31.5h** |
+| Feature 7: Markers/Legends | 5 | 4 | 1 | ~2h |
+| **TOTAL** | **28** | **4** | **24** | **~27.5h** |
 
-**Sprint 3 Total Remaining**: ~31.5 hours (Phase 2 features only, revised up from 29.5h)
+**Sprint 3 Total Remaining**: ~27.5 hours (Phase 2 features only, reduced from 31.5h)
 
 ---
 
@@ -221,7 +221,7 @@
 | ❌ Streaming | NOT STARTED | 0% | 8 tasks (~9.5h) |
 | ❌ Scrollbars | NOT STARTED | 0% | 6 tasks (~7h) |
 | ✅ Chart Types | COMPLETE | 100% | 0 |
-| 🔄 Markers/Legends/Tooltips | IN PROGRESS | 40% | 5 tasks (~6h) |
+| 🔄 Markers/Legends/Tooltips | IN PROGRESS | 80% | 1 task remaining (~2h) - Legend DONE |
 
 ---
 
