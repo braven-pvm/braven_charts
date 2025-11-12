@@ -1,6 +1,8 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Axis System
 
+// import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'axis_config.dart';
 import 'linear_scale.dart';
 import 'tick.dart';
@@ -83,6 +85,7 @@ class Axis {
     );
 
     ticks = _generateTicks();
+    // debugPrint('   Axis ticks regenerated: ${ticks.length} ticks for range [$newDataMin, $newDataMax]');
   }
 
   /// Updates the pixel range (called when layout changes).

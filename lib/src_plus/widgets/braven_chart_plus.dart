@@ -14,6 +14,7 @@ import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/chart_type.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
 import '../utils/data_converter.dart';
@@ -32,6 +33,7 @@ import '../utils/data_converter.dart';
 class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,
+    required this.chartType,
     required this.series,
     this.theme,
     this.xAxis,
@@ -42,6 +44,7 @@ class BravenChartPlus extends StatefulWidget {
     this.showDebugInfo = false,
   });
 
+  final ChartType chartType;
   final List<ChartSeries> series;
   final ChartTheme? theme;
   final AxisConfig? xAxis;
@@ -67,6 +70,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   // Element generator function for pan/zoom regeneration
   List<ChartElement> Function(ChartTransform)? _elementGenerator;
+
+  // Generation counter to track when elements actually need regeneration
+  // Only incremented in _rebuildElements when series/theme change
+  int _elementGeneratorVersion = 0;
 
   chart_axis.Axis? _xAxis;
   chart_axis.Axis? _yAxis;
@@ -96,14 +103,21 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
+    debugPrint('🔄 didUpdateWidget: seriesChanged=${widget.series != oldWidget.series}, themeChanged=${widget.theme != oldWidget.theme}');
+    debugPrint('   oldTheme seriesColors: ${oldWidget.theme?.seriesColors}');
+    debugPrint('   newTheme seriesColors: ${widget.theme?.seriesColors}');
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
+      debugPrint('🎨 Theme/Series changed! Calling _rebuildElements()');
       _rebuildElements();
       // Request focus after rebuild to ensure keyboard events still work
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _focusNode.requestFocus();
+          debugPrint('🎯 Focus requested after theme/series change');
         }
       });
+    } else {
+      debugPrint('⚠️ NO CHANGE DETECTED - not rebuilding');
     }
   }
 
@@ -118,6 +132,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _rebuildElements() {
+    debugPrint('📋 _rebuildElements called');
+    debugPrint('   Current theme: ${widget.theme}');
+    debugPrint('   Theme seriesColors: ${widget.theme?.seriesColors}');
+
     _spatialIndex.clear();
 
     // Compute data bounds from all series
@@ -155,13 +173,34 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create element generator function
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
+      final seriesIds = widget.series.map((s) => s.id).join(', ');
+      debugPrint('🔧 Element generator executing for series: [$seriesIds]');
       return DataConverter.seriesToElements(series: widget.series, transform: transform, theme: widget.theme, strokeWidth: 2.0);
     };
+
+    // Increment version to signal that regeneration is needed
+    _elementGeneratorVersion++;
+
+    debugPrint('✅ _rebuildElements complete, new generator created (version $_elementGeneratorVersion)');
   }
 
-  void _onCoordinatorChanged() => setState(() {});
+  void _onCoordinatorChanged() {
+    // CRITICAL FIX: Only call setState() if debug overlay is visible!
+    // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
+    // so we don't need setState() for cursor movement.
+    // setState() triggers expensive widget tree rebuilds.
+    if (widget.showDebugInfo) {
+      setState(() {});
+    }
+  }
 
-  void _handlePanStart(DragStartDetails details) {}
+  void _handlePanStart(DragStartDetails details) {
+    // Request focus on pan start to enable keyboard controls
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+      debugPrint('🎯 Focus requested via pan start');
+    }
+  }
 
   void _handlePanUpdate(DragUpdateDetails details) {
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -169,7 +208,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handlePanEnd(DragEndDetails details) {}
-  void _handleTapDown(TapDownDetails details) {}
+
+  void _handleTapDown(TapDownDetails details) {
+    // Request focus on tap to enable keyboard controls
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+      debugPrint('🎯 Focus requested via tap');
+    }
+  }
+
   void _handleTapUp(TapUpDetails details) {}
 
   void _handleCursorChange(MouseCursor cursor) {
@@ -179,41 +226,53 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleKeyEvent(KeyEvent event) {
+    debugPrint('⌨️ _handleKeyEvent: ${event.runtimeType}, key=${event.logicalKey}');
+
     if (event is KeyDownEvent) {
       final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      debugPrint('   RenderBox found: ${renderBox != null}');
 
       if (renderBox == null) return;
 
       // Reset view
       if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
+        debugPrint('   Calling resetView()');
         renderBox.resetView();
       }
       // Shift modifier for zoom
       else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        debugPrint('   Adding Shift modifier');
         _coordinator.addModifierKey(LogicalKeyboardKey.shift);
       }
       // Arrow keys for panning
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        debugPrint('   Arrow Left - calling panChart(-20, 0)');
         renderBox.panChart(-20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        debugPrint('   Arrow Right - calling panChart(20, 0)');
         renderBox.panChart(20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        debugPrint('   Arrow Up - calling panChart(0, -20)');
         renderBox.panChart(0.0, -20.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        debugPrint('   Arrow Down - calling panChart(0, 20)');
         renderBox.panChart(0.0, 20.0);
       }
       // Zoom in with + or = or numpad +
       else if (event.logicalKey == LogicalKeyboardKey.equal ||
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
+        debugPrint('   Zoom In key - calling zoomChart(1.1)');
         renderBox.zoomChart(1.1);
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
+        debugPrint('   Zoom Out key - calling zoomChart(0.9)');
         renderBox.zoomChart(0.9);
       }
     } else if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+        debugPrint('   Removing Shift modifier');
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
@@ -221,6 +280,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🏗️  BravenChartPlus.build() called');
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
@@ -231,42 +291,52 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       child: Builder(
         builder: (context) {
           final hasFocus = _focusNode.hasFocus;
-          return Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: widget.backgroundColor,
-              border: hasFocus ? Border.all(color: Colors.blue, width: 2) : null,
-            ),
-            child: Stack(
-              children: [
-                MouseRegion(
-                  cursor: _currentCursor,
-                  child: RawGestureDetector(
-                    gestures: {
-                      PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
-                        () => _panRecognizer,
-                        (recognizer) {},
+          return MouseRegion(
+            // Request focus when mouse enters this chart (for keyboard controls)
+            onEnter: (_) {
+              if (!_focusNode.hasFocus) {
+                _focusNode.requestFocus();
+                debugPrint('🎯 Focus requested via mouse enter');
+              }
+            },
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                color: widget.backgroundColor,
+                border: hasFocus ? Border.all(color: Colors.blue, width: 2) : null,
+              ),
+              child: Stack(
+                children: [
+                  MouseRegion(
+                    cursor: _currentCursor,
+                    child: RawGestureDetector(
+                      gestures: {
+                        PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
+                          () => _panRecognizer,
+                          (recognizer) {},
+                        ),
+                        PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
+                          () => _tapRecognizer,
+                          (recognizer) {},
+                        ),
+                      },
+                      child: _ChartRenderWidget(
+                        key: _renderBoxKey,
+                        coordinator: _coordinator,
+                        spatialIndex: _spatialIndex,
+                        elementGenerator: _elementGenerator,
+                        elementGeneratorVersion: _elementGeneratorVersion,
+                        xAxis: _xAxis,
+                        yAxis: _yAxis,
+                        theme: widget.theme,
+                        onCursorChange: _handleCursorChange,
                       ),
-                      PriorityTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityTapGestureRecognizer>(
-                        () => _tapRecognizer,
-                        (recognizer) {},
-                      ),
-                    },
-                    child: _ChartRenderWidget(
-                      key: _renderBoxKey,
-                      coordinator: _coordinator,
-                      spatialIndex: _spatialIndex,
-                      elementGenerator: _elementGenerator,
-                      xAxis: _xAxis,
-                      yAxis: _yAxis,
-                      theme: widget.theme,
-                      onCursorChange: _handleCursorChange,
                     ),
                   ),
-                ),
-                if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
-              ],
+                  if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
+                ],
+              ),
             ),
           );
         },
@@ -281,6 +351,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.coordinator,
     required this.spatialIndex,
     this.elementGenerator,
+    required this.elementGeneratorVersion,
     this.xAxis,
     this.yAxis,
     this.theme,
@@ -290,6 +361,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final ChartInteractionCoordinator coordinator;
   final QuadTree spatialIndex;
   final List<ChartElement> Function(ChartTransform)? elementGenerator;
+  final int elementGeneratorVersion;
   final chart_axis.Axis? xAxis;
   final chart_axis.Axis? yAxis;
   final ChartTheme? theme;
@@ -304,8 +376,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
+    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called (version $elementGeneratorVersion)');
     renderObject
-      ..setElementGenerator(elementGenerator)
+      ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
       ..setYAxis(yAxis)
       ..setTheme(theme);

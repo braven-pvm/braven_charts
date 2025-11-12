@@ -28,14 +28,22 @@ class SeriesElement implements ChartElement {
     this.isHovered = false,
     this.strokeWidth = 2.0,
     this.themeColor,
-  }) {
+  }) : _currentTransform = transform {
     _computeBounds();
   }
 
   final ChartSeries series;
-  final ChartTransform transform;
+  final ChartTransform transform; // Initial transform for bounds computation
+  ChartTransform _currentTransform; // Current transform for painting
   final double strokeWidth;
   final Color? themeColor;
+
+  /// Update the current transform before painting (for real-time pan/zoom).
+  /// This allows path caching to work - transform stored at construction stays fixed,
+  /// but _currentTransform updates on every paint.
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
 
   @override
   final bool isSelected;
@@ -44,6 +52,11 @@ class SeriesElement implements ChartElement {
   final bool isHovered;
 
   late Rect _bounds;
+
+  // Cache the rendered path to avoid recalculating on every paint
+  Path? _cachedPath;
+  List<Offset>? _cachedTransformedPoints;
+  late ChartTransform _cachedTransform;
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   void _computeBounds() {
@@ -170,30 +183,51 @@ class SeriesElement implements ChartElement {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Draw line with configured interpolation
-    switch (series.interpolation) {
-      case LineInterpolation.linear:
-        _paintLinearPath(canvas, series.points, paint);
-        break;
-      case LineInterpolation.bezier:
-        _paintBezierPath(canvas, series.points, paint, series.tension);
-        break;
-      case LineInterpolation.stepped:
-        _paintSteppedPath(canvas, series.points, paint);
-        break;
-      case LineInterpolation.monotone:
-        _paintMonotonePath(canvas, series.points, paint);
-        break;
+    // Check if we need to regenerate the path (transform changed or no cache)
+    final needsRegeneration = _cachedPath == null || _cachedTransform != _currentTransform;
+
+    if (needsRegeneration) {
+      // PRE-TRANSFORM all points ONCE to avoid redundant calculations
+      final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
+
+      final path = Path();
+      if (transformedPoints.isEmpty) return;
+      path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+
+      // Draw line with configured interpolation using cached transforms
+      switch (series.interpolation) {
+        case LineInterpolation.linear:
+          for (int i = 1; i < transformedPoints.length; i++) {
+            path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+          }
+          break;
+        case LineInterpolation.bezier:
+          _addBezierToPath(path, transformedPoints, series.tension);
+          break;
+        case LineInterpolation.stepped:
+          _addSteppedToPath(path, transformedPoints);
+          break;
+        case LineInterpolation.monotone:
+          _addMonotoneToPath(path, transformedPoints);
+          break;
+      }
+
+      // Cache the generated path, transformed points, and transform
+      _cachedPath = path;
+      _cachedTransformedPoints = transformedPoints;
+      _cachedTransform = _currentTransform;
     }
 
-    // Draw data point markers if enabled
-    if (series.showDataPointMarkers) {
-      _paintDataPointMarkers(canvas, series.points, series.dataPointMarkerRadius, baseColor);
+    // Paint using the cached path (no regeneration on hover!)
+    canvas.drawPath(_cachedPath!, paint);
+
+    // Draw data point markers if enabled (use cached transforms!)
+    if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
+      _paintDataPointMarkers(canvas, _cachedTransformedPoints!, series.dataPointMarkerRadius, baseColor);
     }
   }
 
   void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
-    // Create paint for filled circles
     final pointPaint = Paint()
       ..color = isSelected
           ? baseColor.withOpacity(1.0)
@@ -203,7 +237,7 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
+      final plotPos = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(plotPos, series.markerRadius, pointPaint);
     }
   }
@@ -211,38 +245,37 @@ class SeriesElement implements ChartElement {
   void _paintAreaSeries(Canvas canvas, AreaChartSeries series, Color baseColor) {
     if (series.points.isEmpty) return;
 
+    // PRE-TRANSFORM all points ONCE
+    final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
+
     final path = Path();
-    final firstPoint = series.points.first;
-    final firstPlot = transform.dataToPlot(firstPoint.x, firstPoint.y);
+    final firstPlot = transformedPoints.first;
 
     // Start from x-axis (bottom of plot area)
-    path.moveTo(firstPlot.dx, transform.plotHeight);
+    path.moveTo(firstPlot.dx, _currentTransform.plotHeight);
     path.lineTo(firstPlot.dx, firstPlot.dy);
 
-    // Build path through points using configured interpolation
+    // Build fill path through points using configured interpolation
     switch (series.interpolation) {
       case LineInterpolation.linear:
-        for (int i = 1; i < series.points.length; i++) {
-          final point = series.points[i];
-          final plotPos = transform.dataToPlot(point.x, point.y);
-          path.lineTo(plotPos.dx, plotPos.dy);
+        for (int i = 1; i < transformedPoints.length; i++) {
+          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
         }
         break;
       case LineInterpolation.bezier:
-        _addBezierToPath(path, series.points, series.tension, startIndex: 1);
+        _addBezierToPath(path, transformedPoints, series.tension, startIndex: 1);
         break;
       case LineInterpolation.stepped:
-        _addSteppedToPath(path, series.points, startIndex: 1);
+        _addSteppedToPath(path, transformedPoints, startIndex: 1);
         break;
       case LineInterpolation.monotone:
-        _addMonotoneToPath(path, series.points, startIndex: 1);
+        _addMonotoneToPath(path, transformedPoints, startIndex: 1);
         break;
     }
 
     // Close to x-axis
-    final lastPoint = series.points.last;
-    final lastPlot = transform.dataToPlot(lastPoint.x, lastPoint.y);
-    path.lineTo(lastPlot.dx, transform.plotHeight);
+    final lastPlot = transformedPoints.last;
+    path.lineTo(lastPlot.dx, _currentTransform.plotHeight);
     path.close();
 
     // Fill area
@@ -251,7 +284,7 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Draw line on top
+    // Draw line on top (reuse cached transforms!)
     final linePaint = Paint()
       ..color = isSelected
           ? baseColor.withOpacity(1.0)
@@ -263,24 +296,31 @@ class SeriesElement implements ChartElement {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
+    final linePath = Path();
+    linePath.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+
     switch (series.interpolation) {
       case LineInterpolation.linear:
-        _paintLinearPath(canvas, series.points, linePaint);
+        for (int i = 1; i < transformedPoints.length; i++) {
+          linePath.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
         break;
       case LineInterpolation.bezier:
-        _paintBezierPath(canvas, series.points, linePaint, series.tension);
+        _addBezierToPath(linePath, transformedPoints, series.tension);
         break;
       case LineInterpolation.stepped:
-        _paintSteppedPath(canvas, series.points, linePaint);
+        _addSteppedToPath(linePath, transformedPoints);
         break;
       case LineInterpolation.monotone:
-        _paintMonotonePath(canvas, series.points, linePaint);
+        _addMonotoneToPath(linePath, transformedPoints);
         break;
     }
 
-    // Draw data point markers if enabled
+    canvas.drawPath(linePath, linePaint);
+
+    // Draw data point markers if enabled (reuse cached transforms!)
     if (series.showDataPointMarkers) {
-      _paintDataPointMarkers(canvas, series.points, series.dataPointMarkerRadius, baseColor);
+      _paintDataPointMarkers(canvas, transformedPoints, series.dataPointMarkerRadius, baseColor);
     }
   }
 
@@ -294,17 +334,15 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      final zeroY = transform.dataToPlot(point.x, 0).dy;
+      final plotPos = _currentTransform.dataToPlot(point.x, point.y);
+      final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
 
       // Calculate bar width based on configuration
       double barWidth;
       if (series.barWidthPixels != null) {
-        // Explicit pixel width (scales with zoom)
-        barWidth = series.barWidthPixels! / transform.dataPerPixelX;
+        barWidth = series.barWidthPixels! / _currentTransform.dataPerPixelX;
         barWidth = barWidth.clamp(series.minWidth, series.maxWidth);
       } else {
-        // Percentage of X-axis spacing
         final spacingInPixels = _calculateXAxisSpacing(series.points);
         barWidth = spacingInPixels * series.barWidthPercent!;
         barWidth = barWidth.clamp(series.minWidth, series.maxWidth);
@@ -315,14 +353,9 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  /// Calculate typical X-axis spacing for bar width calculations.
   double _calculateXAxisSpacing(List<ChartDataPoint> points) {
-    if (points.length == 1) {
-      // Single bar: use 60% of visible plot width
-      return transform.plotWidth * 0.6;
-    }
+    if (points.length == 1) return _currentTransform.plotWidth * 0.6;
 
-    // Multiple bars: calculate minimum X spacing between points
     double minXSpacing = double.infinity;
     for (int i = 0; i < points.length - 1; i++) {
       final xSpacing = (points[i + 1].x - points[i].x).abs();
@@ -331,66 +364,28 @@ class SeriesElement implements ChartElement {
       }
     }
 
-    // Convert data spacing to plot pixels
     if (minXSpacing != double.infinity) {
-      return minXSpacing / transform.dataPerPixelX;
-    } else {
-      return 40.0; // Fallback if spacing calculation fails
+      return minXSpacing / _currentTransform.dataPerPixelX;
     }
+    return 40.0;
   }
 
-  // ==================== LINE INTERPOLATION METHODS ====================
+  // ==================== OPTIMIZED INTERPOLATION METHODS ====================
 
-  /// Paint linear (straight line) path through points.
-  void _paintLinearPath(Canvas canvas, List<ChartDataPoint> points, Paint paint) {
-    final path = Path();
-    bool first = true;
+  /// Add bezier curves using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
 
-    for (final point in points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
-      if (first) {
-        path.moveTo(plotPos.dx, plotPos.dy);
-        first = false;
-      } else {
-        path.lineTo(plotPos.dx, plotPos.dy);
-      }
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  /// Paint smooth bezier curve through points using Catmull-Rom splines.
-  void _paintBezierPath(Canvas canvas, List<ChartDataPoint> points, Paint paint, double tension) {
-    if (points.length < 2) return;
-
-    final path = Path();
-    final firstPlot = transform.dataToPlot(points[0].x, points[0].y);
-    path.moveTo(firstPlot.dx, firstPlot.dy);
-
-    _addBezierToPath(path, points, tension);
-    canvas.drawPath(path, paint);
-  }
-
-  /// Add bezier curves to an existing path (for area charts).
-  void _addBezierToPath(Path path, List<ChartDataPoint> points, double tension, {int startIndex = 1}) {
-    if (points.length < 2 || startIndex >= points.length) return;
-
-    // Convert tension (0.0-1.0) to Catmull-Rom alpha (0.0 = tight, 0.5 = centripetal, 1.0 = loose)
     final alpha = tension;
 
-    for (int i = startIndex; i < points.length; i++) {
-      final p0 = i > 0 ? points[i - 1] : points[i];
-      final p1 = points[i];
-      final p2 = i < points.length - 1 ? points[i + 1] : points[i];
-      final p3 = i < points.length - 2 ? points[i + 2] : p2;
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      // Access pre-transformed points by index - NO TRANSFORMS IN LOOP!
+      final plot0 = transformedPoints[i > 0 ? i - 1 : i];
+      final plot1 = transformedPoints[i];
+      final plot2 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : i];
+      final plot3 = transformedPoints[i < transformedPoints.length - 2 ? i + 2 : i];
 
-      // Calculate control points using Catmull-Rom to cubic bezier conversion
-      final plot0 = transform.dataToPlot(p0.x, p0.y);
-      final plot1 = transform.dataToPlot(p1.x, p1.y);
-      final plot2 = transform.dataToPlot(p2.x, p2.y);
-      final plot3 = transform.dataToPlot(p3.x, p3.y);
-
-      // Control points for cubic bezier (simplified formula)
+      // Catmull-Rom to cubic bezier control points
       final cp1x = plot1.dx + (plot2.dx - plot0.dx) * alpha / 6;
       final cp1y = plot1.dy + (plot2.dy - plot0.dy) * alpha / 6;
       final cp2x = plot2.dx - (plot3.dx - plot1.dx) * alpha / 6;
@@ -400,59 +395,35 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  /// Paint stepped (horizontal then vertical) path through points.
-  void _paintSteppedPath(Canvas canvas, List<ChartDataPoint> points, Paint paint) {
-    if (points.length < 2) return;
+  /// Add stepped lines using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _addSteppedToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
 
-    final path = Path();
-    final firstPlot = transform.dataToPlot(points[0].x, points[0].y);
-    path.moveTo(firstPlot.dx, firstPlot.dy);
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      final prevPlot = transformedPoints[i - 1];
+      final currPlot = transformedPoints[i];
 
-    _addSteppedToPath(path, points);
-    canvas.drawPath(path, paint);
-  }
-
-  /// Add stepped lines to an existing path (for area charts).
-  void _addSteppedToPath(Path path, List<ChartDataPoint> points, {int startIndex = 1}) {
-    if (points.length < 2 || startIndex >= points.length) return;
-
-    for (int i = startIndex; i < points.length; i++) {
-      final prevPlot = transform.dataToPlot(points[i - 1].x, points[i - 1].y);
-      final currPlot = transform.dataToPlot(points[i].x, points[i].y);
-
-      // Horizontal line to next X, then vertical line to next Y
       path.lineTo(currPlot.dx, prevPlot.dy);
       path.lineTo(currPlot.dx, currPlot.dy);
     }
   }
 
-  /// Paint monotone cubic interpolation (preserves monotonicity).
-  void _paintMonotonePath(Canvas canvas, List<ChartDataPoint> points, Paint paint) {
-    // For simplicity, use linear interpolation for now (full monotone is complex)
-    // TODO: Implement full monotone cubic interpolation if needed
-    _paintLinearPath(canvas, points, paint);
-  }
+  /// Add monotone curves using PRE-TRANSFORMED points (currently uses linear)
+  void _addMonotoneToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
 
-  /// Add monotone curves to an existing path (for area charts).
-  void _addMonotoneToPath(Path path, List<ChartDataPoint> points, {int startIndex = 1}) {
-    // For simplicity, use linear interpolation for now
-    // TODO: Implement full monotone cubic interpolation if needed
-    if (points.length < 2 || startIndex >= points.length) return;
-
-    for (int i = startIndex; i < points.length; i++) {
-      final currPlot = transform.dataToPlot(points[i].x, points[i].y);
-      path.lineTo(currPlot.dx, currPlot.dy);
+    for (int i = startIndex; i < transformedPoints.length; i++) {
+      path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
     }
   }
 
-  /// Paint data point markers (dots) at each data point.
-  void _paintDataPointMarkers(Canvas canvas, List<ChartDataPoint> points, double radius, Color baseColor) {
+  /// Paint markers using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  void _paintDataPointMarkers(Canvas canvas, List<Offset> transformedPoints, double radius, Color baseColor) {
     final markerPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
 
-    for (final point in points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
+    for (final plotPos in transformedPoints) {
       canvas.drawCircle(plotPos, radius, markerPaint);
     }
   }
