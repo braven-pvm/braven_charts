@@ -6,6 +6,7 @@ import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
+import 'package:braven_charts/src_plus/widgets/chart_legend.dart';
 import 'package:flutter/material.dart';
 
 /// Feature Showcase for BravenChartPlus (lib/src_plus/)
@@ -25,10 +26,10 @@ import 'package:flutter/material.dart';
 /// - Tooltips (basic - shown on hover)
 /// - Performance optimizations (Picture caching, hit test throttling)
 /// - Focus management for keyboard interaction
+/// - Legend widget (show/hide series with click interaction)
 ///
 /// ❌ NOT YET IMPLEMENTED:
 /// - Real annotation system (5 types: Point, Range, Text, Threshold, Trend)
-/// - Legend widget (show/hide series)
 /// - Real-time streaming data
 /// - Scrollbars
 /// - Advanced markers (shapes beyond circles)
@@ -64,6 +65,73 @@ class FeatureShowcasePage extends StatefulWidget {
 class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   ChartTheme _selectedTheme = ChartTheme.light;
   bool _showDebugInfo = false;
+
+  // Legend example state
+  final Set<String> _hiddenSeriesIds = {};
+  late final List<ChartSeries> _legendExampleSeries;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Legend example series
+    _legendExampleSeries = [
+      LineChartSeries(
+        id: 'legend_line',
+        name: 'Line Chart',
+        interpolation: LineInterpolation.bezier,
+        tension: 0.4,
+        strokeWidth: 2.5,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 4.0,
+        color: Colors.blue,
+        points: List.generate(15, (i) {
+          final x = i / 2.0;
+          final y = 50 + 25 * Math.sin(x * 0.8);
+          return ChartDataPoint(x: x, y: y);
+        }),
+        isXOrdered: true,
+      ),
+      BarChartSeries(
+        id: 'legend_bar',
+        name: 'Bar Chart',
+        barWidthPercent: 0.6,
+        color: Colors.orange,
+        points: List.generate(10, (i) {
+          final x = i / 2.0;
+          final y = 40 + 20 * Math.sin(i * 0.5);
+          return ChartDataPoint(x: x, y: y);
+        }),
+        isXOrdered: true,
+      ),
+      ScatterChartSeries(
+        id: 'legend_scatter',
+        name: 'Scatter Plot',
+        markerRadius: 6.0,
+        color: Colors.green,
+        points: List.generate(12, (i) {
+          final x = i / 2.0;
+          final y = 60 + 15 * Math.cos(i * 0.6);
+          return ChartDataPoint(x: x, y: y);
+        }),
+        isXOrdered: true,
+      ),
+      AreaChartSeries(
+        id: 'legend_area',
+        name: 'Area Chart',
+        interpolation: LineInterpolation.bezier,
+        tension: 0.5,
+        strokeWidth: 2.0,
+        fillOpacity: 0.3,
+        color: Colors.purple,
+        points: List.generate(15, (i) {
+          final x = i / 2.0;
+          final y = 30 + 20 * Math.sin(x * 0.7 + 1.5);
+          return ChartDataPoint(x: x, y: y);
+        }),
+        isXOrdered: true,
+      ),
+    ];
+  }
 
   // Generate sample data for demonstrations
   List<ChartDataPoint> _generateSineWave({
@@ -600,6 +668,63 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
             const SizedBox(height: 32),
 
+            // Feature 7: Legend Widget (Show/Hide Series)
+            _buildFeatureCard(
+              title: '7. Legend Widget - Show/Hide Series',
+              description: 'Interactive legend for controlling series visibility. Click legend items to show/hide series.',
+              features: const [
+                'Click to show/hide series',
+                'Visual indicator for hidden series',
+                'Supports all chart types',
+                'Customizable styling',
+                'Horizontal/vertical orientation',
+              ],
+              child: Column(
+                children: [
+                  // Chart with visible series only
+                  SizedBox(
+                    height: 250,
+                    child: BravenChartPlus(
+                      key: const ValueKey('chart_legend'),
+                      chartType: ChartType.line,
+                      series: _legendExampleSeries
+                          .where((s) => !_hiddenSeriesIds.contains(s.id))
+                          .toList(),
+                      theme: _selectedTheme,
+                      backgroundColor: _selectedTheme == ChartTheme.dark 
+                          ? Colors.grey.shade900 
+                          : Colors.white,
+                      showDebugInfo: _showDebugInfo,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Legend widget
+                  ChartLegend(
+                    series: _legendExampleSeries,
+                    hiddenSeriesIds: _hiddenSeriesIds,
+                    onSeriesToggle: (seriesId) {
+                      setState(() {
+                        if (_hiddenSeriesIds.contains(seriesId)) {
+                          _hiddenSeriesIds.remove(seriesId);
+                        } else {
+                          _hiddenSeriesIds.add(seriesId);
+                        }
+                      });
+                    },
+                    orientation: Axis.horizontal,
+                    spacing: 20.0,
+                    runSpacing: 12.0,
+                    padding: const EdgeInsets.all(16.0),
+                    borderRadius: BorderRadius.circular(8),
+                    showBorder: true,
+                    borderColor: Colors.grey.shade300,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
             // Footer with implementation status
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -635,7 +760,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     '• 4 chart types (Line, Bar, Scatter, Area)\n'
                     '• Data point markers\n'
                     '• Basic tooltips\n'
-                    '• Performance optimizations',
+                    '• Performance optimizations\n'
+                    '• Legend widget (show/hide series)',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 16),
@@ -646,10 +772,9 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                   const SizedBox(height: 4),
                   Text(
                     '• Real annotation system (5 types: Point, Range, Text, Threshold, Trend) - ~9h\n'
-                    '• Legend widget (show/hide series) - ~3h\n'
                     '• Real-time streaming data - ~9.5h\n'
                     '• Scrollbars - ~7h\n'
-                    '• Advanced markers (shapes) - ~1.5h\n'
+                    '• Advanced markers (shapes beyond circles) - ~1.5h\n'
                     '\n'
                     'See docs/refactor/SPRINT_TASKS.md for detailed roadmap.',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
