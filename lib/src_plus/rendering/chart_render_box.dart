@@ -1,6 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Interaction Architecture
 
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
@@ -105,6 +106,28 @@ class ChartRenderBox extends RenderBox {
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
 
+  // ==========================================================================
+  // Hit Test Throttling (Performance Optimization)
+  // ==========================================================================
+
+  /// Pending hover position for deferred hit testing.
+  ///
+  /// When mouse moves rapidly, we update crosshair immediately but defer
+  /// expensive hit testing until movement slows or stops.
+  Offset? _pendingHitTestPosition;
+
+  /// Timer for debouncing hit testing during rapid hover movements.
+  ///
+  /// Scheduled when mouse moves, cancelled if mouse moves again before firing.
+  /// This ensures hit testing only runs when mouse is relatively still.
+  Timer? _hitTestDebounceTimer;
+
+  /// Throttle duration for hit testing (milliseconds).
+  ///
+  /// Hit testing will be deferred until mouse movement pauses for this duration.
+  /// Tuned to balance responsiveness with performance (16ms = ~60fps frame budget).
+  static const Duration _hitTestThrottleDuration = Duration(milliseconds: 50);
+
   /// X-axis for the chart (optional).
   chart_axis.Axis? _xAxis;
 
@@ -180,6 +203,28 @@ class ChartRenderBox extends RenderBox {
   int _cachedSeriesHash = 0;
 
   // ==========================================================================
+  // Crosshair Label Caching (Sprint 3 Optimization)
+  // ==========================================================================
+
+  /// Cached TextPainter for X coordinate label.
+  ///
+  /// Reused across frames to avoid expensive TextPainter.layout() calls.
+  /// Only re-layout when label text actually changes.
+  TextPainter? _cachedXLabelPainter;
+
+  /// Cached TextPainter for Y coordinate label.
+  ///
+  /// Reused across frames to avoid expensive TextPainter.layout() calls.
+  /// Only re-layout when label text actually changes.
+  TextPainter? _cachedYLabelPainter;
+
+  /// Last X label text rendered (for change detection).
+  final String _lastXLabelText = '';
+
+  /// Last Y label text rendered (for change detection).
+  final String _lastYLabelText = '';
+
+  // ==========================================================================
   // Zoom/Pan Constraints
   // ==========================================================================
 
@@ -215,6 +260,8 @@ class ChartRenderBox extends RenderBox {
   void dispose() {
     _cachedSeriesPicture?.dispose();
     _cachedSeriesPicture = null;
+    _hitTestDebounceTimer?.cancel();
+    _hitTestDebounceTimer = null;
     super.dispose();
   }
 
@@ -321,7 +368,7 @@ class ChartRenderBox extends RenderBox {
     if (_transform != null && _elementGenerator != null) {
       debugPrint('🎨 Regenerating elements due to generator change (version $version)');
       _rebuildElementsWithTransform();
-      
+
       // Invalidate cache - element generator changed (new data/theme)
       _seriesCacheDirty = true;
     }
@@ -422,7 +469,7 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
-    
+
     // Invalidate cache - transform reset to original
     _seriesCacheDirty = true;
 
@@ -743,7 +790,7 @@ class ChartRenderBox extends RenderBox {
         if (_elementGenerator != null) {
           debugPrint('🎨 Generating initial elements in performLayout');
           _rebuildElementsWithTransform();
-          
+
           // Invalidate cache - initial element generation
           _seriesCacheDirty = true;
         }
@@ -1106,10 +1153,10 @@ class ChartRenderBox extends RenderBox {
       _updateAxesFromTransform();
 
       _rebuildElementsWithTransform();
-      
+
       // Invalidate cache - transform changed from panning
       _seriesCacheDirty = true;
-      
+
       debugPrint('🔄 Pan ended - regenerated elements with final transform');
     }
 
@@ -1126,6 +1173,9 @@ class ChartRenderBox extends RenderBox {
     // Track cursor position for crosshair rendering
     _cursorPosition = position;
 
+    // Always update crosshair immediately for smooth 60fps tracking
+    markNeedsPaint();
+
     // Per conflict resolution scenario 7: Hover is passive
     // Per scenario 12: Hover/tooltips suspended during panning
     if (coordinator.isPanning) {
@@ -1134,8 +1184,35 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
+    // Throttle expensive hit testing during rapid mouse movement
+    // Strategy: Update crosshair immediately, defer hit testing until movement slows
+    _pendingHitTestPosition = position;
+
+    // Cancel previous hit test if still pending (mouse moved again before timer fired)
+    _hitTestDebounceTimer?.cancel();
+
+    // Schedule deferred hit testing
+    _hitTestDebounceTimer = Timer(_hitTestThrottleDuration, () {
+      _performDeferredHitTest();
+    });
+  }
+
+  /// Performs deferred hit testing after mouse movement slows/stops.
+  ///
+  /// This method is called by the debounce timer when mouse movement pauses.
+  /// It performs the expensive hit testing operations (QuadTree query, precise
+  /// hit test, priority sorting) that would cause lag if done on every hover event.
+  void _performDeferredHitTest() {
+    final position = _pendingHitTestPosition;
+    if (position == null) return;
+
+    // Clear pending state
+    _pendingHitTestPosition = null;
+
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
+
+    debugPrint('🎯 HIT TEST: element=${hitElement?.elementType.name ?? "none"}, id=${hitElement?.id ?? "N/A"}');
 
     // Check if we hit a resize handle (priority 7)
     if (hitElement is ResizeHandleElement) {
@@ -1144,7 +1221,7 @@ class ChartRenderBox extends RenderBox {
       onCursorChange?.call(cursor);
       coordinator.setHoveredElement(hitElement.parentAnnotation);
       onElementHover?.call(hitElement.parentAnnotation);
-      markNeedsPaint();
+      markNeedsPaint(); // Repaint for hover highlight
       return;
     }
 
@@ -1153,7 +1230,7 @@ class ChartRenderBox extends RenderBox {
     onCursorChange?.call(SystemMouseCursors.basic);
     coordinator.setHoveredElement(hitElement);
     onElementHover?.call(hitElement);
-    markNeedsPaint();
+    markNeedsPaint(); // Repaint for hover highlight
   }
 
   /// Gets the appropriate cursor for a resize direction.
@@ -1201,7 +1278,7 @@ class ChartRenderBox extends RenderBox {
 
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();
-      
+
       // Invalidate cache - transform changed from scroll zoom
       _seriesCacheDirty = true;
 
@@ -1251,18 +1328,20 @@ class ChartRenderBox extends RenderBox {
 
     int hash = seriesElements.length;
 
-    for (final series in seriesElements) {
+    for (final seriesElement in seriesElements) {
+      final points = seriesElement.series.points;
+
       // Hash number of points
-      hash = hash ^ series.points.length;
+      hash = hash ^ points.length;
 
       // Hash data ranges (first and last points as proxy for data range)
-      if (series.points.isNotEmpty) {
-        final first = series.points.first;
-        final last = series.points.last;
-        hash = hash ^ first.dx.hashCode;
-        hash = hash ^ first.dy.hashCode;
-        hash = hash ^ last.dx.hashCode;
-        hash = hash ^ last.dy.hashCode;
+      if (points.isNotEmpty) {
+        final first = points.first;
+        final last = points.last;
+        hash = hash ^ first.x.hashCode;
+        hash = hash ^ first.y.hashCode;
+        hash = hash ^ last.x.hashCode;
+        hash = hash ^ last.y.hashCode;
       }
     }
 
@@ -1340,17 +1419,14 @@ class ChartRenderBox extends RenderBox {
   /// - size: Size of the plot area (for element paint calls)
   void _paintSeriesLayer(ui.PictureRecorder recorder, Size size) {
     final canvas = Canvas(recorder);
-    
+
     // Clip to plot area bounds to prevent rendering outside cache region
     canvas.clipRect(Offset.zero & size);
-    
+
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
-    final seriesElements = _elements
-        .whereType<SeriesElement>()
-        .toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
-    
+    final seriesElements = _elements.whereType<SeriesElement>().toList()..sort((a, b) => a.priority.compareTo(b.priority));
+
     // Paint each series with current transform
     for (final series in seriesElements) {
       if (_transform != null) {
@@ -1383,18 +1459,18 @@ class ChartRenderBox extends RenderBox {
   ui.Picture _generateSeriesPicture() {
     // Create recorder with plot area bounds
     final recorder = ui.PictureRecorder();
-    
+
     // Paint series into recorder
     _paintSeriesLayer(recorder, _plotArea.size);
-    
+
     // End recording to produce Picture
     final picture = recorder.endRecording();
-    
+
     // Update cache metadata
     _cachedSeriesHash = _calculateSeriesHash();
     _cachedTransform = _transform?.copyWith(); // Deep copy to detect future changes
     _seriesCacheDirty = false;
-    
+
     return picture;
   }
 
@@ -1414,6 +1490,7 @@ class ChartRenderBox extends RenderBox {
   /// - canvas: Canvas to paint overlays (in widget space)
   /// - size: Total widget size (including axis areas)
   void _paintOverlayLayer(Canvas canvas, Size size) {
+    debugPrint('🎨 OVERLAY: Starting paint | Mode=${coordinator.currentMode}');
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
@@ -1460,6 +1537,7 @@ class ChartRenderBox extends RenderBox {
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
     if (cursorPos != null) {
+      debugPrint('🎨 OVERLAY: Drawing crosshair lines at $cursorPos');
       final crosshairPaint = Paint()
         ..color = const Color(0x80666666) // Semi-transparent gray
         ..style = PaintingStyle.stroke
@@ -1474,6 +1552,18 @@ class ChartRenderBox extends RenderBox {
       // Draw coordinate labels (showing both screen and data coordinates)
       _drawCrosshairLabels(canvas, size, cursorPos);
     }
+
+    // Draw tooltip for hovered element (if any)
+    // Show tooltips for datapoints or series (with nearest point lookup)
+    final hoveredElement = coordinator.hoveredElement;
+    if (hoveredElement != null &&
+        !coordinator.isPanning &&
+        (hoveredElement.elementType == ChartElementType.datapoint || hoveredElement.elementType == ChartElementType.series) &&
+        _cursorPosition != null) {
+      _drawTooltip(canvas, size, hoveredElement, _cursorPosition!);
+    }
+
+    debugPrint('🎨 OVERLAY: Paint complete');
   }
 
   @override
@@ -1517,27 +1607,32 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
-    if (_isCacheValid()) {
+    final cacheValid = _isCacheValid();
+    debugPrint(
+        '🎨 PAINT: Cache ${cacheValid ? "HIT ✅" : "MISS ❌"} | Dirty=$_seriesCacheDirty | Series=${_elements.whereType<SeriesElement>().length}');
+
+    if (cacheValid) {
       // Cache hit! Draw cached Picture (fast path ~0.1ms)
       canvas.drawPicture(_cachedSeriesPicture!);
     } else {
       // Cache miss - regenerate Picture from current data/transform
+      debugPrint('   📸 Regenerating Picture (slow path ~17ms for 5 series)...');
+
       // Dispose old Picture to free GPU memory
       _cachedSeriesPicture?.dispose();
-      
+
       // Generate new Picture (slow path ~17ms for 5 series)
       _cachedSeriesPicture = _generateSeriesPicture();
-      
+
       // Draw freshly generated Picture
       canvas.drawPicture(_cachedSeriesPicture!);
+
+      debugPrint('   ✅ Picture regenerated | Hash=$_cachedSeriesHash | Transform=[${_cachedTransform?.dataXMin}..${_cachedTransform?.dataXMax}]');
     }
 
     // Paint non-series elements (annotations, handles, etc.)
     // These are not cached because they're less expensive and change frequently
-    final nonSeriesElements = _elements
-        .where((e) => e is! SeriesElement)
-        .toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
+    final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
     for (final element in nonSeriesElements) {
       element.paint(canvas, _plotArea.size);
@@ -1547,7 +1642,12 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 2: Overlays (dynamic, always rendered fresh)
     // Crosshair, selection box, preview indicators - change every frame during hover/drag
+    // Use saveLayer to create independent compositing layer for crosshair
+    // This allows Flutter to repaint ONLY the crosshair without touching series layer
+    final overlayBounds = Offset.zero & size;
+    canvas.saveLayer(overlayBounds, Paint());
     _paintOverlayLayer(canvas, size);
+    canvas.restore(); // Restore from saveLayer
 
     canvas.restore(); // Final restore (removes initial offset translation)
   }
@@ -1647,6 +1747,121 @@ class ChartRenderBox extends RenderBox {
     } else {
       return value.toStringAsFixed(0);
     }
+  }
+
+  /// Draws a tooltip for the hovered element.
+  ///
+  /// Implements FR-003: Tooltip System from spec 007-interaction-system
+  /// - Shows data point details (series name, X value, Y value)
+  /// - Positions automatically to avoid clipping
+  /// - Renders with semi-transparent background
+  ///
+  /// For series elements, finds the nearest datapoint to cursor position.
+  void _drawTooltip(Canvas canvas, Size size, ChartElement element, Offset cursorPosition) {
+    // For series elements, find nearest datapoint to cursor
+    Offset tooltipAnchor = plotToWidget(element.bounds.center);
+    String tooltipText;
+
+    if (element.elementType == ChartElementType.series && element is SeriesElement) {
+      // Convert cursor to plot space
+      final plotCursor = widgetToPlot(cursorPosition);
+
+      // Get series datapoints and transform them to plot space
+      final dataPoints = element.series.points;
+      if (dataPoints.isEmpty || _transform == null) {
+        tooltipText = element.series.name ?? 'Series: ${element.id}';
+      } else {
+        // Find closest datapoint to cursor
+        var minDist = double.infinity;
+        var closestDataPoint = dataPoints.first;
+        Offset closestPlotPoint = _transform!.dataToPlot(closestDataPoint.x, closestDataPoint.y);
+
+        for (final dataPoint in dataPoints) {
+          final plotPoint = _transform!.dataToPlot(dataPoint.x, dataPoint.y);
+          final dist = (plotPoint.dx - plotCursor.dx).abs() + (plotPoint.dy - plotCursor.dy).abs();
+          if (dist < minDist) {
+            minDist = dist;
+            closestDataPoint = dataPoint;
+            closestPlotPoint = plotPoint;
+          }
+        }
+
+        // Show tooltip with nearest datapoint's coordinates
+        tooltipText = '${element.series.name ?? element.id}\nX: ${_formatDataValue(closestDataPoint.x)}\nY: ${_formatDataValue(closestDataPoint.y)}';
+        tooltipAnchor = plotToWidget(closestPlotPoint); // Position tooltip at the datapoint
+      }
+    } else if (element.elementType == ChartElementType.datapoint) {
+      // For actual datapoint elements (if they exist)
+      final center = element.bounds.center;
+      if (_transform != null) {
+        final dataPos = _transform!.plotToData(center.dx, center.dy);
+        tooltipText = '${element.id}\nX: ${_formatDataValue(dataPos.dx)}\nY: ${_formatDataValue(dataPos.dy)}';
+      } else {
+        tooltipText = element.id;
+      }
+      tooltipAnchor = plotToWidget(center);
+    } else {
+      // Fallback for other elements
+      tooltipText = '${element.elementType.name}: ${element.id}';
+      tooltipAnchor = plotToWidget(element.bounds.center);
+    }
+
+    // Create text painter
+    const textStyle = TextStyle(
+      color: Color(0xFFFFFFFF),
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    );
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: tooltipText, style: textStyle),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+
+    // Calculate tooltip size with padding
+    const padding = 8.0;
+    final tooltipWidth = textPainter.width + padding * 2;
+    final tooltipHeight = textPainter.height + padding * 2;
+
+    // Smart positioning: Position above datapoint anchor, but flip if it would clip top
+    var tooltipX = tooltipAnchor.dx - tooltipWidth / 2;
+    var tooltipY = tooltipAnchor.dy - tooltipHeight - 12;
+
+    // Avoid clipping left/right edges
+    if (tooltipX < 10) {
+      tooltipX = 10;
+    } else if (tooltipX + tooltipWidth > size.width - 10) {
+      tooltipX = size.width - tooltipWidth - 10;
+    }
+
+    // Flip to below if it would clip top
+    if (tooltipY < 10) {
+      tooltipY = tooltipAnchor.dy + 12;
+    }
+
+    // Draw tooltip background (rounded rectangle with shadow)
+    final tooltipRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
+      const Radius.circular(4),
+    );
+
+    // Draw shadow
+    canvas.drawRRect(
+      tooltipRect.shift(const Offset(0, 2)),
+      Paint()
+        ..color = const Color(0x40000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+
+    // Draw background
+    canvas.drawRRect(
+      tooltipRect,
+      Paint()..color = const Color(0xE0000000), // Semi-transparent black
+    );
+
+    // Draw text
+    textPainter.paint(canvas, Offset(tooltipX + padding, tooltipY + padding));
   }
 
   // ============================================================================
