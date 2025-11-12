@@ -221,10 +221,12 @@ class ChartRenderBox extends RenderBox {
   /// Updates the list of chart elements.
   ///
   /// Rebuilds the spatial index with new elements.
+  /// Invalidates series cache since data has changed.
   void updateElements(List<ChartElement> elements) {
     if (elements == _elements) return;
 
     _elements = elements;
+    _seriesCacheDirty = true; // Invalidate cache - data changed
     _rebuildSpatialIndex();
     markNeedsPaint();
   }
@@ -290,9 +292,11 @@ class ChartRenderBox extends RenderBox {
   /// Sets the theme for the chart.
   ///
   /// Updates colors for background, grid, axes, etc.
+  /// Invalidates series cache since visual appearance changed.
   void setTheme(ChartTheme? theme) {
     if (_theme == theme) return;
     _theme = theme;
+    _seriesCacheDirty = true; // Invalidate cache - theme changed
     markNeedsPaint();
   }
 
@@ -317,6 +321,9 @@ class ChartRenderBox extends RenderBox {
     if (_transform != null && _elementGenerator != null) {
       debugPrint('🎨 Regenerating elements due to generator change (version $version)');
       _rebuildElementsWithTransform();
+      
+      // Invalidate cache - element generator changed (new data/theme)
+      _seriesCacheDirty = true;
     }
   }
 
@@ -354,6 +361,9 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
+
+    // Invalidate cache - transform changed
+    _seriesCacheDirty = true;
 
     debugPrint('✅ Keyboard zoom: factor=$factor, center=$center');
   }
@@ -412,8 +422,11 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements
     _rebuildElementsWithTransform();
+    
+    // Invalidate cache - transform reset to original
+    _seriesCacheDirty = true;
 
-    debugPrint(' View reset to original');
+    debugPrint('🔄 View reset to original');
   }
 
   /// Updates axes to reflect the current transform's data ranges.
@@ -730,6 +743,9 @@ class ChartRenderBox extends RenderBox {
         if (_elementGenerator != null) {
           debugPrint('🎨 Generating initial elements in performLayout');
           _rebuildElementsWithTransform();
+          
+          // Invalidate cache - initial element generation
+          _seriesCacheDirty = true;
         }
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
@@ -1090,7 +1106,11 @@ class ChartRenderBox extends RenderBox {
       _updateAxesFromTransform();
 
       _rebuildElementsWithTransform();
-      debugPrint(' Pan ended - regenerated elements with final transform');
+      
+      // Invalidate cache - transform changed from panning
+      _seriesCacheDirty = true;
+      
+      debugPrint('🔄 Pan ended - regenerated elements with final transform');
     }
 
     // Clear cursor position
@@ -1181,6 +1201,9 @@ class ChartRenderBox extends RenderBox {
 
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();
+      
+      // Invalidate cache - transform changed from scroll zoom
+      _seriesCacheDirty = true;
 
       debugPrint('🔍 Transform updated: dataX=${_transform!.dataXMin}..${_transform!.dataXMax}');
 
