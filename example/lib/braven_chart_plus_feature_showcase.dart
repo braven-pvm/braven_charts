@@ -683,7 +683,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 children: [
                   // Chart with visible series only
                   SizedBox(
-                    height: 250,
+                    height: 240,
                     child: BravenChartPlus(
                       key: const ValueKey('chart_legend'),
                       chartType: ChartType.line,
