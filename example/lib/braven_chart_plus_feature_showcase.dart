@@ -687,13 +687,9 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     child: BravenChartPlus(
                       key: const ValueKey('chart_legend'),
                       chartType: ChartType.line,
-                      series: _legendExampleSeries
-                          .where((s) => !_hiddenSeriesIds.contains(s.id))
-                          .toList(),
+                      series: _legendExampleSeries.where((s) => !_hiddenSeriesIds.contains(s.id)).toList(),
                       theme: _selectedTheme,
-                      backgroundColor: _selectedTheme == ChartTheme.dark 
-                          ? Colors.grey.shade900 
-                          : Colors.white,
+                      backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                       showDebugInfo: _showDebugInfo,
                     ),
                   ),
