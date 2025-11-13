@@ -2,6 +2,7 @@
 // Chart Legend Widget - Show/Hide Series Control
 
 import 'package:flutter/material.dart';
+
 import '../models/chart_series.dart';
 
 /// A legend widget for displaying chart series with show/hide functionality.
@@ -128,10 +129,12 @@ class ChartLegend extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: series.map((s) => Padding(
-                padding: EdgeInsets.only(bottom: spacing),
-                child: _buildLegendItem(s),
-              )).toList(),
+              children: series
+                  .map((s) => Padding(
+                        padding: EdgeInsets.only(bottom: spacing),
+                        child: _buildLegendItem(s),
+                      ))
+                  .toList(),
             ),
     );
   }
