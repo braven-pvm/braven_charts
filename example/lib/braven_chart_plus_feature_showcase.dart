@@ -1,6 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // BravenChartPlus Feature Showcase - What's ACTUALLY Implemented
 
+import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
@@ -27,13 +28,12 @@ import 'package:flutter/material.dart';
 /// - Performance optimizations (Picture caching, hit test throttling)
 /// - Focus management for keyboard interaction
 /// - Legend widget (show/hide series with click interaction)
-/// - Annotations (Point, Range, Text with selection and hover)
+/// - Annotations (ALL 5 types: Point, Range, Text, Threshold, Trend)
 ///
 /// ❌ NOT YET IMPLEMENTED:
 /// - Real-time streaming data
 /// - Scrollbars
 /// - Advanced markers (shapes beyond circles)
-/// - Advanced annotations (Threshold, Trend)
 /// - Context menus
 /// - Export functionality
 void main() {
@@ -186,6 +186,48 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         anchor: AnnotationAnchor.topRight,
         backgroundColor: Colors.green.withOpacity(0.1),
         borderColor: Colors.green,
+      ),
+      // Threshold annotation - horizontal target line
+      ThresholdAnnotation(
+        id: 'target_line',
+        axis: AnnotationAxis.y,
+        value: 70.0,
+        lineColor: Colors.green,
+        lineWidth: 2.0,
+        dashPattern: const [8, 4],
+        label: 'Target: 70°',
+        labelPosition: AnnotationLabelPosition.topRight,
+      ),
+      // Threshold annotation - horizontal minimum line
+      ThresholdAnnotation(
+        id: 'minimum_line',
+        axis: AnnotationAxis.y,
+        value: 55.0,
+        lineColor: Colors.red.withOpacity(0.7),
+        lineWidth: 2.0,
+        dashPattern: const [5, 3],
+        label: 'Min: 55°',
+        labelPosition: AnnotationLabelPosition.bottomRight,
+      ),
+      // Trend annotation - linear trend line
+      TrendAnnotation(
+        id: 'linear_trend',
+        seriesId: 'annotation_line',
+        trendType: TrendType.linear,
+        lineColor: Colors.purple.withOpacity(0.8),
+        lineWidth: 2.5,
+        dashPattern: const [10, 5],
+        label: 'Linear Trend',
+      ),
+      // Trend annotation - moving average
+      TrendAnnotation(
+        id: 'moving_avg',
+        seriesId: 'annotation_line',
+        trendType: TrendType.movingAverage,
+        windowSize: 3,
+        lineColor: Colors.teal.withOpacity(0.8),
+        lineWidth: 2.0,
+        label: '3-pt MA',
       ),
     ];
   }
@@ -780,14 +822,15 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
             // Feature 8: Chart Annotations
             _buildFeatureCard(
-              title: '8. Chart Annotations - Interactive Markers',
-              description: 'Add interactive annotations to highlight important data points, ranges, and add notes to your charts.',
+              title: '8. Chart Annotations - ALL 5 Types',
+              description: 'Point, Range, Text, Threshold, and Trend annotations with interactive selection and visual feedback.',
               features: const [
-                'Point annotations with custom markers',
-                'Range annotations for highlighting regions',
-                'Text annotations for labels and notes',
+                'Point annotations (custom markers)',
+                'Range annotations (highlight regions)',
+                'Text annotations (labels & notes)',
+                'Threshold annotations (reference lines)',
+                'Trend annotations (linear, MA)',
                 'Selection and hover feedback',
-                'Multiple annotation types on one chart',
               ],
               child: SizedBox(
                 height: 280,
@@ -842,7 +885,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     '• Basic tooltips\n'
                     '• Performance optimizations\n'
                     '• Legend widget (show/hide series)\n'
-                    '• Annotations (Point, Range, Text)',
+                    '• Annotations (ALL 5 types: Point, Range, Text, Threshold, Trend)',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 16),
@@ -855,7 +898,6 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     '• Real-time streaming data - ~9.5h\n'
                     '• Scrollbars - ~7h\n'
                     '• Advanced markers (shapes beyond circles) - ~1.5h\n'
-                    '• Advanced annotations (Threshold, Trend) - ~2h\n'
                     '\n'
                     'See docs/refactor/SPRINT_TASKS.md for detailed roadmap.',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),

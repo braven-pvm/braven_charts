@@ -8,8 +8,11 @@ import 'package:flutter/material.dart';
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/element_types.dart';
+import '../interaction/core/hit_test_strategy.dart';
 import '../models/chart_annotation.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import 'resize_handle_element.dart';
 
 /// A chart element that renders a point annotation marker.
 ///
@@ -20,40 +23,51 @@ class PointAnnotationElement extends ChartElement {
     required this.series,
     required this.transform,
   })  : _isSelected = false,
-        _isHovered = false {
-    // Get the data point from the series
+        _isHovered = false,
+        _currentTransform = transform {
+    // Get the data point from the series and store data coordinates
     if (annotation.dataPointIndex < series.points.length) {
       final point = series.points[annotation.dataPointIndex];
       _dataPosition = Offset(point.x, point.y);
-
-      // Transform to screen coordinates and apply offset
-      final screenPos = transform.dataToPlot(_dataPosition!.dx, _dataPosition!.dy);
-      _screenPosition = screenPos + annotation.offset;
-
-      // Calculate bounds (marker size + padding for hit testing)
-      final hitRadius = annotation.markerSize + 4.0;
-      _bounds = Rect.fromCircle(
-        center: _screenPosition!,
-        radius: hitRadius,
-      );
     }
   }
 
   final PointAnnotation annotation;
   final ChartSeries series;
-  final ChartTransform transform;
+  final ChartTransform transform; // Initial transform for construction
+  ChartTransform _currentTransform; // Current transform for painting
 
-  Offset? _dataPosition;
-  Offset? _screenPosition;
-  Rect? _bounds;
+  Offset? _dataPosition; // Data coordinates (never changes)
   bool _isSelected;
   bool _isHovered;
+
+  /// Update the current transform before painting (for real-time pan/zoom).
+  /// This allows annotations to move smoothly during pan without regenerating elements.
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
+
+  /// Recalculate screen position using current transform.
+  Offset? _getScreenPosition() {
+    if (_dataPosition == null) return null;
+    final screenPos = _currentTransform.dataToPlot(_dataPosition!.dx, _dataPosition!.dy);
+    return screenPos + annotation.offset;
+  }
 
   @override
   String get id => annotation.id;
 
   @override
-  Rect get bounds => _bounds ?? Rect.zero;
+  Rect get bounds {
+    final screenPos = _getScreenPosition();
+    if (screenPos == null) return Rect.zero;
+
+    final hitRadius = annotation.markerSize + 4.0;
+    return Rect.fromCircle(
+      center: screenPos,
+      radius: hitRadius,
+    );
+  }
 
   @override
   ChartElementType get elementType => ChartElementType.annotation;
@@ -72,16 +86,18 @@ class PointAnnotationElement extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
-    if (_screenPosition == null) return false;
+    final screenPos = _getScreenPosition();
+    if (screenPos == null) return false;
 
     final hitRadius = annotation.markerSize + 4.0;
-    final distance = (position - _screenPosition!).distance;
+    final distance = (position - screenPos).distance;
     return distance <= hitRadius;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_screenPosition == null) return;
+    final screenPos = _getScreenPosition();
+    if (screenPos == null) return;
 
     final paint = Paint()
       ..color = annotation.markerColor
@@ -92,11 +108,11 @@ class PointAnnotationElement extends ChartElement {
       paint.color = paint.color.withOpacity(_isSelected ? 1.0 : 0.7);
     }
 
-    _drawMarker(canvas, _screenPosition!, annotation.markerShape, annotation.markerSize, paint);
+    _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, paint);
 
     // Draw label if present
     if (annotation.label != null && annotation.label!.isNotEmpty) {
-      _drawLabel(canvas, _screenPosition!, annotation.label!);
+      _drawLabel(canvas, screenPos, annotation.label!);
     }
   }
 
@@ -233,8 +249,7 @@ class PointAnnotationElement extends ChartElement {
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._dataPosition = _dataPosition;
-    copy._screenPosition = _screenPosition;
-    copy._bounds = _bounds;
+    copy._currentTransform = _currentTransform;
     return copy;
   }
 }
@@ -242,50 +257,73 @@ class PointAnnotationElement extends ChartElement {
 /// A chart element that renders a range annotation.
 ///
 /// Highlights a rectangular region on the chart with optional fill and border.
-class RangeAnnotationElement extends ChartElement {
+/// Implements ResizableElement to support resizing via edge/corner handles.
+class RangeAnnotationElement extends ChartElement with ResizableElement {
   RangeAnnotationElement({
     required this.annotation,
     required this.transform,
     required this.chartSize,
   })  : _isSelected = false,
-        _isHovered = false {
-    _calculateBounds();
-  }
+        _isHovered = false,
+        _currentTransform = transform;
 
   final RangeAnnotation annotation;
-  final ChartTransform transform;
+  final ChartTransform transform; // Initial transform for construction
+  ChartTransform _currentTransform; // Current transform for painting
   final Size chartSize;
 
-  Rect? _bounds;
-  Rect? _fillRect;
   bool _isSelected;
   bool _isHovered;
 
-  void _calculateBounds() {
+  // Temporary resize bounds (in screen space)
+  Rect? _tempResizeBounds;
+
+  /// Update the current transform before painting (for real-time pan/zoom).
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
+
+  /// Updates annotation bounds (for resize operations).
+  ///
+  /// Stores temporary screen-space bounds that will be used during resize
+  /// operations until the drag is complete.
+  void updateBounds(Rect newBounds) {
+    _tempResizeBounds = newBounds;
+  }
+
+  /// Clears temporary resize bounds (called when resize operation completes).
+  void clearTempBounds() {
+    _tempResizeBounds = null;
+  }
+
+  /// Calculate bounds and fill rect using current transform.
+  Rect _calculateRect() {
+    // If we're in the middle of a resize operation, use temporary bounds
+    if (_tempResizeBounds != null) {
+      return _tempResizeBounds!;
+    }
     // Transform data ranges to screen coordinates
-    final left = annotation.startX != null ? transform.dataToPlot(annotation.startX!, 0).dx : 0.0;
+    final left = annotation.startX != null ? _currentTransform.dataToPlot(annotation.startX!, 0).dx : 0.0;
 
-    final right = annotation.endX != null ? transform.dataToPlot(annotation.endX!, 0).dx : chartSize.width;
+    final right = annotation.endX != null ? _currentTransform.dataToPlot(annotation.endX!, 0).dx : chartSize.width;
 
-    final top = annotation.startY != null ? transform.dataToPlot(0, annotation.startY!).dy : 0.0;
+    final top = annotation.startY != null ? _currentTransform.dataToPlot(0, annotation.startY!).dy : 0.0;
 
-    final bottom = annotation.endY != null ? transform.dataToPlot(0, annotation.endY!).dy : chartSize.height;
+    final bottom = annotation.endY != null ? _currentTransform.dataToPlot(0, annotation.endY!).dy : chartSize.height;
 
-    _fillRect = Rect.fromLTRB(
+    return Rect.fromLTRB(
       left.clamp(0.0, chartSize.width),
       top.clamp(0.0, chartSize.height),
       right.clamp(0.0, chartSize.width),
       bottom.clamp(0.0, chartSize.height),
     );
-
-    _bounds = _fillRect;
   }
 
   @override
   String get id => annotation.id;
 
   @override
-  Rect get bounds => _bounds ?? Rect.zero;
+  Rect get bounds => _calculateRect();
 
   @override
   ChartElementType get elementType => ChartElementType.annotation;
@@ -304,12 +342,12 @@ class RangeAnnotationElement extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
-    return _fillRect?.contains(position) ?? false;
+    return _calculateRect().contains(position);
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_fillRect == null) return;
+    final fillRect = _calculateRect();
 
     // Draw fill
     if (annotation.fillColor != null) {
@@ -321,7 +359,7 @@ class RangeAnnotationElement extends ChartElement {
         fillPaint.color = fillPaint.color.withOpacity(fillPaint.color.opacity * 1.2);
       }
 
-      canvas.drawRect(_fillRect!, fillPaint);
+      canvas.drawRect(fillRect, fillPaint);
     }
 
     // Draw border
@@ -331,12 +369,52 @@ class RangeAnnotationElement extends ChartElement {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _isSelected ? 2.0 : 1.0;
 
-      canvas.drawRect(_fillRect!, borderPaint);
+      canvas.drawRect(fillRect, borderPaint);
     }
 
     // Draw label if present
     if (annotation.label != null && annotation.label!.isNotEmpty) {
-      _drawLabel(canvas, _fillRect!, annotation.label!);
+      _drawLabel(canvas, fillRect, annotation.label!);
+    }
+
+    // Draw resize handles if selected
+    if (_isSelected) {
+      _drawResizeHandles(canvas, fillRect);
+    }
+  }
+
+  void _drawResizeHandles(Canvas canvas, Rect rect) {
+    const handleSize = 8.0;
+    final handlePaint = Paint()
+      ..color = annotation.borderColor ?? const Color(0xFFFBC02D)
+      ..style = PaintingStyle.fill;
+
+    final handleBorderPaint = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    // Get handle positions
+    final handles = [
+      Offset(rect.left, rect.top), // Top-left
+      Offset(rect.right, rect.top), // Top-right
+      Offset(rect.left, rect.bottom), // Bottom-left
+      Offset(rect.right, rect.bottom), // Bottom-right
+      Offset(rect.center.dx, rect.top), // Top
+      Offset(rect.right, rect.center.dy), // Right
+      Offset(rect.center.dx, rect.bottom), // Bottom
+      Offset(rect.left, rect.center.dy), // Left
+    ];
+
+    // Draw each handle
+    for (final center in handles) {
+      final handleRect = Rect.fromCenter(
+        center: center,
+        width: handleSize,
+        height: handleSize,
+      );
+      canvas.drawRect(handleRect, handlePaint);
+      canvas.drawRect(handleRect, handleBorderPaint);
     }
   }
 
@@ -405,6 +483,89 @@ class RangeAnnotationElement extends ChartElement {
   @override
   void onHoverExit() => _isHovered = false;
 
+  // ============================================================================
+  // ResizableElement implementation
+  // ============================================================================
+
+  @override
+  List<ResizeHandleElement> createResizeHandleElements() {
+    const handleSize = 8.0; // 8px × 8px hit target
+    const halfSize = handleSize / 2;
+
+    final rect = _calculateRect();
+    final left = rect.left;
+    final right = rect.right;
+    final top = rect.top;
+    final bottom = rect.bottom;
+
+    return [
+      // Corners
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.topLeft,
+        bounds: Rect.fromCenter(center: Offset(left, top), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.topRight,
+        bounds: Rect.fromCenter(center: Offset(right, top), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottomLeft,
+        bounds: Rect.fromCenter(center: Offset(left, bottom), width: handleSize, height: handleSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottomRight,
+        bounds: Rect.fromCenter(center: Offset(right, bottom), width: handleSize, height: handleSize),
+      ),
+      // Edges (continuous zones along the edge)
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.top,
+        bounds: Rect.fromLTRB(left + halfSize, top - halfSize, right - halfSize, top + halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.right,
+        bounds: Rect.fromLTRB(right - halfSize, top + halfSize, right + halfSize, bottom - halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.bottom,
+        bounds: Rect.fromLTRB(left + halfSize, bottom - halfSize, right - halfSize, bottom + halfSize),
+      ),
+      ResizeHandleElement(
+        parentAnnotation: this,
+        direction: ResizeDirection.left,
+        bounds: Rect.fromLTRB(left - halfSize, top + halfSize, left + halfSize, bottom - halfSize),
+      ),
+    ];
+  }
+
+  @override
+  List<Rect> get resizeHandleBounds {
+    final handles = createResizeHandleElements();
+    return handles.map((h) => h.bounds).toList();
+  }
+
+  @override
+  int? getResizeHandleAt(Offset position) {
+    final handles = createResizeHandleElements();
+    for (int i = 0; i < handles.length; i++) {
+      if (handles[i].hitTest(position)) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  @override
+  bool get showResizeHandles => _isSelected;
+
+  // ============================================================================
+
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
     final copy = RangeAnnotationElement(
@@ -414,8 +575,7 @@ class RangeAnnotationElement extends ChartElement {
     );
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
-    copy._bounds = _bounds;
-    copy._fillRect = _fillRect;
+    copy._currentTransform = _currentTransform;
     return copy;
   }
 }
@@ -592,6 +752,475 @@ class TextAnnotationElement extends ChartElement {
     copy._isHovered = isHovered ?? _isHovered;
     copy._bounds = _bounds;
     copy._anchoredPosition = _anchoredPosition;
+    return copy;
+  }
+}
+
+/// A chart element that renders a threshold annotation line.
+///
+/// Draws a horizontal or vertical reference line at a fixed axis value.
+class ThresholdAnnotationElement extends ChartElement {
+  ThresholdAnnotationElement({
+    required this.annotation,
+    required this.transform,
+  })  : _isSelected = false,
+        _isHovered = false,
+        _currentTransform = transform;
+
+  final ThresholdAnnotation annotation;
+  final ChartTransform transform;
+  ChartTransform _currentTransform;
+  bool _isSelected;
+  bool _isHovered;
+
+  /// Update the current transform before painting.
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
+
+  @override
+  String get id => annotation.id;
+
+  @override
+  Rect get bounds {
+    // Threshold spans the entire plot area in one direction
+    if (annotation.axis == AnnotationAxis.y) {
+      // Horizontal line at Y value
+      final plotY = _currentTransform.dataToPlot(0, annotation.value).dy;
+      return Rect.fromLTWH(
+        0,
+        plotY - annotation.lineWidth / 2,
+        _currentTransform.plotWidth,
+        annotation.lineWidth + 8, // Add hit test margin
+      );
+    } else {
+      // Vertical line at X value
+      final plotX = _currentTransform.dataToPlot(annotation.value, 0).dx;
+      return Rect.fromLTWH(
+        plotX - annotation.lineWidth / 2,
+        0,
+        annotation.lineWidth + 8, // Add hit test margin
+        _currentTransform.plotHeight,
+      );
+    }
+  }
+
+  @override
+  ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  bool get isHovered => _isHovered;
+
+  @override
+  bool get isSelectable => true;
+
+  @override
+  bool get isDraggable => annotation.allowDragging;
+
+  @override
+  bool hitTest(Offset position) {
+    return bounds.contains(position);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 1.5 : annotation.lineWidth
+      ..style = PaintingStyle.stroke;
+
+    // Calculate line position
+    Offset start, end;
+    if (annotation.axis == AnnotationAxis.y) {
+      // Horizontal line
+      final plotY = _currentTransform.dataToPlot(0, annotation.value).dy;
+      start = Offset(0, plotY);
+      end = Offset(_currentTransform.plotWidth, plotY);
+    } else {
+      // Vertical line
+      final plotX = _currentTransform.dataToPlot(annotation.value, 0).dx;
+      start = Offset(plotX, 0);
+      end = Offset(plotX, _currentTransform.plotHeight);
+    }
+
+    // Draw line (with dash pattern if specified)
+    if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+      _drawDashedLine(canvas, start, end, paint, annotation.dashPattern!);
+    } else {
+      canvas.drawLine(start, end, paint);
+    }
+
+    // Draw label if present
+    if (annotation.label != null && annotation.label!.isNotEmpty) {
+      final textStyle = annotation.style.textStyle.copyWith(
+        backgroundColor: annotation.style.backgroundColor,
+      );
+      final textSpan = TextSpan(text: annotation.label, style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Position label based on labelPosition
+      Offset labelPos;
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          labelPos = Offset(start.dx + 4, start.dy - textPainter.height - 4);
+          break;
+        case AnnotationLabelPosition.topRight:
+          labelPos = Offset(end.dx - textPainter.width - 4, end.dy - textPainter.height - 4);
+          break;
+        case AnnotationLabelPosition.bottomLeft:
+          labelPos = Offset(start.dx + 4, start.dy + 4);
+          break;
+        case AnnotationLabelPosition.bottomRight:
+          labelPos = Offset(end.dx - textPainter.width - 4, end.dy + 4);
+          break;
+        case AnnotationLabelPosition.center:
+          labelPos = Offset(
+            (start.dx + end.dx) / 2 - textPainter.width / 2,
+            (start.dy + end.dy) / 2 - textPainter.height / 2,
+          );
+          break;
+      }
+
+      textPainter.paint(canvas, labelPos);
+    }
+  }
+
+  /// Draws a dashed line using the provided dash pattern.
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
+    final totalLength = (end - start).distance;
+    var currentLength = 0.0;
+    var patternIndex = 0;
+    var isDash = true;
+
+    while (currentLength < totalLength) {
+      final dashLength = dashPattern[patternIndex % dashPattern.length];
+      final nextLength = math.min(currentLength + dashLength, totalLength);
+
+      if (isDash) {
+        final t1 = currentLength / totalLength;
+        final t2 = nextLength / totalLength;
+        final p1 = Offset.lerp(start, end, t1)!;
+        final p2 = Offset.lerp(start, end, t2)!;
+        canvas.drawLine(p1, p2, paint);
+      }
+
+      currentLength = nextLength;
+      patternIndex++;
+      isDash = !isDash;
+    }
+  }
+
+  @override
+  void onSelect() => _isSelected = true;
+
+  @override
+  void onDeselect() => _isSelected = false;
+
+  @override
+  void onHoverEnter() => _isHovered = true;
+
+  @override
+  void onHoverExit() => _isHovered = false;
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) {
+    final copy = ThresholdAnnotationElement(
+      annotation: annotation,
+      transform: _currentTransform,
+    );
+    copy._isSelected = isSelected ?? _isSelected;
+    copy._isHovered = isHovered ?? _isHovered;
+    return copy;
+  }
+}
+
+/// A chart element that renders a trend annotation line.
+///
+/// Calculates and displays statistical trend lines over series data.
+class TrendAnnotationElement extends ChartElement {
+  TrendAnnotationElement({
+    required this.annotation,
+    required this.series,
+    required this.transform,
+  })  : _isSelected = false,
+        _isHovered = false,
+        _currentTransform = transform {
+    _calculateTrendPoints();
+  }
+
+  final TrendAnnotation annotation;
+  final ChartSeries series;
+  final ChartTransform transform;
+  ChartTransform _currentTransform;
+  bool _isSelected;
+  bool _isHovered;
+  List<Offset> _trendPoints = [];
+
+  /// Update the current transform before painting.
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
+
+  /// Calculate trend line points based on series data and trend type.
+  void _calculateTrendPoints() {
+    final dataPoints = series.points;
+    if (dataPoints.isEmpty) {
+      _trendPoints = [];
+      return;
+    }
+
+    switch (annotation.trendType) {
+      case TrendType.linear:
+        _trendPoints = _calculateLinearTrend(dataPoints);
+        break;
+      case TrendType.polynomial:
+        _trendPoints = _calculatePolynomialTrend(dataPoints, annotation.degree);
+        break;
+      case TrendType.movingAverage:
+        _trendPoints = _calculateMovingAverage(dataPoints, annotation.windowSize!);
+        break;
+      case TrendType.exponentialMovingAverage:
+        _trendPoints = _calculateExponentialMovingAverage(dataPoints, annotation.windowSize ?? 10);
+        break;
+    }
+  }
+
+  /// Calculate linear regression trend line.
+  List<Offset> _calculateLinearTrend(List<ChartDataPoint> points) {
+    if (points.length < 2) return [];
+
+    // Calculate linear regression: y = mx + b
+    double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    final n = points.length;
+
+    for (final point in points) {
+      sumX += point.x;
+      sumY += point.y;
+      sumXY += point.x * point.y;
+      sumX2 += point.x * point.x;
+    }
+
+    final m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    final b = (sumY - m * sumX) / n;
+
+    // Generate trend line points
+    final minX = points.first.x;
+    final maxX = points.last.x;
+    return [
+      Offset(minX, m * minX + b),
+      Offset(maxX, m * maxX + b),
+    ];
+  }
+
+  /// Calculate polynomial regression trend line.
+  List<Offset> _calculatePolynomialTrend(List<ChartDataPoint> points, int degree) {
+    // Simplified polynomial - for now use linear (full polynomial regression is complex)
+    // TODO: Implement proper polynomial regression
+    return _calculateLinearTrend(points);
+  }
+
+  /// Calculate simple moving average.
+  List<Offset> _calculateMovingAverage(List<ChartDataPoint> points, int windowSize) {
+    if (points.length < windowSize) return [];
+
+    final result = <Offset>[];
+    for (int i = 0; i <= points.length - windowSize; i++) {
+      double sum = 0;
+      double xCenter = 0;
+      for (int j = 0; j < windowSize; j++) {
+        sum += points[i + j].y;
+        xCenter += points[i + j].x;
+      }
+      result.add(Offset(xCenter / windowSize, sum / windowSize));
+    }
+    return result;
+  }
+
+  /// Calculate exponential moving average.
+  List<Offset> _calculateExponentialMovingAverage(List<ChartDataPoint> points, int period) {
+    if (points.isEmpty) return [];
+
+    final alpha = 2.0 / (period + 1);
+    final result = <Offset>[];
+    double ema = points.first.y;
+
+    for (int i = 0; i < points.length; i++) {
+      if (i > 0) {
+        ema = alpha * points[i].y + (1 - alpha) * ema;
+      }
+      result.add(Offset(points[i].x, ema));
+    }
+    return result;
+  }
+
+  @override
+  String get id => annotation.id;
+
+  @override
+  Rect get bounds {
+    if (_trendPoints.isEmpty) return Rect.zero;
+
+    // Calculate bounds from trend points in plot coordinates
+    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+
+    double minX = plotPoints.first.dx;
+    double maxX = plotPoints.first.dx;
+    double minY = plotPoints.first.dy;
+    double maxY = plotPoints.first.dy;
+
+    for (final point in plotPoints) {
+      minX = math.min(minX, point.dx);
+      maxX = math.max(maxX, point.dx);
+      minY = math.min(minY, point.dy);
+      maxY = math.max(maxY, point.dy);
+    }
+
+    // Add hit test margin
+    return Rect.fromLTRB(
+      minX - annotation.lineWidth - 4,
+      minY - annotation.lineWidth - 4,
+      maxX + annotation.lineWidth + 4,
+      maxY + annotation.lineWidth + 4,
+    );
+  }
+
+  @override
+  ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  bool get isHovered => _isHovered;
+
+  @override
+  bool get isSelectable => true;
+
+  @override
+  bool get isDraggable => annotation.allowDragging;
+
+  @override
+  bool hitTest(Offset position) {
+    if (_trendPoints.isEmpty) return false;
+
+    // Convert trend points to plot coordinates
+    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+
+    // Check if click is near any line segment
+    final hitRadius = annotation.lineWidth + 4;
+    for (int i = 0; i < plotPoints.length - 1; i++) {
+      final distance = _distanceToLineSegment(position, plotPoints[i], plotPoints[i + 1]);
+      if (distance <= hitRadius) return true;
+    }
+    return false;
+  }
+
+  /// Calculate distance from point to line segment.
+  double _distanceToLineSegment(Offset point, Offset lineStart, Offset lineEnd) {
+    final lengthSquared = (lineEnd - lineStart).distanceSquared;
+    if (lengthSquared == 0) return (point - lineStart).distance;
+
+    final t = math.max(
+      0.0,
+      math.min(1.0, ((point - lineStart).dx * (lineEnd - lineStart).dx + (point - lineStart).dy * (lineEnd - lineStart).dy) / lengthSquared),
+    );
+    final projection = lineStart + (lineEnd - lineStart) * t;
+    return (point - projection).distance;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (_trendPoints.isEmpty) return;
+
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 1.5 : annotation.lineWidth
+      ..style = PaintingStyle.stroke;
+
+    // Convert trend points to plot coordinates
+    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+
+    // Draw trend line
+    if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+      for (int i = 0; i < plotPoints.length - 1; i++) {
+        _drawDashedLine(canvas, plotPoints[i], plotPoints[i + 1], paint, annotation.dashPattern!);
+      }
+    } else {
+      final path = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
+      for (int i = 1; i < plotPoints.length; i++) {
+        path.lineTo(plotPoints[i].dx, plotPoints[i].dy);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    // Draw label if present
+    if (annotation.label != null && annotation.label!.isNotEmpty) {
+      final textStyle = annotation.style.textStyle;
+      final textSpan = TextSpan(text: annotation.label, style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Position at end of trend line
+      final labelPos = plotPoints.last + Offset(4, -textPainter.height / 2);
+      textPainter.paint(canvas, labelPos);
+    }
+  }
+
+  /// Draws a dashed line using the provided dash pattern.
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
+    final totalLength = (end - start).distance;
+    var currentLength = 0.0;
+    var patternIndex = 0;
+    var isDash = true;
+
+    while (currentLength < totalLength) {
+      final dashLength = dashPattern[patternIndex % dashPattern.length];
+      final nextLength = math.min(currentLength + dashLength, totalLength);
+
+      if (isDash) {
+        final t1 = currentLength / totalLength;
+        final t2 = nextLength / totalLength;
+        final p1 = Offset.lerp(start, end, t1)!;
+        final p2 = Offset.lerp(start, end, t2)!;
+        canvas.drawLine(p1, p2, paint);
+      }
+
+      currentLength = nextLength;
+      patternIndex++;
+      isDash = !isDash;
+    }
+  }
+
+  @override
+  void onSelect() => _isSelected = true;
+
+  @override
+  void onDeselect() => _isSelected = false;
+
+  @override
+  void onHoverEnter() => _isHovered = true;
+
+  @override
+  void onHoverExit() => _isHovered = false;
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) {
+    final copy = TrendAnnotationElement(
+      annotation: annotation,
+      series: series,
+      transform: _currentTransform,
+    );
+    copy._isSelected = isSelected ?? _isSelected;
+    copy._isHovered = isHovered ?? _isHovered;
+    copy._trendPoints = _trendPoints;
     return copy;
   }
 }

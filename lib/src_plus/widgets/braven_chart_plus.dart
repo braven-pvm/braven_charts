@@ -189,6 +189,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ).cast<ChartElement>().toList();
 
       // Convert annotations to elements
+      debugPrint('📍 Converting ${widget.annotations.length} annotations to elements');
+      debugPrint('   Transform: plotWidth=${transform.plotWidth}, plotHeight=${transform.plotHeight}');
+      debugPrint('   Transform: dataX=${transform.dataXMin}..${transform.dataXMax}, dataY=${transform.dataYMin}..${transform.dataYMax}');
       for (final annotation in widget.annotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -208,8 +211,28 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             TextAnnotation() => TextAnnotationElement(
                 annotation: annotation,
               ),
+            ThresholdAnnotation() => ThresholdAnnotationElement(
+                annotation: annotation,
+                transform: transform,
+              ),
+            TrendAnnotation() => TrendAnnotationElement(
+                annotation: annotation,
+                series: widget.series.firstWhere(
+                  (s) => s.id == annotation.seriesId,
+                  orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
+                ),
+                transform: transform,
+              ),
           };
           elements.add(element);
+          debugPrint('  ✅ Created ${annotation.runtimeType} element: ${annotation.id}');
+
+          // For resizable elements, also insert their resize handle elements
+          if (element is ResizableElement && element.isResizable) {
+            final handleElements = element.createResizeHandleElements().cast<ChartElement>();
+            elements.addAll(handleElements);
+            debugPrint('  🎯 Added ${handleElements.length} resize handles for ${annotation.id}');
+          }
         } catch (e) {
           debugPrint('⚠️ Warning: Failed to create annotation element for ${annotation.id}: $e');
         }

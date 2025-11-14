@@ -132,6 +132,24 @@ mixin ResizableElement on ChartElement {
   ///
   /// Typically true when element is selected, false otherwise.
   bool get showResizeHandles;
+
+  /// Creates ResizeHandleElement instances for this annotation.
+  ///
+  /// These are separate ChartElements that participate in the unified
+  /// hit-testing system with high priority (7).
+  ///
+  /// Returns list of 8 handle elements (4 corners + 4 edges) for insertion
+  /// into the spatial index.
+  ///
+  /// Import note: ResizeHandleElement is defined in '../../../elements/resize_handle_element.dart'
+  /// but cannot be imported here due to circular dependency. Elements implementing this
+  /// mixin should implement this method using their concrete handle type.
+  List<dynamic> createResizeHandleElements();
+
+  /// Whether this element is resizable.
+  ///
+  /// Default is true. Override to control resizability based on state.
+  bool get isResizable => true;
 }
 
 /// Mixin for elements that can show tooltips.
