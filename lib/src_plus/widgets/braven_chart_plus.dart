@@ -12,6 +12,7 @@ import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
+import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/chart_type.dart';
@@ -35,6 +36,7 @@ class BravenChartPlus extends StatefulWidget {
     super.key,
     required this.chartType,
     required this.series,
+    this.annotations = const [],
     this.theme,
     this.xAxis,
     this.yAxis,
@@ -46,6 +48,7 @@ class BravenChartPlus extends StatefulWidget {
 
   final ChartType chartType;
   final List<ChartSeries> series;
+  final List<ChartAnnotation> annotations;
   final ChartTheme? theme;
   final AxisConfig? xAxis;
   final AxisConfig? yAxis;
