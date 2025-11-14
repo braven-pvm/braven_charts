@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
 import '../coordinates/chart_transform.dart';
+import '../elements/annotation_elements.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/recognizers/priority_pan_recognizer.dart';
@@ -178,7 +179,43 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _elementGenerator = (ChartTransform transform) {
       final seriesIds = widget.series.map((s) => s.id).join(', ');
       debugPrint('🔧 Element generator executing for series: [$seriesIds]');
-      return DataConverter.seriesToElements(series: widget.series, transform: transform, theme: widget.theme, strokeWidth: 2.0);
+      
+      // Generate series elements and convert to mutable list
+      final elements = DataConverter.seriesToElements(
+        series: widget.series, 
+        transform: transform, 
+        theme: widget.theme, 
+        strokeWidth: 2.0,
+      ).cast<ChartElement>().toList();
+      
+      // Convert annotations to elements
+      for (final annotation in widget.annotations) {
+        try {
+          final ChartElement element = switch (annotation) {
+            PointAnnotation() => PointAnnotationElement(
+              annotation: annotation,
+              series: widget.series.firstWhere(
+                (s) => s.id == annotation.seriesId,
+                orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
+              ),
+              transform: transform,
+            ),
+            RangeAnnotation() => RangeAnnotationElement(
+              annotation: annotation,
+              transform: transform,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+            TextAnnotation() => TextAnnotationElement(
+              annotation: annotation,
+            ),
+          };
+          elements.add(element);
+        } catch (e) {
+          debugPrint('⚠️ Warning: Failed to create annotation element for ${annotation.id}: $e');
+        }
+      }
+      
+      return elements;
     };
 
     // Increment version to signal that regeneration is needed
