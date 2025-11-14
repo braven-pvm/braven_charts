@@ -387,3 +387,207 @@ class TextAnnotation extends ChartAnnotation {
     );
   }
 }
+
+/// Which axis a threshold annotation is perpendicular to.
+enum AnnotationAxis {
+  /// Horizontal line at Y value.
+  y,
+
+  /// Vertical line at X value.
+  x,
+}
+
+/// A threshold annotation that draws a reference line at a fixed axis value.
+///
+/// Creates horizontal or vertical lines across the chart to mark important
+/// reference values (e.g., target values, limits, averages).
+///
+/// Example:
+/// ```dart
+/// ThresholdAnnotation(
+///   id: 'target',
+///   axis: AnnotationAxis.y,
+///   value: 100.0,
+///   label: 'Target',
+///   lineColor: Colors.green,
+///   lineWidth: 2.0,
+/// )
+/// ```
+class ThresholdAnnotation extends ChartAnnotation {
+  /// Creates a threshold annotation.
+  ThresholdAnnotation({
+    String? id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    required this.axis,
+    required this.value,
+    this.lineColor = Colors.black,
+    this.lineWidth = 1.0,
+    this.dashPattern,
+    this.labelPosition = AnnotationLabelPosition.topLeft,
+  })  : assert(value.isFinite, 'Threshold value must be finite'),
+        super(id: id ?? ChartAnnotation.generateId());
+
+  /// Which axis this threshold line is perpendicular to.
+  final AnnotationAxis axis;
+
+  /// The axis value where the threshold line is drawn.
+  final double value;
+
+  /// The color of the threshold line.
+  final Color lineColor;
+
+  /// The width of the threshold line in logical pixels.
+  final double lineWidth;
+
+  /// Optional dash pattern for the line.
+  final List<double>? dashPattern;
+
+  /// Where to position the label text along the threshold line.
+  final AnnotationLabelPosition labelPosition;
+
+  /// Creates a copy with modified properties.
+  ThresholdAnnotation copyWith({
+    String? id,
+    String? label,
+    AnnotationStyle? style,
+    bool? allowDragging,
+    bool? allowEditing,
+    int? zIndex,
+    AnnotationAxis? axis,
+    double? value,
+    Color? lineColor,
+    double? lineWidth,
+    List<double>? dashPattern,
+    AnnotationLabelPosition? labelPosition,
+  }) {
+    return ThresholdAnnotation(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      style: style ?? this.style,
+      allowDragging: allowDragging ?? this.allowDragging,
+      allowEditing: allowEditing ?? this.allowEditing,
+      zIndex: zIndex ?? this.zIndex,
+      axis: axis ?? this.axis,
+      value: value ?? this.value,
+      lineColor: lineColor ?? this.lineColor,
+      lineWidth: lineWidth ?? this.lineWidth,
+      dashPattern: dashPattern ?? this.dashPattern,
+      labelPosition: labelPosition ?? this.labelPosition,
+    );
+  }
+}
+
+/// Type of trend calculation.
+enum TrendType {
+  /// Linear regression (y = mx + b).
+  linear,
+
+  /// Polynomial regression (y = ax^n + bx^(n-1) + ... + c).
+  polynomial,
+
+  /// Simple moving average.
+  movingAverage,
+
+  /// Exponential moving average.
+  exponentialMovingAverage,
+}
+
+/// A trend annotation that overlays statistical trend lines on chart data.
+///
+/// Calculates and displays trend lines (linear regression, polynomial fits,
+/// moving averages, etc.) for a specific data series.
+///
+/// Example:
+/// ```dart
+/// TrendAnnotation(
+///   id: 'trend1',
+///   seriesId: 'temperature',
+///   trendType: TrendType.linear,
+///   lineColor: Colors.red,
+///   dashPattern: [5, 5],
+/// )
+/// ```
+class TrendAnnotation extends ChartAnnotation {
+  /// Creates a trend annotation.
+  TrendAnnotation({
+    String? id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    this.seriesId = '',
+    required this.trendType,
+    this.windowSize,
+    this.degree = 2,
+    this.lineColor = Colors.blue,
+    this.lineWidth = 2.0,
+    this.dashPattern,
+  })  : assert(
+          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+          'windowSize must be positive when trendType is movingAverage',
+        ),
+        assert(
+          degree > 0,
+          'degree must be positive',
+        ),
+        super(id: id ?? ChartAnnotation.generateId());
+
+  /// The ID of the series to calculate the trend for.
+  final String seriesId;
+
+  /// The type of trend calculation to perform.
+  final TrendType trendType;
+
+  /// Window size for moving average trends (required for movingAverage).
+  final int? windowSize;
+
+  /// Polynomial degree for polynomial regression (default 2).
+  final int degree;
+
+  /// The color of the trend line.
+  final Color lineColor;
+
+  /// The width of the trend line in logical pixels.
+  final double lineWidth;
+
+  /// Optional dash pattern for the trend line.
+  final List<double>? dashPattern;
+
+  /// Creates a copy with modified properties.
+  TrendAnnotation copyWith({
+    String? id,
+    String? label,
+    AnnotationStyle? style,
+    bool? allowDragging,
+    bool? allowEditing,
+    int? zIndex,
+    String? seriesId,
+    TrendType? trendType,
+    int? windowSize,
+    int? degree,
+    Color? lineColor,
+    double? lineWidth,
+    List<double>? dashPattern,
+  }) {
+    return TrendAnnotation(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      style: style ?? this.style,
+      allowDragging: allowDragging ?? this.allowDragging,
+      allowEditing: allowEditing ?? this.allowEditing,
+      zIndex: zIndex ?? this.zIndex,
+      seriesId: seriesId ?? this.seriesId,
+      trendType: trendType ?? this.trendType,
+      windowSize: windowSize ?? this.windowSize,
+      degree: degree ?? this.degree,
+      lineColor: lineColor ?? this.lineColor,
+      lineWidth: lineWidth ?? this.lineWidth,
+      dashPattern: dashPattern ?? this.dashPattern,
+    );
+  }
+}

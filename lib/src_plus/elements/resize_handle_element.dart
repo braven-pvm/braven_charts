@@ -1,23 +1,22 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
-// Phase 0 Prototype - Interaction Architecture
+// Resize Handle Elements for Annotations
 
 import 'dart:ui';
 
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
-import 'simulated_annotation.dart';
 
 /// Resize handle element for annotation edges.
 ///
 /// **Purpose**: Make resize handles participate in the unified priority system.
 /// Instead of checking resize handles separately, they are inserted into the
-/// QuadTree as real elements with priority 7.
+/// spatial index as real elements with high priority.
 ///
 /// **Integration**: Created dynamically when annotations are added to the chart.
 /// Each annotation generates 8 resize handle elements (4 corners + 4 edges).
 ///
-/// **Priority**: 7 (HIGH) - but loses to datapoints (9) and series (8).
+/// **Priority**: 7 (HIGH) - participates in hit-testing but loses to datapoints if overlapping.
 class ResizeHandleElement extends ChartElement {
   ResizeHandleElement({
     required this.parentAnnotation,
@@ -26,7 +25,7 @@ class ResizeHandleElement extends ChartElement {
   }) : _bounds = bounds;
 
   /// The annotation this handle belongs to.
-  final SimulatedAnnotation parentAnnotation;
+  final ChartElement parentAnnotation;
 
   /// The resize direction this handle controls.
   final ResizeDirection direction;
@@ -42,8 +41,6 @@ class ResizeHandleElement extends ChartElement {
 
   @override
   ChartElementType get elementType => ChartElementType.resizeHandle;
-
-  // Priority automatically computed as 7 from elementType
 
   @override
   bool get isSelected => parentAnnotation.isSelected;
