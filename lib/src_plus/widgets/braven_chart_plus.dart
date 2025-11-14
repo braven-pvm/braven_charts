@@ -2,6 +2,8 @@
 // BravenChartPlus - Integration of Prototype Interaction System
 // NO REFERENCES TO lib/src - COMPLETELY ISOLATED
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,11 +16,15 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
 import '../models/chart_annotation.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/chart_type.dart';
+import '../models/streaming_config.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
+import '../streaming/buffer_manager.dart';
+import '../streaming/streaming_controller.dart';
 import '../utils/data_converter.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -45,6 +51,9 @@ class BravenChartPlus extends StatefulWidget {
     this.height,
     this.backgroundColor = Colors.white,
     this.showDebugInfo = false,
+    this.dataStream,
+    this.streamingConfig,
+    this.streamingController,
   });
 
   final ChartType chartType;
@@ -57,6 +66,25 @@ class BravenChartPlus extends StatefulWidget {
   final double? height;
   final Color backgroundColor;
   final bool showDebugInfo;
+
+  /// Optional stream of real-time data points.
+  ///
+  /// When provided, the chart will subscribe to this stream and add incoming
+  /// data points to the first series. For multiple series streaming, use
+  /// [StreamingController] to manage data programmatically.
+  final Stream<ChartDataPoint>? dataStream;
+
+  /// Configuration for streaming behavior.
+  ///
+  /// Controls buffer size, auto-scroll, and callbacks. Only used when
+  /// [dataStream] is provided. Defaults to [StreamingConfig()] if null.
+  final StreamingConfig? streamingConfig;
+
+  /// Controller for programmatic streaming control.
+  ///
+  /// Allows pausing/resuming streaming and provides state notifications.
+  /// Optional - streaming works without it, but useful for custom UI controls.
+  final StreamingController? streamingController;
 
   @override
   State<BravenChartPlus> createState() => _BravenChartPlusState();
@@ -82,6 +110,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   chart_axis.Axis? _xAxis;
   chart_axis.Axis? _yAxis;
 
+  // Streaming state
+  StreamSubscription<ChartDataPoint>? _streamSubscription;
+  BufferManager<ChartDataPoint>? _buffer;
+  bool _isStreaming = true;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +135,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _tapRecognizer = PriorityTapGestureRecognizer(coordinator: _coordinator, onTapDown: _handleTapDown, onTapUp: _handleTapUp);
 
     _rebuildElements();
+
+    // Set up streaming if dataStream is provided
+    if (widget.dataStream != null) {
+      _setupStreamSubscription();
+    }
   }
 
   @override
@@ -128,6 +166,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   void dispose() {
     _focusNode.dispose();
+    _streamSubscription?.cancel();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
@@ -339,6 +378,116 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
+  }
+
+  // Streaming methods
+
+  /// Sets up the stream subscription for real-time data ingestion.
+  void _setupStreamSubscription() {
+    final config = widget.streamingConfig ?? const StreamingConfig();
+
+    // Initialize buffer if not already created
+    _buffer ??= BufferManager<ChartDataPoint>(maxSize: config.maxBufferSize);
+
+    // Register callbacks with controller if provided
+    widget.streamingController?.registerResumeCallback(_resumeStreaming);
+    widget.streamingController?.registerPauseCallback(_pauseStreaming);
+
+    // Subscribe to the data stream
+    _streamSubscription = widget.dataStream?.listen(
+      _onStreamData,
+      onError: (error) {
+        config.onStreamError?.call(error);
+        debugPrint('❌ Stream error: $error');
+      },
+    );
+  }
+
+  /// Handles incoming stream data points.
+  void _onStreamData(ChartDataPoint point) {
+    if (!mounted) return;
+
+    final config = widget.streamingConfig ?? const StreamingConfig();
+
+    if (_isStreaming) {
+      // Add point to first series (convention for simple streaming)
+      if (widget.series.isNotEmpty) {
+        setState(() {
+          widget.series.first.points.add(point);
+          _rebuildElements();
+
+          // Auto-scroll if enabled
+          if (config.autoScroll) {
+            _autoScrollToLatest();
+          }
+        });
+      }
+    } else {
+      // Buffer the point for later
+      _buffer?.add(point);
+      config.onBufferUpdated?.call(_buffer?.length ?? 0);
+    }
+  }
+
+  /// Pauses streaming and starts buffering incoming data.
+  void _pauseStreaming() {
+    if (!_isStreaming) return; // Already paused
+
+    setState(() {
+      _isStreaming = false;
+    });
+
+    widget.streamingController?.updateState(false);
+    debugPrint('⏸️  Streaming paused');
+  }
+
+  /// Resumes streaming and applies buffered data.
+  void _resumeStreaming() {
+    if (_isStreaming) return; // Already streaming
+
+    // Apply buffered data
+    _applyBufferedData();
+
+    setState(() {
+      _isStreaming = true;
+    });
+
+    widget.streamingController?.updateState(true);
+    debugPrint('▶️  Streaming resumed');
+  }
+
+  /// Applies all buffered data points to the series.
+  void _applyBufferedData() {
+    final bufferedPoints = _buffer?.removeAll() ?? [];
+    
+    if (bufferedPoints.isEmpty || widget.series.isEmpty) return;
+    
+    setState(() {
+      // Add all buffered points to first series
+      widget.series.first.points.addAll(bufferedPoints);
+      _rebuildElements();
+      
+      // Auto-scroll if enabled
+      final config = widget.streamingConfig ?? const StreamingConfig();
+      if (config.autoScroll) {
+        _autoScrollToLatest();
+      }
+      
+      // Notify about buffer clear
+      config.onBufferUpdated?.call(0);
+    });
+    
+    debugPrint('📊 Applied ${bufferedPoints.length} buffered points');
+  }
+  
+  /// Auto-scrolls the viewport to show the latest data.
+  void _autoScrollToLatest() {
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null || widget.series.isEmpty || widget.series.first.isEmpty) return;
+    
+    // For now, use a simple approach: pan right by a fixed amount
+    // TODO: Make this smarter by calculating actual viewport bounds
+    renderBox.panChart(50.0, 0.0);
   }
 
   @override
