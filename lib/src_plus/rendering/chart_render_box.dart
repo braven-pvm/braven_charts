@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
+import '../elements/annotation_elements.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
@@ -96,8 +97,9 @@ class ChartRenderBox extends RenderBox {
   final void Function(MouseCursor cursor)? onCursorChange;
 
   /// Current resize state (if resizing annotation).
+  // Current resize state (if resizing annotation).
   ResizeDirection? _activeResizeDirection;
-  SimulatedAnnotation? _resizingAnnotation;
+  RangeAnnotationElement? _resizingAnnotation;
   Rect? _resizeStartBounds;
 
   /// Current cursor position (for crosshair rendering).
@@ -984,6 +986,11 @@ class ChartRenderBox extends RenderBox {
       final annotation = hitElement.parentAnnotation;
       final direction = hitElement.direction;
 
+      // Only RangeAnnotationElement supports resizing currently
+      if (annotation is! RangeAnnotationElement) {
+        return;
+      }
+
       // Select the annotation first if not already selected
       if (!annotation.isSelected) {
         coordinator.selectElement(annotation);
@@ -1143,7 +1150,10 @@ class ChartRenderBox extends RenderBox {
       _rebuildSpatialIndex();
     }
 
-    // Clear resize state (annotation will revert to original size on next rebuild)
+    // Clear resize state
+    if (_resizingAnnotation != null) {
+      _resizingAnnotation!.clearTempBounds(); // Clear temporary resize bounds
+    }
     _activeResizeDirection = null;
     _resizingAnnotation = null;
     _resizeStartBounds = null;
@@ -1638,7 +1648,25 @@ class ChartRenderBox extends RenderBox {
     // These are not cached because they're less expensive and change frequently
     final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
+    debugPrint('🎨 PAINT: Painting ${nonSeriesElements.length} non-series elements');
     for (final element in nonSeriesElements) {
+      debugPrint('  - Painting element: ${element.runtimeType} (${element.id})');
+
+      // Update transform for annotation elements before painting (enables dynamic positioning)
+      // CRITICAL FIX: Update transform for ALL annotation types, not just Point and Range
+      // This ensures Threshold and Trend annotations update during pan/zoom gestures
+      if (_transform != null) {
+        if (element is PointAnnotationElement) {
+          element.updateTransform(_transform!);
+        } else if (element is RangeAnnotationElement) {
+          element.updateTransform(_transform!);
+        } else if (element is ThresholdAnnotationElement) {
+          element.updateTransform(_transform!);
+        } else if (element is TrendAnnotationElement) {
+          element.updateTransform(_transform!);
+        }
+      }
+
       element.paint(canvas, _plotArea.size);
     }
 
