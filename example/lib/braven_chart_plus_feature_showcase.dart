@@ -1,11 +1,15 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // BravenChartPlus Feature Showcase - What's ACTUALLY Implemented
 
+import 'dart:async';
+
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
+import 'package:braven_charts/src_plus/models/streaming_config.dart';
+import 'package:braven_charts/src_plus/streaming/streaming_controller.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:braven_charts/src_plus/widgets/chart_legend.dart';
 import 'package:flutter/material.dart';
@@ -29,9 +33,9 @@ import 'package:flutter/material.dart';
 /// - Focus management for keyboard interaction
 /// - Legend widget (show/hide series with click interaction)
 /// - Annotations (ALL 5 types: Point, Range, Text, Threshold, Trend)
+/// - Real-time streaming data with pause/resume and auto-scroll
 ///
 /// ❌ NOT YET IMPLEMENTED:
-/// - Real-time streaming data
 /// - Scrollbars
 /// - Advanced markers (shapes beyond circles)
 /// - Context menus
@@ -74,6 +78,13 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   // Annotation example state
   late final List<ChartSeries> _annotationExampleSeries;
   late final List<ChartAnnotation> _annotationExampleAnnotations;
+
+  // Streaming example state
+  final StreamController<ChartDataPoint> _streamController = StreamController<ChartDataPoint>.broadcast();
+  final StreamingController _streamingController = StreamingController();
+  Timer? _streamingTimer;
+  int _streamingDataCounter = 0;
+  int _bufferCount = 0;
 
   @override
   void initState() {
@@ -230,6 +241,29 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         label: '3-pt MA',
       ),
     ];
+
+    // Initialize streaming: generate data points at 10Hz (100ms intervals)
+    _streamingTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      _streamingDataCounter++;
+      final x = _streamingDataCounter * 0.1; // Time in seconds
+      final y = 50 + 30 * Math.sin(x * 2.0); // Sine wave
+      _streamController.add(ChartDataPoint(x: x, y: y));
+    });
+
+    // Listen to buffer updates
+    _streamingController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _streamingTimer?.cancel();
+    _streamController.close();
+    _streamingController.dispose();
+    super.dispose();
   }
 
   // Generate sample data for demonstrations
@@ -843,6 +877,109 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                   backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                   showDebugInfo: _showDebugInfo,
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Feature 9: Real-Time Streaming Data
+            _buildFeatureCard(
+              title: '9. Real-Time Streaming Data',
+              description: 'Live data ingestion with buffering, pause/resume controls, and auto-scroll viewport.',
+              features: const [
+                'Stream<ChartDataPoint> integration',
+                'Configurable buffer (10,000 points default)',
+                'Pause/resume streaming',
+                'Auto-scroll to follow latest data',
+                'Buffer count monitoring',
+                '10Hz data rate (100ms intervals)',
+              ],
+              child: Column(
+                children: [
+                  // Streaming chart
+                  SizedBox(
+                    height: 250,
+                    child: BravenChartPlus(
+                      key: const ValueKey('chart_streaming'),
+                      chartType: ChartType.line,
+                      series: const [
+                        LineChartSeries(
+                          id: 'streaming_data',
+                          name: 'Live Data',
+                          interpolation: LineInterpolation.linear,
+                          strokeWidth: 2.0,
+                          showDataPointMarkers: false,
+                          color: Colors.blue,
+                          points: [], // Start with empty data
+                          isXOrdered: true,
+                        ),
+                      ],
+                      dataStream: _streamController.stream,
+                      streamingConfig: StreamingConfig(
+                        maxBufferSize: 500,
+                        autoScroll: true,
+                        onBufferUpdated: (count) {
+                          if (mounted) {
+                            setState(() {
+                              _bufferCount = count;
+                            });
+                          }
+                        },
+                      ),
+                      streamingController: _streamingController,
+                      theme: _selectedTheme,
+                      backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                      showDebugInfo: _showDebugInfo,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Streaming controls
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _streamingController.isStreaming
+                              ? () => _streamingController.pauseStreaming()
+                              : () => _streamingController.resumeStreaming(),
+                          icon: Icon(_streamingController.isStreaming ? Icons.pause : Icons.play_arrow),
+                          label: Text(_streamingController.isStreaming ? 'Pause' : 'Resume'),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            'Buffer: $_bufferCount points',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const Text(
+                            'Data rate: 10Hz',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 
