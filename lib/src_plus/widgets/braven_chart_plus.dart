@@ -179,42 +179,42 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _elementGenerator = (ChartTransform transform) {
       final seriesIds = widget.series.map((s) => s.id).join(', ');
       debugPrint('🔧 Element generator executing for series: [$seriesIds]');
-      
+
       // Generate series elements and convert to mutable list
       final elements = DataConverter.seriesToElements(
-        series: widget.series, 
-        transform: transform, 
-        theme: widget.theme, 
+        series: widget.series,
+        transform: transform,
+        theme: widget.theme,
         strokeWidth: 2.0,
       ).cast<ChartElement>().toList();
-      
+
       // Convert annotations to elements
       for (final annotation in widget.annotations) {
         try {
           final ChartElement element = switch (annotation) {
             PointAnnotation() => PointAnnotationElement(
-              annotation: annotation,
-              series: widget.series.firstWhere(
-                (s) => s.id == annotation.seriesId,
-                orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
+                annotation: annotation,
+                series: widget.series.firstWhere(
+                  (s) => s.id == annotation.seriesId,
+                  orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
+                ),
+                transform: transform,
               ),
-              transform: transform,
-            ),
             RangeAnnotation() => RangeAnnotationElement(
-              annotation: annotation,
-              transform: transform,
-              chartSize: Size(transform.plotWidth, transform.plotHeight),
-            ),
+                annotation: annotation,
+                transform: transform,
+                chartSize: Size(transform.plotWidth, transform.plotHeight),
+              ),
             TextAnnotation() => TextAnnotationElement(
-              annotation: annotation,
-            ),
+                annotation: annotation,
+              ),
           };
           elements.add(element);
         } catch (e) {
           debugPrint('⚠️ Warning: Failed to create annotation element for ${annotation.id}: $e');
         }
       }
-      
+
       return elements;
     };
 

@@ -27,12 +27,13 @@ import 'package:flutter/material.dart';
 /// - Performance optimizations (Picture caching, hit test throttling)
 /// - Focus management for keyboard interaction
 /// - Legend widget (show/hide series with click interaction)
+/// - Annotations (Point, Range, Text with selection and hover)
 ///
 /// ❌ NOT YET IMPLEMENTED:
-/// - Real annotation system (5 types: Point, Range, Text, Threshold, Trend)
 /// - Real-time streaming data
 /// - Scrollbars
 /// - Advanced markers (shapes beyond circles)
+/// - Advanced annotations (Threshold, Trend)
 /// - Context menus
 /// - Export functionality
 void main() {
@@ -69,6 +70,10 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   // Legend example state
   final Set<String> _hiddenSeriesIds = {};
   late final List<ChartSeries> _legendExampleSeries;
+
+  // Annotation example state
+  late final List<ChartSeries> _annotationExampleSeries;
+  late final List<ChartAnnotation> _annotationExampleAnnotations;
 
   @override
   void initState() {
@@ -129,6 +134,58 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
+      ),
+    ];
+
+    // Initialize Annotation example series and annotations
+    _annotationExampleSeries = [
+      LineChartSeries(
+        id: 'annotation_line',
+        name: 'Temperature',
+        interpolation: LineInterpolation.bezier,
+        tension: 0.4,
+        strokeWidth: 2.5,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 4.0,
+        color: Colors.blue,
+        points: List.generate(12, (i) {
+          final x = i.toDouble();
+          final y = 60 + 15 * Math.sin(i * 0.5) + (i > 6 ? (i - 6) * 3 : 0);
+          return ChartDataPoint(x: x, y: y);
+        }),
+        isXOrdered: true,
+      ),
+    ];
+
+    _annotationExampleAnnotations = [
+      // Point annotation marking the peak value
+      PointAnnotation(
+        id: 'peak',
+        seriesId: 'annotation_line',
+        dataPointIndex: 9,
+        markerShape: MarkerShape.star,
+        markerSize: 14.0,
+        markerColor: Colors.red,
+        label: 'Peak',
+      ),
+      // Range annotation highlighting weekend period
+      RangeAnnotation(
+        id: 'weekend',
+        startX: 5.0,
+        endX: 7.0,
+        fillColor: Colors.orange.withOpacity(0.15),
+        borderColor: Colors.orange.withOpacity(0.3),
+        label: 'Weekend',
+        labelPosition: AnnotationLabelPosition.topRight,
+      ),
+      // Text annotation for important note
+      TextAnnotation(
+        id: 'note',
+        text: 'Trend Increasing',
+        position: const Offset(320, 30),
+        anchor: AnnotationAnchor.topRight,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        borderColor: Colors.green,
       ),
     ];
   }
@@ -721,6 +778,33 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
             const SizedBox(height: 32),
 
+            // Feature 8: Chart Annotations
+            _buildFeatureCard(
+              title: '8. Chart Annotations - Interactive Markers',
+              description: 'Add interactive annotations to highlight important data points, ranges, and add notes to your charts.',
+              features: const [
+                'Point annotations with custom markers',
+                'Range annotations for highlighting regions',
+                'Text annotations for labels and notes',
+                'Selection and hover feedback',
+                'Multiple annotation types on one chart',
+              ],
+              child: SizedBox(
+                height: 280,
+                child: BravenChartPlus(
+                  key: const ValueKey('chart_annotations'),
+                  chartType: ChartType.line,
+                  series: _annotationExampleSeries,
+                  annotations: _annotationExampleAnnotations,
+                  theme: _selectedTheme,
+                  backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                  showDebugInfo: _showDebugInfo,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
             // Footer with implementation status
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -757,7 +841,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     '• Data point markers\n'
                     '• Basic tooltips\n'
                     '• Performance optimizations\n'
-                    '• Legend widget (show/hide series)',
+                    '• Legend widget (show/hide series)\n'
+                    '• Annotations (Point, Range, Text)',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 16),
@@ -767,10 +852,10 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '• Real annotation system (5 types: Point, Range, Text, Threshold, Trend) - ~9h\n'
                     '• Real-time streaming data - ~9.5h\n'
                     '• Scrollbars - ~7h\n'
                     '• Advanced markers (shapes beyond circles) - ~1.5h\n'
+                    '• Advanced annotations (Threshold, Trend) - ~2h\n'
                     '\n'
                     'See docs/refactor/SPRINT_TASKS.md for detailed roadmap.',
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
