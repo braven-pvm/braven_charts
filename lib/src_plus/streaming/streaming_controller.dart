@@ -3,6 +3,30 @@
 
 import 'package:flutter/foundation.dart';
 
+/// Viewport mode for streaming charts.
+///
+/// Determines whether the chart follows the latest data (auto-scroll)
+/// or allows full exploration of historical data.
+enum ViewportMode {
+  /// Follow the latest data with auto-scroll (sliding window).
+  ///
+  /// When in this mode:
+  /// - Viewport shows only the last N points (configured window size)
+  /// - As new data arrives, viewport automatically pans to follow
+  /// - User manual pan/zoom is limited to the visible window
+  /// - Historical data is preserved but scrolled out of view
+  followLatest,
+
+  /// Allow full exploration of all historical data.
+  ///
+  /// When in this mode:
+  /// - Viewport shows full data bounds (all accumulated points)
+  /// - User can freely pan and zoom through entire dataset
+  /// - No auto-scroll or viewport constraints
+  /// - New data is buffered (not immediately visible)
+  explore,
+}
+
 /// Controller for programmatic control of streaming behavior in BravenChartPlus.
 ///
 /// Provides methods to control streaming state, allowing developers to build
@@ -35,6 +59,9 @@ class StreamingController extends ChangeNotifier {
   /// Whether streaming is currently active.
   bool _isStreaming = true;
 
+  /// Current viewport mode (followLatest or explore).
+  ViewportMode _viewportMode = ViewportMode.followLatest;
+
   /// Internal callback to resume streaming (set by BravenChartPlus).
   VoidCallback? _resumeStreamingCallback;
 
@@ -49,6 +76,12 @@ class StreamingController extends ChangeNotifier {
 
   /// Whether streaming is currently paused.
   bool get isPaused => !_isStreaming;
+
+  /// Current viewport mode.
+  ///
+  /// - [ViewportMode.followLatest]: Auto-scroll enabled, shows sliding window
+  /// - [ViewportMode.explore]: Full data exploration, manual pan/zoom
+  ViewportMode get viewportMode => _viewportMode;
 
   /// Registers the resume callback (called by BravenChartPlus internally).
   void registerResumeCallback(VoidCallback callback) {
@@ -67,9 +100,13 @@ class StreamingController extends ChangeNotifier {
 
   /// Updates the streaming state (called by BravenChartPlus internally).
   void updateState(bool isStreaming) {
+    debugPrint('🎮 updateState called: old=$_isStreaming, new=$isStreaming');
     if (_isStreaming != isStreaming) {
       _isStreaming = isStreaming;
+      debugPrint('🎮 State changed, notifying listeners');
       notifyListeners();
+    } else {
+      debugPrint('🎮 No state change, skipping notification');
     }
   }
 
@@ -80,6 +117,8 @@ class StreamingController extends ChangeNotifier {
   /// - Clears buffer
   /// - Resumes real-time updates
   /// - Auto-scroll resumes (if enabled)
+  /// - Viewport mode switches to [ViewportMode.followLatest]
+  /// - Viewport jumps to show latest data (animated)
   ///
   /// **Idempotency**: Safe to call when already streaming (no-op).
   ///
@@ -88,8 +127,16 @@ class StreamingController extends ChangeNotifier {
   /// - Custom gesture to resume (e.g., double-tap)
   /// - Keyboard shortcut (e.g., Spacebar)
   void resumeStreaming() {
+    print('🎮 resumeStreaming called: _isStreaming=$_isStreaming');
     if (!_isStreaming) {
-      _resumeStreamingCallback?.call();
+      print('🎮 Setting viewport to followLatest and calling callback FIRST');
+      _isStreaming = true; // Update state immediately
+      _viewportMode = ViewportMode.followLatest;
+      _resumeStreamingCallback?.call(); // Call widget callback FIRST
+      print('🎮 Callback complete, now notifying listeners');
+      notifyListeners(); // Notify AFTER callback
+    } else {
+      print('🎮 Already streaming, ignoring');
     }
   }
 
@@ -99,15 +146,25 @@ class StreamingController extends ChangeNotifier {
   /// - Stops real-time updates
   /// - Future stream data will be buffered
   /// - User can interact with chart without new data interfering
+  /// - Viewport mode switches to [ViewportMode.explore]
+  /// - Full data bounds become available for pan/zoom
   ///
   /// **Idempotency**: Safe to call when already paused (no-op).
   ///
   /// **Use Cases**:
   /// - "Pause" button in your UI
   /// - Automatic pause on user interaction
-  void pauseStreaming() {
+  void pauseStreaming() async {
+    print('🎮 pauseStreaming called: _isStreaming=$_isStreaming');
     if (_isStreaming) {
-      _pauseStreamingCallback?.call();
+      print('🎮 Setting viewport to explore and calling callback FIRST');
+      _isStreaming = false; // Update state immediately
+      _viewportMode = ViewportMode.explore;
+      _pauseStreamingCallback?.call(); // Call widget callback FIRST (sets _preserveAxesOnRebuild flag)
+      print('🎮 Callback complete, now notifying listeners');
+      notifyListeners(); // Notify AFTER callback so flag is already set
+    } else {
+      print('🎮 Already paused, ignoring');
     }
   }
 

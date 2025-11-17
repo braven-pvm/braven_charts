@@ -95,11 +95,13 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   int _total1DataPoints = 0;
 
   // Streaming Test 2: ChartController direct approach
+  final StreamingController _streaming2Controller = StreamingController();
   late final ChartController _chart2Controller;
   Timer? _streaming2Timer;
   int _streaming2DataCounter = 0;
   int _streaming2Rate = 10; // Hz
   String _data2Pattern = 'sine'; // 'sine', 'linear', 'random'
+  bool _autoScroll2 = true;
   int _total2DataPoints = 0;
 
   @override
@@ -261,17 +263,15 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       ),
     ];
 
-    // Listen to buffer updates for chart 1
-    _streaming1Controller.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    // REMOVED: Global listener that rebuilds entire page on pause/resume
+    // Buttons now use ListenableBuilder to rebuild only themselves
   }
 
   // Chart 1 (dataStream) streaming methods
   void _startStreaming1() {
     _streaming1Timer?.cancel();
+    // Also resume the chart to enable auto-scroll
+    _streaming1Controller.resumeStreaming();
     _streaming1Timer = Timer.periodic(Duration(milliseconds: 1000 ~/ _streaming1Rate), (_) {
       _streaming1DataCounter++;
       _total1DataPoints++;
@@ -300,13 +300,15 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       }
 
       _stream1Controller.add(point);
-      debugPrint("[Chart 1] data point: $point, pattern: $_data1Pattern");
+      // Removed excessive print - was flooding console 10-50 times per second
     });
   }
 
   void _stopStreaming1() {
     _streaming1Timer?.cancel();
     _streaming1Timer = null;
+    // Also pause the chart to freeze viewport
+    _streaming1Controller.pauseStreaming();
   }
 
   void _resetStreaming1() {
@@ -338,6 +340,29 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     setState(() {
       _autoScroll1 = !_autoScroll1;
     });
+  }
+
+  void _toggleAutoScroll2() {
+    setState(() {
+      _autoScroll2 = !_autoScroll2;
+    });
+  }
+
+  void _togglePauseResume1() {
+    // CRITICAL: Read the state ONCE at method entry to avoid race conditions
+    final isCurrentlyStreaming = _streaming1Controller.isStreaming;
+    print('🔘🔘🔘 BUTTON CLICKED: isStreaming=$isCurrentlyStreaming');
+
+    if (isCurrentlyStreaming) {
+      print('🔘 Branch: Calling pauseStreaming()');
+      _streaming1Controller.pauseStreaming();
+      print('🔘 pauseStreaming() returned');
+    } else {
+      print('🔘 Branch: Calling resumeStreaming()');
+      _streaming1Controller.resumeStreaming();
+      print('🔘 resumeStreaming() returned');
+    }
+    print('🔘 Method complete');
   }
 
   // Chart 2 (ChartController) streaming methods
@@ -372,7 +397,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
       // Add directly to controller
       _chart2Controller.addPoint('controller_data', src_point.ChartDataPoint(x: point.x, y: point.y));
-      debugPrint("[Chart 2] data point: $point, pattern: $_data2Pattern");
+      // Removed excessive print - was flooding console 10-50 times per second
     });
   }
 
@@ -1159,18 +1184,26 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                       Row(
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _streaming1Controller.isStreaming
-                                  ? () => _streaming1Controller.pauseStreaming()
-                                  : () => _streaming1Controller.resumeStreaming(),
-                              icon: Icon(_streaming1Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 14),
-                              label: Text(_streaming1Controller.isStreaming ? 'Pause' : 'Resume', style: const TextStyle(fontSize: 11)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _streaming1Controller.isStreaming ? Colors.orange : Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                minimumSize: const Size(0, 32),
-                              ),
+                            // Wrap button in ListenableBuilder so only this button rebuilds
+                            // when controller changes, not the entire page
+                            child: ListenableBuilder(
+                              listenable: _streaming1Controller,
+                              builder: (context, child) {
+                                return ElevatedButton.icon(
+                                  onPressed: () {
+                                    print('🔵🔵🔵 INLINE onPressed FIRED! Button widget received click event');
+                                    _togglePauseResume1();
+                                  },
+                                  icon: Icon(_streaming1Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 14),
+                                  label: Text(_streaming1Controller.isStreaming ? 'Pause' : 'Resume', style: const TextStyle(fontSize: 11)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _streaming1Controller.isStreaming ? Colors.orange : Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    minimumSize: const Size(0, 32),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1484,6 +1517,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                         streamingConfig: StreamingConfig(
                           maxBufferSize: 500,
                           autoScroll: _autoScroll1,
+                          autoScrollWindowSize: 150, // Sliding window size
+                          resumeAnimationDuration: const Duration(milliseconds: 300), // Smooth jump animation
                           onBufferUpdated: (count) {
                             if (mounted) {
                               setState(() {
@@ -1557,7 +1592,13 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                             isXOrdered: true,
                           ),
                         ],
-                        // No dataStream - relies on controller updates
+                        streamingConfig: StreamingConfig(
+                          maxBufferSize: 500,
+                          autoScroll: _autoScroll2,
+                          autoScrollWindowSize: 150, // Sliding window size
+                          resumeAnimationDuration: const Duration(milliseconds: 300), // Smooth jump animation
+                        ),
+                        streamingController: _streaming2Controller,
                         theme: _selectedTheme,
                         backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                         showDebugInfo: _showDebugInfo,
@@ -1604,16 +1645,24 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _streaming1Controller.isStreaming
-                      ? () => _streaming1Controller.pauseStreaming()
-                      : () => _streaming1Controller.resumeStreaming(),
-                  icon: Icon(_streaming1Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 16),
-                  label: Text(_streaming1Controller.isStreaming ? 'Pause' : 'Resume'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _streaming1Controller.isStreaming ? Colors.orange : Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
+                // Wrap button in ListenableBuilder so only this button rebuilds
+                // when controller changes, not the entire page
+                child: ListenableBuilder(
+                  listenable: _streaming1Controller,
+                  builder: (context, child) {
+                    return ElevatedButton.icon(
+                      onPressed: () {
+                        print('🔵🔵🔵 INLINE onPressed FIRED! Button widget received click event');
+                        _togglePauseResume1();
+                      },
+                      icon: Icon(_streaming1Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 16),
+                      label: Text(_streaming1Controller.isStreaming ? 'Pause' : 'Resume'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _streaming1Controller.isStreaming ? Colors.orange : Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -1740,11 +1789,25 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
+                  onPressed: _streaming2Controller.isStreaming
+                      ? () => _streaming2Controller.pauseStreaming()
+                      : () => _streaming2Controller.resumeStreaming(),
+                  icon: Icon(_streaming2Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 16),
+                  label: Text(_streaming2Controller.isStreaming ? 'Pause' : 'Resume'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _streaming2Controller.isStreaming ? Colors.orange : Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
                   onPressed: _streaming2Timer != null && _streaming2Timer!.isActive ? _stopStreaming2 : _startStreaming2,
                   icon: Icon(_streaming2Timer != null && _streaming2Timer!.isActive ? Icons.stop : Icons.play_arrow, size: 16),
                   label: Text(_streaming2Timer != null && _streaming2Timer!.isActive ? 'Stop' : 'Start'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _streaming2Timer != null && _streaming2Timer!.isActive ? Colors.red : Colors.green,
+                    backgroundColor: _streaming2Timer != null && _streaming2Timer!.isActive ? Colors.red : Colors.blue,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -1796,6 +1859,24 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                         return DropdownMenuItem(value: pattern, child: Text(pattern));
                       }).toList(),
                       onChanged: (pattern) => pattern != null ? _changeData2Pattern(pattern) : null,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('AutoScroll:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    ElevatedButton(
+                      onPressed: _toggleAutoScroll2,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _autoScroll2 ? Colors.green : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(_autoScroll2 ? 'ON' : 'OFF'),
                     ),
                   ],
                 ),

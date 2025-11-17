@@ -126,6 +126,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   bool _isStreaming = true;
   final List<ChartDataPoint> _streamingDataPoints = [];
 
+  // Locked viewport bounds when paused - THE FUNDAMENTAL FIX
+  DataBounds? _lockedPausedBounds;
+
   @override
   void initState() {
     super.initState();
@@ -159,9 +162,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    debugPrint('🔄 didUpdateWidget: seriesChanged=${widget.series != oldWidget.series}, themeChanged=${widget.theme != oldWidget.theme}');
-    debugPrint('   oldTheme seriesColors: ${oldWidget.theme?.seriesColors}');
-    debugPrint('   newTheme seriesColors: ${widget.theme?.seriesColors}');
+    // Removed excessive debugPrints (didUpdateWidget details)
 
     // Handle controller changes (matches BravenChart pattern)
     if (widget.controller != oldWidget.controller) {
@@ -170,17 +171,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
 
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
-      debugPrint('🎨 Theme/Series changed! Calling _rebuildElements()');
+      // Removed excessive debugPrint (theme/series changed)
       _rebuildElements();
       // Request focus after rebuild to ensure keyboard events still work
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _focusNode.requestFocus();
-          debugPrint('🎯 Focus requested after theme/series change');
+          // Removed excessive debugPrint (focus requested)
         }
       });
-    } else {
-      debugPrint('⚠️ NO CHANGE DETECTED - not rebuilding');
     }
   }
 
@@ -200,6 +199,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _onControllerUpdate() {
     if (!mounted) return;
 
+    // When paused, don't rebuild - let data accumulate silently
+    // This prevents visual jumps when exploring the viewport
+    if (!_isStreaming) {
+      debugPrint('⏸️  Controller updated while paused - data accumulating, no rebuild');
+      return;
+    }
+
     // Controller data changed - rebuild with merged data
     // This ensures controller.addPoint() updates appear immediately
     setState(() {
@@ -208,9 +214,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _rebuildElements() {
-    debugPrint('📋 _rebuildElements called');
-    debugPrint('   Current theme: ${widget.theme}');
-    debugPrint('   Theme seriesColors: ${widget.theme?.seriesColors}');
+    // Removed excessive debugPrints - was firing on every frame during streaming
 
     _spatialIndex.clear();
 
@@ -231,13 +235,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final mergedSeriesList = <ChartSeries>[];
       final processedIds = <String>{};
 
-      debugPrint('🔄 Controller has ${controllerData.length} series');
+      // Removed excessive debugPrint
 
       // First, update existing series with controller data
       for (final series in widget.series) {
         final controllerPoints = controllerData[series.id];
         if (controllerPoints != null && controllerPoints.isNotEmpty) {
-          debugPrint('   Series ${series.id}: ${controllerPoints.length} points from controller');
+          // Removed excessive debugPrints - was firing on every frame
 
           // Convert src ChartDataPoint to src_plus ChartDataPoint
           final convertedPoints = controllerPoints
@@ -250,10 +254,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                   ))
               .toList();
 
-          if (convertedPoints.isNotEmpty) {
-            final lastPoint = convertedPoints.last;
-            debugPrint('      Last point: x=${lastPoint.x.toStringAsFixed(3)}, y=${lastPoint.y.toStringAsFixed(6)}');
-          }
+          // Removed excessive debugPrint (last point details)
 
           // Merge series points with controller points
           final mergedPoints = [...series.points, ...convertedPoints];
@@ -337,42 +338,77 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
 
     // Compute data bounds from effective series
-    // For streaming with auto-scroll, use a sliding window instead of all data
-    final DataBounds dataBounds;
-    if (widget.streamingConfig?.autoScroll == true && effectiveSeries.isNotEmpty) {
-      // Calculate sliding window bounds using FIXED NUMBER of recent points
-      final allPoints = effectiveSeries.expand((s) => s.points).toList();
-      debugPrint('📊 Sliding window calculation: total points=${allPoints.length}');
+    // FUNDAMENTAL FIX: Use locked bounds when paused to prevent visual jump
+    // Otherwise calculate bounds based on viewport mode
+    DataBounds dataBounds; // Made mutable for validation safety checks
 
-      if (allPoints.isNotEmpty) {
-        // Use last 100 points only (or all if less than 100)
-        const maxWindowPoints = 100;
-        final windowPoints = allPoints.length <= maxWindowPoints ? allPoints : allPoints.sublist(allPoints.length - maxWindowPoints);
+    if (_lockedPausedBounds != null) {
+      // PAUSED: Use locked bounds captured at pause time
+      // Removed excessive debugPrint (locked bounds details)
+      dataBounds = _lockedPausedBounds!;
+    } else {
+      // NOT PAUSED: Calculate bounds based on viewport mode
+      final shouldUseWindowBounds = widget.streamingConfig?.autoScroll == true &&
+          widget.streamingController?.viewportMode == ViewportMode.followLatest &&
+          effectiveSeries.isNotEmpty;
 
-        debugPrint('   Using last ${windowPoints.length} points for bounds (of ${allPoints.length} total)');
+      if (shouldUseWindowBounds) {
+        // Calculate sliding window bounds using CONFIGURABLE NUMBER of recent points
+        final allPoints = effectiveSeries.expand((s) => s.points).toList();
+        final windowSize = widget.streamingConfig?.autoScrollWindowSize ?? 150;
+        // Removed excessive debugPrint (sliding window calculation)
 
-        if (windowPoints.isNotEmpty) {
-          final minX = windowPoints.map((p) => p.x).reduce((a, b) => a < b ? a : b);
-          final maxX = windowPoints.map((p) => p.x).reduce((a, b) => a > b ? a : b);
-          final minY = windowPoints.map((p) => p.y).reduce((a, b) => a < b ? a : b);
-          final maxY = windowPoints.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+        if (allPoints.isNotEmpty) {
+          // Use last N points only (or all if less than N)
+          final windowPoints = allPoints.length <= windowSize ? allPoints : allPoints.sublist(allPoints.length - windowSize);
 
-          debugPrint('   window bounds: X=[$minX, $maxX], Y=[$minY, $maxY]');
+          // Removed excessive debugPrint (window points count)
 
-          dataBounds = DataBounds(xMin: minX, xMax: maxX, yMin: minY, yMax: maxY);
+          if (windowPoints.isNotEmpty) {
+            final minX = windowPoints.map((p) => p.x).reduce((a, b) => a < b ? a : b);
+            final maxX = windowPoints.map((p) => p.x).reduce((a, b) => a > b ? a : b);
+            final minY = windowPoints.map((p) => p.y).reduce((a, b) => a < b ? a : b);
+            final maxY = windowPoints.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+
+            // Removed excessive print (window bounds)
+
+            dataBounds = DataBounds(xMin: minX, xMax: maxX, yMin: minY, yMax: maxY);
+          } else {
+            // Removed excessive print (no points in window)
+            dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+          }
         } else {
-          debugPrint('   ⚠️ No points in window, falling back to full bounds');
-          dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+          // Removed excessive print (no points at all)
+          dataBounds = const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
         }
       } else {
-        debugPrint('   ⚠️ No points at all, using default [0,1]');
-        dataBounds = const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
+        // Non-streaming, no auto-scroll, or explore mode: use all data
+        // Removed excessive print (full data bounds)
+        dataBounds = DataConverter.computeDataBounds(effectiveSeries);
       }
-    } else {
-      // Non-streaming or no auto-scroll: use all data
-      debugPrint('📊 Using full data bounds (not streaming or autoScroll=false)');
-      dataBounds = DataConverter.computeDataBounds(effectiveSeries);
-    } // Create axes from data bounds with theme colors
+    }
+
+    // CRITICAL: Ensure valid bounds before creating axes (prevent dataMax <= dataMin assertion)
+    if (dataBounds.xMax <= dataBounds.xMin) {
+      print('⚠️ INVALID X BOUNDS: xMin=${dataBounds.xMin}, xMax=${dataBounds.xMax}, forcing default [0,1]');
+      dataBounds = DataBounds(
+        xMin: 0,
+        xMax: 1,
+        yMin: dataBounds.yMin,
+        yMax: dataBounds.yMax,
+      );
+    }
+    if (dataBounds.yMax <= dataBounds.yMin) {
+      print('⚠️ INVALID Y BOUNDS: yMin=${dataBounds.yMin}, yMax=${dataBounds.yMax}, forcing default [0,1]');
+      dataBounds = DataBounds(
+        xMin: dataBounds.xMin,
+        xMax: dataBounds.xMax,
+        yMin: 0,
+        yMax: 1,
+      );
+    }
+
+    // Create axes from data bounds with theme colors
     _xAxis = chart_axis.Axis(
       config: AxisConfig(
         label: widget.xAxis?.label ?? 'X',
@@ -401,11 +437,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       dataMax: dataBounds.yMax,
     );
 
-    // Create element generator function
+    // Create element generator that renders series
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
-      final seriesIds = effectiveSeries.map((s) => s.id).join(', ');
-      debugPrint('🔧 Element generator executing for series: [$seriesIds]');
+      // Removed excessive debugPrint (element generator executing)
 
       // Generate series elements from effective series (with streaming data)
       final elements = DataConverter.seriesToElements(
@@ -416,9 +451,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ).cast<ChartElement>().toList();
 
       // Convert annotations to elements
-      debugPrint('📍 Converting ${widget.annotations.length} annotations to elements');
-      debugPrint('   Transform: plotWidth=${transform.plotWidth}, plotHeight=${transform.plotHeight}');
-      debugPrint('   Transform: dataX=${transform.dataXMin}..${transform.dataXMax}, dataY=${transform.dataYMin}..${transform.dataYMax}');
+      // Removed excessive debugPrints (annotation conversion details)
       for (final annotation in widget.annotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -458,7 +491,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           if (element is ResizableElement && element.isResizable) {
             final handleElements = element.createResizeHandleElements().cast<ChartElement>();
             elements.addAll(handleElements);
-            debugPrint('  🎯 Added ${handleElements.length} resize handles for ${annotation.id}');
+            // Removed excessive debugPrint (resize handles added)
           }
         } catch (e) {
           debugPrint('⚠️ Warning: Failed to create annotation element for ${annotation.id}: $e');
@@ -471,7 +504,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Increment version to signal that regeneration is needed
     _elementGeneratorVersion++;
 
-    debugPrint('✅ _rebuildElements complete, new generator created (version $_elementGeneratorVersion)');
+    // Removed excessive debugPrint (_rebuildElements complete)
   }
 
   void _onCoordinatorChanged() {
@@ -488,7 +521,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Request focus on pan start to enable keyboard controls
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
-      debugPrint('🎯 Focus requested via pan start');
+      // Removed excessive debugPrint (focus requested via pan start)
     }
   }
 
@@ -503,7 +536,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Request focus on tap to enable keyboard controls
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
-      debugPrint('🎯 Focus requested via tap');
+      // Removed excessive debugPrint (focus requested via tap)
     }
   }
 
@@ -516,53 +549,53 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    debugPrint('⌨️ _handleKeyEvent: ${event.runtimeType}, key=${event.logicalKey}');
+    // Removed excessive debugPrint (key event)
 
     if (event is KeyDownEvent) {
       final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-      debugPrint('   RenderBox found: ${renderBox != null}');
+      // Removed excessive debugPrint (renderbox found)
 
       if (renderBox == null) return;
 
       // Reset view
       if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
-        debugPrint('   Calling resetView()');
+        // Removed excessive debugPrint (calling resetView)
         renderBox.resetView();
       }
       // Shift modifier for zoom
       else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-        debugPrint('   Adding Shift modifier');
+        // Removed excessive debugPrint (adding shift modifier)
         _coordinator.addModifierKey(LogicalKeyboardKey.shift);
       }
       // Arrow keys for panning
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        debugPrint('   Arrow Left - calling panChart(-20, 0)');
+        // Removed excessive debugPrint (arrow left)
         renderBox.panChart(-20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        debugPrint('   Arrow Right - calling panChart(20, 0)');
+        // Removed excessive debugPrint (arrow right)
         renderBox.panChart(20.0, 0.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        debugPrint('   Arrow Up - calling panChart(0, -20)');
+        // Removed excessive debugPrint (arrow up)
         renderBox.panChart(0.0, -20.0);
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        debugPrint('   Arrow Down - calling panChart(0, 20)');
+        // Removed excessive debugPrint (arrow down)
         renderBox.panChart(0.0, 20.0);
       }
       // Zoom in with + or = or numpad +
       else if (event.logicalKey == LogicalKeyboardKey.equal ||
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
-        debugPrint('   Zoom In key - calling zoomChart(1.1)');
+        // Removed excessive debugPrint (zoom in)
         renderBox.zoomChart(1.1);
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
-        debugPrint('   Zoom Out key - calling zoomChart(0.9)');
+        // Removed excessive debugPrint (zoom out)
         renderBox.zoomChart(0.9);
       }
     } else if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-        debugPrint('   Removing Shift modifier');
+        // Removed excessive debugPrint (removing shift modifier)
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
@@ -598,7 +631,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final config = widget.streamingConfig ?? const StreamingConfig();
 
-    debugPrint('🔵 Stream data received: x=${point.x.toStringAsFixed(3)}, y=${point.y.toStringAsFixed(6)}');
+    // Removed excessive print - was flooding console 10-50 times per second
 
     if (_isStreaming) {
       // Use controller if available (matches BravenChart pattern)
@@ -644,30 +677,63 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   /// Pauses streaming and starts buffering incoming data.
+  /// FUNDAMENTAL FIX: Lock the current viewport bounds to prevent visual jump.
+  /// PERFORMANCE FIX: No expensive point iteration - instant pause response.
   void _pauseStreaming() {
     if (!_isStreaming) return; // Already paused
 
-    setState(() {
-      _isStreaming = false;
-    });
+    print('⏸️  ===== PAUSE STREAMING STARTED =====');
 
-    widget.streamingController?.updateState(false);
-    debugPrint('⏸️  Streaming paused');
+    // STEP 1: Capture current viewport bounds from axes
+    // This is what the user sees RIGHT NOW - we must preserve it exactly
+    if (_xAxis != null && _yAxis != null) {
+      _lockedPausedBounds = DataBounds(
+        xMin: _xAxis!.dataMin,
+        xMax: _xAxis!.dataMax,
+        yMin: _yAxis!.dataMin,
+        yMax: _yAxis!.dataMax,
+      );
+      print(
+          '🔒 LOCKED viewport bounds: X=[${_lockedPausedBounds!.xMin}, ${_lockedPausedBounds!.xMax}], Y=[${_lockedPausedBounds!.yMin}, ${_lockedPausedBounds!.yMax}]');
+    }
+
+    // STEP 2: Update streaming state
+    _isStreaming = false;
+
+    print('⏸️  ===== PAUSE COMPLETE - Viewport LOCKED =====');
+
+    // STEP 3: Force rebuild with locked bounds to prevent race condition
+    // This ensures _lockedPausedBounds is used IMMEDIATELY, before any other rebuild
+    setState(() {
+      // Locked bounds are already set, this just triggers rebuild
+      print('⏸️  Forcing rebuild with locked bounds to prevent race condition');
+    });
   }
 
   /// Resumes streaming and applies buffered data.
+  /// FUNDAMENTAL FIX: Unlock the viewport bounds to resume dynamic calculation.
   void _resumeStreaming() {
     if (_isStreaming) return; // Already streaming
 
-    // Apply buffered data
+    print('▶️  ===== RESUME STREAMING STARTED =====');
+
+    // STEP 1: Unlock the viewport bounds AND update streaming state FIRST
+    // CRITICAL: Must set _isStreaming = true BEFORE applying buffered data
+    // to prevent "Controller updated while paused" spam when controller.addPoint() is called
+    _lockedPausedBounds = null;
+    _isStreaming = true;
+
+    // STEP 2: Apply buffered data (controller.addPoint will now trigger rebuilds)
     _applyBufferedData();
 
-    setState(() {
-      _isStreaming = true;
-    });
+    // DON'T call updateState() - the controller already updated its state
+    // and called notifyListeners() before calling this callback
+    // widget.streamingController?.updateState(true);  // REMOVED - redundant
 
-    widget.streamingController?.updateState(true);
-    debugPrint('▶️  Streaming resumed');
+    // STEP 3: Jump viewport to latest data after resume
+    _jumpToLatestData();
+
+    // Removed excessive debugPrint (streaming resumed)
   }
 
   /// Applies all buffered data points to the series.
@@ -710,7 +776,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Notify about buffer clear
     config.onBufferUpdated?.call(0);
 
-    debugPrint('📊 Applied ${bufferedPoints.length} buffered points');
+    // Removed excessive debugPrint (applied buffered points)
   }
 
   /// Clears all accumulated streaming data.
@@ -724,12 +790,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Controller will trigger _onControllerUpdate -> setState -> rebuild
     } else {
       // Legacy path
-      final pointCount = _streamingDataPoints.length;
       setState(() {
         _streamingDataPoints.clear();
         _rebuildElements();
       });
-      debugPrint('🗑️  Cleared $pointCount streaming points');
+      // Removed excessive debugPrint (cleared streaming points)
     }
 
     // Clear buffer regardless of path
@@ -746,16 +811,49 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // 2. Calling updateDataBounds() with all historical data causes bounds explosion
     // 3. The pan operation below is sufficient to follow latest data
 
-    debugPrint('↩️  Auto-scrolling viewport to follow latest data');
+    // Removed excessive debugPrint (auto-scrolling viewport)
 
     // Pan right every time to follow the data
     final panAmount = renderBox.size.width * 0.02; // 2% per update
     renderBox.panChart(panAmount, 0.0);
   }
 
+  /// Jumps the viewport to show the latest data after resume.
+  ///
+  /// This is called when streaming resumes to ensure the user sees the
+  /// most recent data immediately. The viewport smoothly animates back
+  /// to the "tip" of the data stream.
+  void _jumpToLatestData() {
+    // Schedule for next frame to ensure data is applied
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      if (renderBox == null) {
+        // Keep this warning - it's important
+        debugPrint('⚠️  Cannot jump to latest: renderBox not found');
+        return;
+      }
+
+      // Reset the viewport transform to original (identity transform)
+      // This effectively "jumps" back to showing the sliding window bounds
+      // Removed excessive debugPrint (resetting viewport)
+
+      // Reset view to show original bounds (which are now the sliding window)
+      renderBox.resetView();
+
+      // Trigger rebuild with sliding window bounds (viewportMode changed to followLatest)
+      setState(() {
+        _rebuildElements();
+      });
+
+      // Removed excessive debugPrint (viewport reset)
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    debugPrint('🏗️  BravenChartPlus.build() called');
+    // Removed excessive debugPrint (build called)
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
@@ -771,7 +869,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             onEnter: (_) {
               if (!_focusNode.hasFocus) {
                 _focusNode.requestFocus();
-                debugPrint('🎯 Focus requested via mouse enter');
+                // Removed excessive debugPrint (focus requested via mouse enter)
               }
             },
             child: Container(
@@ -851,7 +949,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
-    debugPrint('🔧 _ChartRenderWidget.updateRenderObject called (version $elementGeneratorVersion)');
     renderObject
       ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
