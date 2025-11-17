@@ -7,6 +7,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../src/foundation/data_models/chart_data_point.dart' as src_point;
+import '../../src/widgets/controller/chart_controller.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
 import '../coordinates/chart_transform.dart';
@@ -54,6 +56,7 @@ class BravenChartPlus extends StatefulWidget {
     this.dataStream,
     this.streamingConfig,
     this.streamingController,
+    this.controller,
   });
 
   final ChartType chartType;
@@ -66,6 +69,13 @@ class BravenChartPlus extends StatefulWidget {
   final double? height;
   final Color backgroundColor;
   final bool showDebugInfo;
+
+  /// Optional controller for programmatic data updates.
+  ///
+  /// Matches BravenChart API. When provided, the chart will listen to
+  /// controller changes and merge controller data with [series] data.
+  /// Use [ChartController.addPoint] for real-time data updates.
+  final ChartController? controller;
 
   /// Optional stream of real-time data points.
   ///
@@ -114,6 +124,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   StreamSubscription<ChartDataPoint>? _streamSubscription;
   BufferManager<ChartDataPoint>? _buffer;
   bool _isStreaming = true;
+  final List<ChartDataPoint> _streamingDataPoints = [];
 
   @override
   void initState() {
@@ -134,6 +145,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     _tapRecognizer = PriorityTapGestureRecognizer(coordinator: _coordinator, onTapDown: _handleTapDown, onTapUp: _handleTapUp);
 
+    // Listen to controller updates (matches BravenChart pattern)
+    widget.controller?.addListener(_onControllerUpdate);
+
     _rebuildElements();
 
     // Set up streaming if dataStream is provided
@@ -148,6 +162,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     debugPrint('🔄 didUpdateWidget: seriesChanged=${widget.series != oldWidget.series}, themeChanged=${widget.theme != oldWidget.theme}');
     debugPrint('   oldTheme seriesColors: ${oldWidget.theme?.seriesColors}');
     debugPrint('   newTheme seriesColors: ${widget.theme?.seriesColors}');
+
+    // Handle controller changes (matches BravenChart pattern)
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?.removeListener(_onControllerUpdate);
+      widget.controller?.addListener(_onControllerUpdate);
+    }
+
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
       debugPrint('🎨 Theme/Series changed! Calling _rebuildElements()');
       _rebuildElements();
@@ -167,11 +188,23 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void dispose() {
     _focusNode.dispose();
     _streamSubscription?.cancel();
+    widget.controller?.removeListener(_onControllerUpdate);
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
     _tapRecognizer.dispose();
     super.dispose();
+  }
+
+  /// Called when controller notifies of changes (matches BravenChart pattern).
+  void _onControllerUpdate() {
+    if (!mounted) return;
+
+    // Controller data changed - rebuild with merged data
+    // This ensures controller.addPoint() updates appear immediately
+    setState(() {
+      _rebuildElements();
+    });
   }
 
   void _rebuildElements() {
@@ -181,10 +214,165 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     _spatialIndex.clear();
 
-    // Compute data bounds from all series
-    final dataBounds = DataConverter.computeDataBounds(widget.series);
+    // Start with widget.series as base
+    List<ChartSeries> effectiveSeries = widget.series;
 
-    // Create axes from data bounds with theme colors
+    // Merge controller data if controller is provided (matches BravenChart pattern)
+    if (widget.controller != null) {
+      final controllerData = widget.controller!.getAllSeries();
+
+      // Create map of existing series for efficient lookup
+      final seriesMap = <String, ChartSeries>{};
+      for (final series in widget.series) {
+        seriesMap[series.id] = series;
+      }
+
+      // Merge controller data into series
+      final mergedSeriesList = <ChartSeries>[];
+      final processedIds = <String>{};
+
+      debugPrint('🔄 Controller has ${controllerData.length} series');
+
+      // First, update existing series with controller data
+      for (final series in widget.series) {
+        final controllerPoints = controllerData[series.id];
+        if (controllerPoints != null && controllerPoints.isNotEmpty) {
+          debugPrint('   Series ${series.id}: ${controllerPoints.length} points from controller');
+
+          // Convert src ChartDataPoint to src_plus ChartDataPoint
+          final convertedPoints = controllerPoints
+              .map((p) => ChartDataPoint(
+                    x: p.x,
+                    y: p.y,
+                    timestamp: p.timestamp,
+                    label: p.label,
+                    metadata: p.metadata,
+                  ))
+              .toList();
+
+          if (convertedPoints.isNotEmpty) {
+            final lastPoint = convertedPoints.last;
+            debugPrint('      Last point: x=${lastPoint.x.toStringAsFixed(3)}, y=${lastPoint.y.toStringAsFixed(6)}');
+          }
+
+          // Merge series points with controller points
+          final mergedPoints = [...series.points, ...convertedPoints];
+
+          final updatedSeries = switch (series) {
+            LineChartSeries() => LineChartSeries(
+                id: series.id,
+                name: series.name,
+                points: mergedPoints,
+                color: series.color,
+                isXOrdered: series.isXOrdered,
+                metadata: series.metadata,
+                interpolation: series.interpolation,
+                strokeWidth: series.strokeWidth,
+                tension: series.tension,
+                showDataPointMarkers: series.showDataPointMarkers,
+                dataPointMarkerRadius: series.dataPointMarkerRadius,
+              ),
+            _ => series, // Keep original if not LineChartSeries
+          };
+
+          mergedSeriesList.add(updatedSeries);
+        } else {
+          mergedSeriesList.add(series);
+        }
+        processedIds.add(series.id);
+      }
+
+      // Then, add any controller series that don't exist in widget.series
+      for (final entry in controllerData.entries) {
+        if (!processedIds.contains(entry.key)) {
+          // Convert src ChartDataPoint to src_plus ChartDataPoint
+          final convertedPoints = entry.value
+              .map((p) => ChartDataPoint(
+                    x: p.x,
+                    y: p.y,
+                    timestamp: p.timestamp,
+                    label: p.label,
+                    metadata: p.metadata,
+                  ))
+              .toList();
+
+          // Create new series from controller data
+          mergedSeriesList.add(LineChartSeries(
+            id: entry.key,
+            name: entry.key,
+            points: convertedPoints,
+            color: widget.theme?.seriesColors.isNotEmpty == true
+                ? widget.theme!.seriesColors[mergedSeriesList.length % widget.theme!.seriesColors.length]
+                : Colors.blue,
+          ));
+        }
+      }
+
+      effectiveSeries = mergedSeriesList;
+    }
+    // Legacy: Also merge _streamingDataPoints if present (for backward compatibility)
+    else if (_streamingDataPoints.isNotEmpty && widget.series.isNotEmpty) {
+      final firstSeries = widget.series.first;
+      final mergedPoints = [...firstSeries.points, ..._streamingDataPoints];
+
+      // Create updated series with streaming data
+      final updatedFirstSeries = switch (firstSeries) {
+        LineChartSeries() => LineChartSeries(
+            id: firstSeries.id,
+            name: firstSeries.name,
+            points: mergedPoints,
+            color: firstSeries.color,
+            isXOrdered: firstSeries.isXOrdered,
+            metadata: firstSeries.metadata,
+            interpolation: firstSeries.interpolation,
+            strokeWidth: firstSeries.strokeWidth,
+            tension: firstSeries.tension,
+            showDataPointMarkers: firstSeries.showDataPointMarkers,
+            dataPointMarkerRadius: firstSeries.dataPointMarkerRadius,
+          ),
+        _ => firstSeries, // Keep original if not LineChartSeries
+      };
+
+      effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
+    }
+
+    // Compute data bounds from effective series
+    // For streaming with auto-scroll, use a sliding window instead of all data
+    final DataBounds dataBounds;
+    if (widget.streamingConfig?.autoScroll == true && effectiveSeries.isNotEmpty) {
+      // Calculate sliding window bounds using FIXED NUMBER of recent points
+      final allPoints = effectiveSeries.expand((s) => s.points).toList();
+      debugPrint('📊 Sliding window calculation: total points=${allPoints.length}');
+
+      if (allPoints.isNotEmpty) {
+        // Use last 100 points only (or all if less than 100)
+        const maxWindowPoints = 100;
+        final windowPoints = allPoints.length <= maxWindowPoints ? allPoints : allPoints.sublist(allPoints.length - maxWindowPoints);
+
+        debugPrint('   Using last ${windowPoints.length} points for bounds (of ${allPoints.length} total)');
+
+        if (windowPoints.isNotEmpty) {
+          final minX = windowPoints.map((p) => p.x).reduce((a, b) => a < b ? a : b);
+          final maxX = windowPoints.map((p) => p.x).reduce((a, b) => a > b ? a : b);
+          final minY = windowPoints.map((p) => p.y).reduce((a, b) => a < b ? a : b);
+          final maxY = windowPoints.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+
+          debugPrint('   window bounds: X=[$minX, $maxX], Y=[$minY, $maxY]');
+
+          dataBounds = DataBounds(xMin: minX, xMax: maxX, yMin: minY, yMax: maxY);
+        } else {
+          debugPrint('   ⚠️ No points in window, falling back to full bounds');
+          dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+        }
+      } else {
+        debugPrint('   ⚠️ No points at all, using default [0,1]');
+        dataBounds = const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
+      }
+    } else {
+      // Non-streaming or no auto-scroll: use all data
+      debugPrint('📊 Using full data bounds (not streaming or autoScroll=false)');
+      dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+    } // Create axes from data bounds with theme colors
     _xAxis = chart_axis.Axis(
       config: AxisConfig(
         label: widget.xAxis?.label ?? 'X',
@@ -216,12 +404,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create element generator function
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
     _elementGenerator = (ChartTransform transform) {
-      final seriesIds = widget.series.map((s) => s.id).join(', ');
+      final seriesIds = effectiveSeries.map((s) => s.id).join(', ');
       debugPrint('🔧 Element generator executing for series: [$seriesIds]');
 
-      // Generate series elements and convert to mutable list
+      // Generate series elements from effective series (with streaming data)
       final elements = DataConverter.seriesToElements(
-        series: widget.series,
+        series: effectiveSeries,
         transform: transform,
         theme: widget.theme,
         strokeWidth: 2.0,
@@ -392,6 +580,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Register callbacks with controller if provided
     widget.streamingController?.registerResumeCallback(_resumeStreaming);
     widget.streamingController?.registerPauseCallback(_pauseStreaming);
+    widget.streamingController?.registerClearCallback(_clearStreamingData);
 
     // Subscribe to the data stream
     _streamSubscription = widget.dataStream?.listen(
@@ -409,11 +598,36 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final config = widget.streamingConfig ?? const StreamingConfig();
 
+    debugPrint('🔵 Stream data received: x=${point.x.toStringAsFixed(3)}, y=${point.y.toStringAsFixed(6)}');
+
     if (_isStreaming) {
-      // Add point to first series (convention for simple streaming)
-      if (widget.series.isNotEmpty) {
+      // Use controller if available (matches BravenChart pattern)
+      if (widget.controller != null) {
+        // Determine series ID - use first series ID or default to 'stream'
+        final seriesId = widget.series.isNotEmpty ? widget.series.first.id : 'stream';
+
+        // Convert src_plus ChartDataPoint to src ChartDataPoint for controller
+        final srcPoint = src_point.ChartDataPoint(
+          x: point.x,
+          y: point.y,
+          timestamp: point.timestamp,
+          label: point.label,
+          metadata: point.metadata,
+        );
+
+        // Add to controller - this will trigger _onControllerUpdate -> setState -> rebuild
+        widget.controller!.addPoint(seriesId, srcPoint);
+
+        // Auto-scroll if enabled
+        if (config.autoScroll) {
+          setState(() {
+            _autoScrollToLatest();
+          });
+        }
+      } else {
+        // Legacy path: Add point to streaming data list
         setState(() {
-          widget.series.first.points.add(point);
+          _streamingDataPoints.add(point);
           _rebuildElements();
 
           // Auto-scroll if enabled
@@ -459,35 +673,84 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// Applies all buffered data points to the series.
   void _applyBufferedData() {
     final bufferedPoints = _buffer?.removeAll() ?? [];
-    
-    if (bufferedPoints.isEmpty || widget.series.isEmpty) return;
-    
-    setState(() {
-      // Add all buffered points to first series
-      widget.series.first.points.addAll(bufferedPoints);
-      _rebuildElements();
-      
-      // Auto-scroll if enabled
-      final config = widget.streamingConfig ?? const StreamingConfig();
-      if (config.autoScroll) {
-        _autoScrollToLatest();
+
+    if (bufferedPoints.isEmpty) return;
+
+    // Use controller if available
+    if (widget.controller != null) {
+      final seriesId = widget.series.isNotEmpty ? widget.series.first.id : 'stream';
+
+      for (final point in bufferedPoints) {
+        final srcPoint = src_point.ChartDataPoint(
+          x: point.x,
+          y: point.y,
+          timestamp: point.timestamp,
+          label: point.label,
+          metadata: point.metadata,
+        );
+        widget.controller!.addPoint(seriesId, srcPoint);
       }
-      
-      // Notify about buffer clear
-      config.onBufferUpdated?.call(0);
-    });
-    
+      // Controller will trigger _onControllerUpdate -> setState -> rebuild
+    } else {
+      // Legacy path
+      setState(() {
+        _streamingDataPoints.addAll(bufferedPoints);
+        _rebuildElements();
+      });
+    }
+
+    // Auto-scroll and notify regardless of path
+    final config = widget.streamingConfig ?? const StreamingConfig();
+    if (config.autoScroll) {
+      setState(() {
+        _autoScrollToLatest();
+      });
+    }
+
+    // Notify about buffer clear
+    config.onBufferUpdated?.call(0);
+
     debugPrint('📊 Applied ${bufferedPoints.length} buffered points');
   }
-  
+
+  /// Clears all accumulated streaming data.
+  void _clearStreamingData() {
+    if (!mounted) return;
+
+    // Clear controller data if available
+    if (widget.controller != null) {
+      final seriesId = widget.series.isNotEmpty ? widget.series.first.id : 'stream';
+      widget.controller!.clearSeries(seriesId);
+      // Controller will trigger _onControllerUpdate -> setState -> rebuild
+    } else {
+      // Legacy path
+      final pointCount = _streamingDataPoints.length;
+      setState(() {
+        _streamingDataPoints.clear();
+        _rebuildElements();
+      });
+      debugPrint('🗑️  Cleared $pointCount streaming points');
+    }
+
+    // Clear buffer regardless of path
+    _buffer?.clear();
+  }
+
   /// Auto-scrolls the viewport to show the latest data.
   void _autoScrollToLatest() {
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-    if (renderBox == null || widget.series.isEmpty || widget.series.first.isEmpty) return;
-    
-    // For now, use a simple approach: pan right by a fixed amount
-    // TODO: Make this smarter by calculating actual viewport bounds
-    renderBox.panChart(50.0, 0.0);
+    if (renderBox == null) return;
+
+    // NOTE: We don't call updateDataBounds() here anymore because:
+    // 1. The sliding window in _rebuildElements() already calculated correct bounds
+    // 2. Calling updateDataBounds() with all historical data causes bounds explosion
+    // 3. The pan operation below is sufficient to follow latest data
+
+    debugPrint('↩️  Auto-scrolling viewport to follow latest data');
+
+    // Pan right every time to follow the data
+    final panAmount = renderBox.size.width * 0.02; // 2% per update
+    renderBox.panChart(panAmount, 0.0);
   }
 
   @override

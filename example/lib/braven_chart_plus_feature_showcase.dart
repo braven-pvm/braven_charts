@@ -2,7 +2,9 @@
 // BravenChartPlus Feature Showcase - What's ACTUALLY Implemented
 
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
@@ -82,13 +84,19 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   // Streaming example state
   final StreamController<ChartDataPoint> _streamController = StreamController<ChartDataPoint>.broadcast();
   final StreamingController _streamingController = StreamingController();
+  late final ChartController _chartController; // Add ChartController
   Timer? _streamingTimer;
   int _streamingDataCounter = 0;
   int _bufferCount = 0;
+  int _streamingRate = 10; // Hz
+  String _dataPattern = 'sine'; // 'sine', 'linear', 'random'
+  bool _autoScroll = true;
+  int _totalDataPoints = 0;
 
   @override
   void initState() {
     super.initState();
+    _chartController = ChartController(); // Initialize controller
     // Initialize Legend example series
     _legendExampleSeries = [
       LineChartSeries(
@@ -102,7 +110,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         color: Colors.blue,
         points: List.generate(15, (i) {
           final x = i / 2.0;
-          final y = 50 + 25 * Math.sin(x * 0.8);
+          final y = 50 + 25 * math.sin(x * 0.8);
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
@@ -114,7 +122,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         color: Colors.orange,
         points: List.generate(10, (i) {
           final x = i / 2.0;
-          final y = 40 + 20 * Math.sin(i * 0.5);
+          final y = 40 + 20 * math.sin(i * 0.5);
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
@@ -126,7 +134,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         color: Colors.green,
         points: List.generate(12, (i) {
           final x = i / 2.0;
-          final y = 60 + 15 * Math.cos(i * 0.6);
+          final y = 60 + 15 * math.cos(i * 0.6);
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
@@ -141,7 +149,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         color: Colors.purple,
         points: List.generate(15, (i) {
           final x = i / 2.0;
-          final y = 30 + 20 * Math.sin(x * 0.7 + 1.5);
+          final y = 30 + 20 * math.sin(x * 0.7 + 1.5);
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
@@ -161,7 +169,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         color: Colors.blue,
         points: List.generate(12, (i) {
           final x = i.toDouble();
-          final y = 60 + 15 * Math.sin(i * 0.5) + (i > 6 ? (i - 6) * 3 : 0);
+          final y = 60 + 15 * math.sin(i * 0.5) + (i > 6 ? (i - 6) * 3 : 0);
           return ChartDataPoint(x: x, y: y);
         }),
         isXOrdered: true,
@@ -242,13 +250,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       ),
     ];
 
-    // Initialize streaming: generate data points at 10Hz (100ms intervals)
-    _streamingTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      _streamingDataCounter++;
-      final x = _streamingDataCounter * 0.1; // Time in seconds
-      final y = 50 + 30 * Math.sin(x * 2.0); // Sine wave
-      _streamController.add(ChartDataPoint(x: x, y: y));
-    });
+    // Initialize streaming: generate data points at configured rate
+    _startStreaming();
 
     // Listen to buffer updates
     _streamingController.addListener(() {
@@ -258,11 +261,114 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     });
   }
 
+  void _startStreaming() {
+    _streamingTimer?.cancel();
+    _streamingTimer = Timer.periodic(Duration(milliseconds: 1000 ~/ _streamingRate), (_) {
+      _streamingDataCounter++;
+      _totalDataPoints++;
+
+      final ChartDataPoint point;
+      switch (_dataPattern) {
+        case 'sine':
+          final x = _streamingDataCounter * 0.01;
+          final y = 0.5 + 0.4 * math.sin(x * 8.0); // Oscillate between 0.1 and 0.9
+          point = ChartDataPoint(x: x, y: y);
+          break;
+        case 'linear':
+          final x = _streamingDataCounter * 0.01;
+          final y = 0.3 + (x * 0.3) % 0.6; // Sawtooth between 0.3 and 0.9
+          point = ChartDataPoint(x: x, y: y);
+          break;
+        case 'random':
+          final x = _streamingDataCounter * 0.01;
+          final y = 0.2 + math.Random().nextDouble() * 0.6; // Random between 0.2 and 0.8
+          point = ChartDataPoint(x: x, y: y);
+          break;
+        default:
+          final x = _streamingDataCounter * 0.01;
+          final y = 0.5;
+          point = ChartDataPoint(x: x, y: y);
+      }
+
+      _streamController.add(point);
+      debugPrint("data point: $point, data pattern: $_dataPattern");
+    });
+  }
+
+  void _stopStreaming() {
+    _streamingTimer?.cancel();
+    _streamingTimer = null;
+  }
+
+  void _resetStreaming() {
+    _stopStreaming();
+    _streamingController.pauseStreaming();
+    _streamingController.clearStreamingData(); // Clear widget's accumulated data
+    _streamingDataCounter = 0;
+    _totalDataPoints = 0;
+    setState(() {});
+  }
+
+  void _changeStreamingRate(int newRate) {
+    setState(() {
+      _streamingRate = newRate;
+    });
+    if (_streamingTimer != null && _streamingTimer!.isActive) {
+      _startStreaming(); // Restart with new rate
+    }
+  }
+
+  void _changeDataPattern(String pattern) {
+    setState(() {
+      _dataPattern = pattern;
+      _streamingDataCounter = 0; // Reset counter for new pattern
+    });
+  }
+
+  void _toggleAutoScroll() {
+    setState(() {
+      _autoScroll = !_autoScroll;
+    });
+  }
+
+  Widget _buildStatusChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _streamingTimer?.cancel();
     _streamController.close();
     _streamingController.dispose();
+    _chartController.dispose(); // Dispose controller
     super.dispose();
   }
 
@@ -275,7 +381,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   }) {
     return List.generate(pointCount, (i) {
       final x = i * 10.0 / pointCount;
-      final y = amplitude * Math.sin(frequency * x + phase) + 50;
+      final y = amplitude * math.sin(frequency * x + phase) + 50;
       return ChartDataPoint(x: x, y: y);
     });
   }
@@ -285,6 +391,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     required String description,
     required Widget child,
     required List<String> features,
+    double height = 350,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -359,7 +466,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             ),
             // Chart
             SizedBox(
-              height: 350,
+              height: height,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: child,
@@ -646,7 +753,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     dataPointMarkerRadius: 3.0,
                     points: List.generate(50, (i) {
                       final x = i / 5.0;
-                      final y = 50 + 30 * Math.sin(x * 0.5) + 10 * Math.cos(x * 1.2);
+                      final y = 50 + 30 * math.sin(x * 0.5) + 10 * math.cos(x * 1.2);
                       return ChartDataPoint(x: x, y: y);
                     }),
                     isXOrdered: true,
@@ -786,7 +893,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                       dataPointMarkerRadius: 3.0,
                       points: List.generate(20, (j) {
                         final x = j / 2.0;
-                        final y = 50 + 20 * Math.sin(x * 0.5 + i * 0.3) + i * 5;
+                        final y = 50 + 20 * math.sin(x * 0.5 + i * 0.3) + i * 5;
                         return ChartDataPoint(x: x, y: y);
                       }),
                       isXOrdered: true,
@@ -886,95 +993,226 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             _buildFeatureCard(
               title: '9. Real-Time Streaming Data',
               description: 'Live data ingestion with buffering, pause/resume controls, and auto-scroll viewport.',
+              height: 650, // Larger height for streaming controls
               features: const [
                 'Stream<ChartDataPoint> integration',
                 'Configurable buffer (10,000 points default)',
                 'Pause/resume streaming',
                 'Auto-scroll to follow latest data',
                 'Buffer count monitoring',
-                '10Hz data rate (100ms intervals)',
+                'Variable data rates (1Hz-50Hz)',
               ],
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Streaming chart
-                  SizedBox(
-                    height: 250,
-                    child: BravenChartPlus(
-                      key: const ValueKey('chart_streaming'),
-                      chartType: ChartType.line,
-                      series: const [
-                        LineChartSeries(
-                          id: 'streaming_data',
-                          name: 'Live Data',
-                          interpolation: LineInterpolation.linear,
-                          strokeWidth: 2.0,
-                          showDataPointMarkers: false,
-                          color: Colors.blue,
-                          points: [], // Start with empty data
-                          isXOrdered: true,
+                  Expanded(
+                    child: Container(
+                      child: BravenChartPlus(
+                        key: const ValueKey('chart_streaming'),
+                        chartType: ChartType.line,
+                        controller: _chartController, // Add controller
+                        series: const [
+                          LineChartSeries(
+                            id: 'streaming_data',
+                            name: 'Live Data',
+                            interpolation: LineInterpolation.linear,
+                            strokeWidth: 2.0,
+                            showDataPointMarkers: false,
+                            color: Colors.blue,
+                            points: [], // Start with empty data
+                            isXOrdered: true,
+                          ),
+                        ],
+                        dataStream: _streamController.stream,
+                        streamingConfig: StreamingConfig(
+                          maxBufferSize: 500,
+                          autoScroll: _autoScroll,
+                          onBufferUpdated: (count) {
+                            if (mounted) {
+                              setState(() {
+                                _bufferCount = count;
+                              });
+                            }
+                          },
                         ),
-                      ],
-                      dataStream: _streamController.stream,
-                      streamingConfig: StreamingConfig(
-                        maxBufferSize: 500,
-                        autoScroll: true,
-                        onBufferUpdated: (count) {
-                          if (mounted) {
-                            setState(() {
-                              _bufferCount = count;
-                            });
-                          }
-                        },
+                        streamingController: _streamingController,
+                        theme: _selectedTheme,
+                        backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                        showDebugInfo: _showDebugInfo,
                       ),
-                      streamingController: _streamingController,
-                      theme: _selectedTheme,
-                      backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
-                      showDebugInfo: _showDebugInfo,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Streaming controls
+
+                  // Ultra-Compact Control Panel
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    height: 150,
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: _streamingController.isStreaming
-                              ? () => _streamingController.pauseStreaming()
-                              : () => _streamingController.resumeStreaming(),
-                          icon: Icon(_streamingController.isStreaming ? Icons.pause : Icons.play_arrow),
-                          label: Text(_streamingController.isStreaming ? 'Pause' : 'Resume'),
+                        // Row 1: Stream control buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _streamingController.isStreaming
+                                    ? () => _streamingController.pauseStreaming()
+                                    : () => _streamingController.resumeStreaming(),
+                                icon: Icon(_streamingController.isStreaming ? Icons.pause : Icons.play_arrow, size: 14),
+                                label: Text(_streamingController.isStreaming ? 'Pause' : 'Resume', style: const TextStyle(fontSize: 11)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _streamingController.isStreaming ? Colors.orange : Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _streamingTimer != null && _streamingTimer!.isActive ? _stopStreaming : _startStreaming,
+                                icon: Icon(_streamingTimer != null && _streamingTimer!.isActive ? Icons.stop : Icons.play_arrow, size: 14),
+                                label: Text(_streamingTimer != null && _streamingTimer!.isActive ? 'Stop' : 'Start',
+                                    style: const TextStyle(fontSize: 11)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _streamingTimer != null && _streamingTimer!.isActive ? Colors.red : Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _resetStreaming,
+                                icon: const Icon(Icons.refresh, size: 14),
+                                label: const Text('Reset', style: TextStyle(fontSize: 11)),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Text(
-                            'Buffer: $_bufferCount points',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+
+                        const SizedBox(height: 8),
+
+                        // Row 2: Dropdowns + Status
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Rate
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Rate:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    height: 32,
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: DropdownButton<int>(
+                                      value: _streamingRate,
+                                      isDense: true,
+                                      isExpanded: true,
+                                      underline: const SizedBox(),
+                                      style: const TextStyle(fontSize: 10, color: Colors.black87),
+                                      items: [1, 5, 10, 20, 50].map((rate) {
+                                        return DropdownMenuItem(value: rate, child: Text('$rate Hz'));
+                                      }).toList(),
+                                      onChanged: (rate) => rate != null ? _changeStreamingRate(rate) : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            // Pattern
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Pattern:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    height: 32,
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: DropdownButton<String>(
+                                      value: _dataPattern,
+                                      isDense: true,
+                                      isExpanded: true,
+                                      underline: const SizedBox(),
+                                      style: const TextStyle(fontSize: 10, color: Colors.black87),
+                                      items: const [
+                                        DropdownMenuItem(value: 'sine', child: Text('Sine')),
+                                        DropdownMenuItem(value: 'linear', child: Text('Linear')),
+                                        DropdownMenuItem(value: 'random', child: Text('Random')),
+                                      ],
+                                      onChanged: (pattern) => pattern != null ? _changeDataPattern(pattern) : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            // Auto-scroll
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Auto:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 3),
+                                  SizedBox(
+                                    height: 32,
+                                    child: ElevatedButton(
+                                      onPressed: _toggleAutoScroll,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _autoScroll ? Colors.green : Colors.grey,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      ),
+                                      child: Text(_autoScroll ? 'ON' : 'OFF', style: const TextStyle(fontSize: 10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: const Text(
-                            'Data rate: 10Hz',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+
+                        const SizedBox(height: 6),
+
+                        // Row 3: Compact status chips
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            _buildStatusChip('Buf', '$_bufferCount', Colors.orange),
+                            _buildStatusChip('Pts', '$_totalDataPoints', Colors.purple),
+                            _buildStatusChip('${_streamingRate}Hz', _streamingTimer != null && _streamingTimer!.isActive ? 'On' : 'Off',
+                                _streamingTimer != null && _streamingTimer!.isActive ? Colors.green : Colors.red),
+                          ],
                         ),
                       ],
                     ),
@@ -1048,33 +1286,5 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         ),
       ),
     );
-  }
-}
-
-// Math class for sine/cosine calculations
-class Math {
-  static double sin(double x) => _sin(x);
-  static double cos(double x) => _cos(x);
-
-  static double _sin(double x) {
-    // Taylor series approximation for sine
-    double result = 0;
-    double term = x;
-    for (int n = 0; n < 10; n++) {
-      result += term;
-      term *= -x * x / ((2 * n + 2) * (2 * n + 3));
-    }
-    return result;
-  }
-
-  static double _cos(double x) {
-    // Taylor series approximation for cosine
-    double result = 0;
-    double term = 1;
-    for (int n = 0; n < 10; n++) {
-      result += term;
-      term *= -x * x / ((2 * n + 1) * (2 * n + 2));
-    }
-    return result;
   }
 }
