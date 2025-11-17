@@ -290,18 +290,11 @@ class ChartRenderBox extends RenderBox {
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setXAxis(chart_axis.Axis? axis) {
     if (_xAxis == axis) {
-      debugPrint('🔄 setXAxis: Same axis reference, skipping');
+      // [DEBUG OUTPUT REMOVED] Same axis reference - fires frequently during streaming
       return;
     }
 
-    debugPrint('🔄 setXAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
-    if (axis != null) {
-      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
-    }
-    if (_transform != null) {
-      debugPrint('   Current transform: dataX=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
-    }
-
+    // [DEBUG OUTPUT REMOVED] X-axis updates - fire frequently during streaming
     _xAxis = axis;
 
     // Update both transforms to show the new data range (for streaming/dynamic data)
@@ -323,7 +316,7 @@ class ChartRenderBox extends RenderBox {
       // Invalidate series cache - viewport changed, need to regenerate Picture
       _seriesCacheDirty = true;
 
-      debugPrint('✅ setXAxis: Updated viewport to show new data X=[${axis.dataMin}, ${axis.dataMax}]');
+      // [DEBUG OUTPUT REMOVED] X-axis viewport update - fires frequently during streaming
     }
 
     markNeedsLayout();
@@ -335,18 +328,11 @@ class ChartRenderBox extends RenderBox {
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setYAxis(chart_axis.Axis? axis) {
     if (_yAxis == axis) {
-      debugPrint('🔄 setYAxis: Same axis reference, skipping');
+      // [DEBUG OUTPUT REMOVED] Same axis reference - fires frequently during streaming
       return;
     }
 
-    debugPrint('🔄 setYAxis: Setting new axis, hasTransform=${_transform != null}, hasOriginalTransform=${_originalTransform != null}');
-    if (axis != null) {
-      debugPrint('   New axis dataRange: [${axis.dataMin}, ${axis.dataMax}]');
-    }
-    if (_transform != null) {
-      debugPrint('   Current transform: dataY=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
-    }
-
+    // [DEBUG OUTPUT REMOVED] Y-axis updates - fire frequently during streaming
     _yAxis = axis;
 
     // Update both transforms to show the new data range (for streaming/dynamic data)
@@ -368,7 +354,7 @@ class ChartRenderBox extends RenderBox {
       // Invalidate series cache - viewport changed, need to regenerate Picture
       _seriesCacheDirty = true;
 
-      debugPrint('✅ setYAxis: Updated viewport to show new data Y=[${axis.dataMin}, ${axis.dataMax}]');
+      // [DEBUG OUTPUT REMOVED] Y-axis viewport update - fires frequently during streaming
     }
 
     markNeedsLayout();
@@ -391,11 +377,11 @@ class ChartRenderBox extends RenderBox {
   /// This prevents unnecessary regeneration when parent widgets rebuild
   /// without actual data/theme changes.
   void setElementGenerator(ElementGenerator? generator, int version) {
-    debugPrint('🔄 setElementGenerator called: version=$version, lastVersion=$_elementGeneratorVersion, hasTransform=${_transform != null}');
+    // [DEBUG OUTPUT REMOVED] Element generator updates - fire on data changes
 
     // Only update if version changed (indicates real data/theme change)
     if (_elementGeneratorVersion == version && _elementGenerator != null) {
-      debugPrint('⏭️  Version unchanged, skipping regeneration');
+      // [DEBUG OUTPUT REMOVED] Version unchanged - fires frequently
       return;
     }
 
@@ -404,7 +390,7 @@ class ChartRenderBox extends RenderBox {
 
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
-      debugPrint('🎨 Regenerating elements due to generator change (version $version)');
+      // [DEBUG OUTPUT REMOVED] Regenerating elements - fires on data updates
       _rebuildElementsWithTransform();
 
       // Invalidate cache - element generator changed (new data/theme)
@@ -420,12 +406,10 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void zoomChart(double factor, {Offset? plotCenter}) {
-    debugPrint(
-        '🔍 zoomChart called: factor=$factor, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
+    // [DEBUG OUTPUT REMOVED] Zoom chart calls - fire on user interaction
 
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(
-          '❌ Cannot zoom: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
+      // [DEBUG OUTPUT REMOVED] Cannot zoom warning - rare error case
       return;
     }
 
@@ -450,7 +434,7 @@ class ChartRenderBox extends RenderBox {
     // Invalidate cache - transform changed
     _seriesCacheDirty = true;
 
-    debugPrint('✅ Keyboard zoom: factor=$factor, center=$center');
+    // [DEBUG OUTPUT REMOVED] Keyboard zoom - fires on user interaction
   }
 
   /// Programmatically pan the chart.
@@ -460,12 +444,10 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Only works when using elementGenerator (for element regeneration).
   void panChart(double plotDx, double plotDy) {
-    debugPrint(
-        '🔄 panChart called: dx=$plotDx, dy=$plotDy, hasTransform=${_transform != null}, hasGenerator=${_elementGenerator != null}, hasOriginal=${_originalTransform != null}');
+    // [DEBUG OUTPUT REMOVED] Pan chart calls - fire frequently during dragging
 
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
-      debugPrint(
-          '❌ Cannot pan: transform=${_transform != null}, elementGenerator=${_elementGenerator != null}, originalTransform=${_originalTransform != null}');
+      // [DEBUG OUTPUT REMOVED] Cannot pan warning - rare error case
       return;
     }
 
@@ -485,11 +467,7 @@ class ChartRenderBox extends RenderBox {
     // Mark for repaint (will paint existing elements with new transform)
     markNeedsPaint();
 
-    if (clampedDx != plotDx || clampedDy != plotDy) {
-      debugPrint(' Pan constrained: requested=($plotDx, $plotDy) to allowed=($clampedDx, $clampedDy)');
-    } else {
-      debugPrint('✅ Pan applied: dx=$plotDx, dy=$plotDy');
-    }
+    // [DEBUG OUTPUT REMOVED] Pan constrained/applied - fires frequently during dragging
   }
 
   /// Reset view to original zoom/pan state.
@@ -511,7 +489,7 @@ class ChartRenderBox extends RenderBox {
     // Invalidate cache - transform reset to original
     _seriesCacheDirty = true;
 
-    debugPrint('🔄 View reset to original');
+    // [DEBUG OUTPUT REMOVED] View reset - fires on user action
   }
 
   /// Updates the data bounds for streaming data that extends beyond original range.
@@ -548,7 +526,7 @@ class ChartRenderBox extends RenderBox {
     _seriesCacheDirty = true;
     markNeedsPaint();
 
-    debugPrint('📊 Data bounds updated: X[$dataXMin, $dataXMax], Y[$dataYMin, $dataYMax]');
+    // [DEBUG OUTPUT REMOVED] Data bounds updated - fires during streaming
   }
 
   /// Updates axes to reflect the current transform's data ranges.
@@ -644,7 +622,7 @@ class ChartRenderBox extends RenderBox {
     final newDataYMin = centerY - newYRange / 2;
     final newDataYMax = centerY + newYRange / 2;
 
-    debugPrint(' Zoom clamped: X=$currentZoomX to $clampedZoomX, Y=$currentZoomY to $clampedZoomY');
+    // [DEBUG OUTPUT REMOVED] Zoom clamped - fires frequently during zoom operations
 
     return ChartTransform(
       dataXMin: newDataXMin,
@@ -728,10 +706,7 @@ class ChartRenderBox extends RenderBox {
         ? -actualDataDy / dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
-    // Debug output (optional - can be removed in production)
-    if (actualPlotDx != requestedPlotDx || actualPlotDy != requestedPlotDy) {
-      debugPrint(' PAN CONSTRAINED: requested=($requestedPlotDx, $requestedPlotDy) to allowed=($actualPlotDx, $actualPlotDy)');
-    }
+    // [DEBUG OUTPUT REMOVED] Pan constrained - fires frequently during dragging
 
     return (actualPlotDx, actualPlotDy);
   }
@@ -786,15 +761,13 @@ class ChartRenderBox extends RenderBox {
     final generator = _elementGenerator;
     final transform = _transform;
     if (generator == null || transform == null) {
-      debugPrint(' REBUILD ELEMENTS SKIPPED: generator=${generator != null}, transform=${transform != null}');
+      // [DEBUG OUTPUT REMOVED] Rebuild elements skipped - fires frequently
       return;
     }
 
     // Generate new elements using current transform
     _elements = generator(transform);
-    debugPrint(
-      ' ELEMENTS REGENERATED: count=${_elements.length}, dataX=${transform.dataXMin.toStringAsFixed(2)}..${transform.dataXMax.toStringAsFixed(2)}',
-    );
+    // [DEBUG OUTPUT REMOVED] Elements regenerated - fires on data updates
 
     // Rebuild spatial index with new elements
     _rebuildSpatialIndex();
@@ -859,11 +832,11 @@ class ChartRenderBox extends RenderBox {
 
         // Capture original transform for reset and constraint calculations
         _originalTransform = _transform;
-        debugPrint(' Original transform captured: dataX=${_xAxis!.dataMin}..${_xAxis!.dataMax}, dataY=${_yAxis!.dataMin}..${_yAxis!.dataMax}');
+        // [DEBUG OUTPUT REMOVED] Original transform captured - fires once at init
 
         // Generate initial elements now that we have a transform
         if (_elementGenerator != null) {
-          debugPrint('🎨 Generating initial elements in performLayout');
+          // [DEBUG OUTPUT REMOVED] Generating initial elements - fires once at init
           _rebuildElementsWithTransform();
 
           // Invalidate cache - initial element generation
@@ -1046,7 +1019,7 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
-    debugPrint(' PointerDown: buttons=${event.buttons} (middle=$kMiddleMouseButton, primary=$kPrimaryMouseButton)');
+    // [DEBUG OUTPUT REMOVED] Pointer down - fires on every mouse click
     coordinator.startInteraction(position, element: hitElement);
 
     // Check if we hit a resize handle (priority 7)
@@ -1076,11 +1049,11 @@ class ChartRenderBox extends RenderBox {
     // Per conflict resolution: Different buttons have different behaviors
     if (event.buttons == kMiddleMouseButton) {
       // Middle-click: EXCLUSIVELY pan (per scenario 6)
-      debugPrint(' Middle button DOWN detected at $position');
+      // [DEBUG OUTPUT REMOVED] Middle button down - fires on user interaction
       coordinator.claimMode(InteractionMode.panning);
       // Store initial pan position in widget space
       _lastPanPosition = position;
-      debugPrint(' Pan mode claimed, _lastPanPosition set to $position');
+      // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
@@ -1240,7 +1213,7 @@ class ChartRenderBox extends RenderBox {
       // Invalidate cache - transform changed from panning
       _seriesCacheDirty = true;
 
-      debugPrint('🔄 Pan ended - regenerated elements with final transform');
+      // [DEBUG OUTPUT REMOVED] Pan ended - fires on user interaction
     }
 
     // Clear cursor position
@@ -1295,7 +1268,7 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
-    debugPrint('🎯 HIT TEST: element=${hitElement?.elementType.name ?? "none"}, id=${hitElement?.id ?? "N/A"}');
+    // [DEBUG OUTPUT REMOVED] Hit test - fires frequently on mouse movement
 
     // Check if we hit a resize handle (priority 7)
     if (hitElement is ResizeHandleElement) {
@@ -1347,7 +1320,7 @@ class ChartRenderBox extends RenderBox {
       const double zoomSensitivity = 0.001; // Adjust for comfortable zoom speed
       final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
 
-      debugPrint('🔍 ZOOM: factor=$zoomFactor, scrollDelta=${event.scrollDelta.dy}');
+      // [DEBUG OUTPUT REMOVED] Zoom factor - fires on scroll events
 
       // Convert cursor position (widget space) to plot space
       final Offset plotPosition = widgetToPlot(position);
@@ -1365,7 +1338,7 @@ class ChartRenderBox extends RenderBox {
       // Invalidate cache - transform changed from scroll zoom
       _seriesCacheDirty = true;
 
-      debugPrint('🔍 Transform updated: dataX=${_transform!.dataXMin}..${_transform!.dataXMax}');
+      // [DEBUG OUTPUT REMOVED] Transform updated - fires on scroll zoom
 
       // Release zoom mode after short delay
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -1374,9 +1347,7 @@ class ChartRenderBox extends RenderBox {
         }
       });
     } else {
-      debugPrint(
-        ' Scroll without zoom: shift=${coordinator.isShiftPressed}, transform=${_transform != null}, generator=${_elementGenerator != null}',
-      );
+      // [DEBUG OUTPUT REMOVED] Scroll without zoom - fires on regular scroll
 
       // Without Shift, just claim mode for compatibility
       coordinator.claimMode(InteractionMode.zooming);
@@ -1573,7 +1544,7 @@ class ChartRenderBox extends RenderBox {
   /// - canvas: Canvas to paint overlays (in widget space)
   /// - size: Total widget size (including axis areas)
   void _paintOverlayLayer(Canvas canvas, Size size) {
-    debugPrint('🎨 OVERLAY: Starting paint | Mode=${coordinator.currentMode}');
+    // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
@@ -1620,7 +1591,7 @@ class ChartRenderBox extends RenderBox {
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
     if (cursorPos != null) {
-      debugPrint('🎨 OVERLAY: Drawing crosshair lines at $cursorPos');
+      // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
       final crosshairPaint = Paint()
         ..color = const Color(0x80666666) // Semi-transparent gray
         ..style = PaintingStyle.stroke
@@ -1646,7 +1617,7 @@ class ChartRenderBox extends RenderBox {
       _drawTooltip(canvas, size, hoveredElement, _cursorPosition!);
     }
 
-    debugPrint('🎨 OVERLAY: Paint complete');
+    // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
   }
 
   @override
@@ -1691,15 +1662,14 @@ class ChartRenderBox extends RenderBox {
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
     final cacheValid = _isCacheValid();
-    debugPrint(
-        '🎨 PAINT: Cache ${cacheValid ? "HIT ✅" : "MISS ❌"} | Dirty=$_seriesCacheDirty | Series=${_elements.whereType<SeriesElement>().length}');
+    // [DEBUG OUTPUT REMOVED] Cache hit/miss - was firing at 60fps
 
     if (cacheValid) {
       // Cache hit! Draw cached Picture (fast path ~0.1ms)
       canvas.drawPicture(_cachedSeriesPicture!);
     } else {
       // Cache miss - regenerate Picture from current data/transform
-      debugPrint('   📸 Regenerating Picture (slow path ~17ms for 5 series)...');
+      // [DEBUG OUTPUT REMOVED] Picture regeneration - fires on data updates
 
       // Dispose old Picture to free GPU memory
       _cachedSeriesPicture?.dispose();
@@ -1710,16 +1680,16 @@ class ChartRenderBox extends RenderBox {
       // Draw freshly generated Picture
       canvas.drawPicture(_cachedSeriesPicture!);
 
-      debugPrint('   ✅ Picture regenerated | Hash=$_cachedSeriesHash | Transform=[${_cachedTransform?.dataXMin}..${_cachedTransform?.dataXMax}]');
+      // [DEBUG OUTPUT REMOVED] Picture regenerated - fires on data updates
     }
 
     // Paint non-series elements (annotations, handles, etc.)
     // These are not cached because they're less expensive and change frequently
     final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
-    debugPrint('🎨 PAINT: Painting ${nonSeriesElements.length} non-series elements');
+    // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
     for (final element in nonSeriesElements) {
-      debugPrint('  - Painting element: ${element.runtimeType} (${element.id})');
+      // [DEBUG OUTPUT REMOVED] Per-element painting - was firing at 60fps
 
       // Update transform for annotation elements before painting (enables dynamic positioning)
       // CRITICAL FIX: Update transform for ALL annotation types, not just Point and Range
