@@ -129,6 +129,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Locked viewport bounds when paused - THE FUNDAMENTAL FIX
   DataBounds? _lockedPausedBounds;
 
+  // Cached full dataset bounds for pan constraints when paused (Option 4)
+  // Updated incrementally in O(1) time as new data arrives
+  double? _cachedDataXMin;
+  double? _cachedDataXMax;
+  double? _cachedDataYMin;
+  double? _cachedDataYMax;
+
   @override
   void initState() {
     super.initState();
@@ -152,6 +159,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     widget.controller?.addListener(_onControllerUpdate);
 
     _rebuildElements();
+
+    // Initialize cached bounds from existing series data for pan constraints
+    _initializeCachedDataBounds();
 
     // Set up streaming if dataStream is provided
     if (widget.dataStream != null) {
@@ -633,6 +643,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Removed excessive print - was flooding console 10-50 times per second
 
+    // Update cached bounds for full dataset pan constraints (O(1) per point)
+    _updateCachedDataBounds(point.x, point.y);
+
     if (_isStreaming) {
       // Use controller if available (matches BravenChart pattern)
       if (widget.controller != null) {
@@ -697,12 +710,23 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           '🔒 LOCKED viewport bounds: X=[${_lockedPausedBounds!.xMin}, ${_lockedPausedBounds!.xMax}], Y=[${_lockedPausedBounds!.yMin}, ${_lockedPausedBounds!.yMax}]');
     }
 
-    // STEP 2: Update streaming state
+    // STEP 2: Set pan constraints to full dataset bounds (Option 4)
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox != null && _cachedDataXMin != null) {
+      renderBox.setPanConstraintBounds(
+        _cachedDataXMin!,
+        _cachedDataXMax!,
+        _cachedDataYMin!,
+        _cachedDataYMax!,
+      );
+    }
+
+    // STEP 3: Update streaming state
     _isStreaming = false;
 
     print('⏸️  ===== PAUSE COMPLETE - Viewport LOCKED =====');
 
-    // STEP 3: Force rebuild with locked bounds to prevent race condition
+    // STEP 4: Force rebuild with locked bounds to prevent race condition
     // This ensures _lockedPausedBounds is used IMMEDIATELY, before any other rebuild
     setState(() {
       // Locked bounds are already set, this just triggers rebuild
@@ -717,13 +741,17 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     print('▶️  ===== RESUME STREAMING STARTED =====');
 
-    // STEP 1: Unlock the viewport bounds AND update streaming state FIRST
+    // STEP 1: Clear pan constraint bounds to restore sliding window constraints (Option 4)
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    renderBox?.clearPanConstraintBounds();
+
+    // STEP 2: Unlock the viewport bounds AND update streaming state FIRST
     // CRITICAL: Must set _isStreaming = true BEFORE applying buffered data
     // to prevent "Controller updated while paused" spam when controller.addPoint() is called
     _lockedPausedBounds = null;
     _isStreaming = true;
 
-    // STEP 2: Apply buffered data (controller.addPoint will now trigger rebuilds)
+    // STEP 3: Apply buffered data (controller.addPoint will now trigger rebuilds)
     _applyBufferedData();
 
     // DON'T call updateState() - the controller already updated its state
@@ -799,6 +827,47 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Clear buffer regardless of path
     _buffer?.clear();
+  }
+
+  /// Updates the cached full dataset bounds incrementally (O(1) per point).
+  ///
+  /// This tracks the absolute min/max of all data that has ever been added,
+  /// enabling pan constraints to cover the full dataset when paused.
+  void _updateCachedDataBounds(double x, double y) {
+    _cachedDataXMin = _cachedDataXMin == null ? x : (_cachedDataXMin! < x ? _cachedDataXMin! : x);
+    _cachedDataXMax = _cachedDataXMax == null ? x : (_cachedDataXMax! > x ? _cachedDataXMax! : x);
+    _cachedDataYMin = _cachedDataYMin == null ? y : (_cachedDataYMin! < y ? _cachedDataYMin! : y);
+    _cachedDataYMax = _cachedDataYMax == null ? y : (_cachedDataYMax! > y ? _cachedDataYMax! : y);
+  }
+
+  /// Initializes cached bounds from existing series data.
+  ///
+  /// Called once during setup to establish baseline bounds before streaming starts.
+  void _initializeCachedDataBounds() {
+    if (_cachedDataXMin != null) return; // Already initialized
+
+    // Get all points from all series
+    final allPoints = widget.series.expand((s) => s.points).toList();
+
+    if (allPoints.isEmpty) {
+      // No initial data - will be initialized when first point arrives
+      return;
+    }
+
+    // Initialize with first point, then update with rest
+    final firstPoint = allPoints.first;
+    _cachedDataXMin = firstPoint.x;
+    _cachedDataXMax = firstPoint.x;
+    _cachedDataYMin = firstPoint.y;
+    _cachedDataYMax = firstPoint.y;
+
+    // Update with remaining points
+    for (final point in allPoints.skip(1)) {
+      _updateCachedDataBounds(point.x, point.y);
+    }
+
+    debugPrint('📊 Initialized cached bounds from ${allPoints.length} points: '
+        'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
   }
 
   /// Auto-scrolls the viewport to show the latest data.
