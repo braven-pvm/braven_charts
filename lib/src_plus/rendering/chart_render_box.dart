@@ -304,10 +304,26 @@ class ChartRenderBox extends RenderBox {
 
     _xAxis = axis;
 
-    // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
+    // Update both transforms to show the new data range (for streaming/dynamic data)
+    // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      axis.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
-      debugPrint('✅ setXAxis: Synced new axis to current viewport X=[${_transform!.dataXMin}, ${_transform!.dataXMax}]');
+      _transform = _transform!.copyWith(
+        dataXMin: axis.dataMin,
+        dataXMax: axis.dataMax,
+      );
+
+      // Also update _originalTransform so pan constraints work correctly
+      if (_originalTransform != null) {
+        _originalTransform = _originalTransform!.copyWith(
+          dataXMin: axis.dataMin,
+          dataXMax: axis.dataMax,
+        );
+      }
+
+      // Invalidate series cache - viewport changed, need to regenerate Picture
+      _seriesCacheDirty = true;
+
+      debugPrint('✅ setXAxis: Updated viewport to show new data X=[${axis.dataMin}, ${axis.dataMax}]');
     }
 
     markNeedsLayout();
@@ -333,10 +349,26 @@ class ChartRenderBox extends RenderBox {
 
     _yAxis = axis;
 
-    // If we have an existing transform (zoomed/panned state), sync the new axis to match viewport
+    // Update both transforms to show the new data range (for streaming/dynamic data)
+    // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      axis.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-      debugPrint('✅ setYAxis: Synced new axis to current viewport Y=[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+      _transform = _transform!.copyWith(
+        dataYMin: axis.dataMin,
+        dataYMax: axis.dataMax,
+      );
+
+      // Also update _originalTransform so pan constraints work correctly
+      if (_originalTransform != null) {
+        _originalTransform = _originalTransform!.copyWith(
+          dataYMin: axis.dataMin,
+          dataYMax: axis.dataMax,
+        );
+      }
+
+      // Invalidate series cache - viewport changed, need to regenerate Picture
+      _seriesCacheDirty = true;
+
+      debugPrint('✅ setYAxis: Updated viewport to show new data Y=[${axis.dataMin}, ${axis.dataMax}]');
     }
 
     markNeedsLayout();
@@ -463,7 +495,7 @@ class ChartRenderBox extends RenderBox {
   /// Reset view to original zoom/pan state.
   void resetView() {
     if (_originalTransform == null || _elementGenerator == null) {
-      debugPrint(' Cannot reset: originalTransform or elementGenerator not available');
+      debugPrint('⚠️ Cannot reset: originalTransform or elementGenerator not available');
       return;
     }
 
@@ -480,6 +512,43 @@ class ChartRenderBox extends RenderBox {
     _seriesCacheDirty = true;
 
     debugPrint('🔄 View reset to original');
+  }
+
+  /// Updates the data bounds for streaming data that extends beyond original range.
+  ///
+  /// Called when streaming data expands the data range, allowing pan constraints
+  /// to permit panning to the new data regions.
+  void updateDataBounds(double dataXMin, double dataXMax, double dataYMin, double dataYMax) {
+    if (_originalTransform == null) return;
+
+    // Update original transform to include expanded data range
+    _originalTransform = ChartTransform(
+      plotWidth: _plotArea.width,
+      plotHeight: _plotArea.height,
+      dataXMin: dataXMin,
+      dataXMax: dataXMax,
+      dataYMin: dataYMin,
+      dataYMax: dataYMax,
+      invertY: _originalTransform!.invertY,
+    );
+
+    // Also update current transform so viewport shows the new data
+    _transform = ChartTransform(
+      plotWidth: _plotArea.width,
+      plotHeight: _plotArea.height,
+      dataXMin: dataXMin,
+      dataXMax: dataXMax,
+      dataYMin: dataYMin,
+      dataYMax: dataYMax,
+      invertY: _transform?.invertY ?? false,
+    );
+
+    _updateAxesFromTransform();
+    _rebuildElementsWithTransform();
+    _seriesCacheDirty = true;
+    markNeedsPaint();
+
+    debugPrint('📊 Data bounds updated: X[$dataXMin, $dataXMax], Y[$dataYMin, $dataYMax]');
   }
 
   /// Updates axes to reflect the current transform's data ranges.

@@ -41,6 +41,9 @@ class StreamingController extends ChangeNotifier {
   /// Internal callback to pause streaming (set by BravenChartPlus).
   VoidCallback? _pauseStreamingCallback;
 
+  /// Internal callback to clear/reset streaming data (set by BravenChartPlus).
+  VoidCallback? _clearStreamingCallback;
+
   /// Whether streaming is currently active.
   bool get isStreaming => _isStreaming;
 
@@ -55,6 +58,11 @@ class StreamingController extends ChangeNotifier {
   /// Registers the pause callback (called by BravenChartPlus internally).
   void registerPauseCallback(VoidCallback callback) {
     _pauseStreamingCallback = callback;
+  }
+
+  /// Registers the clear callback (called by BravenChartPlus internally).
+  void registerClearCallback(VoidCallback callback) {
+    _clearStreamingCallback = callback;
   }
 
   /// Updates the streaming state (called by BravenChartPlus internally).
@@ -103,10 +111,27 @@ class StreamingController extends ChangeNotifier {
     }
   }
 
+  /// Clears all accumulated streaming data.
+  ///
+  /// Effects:
+  /// - Removes all data points from the chart
+  /// - Clears any buffered data
+  /// - Resets the chart to initial empty state
+  /// - Streaming continues if active
+  ///
+  /// **Use Cases**:
+  /// - "Clear" or "Reset" button in your UI
+  /// - Starting a new data collection session
+  /// - Clearing old data before recording
+  void clearStreamingData() {
+    _clearStreamingCallback?.call();
+  }
+
   @override
   void dispose() {
     _resumeStreamingCallback = null;
     _pauseStreamingCallback = null;
+    _clearStreamingCallback = null;
     super.dispose();
   }
 }

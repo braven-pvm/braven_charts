@@ -1,8 +1,6 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Streaming Configuration for BravenChartPlus
 
-import 'package:flutter/foundation.dart' show VoidCallback;
-
 /// Configuration for real-time data streaming in BravenChartPlus.
 ///
 /// Controls buffer limits, auto-scroll behavior, and provides callbacks
@@ -129,9 +127,7 @@ class StreamingConfig {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is StreamingConfig &&
-        other.maxBufferSize == maxBufferSize &&
-        other.autoScroll == autoScroll;
+    return other is StreamingConfig && other.maxBufferSize == maxBufferSize && other.autoScroll == autoScroll;
     // Callbacks intentionally excluded from equality
   }
 
