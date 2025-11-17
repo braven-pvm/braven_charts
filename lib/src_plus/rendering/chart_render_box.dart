@@ -161,6 +161,23 @@ class ChartRenderBox extends RenderBox {
   /// - Reset view to original state
   ChartTransform? _originalTransform;
 
+  /// Optional pan constraint bounds (for paused streaming mode).
+  ///
+  /// When set (non-null), this overrides _originalTransform for pan constraint
+  /// calculations in _clampPanDelta(). This allows paused streaming mode to
+  /// provide pan constraints based on the FULL accumulated dataset, while
+  /// _originalTransform continues to track the sliding window bounds.
+  ///
+  /// Usage flow:
+  /// - Streaming: _panConstraintTransform = null, constraints use _originalTransform (sliding window)
+  /// - Pause: Widget calls setPanConstraintBounds(fullDataBounds), user can pan through entire dataset
+  /// - Resume: Widget calls clearPanConstraintBounds(), constraints back to sliding window
+  ///
+  /// This separation is critical because during streaming, setXAxis()/setYAxis()
+  /// continuously update _originalTransform to match the sliding window. If we used
+  /// _originalTransform for full dataset constraints, they would be overwritten.
+  ChartTransform? _panConstraintTransform;
+
   // ==========================================================================
   // Layer Separation & Picture Caching (Sprint 1)
   // ==========================================================================
@@ -369,6 +386,59 @@ class ChartRenderBox extends RenderBox {
     _theme = theme;
     _seriesCacheDirty = true; // Invalidate cache - theme changed
     markNeedsPaint();
+  }
+
+  /// Sets pan constraint bounds for paused streaming mode.
+  ///
+  /// When called, creates a separate transform from the provided data bounds
+  /// that will be used by _clampPanDelta() for pan constraint calculations.
+  /// This allows the widget to provide full dataset bounds while paused,
+  /// enabling exploration of all accumulated data, while _originalTransform
+  /// continues to track the sliding window bounds.
+  ///
+  /// Typical usage:
+  /// ```dart
+  /// // In widget's _pauseStreaming():
+  /// renderBox.setPanConstraintBounds(
+  ///   _cachedDataXMin, _cachedDataXMax,
+  ///   _cachedDataYMin, _cachedDataYMax,
+  /// );
+  /// ```
+  ///
+  /// See also: [clearPanConstraintBounds] to restore normal pan constraints.
+  void setPanConstraintBounds(double xMin, double xMax, double yMin, double yMax) {
+    if (_transform == null) {
+      debugPrint('⚠️ Cannot set pan constraints: transform not initialized');
+      return;
+    }
+
+    // Create a transform with full dataset bounds for pan constraints
+    _panConstraintTransform = _transform!.copyWith(
+      dataXMin: xMin,
+      dataXMax: xMax,
+      dataYMin: yMin,
+      dataYMax: yMax,
+    );
+
+    debugPrint('🔓 Pan constraints set to FULL DATASET: X=[$xMin, $xMax], Y=[$yMin, $yMax]');
+  }
+
+  /// Clears pan constraint bounds, restoring normal sliding window constraints.
+  ///
+  /// After calling this, _clampPanDelta() will use _originalTransform again
+  /// for pan constraint calculations, which tracks the sliding window bounds
+  /// during streaming.
+  ///
+  /// Typical usage:
+  /// ```dart
+  /// // In widget's _resumeStreaming():
+  /// renderBox.clearPanConstraintBounds();
+  /// ```
+  ///
+  /// See also: [setPanConstraintBounds] to set full dataset constraints.
+  void clearPanConstraintBounds() {
+    _panConstraintTransform = null;
+    debugPrint('🔒 Pan constraints cleared - back to sliding window');
   }
 
   /// Updates the element generator function.
@@ -662,6 +732,10 @@ class ChartRenderBox extends RenderBox {
       return (requestedPlotDx, requestedPlotDy);
     }
 
+    // Use pan constraint transform if set (paused streaming mode with full dataset bounds),
+    // otherwise use original transform (normal streaming mode with sliding window bounds)
+    final constraintTransform = _panConstraintTransform ?? _originalTransform!;
+
     // 1. Convert requested plot delta to data space
     // CRITICAL: Match the inversion logic in ChartTransform.pan()!
     final dataPerPixelX = _transform!.dataPerPixelX;
@@ -682,15 +756,15 @@ class ChartRenderBox extends RenderBox {
     final maxWhitespaceDataX = _transform!.plotWidth * maxWhitespaceFraction * dataPerPixelX;
     final maxWhitespaceDataY = _transform!.plotHeight * maxWhitespaceFraction * dataPerPixelY;
 
-    // 4. Calculate allowed bounds for viewport position
+    // 4. Calculate allowed bounds for viewport position using constraint transform
     // Viewport left edge (dataXMin) can range from:
-    //   - Minimum: originalDataXMin - maxWhitespace (show whitespace on left)
-    //   - Maximum: originalDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
-    final minAllowedDataXMin = _originalTransform!.dataXMin - maxWhitespaceDataX;
-    final maxAllowedDataXMin = _originalTransform!.dataXMax - _transform!.dataXRange + maxWhitespaceDataX;
+    //   - Minimum: constraintDataXMin - maxWhitespace (show whitespace on left)
+    //   - Maximum: constraintDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
+    final minAllowedDataXMin = constraintTransform.dataXMin - maxWhitespaceDataX;
+    final maxAllowedDataXMin = constraintTransform.dataXMax - _transform!.dataXRange + maxWhitespaceDataX;
 
-    final minAllowedDataYMin = _originalTransform!.dataYMin - maxWhitespaceDataY;
-    final maxAllowedDataYMin = _originalTransform!.dataYMax - _transform!.dataYRange + maxWhitespaceDataY;
+    final minAllowedDataYMin = constraintTransform.dataYMin - maxWhitespaceDataY;
+    final maxAllowedDataYMin = constraintTransform.dataYMax - _transform!.dataYRange + maxWhitespaceDataY;
 
     // 5. Clamp tentative viewport position to allowed bounds
     final clampedDataXMin = tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin);
