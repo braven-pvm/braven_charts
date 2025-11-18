@@ -1376,7 +1376,62 @@ class ChartRenderBox extends RenderBox {
     onCursorChange?.call(SystemMouseCursors.basic);
     coordinator.setHoveredElement(hitElement);
     onElementHover?.call(hitElement);
+
+    // Check for per-marker hover within series elements
+    // This provides finer-grained hover feedback without creating individual
+    // marker elements (performance optimization)
+    if (hitElement is SeriesElement) {
+      final plotPosition = widgetToPlot(position);
+      final markerInfo = _findNearestMarker(hitElement, plotPosition);
+      // ignore: avoid_print
+      print('🎯 Marker hover check: seriesId=${hitElement.id}, markerInfo=$markerInfo');
+      coordinator.setHoveredMarker(markerInfo);
+      // Invalidate series cache to trigger marker highlight repaint
+      _seriesCacheDirty = true;
+    } else {
+      coordinator.setHoveredMarker(null);
+      // Invalidate series cache to clear marker highlight
+      _seriesCacheDirty = true;
+    }
+
     markNeedsPaint(); // Repaint for hover highlight
+  }
+
+  /// Finds the nearest marker within a series element.
+  ///
+  /// Returns marker information if a marker is within the snap radius,
+  /// null otherwise.
+  ///
+  /// **Performance**: Only called after debounced hit testing (50ms throttle),
+  /// and only on the series that was hit by priority-based resolution.
+  HoveredMarkerInfo? _findNearestMarker(SeriesElement series, Offset plotPosition) {
+    if (_transform == null) return null;
+
+    const snapRadius = 20.0; // Same as BravenChart's default snap radius
+    double minDistance = snapRadius;
+    int? nearestIndex;
+
+    // Use current transform for accurate marker positions
+    for (int i = 0; i < series.series.points.length; i++) {
+      final point = series.series.points[i];
+      final plotPos = _transform!.dataToPlot(point.x, point.y);
+      final distance = (plotPosition - plotPos).distance;
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    if (nearestIndex != null) {
+      return HoveredMarkerInfo(
+        seriesId: series.id,
+        markerIndex: nearestIndex,
+        plotPosition: plotPosition,
+      );
+    }
+
+    return null;
   }
 
   /// Gets the appropriate cursor for a resize direction.

@@ -3,6 +3,7 @@
 
 import '../coordinates/chart_transform.dart';
 import '../elements/series_element.dart';
+import '../interaction/core/coordinator.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 
@@ -35,6 +36,7 @@ class DataConverter {
   /// - `transform`: Current ChartTransform for coordinate conversion
   /// - `theme`: Optional ChartTheme for styling (if null, uses series colors)
   /// - `strokeWidth`: Line stroke width (default 2.0)
+  /// - `coordinator`: Optional interaction coordinator for per-marker hover state
   ///
   /// **Returns**: List of SeriesElements ready for spatial index insertion
   static List<SeriesElement> seriesToElements({
@@ -42,6 +44,7 @@ class DataConverter {
     required ChartTransform transform,
     ChartTheme? theme,
     double strokeWidth = 2.0,
+    ChartInteractionCoordinator? coordinator,
   }) {
     // Silent mode - this is called on every mouse movement during pan
     // print(' DataConverter: theme=$theme, seriesColors=${theme?.seriesColors}');
@@ -50,7 +53,13 @@ class DataConverter {
       final s = entry.value;
       final themeColor = theme?.seriesColors[index % theme.seriesColors.length];
       // print('   Series[$index] "${s.name}": themeColor=$themeColor, seriesColor=${s.color}');
-      return SeriesElement(series: s, transform: transform, strokeWidth: strokeWidth, themeColor: themeColor);
+      return SeriesElement(
+        series: s,
+        transform: transform,
+        strokeWidth: strokeWidth,
+        themeColor: themeColor,
+        coordinator: coordinator,
+      );
     }).toList();
   }
 
