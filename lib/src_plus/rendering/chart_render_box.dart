@@ -168,6 +168,12 @@ class ChartRenderBox extends RenderBox {
   /// Plot area where chart elements are rendered (excluding axis space).
   Rect _plotArea = Rect.zero;
 
+  /// Horizontal scrollbar rectangle (positioned below chart, if enabled).
+  Rect? _xScrollbarRect;
+
+  /// Vertical scrollbar rectangle (positioned to right of chart, if enabled).
+  Rect? _yScrollbarRect;
+
   /// Coordinate transform for Data ↔ Plot conversion.
   ///
   /// Created during layout based on data ranges and plot area dimensions.
@@ -897,12 +903,28 @@ class ChartRenderBox extends RenderBox {
           : Size(constraints.hasBoundedWidth ? constraints.maxWidth : 800, constraints.hasBoundedHeight ? constraints.maxHeight : 600),
     );
 
-    // Calculate plot area (reserve space for axes)
+    // Get scrollbar theme (use default if not provided)
+    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+    final scrollbarPadding = scrollbarTheme.padding;
+
+    // Calculate space needed for scrollbars
+    double rightReserved = 0;
+    double bottomReserved = 0;
+
+    if (_showYScrollbar) {
+      rightReserved = scrollbarTheme.thickness + scrollbarPadding;
+    }
+
+    if (_showXScrollbar) {
+      bottomReserved = scrollbarTheme.thickness + scrollbarPadding;
+    }
+
+    // Calculate plot area (reserve space for axes AND scrollbars)
     // Default margins if no axes
     double leftMargin = 10;
-    const double rightMargin = 10;
+    double rightMargin = 10 + rightReserved; // Add scrollbar space
     const double topMargin = 10;
-    double bottomMargin = 10;
+    double bottomMargin = 10 + bottomReserved; // Add scrollbar space
 
     // Reserve space for Y-axis (left side)
     if (_yAxis != null) {
@@ -911,11 +933,38 @@ class ChartRenderBox extends RenderBox {
 
     // Reserve space for X-axis (bottom)
     if (_xAxis != null) {
-      bottomMargin = 50; // Space for X-axis labels + axis label + padding
+      bottomMargin = 50 + bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
     }
 
-    // Calculate plot area
+    // Calculate plot area (chart canvas excluding axes and scrollbars)
     _plotArea = Rect.fromLTRB(leftMargin, topMargin, size.width - rightMargin, size.height - bottomMargin);
+
+    // Calculate scrollbar rectangles if enabled
+    if (_showXScrollbar) {
+      // Position horizontal scrollbar below the plot area
+      final scrollbarTop = _plotArea.bottom + scrollbarPadding;
+      _xScrollbarRect = Rect.fromLTWH(
+        _plotArea.left,
+        scrollbarTop,
+        _plotArea.width, // Match plot area width
+        scrollbarTheme.thickness,
+      );
+    } else {
+      _xScrollbarRect = null;
+    }
+
+    if (_showYScrollbar) {
+      // Position vertical scrollbar to the right of the plot area
+      final scrollbarLeft = _plotArea.right + scrollbarPadding;
+      _yScrollbarRect = Rect.fromLTWH(
+        scrollbarLeft,
+        _plotArea.top,
+        scrollbarTheme.thickness,
+        _plotArea.height, // Match plot area height
+      );
+    } else {
+      _yScrollbarRect = null;
+    }
 
     // Update axis pixel ranges to match plot area
     _xAxis?.updatePixelRange(_plotArea.left, _plotArea.right);
