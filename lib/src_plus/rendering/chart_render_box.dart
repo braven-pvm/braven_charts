@@ -22,6 +22,8 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_theme.dart';
 import '../theming/components/scrollbar_config.dart';
+import '../widgets/scrollbar/hit_test_zone.dart';
+import '../widgets/scrollbar/scrollbar_controller.dart';
 import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
@@ -132,6 +134,19 @@ class ChartRenderBox extends RenderBox {
 
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
+
+  // ==========================================================================
+  // Scrollbar Interaction State
+  // ==========================================================================
+
+  /// Active scrollbar being dragged (null if not dragging scrollbar).
+  Axis? _activeScrollbarAxis;
+
+  /// Initial pointer position when scrollbar drag started (in widget coordinates).
+  Offset? _scrollbarDragStartPosition;
+
+  /// Hit test zone where drag started (leftEdge, rightEdge, center, track, etc.).
+  HitTestZone? _scrollbarDragStartZone;
 
   // ==========================================================================
   // Hit Test Throttling (Performance Optimization)
@@ -1175,6 +1190,11 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerDown(PointerDownEvent event, Offset position) {
+    // PRIORITY 1: Check if pointer is on scrollbar (highest priority)
+    if (_hitTestScrollbars(position, event)) {
+      return; // Scrollbar claimed the event
+    }
+
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
@@ -1237,6 +1257,12 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerMove(PointerMoveEvent event, Offset position) {
+    // PRIORITY 1: Handle scrollbar drag if active
+    if (_activeScrollbarAxis != null && _scrollbarDragStartPosition != null) {
+      _handleScrollbarDrag(position);
+      return; // Scrollbar is handling the event
+    }
+
     if (!coordinator.isInteracting) return;
 
     final startPos = coordinator.interactionStartPosition;
@@ -1940,6 +1966,183 @@ class ChartRenderBox extends RenderBox {
 
     canvas.restore(); // Final restore (removes initial offset translation)
   }
+
+  // ==========================================================================
+  // Scrollbar Interaction Handlers
+  // ==========================================================================
+
+  /// Hit tests scrollbar regions and handles initial scrollbar interaction.
+  ///
+  /// Returns true if pointer is on a scrollbar and starts interaction, false otherwise.
+  /// When true is returned, the pointer event should not propagate to chart handlers.
+  bool _hitTestScrollbars(Offset position, PointerDownEvent event) {
+    if (event.buttons != kPrimaryMouseButton) {
+      return false; // Only left-click interacts with scrollbars
+    }
+
+    // Check X scrollbar (horizontal, bottom of chart)
+    if (_showXScrollbar && _xScrollbarRect != null && _xScrollbarRect!.contains(position)) {
+      return _startScrollbarInteraction(Axis.horizontal, position);
+    }
+
+    // Check Y scrollbar (vertical, right of chart)
+    if (_showYScrollbar && _yScrollbarRect != null && _yScrollbarRect!.contains(position)) {
+      return _startScrollbarInteraction(Axis.vertical, position);
+    }
+
+    return false; // Not on any scrollbar
+  }
+
+  /// Starts scrollbar interaction after hit test confirms pointer is on scrollbar.
+  ///
+  /// Returns true to indicate event was claimed by scrollbar.
+  bool _startScrollbarInteraction(Axis axis, Offset position) {
+    if (_transform == null || _originalTransform == null) {
+      return false; // Transform not ready
+    }
+
+    // Get scrollbar rect based on axis
+    final scrollbarRect = axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
+    if (scrollbarRect == null) return false;
+
+    // Calculate handle geometry
+    final isHorizontal = axis == Axis.horizontal;
+    final trackLength = isHorizontal ? scrollbarRect.width : scrollbarRect.height;
+
+    final dataMin = isHorizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
+    final dataMax = isHorizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
+    final viewportMin = isHorizontal ? _transform!.dataXMin : _transform!.dataYMin;
+    final viewportMax = isHorizontal ? _transform!.dataXMax : _transform!.dataYMax;
+
+    final dataSpan = dataMax - dataMin;
+    final viewportSpan = viewportMax - viewportMin;
+    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+
+    // Calculate handle size and position using same formulas as _paintScrollbars
+    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+    final viewportOffset = viewportMin - dataMin;
+    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+    // Convert pointer position to scrollbar-local coordinate
+    final localPos = isHorizontal ? (position.dx - scrollbarRect.left) : (position.dy - scrollbarRect.top);
+
+    // Use ScrollbarController to determine which zone was hit
+    final hitZone = ScrollbarController.getHitTestZone(
+      Offset(localPos, 0), // Convert to Offset (only one dimension matters)
+      axis,
+      trackLength,
+      handlePosition,
+      handleSize,
+      edgeDetectionThreshold: scrollbarTheme.edgeGripWidth,
+    );
+
+    if (hitZone == null) {
+      return false; // Outside scrollbar bounds
+    }
+
+    // Store drag state
+    _activeScrollbarAxis = axis;
+    _scrollbarDragStartPosition = position;
+    _scrollbarDragStartZone = hitZone;
+
+    // Handle track click immediately (doesn't require drag)
+    if (hitZone == HitTestZone.track) {
+      _handleScrollbarTrackClick(axis, localPos, trackLength, handleSize);
+    }
+
+    markNeedsPaint(); // Redraw with active state
+    return true; // Event claimed by scrollbar
+  }
+
+  /// Handles ongoing scrollbar drag interaction.
+  void _handleScrollbarDrag(Offset currentPosition) {
+    if (_activeScrollbarAxis == null || _scrollbarDragStartPosition == null || _scrollbarDragStartZone == null) {
+      return; // No active drag
+    }
+
+    // Track clicks don't drag - they jump immediately
+    if (_scrollbarDragStartZone == HitTestZone.track) {
+      return;
+    }
+
+    final axis = _activeScrollbarAxis!;
+    final startPos = _scrollbarDragStartPosition!;
+    final zone = _scrollbarDragStartZone!;
+
+    // Calculate pixel delta from drag start
+    final pixelDelta = axis == Axis.horizontal ? (currentPosition.dx - startPos.dx) : (currentPosition.dy - startPos.dy);
+
+    // Convert zone to interaction type
+    final interactionType = _scrollbarZoneToInteractionType(zone, axis);
+
+    // Call appropriate pixel-delta handler
+    if (axis == Axis.horizontal) {
+      _handleXScrollbarDelta(pixelDelta, interactionType);
+    } else {
+      _handleYScrollbarDelta(pixelDelta, interactionType);
+    }
+  }
+
+  /// Handles track click (jump to clicked position).
+  void _handleScrollbarTrackClick(Axis axis, double clickPosition, double trackLength, double handleSize) {
+    // Calculate where the handle CENTER should be positioned (clicked position)
+    final targetHandleCenter = clickPosition;
+
+    // Calculate where handle CENTER currently is
+    final currentHandlePosition = axis == Axis.horizontal
+        ? _calculateCurrentHandlePosition(Axis.horizontal)
+        : _calculateCurrentHandlePosition(Axis.vertical);
+    final currentHandleCenter = currentHandlePosition + (handleSize / 2.0);
+
+    // Pixel delta = where we want to be - where we are
+    final pixelDelta = targetHandleCenter - currentHandleCenter;
+
+    // Call pixel-delta handler with trackClick interaction type
+    if (axis == Axis.horizontal) {
+      _handleXScrollbarDelta(pixelDelta, ScrollbarInteraction.trackClick);
+    } else {
+      _handleYScrollbarDelta(pixelDelta, ScrollbarInteraction.trackClick);
+    }
+  }
+
+  /// Calculates current handle position for an axis (used for track click calculations).
+  double _calculateCurrentHandlePosition(Axis axis) {
+    if (_transform == null || _originalTransform == null) return 0.0;
+
+    final isHorizontal = axis == Axis.horizontal;
+    final scrollbarRect = isHorizontal ? _xScrollbarRect : _yScrollbarRect;
+    if (scrollbarRect == null) return 0.0;
+
+    final trackLength = isHorizontal ? scrollbarRect.width : scrollbarRect.height;
+    final dataMin = isHorizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
+    final dataMax = isHorizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
+    final viewportMin = isHorizontal ? _transform!.dataXMin : _transform!.dataYMin;
+
+    final dataSpan = dataMax - dataMin;
+    final viewportOffset = viewportMin - dataMin;
+
+    return (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength);
+  }
+
+  /// Converts HitTestZone to ScrollbarInteraction type.
+  ScrollbarInteraction _scrollbarZoneToInteractionType(HitTestZone zone, Axis axis) {
+    switch (zone) {
+      case HitTestZone.leftEdge:
+      case HitTestZone.topEdge:
+        return ScrollbarInteraction.zoomLeftOrTop;
+      case HitTestZone.rightEdge:
+      case HitTestZone.bottomEdge:
+        return ScrollbarInteraction.zoomRightOrBottom;
+      case HitTestZone.center:
+        return ScrollbarInteraction.pan;
+      case HitTestZone.track:
+        return ScrollbarInteraction.trackClick;
+    }
+  }
+
+  // ==========================================================================
+  // Scrollbar Rendering
+  // ==========================================================================
 
   /// Paints scrollbars if enabled.
   ///
