@@ -345,8 +345,36 @@ _xScrollbarRect = Rect.fromLTWH(
 
 ---
 
-#### Task 2.3: Scrollbar Rendering ⚠️ MODERATE COMPLEXITY
-**Time**: 15 minutes (updated estimate)
+#### Task 2.3: Scrollbar Rendering ✅ COMPLETE
+**Time**: 17 minutes
+
+**Implementation Details**:
+- Added scrollbar component imports to ChartRenderBox
+- Implemented _paintScrollbars() method:
+  - Uses _originalTransform for full data range (dataXMin/Max, dataYMin/Max)
+  - Uses current _transform for viewport range (same fields)
+  - Calculates handle size as proportion: viewportSpan / dataSpan * trackLength
+  - Calculates handle position: viewportOffset / dataSpan * trackLength
+  - Creates ScrollbarState with calculated values
+  - Uses ScrollbarPainter to render scrollbars
+- Added _paintScrollbars() call in paint() method (before final restore)
+
+**Key Insight**: ChartTransform stores viewport as direct fields (dataXMin/Max, dataYMin/Max), not Range objects. The "viewport" IS represented by these data fields - they show the currently visible data range, not separate viewport coordinate properties.
+
+**Success Criteria**: ✅ ALL MET
+- [x] Scrollbars render at correct positions (using _xScrollbarRect/_yScrollbarRect from layout)
+- [x] Handle size reflects viewport-to-data ratio
+- [x] Handle position reflects viewport offset in data space
+- [x] Code compiles without errors in ChartRenderBox
+- [x] ScrollbarPainter used correctly (config, state, isHorizontal, trackLength)
+
+**Known Issues**:
+- ~130 test errors in standalone scrollbar widget tests (expected - tests use old pixel-delta callback API)
+- These will be addressed in Task 2.4 when implementing ChartRenderBox integration
+
+---
+
+#### Task 2.4: Pixel-Delta Conversion and Interaction 🔥 CRITICAL
 
 - [ ] Modify `ChartRenderBox.performLayout()` to reserve space for scrollbars:
   ```dart
@@ -1104,37 +1132,40 @@ class ChartRenderBox extends RenderBox {
 - [~] **Phase 1, Task 1.4: Port Main Widget** (Partially Complete - 45 minutes, needs final cleanup)
 - [x] **Phase 2, Task 2.1: Add Scrollbar Configuration** (Complete - 12 minutes)
 - [x] **Phase 2, Task 2.2: Layout Integration** (Complete - 18 minutes)
-- [ ] **Phase 2, Tasks 2.3-2.4: Rendering & Pixel-Delta** (Not started)
+- [x] **Phase 2, Task 2.3: Scrollbar Rendering** (Complete - 17 minutes)
+- [ ] **Phase 2, Task 2.4: Pixel-Delta Conversion** (Not started)
 - [ ] **Phase 3: Coordinator** (0/3 tasks complete)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 5.5/15 tasks complete (37% - Phase 1 at 88%, Phase 2 at 50%)
-**Time Spent**: 120 minutes (vs 2.5-3.5 hours estimated for Phase 1+2.1+2.2, 55% faster than planned)
+**Overall Progress**: 6/15 tasks complete (40% - Phase 1 at 88%, Phase 2 at 75%)
+**Time Spent**: 137 minutes (vs 3.5-4.5 hours estimated for Phase 1+2.1+2.2+2.3, ~50% faster than planned)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Phase 2, Task 2.3** (Rendering Integration - 15 minutes) **NEXT**:
-   - Add scrollbar rendering to ChartRenderBox.paint()
-   - Create ChartScrollbar widgets at calculated _xScrollbarRect/_yScrollbarRect positions
-   - Wire up theme configuration and data ranges
-   
-2. **Phase 2, Task 2.4** (Pixel-Delta Conversion - 1 hour) **MOST CRITICAL**:
+1. **Phase 2, Task 2.4** (Pixel-Delta Conversion - 1 hour) **MOST CRITICAL** **NEXT**:
    - Implement _handleXScrollbarDelta() and _handleYScrollbarDelta()
    - Convert pixel deltas to data deltas using current viewport
    - Handle pan (shift viewport), zoom (resize edge), track click (jump)
    - Integrate with ChartTransform and viewport controller
+   - This enables actual user interaction with scrollbars
 
-3. **Complete Phase 1, Task 1.4 cleanup** (deferred, will complete during Phase 2):
+2. **Complete Phase 1, Task 1.4 cleanup** (deferred, will complete during Phase 2):
    - Remove obsolete jump animation code
    - Resolve foundation dependency
    - Will complete naturally as we integrate
 
-4. **Phase 3** (Coordinator Integration - 3 tasks):
+3. **Phase 3** (Coordinator Integration - 3 tasks):
    - Gesture priority handling
    - Viewport synchronization
    - Interaction mode coordination
+
+4. **Phase 4** (Testing & Polish - 4 tasks):
+   - Example usage
+   - Manual testing
+   - Performance validation
+   - Unit tests
 
 5. **Commit after each task**: Document progress, maintain commit frequency
 
