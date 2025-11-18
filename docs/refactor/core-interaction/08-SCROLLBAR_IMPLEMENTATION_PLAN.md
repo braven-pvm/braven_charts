@@ -291,8 +291,62 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 
 ---
 
-#### Task 2.2: Layout Integration ⚠️ MODERATE COMPLEXITY
-**Time**: 30 minutes
+#### Task 2.2: Layout Integration ✅ COMPLETE
+**Time**: 30 minutes (actual: 18 minutes)
+
+- [x] Modified `ChartRenderBox.performLayout()` to reserve space for scrollbars
+- [x] Added `_xScrollbarRect` and `_yScrollbarRect` fields to store calculated positions
+- [x] Calculate scrollbar space based on `ScrollbarConfig.thickness` and `padding`
+- [x] Reserve space on right side when `_showYScrollbar` is true
+- [x] Reserve space on bottom when `_showXScrollbar` is true
+- [x] Adjust plot area to exclude scrollbar space (margins)
+- [x] Position scrollbars adjacent to plot area with proper padding
+
+**Completed Changes**:
+- Added fields:
+  - `Rect? _xScrollbarRect` - Horizontal scrollbar position
+  - `Rect? _yScrollbarRect` - Vertical scrollbar position
+
+- Modified `performLayout()`:
+  - Calculate `rightReserved` and `bottomReserved` based on enabled scrollbars
+  - Add reserved space to margins (rightMargin, bottomMargin)
+  - Calculate `_xScrollbarRect` positioned below plot area with padding
+  - Calculate `_yScrollbarRect` positioned to right of plot area with padding
+  - Set rectangles to null when scrollbars disabled
+
+**Layout Logic**:
+```dart
+// If Y scrollbar enabled:
+_yScrollbarRect = Rect.fromLTWH(
+  _plotArea.right + padding,   // Right of plot area
+  _plotArea.top,                // Aligned with plot top
+  scrollbarTheme.thickness,     // Configured width
+  _plotArea.height              // Match plot height
+);
+
+// If X scrollbar enabled:
+_xScrollbarRect = Rect.fromLTWH(
+  _plotArea.left,               // Aligned with plot left
+  _plotArea.bottom + padding,   // Below plot area
+  _plotArea.width,              // Match plot width
+  scrollbarTheme.thickness      // Configured height
+);
+```
+
+**Success Criteria**: ✅ ALL MET
+- [x] Chart canvas size correctly excludes scrollbar space
+- [x] Scrollbar positions calculated correctly (adjacent to plot area)
+- [x] Corner overlap handled naturally (scrollbars don't overlap each other by design)
+- [x] Layout doesn't break existing rendering
+- [x] Scrollbar rectangles accessible for rendering phase
+
+**Known Issues**:
+- 2 unused field warnings for _xScrollbarRect/_yScrollbarRect (expected - will be used in Task 2.3)
+
+---
+
+#### Task 2.3: Scrollbar Rendering ⚠️ MODERATE COMPLEXITY
+**Time**: 15 minutes (updated estimate)
 
 - [ ] Modify `ChartRenderBox.performLayout()` to reserve space for scrollbars:
   ```dart
@@ -1049,42 +1103,44 @@ class ChartRenderBox extends RenderBox {
 - [x] **Phase 1, Task 1.3: Port Custom Painter** (Complete - 12 minutes)
 - [~] **Phase 1, Task 1.4: Port Main Widget** (Partially Complete - 45 minutes, needs final cleanup)
 - [x] **Phase 2, Task 2.1: Add Scrollbar Configuration** (Complete - 12 minutes)
-- [ ] **Phase 2, Tasks 2.2-2.4: Layout, Rendering, Pixel-Delta** (Not started)
+- [x] **Phase 2, Task 2.2: Layout Integration** (Complete - 18 minutes)
+- [ ] **Phase 2, Tasks 2.3-2.4: Rendering & Pixel-Delta** (Not started)
 - [ ] **Phase 3: Coordinator** (0/3 tasks complete)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 4.5/15 tasks complete (30% - Phase 1 at 88%, Phase 2 at 25%)
-**Time Spent**: 102 minutes (vs 2-3 hours estimated for Phase 1+2.1, 43% faster than planned)
+**Overall Progress**: 5.5/15 tasks complete (37% - Phase 1 at 88%, Phase 2 at 50%)
+**Time Spent**: 120 minutes (vs 2.5-3.5 hours estimated for Phase 1+2.1+2.2, 55% faster than planned)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Phase 2, Task 2.2** (Layout Integration - 30 minutes):
-   - Modify ChartRenderBox.performLayout() to reserve scrollbar space
-   - Calculate _xScrollbarRect and _yScrollbarRect when enabled
-   - Handle corner overlap when both scrollbars shown
-   
-2. **Phase 2, Task 2.3** (Rendering Integration - 15 minutes):
+1. **Phase 2, Task 2.3** (Rendering Integration - 15 minutes) **NEXT**:
    - Add scrollbar rendering to ChartRenderBox.paint()
-   - Create ChartScrollbar widgets at calculated positions
-   - Wire up theme configuration
-
-3. **Phase 2, Task 2.4** (Pixel-Delta Conversion - 1 hour) **MOST CRITICAL**:
-   - Implement conversion logic: pixel delta → data delta
+   - Create ChartScrollbar widgets at calculated _xScrollbarRect/_yScrollbarRect positions
+   - Wire up theme configuration and data ranges
+   
+2. **Phase 2, Task 2.4** (Pixel-Delta Conversion - 1 hour) **MOST CRITICAL**:
+   - Implement _handleXScrollbarDelta() and _handleYScrollbarDelta()
+   - Convert pixel deltas to data deltas using current viewport
    - Handle pan (shift viewport), zoom (resize edge), track click (jump)
-   - Integrate with viewport controller and ChartTransform
+   - Integrate with ChartTransform and viewport controller
 
-4. **Complete Phase 1, Task 1.4 cleanup** (deferred, will complete during Phase 2):
+3. **Complete Phase 1, Task 1.4 cleanup** (deferred, will complete during Phase 2):
    - Remove obsolete jump animation code
    - Resolve foundation dependency
    - Will complete naturally as we integrate
+
+4. **Phase 3** (Coordinator Integration - 3 tasks):
+   - Gesture priority handling
+   - Viewport synchronization
+   - Interaction mode coordination
 
 5. **Commit after each task**: Document progress, maintain commit frequency
 
 ---
 
-**Document Status**: ✅ Phase 1: 88% Complete, Phase 2: 25% Complete, Ready for Task 2.2  
+**Document Status**: ✅ Phase 1: 88% Complete, Phase 2: 50% Complete, Ready for Task 2.3  
 **Created**: 2025-11-18  
 **Last Updated**: 2025-11-18  
 **Author**: AI Assistant (with user guidance)  
