@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart' as src_point; // For controller
+import 'package:braven_charts/src/interaction/models/interaction_config.dart';
+import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
@@ -73,6 +75,9 @@ class FeatureShowcasePage extends StatefulWidget {
 class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   ChartTheme _selectedTheme = ChartTheme.light;
   bool _showDebugInfo = false;
+
+  // Tooltips disabled for testing datapoint marker hover highlighting
+  static const _interactionConfig = InteractionConfig(tooltip: TooltipConfig(enabled: false));
 
   // Legend example state
   final Set<String> _hiddenSeriesIds = {};
@@ -777,6 +782,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -847,6 +853,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -884,6 +891,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -928,6 +936,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -985,6 +994,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -1025,6 +1035,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               theme: _selectedTheme,
               backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
               showDebugInfo: _showDebugInfo,
+              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -1053,6 +1064,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     theme: _selectedTheme,
                     backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                     showDebugInfo: _showDebugInfo,
+                    interactionConfig: _interactionConfig,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1105,6 +1117,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
               ),
             ),
           ),
@@ -1162,6 +1175,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                       theme: _selectedTheme,
                       backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                       showDebugInfo: _showDebugInfo,
+                      interactionConfig: _interactionConfig,
                     ),
                   ),
                 ),
@@ -1531,6 +1545,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                         theme: _selectedTheme,
                         backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                         showDebugInfo: _showDebugInfo,
+                        interactionConfig: _interactionConfig,
                       ),
                     ),
 
@@ -1602,6 +1617,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                         theme: _selectedTheme,
                         backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                         showDebugInfo: _showDebugInfo,
+                        interactionConfig: _interactionConfig,
                       ),
                     ),
 

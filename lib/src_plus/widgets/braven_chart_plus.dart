@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../src/foundation/data_models/chart_data_point.dart' as src_point;
+import '../../src/interaction/models/interaction_config.dart';
 import '../../src/widgets/controller/chart_controller.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
@@ -57,6 +58,7 @@ class BravenChartPlus extends StatefulWidget {
     this.streamingConfig,
     this.streamingController,
     this.controller,
+    this.interactionConfig,
   });
 
   final ChartType chartType;
@@ -95,6 +97,12 @@ class BravenChartPlus extends StatefulWidget {
   /// Allows pausing/resuming streaming and provides state notifications.
   /// Optional - streaming works without it, but useful for custom UI controls.
   final StreamingController? streamingController;
+
+  /// Configuration for interactive features (crosshair, tooltip, gestures, keyboard navigation).
+  ///
+  /// Controls tooltip visibility via [InteractionConfig.tooltip.enabled].
+  /// If null, defaults to enabled tooltips with standard behavior.
+  final InteractionConfig? interactionConfig;
 
   @override
   State<BravenChartPlus> createState() => _BravenChartPlusState();
@@ -972,6 +980,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         xAxis: _xAxis,
                         yAxis: _yAxis,
                         theme: widget.theme,
+                        tooltipsEnabled: widget.interactionConfig?.tooltip.enabled ?? true,
                         onCursorChange: _handleCursorChange,
                       ),
                     ),
@@ -997,6 +1006,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.xAxis,
     this.yAxis,
     this.theme,
+    required this.tooltipsEnabled,
     this.onCursorChange,
   });
 
@@ -1007,11 +1017,18 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final chart_axis.Axis? xAxis;
   final chart_axis.Axis? yAxis;
   final ChartTheme? theme;
+  final bool tooltipsEnabled;
   final void Function(MouseCursor cursor)? onCursorChange;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return ChartRenderBox(coordinator: coordinator, elementGenerator: elementGenerator, theme: theme, onCursorChange: onCursorChange)
+    return ChartRenderBox(
+      coordinator: coordinator,
+      elementGenerator: elementGenerator,
+      theme: theme,
+      tooltipsEnabled: tooltipsEnabled,
+      onCursorChange: onCursorChange,
+    )
       ..setXAxis(xAxis)
       ..setYAxis(yAxis);
   }
