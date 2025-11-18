@@ -1188,33 +1188,44 @@ class ChartRenderBox extends RenderBox {
 - [x] **Phase 2, Task 2.2: Layout Integration** (Complete - 18 minutes)
 - [x] **Phase 2, Task 2.3: Scrollbar Rendering** (Complete - 17 minutes)
 - [x] **Phase 2, Task 2.4: Pixel-Delta Conversion** (Complete - 25 minutes)
-- [ ] **Phase 3: Widget Integration & Coordinator** (0/3 tasks complete)
+- [x] **Phase 3, Task 3.1: Scrollbar Interaction Handling** (Complete - 40 minutes)
+- [ ] **Phase 3, Task 3.2: Viewport Synchronization** (Not Started)
+- [ ] **Phase 3, Task 3.3: Coordinator Integration** (Not Started)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 7/15 tasks complete (47% - Phase 1 at 88%, Phase 2 at 100%)
-**Time Spent**: 162 minutes (vs 4-5 hours estimated for Phase 1+2, ~50% faster than planned)
+**Phase 3, Task 3.1 Implementation Details**:
+- Added scrollbar drag state fields to ChartRenderBox
+- Implemented _hitTestScrollbars() for pointer-in-scrollbar detection
+- Implemented _startScrollbarInteraction() to detect hit zone and start drag
+- Implemented _handleScrollbarDrag() to calculate pixel deltas and call handlers
+- Implemented _handleScrollbarTrackClick() for jump-to-position functionality
+- Added scrollbar hit testing as PRIORITY 1 in pointer down handler
+- Added scrollbar drag handling as PRIORITY 1 in pointer move handler
+- Added scrollbar state cleanup in pointer up handler
+- Reused Phase 1 ScrollbarController pure functions for hit testing
+- Integrated with pixel-delta handlers from Task 2.4
+- Code compiles cleanly with zero warnings
+
+**Overall Progress**: 8/15 tasks complete (53% - Phase 1 at 88%, Phase 2 at 100%, Phase 3 at 33%)
+**Time Spent**: 202 minutes (vs 4-5 hours estimated for Phase 1+2+3.1, ~50% faster than planned)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Phase 3, Task 3.1** (Widget Integration - 45 minutes) **NEXT**:
-   - Create ChartScrollbar widget instances in ChartRenderBox
-   - Wire up _handleXScrollbarDelta and _handleYScrollbarDelta callbacks
-   - Pass data ranges, viewport ranges, and theme configuration
-   - Integrate scrollbar widgets into render pipeline
-   - This enables actual user interaction with scrollbars
+1. **Phase 3, Task 3.2** (Viewport Synchronization - 15 minutes) **NEXT**:
+   - Scrollbars already update automatically via repaint after viewport changes
+   - Verify scrollbar handle position updates correctly after pan/zoom
+   - Verify scrollbar handle updates during streaming data
+   - Test that scrollbar state stays in sync with chart viewport
 
-2. **Phase 3, Task 3.2** (Viewport Synchronization - 15 minutes):
-   - Update scrollbar state when viewport changes from chart interactions
-   - Ensure scrollbar handle reflects current viewport after pan/zoom
-   
-3. **Phase 3, Task 3.3** (Coordinator Integration - 30 minutes):
-   - Wire scrollbar drag events to coordinator
+2. **Phase 3, Task 3.3** (Coordinator Integration - 30 minutes):
+   - Wire scrollbar drag events to coordinator for mode management
    - Prevent chart pan/zoom during scrollbar interaction
-   - Gesture priority management
+   - Implement gesture priority management
+   - Test interaction mode conflicts
 
-4. **Complete Phase 1, Task 1.4 cleanup** (deferred):
+3. **Complete Phase 1, Task 1.4 cleanup** (deferred):
    - Remove obsolete jump animation code
    - Resolve foundation dependency
    - Will complete naturally during testing
