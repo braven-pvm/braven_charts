@@ -50,12 +50,14 @@ class ChartRenderBox extends RenderBox {
     List<ChartElement>? elements,
     ElementGenerator? elementGenerator,
     ChartTheme? theme,
+    bool tooltipsEnabled = true,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
     this.onCursorChange,
   })  : _elementGenerator = elementGenerator,
         _theme = theme,
+        _tooltipsEnabled = tooltipsEnabled,
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
@@ -104,6 +106,9 @@ class ChartRenderBox extends RenderBox {
 
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
+
+  /// Whether tooltips are enabled.
+  final bool _tooltipsEnabled;
 
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
@@ -813,18 +818,29 @@ class ChartRenderBox extends RenderBox {
     // QuadTree bounds = plot area (in plot space, not widget space)
     _spatialIndex = QuadTree(bounds: Offset.zero & _plotArea.size, maxElementsPerNode: 4, maxDepth: 8);
 
+    // Collect all elements to insert, including generated sub-elements
+    final allElements = <ChartElement>[];
+
     // Insert all chart elements
     for (final element in _elements) {
-      _spatialIndex!.insert(element);
+      allElements.add(element);
 
       // For annotations, also insert their resize handle elements
       if (element is SimulatedAnnotation) {
         final handleElements = element.createResizeHandleElements();
-        for (final handle in handleElements) {
-          _spatialIndex!.insert(handle);
-        }
+        allElements.addAll(handleElements);
       }
     }
+
+    // Insert all collected elements into spatial index
+    for (final element in allElements) {
+      _spatialIndex!.insert(element);
+    }
+
+    // Update _elements to include handle elements for painting
+    // Keep original order, then add handles at the end
+    final handleElements = allElements.skip(_elements.length).toList();
+    _elements = [..._elements, ...handleElements];
   }
 
   /// Rebuilds elements using the element generator with current transform.
@@ -1684,7 +1700,8 @@ class ChartRenderBox extends RenderBox {
     // Draw tooltip for hovered element (if any)
     // Show tooltips for datapoints or series (with nearest point lookup)
     final hoveredElement = coordinator.hoveredElement;
-    if (hoveredElement != null &&
+    if (_tooltipsEnabled &&
+        hoveredElement != null &&
         !coordinator.isPanning &&
         (hoveredElement.elementType == ChartElementType.datapoint || hoveredElement.elementType == ChartElementType.series) &&
         _cursorPosition != null) {
