@@ -196,40 +196,55 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 
 ---
 
-#### Task 1.4: Port Main Widget (Simplified) ⚠️ COMPLEX
-**Time**: 1 hour  
-**Files**: 1 file (741 lines → ~600 lines after cleanup)
+#### Task 1.4: Port Main Widget (Simplified) ⏳ IN PROGRESS
+**Time**: 1 hour (Actual: 45 minutes so far)  
+**Files**: 1 file (741 lines → 712 lines after initial cleanup)  
+**Status**: Partially Complete - Core structure ported, needs final cleanup
 
-- [ ] Copy `chart_scrollbar.dart` → `lib/src_plus/widgets/scrollbar/`
+- [x] Copy `chart_scrollbar.dart` → `lib/src_plus/widgets/scrollbar/`
   
-- [ ] **REMOVE** obsolete callbacks (backward compatibility cruft):
-  - Remove `onPanChanged` callback (T071 - old API)
-  - Remove `onZoomChanged` callback (T092 - old API)
-  - Keep ONLY `onPixelDeltaChanged` (new pixel-delta pattern)
+- [x] **REMOVED** obsolete callbacks:
+  - Removed `onPanChanged` callback from constructor and field (T071 - old API)
+  - Removed `onZoomChanged` callback from constructor and field (T092 - old API)
+  - Kept ONLY `onPixelDeltaChanged` (new pixel-delta pattern)
   
-- [ ] **REMOVE** obsolete animation code:
-  - Remove `_jumpAnimation` and `_jumpAnimationController` (parent handles jump animation now)
-  - Remove `_onJumpAnimationTick()` method (obsolete in pixel-delta pattern)
-  - Remove `_onJumpAnimationComplete()` method (obsolete in pixel-delta pattern)
-  - Keep `_cancelJumpAnimation()` but simplify (only cancel, no viewport state)
+- [x] **FIXED** imports:
+  - Updated import paths to point to src_plus structure
+  - Fixed relative imports for scrollbar submodule files
   
-- [ ] **KEEP** all essential features:
+- [ ] **REMOVE** obsolete animation code (TODO):
+  - Remove `_jumpAnimation` and `_jumpAnimationController` fields
+  - Remove `_onJumpAnimationTick()` method (unused - confirmed by analyzer)
+  - Remove `_onJumpAnimationComplete()` method (unused - confirmed by analyzer)
+  - Simplify `_cancelJumpAnimation()` method
+  
+- [x] **KEPT** all essential features:
   - Pixel-delta pattern (`_dragStartPosition`, `_dragZone`)
   - Pan/zoom gesture handlers (`_onPanStart`, `_onPanUpdate`, `_onPanEnd`)
   - Hover detection (`_onHover`, `_onExit`, `_getCursorForZone`)
   - Track click (`_onTrackClick`)
   - Auto-hide timer (`_scheduleAutoHide`, `_cancelAutoHide`, `_resetAutoHide`)
   - Zoom limit feedback (`_flashAnimationController`)
-  - Keyboard navigation (if present)
+  - Keyboard navigation
   - ValueNotifier state management
   - Focus management
 
 **Success Criteria**:
-- [ ] File compiles without errors
-- [ ] Simplified API (only `onPixelDeltaChanged` callback)
-- [ ] All gesture handlers work
-- [ ] Pixel-delta pattern preserved
-- [ ] No data state tracking (only pixel positions)
+- [x] File copied and initial cleanup done
+- [x] Simplified API (only `onPixelDeltaChanged` callback)
+- [x] Import paths updated for src_plus structure
+- [ ] All obsolete animation code removed (pending)
+- [ ] Foundation dependency resolved (will be handled in Phase 2)
+- [ ] File compiles without errors (blocked by foundation dependency)
+
+**Known Issues**:
+- Foundation import doesn't exist yet in src_plus (expected - will be resolved in Phase 2)
+- Jump animation code still present but unused (needs cleanup)
+- 2 analyzer warnings for unused jump animation methods
+
+**Next Steps**:
+- Complete jump animation cleanup as part of Phase 2 integration
+- Create minimal foundation stub or adjust imports during integration
 
 ---
 
@@ -1021,38 +1036,37 @@ class ChartRenderBox extends RenderBox {
 - [x] **Phase 1, Task 1.1: Port Pure Functions & Enums** (Complete - 15 minutes)
 - [x] **Phase 1, Task 1.2: Port State & Configuration** (Complete - 18 minutes)
 - [x] **Phase 1, Task 1.3: Port Custom Painter** (Complete - 12 minutes)
-- [ ] **Phase 1, Task 1.4: Port Main Widget** (Not Started)
+- [~] **Phase 1, Task 1.4: Port Main Widget** (Partially Complete - 45 minutes, needs final cleanup)
 - [ ] **Phase 2: Integration** (0/4 tasks complete)
 - [ ] **Phase 3: Coordinator** (0/3 tasks complete)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 3/15 tasks complete (20%)
+**Overall Progress**: 3.5/15 tasks complete (23% - Task 1.4 ~75% done)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Start Phase 1, Task 1.4**: Port main widget (1 hour)
-   - Copy chart_scrollbar.dart to src_plus
-   - Remove obsolete callbacks (onPanChanged, onZoomChanged)
-   - Remove obsolete animation code (jump animation)
-   - Keep pixel-delta pattern, gestures, hover, auto-hide
-   - Most complex task in Phase 1
-
-2. **After Phase 1 Complete**: Begin Phase 2 integration
-   - Integrate with ChartRenderBox
-   - Implement pixel-delta conversion
-   - Wire up viewport sync
+1. **Complete Phase 1, Task 1.4** (remaining work):
+   - Remove obsolete jump animation code
+   - Verify all essential features intact
+   - Will complete during Phase 2 integration when foundation dependency is available
+   
+2. **Begin Phase 2** (Integration with ChartRenderBox):
+   - Create foundation stub or adjust imports
+   - Add scrollbar configuration to ChartRenderBox
+   - Implement pixel-delta conversion logic
+   - Most critical integration phase
 
 3. **Test after each task**: Compile check, verify imports
 
-4. **Commit after each task**: Small, reversible commits
+4. **Commit progress**: Document current state
 
 5. **Update progress** in this document as tasks complete
 
 ---
 
-**Document Status**: ✅ Planning Complete, Implementation In Progress (20%)  
+**Document Status**: ✅ Phase 1 Nearly Complete (23%), Ready for Phase 2 Integration  
 **Created**: 2025-11-18  
 **Last Updated**: 2025-11-18  
 **Author**: AI Assistant (with user guidance)  
