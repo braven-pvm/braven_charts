@@ -250,33 +250,44 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 
 ### Phase 2: Integration with ChartRenderBox (1-2 hours)
 
-#### Task 2.1: Add Scrollbar Configuration ✅ STRAIGHTFORWARD
-**Time**: 15 minutes
+#### Task 2.1: Add Scrollbar Configuration ✅ COMPLETE
+**Time**: 15 minutes (actual: 12 minutes)
 
-- [ ] Add scrollbar config to `ChartConfig`:
-  ```dart
-  class ChartConfig {
-    final bool showXScrollbar;
-    final bool showYScrollbar;
-    final ScrollbarConfig scrollbarTheme;
-    
-    // Constructor with defaults
-    const ChartConfig({
-      this.showXScrollbar = false,
-      this.showYScrollbar = false,
-      this.scrollbarTheme = const ScrollbarConfig.defaultLight(),
-      // ... other config
-    });
-  }
-  ```
+- [x] Add scrollbar fields to `BravenChartPlus` widget:
+  - `showXScrollbar` (bool, default false)
+  - `showYScrollbar` (bool, default false)
+  - `scrollbarTheme` (ScrollbarConfig?, nullable)
 
-- [ ] Update `BravenChartPlus` widget to accept scrollbar config
-- [ ] Pass config to `ChartRenderBox`
+- [x] Update `_ChartRenderWidget` to pass scrollbar config
+- [x] Add scrollbar parameters to `ChartRenderBox` constructor
+- [x] Add import for `ScrollbarConfig` in both files
+- [x] Add private fields to `ChartRenderBox`:
+  - `_showXScrollbar` (final bool)
+  - `_showYScrollbar` (final bool)  
+  - `_scrollbarTheme` (final ScrollbarConfig?)
 
-**Success Criteria**:
-- [ ] Config compiles
-- [ ] Can enable/disable scrollbars via config
-- [ ] Theme config available to ChartRenderBox
+**Completed Changes**:
+- `lib/src_plus/widgets/braven_chart_plus.dart`:
+  - Added import: `import '../theming/components/scrollbar_config.dart';`
+  - Added 3 new fields with documentation to BravenChartPlus widget
+  - Updated _ChartRenderWidget constructor and fields
+  - Passed scrollbar parameters through to ChartRenderBox
+  
+- `lib/src_plus/rendering/chart_render_box.dart`:
+  - Added import: `import '../theming/components/scrollbar_config.dart';`
+  - Added 3 new parameters to constructor (with defaults)
+  - Added 3 new private final fields (with documentation)
+  - Fields available for use in layout/rendering
+
+**Success Criteria**: ✅ ALL MET
+- [x] Config compiles without errors
+- [x] Can enable/disable scrollbars via BravenChartPlus parameters
+- [x] Theme config available to ChartRenderBox
+- [x] Fields properly initialized in constructor
+
+**Known Issues**:
+- 3 unused field warnings (expected - will be used in Tasks 2.2-2.4)
+- ScrollbarConfig deprecation warnings (pre-existing, non-blocking)
 
 ---
 
@@ -1037,36 +1048,43 @@ class ChartRenderBox extends RenderBox {
 - [x] **Phase 1, Task 1.2: Port State & Configuration** (Complete - 18 minutes)
 - [x] **Phase 1, Task 1.3: Port Custom Painter** (Complete - 12 minutes)
 - [~] **Phase 1, Task 1.4: Port Main Widget** (Partially Complete - 45 minutes, needs final cleanup)
-- [ ] **Phase 2: Integration** (0/4 tasks complete)
+- [x] **Phase 2, Task 2.1: Add Scrollbar Configuration** (Complete - 12 minutes)
+- [ ] **Phase 2, Tasks 2.2-2.4: Layout, Rendering, Pixel-Delta** (Not started)
 - [ ] **Phase 3: Coordinator** (0/3 tasks complete)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 3.5/15 tasks complete (23% - Task 1.4 ~75% done)
+**Overall Progress**: 4.5/15 tasks complete (30% - Phase 1 at 88%, Phase 2 at 25%)
+**Time Spent**: 102 minutes (vs 2-3 hours estimated for Phase 1+2.1, 43% faster than planned)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Complete Phase 1, Task 1.4** (remaining work):
-   - Remove obsolete jump animation code
-   - Verify all essential features intact
-   - Will complete during Phase 2 integration when foundation dependency is available
+1. **Phase 2, Task 2.2** (Layout Integration - 30 minutes):
+   - Modify ChartRenderBox.performLayout() to reserve scrollbar space
+   - Calculate _xScrollbarRect and _yScrollbarRect when enabled
+   - Handle corner overlap when both scrollbars shown
    
-2. **Begin Phase 2** (Integration with ChartRenderBox):
-   - Create foundation stub or adjust imports
-   - Add scrollbar configuration to ChartRenderBox
-   - Implement pixel-delta conversion logic
-   - Most critical integration phase
+2. **Phase 2, Task 2.3** (Rendering Integration - 15 minutes):
+   - Add scrollbar rendering to ChartRenderBox.paint()
+   - Create ChartScrollbar widgets at calculated positions
+   - Wire up theme configuration
 
-3. **Test after each task**: Compile check, verify imports
+3. **Phase 2, Task 2.4** (Pixel-Delta Conversion - 1 hour) **MOST CRITICAL**:
+   - Implement conversion logic: pixel delta → data delta
+   - Handle pan (shift viewport), zoom (resize edge), track click (jump)
+   - Integrate with viewport controller and ChartTransform
 
-4. **Commit progress**: Document current state
+4. **Complete Phase 1, Task 1.4 cleanup** (deferred, will complete during Phase 2):
+   - Remove obsolete jump animation code
+   - Resolve foundation dependency
+   - Will complete naturally as we integrate
 
-5. **Update progress** in this document as tasks complete
+5. **Commit after each task**: Document progress, maintain commit frequency
 
 ---
 
-**Document Status**: ✅ Phase 1 Nearly Complete (23%), Ready for Phase 2 Integration  
+**Document Status**: ✅ Phase 1: 88% Complete, Phase 2: 25% Complete, Ready for Task 2.2  
 **Created**: 2025-11-18  
 **Last Updated**: 2025-11-18  
 **Author**: AI Assistant (with user guidance)  

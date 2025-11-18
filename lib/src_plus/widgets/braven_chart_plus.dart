@@ -28,6 +28,7 @@ import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
 import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
+import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -54,6 +55,9 @@ class BravenChartPlus extends StatefulWidget {
     this.height,
     this.backgroundColor = Colors.white,
     this.showDebugInfo = false,
+    this.showXScrollbar = false,
+    this.showYScrollbar = false,
+    this.scrollbarTheme,
     this.dataStream,
     this.streamingConfig,
     this.streamingController,
@@ -71,6 +75,25 @@ class BravenChartPlus extends StatefulWidget {
   final double? height;
   final Color backgroundColor;
   final bool showDebugInfo;
+
+  /// Whether to show horizontal scrollbar at the bottom of the chart.
+  ///
+  /// When enabled, displays a dual-purpose scrollbar for panning (drag handle)
+  /// and zooming (drag edges). Defaults to false.
+  final bool showXScrollbar;
+
+  /// Whether to show vertical scrollbar on the right side of the chart.
+  ///
+  /// When enabled, displays a dual-purpose scrollbar for panning (drag handle)
+  /// and zooming (drag edges). Defaults to false.
+  final bool showYScrollbar;
+
+  /// Theme configuration for scrollbars.
+  ///
+  /// Controls visual appearance (colors, thickness, border radius) and
+  /// interaction behavior (auto-hide, zoom limits, edge grip width).
+  /// If null, defaults to [ScrollbarConfig.defaultLight()].
+  final ScrollbarConfig? scrollbarTheme;
 
   /// Optional controller for programmatic data updates.
   ///
@@ -982,6 +1005,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         yAxis: _yAxis,
                         theme: widget.theme,
                         tooltipsEnabled: widget.interactionConfig?.tooltip.enabled ?? true,
+                        showXScrollbar: widget.showXScrollbar,
+                        showYScrollbar: widget.showYScrollbar,
+                        scrollbarTheme: widget.scrollbarTheme,
                         onCursorChange: _handleCursorChange,
                       ),
                     ),
@@ -1008,6 +1034,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.yAxis,
     this.theme,
     required this.tooltipsEnabled,
+    required this.showXScrollbar,
+    required this.showYScrollbar,
+    this.scrollbarTheme,
     this.onCursorChange,
   });
 
@@ -1019,6 +1048,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final chart_axis.Axis? yAxis;
   final ChartTheme? theme;
   final bool tooltipsEnabled;
+  final bool showXScrollbar;
+  final bool showYScrollbar;
+  final ScrollbarConfig? scrollbarTheme;
   final void Function(MouseCursor cursor)? onCursorChange;
 
   @override
@@ -1028,6 +1060,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       elementGenerator: elementGenerator,
       theme: theme,
       tooltipsEnabled: tooltipsEnabled,
+      showXScrollbar: showXScrollbar,
+      showYScrollbar: showYScrollbar,
+      scrollbarTheme: scrollbarTheme,
       onCursorChange: onCursorChange,
     )
       ..setXAxis(xAxis)
