@@ -21,6 +21,7 @@ import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_theme.dart';
+import '../theming/components/scrollbar_config.dart';
 import 'spatial_index.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -51,6 +52,9 @@ class ChartRenderBox extends RenderBox {
     ElementGenerator? elementGenerator,
     ChartTheme? theme,
     bool tooltipsEnabled = true,
+    bool showXScrollbar = false,
+    bool showYScrollbar = false,
+    ScrollbarConfig? scrollbarTheme,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
@@ -58,6 +62,9 @@ class ChartRenderBox extends RenderBox {
   })  : _elementGenerator = elementGenerator,
         _theme = theme,
         _tooltipsEnabled = tooltipsEnabled,
+        _showXScrollbar = showXScrollbar,
+        _showYScrollbar = showYScrollbar,
+        _scrollbarTheme = scrollbarTheme,
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
@@ -109,6 +116,16 @@ class ChartRenderBox extends RenderBox {
 
   /// Whether tooltips are enabled.
   final bool _tooltipsEnabled;
+
+  /// Whether to show horizontal scrollbar at bottom of chart.
+  final bool _showXScrollbar;
+
+  /// Whether to show vertical scrollbar on right side of chart.
+  final bool _showYScrollbar;
+
+  /// Theme configuration for scrollbars.
+  /// If null, defaults to ScrollbarConfig.defaultLight().
+  final ScrollbarConfig? _scrollbarTheme;
 
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
