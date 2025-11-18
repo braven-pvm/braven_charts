@@ -1359,6 +1359,19 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerUp(PointerUpEvent event, Offset position) {
+    // Clear scrollbar drag state if active
+    if (_activeScrollbarAxis != null) {
+      _activeScrollbarAxis = null;
+      _scrollbarDragStartPosition = null;
+      _scrollbarDragStartZone = null;
+      
+      // Release scrollbar mode and end interaction
+      coordinator.endInteraction();
+      coordinator.releaseMode();
+      markNeedsPaint(); // Redraw with updated hover state
+      return;
+    }
+
     // Complete box selection if active
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       final boxRect = coordinator.boxSelectionRect;
@@ -1548,6 +1561,11 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerScroll(PointerScrollEvent event, Offset position) {
+    // Prevent scroll wheel zoom during scrollbar drag
+    if (coordinator.currentMode == InteractionMode.scrollbarDragging) {
+      return;
+    }
+
     // Check for Shift modifier to trigger zoom
     if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null && _originalTransform != null) {
       // Claim zooming mode
@@ -2001,6 +2019,11 @@ class ChartRenderBox extends RenderBox {
       return false; // Transform not ready
     }
 
+    // Check if coordinator allows scrollbar interaction (not blocked by modal modes)
+    if (coordinator.isModal) {
+      return false; // Modal state blocks scrollbar interaction
+    }
+
     // Get scrollbar rect based on axis
     final scrollbarRect = axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
     if (scrollbarRect == null) return false;
@@ -2050,6 +2073,9 @@ class ChartRenderBox extends RenderBox {
       _handleScrollbarTrackClick(axis, localPos, trackLength, handleSize);
     }
 
+    // Claim scrollbar mode in coordinator
+    coordinator.claimMode(InteractionMode.scrollbarDragging);
+
     markNeedsPaint(); // Redraw with active state
     return true; // Event claimed by scrollbar
   }
@@ -2089,9 +2115,8 @@ class ChartRenderBox extends RenderBox {
     final targetHandleCenter = clickPosition;
 
     // Calculate where handle CENTER currently is
-    final currentHandlePosition = axis == Axis.horizontal
-        ? _calculateCurrentHandlePosition(Axis.horizontal)
-        : _calculateCurrentHandlePosition(Axis.vertical);
+    final currentHandlePosition =
+        axis == Axis.horizontal ? _calculateCurrentHandlePosition(Axis.horizontal) : _calculateCurrentHandlePosition(Axis.vertical);
     final currentHandleCenter = currentHandlePosition + (handleSize / 2.0);
 
     // Pixel delta = where we want to be - where we are
