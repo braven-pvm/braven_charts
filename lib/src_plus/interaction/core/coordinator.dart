@@ -7,6 +7,36 @@ import 'package:flutter/services.dart';
 import 'chart_element.dart';
 import 'interaction_mode.dart';
 
+/// Information about a hovered marker within a series.
+///
+/// Used to track which specific marker (datapoint) is being hovered,
+/// allowing per-marker visual feedback without creating individual elements.
+class HoveredMarkerInfo {
+  const HoveredMarkerInfo({
+    required this.seriesId,
+    required this.markerIndex,
+    required this.plotPosition,
+  });
+
+  /// ID of the series containing the hovered marker.
+  final String seriesId;
+
+  /// Index of the hovered marker within the series.points list.
+  final int markerIndex;
+
+  /// Position of the marker in plot coordinates.
+  final Offset plotPosition;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is HoveredMarkerInfo && other.seriesId == seriesId && other.markerIndex == markerIndex && other.plotPosition == plotPosition;
+  }
+
+  @override
+  int get hashCode => Object.hash(seriesId, markerIndex, plotPosition);
+}
+
 /// Central coordinator for all chart interactions.
 ///
 /// **Purpose**: Prevent gesture arena conflicts via explicit state management.
@@ -38,6 +68,13 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Currently hovered element (if any).
   ChartElement? _hoveredElement;
 
+  /// Currently hovered marker within a series (if any).
+  ///
+  /// Tracks per-marker hover state without creating individual marker elements.
+  /// Allows highlighting individual datapoints while preserving SeriesElement
+  /// as single spatial index entry (performance optimization).
+  HoveredMarkerInfo? _hoveredMarker;
+
   /// Set of currently pressed keyboard modifier keys.
   final Set<LogicalKeyboardKey> _modifierKeys = {};
 
@@ -68,6 +105,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
   /// Currently hovered element.
   ChartElement? get hoveredElement => _hoveredElement;
+
+  /// Currently hovered marker within a series.
+  HoveredMarkerInfo? get hoveredMarker => _hoveredMarker;
 
   /// Whether Ctrl/Command modifier is pressed.
   bool get isCtrlPressed => _modifierKeys.contains(LogicalKeyboardKey.control) || _modifierKeys.contains(LogicalKeyboardKey.meta);
@@ -257,6 +297,19 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       _setMode(InteractionMode.idle);
     }
 
+    notifyListeners();
+  }
+
+  /// Sets the currently hovered marker within a series.
+  ///
+  /// This allows per-marker hover feedback without creating individual marker
+  /// elements in the spatial index (performance optimization).
+  ///
+  /// Typically called after setHoveredElement() when the hovered element is
+  /// a SeriesElement, to provide finer-grained hover feedback.
+  void setHoveredMarker(HoveredMarkerInfo? marker) {
+    if (_hoveredMarker == marker) return;
+    _hoveredMarker = marker;
     notifyListeners();
   }
 

@@ -466,6 +466,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         transform: transform,
         theme: widget.theme,
         strokeWidth: 2.0,
+        coordinator: _coordinator,
       ).cast<ChartElement>().toList();
 
       // Convert annotations to elements

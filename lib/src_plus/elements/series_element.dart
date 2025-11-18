@@ -5,6 +5,7 @@ import 'dart:ui';
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
+import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -28,6 +29,7 @@ class SeriesElement implements ChartElement {
     this.isHovered = false,
     this.strokeWidth = 2.0,
     this.themeColor,
+    this.coordinator,
   }) : _currentTransform = transform {
     _computeBounds();
   }
@@ -37,6 +39,7 @@ class SeriesElement implements ChartElement {
   ChartTransform _currentTransform; // Current transform for painting
   final double strokeWidth;
   final Color? themeColor;
+  final ChartInteractionCoordinator? coordinator;
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows path caching to work - transform stored at construction stays fixed,
@@ -419,12 +422,42 @@ class SeriesElement implements ChartElement {
 
   /// Paint markers using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   void _paintDataPointMarkers(Canvas canvas, List<Offset> transformedPoints, double radius, Color baseColor) {
-    final markerPaint = Paint()
+    // Check if any marker in this series is hovered
+    final hoveredMarker = coordinator?.hoveredMarker;
+    final isThisSeriesHovered = hoveredMarker?.seriesId == series.id;
+
+    // ignore: avoid_print
+    if (isThisSeriesHovered) {
+      print('🎨 Painting markers for ${series.id}: hoveredIndex=${hoveredMarker!.markerIndex}, totalMarkers=${transformedPoints.length}');
+    }
+
+    // Paint setup
+    final normalPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
 
-    for (final plotPos in transformedPoints) {
-      canvas.drawCircle(plotPos, radius, markerPaint);
+    final hoverPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    for (int i = 0; i < transformedPoints.length; i++) {
+      final plotPos = transformedPoints[i];
+
+      if (isThisSeriesHovered && i == hoveredMarker!.markerIndex) {
+        // Paint highlighted marker (larger with border)
+        // ignore: avoid_print
+        print('✨ Painting HIGHLIGHTED marker at index $i: pos=$plotPos, radius=${radius * 1.5}');
+        canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
+        canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
+      } else {
+        // Paint normal marker
+        canvas.drawCircle(plotPos, radius, normalPaint);
+      }
     }
   }
 
@@ -456,6 +489,7 @@ class SeriesElement implements ChartElement {
       isSelected: isSelected ?? this.isSelected,
       isHovered: isHovered ?? this.isHovered,
       strokeWidth: strokeWidth,
+      coordinator: coordinator,
     );
   }
 }
