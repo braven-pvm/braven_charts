@@ -179,19 +179,20 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 
 ---
 
-#### Task 1.3: Port Custom Painter ✅ STRAIGHTFORWARD
-**Time**: 30 minutes  
-**Files**: 1 file (~360 lines)
+#### Task 1.3: Port Custom Painter ✅ COMPLETE
+**Time**: 30 minutes (Actual: 12 minutes)  
+**Files**: 1 file (~360 lines)  
+**Completed**: 2025-11-18
 
-- [ ] Copy `scrollbar_painter.dart` → `lib/src_plus/widgets/scrollbar/`
+- [x] Copy `scrollbar_painter.dart` → `lib/src_plus/widgets/scrollbar/`
   - CustomPainter for rendering track, handle, grip indicator, edge highlights
   - Verify imports (ScrollbarConfig, ScrollbarState, HitTestZone)
   - No modifications needed (stateless rendering)
 
 **Success Criteria**:
-- [ ] File compiles without errors
-- [ ] All rendering methods present (paintTrack, paintHandle, paintGripIndicator, paintEdgeHighlight)
-- [ ] shouldRepaint() logic works
+- [x] File compiles without errors (8 deprecation warnings for Color.opacity - non-blocking)
+- [x] All rendering methods present (paintTrack, paintHandle, paintGripIndicator, paintEdgeHighlight)
+- [x] shouldRepaint() logic works
 
 ---
 
@@ -1019,27 +1020,29 @@ class ChartRenderBox extends RenderBox {
 
 - [x] **Phase 1, Task 1.1: Port Pure Functions & Enums** (Complete - 15 minutes)
 - [x] **Phase 1, Task 1.2: Port State & Configuration** (Complete - 18 minutes)
-- [ ] **Phase 1, Task 1.3: Port Custom Painter** (Not Started)
+- [x] **Phase 1, Task 1.3: Port Custom Painter** (Complete - 12 minutes)
 - [ ] **Phase 1, Task 1.4: Port Main Widget** (Not Started)
 - [ ] **Phase 2: Integration** (0/4 tasks complete)
 - [ ] **Phase 3: Coordinator** (0/3 tasks complete)
 - [ ] **Phase 4: Testing & Polish** (0/4 tasks complete)
 
-**Overall Progress**: 2/15 tasks complete (13%)
+**Overall Progress**: 3/15 tasks complete (20%)
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Start Phase 1, Task 1.3**: Port custom painter (30 min)
-   - Copy scrollbar_painter.dart to src_plus
-   - Verify rendering logic intact
-   - Test compilation
+1. **Start Phase 1, Task 1.4**: Port main widget (1 hour)
+   - Copy chart_scrollbar.dart to src_plus
+   - Remove obsolete callbacks (onPanChanged, onZoomChanged)
+   - Remove obsolete animation code (jump animation)
+   - Keep pixel-delta pattern, gestures, hover, auto-hide
+   - Most complex task in Phase 1
 
-2. **Continue Phase 1, Task 1.4**: Port main widget (1 hour)
-   - Copy chart_scrollbar.dart
-   - Remove obsolete callbacks
-   - Simplify for pixel-delta pattern
+2. **After Phase 1 Complete**: Begin Phase 2 integration
+   - Integrate with ChartRenderBox
+   - Implement pixel-delta conversion
+   - Wire up viewport sync
 
 3. **Test after each task**: Compile check, verify imports
 
@@ -1049,7 +1052,7 @@ class ChartRenderBox extends RenderBox {
 
 ---
 
-**Document Status**: ✅ Planning Complete, Implementation In Progress (13%)  
+**Document Status**: ✅ Planning Complete, Implementation In Progress (20%)  
 **Created**: 2025-11-18  
 **Last Updated**: 2025-11-18  
 **Author**: AI Assistant (with user guidance)  
