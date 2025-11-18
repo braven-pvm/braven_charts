@@ -22,6 +22,9 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_theme.dart';
 import '../theming/components/scrollbar_config.dart';
+import '../widgets/scrollbar/scrollbar_controller.dart';
+import '../widgets/scrollbar/scrollbar_painter.dart';
+import '../widgets/scrollbar/scrollbar_state.dart';
 import 'spatial_index.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -922,7 +925,7 @@ class ChartRenderBox extends RenderBox {
     // Calculate plot area (reserve space for axes AND scrollbars)
     // Default margins if no axes
     double leftMargin = 10;
-    double rightMargin = 10 + rightReserved; // Add scrollbar space
+    final double rightMargin = 10 + rightReserved; // Add scrollbar space
     const double topMargin = 10;
     double bottomMargin = 10 + bottomReserved; // Add scrollbar space
 
@@ -1932,7 +1935,112 @@ class ChartRenderBox extends RenderBox {
     _paintOverlayLayer(canvas, size);
     canvas.restore(); // Restore from saveLayer
 
+    // Paint scrollbars if enabled (outside plot area clipping)
+    _paintScrollbars(canvas, size);
+
     canvas.restore(); // Final restore (removes initial offset translation)
+  }
+
+  /// Paints scrollbars if enabled.
+  ///
+  /// Renders horizontal and/or vertical scrollbars using ScrollbarPainter.
+  /// Scrollbars show the current viewport range relative to the full data range.
+  void _paintScrollbars(Canvas canvas, Size size) {
+    if (_transform == null || _originalTransform == null) return;
+
+    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+
+    // Paint horizontal scrollbar (X-axis)
+    if (_showXScrollbar && _xScrollbarRect != null) {
+      // Use original transform for full data range
+      final dataMin = _originalTransform!.dataXMin;
+      final dataMax = _originalTransform!.dataXMax;
+      
+      // Use current transform for viewport range
+      final viewportMin = _transform!.dataXMin;
+      final viewportMax = _transform!.dataXMax;
+
+      final trackLength = _xScrollbarRect!.width;
+      final dataSpan = dataMax - dataMin;
+
+      // Calculate handle size (proportion of viewport to data)
+      final viewportSpan = viewportMax - viewportMin;
+      final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+
+      // Calculate handle position (where viewport starts relative to data)
+      final viewportOffset = viewportMin - dataMin;
+      final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+      // Create scrollbar state
+      final state = ScrollbarState(
+        handlePosition: handlePosition,
+        handleSize: handleSize,
+        isDragging: false,
+        hoverZone: null,
+        isFocused: false,
+        isVisible: true,
+      );
+
+      // Create painter and render
+      final painter = ScrollbarPainter(
+        config: scrollbarTheme,
+        state: state,
+        isHorizontal: true,
+        trackLength: trackLength,
+        opacity: 1.0,
+      );
+
+      canvas.save();
+      canvas.translate(_xScrollbarRect!.left, _xScrollbarRect!.top);
+      painter.paint(canvas, Size(_xScrollbarRect!.width, _xScrollbarRect!.height));
+      canvas.restore();
+    }
+
+    // Paint vertical scrollbar (Y-axis)
+    if (_showYScrollbar && _yScrollbarRect != null) {
+      // Use original transform for full data range
+      final dataMin = _originalTransform!.dataYMin;
+      final dataMax = _originalTransform!.dataYMax;
+      
+      // Use current transform for viewport range
+      final viewportMin = _transform!.dataYMin;
+      final viewportMax = _transform!.dataYMax;
+
+      final trackLength = _yScrollbarRect!.height;
+      final dataSpan = dataMax - dataMin;
+
+      // Calculate handle size (proportion of viewport to data)
+      final viewportSpan = viewportMax - viewportMin;
+      final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+
+      // Calculate handle position (where viewport starts relative to data)
+      final viewportOffset = viewportMin - dataMin;
+      final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+      // Create scrollbar state
+      final state = ScrollbarState(
+        handlePosition: handlePosition,
+        handleSize: handleSize,
+        isDragging: false,
+        hoverZone: null,
+        isFocused: false,
+        isVisible: true,
+      );
+
+      // Create painter and render
+      final painter = ScrollbarPainter(
+        config: scrollbarTheme,
+        state: state,
+        isHorizontal: false,
+        trackLength: trackLength,
+        opacity: 1.0,
+      );
+
+      canvas.save();
+      canvas.translate(_yScrollbarRect!.left, _yScrollbarRect!.top);
+      painter.paint(canvas, Size(_yScrollbarRect!.width, _yScrollbarRect!.height));
+      canvas.restore();
+    }
   }
 
   /// Draws coordinate labels for the crosshair showing screen and data coordinates.
