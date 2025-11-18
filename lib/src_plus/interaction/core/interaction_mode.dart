@@ -19,6 +19,11 @@ enum InteractionMode {
   /// This is a passive state - doesn't claim interactions.
   hovering,
 
+  /// Scrollbar is being dragged (left-click drag on scrollbar handle/edges).
+  /// Priority: 4 (above pan/zoom, below element interactions)
+  /// Provides explicit viewport control via scrollbar UI.
+  scrollbarDragging,
+
   /// Chart is being panned (middle-click drag per conflict resolution rules).
   /// EXCLUSIVE: Middle-button events route here only.
   panning,
@@ -102,6 +107,8 @@ extension InteractionModeExtensions on InteractionMode {
       case InteractionMode.selecting:
       case InteractionMode.boxSelecting:
         return 6;
+      case InteractionMode.scrollbarDragging:
+        return 4;
       case InteractionMode.panning:
         return 3;
       case InteractionMode.zooming:
@@ -119,6 +126,8 @@ extension InteractionModeExtensions on InteractionMode {
         return 'Idle';
       case InteractionMode.hovering:
         return 'Hovering';
+      case InteractionMode.scrollbarDragging:
+        return 'Dragging scrollbar';
       case InteractionMode.panning:
         return 'Panning (middle-click drag)';
       case InteractionMode.zooming:
