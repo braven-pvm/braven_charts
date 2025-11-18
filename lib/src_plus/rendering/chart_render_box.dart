@@ -22,7 +22,7 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_theme.dart';
 import '../theming/components/scrollbar_config.dart';
-import '../widgets/scrollbar/scrollbar_controller.dart';
+import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
 import 'spatial_index.dart';
@@ -1955,7 +1955,7 @@ class ChartRenderBox extends RenderBox {
       // Use original transform for full data range
       final dataMin = _originalTransform!.dataXMin;
       final dataMax = _originalTransform!.dataXMax;
-      
+
       // Use current transform for viewport range
       final viewportMin = _transform!.dataXMin;
       final viewportMax = _transform!.dataXMax;
@@ -2001,7 +2001,7 @@ class ChartRenderBox extends RenderBox {
       // Use original transform for full data range
       final dataMin = _originalTransform!.dataYMin;
       final dataMax = _originalTransform!.dataYMax;
-      
+
       // Use current transform for viewport range
       final viewportMin = _transform!.dataYMin;
       final viewportMax = _transform!.dataYMax;
@@ -2041,6 +2041,236 @@ class ChartRenderBox extends RenderBox {
       painter.paint(canvas, Size(_yScrollbarRect!.width, _yScrollbarRect!.height));
       canvas.restore();
     }
+  }
+
+  // ============================================================================
+  // Scrollbar Interaction Handlers
+  // ============================================================================
+
+  /// Handles horizontal scrollbar pixel delta and converts to viewport change.
+  ///
+  /// Converts pixel delta from scrollbar to data delta using current viewport,
+  /// then updates the X viewport range accordingly.
+  ///
+  /// **Parameters**:
+  /// - `pixelDelta`: Horizontal pixel offset from scrollbar drag
+  /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
+  void _handleXScrollbarDelta(double pixelDelta, ScrollbarInteraction interactionType) {
+    if (_transform == null || _originalTransform == null || _xScrollbarRect == null) return;
+
+    final trackLength = _xScrollbarRect!.width;
+    if (trackLength == 0) return;
+
+    // Get full data range (original transform = full dataset)
+    final dataMin = _originalTransform!.dataXMin;
+    final dataMax = _originalTransform!.dataXMax;
+    final dataSpan = dataMax - dataMin;
+
+    // Get current viewport range
+    final viewportMin = _transform!.dataXMin;
+    final viewportMax = _transform!.dataXMax;
+    final viewportSpan = viewportMax - viewportMin;
+
+    // Convert pixel delta to data delta
+    final dataPerPixel = dataSpan / trackLength;
+    final dataDelta = pixelDelta * dataPerPixel;
+
+    // Apply based on interaction type
+    switch (interactionType) {
+      case ScrollbarInteraction.pan:
+        // Pan: shift entire viewport by delta
+        var newMin = viewportMin + dataDelta;
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
+        break;
+
+      case ScrollbarInteraction.zoomLeftOrTop:
+        // Zoom left: adjust minimum boundary only
+        var newMin = viewportMin + dataDelta;
+
+        // Clamp to prevent inversion and respect data bounds
+        newMin = newMin.clamp(dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
+
+        _transform = _transform!.copyWith(dataXMin: newMin);
+        break;
+
+      case ScrollbarInteraction.zoomRightOrBottom:
+        // Zoom right: adjust maximum boundary only
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to prevent inversion and respect data bounds
+        newMax = newMax.clamp(viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
+
+        _transform = _transform!.copyWith(dataXMax: newMax);
+        break;
+
+      case ScrollbarInteraction.trackClick:
+        // Track click: center viewport at clicked position
+        final targetDataPosition = dataMin + (pixelDelta * dataPerPixel);
+        final halfSpan = viewportSpan / 2;
+
+        var newMin = targetDataPosition - halfSpan;
+        var newMax = targetDataPosition + halfSpan;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
+        break;
+
+      case ScrollbarInteraction.keyboard:
+        // Keyboard: apply delta directly (already calculated by controller)
+        var newMin = viewportMin + dataDelta;
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
+        break;
+    }
+
+    // Update axes and trigger repaint
+    _updateAxesFromTransform();
+    markNeedsPaint();
+  }
+
+  /// Handles vertical scrollbar pixel delta and converts to viewport change.
+  ///
+  /// Converts pixel delta from scrollbar to data delta using current viewport,
+  /// then updates the Y viewport range accordingly.
+  ///
+  /// **Parameters**:
+  /// - `pixelDelta`: Vertical pixel offset from scrollbar drag
+  /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
+  void _handleYScrollbarDelta(double pixelDelta, ScrollbarInteraction interactionType) {
+    if (_transform == null || _originalTransform == null || _yScrollbarRect == null) return;
+
+    final trackLength = _yScrollbarRect!.height;
+    if (trackLength == 0) return;
+
+    // Get full data range (original transform = full dataset)
+    final dataMin = _originalTransform!.dataYMin;
+    final dataMax = _originalTransform!.dataYMax;
+    final dataSpan = dataMax - dataMin;
+
+    // Get current viewport range
+    final viewportMin = _transform!.dataYMin;
+    final viewportMax = _transform!.dataYMax;
+    final viewportSpan = viewportMax - viewportMin;
+
+    // Convert pixel delta to data delta
+    final dataPerPixel = dataSpan / trackLength;
+    final dataDelta = pixelDelta * dataPerPixel;
+
+    // Apply based on interaction type
+    switch (interactionType) {
+      case ScrollbarInteraction.pan:
+        // Pan: shift entire viewport by delta
+        var newMin = viewportMin + dataDelta;
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
+        break;
+
+      case ScrollbarInteraction.zoomLeftOrTop:
+        // Zoom top: adjust minimum boundary only
+        var newMin = viewportMin + dataDelta;
+
+        // Clamp to prevent inversion and respect data bounds
+        newMin = newMin.clamp(dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
+
+        _transform = _transform!.copyWith(dataYMin: newMin);
+        break;
+
+      case ScrollbarInteraction.zoomRightOrBottom:
+        // Zoom bottom: adjust maximum boundary only
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to prevent inversion and respect data bounds
+        newMax = newMax.clamp(viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
+
+        _transform = _transform!.copyWith(dataYMax: newMax);
+        break;
+
+      case ScrollbarInteraction.trackClick:
+        // Track click: center viewport at clicked position
+        final targetDataPosition = dataMin + (pixelDelta * dataPerPixel);
+        final halfSpan = viewportSpan / 2;
+
+        var newMin = targetDataPosition - halfSpan;
+        var newMax = targetDataPosition + halfSpan;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
+        break;
+
+      case ScrollbarInteraction.keyboard:
+        // Keyboard: apply delta directly (already calculated by controller)
+        var newMin = viewportMin + dataDelta;
+        var newMax = viewportMax + dataDelta;
+
+        // Clamp to data bounds
+        if (newMin < dataMin) {
+          newMin = dataMin;
+          newMax = dataMin + viewportSpan;
+        }
+        if (newMax > dataMax) {
+          newMax = dataMax;
+          newMin = dataMax - viewportSpan;
+        }
+
+        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
+        break;
+    }
+
+    // Update axes and trigger repaint
+    _updateAxesFromTransform();
+    markNeedsPaint();
   }
 
   /// Draws coordinate labels for the crosshair showing screen and data coordinates.
