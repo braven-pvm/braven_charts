@@ -500,7 +500,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     required String description,
     required Widget child,
     required List<String> features,
-    double height = 450,
+    double height = 550,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1182,7 +1182,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           _buildFeatureCard(
             title: '9. Real-Time Streaming Data',
             description: 'Live data ingestion with buffering, pause/resume controls, and auto-scroll viewport.',
-            height: 750, // Larger height for streaming controls
+            height: 900, // Larger height for streaming controls
             features: const [
               'Stream<ChartDataPoint> integration',
               'Configurable buffer (10,000 points default)',
@@ -1759,7 +1759,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             const SizedBox(height: 16),
             // Chart
             SizedBox(
-              height: 400,
+              height: 500,
               child: child,
             ),
           ],
@@ -1847,7 +1847,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     const SizedBox(height: 16),
 
                     SizedBox(
-                      height: 400,
+                      height: 500,
                       child: BravenChartPlus(
                         key: const ValueKey('stream_test_datastream'),
                         chartType: ChartType.line,
