@@ -110,11 +110,11 @@ class AxisRenderer {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Position label after scrollbar area
-      // For bottom axis: calculate position accounting for tick labels (35px) + scrollbar (15px) + padding
+      // Position label between tick labels and scrollbar
+      // For bottom axis: place after tick labels with spacing
       // For top axis: place above at top of chart
       final labelY = config.position == AxisPosition.bottom
-          ? axisY + 35.0 + 15.0 + 8.0 // After tick labels + scrollbar height + padding
+          ? axisY + config.tickLength + config.labelPadding + 20 // Between tick labels and scrollbar
           : 12.0; // Top of chart
 
       labelPainter.paint(
