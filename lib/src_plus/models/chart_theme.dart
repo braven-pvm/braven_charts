@@ -11,12 +11,24 @@ class ChartTheme {
     this.axisColor = Colors.black87,
     this.textColor = Colors.black87,
     this.seriesColors = const [Colors.blue, Colors.red, Colors.green, Colors.orange, Colors.purple],
+    this.focusBorderColor = Colors.blue,
+    this.focusBorderWidth = 2.0,
+    this.focusBorderRadius = 0.0,
   });
   final Color backgroundColor;
   final Color gridColor;
   final Color axisColor;
   final Color textColor;
   final List<Color> seriesColors;
+
+  /// Focus border color when chart has keyboard focus.
+  final Color focusBorderColor;
+
+  /// Focus border width in pixels.
+  final double focusBorderWidth;
+
+  /// Focus border corner radius in pixels (0 = sharp corners).
+  final double focusBorderRadius;
 
   @override
   bool operator ==(Object other) {
@@ -35,6 +47,11 @@ class ChartTheme {
       if (seriesColors[i] != other.seriesColors[i]) return false;
     }
 
+    // Compare focus border properties
+    if (focusBorderColor != other.focusBorderColor) return false;
+    if (focusBorderWidth != other.focusBorderWidth) return false;
+    if (focusBorderRadius != other.focusBorderRadius) return false;
+
     return true;
   }
 
@@ -45,6 +62,9 @@ class ChartTheme {
         axisColor,
         textColor,
         Object.hashAll(seriesColors),
+        focusBorderColor,
+        focusBorderWidth,
+        focusBorderRadius,
       );
 
   static const ChartTheme light = ChartTheme();

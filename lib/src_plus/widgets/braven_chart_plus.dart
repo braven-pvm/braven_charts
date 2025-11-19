@@ -1041,7 +1041,17 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
               height: widget.height,
               decoration: BoxDecoration(
                 color: widget.backgroundColor,
-                border: hasFocus ? Border.all(color: Colors.blue, width: 2) : null,
+                border: (widget.interactionConfig?.showFocusBorder ?? true) && hasFocus
+                    ? Border.all(
+                        color: widget.theme?.focusBorderColor ?? Colors.blue,
+                        width: widget.theme?.focusBorderWidth ?? 2.0,
+                      )
+                    : null,
+                borderRadius: (widget.interactionConfig?.showFocusBorder ?? true) &&
+                        hasFocus &&
+                        (widget.theme?.focusBorderRadius ?? 0.0) > 0
+                    ? BorderRadius.circular(widget.theme?.focusBorderRadius ?? 0.0)
+                    : null,
               ),
               child: Stack(
                 children: [
