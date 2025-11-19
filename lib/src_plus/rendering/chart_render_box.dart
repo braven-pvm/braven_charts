@@ -2306,6 +2306,46 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Renders horizontal and/or vertical scrollbars using ScrollbarPainter.
   /// Scrollbars show the current viewport range relative to the full data range.
+  ///
+  /// **ScrollbarConfig Properties - Implementation Status:**
+  ///
+  /// ✅ **FULLY IMPLEMENTED (Visual):**
+  /// - `thickness` - Width/height of scrollbar track
+  /// - `minHandleSize` - Minimum size of draggable handle
+  /// - `padding` - Space between scrollbar and chart edge
+  /// - `borderRadius` - Corner radius for rounded edges
+  /// - `edgeGripWidth` - Size of zoom edge zones (with power 1.5 amplification)
+  ///
+  /// ✅ **FULLY IMPLEMENTED (Colors):**
+  /// - `trackColor` - Background color of scrollbar track
+  /// - `trackHoverColor` - Track color when hovering (not on handle)
+  /// - `handleColor` - Default handle color
+  /// - `handleHoverColor` - Handle color when hovering
+  /// - `handleActiveColor` - Handle color when dragging
+  /// - `handleDisabledColor` - Handle color when disabled (TODO: wire to InteractionConfig)
+  /// - `edgeZoneColor` - Default color of edge zones (always visible)
+  /// - `edgeHoverColor` - Edge zone color when hovering (zoom affordance)
+  /// - `gripIndicatorColor` - Color of grip indicator lines
+  ///
+  /// ✅ **FULLY IMPLEMENTED (Grip Indicators):**
+  /// - `showGripIndicator` - Toggle center grip indicator on/off
+  ///
+  /// ❌ **NOT IMPLEMENTED (Animations - Architectural):**
+  /// - `autoHide` - Auto-hide after inactivity (requires animation system)
+  /// - `autoHideDelay` - Delay before hiding (requires timer management)
+  /// - `fadeDuration` - Fade animation duration (requires animation controller)
+  ///
+  /// ❌ **NOT IMPLEMENTED (Behavior - Architectural):**
+  /// - `enableResizeHandles` - Edge zones always enabled (no conditional logic)
+  /// - `minZoomRatio` - Zoom limits not enforced in scrollbar (handled elsewhere)
+  /// - `maxZoomRatio` - Zoom limits not enforced in scrollbar (handled elsewhere)
+  ///
+  /// ❌ **NOT IMPLEMENTED (Accessibility - Platform-Specific):**
+  /// - `forcedColorsMode` - High contrast mode (requires MediaQuery integration)
+  /// - `prefersReducedMotion` - Motion preferences (requires MediaQuery integration)
+  ///
+  /// **Note:** The ChartScrollbar widget (separate component) implements some of these
+  /// missing features, but chart_render_box does direct rendering for performance.
   void _paintScrollbars(Canvas canvas, Size size) {
     if (_transform == null || _originalTransform == null) return;
 
@@ -2331,13 +2371,6 @@ class ChartRenderBox extends RenderBox {
       final viewportSpan = viewportMax - viewportMin;
       final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
       final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-      // DEBUG: Log handle sizing calculation
-      print('🔍 X Scrollbar Handle Sizing:');
-      print('  dataSpan: $dataSpan (original: $dataMin → $dataMax)');
-      print('  viewportSpan: $viewportSpan (current: $viewportMin → $viewportMax)');
-      print('  visibleRatio: $visibleRatio (${(visibleRatio * 100).toStringAsFixed(1)}% visible)');
-      print('  handleSize: $handleSize (minSize: ${scrollbarTheme.minHandleSize}, trackLength: $trackLength)');
 
       // Calculate handle position (where viewport starts relative to data)
       final viewportOffset = viewportMin - dataMin;
@@ -2404,13 +2437,6 @@ class ChartRenderBox extends RenderBox {
       final viewportSpan = viewportMax - viewportMin;
       final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
       final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-      // DEBUG: Log Y scrollbar handle sizing calculation
-      print('🔍 Y Scrollbar Handle Sizing:');
-      print('  dataSpan: $dataSpan (original: $dataMin → $dataMax)');
-      print('  viewportSpan: $viewportSpan (current: $viewportMin → $viewportMax)');
-      print('  visibleRatio: $visibleRatio (${(visibleRatio * 100).toStringAsFixed(1)}% visible)');
-      print('  handleSize: $handleSize (minSize: ${scrollbarTheme.minHandleSize}, trackLength: $trackLength)');
 
       // Calculate handle position (where viewport starts relative to data)
       final viewportOffset = viewportMin - dataMin;

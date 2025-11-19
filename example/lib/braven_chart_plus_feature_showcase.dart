@@ -15,6 +15,7 @@ import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/streaming_config.dart';
 import 'package:braven_charts/src_plus/streaming/streaming_controller.dart';
+import 'package:braven_charts/src_plus/theming/components/scrollbar_config.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:braven_charts/src_plus/widgets/chart_legend.dart';
 import 'package:flutter/material.dart';
@@ -734,6 +735,37 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               chartType: ChartType.line,
               showXScrollbar: true,
               showYScrollbar: true,
+              // EXTREME SCROLLBAR THEME TEST - Verify all visual properties render
+              scrollbarTheme: const ScrollbarConfig(
+                // Sizing properties
+                thickness: 20.0, // 20px thick (vs default 11.5)
+                minHandleSize: 50.0, // 50px minimum (vs default 23)
+                padding: 8.0, // 8px padding (vs default 4)
+                borderRadius: 10.0, // 10px radius (vs default 4)
+                edgeGripWidth: 60.0, // 60px edge zones (vs default 40)
+
+                // Track colors (bright yellow background)
+                trackColor: Color(0xFFFFEB3B), // Yellow track
+                trackHoverColor: Color(0xFFFFD600), // Darker yellow on hover
+
+                // Handle colors (cyan/teal)
+                handleColor: Color(0xFF00BCD4), // Cyan handle
+                handleHoverColor: Color(0xFF00ACC1), // Darker cyan hover
+                handleActiveColor: Color(0xFF0097A7), // Dark cyan active
+                handleDisabledColor: Color(0xFFB2EBF2), // Light cyan disabled
+
+                // Edge zone colors (magenta/pink - dramatic contrast)
+                edgeZoneColor: Color(0xFFE91E63), // Pink default
+                edgeHoverColor: Color(0xFFFF5722), // Deep orange on hover
+
+                // Grip indicator (white for contrast)
+                showGripIndicator: true,
+                gripIndicatorColor: Color(0xFFFFFFFF), // White grips
+
+                // Behavior (note: some not implemented in chart_render_box yet)
+                autoHide: false, // Always visible for testing
+                enableResizeHandles: true, // Edge zones enabled
+              ),
               series: [
                 LineChartSeries(
                   id: 'linear',
