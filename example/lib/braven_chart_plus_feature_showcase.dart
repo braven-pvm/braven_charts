@@ -739,14 +739,14 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               scrollbarTheme: const ScrollbarConfig(
                 // Sizing properties
                 thickness: 20.0, // 20px thick (vs default 11.5)
-                minHandleSize: 50.0, // 50px minimum (vs default 23)
-                padding: 8.0, // 8px padding (vs default 4)
+                minHandleSize: 80.0, // 80px minimum HANDLE LENGTH (vs default 23) - prevents tiny handle when zoomed out
+                padding: 0.0, // No padding for max visibility
                 borderRadius: 10.0, // 10px radius (vs default 4)
-                edgeGripWidth: 60.0, // 60px edge zones (vs default 40)
+                edgeGripWidth: 40.0, // 40px edge zone WIDTH (default) - each end of handle for zoom
 
-                // Track colors (bright yellow background)
+                // Track colors (bright yellow background with GREEN hover for testing)
                 trackColor: Color(0xFFFFEB3B), // Yellow track
-                trackHoverColor: Color(0xFFFFD600), // Darker yellow on hover
+                trackHoverColor: Color(0xFF4CAF50), // GREEN on hover (VERY different so we can test it works!)
 
                 // Handle colors (cyan/teal)
                 handleColor: Color(0xFF00BCD4), // Cyan handle
@@ -1561,6 +1561,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                         key: const ValueKey('stream_test_datastream'),
                         chartType: ChartType.line,
                         controller: _chart1Controller,
+                        showXScrollbar: true,
+                        showYScrollbar: true,
                         series: const [
                           LineChartSeries(
                             id: 'streaming_data',
