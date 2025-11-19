@@ -2,6 +2,7 @@
 // Phase 0 Prototype - Interaction Architecture
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
@@ -147,6 +148,16 @@ class ChartRenderBox extends RenderBox {
 
   /// Hit test zone where drag started (leftEdge, rightEdge, center, track, etc.).
   HitTestZone? _scrollbarDragStartZone;
+
+  /// Last known drag position for incremental delta calculation.
+  /// Using incremental deltas instead of accumulated deltas prevents oversensitivity.
+  Offset? _scrollbarLastDragPosition;
+
+  /// Current hover zone for X scrollbar (for visual feedback).
+  HitTestZone? _xScrollbarHoverZone;
+
+  /// Current hover zone for Y scrollbar (for visual feedback).
+  HitTestZone? _yScrollbarHoverZone;
 
   // ==========================================================================
   // Hit Test Throttling (Performance Optimization)
@@ -368,13 +379,9 @@ class ChartRenderBox extends RenderBox {
         dataXMax: axis.dataMax,
       );
 
-      // Also update _originalTransform so pan constraints work correctly
-      if (_originalTransform != null) {
-        _originalTransform = _originalTransform!.copyWith(
-          dataXMin: axis.dataMin,
-          dataXMax: axis.dataMax,
-        );
-      }
+      // DO NOT update _originalTransform here - it must stay frozen at initial data range
+      // for scrollbar handle sizing to work correctly. Updating it causes the handle
+      // to always show full size because dataSpan == viewportSpan after update.
 
       // Invalidate series cache - viewport changed, need to regenerate Picture
       _seriesCacheDirty = true;
@@ -406,13 +413,9 @@ class ChartRenderBox extends RenderBox {
         dataYMax: axis.dataMax,
       );
 
-      // Also update _originalTransform so pan constraints work correctly
-      if (_originalTransform != null) {
-        _originalTransform = _originalTransform!.copyWith(
-          dataYMin: axis.dataMin,
-          dataYMax: axis.dataMax,
-        );
-      }
+      // DO NOT update _originalTransform here - it must stay frozen at initial data range
+      // for scrollbar handle sizing to work correctly. Updating it causes the handle
+      // to always show full size because dataSpan == viewportSpan after update.
 
       // Invalidate series cache - viewport changed, need to regenerate Picture
       _seriesCacheDirty = true;
@@ -615,18 +618,14 @@ class ChartRenderBox extends RenderBox {
   void updateDataBounds(double dataXMin, double dataXMax, double dataYMin, double dataYMax) {
     if (_originalTransform == null) return;
 
-    // Update original transform to include expanded data range
-    _originalTransform = ChartTransform(
-      plotWidth: _plotArea.width,
-      plotHeight: _plotArea.height,
-      dataXMin: dataXMin,
-      dataXMax: dataXMax,
-      dataYMin: dataYMin,
-      dataYMax: dataYMax,
-      invertY: _originalTransform!.invertY,
-    );
+    // DO NOT update _originalTransform here - it must stay frozen at initial data range
+    // for scrollbar handle sizing to work correctly. Updating it causes the scrollbar
+    // handle to always show full size because dataSpan == viewportSpan after update.
+    //
+    // TODO: Create separate _fullDataTransform field for pan constraints that can be
+    // updated with expanded data range, while keeping _originalTransform frozen.
 
-    // Also update current transform so viewport shows the new data
+    // Update current transform so viewport shows the new data
     _transform = ChartTransform(
       plotWidth: _plotArea.width,
       plotHeight: _plotArea.height,
@@ -1005,7 +1004,9 @@ class ChartRenderBox extends RenderBox {
         );
 
         // Capture original transform for reset and constraint calculations
-        _originalTransform = _transform;
+        // CRITICAL: Use copyWith() to create a deep copy, not a reference
+        // Otherwise both variables point to same object and zoom breaks scrollbar handle sizing
+        _originalTransform = _transform!.copyWith();
         // [DEBUG OUTPUT REMOVED] Original transform captured - fires once at init
 
         // Generate initial elements now that we have a transform
@@ -1364,7 +1365,7 @@ class ChartRenderBox extends RenderBox {
       _activeScrollbarAxis = null;
       _scrollbarDragStartPosition = null;
       _scrollbarDragStartZone = null;
-      
+
       // Release scrollbar mode and end interaction
       coordinator.endInteraction();
       coordinator.releaseMode();
@@ -1429,6 +1430,12 @@ class ChartRenderBox extends RenderBox {
 
     // Always update crosshair immediately for smooth 60fps tracking
     markNeedsPaint();
+
+    // PRIORITY 1: Check scrollbar hover first (before element hit testing)
+    // Fixes issue #5: Show appropriate cursors for pan (center) and zoom (edges)
+    if (_checkScrollbarHover(position)) {
+      return; // Scrollbar handled hover, don't check elements
+    }
 
     // Per conflict resolution scenario 7: Hover is passive
     // Per scenario 12: Hover/tooltips suspended during panning
@@ -1989,6 +1996,115 @@ class ChartRenderBox extends RenderBox {
   // Scrollbar Interaction Handlers
   // ==========================================================================
 
+  /// Checks if pointer is hovering over a scrollbar and updates cursor.
+  ///
+  /// Returns true if hovering over scrollbar (prevents element hit testing).
+  /// Fixes issue #5: Show appropriate cursors for pan (center) vs zoom (edges).
+  bool _checkScrollbarHover(Offset position) {
+    if (_transform == null || _originalTransform == null) return false;
+
+    // Check X scrollbar hover
+    if (_showXScrollbar && _xScrollbarRect != null && _xScrollbarRect!.contains(position)) {
+      final localX = position.dx - _xScrollbarRect!.left;
+      final zone = _getScrollbarZoneAtPosition(Axis.horizontal, localX);
+      final cursor = _getCursorForScrollbarZone(zone, Axis.horizontal);
+      onCursorChange?.call(cursor);
+
+      // Store hover zone and repaint to show visual feedback
+      if (_xScrollbarHoverZone != zone) {
+        _xScrollbarHoverZone = zone;
+        markNeedsPaint();
+      }
+
+      return true;
+    }
+
+    // Check Y scrollbar hover
+    if (_showYScrollbar && _yScrollbarRect != null && _yScrollbarRect!.contains(position)) {
+      final localY = position.dy - _yScrollbarRect!.top;
+      final zone = _getScrollbarZoneAtPosition(Axis.vertical, localY);
+      final cursor = _getCursorForScrollbarZone(zone, Axis.vertical);
+      onCursorChange?.call(cursor);
+
+      // Store hover zone and repaint to show visual feedback
+      if (_yScrollbarHoverZone != zone) {
+        _yScrollbarHoverZone = zone;
+        markNeedsPaint();
+      }
+
+      return true;
+    }
+
+    // Clear hover zones when not hovering over scrollbars
+    if (_xScrollbarHoverZone != null || _yScrollbarHoverZone != null) {
+      _xScrollbarHoverZone = null;
+      _yScrollbarHoverZone = null;
+      markNeedsPaint();
+    }
+
+    return false; // Not hovering over scrollbar
+  }
+
+  /// Gets the scrollbar zone at a local position within the scrollbar.
+  HitTestZone? _getScrollbarZoneAtPosition(Axis axis, double localPos) {
+    if (_transform == null || _originalTransform == null) return null;
+
+    final scrollbarRect = axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
+    if (scrollbarRect == null) return null;
+
+    final trackLength = axis == Axis.horizontal ? scrollbarRect.width : scrollbarRect.height;
+    final dataMin = axis == Axis.horizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
+    final dataMax = axis == Axis.horizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
+    final viewportMin = axis == Axis.horizontal ? _transform!.dataXMin : _transform!.dataYMin;
+    final viewportMax = axis == Axis.horizontal ? _transform!.dataXMax : _transform!.dataYMax;
+
+    final dataSpan = dataMax - dataMin;
+    final viewportSpan = viewportMax - viewportMin;
+    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+
+    // Calculate handle geometry
+    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+    final viewportOffset = viewportMin - dataMin;
+    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+    // Calculate zoom-adjusted edge grip width (must match rendering and hit test logic)
+    final zoomFactor = dataSpan / viewportSpan;
+    final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
+    // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
+    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
+      baseEdgeGripWidth,
+      handleSize * 0.4,
+    );
+
+    // Use ScrollbarController to determine zone
+    return ScrollbarController.getHitTestZone(
+      Offset(localPos, 0),
+      axis,
+      trackLength,
+      handlePosition,
+      handleSize,
+      edgeDetectionThreshold: zoomAdjustedEdgeGripWidth,
+    );
+  }
+
+  /// Gets the appropriate cursor for a scrollbar zone.
+  MouseCursor _getCursorForScrollbarZone(HitTestZone? zone, Axis axis) {
+    if (zone == null) return SystemMouseCursors.basic;
+
+    switch (zone) {
+      case HitTestZone.track:
+        return SystemMouseCursors.click; // Click to jump
+      case HitTestZone.center:
+        return SystemMouseCursors.grab; // Drag to pan
+      case HitTestZone.leftEdge:
+      case HitTestZone.rightEdge:
+        return SystemMouseCursors.resizeColumn; // Drag to zoom horizontally
+      case HitTestZone.topEdge:
+      case HitTestZone.bottomEdge:
+        return SystemMouseCursors.resizeRow; // Drag to zoom vertically
+    }
+  }
+
   /// Hit tests scrollbar regions and handles initial scrollbar interaction.
   ///
   /// Returns true if pointer is on a scrollbar and starts interaction, false otherwise.
@@ -2046,17 +2162,26 @@ class ChartRenderBox extends RenderBox {
     final viewportOffset = viewportMin - dataMin;
     final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
+    // Calculate zoom-adjusted edge grip width (must match rendering logic)
+    final zoomFactor = dataSpan / viewportSpan;
+    final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
+    // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
+    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
+      baseEdgeGripWidth,
+      handleSize * 0.4,
+    );
+
     // Convert pointer position to scrollbar-local coordinate
     final localPos = isHorizontal ? (position.dx - scrollbarRect.left) : (position.dy - scrollbarRect.top);
 
-    // Use ScrollbarController to determine which zone was hit
+    // Use ScrollbarController to determine which zone was hit (with zoom-adjusted edges)
     final hitZone = ScrollbarController.getHitTestZone(
       Offset(localPos, 0), // Convert to Offset (only one dimension matters)
       axis,
       trackLength,
       handlePosition,
       handleSize,
-      edgeDetectionThreshold: scrollbarTheme.edgeGripWidth,
+      edgeDetectionThreshold: zoomAdjustedEdgeGripWidth,
     );
 
     if (hitZone == null) {
@@ -2066,6 +2191,7 @@ class ChartRenderBox extends RenderBox {
     // Store drag state
     _activeScrollbarAxis = axis;
     _scrollbarDragStartPosition = position;
+    _scrollbarLastDragPosition = position; // Initialize for incremental delta tracking
     _scrollbarDragStartZone = hitZone;
 
     // Handle track click immediately (doesn't require drag)
@@ -2082,7 +2208,10 @@ class ChartRenderBox extends RenderBox {
 
   /// Handles ongoing scrollbar drag interaction.
   void _handleScrollbarDrag(Offset currentPosition) {
-    if (_activeScrollbarAxis == null || _scrollbarDragStartPosition == null || _scrollbarDragStartZone == null) {
+    if (_activeScrollbarAxis == null ||
+        _scrollbarDragStartPosition == null ||
+        _scrollbarDragStartZone == null ||
+        _scrollbarLastDragPosition == null) {
       return; // No active drag
     }
 
@@ -2092,11 +2221,15 @@ class ChartRenderBox extends RenderBox {
     }
 
     final axis = _activeScrollbarAxis!;
-    final startPos = _scrollbarDragStartPosition!;
+    final lastPos = _scrollbarLastDragPosition!;
     final zone = _scrollbarDragStartZone!;
 
-    // Calculate pixel delta from drag start
-    final pixelDelta = axis == Axis.horizontal ? (currentPosition.dx - startPos.dx) : (currentPosition.dy - startPos.dy);
+    // Calculate INCREMENTAL pixel delta from last position (not from drag start)
+    // This fixes issue #4: oversensitive pan due to accumulated delta
+    final pixelDelta = axis == Axis.horizontal ? (currentPosition.dx - lastPos.dx) : (currentPosition.dy - lastPos.dy);
+
+    // Update last position for next incremental delta
+    _scrollbarLastDragPosition = currentPosition;
 
     // Convert zone to interaction type
     final interactionType = _scrollbarZoneToInteractionType(zone, axis);
@@ -2191,27 +2324,54 @@ class ChartRenderBox extends RenderBox {
       final trackLength = _xScrollbarRect!.width;
       final dataSpan = dataMax - dataMin;
 
-      // Calculate handle size (proportion of viewport to data)
+      // Calculate handle size as ZOOM LEVEL representation
+      // At 100% zoom (all data visible): handle = ~80% of track (no zoom applied)
+      // As zoom increases: handle shrinks to show zoomed-in state
+      // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
       final viewportSpan = viewportMax - viewportMin;
-      final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+      final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
+      final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+
+      // DEBUG: Log handle sizing calculation
+      print('🔍 X Scrollbar Handle Sizing:');
+      print('  dataSpan: $dataSpan (original: $dataMin → $dataMax)');
+      print('  viewportSpan: $viewportSpan (current: $viewportMin → $viewportMax)');
+      print('  visibleRatio: $visibleRatio (${(visibleRatio * 100).toStringAsFixed(1)}% visible)');
+      print('  handleSize: $handleSize (minSize: ${scrollbarTheme.minHandleSize}, trackLength: $trackLength)');
 
       // Calculate handle position (where viewport starts relative to data)
       final viewportOffset = viewportMin - dataMin;
       final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
-      // Create scrollbar state
+      // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
+      // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 8px)
+      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2x base size (e.g., 16px)
+      // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
+      final zoomFactor = dataSpan / viewportSpan;
+      final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
+      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor).clamp(
+        baseEdgeGripWidth,
+        handleSize * 0.4, // Max 40% of handle size to leave center draggable
+      );
+
+      // Create modified scrollbar config with zoom-adjusted edge zones
+      final zoomAdjustedConfig = scrollbarTheme.copyWith(
+        edgeGripWidth: zoomAdjustedEdgeGripWidth,
+      );
+
+      // Create scrollbar state with hover zone for visual feedback
       final state = ScrollbarState(
         handlePosition: handlePosition,
         handleSize: handleSize,
-        isDragging: false,
-        hoverZone: null,
+        isDragging: _activeScrollbarAxis == Axis.horizontal,
+        hoverZone: _xScrollbarHoverZone,
         isFocused: false,
         isVisible: true,
       );
 
-      // Create painter and render
+      // Create painter and render with zoom-adjusted config
       final painter = ScrollbarPainter(
-        config: scrollbarTheme,
+        config: zoomAdjustedConfig,
         state: state,
         isHorizontal: true,
         trackLength: trackLength,
@@ -2237,27 +2397,55 @@ class ChartRenderBox extends RenderBox {
       final trackLength = _yScrollbarRect!.height;
       final dataSpan = dataMax - dataMin;
 
-      // Calculate handle size (proportion of viewport to data)
+      // Calculate handle size as ZOOM LEVEL representation
+      // At 100% zoom (all data visible): handle = ~80% of track (no zoom applied)
+      // As zoom increases: handle shrinks to show zoomed-in state
+      // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
       final viewportSpan = viewportMax - viewportMin;
-      final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+      final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
+      final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
+
+      // DEBUG: Log Y scrollbar handle sizing calculation
+      print('🔍 Y Scrollbar Handle Sizing:');
+      print('  dataSpan: $dataSpan (original: $dataMin → $dataMax)');
+      print('  viewportSpan: $viewportSpan (current: $viewportMin → $viewportMax)');
+      print('  visibleRatio: $visibleRatio (${(visibleRatio * 100).toStringAsFixed(1)}% visible)');
+      print('  handleSize: $handleSize (minSize: ${scrollbarTheme.minHandleSize}, trackLength: $trackLength)');
 
       // Calculate handle position (where viewport starts relative to data)
       final viewportOffset = viewportMin - dataMin;
       final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
-      // Create scrollbar state
+      // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
+      // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 40px)
+      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2.83x base size (e.g., 113px with ^1.5 amplification)
+      // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
+      final zoomFactor = dataSpan / viewportSpan;
+      final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
+      // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
+      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
+        baseEdgeGripWidth,
+        handleSize * 0.4, // Max 40% of handle size to leave center draggable
+      );
+
+      // Create modified scrollbar config with zoom-adjusted edge zones
+      final zoomAdjustedConfig = scrollbarTheme.copyWith(
+        edgeGripWidth: zoomAdjustedEdgeGripWidth,
+      );
+
+      // Create scrollbar state with hover zone for visual feedback
       final state = ScrollbarState(
         handlePosition: handlePosition,
         handleSize: handleSize,
-        isDragging: false,
-        hoverZone: null,
+        isDragging: _activeScrollbarAxis == Axis.vertical,
+        hoverZone: _yScrollbarHoverZone,
         isFocused: false,
         isVisible: true,
       );
 
-      // Create painter and render
+      // Create painter and render with zoom-adjusted config
       final painter = ScrollbarPainter(
-        config: scrollbarTheme,
+        config: zoomAdjustedConfig,
         state: state,
         isHorizontal: false,
         trackLength: trackLength,

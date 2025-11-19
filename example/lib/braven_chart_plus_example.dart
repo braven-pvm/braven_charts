@@ -424,11 +424,9 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
-                showXScrollbar: true,  // Enable horizontal scrollbar for testing
-                showYScrollbar: true,  // Enable vertical scrollbar for testing
-                scrollbarTheme: _selectedTheme == ChartTheme.dark 
-                    ? ScrollbarConfig.defaultDark
-                    : ScrollbarConfig.defaultLight,
+                showXScrollbar: true, // Enable horizontal scrollbar for testing
+                showYScrollbar: true, // Enable vertical scrollbar for testing
+                scrollbarTheme: _selectedTheme == ChartTheme.dark ? ScrollbarConfig.defaultDark : ScrollbarConfig.defaultLight,
               ),
             ),
           ),
