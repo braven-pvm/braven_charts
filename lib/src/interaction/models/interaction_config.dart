@@ -234,6 +234,7 @@ class InteractionConfig {
     this.enableZoom = true,
     this.enablePan = true,
     this.enableSelection = true,
+    this.showFocusBorder = true,
     this.showXScrollbar = false,
     this.showYScrollbar = false,
     // Callback functions for user interaction events (FR-007)
@@ -274,6 +275,7 @@ class InteractionConfig {
         enableZoom: true,
         enablePan: true,
         enableSelection: true,
+        showFocusBorder: true,
         showXScrollbar: true,
         showYScrollbar: true,
       );
@@ -299,6 +301,7 @@ class InteractionConfig {
         enableZoom: false,
         enablePan: false,
         enableSelection: false,
+        showFocusBorder: false,
         showXScrollbar: false,
         showYScrollbar: false,
       );
@@ -333,6 +336,9 @@ class InteractionConfig {
 
   /// Whether data point selection is enabled.
   final bool enableSelection;
+
+  /// Whether to show focus border when chart has keyboard focus.
+  final bool showFocusBorder;
 
   /// Whether to show the X-axis scrollbar for horizontal scrolling.
   final bool showXScrollbar;
@@ -493,6 +499,7 @@ class InteractionConfig {
     bool? enableZoom,
     bool? enablePan,
     bool? enableSelection,
+    bool? showFocusBorder,
     bool? showXScrollbar,
     bool? showYScrollbar,
     DataPointCallback? onDataPointTap,
@@ -515,6 +522,7 @@ class InteractionConfig {
       enableZoom: enableZoom ?? this.enableZoom,
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
+      showFocusBorder: showFocusBorder ?? this.showFocusBorder,
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
       showYScrollbar: showYScrollbar ?? this.showYScrollbar,
       onDataPointTap: onDataPointTap ?? this.onDataPointTap,
@@ -542,11 +550,23 @@ class InteractionConfig {
         other.enableZoom == enableZoom &&
         other.enablePan == enablePan &&
         other.enableSelection == enableSelection &&
+        other.showFocusBorder == showFocusBorder &&
         other.showXScrollbar == showXScrollbar &&
         other.showYScrollbar == showYScrollbar;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(enabled, crosshair, tooltip, gesture, keyboard, enableZoom, enablePan, enableSelection, showXScrollbar, showYScrollbar);
+  int get hashCode => Object.hash(
+        enabled,
+        crosshair,
+        tooltip,
+        gesture,
+        keyboard,
+        enableZoom,
+        enablePan,
+        enableSelection,
+        showFocusBorder,
+        showXScrollbar,
+        showYScrollbar,
+      );
 }
