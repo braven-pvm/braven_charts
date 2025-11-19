@@ -976,8 +976,12 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate scrollbar rectangles if enabled
     if (_showXScrollbar) {
-      // Position horizontal scrollbar below the plot area
-      final scrollbarTop = _plotArea.bottom + scrollbarPadding;
+      // Position horizontal scrollbar BELOW the X-axis labels
+      // X-axis labels are rendered below _plotArea.bottom
+      // Typical X-axis takes ~35-40px (labels + axis line + padding)
+      // So scrollbar should start after that space
+      final xAxisHeight = 35.0; // Space for X-axis labels and line
+      final scrollbarTop = _plotArea.bottom + xAxisHeight + scrollbarPadding;
       _xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
         scrollbarTop,
