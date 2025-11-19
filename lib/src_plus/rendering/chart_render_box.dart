@@ -951,7 +951,7 @@ class ChartRenderBox extends RenderBox {
     }
 
     if (_showXScrollbar) {
-      bottomReserved = scrollbarTheme.thickness + scrollbarPadding;
+      bottomReserved = scrollbarTheme.thickness + (scrollbarPadding * 2); // Padding above and below scrollbar
     }
 
     // Calculate plot area (reserve space for axes AND scrollbars)
