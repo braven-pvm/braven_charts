@@ -184,6 +184,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     super.initState();
 
     _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChanged);
     _coordinator = ChartInteractionCoordinator();
     _coordinator.addListener(_onCoordinatorChanged);
 
@@ -241,8 +242,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
+  /// Called when focus state changes.
+  void _onFocusChanged() {
+    // Trigger rebuild to show/hide focus border
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
     _streamSubscription?.cancel();
     widget.controller?.removeListener(_onControllerUpdate);
