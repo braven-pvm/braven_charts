@@ -1030,6 +1030,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                 // Removed excessive debugPrint (focus requested via mouse enter)
               }
             },
+            // Unfocus when mouse exits this chart
+            onExit: (_) {
+              if (_focusNode.hasFocus) {
+                _focusNode.unfocus();
+              }
+            },
             child: Container(
               width: widget.width,
               height: widget.height,
