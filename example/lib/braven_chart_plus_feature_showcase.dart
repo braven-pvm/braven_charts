@@ -629,6 +629,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           ],
           bottom: const TabBar(
             isScrollable: false,
+            physics: NeverScrollableScrollPhysics(),
             tabs: [
               Tab(icon: Icon(Icons.dashboard), text: 'Features'),
               Tab(icon: Icon(Icons.stream), text: 'Streaming Tests'),
@@ -636,6 +637,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           ),
         ),
         body: TabBarView(
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             // Tab 1: Feature showcase
             _buildFeaturesTab(),

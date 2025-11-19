@@ -701,8 +701,12 @@ class ChartRenderBox extends RenderBox {
   ChartTransform _clampZoomLevel(ChartTransform transform) {
     if (_originalTransform == null) return transform;
 
-    final originalXRange = _originalTransform!.dataXMax - _originalTransform!.dataXMin;
-    final originalYRange = _originalTransform!.dataYMax - _originalTransform!.dataYMin;
+    // Use pan constraint transform if set (paused streaming with full dataset),
+    // otherwise use original transform (normal mode or active streaming with sliding window)
+    final constraintTransform = _panConstraintTransform ?? _originalTransform!;
+
+    final originalXRange = constraintTransform.dataXMax - constraintTransform.dataXMin;
+    final originalYRange = constraintTransform.dataYMax - constraintTransform.dataYMin;
 
     final currentXRange = transform.dataXMax - transform.dataXMin;
     final currentYRange = transform.dataYMax - transform.dataYMin;
@@ -812,8 +816,11 @@ class ChartRenderBox extends RenderBox {
     final maxAllowedDataYMin = constraintTransform.dataYMax - _transform!.dataYRange + maxWhitespaceDataY;
 
     // 5. Clamp tentative viewport position to allowed bounds
-    final clampedDataXMin = tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin);
-    final clampedDataYMin = tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin);
+    // Defensive: If min > max (viewport larger than constraint range), allow full movement
+    final clampedDataXMin =
+        minAllowedDataXMin <= maxAllowedDataXMin ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin) : tentativeDataXMin;
+    final clampedDataYMin =
+        minAllowedDataYMin <= maxAllowedDataYMin ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin) : tentativeDataYMin;
 
     // 6. Calculate actual movement allowed and convert back to plot space
     // CRITICAL: Reverse the inversion applied in step 1!
