@@ -206,6 +206,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Initialize cached bounds from existing series data for pan constraints
     _initializeCachedDataBounds();
 
+    // Register streaming controller callbacks (needed even without dataStream)
+    widget.streamingController?.registerResumeCallback(_resumeStreaming);
+    widget.streamingController?.registerPauseCallback(_pauseStreaming);
+    widget.streamingController?.registerClearCallback(_clearStreamingData);
+
     // Set up streaming if dataStream is provided
     if (widget.dataStream != null) {
       _setupStreamSubscription();
@@ -250,7 +255,36 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Called when controller notifies of changes (matches BravenChart pattern).
   void _onControllerUpdate() {
+    debugPrint('🔔 _onControllerUpdate called, mounted=$mounted, controller=${widget.controller != null}');
     if (!mounted) return;
+
+    // Update cached bounds even when paused - needed for pan constraints
+    if (widget.controller != null) {
+      final controllerData = widget.controller!.getAllSeries();
+      debugPrint('🔔 Controller has ${controllerData.length} series');
+      int totalPoints = 0;
+      for (final points in controllerData.values) {
+        totalPoints += points.length;
+        for (final point in points) {
+          // Initialize cached bounds if this is the first point
+          if (_cachedDataXMin == null) {
+            _cachedDataXMin = point.x;
+            _cachedDataXMax = point.x;
+            _cachedDataYMin = point.y;
+            _cachedDataYMax = point.y;
+            debugPrint('📊 Controller: Initialized cached bounds with first point: '
+                'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
+          } else {
+            _updateCachedDataBounds(point.x, point.y);
+          }
+        }
+      }
+      // Only log occasionally to avoid spam
+      if (totalPoints % 50 == 0 || totalPoints < 10) {
+        debugPrint('📊 Controller: Updated cached bounds from $totalPoints points: '
+            'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
+      }
+    }
 
     // When paused, don't rebuild - let data accumulate silently
     // This prevents visual jumps when exploring the viewport
@@ -664,11 +698,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Initialize buffer if not already created
     _buffer ??= BufferManager<ChartDataPoint>(maxSize: config.maxBufferSize);
 
-    // Register callbacks with controller if provided
-    widget.streamingController?.registerResumeCallback(_resumeStreaming);
-    widget.streamingController?.registerPauseCallback(_pauseStreaming);
-    widget.streamingController?.registerClearCallback(_clearStreamingData);
-
     // Subscribe to the data stream
     _streamSubscription = widget.dataStream?.listen(
       _onStreamData,
@@ -890,8 +919,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _initializeCachedDataBounds() {
     if (_cachedDataXMin != null) return; // Already initialized
 
-    // Get all points from all series
-    final allPoints = widget.series.expand((s) => s.points).toList();
+    // Get all points from widget.series OR widget.controller
+    final List<dynamic> allPoints;
+    if (widget.controller != null) {
+      // ChartController Direct mode: get points from controller
+      final controllerData = widget.controller!.getAllSeries();
+      allPoints = controllerData.values.expand((points) => points).toList();
+    } else {
+      // Normal mode: get points from widget.series
+      allPoints = widget.series.expand((s) => s.points).toList();
+    }
 
     if (allPoints.isEmpty) {
       // No initial data - will be initialized when first point arrives
