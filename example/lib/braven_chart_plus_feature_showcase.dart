@@ -628,6 +628,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             ),
           ],
           bottom: const TabBar(
+            isScrollable: false,
             tabs: [
               Tab(icon: Icon(Icons.dashboard), text: 'Features'),
               Tab(icon: Icon(Icons.stream), text: 'Streaming Tests'),
@@ -736,31 +737,31 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               showXScrollbar: true,
               showYScrollbar: true,
               // EXTREME SCROLLBAR THEME TEST - Verify all visual properties render
-              scrollbarTheme: const ScrollbarConfig(
+              scrollbarTheme: ScrollbarConfig(
                 // Sizing properties
                 thickness: 20.0, // 20px thick (vs default 11.5)
                 minHandleSize: 80.0, // 80px minimum HANDLE LENGTH (vs default 23) - prevents tiny handle when zoomed out
                 padding: 0.0, // No padding for max visibility
-                borderRadius: 10.0, // 10px radius (vs default 4)
+                borderRadius: 6.0, // 10px radius (vs default 4)
                 edgeGripWidth: 40.0, // 40px edge zone WIDTH (default) - each end of handle for zoom
 
                 // Track colors (bright yellow background with GREEN hover for testing)
-                trackColor: Color(0xFFFFEB3B), // Yellow track
-                trackHoverColor: Color(0xFF4CAF50), // GREEN on hover (VERY different so we can test it works!)
+                trackColor: Colors.grey.shade200.withAlpha(75),
+                trackHoverColor: Colors.grey.shade300.withAlpha(100),
 
-                // Handle colors (cyan/teal)
-                handleColor: Color(0xFF00BCD4), // Cyan handle
-                handleHoverColor: Color(0xFF00ACC1), // Darker cyan hover
-                handleActiveColor: Color(0xFF0097A7), // Dark cyan active
-                handleDisabledColor: Color(0xFFB2EBF2), // Light cyan disabled
+                // Handle colors (cyan/teal)R
+                handleColor: Colors.grey.shade300.withAlpha(120),
+                handleHoverColor: Colors.grey.shade400.withAlpha(175),
+                handleActiveColor: Colors.grey.shade400.withAlpha(200), // Dark cyan active
+                handleDisabledColor: const Color(0xFFB2EBF2), // Light cyan disabled
 
                 // Edge zone colors (magenta/pink - dramatic contrast)
-                edgeZoneColor: Color(0xFFE91E63), // Pink default
-                edgeHoverColor: Color(0xFFFF5722), // Deep orange on hover
+                edgeZoneColor: Colors.blue.shade300.withAlpha(100),
+                edgeHoverColor: Colors.blue.shade400.withAlpha(125),
 
                 // Grip indicator (white for contrast)
                 showGripIndicator: true,
-                gripIndicatorColor: Color(0xFFFFFFFF), // White grips
+                gripIndicatorColor: Colors.black38,
 
                 // Behavior (note: some not implemented in chart_render_box yet)
                 autoHide: false, // Always visible for testing

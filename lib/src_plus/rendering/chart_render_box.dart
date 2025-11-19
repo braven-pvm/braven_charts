@@ -2064,8 +2064,11 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate handle geometry
     final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-    final viewportOffset = viewportMin - dataMin;
-    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+    // Calculate handle position (same logic for both axes - no inversion!)
+    // For Y-axis: Chart Y increases upward, but screen Y increases downward
+    // The natural mapping works: viewport at bottom (low Y) → handle at top (low screen Y)
+    final handlePosition = ((viewportMin - dataMin) / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
     // Calculate zoom-adjusted edge grip width (must match rendering logic)
     // Both X and Y axes now use LINEAR zoom scaling for consistency
@@ -2080,14 +2083,16 @@ class ChartRenderBox extends RenderBox {
         .toDouble();
 
     // Use ScrollbarController to determine zone
-    return ScrollbarController.getHitTestZone(
-      Offset(localPos, 0),
+    final zone = ScrollbarController.getHitTestZone(
+      axis == Axis.horizontal ? Offset(localPos, 0) : Offset(0, localPos),
       axis,
       trackLength,
       handlePosition,
       handleSize,
       edgeDetectionThreshold: zoomAdjustedEdgeGripWidth,
     );
+
+    return zone;
   }
 
   /// Gets the appropriate cursor for a scrollbar zone.
@@ -2162,8 +2167,9 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate handle size and position using same formulas as _paintScrollbars
     final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-    final viewportOffset = viewportMin - dataMin;
-    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
+
+    // Calculate handle position (same formula for both axes - natural mapping works!)
+    final handlePosition = ((viewportMin - dataMin) / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
     // Calculate zoom-adjusted edge grip width (must match rendering logic)
     // Both X and Y axes use LINEAR zoom scaling for consistency
@@ -2182,7 +2188,7 @@ class ChartRenderBox extends RenderBox {
 
     // Use ScrollbarController to determine which zone was hit (with zoom-adjusted edges)
     final hitZone = ScrollbarController.getHitTestZone(
-      Offset(localPos, 0), // Convert to Offset (only one dimension matters)
+      isHorizontal ? Offset(localPos, 0) : Offset(0, localPos), // Correct offset based on axis
       axis,
       trackLength,
       handlePosition,
@@ -2283,8 +2289,9 @@ class ChartRenderBox extends RenderBox {
     final viewportMin = isHorizontal ? _transform!.dataXMin : _transform!.dataYMin;
 
     final dataSpan = dataMax - dataMin;
-    final viewportOffset = viewportMin - dataMin;
 
+    // Calculate handle position (same formula for both axes - natural mapping!)
+    final viewportOffset = viewportMin - dataMin;
     return (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength);
   }
 
@@ -2449,6 +2456,10 @@ class ChartRenderBox extends RenderBox {
       final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
 
       // Calculate handle position (where viewport starts relative to data)
+      // Y-AXIS INVERTED: In chart space, Y increases upward, but in screen space Y increases downward
+      // When viewport shows LOWER Y values (bottom of chart), handle should be at TOP of scrollbar
+      // When viewport shows HIGHER Y values (top of chart), handle should be at BOTTOM of scrollbar
+      // Therefore: use viewportMin (not viewportMax) and NO inversion needed!
       final viewportOffset = viewportMin - dataMin;
       final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
@@ -2620,6 +2631,10 @@ class ChartRenderBox extends RenderBox {
   /// Converts pixel delta from scrollbar to data delta using current viewport,
   /// then updates the Y viewport range accordingly.
   ///
+  /// **Y-AXIS COORDINATE MAPPING**: Drag direction matches viewport movement.
+  /// Positive pixelDelta (drag down) moves viewport DOWN (to lower Y values).
+  /// Negative pixelDelta (drag up) moves viewport UP (to higher Y values).
+  ///
   /// **Parameters**:
   /// - `pixelDelta`: Vertical pixel offset from scrollbar drag
   /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
@@ -2639,9 +2654,9 @@ class ChartRenderBox extends RenderBox {
     final viewportMax = _transform!.dataYMax;
     final viewportSpan = viewportMax - viewportMin;
 
-    // Convert pixel delta to data delta
+    // Convert pixel delta to data delta (natural mapping for Y-axis)
     final dataPerPixel = dataSpan / trackLength;
-    final dataDelta = pixelDelta * dataPerPixel;
+    final dataDelta = pixelDelta * dataPerPixel; // Drag down = move viewport down
 
     // Apply based on interaction type
     switch (interactionType) {
