@@ -590,7 +590,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -634,7 +634,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             physics: NeverScrollableScrollPhysics(),
             tabs: [
               Tab(icon: Icon(Icons.dashboard), text: 'Features'),
-              Tab(icon: Icon(Icons.stream), text: 'Streaming Tests'),
+              Tab(icon: Icon(Icons.label), text: 'Annotations'),
+              Tab(icon: Icon(Icons.stream), text: 'Streaming'),
             ],
           ),
         ),
@@ -643,7 +644,9 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           children: [
             // Tab 1: Feature showcase
             _buildFeaturesTab(),
-            // Tab 2: Streaming tests
+            // Tab 2: Annotations showcase
+            _buildAnnotationsTab(),
+            // Tab 3: Streaming tests
             _buildStreamingTestsTab(),
           ],
         ),
@@ -1478,6 +1481,289 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAnnotationsTab() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Info banner
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.label, color: Colors.purple.shade900, size: 32),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chart Annotations',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'All 5 annotation types with interactive examples: Point, Range, Text, Threshold, and Trend annotations.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.purple.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Overview chart with all annotations
+            _buildAnnotationCard(
+              title: 'Complete Example - All Annotation Types',
+              description: 'This chart demonstrates all 5 annotation types working together on a single chart.',
+              icon: Icons.dashboard,
+              child: BravenChartPlus(
+                key: const ValueKey('annotations_overview'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations,
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Point Annotations
+            _buildAnnotationCard(
+              title: '1. Point Annotations',
+              description: 'Mark specific data points with custom markers (circle, star, triangle, etc.) and labels.',
+              icon: Icons.place,
+              features: const [
+                'Multiple marker shapes (star, circle, triangle, square, diamond)',
+                'Custom colors and sizes',
+                'Optional labels',
+                'Attached to specific data points by seriesId + index',
+              ],
+              child: BravenChartPlus(
+                key: const ValueKey('point_annotations'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations.where((a) => a is PointAnnotation).toList(),
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Range Annotations
+            _buildAnnotationCard(
+              title: '2. Range Annotations',
+              description: 'Highlight horizontal or vertical regions with colored fills and borders.',
+              icon: Icons.width_full,
+              features: const [
+                'Vertical regions (startX to endX)',
+                'Horizontal regions (startY to endY)',
+                'Customizable fill color and opacity',
+                'Optional borders and labels',
+              ],
+              child: BravenChartPlus(
+                key: const ValueKey('range_annotations'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations.where((a) => a is RangeAnnotation).toList(),
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Text Annotations
+            _buildAnnotationCard(
+              title: '3. Text Annotations',
+              description: 'Add freeform text labels at any position on the chart.',
+              icon: Icons.text_fields,
+              features: const [
+                'Positioned via Offset (x, y in pixels)',
+                'Multiple anchor points (topLeft, center, bottomRight, etc.)',
+                'Custom text styling',
+                'Optional background and border',
+              ],
+              child: BravenChartPlus(
+                key: const ValueKey('text_annotations'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations.where((a) => a is TextAnnotation).toList(),
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Threshold Annotations
+            _buildAnnotationCard(
+              title: '4. Threshold Annotations',
+              description: 'Draw horizontal or vertical reference lines (e.g., targets, limits, averages).',
+              icon: Icons.horizontal_rule,
+              features: const [
+                'Horizontal lines (Y-axis thresholds)',
+                'Vertical lines (X-axis thresholds)',
+                'Solid or dashed line styles',
+                'Labels with flexible positioning',
+              ],
+              child: BravenChartPlus(
+                key: const ValueKey('threshold_annotations'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations.where((a) => a is ThresholdAnnotation).toList(),
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Trend Annotations
+            _buildAnnotationCard(
+              title: '5. Trend Annotations',
+              description: 'Overlay trend lines calculated from series data (linear regression, moving averages).',
+              icon: Icons.trending_up,
+              features: const [
+                'Linear trend (least squares regression)',
+                'Moving average (configurable window size)',
+                'Attached to specific series',
+                'Customizable line style and color',
+              ],
+              child: BravenChartPlus(
+                key: const ValueKey('trend_annotations'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                series: _annotationExampleSeries,
+                annotations: _annotationExampleAnnotations.where((a) => a is TrendAnnotation).toList(),
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
+              ),
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnnotationCard({
+    required String title,
+    required String description,
+    required IconData icon,
+    required Widget child,
+    List<String> features = const [],
+  }) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Icon(icon, color: Colors.purple.shade700, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            if (features.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: features.map((feature) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.purple.shade200),
+                    ),
+                    child: Text(
+                      feature,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.purple.shade800,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 16),
+            // Chart
+            SizedBox(
+              height: 300,
+              child: child,
+            ),
+          ],
+        ),
       ),
     );
   }
