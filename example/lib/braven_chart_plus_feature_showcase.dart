@@ -405,11 +405,13 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       _chart2Controller.addPoint('controller_data', src_point.ChartDataPoint(x: point.x, y: point.y));
       // Removed excessive print - was flooding console 10-50 times per second
     });
+    setState(() {}); // Rebuild UI to reflect timer state
   }
 
   void _stopStreaming2() {
     _streaming2Timer?.cancel();
     _streaming2Timer = null;
+    setState(() {}); // Rebuild UI to reflect timer state
   }
 
   void _resetStreaming2() {
@@ -1855,16 +1857,27 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _streaming2Controller.isStreaming
-                      ? () => _streaming2Controller.pauseStreaming()
-                      : () => _streaming2Controller.resumeStreaming(),
-                  icon: Icon(_streaming2Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 16),
-                  label: Text(_streaming2Controller.isStreaming ? 'Pause' : 'Resume'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _streaming2Controller.isStreaming ? Colors.orange : Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
+                child: ListenableBuilder(
+                  listenable: _streaming2Controller,
+                  builder: (context, child) {
+                    return ElevatedButton.icon(
+                      onPressed: _streaming2Controller.isStreaming
+                          ? () {
+                              _streaming2Controller.pauseStreaming();
+                              _stopStreaming2(); // Also stop the data generation timer
+                            }
+                          : () {
+                              _streaming2Controller.resumeStreaming();
+                              _startStreaming2(); // Also restart the data generation timer
+                            },
+                      icon: Icon(_streaming2Controller.isStreaming ? Icons.pause : Icons.play_arrow, size: 16),
+                      label: Text(_streaming2Controller.isStreaming ? 'Pause' : 'Resume'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _streaming2Controller.isStreaming ? Colors.orange : Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),

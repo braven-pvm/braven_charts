@@ -703,10 +703,11 @@ class ChartRenderBox extends RenderBox {
 
     // Use pan constraint transform if set (paused streaming with full dataset),
     // otherwise use original transform (normal mode or active streaming with sliding window)
-    final constraintTransform = _panConstraintTransform ?? _originalTransform!;
+    // This ensures zoom is calculated relative to the actual data range, not stale initial bounds
+    final zoomBaseTransform = _panConstraintTransform ?? _originalTransform!;
 
-    final originalXRange = constraintTransform.dataXMax - constraintTransform.dataXMin;
-    final originalYRange = constraintTransform.dataYMax - constraintTransform.dataYMin;
+    final originalXRange = zoomBaseTransform.dataXMax - zoomBaseTransform.dataXMin;
+    final originalYRange = zoomBaseTransform.dataYMax - zoomBaseTransform.dataYMin;
 
     final currentXRange = transform.dataXMax - transform.dataXMin;
     final currentYRange = transform.dataYMax - transform.dataYMin;
@@ -722,6 +723,13 @@ class ChartRenderBox extends RenderBox {
     if (!needsClampX && !needsClampY) {
       return transform; // No clamping needed
     }
+
+    print('🔍 ZOOM CLAMP DEBUG:');
+    print('   Zoom base transform: X=[${zoomBaseTransform.dataXMin}, ${zoomBaseTransform.dataXMax}], range=$originalXRange');
+    print('   Using: ${_panConstraintTransform != null ? "PAN CONSTRAINT (full dataset)" : "ORIGINAL (initial bounds)"}');
+    print('   Current viewport BEFORE clamp: X=[${transform.dataXMin}, ${transform.dataXMax}], range=$currentXRange');
+    print('   Current center: X=${(transform.dataXMin + transform.dataXMax) / 2}');
+    print('   Zoom level: ${currentZoomX.toStringAsFixed(2)}x, clamping to ${currentZoomX.clamp(minZoomLevel, maxZoomLevel).toStringAsFixed(2)}x');
 
     // Clamp zoom levels
     final clampedZoomX = currentZoomX.clamp(minZoomLevel, maxZoomLevel);
@@ -740,6 +748,9 @@ class ChartRenderBox extends RenderBox {
     final newDataXMax = centerX + newXRange / 2;
     final newDataYMin = centerY - newYRange / 2;
     final newDataYMax = centerY + newYRange / 2;
+
+    print('   New viewport AFTER clamp: X=[$newDataXMin, $newDataXMax], range=$newXRange');
+    print('   New center: X=${(newDataXMin + newDataXMax) / 2}');
 
     // [DEBUG OUTPUT REMOVED] Zoom clamped - fires frequently during zoom operations
 
