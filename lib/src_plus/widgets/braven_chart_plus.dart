@@ -93,6 +93,18 @@ class BravenChartPlus extends StatefulWidget {
   /// Controls visual appearance (colors, thickness, border radius) and
   /// interaction behavior (auto-hide, zoom limits, edge grip width).
   /// If null, defaults to [ScrollbarConfig.defaultLight()].
+  ///
+  /// **Property Implementation Status:**
+  ///
+  /// ✅ **Working:** All visual properties (thickness, colors, borderRadius,
+  /// edgeGripWidth, showGripIndicator, padding, minHandleSize)
+  ///
+  /// ❌ **Not Yet Implemented:** Animation properties (autoHide, autoHideDelay,
+  /// fadeDuration), behavior flags (enableResizeHandles), accessibility
+  /// (forcedColorsMode, prefersReducedMotion), zoom limits (minZoomRatio,
+  /// maxZoomRatio)
+  ///
+  /// See [ScrollbarConfig] documentation for full property list.
   final ScrollbarConfig? scrollbarTheme;
 
   /// Optional controller for programmatic data updates.
