@@ -2067,14 +2067,17 @@ class ChartRenderBox extends RenderBox {
     final viewportOffset = viewportMin - dataMin;
     final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
-    // Calculate zoom-adjusted edge grip width (must match rendering and hit test logic)
+    // Calculate zoom-adjusted edge grip width (must match rendering logic)
+    // Both X and Y axes now use LINEAR zoom scaling for consistency
     final zoomFactor = dataSpan / viewportSpan;
     final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-    // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
-    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
-      baseEdgeGripWidth,
-      handleSize * 0.4,
-    );
+    final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size
+    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
+        .clamp(
+          math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
+          maxEdgeGripWidth,
+        )
+        .toDouble();
 
     // Use ScrollbarController to determine zone
     return ScrollbarController.getHitTestZone(
@@ -2163,13 +2166,16 @@ class ChartRenderBox extends RenderBox {
     final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
 
     // Calculate zoom-adjusted edge grip width (must match rendering logic)
+    // Both X and Y axes use LINEAR zoom scaling for consistency
     final zoomFactor = dataSpan / viewportSpan;
     final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-    // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
-    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
-      baseEdgeGripWidth,
-      handleSize * 0.4,
-    );
+    final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size
+    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
+        .clamp(
+          math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
+          maxEdgeGripWidth,
+        )
+        .toDouble();
 
     // Convert pointer position to scrollbar-local coordinate
     final localPos = isHorizontal ? (position.dx - scrollbarRect.left) : (position.dy - scrollbarRect.top);
@@ -2448,13 +2454,12 @@ class ChartRenderBox extends RenderBox {
 
       // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
       // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 40px)
-      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2.83x base size (e.g., 113px with ^1.5 amplification)
+      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2x base size (e.g., 80px)
       // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
       final zoomFactor = dataSpan / viewportSpan;
       final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
       final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size to leave center draggable
-      // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
-      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5))
+      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
           .clamp(
             math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
             maxEdgeGripWidth,
