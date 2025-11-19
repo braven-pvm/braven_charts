@@ -980,7 +980,7 @@ class ChartRenderBox extends RenderBox {
       // X-axis labels are rendered below _plotArea.bottom
       // Typical X-axis takes ~35-40px (labels + axis line + padding)
       // So scrollbar should start after that space
-      final xAxisHeight = 35.0; // Space for X-axis labels and line
+      const xAxisHeight = 35.0; // Space for X-axis labels and line
       final scrollbarTop = _plotArea.bottom + xAxisHeight + scrollbarPadding;
       _xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
@@ -1877,18 +1877,19 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
-    if (cursorPos != null) {
+    if (cursorPos != null && _plotArea.contains(cursorPos)) {
+      // Only draw crosshair if cursor is inside plot area
       // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
       final crosshairPaint = Paint()
         ..color = const Color(0x80666666) // Semi-transparent gray
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
 
-      // Horizontal line across entire widget
-      canvas.drawLine(Offset(0, cursorPos.dy), Offset(size.width, cursorPos.dy), crosshairPaint);
+      // Horizontal line across plot area
+      canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
 
-      // Vertical line across entire widget
-      canvas.drawLine(Offset(cursorPos.dx, 0), Offset(cursorPos.dx, size.height), crosshairPaint);
+      // Vertical line across plot area
+      canvas.drawLine(Offset(cursorPos.dx, _plotArea.top), Offset(cursorPos.dx, _plotArea.bottom), crosshairPaint);
 
       // Draw coordinate labels (showing both screen and data coordinates)
       _drawCrosshairLabels(canvas, size, cursorPos);

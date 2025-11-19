@@ -19,9 +19,8 @@ import 'axis_config.dart';
 /// renderer.paint(canvas, chartSize, plotArea);
 /// ```
 class AxisRenderer {
-  final Axis axis;
-
   AxisRenderer(this.axis);
+  final Axis axis;
 
   /// Paints the axis on the canvas.
   ///
@@ -111,7 +110,12 @@ class AxisRenderer {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      final labelY = (config.position == AxisPosition.bottom ? chartSize.height - 12 : 12).toDouble();
+      // Position label after scrollbar area
+      // For bottom axis: calculate position accounting for tick labels (35px) + scrollbar (15px) + padding
+      // For top axis: place above at top of chart
+      final labelY = config.position == AxisPosition.bottom
+          ? axisY + 35.0 + 15.0 + 8.0 // After tick labels + scrollbar height + padding
+          : 12.0; // Top of chart
 
       labelPainter.paint(
         canvas,
