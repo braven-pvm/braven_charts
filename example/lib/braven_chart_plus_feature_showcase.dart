@@ -500,7 +500,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     required String description,
     required Widget child,
     required List<String> features,
-    double height = 350,
+    double height = 450,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1182,7 +1182,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           _buildFeatureCard(
             title: '9. Real-Time Streaming Data',
             description: 'Live data ingestion with buffering, pause/resume controls, and auto-scroll viewport.',
-            height: 650, // Larger height for streaming controls
+            height: 750, // Larger height for streaming controls
             features: const [
               'Stream<ChartDataPoint> integration',
               'Configurable buffer (10,000 points default)',
@@ -1571,7 +1571,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.where((a) => a is PointAnnotation).toList(),
+                annotations: _annotationExampleAnnotations.whereType<PointAnnotation>().toList(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1598,7 +1598,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.where((a) => a is RangeAnnotation).toList(),
+                annotations: _annotationExampleAnnotations.whereType<RangeAnnotation>().toList(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1625,7 +1625,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.where((a) => a is TextAnnotation).toList(),
+                annotations: _annotationExampleAnnotations.whereType<TextAnnotation>().toList(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1652,7 +1652,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.where((a) => a is ThresholdAnnotation).toList(),
+                annotations: _annotationExampleAnnotations.whereType<ThresholdAnnotation>().toList(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1679,7 +1679,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.where((a) => a is TrendAnnotation).toList(),
+                annotations: _annotationExampleAnnotations.whereType<TrendAnnotation>().toList(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1759,7 +1759,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             const SizedBox(height: 16),
             // Chart
             SizedBox(
-              height: 300,
+              height: 400,
               child: child,
             ),
           ],
@@ -1847,7 +1847,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     const SizedBox(height: 16),
 
                     SizedBox(
-                      height: 300,
+                      height: 400,
                       child: BravenChartPlus(
                         key: const ValueKey('stream_test_datastream'),
                         chartType: ChartType.line,
@@ -1929,7 +1929,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
-                      height: 300,
+                      height: 400,
                       child: BravenChartPlus(
                         key: const ValueKey('stream_test_controller'),
                         chartType: ChartType.line,
