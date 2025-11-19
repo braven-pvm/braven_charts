@@ -39,9 +39,9 @@ import 'package:flutter/material.dart';
 /// - Legend widget (show/hide series with click interaction)
 /// - Annotations (ALL 5 types: Point, Range, Text, Threshold, Trend)
 /// - Real-time streaming data with pause/resume and auto-scroll
+/// - Scrollbars (dual-purpose: pan via center, zoom via edges)
 ///
 /// ❌ NOT YET IMPLEMENTED:
-/// - Scrollbars
 /// - Advanced markers (shapes beyond circles)
 /// - Context menus
 /// - Export functionality
@@ -732,6 +732,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_interpolation'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: [
                 LineChartSeries(
                   id: 'linear',
@@ -800,6 +802,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_types'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: const [
                 LineChartSeries(
                   id: 'line_1',
@@ -872,6 +876,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_constraints'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: [
                 LineChartSeries(
                   id: 'data_1',
@@ -908,6 +914,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_axes'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: const [
                 LineChartSeries(
                   id: 'exponential',
@@ -954,6 +962,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_theming'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: const [
                 LineChartSeries(
                   id: 'theme_demo_1',
@@ -1012,6 +1022,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             child: BravenChartPlus(
               key: const ValueKey('chart_performance'),
               chartType: ChartType.line,
+              showXScrollbar: true,
+              showYScrollbar: true,
               series: [
                 // 7 series to stress-test performance
                 ...List.generate(7, (i) {
@@ -1112,6 +1124,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               child: BravenChartPlus(
                 key: const ValueKey('chart_annotations'),
                 chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
                 series: _annotationExampleSeries,
                 annotations: _annotationExampleAnnotations,
                 theme: _selectedTheme,
