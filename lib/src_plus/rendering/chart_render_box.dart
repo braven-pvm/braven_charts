@@ -2311,14 +2311,14 @@ class ChartRenderBox extends RenderBox {
   ///
   /// ✅ **FULLY IMPLEMENTED (Visual):**
   /// - `thickness` - Width/height of scrollbar track
-  /// - `minHandleSize` - Minimum size of draggable handle
+  /// - `minHandleSize` - Minimum LENGTH of draggable handle (prevents tiny handle when zoomed out)
   /// - `padding` - Space between scrollbar and chart edge
   /// - `borderRadius` - Corner radius for rounded edges
-  /// - `edgeGripWidth` - Size of zoom edge zones (with power 1.5 amplification)
+  /// - `edgeGripWidth` - WIDTH of zoom edge zones at each end (relationship: minHandleSize >= edgeGripWidth * 2)
   ///
   /// ✅ **FULLY IMPLEMENTED (Colors):**
   /// - `trackColor` - Background color of scrollbar track
-  /// - `trackHoverColor` - Track color when hovering (not on handle)
+  /// - `trackHoverColor` - Track color when hovering over track (not on handle)
   /// - `handleColor` - Default handle color
   /// - `handleHoverColor` - Handle color when hovering
   /// - `handleActiveColor` - Handle color when dragging
@@ -2382,10 +2382,13 @@ class ChartRenderBox extends RenderBox {
       // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
       final zoomFactor = dataSpan / viewportSpan;
       final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor).clamp(
-        baseEdgeGripWidth,
-        handleSize * 0.4, // Max 40% of handle size to leave center draggable
-      );
+      final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size to leave center draggable
+      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
+          .clamp(
+            math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
+            maxEdgeGripWidth,
+          )
+          .toDouble();
 
       // Create modified scrollbar config with zoom-adjusted edge zones
       final zoomAdjustedConfig = scrollbarTheme.copyWith(
@@ -2408,6 +2411,7 @@ class ChartRenderBox extends RenderBox {
         state: state,
         isHorizontal: true,
         trackLength: trackLength,
+        isTrackHovered: _xScrollbarHoverZone == HitTestZone.track,
         opacity: 1.0,
       );
 
@@ -2448,11 +2452,14 @@ class ChartRenderBox extends RenderBox {
       // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
       final zoomFactor = dataSpan / viewportSpan;
       final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
+      final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size to leave center draggable
       // Apply aggressive zoom amplification: use zoomFactor^1.5 for dramatic growth
-      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5)).clamp(
-        baseEdgeGripWidth,
-        handleSize * 0.4, // Max 40% of handle size to leave center draggable
-      );
+      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * math.pow(zoomFactor, 1.5))
+          .clamp(
+            math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
+            maxEdgeGripWidth,
+          )
+          .toDouble();
 
       // Create modified scrollbar config with zoom-adjusted edge zones
       final zoomAdjustedConfig = scrollbarTheme.copyWith(
@@ -2475,6 +2482,7 @@ class ChartRenderBox extends RenderBox {
         state: state,
         isHorizontal: false,
         trackLength: trackLength,
+        isTrackHovered: _yScrollbarHoverZone == HitTestZone.track,
         opacity: 1.0,
       );
 
