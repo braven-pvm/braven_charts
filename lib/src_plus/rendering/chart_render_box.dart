@@ -1293,6 +1293,8 @@ class ChartRenderBox extends RenderBox {
       coordinator.claimMode(InteractionMode.panning);
       // Store initial pan position in widget space
       _lastPanPosition = position;
+      // Show scrollbars when pan starts (once, not on every move)
+      _showScrollbarsAndScheduleHide();
       // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
@@ -1369,10 +1371,8 @@ class ChartRenderBox extends RenderBox {
         // Update last position for next move event
         _lastPanPosition = position;
 
-        // Show scrollbars on viewport change from middle-button pan
-        _showScrollbarsAndScheduleHide();
-
         // Repaint with updated transform (elements use _transform during paint)
+        // Note: Scrollbars already shown in _handlePointerDown, no need to reset timer on every move
         markNeedsPaint();
 
         // if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
@@ -1473,6 +1473,8 @@ class ChartRenderBox extends RenderBox {
       // Update axes after panning completes
       _updateAxesFromTransform();
 
+      // Regenerate elements with new transform
+      // Note: Scrollbars already visible from pointer down, auto-hide timer will handle hiding
       _rebuildElementsWithTransform();
 
       // Invalidate cache - transform changed from panning
