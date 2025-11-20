@@ -496,8 +496,6 @@ class ChartRenderBox extends RenderBox {
       dataYMin: yMin,
       dataYMax: yMax,
     );
-
-    debugPrint('🔓 Pan constraints set to FULL DATASET: X=[$xMin, $xMax], Y=[$yMin, $yMax]');
   }
 
   /// Clears pan constraint bounds, restoring normal sliding window constraints.
@@ -515,7 +513,6 @@ class ChartRenderBox extends RenderBox {
   /// See also: [setPanConstraintBounds] to set full dataset constraints.
   void clearPanConstraintBounds() {
     _panConstraintTransform = null;
-    debugPrint('🔒 Pan constraints cleared - back to sliding window');
   }
 
   /// Updates the element generator function.
@@ -889,9 +886,7 @@ class ChartRenderBox extends RenderBox {
   ///
   /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
   void _rebuildSpatialIndex() {
-    print('🔄 RenderBox: _rebuildSpatialIndex() called - hasSize=$hasSize, plotArea=$_plotArea');
     if (!hasSize || _plotArea.isEmpty) {
-      print('⚠️ RenderBox: Skipping spatial index rebuild - no size or empty plot area');
       return;
     }
 
@@ -1258,7 +1253,6 @@ class ChartRenderBox extends RenderBox {
 
     // Modal states block all events except themselves
     if (coordinator.isModal) {
-      print('⚠️ POINTER EVENT BLOCKED: isModal=true');
       return;
     }
 
@@ -1268,14 +1262,12 @@ class ChartRenderBox extends RenderBox {
     final localPosition = event.localPosition;
 
     if (event is PointerDownEvent) {
-      print('🖱️ POINTER DOWN: position=$localPosition');
       _handlePointerDown(event, localPosition);
     } else if (event is PointerMoveEvent) {
       _handlePointerMove(event, localPosition);
     } else if (event is PointerUpEvent) {
       _handlePointerUp(event, localPosition);
     } else if (event is PointerHoverEvent) {
-      print('🖱️ POINTER HOVER: position=$localPosition');
       _handlePointerHover(event, localPosition);
     } else if (event is PointerScrollEvent) {
       _handlePointerScroll(event, localPosition);
