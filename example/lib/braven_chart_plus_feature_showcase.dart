@@ -205,6 +205,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           id: 'peak',
           seriesId: 'annotation_line',
           dataPointIndex: 5,
+          allowDragging: true, // Enable drag-to-move to different data point
           markerShape: MarkerShape.circle,
           markerSize: 14.0,
           markerColor: Colors.red.withAlpha(120),
