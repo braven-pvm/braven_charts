@@ -132,6 +132,10 @@ class ChartRenderBox extends RenderBox {
   Offset? _moveStartPosition;
   Rect? _moveStartBounds;
 
+  /// Current move state (if moving TextAnnotation).
+  TextAnnotationElement? _movingTextAnnotation;
+  Offset? _moveTextStartPosition;
+
   /// Current move state (if moving PointAnnotation).
   PointAnnotationElement? _movingPointAnnotation;
   int? _originalDataPointIndex;
@@ -149,6 +153,11 @@ class ChartRenderBox extends RenderBox {
   RangeAnnotationElement? _potentialDragRangeAnnotation;
   Offset? _potentialDragRangeStartPosition;
   Rect? _potentialDragRangeStartBounds;
+
+  /// Potential drag state for click-and-hold pattern on TextAnnotation.
+  /// Wait for movement to decide: click (select) or drag (reposition).
+  TextAnnotationElement? _potentialDragTextAnnotation;
+  Offset? _potentialDragTextStartPosition;
 
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
@@ -1327,6 +1336,23 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
+  /// Performs move operation for TextAnnotation during drag.
+  ///
+  /// Updates the annotation's position by the drag delta. The position is stored
+  /// as screen coordinates, so we just offset by the pointer movement.
+  void _performTextAnnotationMove(Offset currentPosition) {
+    if (_movingTextAnnotation == null || _moveTextStartPosition == null) {
+      return;
+    }
+
+    final delta = currentPosition - _moveTextStartPosition!;
+    final originalPosition = _movingTextAnnotation!.annotation.position;
+    final newPosition = originalPosition + delta;
+
+    // Update element's temporary position for visual preview
+    _movingTextAnnotation!.updateTempPosition(newPosition);
+  }
+
   // ============================================================================
   // Event Handling
   // ============================================================================
@@ -1423,6 +1449,12 @@ class ChartRenderBox extends RenderBox {
           _potentialDragRangeStartPosition = position;
           _potentialDragRangeStartBounds = hitElement.bounds;
           // Don't claim mode or call callbacks yet - wait for movement or release
+        } else if (hitElement is TextAnnotationElement && hitElement.annotation.allowDragging) {
+          // Clicked on TextAnnotation - store as potential drag
+          // Wait for movement to decide: click (to select) or drag (to reposition)
+          _potentialDragTextAnnotation = hitElement;
+          _potentialDragTextStartPosition = position;
+          // Don't claim mode or call callbacks yet - wait for movement or release
         } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
           // Clicked on PointAnnotation with dragging enabled - store as potential drag
           // We don't know yet if this is a click (to select) or click-and-hold (to drag)
@@ -1451,6 +1483,33 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerMove(PointerMoveEvent event, Offset position) {
+    // PRIORITY 0: Check for drag threshold on potential TextAnnotation drag
+    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
+    if (_potentialDragTextAnnotation != null && _potentialDragTextStartPosition != null) {
+      final dragDistance = (position - _potentialDragTextStartPosition!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        // Threshold exceeded - convert potential drag to actual drag
+        final hitElement = _potentialDragTextAnnotation!;
+        _movingTextAnnotation = hitElement;
+        _moveTextStartPosition = _potentialDragTextStartPosition;
+
+        coordinator.startInteraction(_potentialDragTextStartPosition!, element: hitElement);
+        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        // Clear potential drag state
+        _potentialDragTextAnnotation = null;
+        _potentialDragTextStartPosition = null;
+
+        // Perform initial move to current position
+        _performTextAnnotationMove(position);
+        markNeedsPaint();
+        return;
+      }
+      // Still within threshold - keep waiting
+      return;
+    }
+
     // PRIORITY 0A: Check for drag threshold on potential RangeAnnotation drag
     // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
     if (_potentialDragRangeAnnotation != null && _potentialDragRangeStartPosition != null && _potentialDragRangeStartBounds != null) {
@@ -1544,6 +1603,13 @@ class ChartRenderBox extends RenderBox {
         _moveStartPosition != null &&
         _moveStartBounds != null) {
       _performMove(position);
+      markNeedsPaint();
+      return;
+    }
+
+    // Handle TextAnnotation move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingTextAnnotation != null && _moveTextStartPosition != null) {
+      _performTextAnnotationMove(position);
       markNeedsPaint();
       return;
     }
@@ -1867,6 +1933,27 @@ class ChartRenderBox extends RenderBox {
       // were already cleared above before the callback was emitted
     }
 
+    // Handle potential TextAnnotation drag that never exceeded threshold (treat as selection click)
+    if (_potentialDragTextAnnotation != null) {
+      final hitElement = _potentialDragTextAnnotation!;
+
+      // This was a quick click without dragging - toggle selection
+      if (coordinator.isCtrlPressed) {
+        coordinator.toggleElementSelection(hitElement);
+      } else {
+        coordinator.selectElement(hitElement);
+      }
+
+      // Emit click callback
+      onElementClick?.call(hitElement, event);
+
+      // Clear potential drag state
+      _potentialDragTextAnnotation = null;
+      _potentialDragTextStartPosition = null;
+
+      markNeedsPaint();
+    }
+
     // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
     if (_potentialDragRangeAnnotation != null) {
       final hitElement = _potentialDragRangeAnnotation!;
@@ -1930,6 +2017,35 @@ class ChartRenderBox extends RenderBox {
         // Create updated annotation with new dataPointIndex
         final updatedAnnotation = movedAnnotation.copyWith(
           dataPointIndex: newIndex,
+        );
+
+        // Emit callback
+        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+      }
+    }
+
+    // Clear TextAnnotation move state
+    if (_movingTextAnnotation != null) {
+      // Get the final moved position from the element's temp position
+      final originalPosition = _movingTextAnnotation!.annotation.position;
+      final tempPosition = _movingTextAnnotation!.tempPosition;
+      final newPosition = tempPosition ?? originalPosition; // Use temp if available, else original
+
+      // Clear temp position
+      _movingTextAnnotation!.clearTempPosition();
+
+      // CRITICAL: Store references BEFORE clearing state
+      final movedAnnotation = _movingTextAnnotation!.annotation;
+
+      // Clear the moving state NOW, before emitting callback
+      _movingTextAnnotation = null;
+      _moveTextStartPosition = null;
+
+      // Emit annotation changed callback with updated position (only if changed)
+      if (onAnnotationChanged != null && newPosition != originalPosition) {
+        // Create updated annotation with new position
+        final updatedAnnotation = movedAnnotation.copyWith(
+          position: newPosition,
         );
 
         // Emit callback

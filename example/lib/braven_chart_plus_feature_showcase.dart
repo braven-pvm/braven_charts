@@ -236,12 +236,13 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             borderRadius: BorderRadius.circular(5),
             padding: const EdgeInsets.all(5),
           )),
-      // Text annotation for important noteR
+      // Text annotation for important note
       TextAnnotation(
           id: 'note',
           text: 'Trend Increasing',
           position: const Offset(320, 30),
           anchor: AnnotationAnchor.topRight,
+          allowDragging: true, // Enable click-and-hold drag to reposition
           backgroundColor: Colors.green.withAlpha(50),
           borderColor: Colors.green,
           style: AnnotationStyle(

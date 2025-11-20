@@ -723,6 +723,12 @@ class TextAnnotationElement extends ChartElement {
   bool _isSelected;
   bool _isHovered;
 
+  /// Temporary position during drag (null when not dragging).
+  Offset? _tempPosition;
+
+  /// Get the current temp position (used during drag completion).
+  Offset? get tempPosition => _tempPosition;
+
   void _calculateBounds() {
     final textStyle = annotation.style.textStyle;
     final textSpan = TextSpan(text: annotation.text, style: textStyle);
@@ -734,9 +740,12 @@ class TextAnnotationElement extends ChartElement {
     final textSize = textPainter.size;
     final padding = annotation.style.padding ?? const EdgeInsets.all(4.0);
 
+    // Use temp position during drag, otherwise use annotation's position
+    final effectivePosition = _tempPosition ?? annotation.position;
+
     // Calculate anchored position
     _anchoredPosition = _getAnchoredPosition(
-      annotation.position,
+      effectivePosition,
       textSize + Offset(padding.horizontal, padding.vertical),
       annotation.anchor,
     );
@@ -856,6 +865,18 @@ class TextAnnotationElement extends ChartElement {
     )..layout();
 
     textPainter.paint(canvas, Offset(_anchoredPosition!.dx, _anchoredPosition!.dy));
+  }
+
+  /// Update temporary position during drag.
+  void updateTempPosition(Offset newPosition) {
+    _tempPosition = newPosition;
+    _calculateBounds(); // Recalculate bounds with new position
+  }
+
+  /// Clear temporary position after drag completes.
+  void clearTempPosition() {
+    _tempPosition = null;
+    _calculateBounds(); // Recalculate bounds with original position
   }
 
   @override
