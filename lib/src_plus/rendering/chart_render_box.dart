@@ -144,6 +144,12 @@ class ChartRenderBox extends RenderBox {
   Offset? _potentialDragStartPosition;
   static const double _dragThresholdPixels = 5.0; // Minimum movement to trigger drag
 
+  /// Potential drag state for click-and-hold pattern on RangeAnnotation.
+  /// Same pattern as PointAnnotation - wait for movement to distinguish click from drag.
+  RangeAnnotationElement? _potentialDragRangeAnnotation;
+  Offset? _potentialDragRangeStartPosition;
+  Rect? _potentialDragRangeStartBounds;
+
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
@@ -1410,13 +1416,13 @@ class ChartRenderBox extends RenderBox {
 
         // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
         // This allows moving the entire annotation region
-        if (hitElement is RangeAnnotationElement && hitElement.isSelected) {
-          // Clicked on already-selected RangeAnnotation body - prepare for move
-          _movingAnnotation = hitElement;
-          _moveStartPosition = position;
-          _moveStartBounds = hitElement.bounds;
-          coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-          // Don't call onElementClick - we're starting a move operation
+        if (hitElement is RangeAnnotationElement) {
+          // Clicked on RangeAnnotation body - store as potential drag
+          // Wait for movement to decide: click (to select) or drag (to move)
+          _potentialDragRangeAnnotation = hitElement;
+          _potentialDragRangeStartPosition = position;
+          _potentialDragRangeStartBounds = hitElement.bounds;
+          // Don't claim mode or call callbacks yet - wait for movement or release
         } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
           // Clicked on PointAnnotation with dragging enabled - store as potential drag
           // We don't know yet if this is a click (to select) or click-and-hold (to drag)
@@ -1445,7 +1451,36 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerMove(PointerMoveEvent event, Offset position) {
-    // PRIORITY 0: Check for drag threshold on potential PointAnnotation drag
+    // PRIORITY 0A: Check for drag threshold on potential RangeAnnotation drag
+    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
+    if (_potentialDragRangeAnnotation != null && _potentialDragRangeStartPosition != null && _potentialDragRangeStartBounds != null) {
+      final dragDistance = (position - _potentialDragRangeStartPosition!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        // Threshold exceeded - convert potential drag to actual drag
+        final hitElement = _potentialDragRangeAnnotation!;
+        _movingAnnotation = hitElement;
+        _moveStartPosition = _potentialDragRangeStartPosition;
+        _moveStartBounds = _potentialDragRangeStartBounds;
+
+        coordinator.startInteraction(_potentialDragRangeStartPosition!, element: hitElement);
+        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        // Clear potential drag state
+        _potentialDragRangeAnnotation = null;
+        _potentialDragRangeStartPosition = null;
+        _potentialDragRangeStartBounds = null;
+
+        // Perform initial move to current position
+        _performMove(position);
+        markNeedsPaint();
+        return;
+      }
+      // Still within threshold - keep waiting
+      return;
+    }
+
+    // PRIORITY 0B: Check for drag threshold on potential PointAnnotation drag
     // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
     if (_potentialDragPointAnnotation != null && _potentialDragStartPosition != null) {
       final dragDistance = (position - _potentialDragStartPosition!).distance;
@@ -1832,7 +1867,29 @@ class ChartRenderBox extends RenderBox {
       // were already cleared above before the callback was emitted
     }
 
-    // Handle potential drag that never exceeded threshold (treat as selection click)
+    // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
+    if (_potentialDragRangeAnnotation != null) {
+      final hitElement = _potentialDragRangeAnnotation!;
+
+      // This was a quick click without dragging - toggle selection
+      if (coordinator.isCtrlPressed) {
+        coordinator.toggleElementSelection(hitElement);
+      } else {
+        coordinator.selectElement(hitElement);
+      }
+
+      // Emit click callback
+      onElementClick?.call(hitElement, event);
+
+      // Clear potential drag state
+      _potentialDragRangeAnnotation = null;
+      _potentialDragRangeStartPosition = null;
+      _potentialDragRangeStartBounds = null;
+
+      markNeedsPaint();
+    }
+
+    // Handle potential PointAnnotation drag that never exceeded threshold (treat as selection click)
     if (_potentialDragPointAnnotation != null) {
       print('🎯 PointAnnotation CLICK (no drag): id=${_potentialDragPointAnnotation!.annotation.id}');
       final hitElement = _potentialDragPointAnnotation!;
