@@ -519,28 +519,20 @@ class ChartRenderBox extends RenderBox {
   /// This prevents unnecessary regeneration when parent widgets rebuild
   /// without actual data/theme changes.
   void setElementGenerator(ElementGenerator? generator, int version) {
-    print('🔧 RenderBox: setElementGenerator called - currentVersion=$_elementGeneratorVersion, newVersion=$version');
-
     // Only update if version changed (indicates real data/theme change)
     if (_elementGeneratorVersion == version && _elementGenerator != null) {
-      print('⏭️ RenderBox: Version unchanged - skipping element regeneration');
       return;
     }
 
     _elementGenerator = generator;
     _elementGeneratorVersion = version;
-    print('✅ RenderBox: Version updated to $version');
 
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
-      print('🔄 RenderBox: Calling _rebuildElementsWithTransform()');
       _rebuildElementsWithTransform();
 
       // Invalidate cache - element generator changed (new data/theme)
       _seriesCacheDirty = true;
-      print('✅ RenderBox: Elements regenerated, spatial index should be updated');
-    } else {
-      print('⚠️ RenderBox: Cannot regenerate - transform=${_transform != null}, generator=${_elementGenerator != null}');
     }
   }
 
@@ -757,13 +749,6 @@ class ChartRenderBox extends RenderBox {
       return transform; // No clamping needed
     }
 
-    print('🔍 ZOOM CLAMP DEBUG:');
-    print('   Zoom base transform: X=[${zoomBaseTransform.dataXMin}, ${zoomBaseTransform.dataXMax}], range=$originalXRange');
-    print('   Using: ${_panConstraintTransform != null ? "PAN CONSTRAINT (full dataset)" : "ORIGINAL (initial bounds)"}');
-    print('   Current viewport BEFORE clamp: X=[${transform.dataXMin}, ${transform.dataXMax}], range=$currentXRange');
-    print('   Current center: X=${(transform.dataXMin + transform.dataXMax) / 2}');
-    print('   Zoom level: ${currentZoomX.toStringAsFixed(2)}x, clamping to ${currentZoomX.clamp(minZoomLevel, maxZoomLevel).toStringAsFixed(2)}x');
-
     // Clamp zoom levels
     final clampedZoomX = currentZoomX.clamp(minZoomLevel, maxZoomLevel);
     final clampedZoomY = currentZoomY.clamp(minZoomLevel, maxZoomLevel);
@@ -781,11 +766,6 @@ class ChartRenderBox extends RenderBox {
     final newDataXMax = centerX + newXRange / 2;
     final newDataYMin = centerY - newYRange / 2;
     final newDataYMax = centerY + newYRange / 2;
-
-    print('   New viewport AFTER clamp: X=[$newDataXMin, $newDataXMax], range=$newXRange');
-    print('   New center: X=${(newDataXMin + newDataXMax) / 2}');
-
-    // [DEBUG OUTPUT REMOVED] Zoom clamped - fires frequently during zoom operations
 
     return ChartTransform(
       dataXMin: newDataXMin,
@@ -936,8 +916,6 @@ class ChartRenderBox extends RenderBox {
     // Keep original order, then add handles at the end
     final handleElements = allElements.skip(_elements.length).toList();
     _elements = [..._elements, ...handleElements];
-    print(
-        '✅ RenderBox: Spatial index rebuilt with ${allElements.length} elements (${_elements.length - allElements.length} original + ${handleElements.length} handles)');
   }
 
   /// Rebuilds elements using the element generator with current transform.
@@ -1280,13 +1258,7 @@ class ChartRenderBox extends RenderBox {
 
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
-    String elementId = 'N/A';
-    if (hitElement is RangeAnnotationElement) {
-      elementId = hitElement.id;
-    }
-    print('🎯 HIT TEST RESULT: hitElement=${hitElement?.runtimeType}, id=$elementId');
 
-    // [DEBUG OUTPUT REMOVED] Pointer down - fires on every mouse click
     coordinator.startInteraction(position, element: hitElement);
 
     // Check if we hit a resize handle (priority 7)
@@ -1505,26 +1477,15 @@ class ChartRenderBox extends RenderBox {
       // Emit annotation changed callback with updated bounds
       // Convert pixel bounds back to data coordinates for the annotation
       if (onAnnotationChanged != null) {
-        print(
-            '🔍 DEBUG: resizedBounds from element: left=${resizedBounds.left}, top=${resizedBounds.top}, right=${resizedBounds.right}, bottom=${resizedBounds.bottom}');
-        print(
-            '🔍 DEBUG: Original annotation startX=${resizedAnnotation.startX}, endX=${resizedAnnotation.endX}, startY=${resizedAnnotation.startY}, endY=${resizedAnnotation.endY}');
-        print('🔍 DEBUG: Resize direction: $resizeDirection');
-
         // Get transform from first series (all series share same transform)
         if (_elements.whereType<SeriesElement>().isNotEmpty) {
           final seriesElement = _elements.whereType<SeriesElement>().first;
           final transform = seriesElement.transform;
 
-          print('🔍 DEBUG: Transform dataYMin=${transform.dataYMin}, dataYMax=${transform.dataYMax}, invertY=${transform.invertY}');
-
           // Convert pixel bounds back to data coordinates
           // plotToData returns Offset(dataX, dataY)
           final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
           final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
-
-          print('🔍 DEBUG: leftData (top-left corner): dx=${leftData.dx}, dy=${leftData.dy}');
-          print('🔍 DEBUG: rightData (bottom-right corner): dx=${rightData.dx}, dy=${rightData.dy}');
 
           var newStartX = leftData.dx;
           var newEndX = rightData.dx;
@@ -1541,16 +1502,12 @@ class ChartRenderBox extends RenderBox {
             newEndY = leftData.dy; // top pixel → higher Y data (endY)
           }
 
-          print(
-              '🔍 DEBUG: After assignment: newStartX=$newStartX, newEndX=$newEndX, newStartY=$newStartY, newEndY=$newEndY'); // Apply snapping if enabled
+          // Apply snapping if enabled
           if (resizedAnnotation.snapToValue) {
-            print('🧲 SNAP: snapToValue enabled, tolerance=${resizedAnnotation.snapTolerance}');
 
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
-
-            print('🧲 SNAP: xTolerance=$xTolerance, yTolerance=$yTolerance');
 
             // Determine which edge was resized based on resize direction
             final needsSnapStartX = resizeDirection == ResizeDirection.left ||
@@ -1569,14 +1526,12 @@ class ChartRenderBox extends RenderBox {
             if (needsSnapStartX) {
               final snapped = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
               if (snapped != null) {
-                print('🧲 SNAP: startX $newStartX -> $snapped');
                 newStartX = snapped;
               }
             }
             if (needsSnapEndX) {
               final snapped = _findNearestDataValue(newEndX, axis: 'x', tolerance: xTolerance);
               if (snapped != null) {
-                print('🧲 SNAP: endX $newEndX -> $snapped');
                 newEndX = snapped;
               }
             }
@@ -1585,14 +1540,12 @@ class ChartRenderBox extends RenderBox {
             if (needsSnapStartY && newStartY != null) {
               final snapped = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
               if (snapped != null) {
-                print('🧲 SNAP: startY $newStartY -> $snapped');
                 newStartY = snapped;
               }
             }
             if (needsSnapEndY && newEndY != null) {
               final snapped = _findNearestDataValue(newEndY, axis: 'y', tolerance: yTolerance);
               if (snapped != null) {
-                print('🧲 SNAP: endY $newEndY -> $snapped');
                 newEndY = snapped;
               }
             }
@@ -1607,10 +1560,7 @@ class ChartRenderBox extends RenderBox {
           );
 
           // Emit callback
-          print(
-              '🔺 RenderBox: Emitting onAnnotationChanged for "${resizedAnnotation.id}" with new bounds: ($newStartX, $newStartY) to ($newEndX, $newEndY)');
           onAnnotationChanged!(resizedAnnotation.id, updatedAnnotation);
-          print('🔺 RenderBox: Callback emitted successfully');
         }
       }
       // Note: _resizingAnnotation, _activeResizeDirection, and _resizeStartBounds
@@ -1721,12 +1671,6 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
-    String elementId = 'N/A';
-    if (hitElement is RangeAnnotationElement) {
-      elementId = hitElement.id;
-    }
-    print('🎯 HOVER HIT TEST: hitElement=${hitElement?.runtimeType}, id=$elementId');
-
     // Check if we hit a resize handle (priority 7)
     if (hitElement is ResizeHandleElement) {
       // Hovering over resize handle - show resize cursor
@@ -1750,8 +1694,6 @@ class ChartRenderBox extends RenderBox {
     if (hitElement is SeriesElement) {
       final plotPosition = widgetToPlot(position);
       final markerInfo = _findNearestMarker(hitElement, plotPosition);
-      // ignore: avoid_print
-      print('🎯 Marker hover check: seriesId=${hitElement.id}, markerInfo=$markerInfo');
       coordinator.setHoveredMarker(markerInfo);
       // Invalidate series cache to trigger marker highlight repaint
       _seriesCacheDirty = true;
