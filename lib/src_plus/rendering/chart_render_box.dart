@@ -137,6 +137,13 @@ class ChartRenderBox extends RenderBox {
   int? _originalDataPointIndex;
   int? _candidateDataPointIndex;
 
+  /// Potential drag state for click-and-hold pattern on PointAnnotation.
+  /// When user clicks on PointAnnotation, we don't immediately start dragging.
+  /// Instead, we wait to see if they move the pointer (drag) or release quickly (click to select).
+  PointAnnotationElement? _potentialDragPointAnnotation;
+  Offset? _potentialDragStartPosition;
+  static const double _dragThresholdPixels = 5.0; // Minimum movement to trigger drag
+
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
@@ -1410,16 +1417,14 @@ class ChartRenderBox extends RenderBox {
           _moveStartBounds = hitElement.bounds;
           coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
           // Don't call onElementClick - we're starting a move operation
-        } else if (hitElement is PointAnnotationElement && hitElement.isSelected && hitElement.annotation.allowDragging) {
-          // Clicked on already-selected PointAnnotation - prepare for move to different data point
-          print(
-              '🎯 PointAnnotation DRAG START: id=${hitElement.annotation.id}, isSelected=${hitElement.isSelected}, allowDragging=${hitElement.annotation.allowDragging}');
-          _movingPointAnnotation = hitElement;
-          _originalDataPointIndex = hitElement.annotation.dataPointIndex;
-          _candidateDataPointIndex = hitElement.annotation.dataPointIndex; // Start with current
-          coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-          print('🎯 Drag mode claimed, state stored');
-          // Don't call onElementClick - we're starting a move operation
+        } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
+          // Clicked on PointAnnotation with dragging enabled - store as potential drag
+          // We don't know yet if this is a click (to select) or click-and-hold (to drag)
+          // Wait for pointer movement to decide
+          print('🎯 PointAnnotation POTENTIAL DRAG: id=${hitElement.annotation.id}, allowDragging=${hitElement.annotation.allowDragging}');
+          _potentialDragPointAnnotation = hitElement;
+          _potentialDragStartPosition = position;
+          // Don't claim mode or call callbacks yet - wait for movement or release
         } else {
           // Clicked on element - select it (or toggle if Ctrl)
           if (coordinator.isCtrlPressed) {
@@ -1440,6 +1445,43 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerMove(PointerMoveEvent event, Offset position) {
+    // PRIORITY 0: Check for drag threshold on potential PointAnnotation drag
+    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
+    if (_potentialDragPointAnnotation != null && _potentialDragStartPosition != null) {
+      final dragDistance = (position - _potentialDragStartPosition!).distance;
+      if (dragDistance >= _dragThresholdPixels) {
+        // Pointer moved beyond threshold - convert to actual drag
+        print('🎯 PointAnnotation DRAG START (threshold met): distance=${dragDistance.toStringAsFixed(1)}px');
+        final hitElement = _potentialDragPointAnnotation!;
+
+        // Initialize drag state
+        _movingPointAnnotation = hitElement;
+        _originalDataPointIndex = hitElement.annotation.dataPointIndex;
+        _candidateDataPointIndex = hitElement.annotation.dataPointIndex;
+
+        // Check coordinator state BEFORE claiming
+        print(
+            '🎯 BEFORE claim: currentMode=${coordinator.currentMode}, priority=${coordinator.currentMode.priority}, isModal=${coordinator.currentMode.isModal}');
+
+        // Start interaction and claim drag mode
+        coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
+        final claimSuccess = coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        print('🎯 Drag mode claim attempt: success=$claimSuccess, isInteracting=${coordinator.isInteracting}, mode=${coordinator.currentMode}');
+
+        // Clear potential drag state
+        _potentialDragPointAnnotation = null;
+        _potentialDragStartPosition = null;
+
+        // Now perform the first move to current position
+        _performPointAnnotationMove(position);
+        markNeedsPaint();
+        return;
+      }
+      // Still within threshold - don't start drag yet, just return
+      return;
+    }
+
     // PRIORITY 1: Handle scrollbar drag if active
     if (_activeScrollbarAxis != null && _scrollbarDragStartPosition != null) {
       _handleScrollbarDrag(position);
@@ -1788,6 +1830,28 @@ class ChartRenderBox extends RenderBox {
       }
       // Note: _movingAnnotation, _moveStartPosition, and _moveStartBounds
       // were already cleared above before the callback was emitted
+    }
+
+    // Handle potential drag that never exceeded threshold (treat as selection click)
+    if (_potentialDragPointAnnotation != null) {
+      print('🎯 PointAnnotation CLICK (no drag): id=${_potentialDragPointAnnotation!.annotation.id}');
+      final hitElement = _potentialDragPointAnnotation!;
+
+      // This was a quick click without dragging - toggle selection
+      if (coordinator.isCtrlPressed) {
+        coordinator.toggleElementSelection(hitElement);
+      } else {
+        coordinator.selectElement(hitElement);
+      }
+
+      // Emit click callback
+      onElementClick?.call(hitElement, event);
+
+      // Clear potential drag state
+      _potentialDragPointAnnotation = null;
+      _potentialDragStartPosition = null;
+
+      markNeedsPaint();
     }
 
     // Clear PointAnnotation move state
