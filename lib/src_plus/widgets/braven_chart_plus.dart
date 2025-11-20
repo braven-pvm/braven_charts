@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +18,7 @@ import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../interaction/core/interaction_mode.dart';
 import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
 import '../models/chart_annotation.dart';
@@ -668,6 +670,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _onCoordinatorChanged() {
+    // CRITICAL: Detect mode transitions to handle context menu
+    if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
+      // Right-click detected by RenderBox - show context menu
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showContextMenu();
+        }
+      });
+    }
+
     // CRITICAL FIX: Only call setState() if debug overlay is visible!
     // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
     // so we don't need setState() for cursor movement.
@@ -675,6 +687,30 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (widget.showDebugInfo) {
       setState(() {});
     }
+  }
+
+  /// Shows context menu at the interaction start position.
+  /// Called when coordinator enters contextMenuOpen mode.
+  void _showContextMenu() {
+    final position = _coordinator.interactionStartPosition;
+    final element = _coordinator.interactionStartElement;
+
+    if (position == null) {
+      debugPrint('⚠️ Context menu requested but no interaction start position');
+      _coordinator.releaseMode();
+      return;
+    }
+
+    debugPrint('🟢 Showing context menu at: $position');
+    debugPrint('🟢 Element: ${element?.runtimeType ?? 'null (empty area)'}');
+
+    // TODO: Convert local position to global for menu positioning
+    // TODO: Detect context type (empty area, data point, annotation)
+    // TODO: Build appropriate menu items
+    // TODO: Show menu using showMenu<String>()
+
+    // For now, just release the mode
+    _coordinator.releaseMode();
   }
 
   void _handlePanStart(DragStartDetails details) {
@@ -1075,6 +1111,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   @override
   Widget build(BuildContext context) {
+    // Disable browser context menu on web platform
+    // This allows our custom context menu to work properly
+    if (kIsWeb) {
+      BrowserContextMenu.disableContextMenu();
+    }
+
     // Removed excessive debugPrint (build called)
     return Focus(
       focusNode: _focusNode,
