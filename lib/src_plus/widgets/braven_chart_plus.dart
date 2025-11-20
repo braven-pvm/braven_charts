@@ -12,6 +12,7 @@ import '../../src/interaction/models/interaction_config.dart';
 import '../../src/widgets/controller/chart_controller.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
+import '../controllers/annotation_controller.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../interaction/core/chart_element.dart';
@@ -48,6 +49,7 @@ class BravenChartPlus extends StatefulWidget {
     required this.chartType,
     required this.series,
     this.annotations = const [],
+    this.annotationController,
     this.theme,
     this.xAxis,
     this.yAxis,
@@ -67,7 +69,33 @@ class BravenChartPlus extends StatefulWidget {
 
   final ChartType chartType;
   final List<ChartSeries> series;
+
+  /// **Deprecated**: Use [annotationController] for reactive annotation management.
+  ///
+  /// Static list of annotations. For editable annotations with reactive updates,
+  /// use [annotationController] instead. If both are provided, [annotationController]
+  /// takes precedence.
   final List<ChartAnnotation> annotations;
+
+  /// Optional controller for managing annotations with CRUD operations.
+  ///
+  /// Provides reactive updates when annotations are added, modified, or removed.
+  /// Recommended for editable annotations (e.g., drag-to-resize ranges).
+  ///
+  /// Example:
+  /// ```dart
+  /// final controller = AnnotationController();
+  /// controller.addAnnotation(RangeAnnotation(...));
+  ///
+  /// BravenChartPlus(
+  ///   annotationController: controller,
+  ///   // annotations are managed via controller
+  /// )
+  /// ```
+  ///
+  /// If null, uses [annotations] list directly (backward compatible).
+  final AnnotationController? annotationController;
+
   final ChartTheme? theme;
   final AxisConfig? xAxis;
   final AxisConfig? yAxis;
@@ -202,6 +230,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Listen to controller updates (matches BravenChart pattern)
     widget.controller?.addListener(_onControllerUpdate);
 
+    // Listen to annotation controller updates
+    widget.annotationController?.addListener(_onAnnotationControllerUpdate);
+
     _rebuildElements();
 
     // Initialize cached bounds from existing series data for pan constraints
@@ -229,8 +260,14 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       widget.controller?.addListener(_onControllerUpdate);
     }
 
-    if (widget.series != oldWidget.series || widget.theme != oldWidget.theme) {
-      // Removed excessive debugPrint (theme/series changed)
+    // Handle annotation controller changes
+    if (widget.annotationController != oldWidget.annotationController) {
+      oldWidget.annotationController?.removeListener(_onAnnotationControllerUpdate);
+      widget.annotationController?.addListener(_onAnnotationControllerUpdate);
+    }
+
+    if (widget.series != oldWidget.series || widget.theme != oldWidget.theme || widget.annotations != oldWidget.annotations) {
+      // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements();
       // Request focus after rebuild to ensure keyboard events still work
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -254,6 +291,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _focusNode.dispose();
     _streamSubscription?.cancel();
     widget.controller?.removeListener(_onControllerUpdate);
+    widget.annotationController?.removeListener(_onAnnotationControllerUpdate);
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
@@ -306,6 +344,39 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     setState(() {
       _rebuildElements();
     });
+  }
+
+  /// Called when annotation controller notifies of changes.
+  void _onAnnotationControllerUpdate() {
+    print('🔔 Widget: _onAnnotationControllerUpdate called (listener notified)');
+    if (!mounted) {
+      print('⚠️ Widget: Not mounted - skipping rebuild');
+      return;
+    }
+
+    print('🔔 Widget: Calling setState() to rebuild with ${widget.annotationController?.annotations.length ?? 0} annotations');
+    // Annotations changed - rebuild elements
+    // NOTE: setState() will trigger build() → updateRenderObject() → setElementGenerator()
+    // automatically, so we don't need to call it manually here.
+    setState(() {
+      _rebuildElements();
+    });
+    print('🔔 Widget: setState() completed - chart will rebuild via normal Flutter lifecycle');
+  }
+
+  /// Called when an annotation is modified through user interaction (e.g., drag-to-resize).
+  void _handleAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
+    print('📊 Widget: _handleAnnotationChanged called for "$annotationId"');
+    print('📊 Widget: Controller is ${widget.annotationController != null ? "present" : "NULL"}');
+
+    // Only update if we have a controller (otherwise annotations are read-only from widget.annotations)
+    if (widget.annotationController != null) {
+      print('📊 Widget: Calling controller.updateAnnotation("$annotationId", ...)');
+      widget.annotationController!.updateAnnotation(annotationId, updatedAnnotation);
+      print('📊 Widget: controller.updateAnnotation() completed');
+    } else {
+      print('⚠️ Widget: No controller - annotation changes will NOT persist!');
+    }
   }
 
   void _rebuildElements() {
@@ -548,7 +619,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // Convert annotations to elements
       // Removed excessive debugPrints (annotation conversion details)
-      for (final annotation in widget.annotations) {
+      // Use annotation controller if provided, otherwise fall back to annotations list
+      final effectiveAnnotations = widget.annotationController?.annotations ?? widget.annotations;
+      print(
+          '📊 _rebuildElements: Using ${widget.annotationController != null ? "CONTROLLER" : "WIDGET"} annotations (${effectiveAnnotations.length} total)');
+      for (final annotation in effectiveAnnotations) {
         try {
           final ChartElement element = switch (annotation) {
             PointAnnotation() => PointAnnotationElement(
@@ -1080,6 +1155,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         showYScrollbar: widget.showYScrollbar,
                         scrollbarTheme: widget.scrollbarTheme,
                         onCursorChange: _handleCursorChange,
+                        onAnnotationChanged: _handleAnnotationChanged,
                       ),
                     ),
                   ),
@@ -1109,6 +1185,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.showYScrollbar,
     this.scrollbarTheme,
     this.onCursorChange,
+    this.onAnnotationChanged,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -1123,6 +1200,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final bool showYScrollbar;
   final ScrollbarConfig? scrollbarTheme;
   final void Function(MouseCursor cursor)? onCursorChange;
+  final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -1135,6 +1213,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       showYScrollbar: showYScrollbar,
       scrollbarTheme: scrollbarTheme,
       onCursorChange: onCursorChange,
+      onAnnotationChanged: onAnnotationChanged,
     )
       ..setXAxis(xAxis)
       ..setYAxis(yAxis);

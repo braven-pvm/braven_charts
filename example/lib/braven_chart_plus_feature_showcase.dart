@@ -9,6 +9,7 @@ import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
+import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
 import 'package:braven_charts/src_plus/models/annotation_style.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
@@ -88,7 +89,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
   // Annotation example state
   late final List<ChartSeries> _annotationExampleSeries;
-  late final List<ChartAnnotation> _annotationExampleAnnotations;
+  late final AnnotationController _annotationController;
 
   // Streaming Test 1: dataStream approach
   final StreamController<ChartDataPoint> _stream1Controller = StreamController<ChartDataPoint>.broadcast();
@@ -197,7 +198,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       ),
     ];
 
-    _annotationExampleAnnotations = [
+    // Initialize AnnotationController with annotations (enables editing)
+    _annotationController = AnnotationController(initialAnnotations: [
       // Point annotation marking the peak value
       PointAnnotation(
           id: 'peak',
@@ -219,6 +221,8 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
           id: 'weekend',
           startX: 5.0,
           endX: 7.0,
+          snapToValue: true,
+          snapTolerance: 0.05,
           fillColor: Colors.orange.withAlpha(50),
           borderColor: Colors.orange.withAlpha(150),
           label: 'Weekend',
@@ -304,9 +308,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             borderRadius: BorderRadius.circular(2),
             padding: const EdgeInsets.all(2),
           )),
-    ];
-
-    // REMOVED: Global listener that rebuilds entire page on pause/resume
+    ]); // REMOVED: Global listener that rebuilds entire page on pause/resume
     // Buttons now use ListenableBuilder to rebuild only themselves
   }
 
@@ -515,6 +517,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     _streaming1Controller.dispose();
     _chart1Controller.dispose();
     _chart2Controller.dispose();
+    _annotationController.dispose();
     super.dispose();
   }
 
@@ -781,6 +784,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 key: const ValueKey('chart_interpolation'),
                 chartType: ChartType.line,
                 showXScrollbar: true,
+
                 showYScrollbar: true,
                 // EXTREME SCROLLBAR THEME TEST - Verify all visual properties render
                 scrollbarTheme: ScrollbarConfig(
@@ -1219,7 +1223,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations,
+                annotationController: _annotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1596,7 +1600,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations,
+                annotationController: _annotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1623,7 +1627,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.whereType<PointAnnotation>().toList(),
+                annotations: _annotationController.getAnnotationsByType<PointAnnotation>(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1650,7 +1654,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.whereType<RangeAnnotation>().toList(),
+                annotations: _annotationController.getAnnotationsByType<RangeAnnotation>(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1677,7 +1681,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.whereType<TextAnnotation>().toList(),
+                annotations: _annotationController.getAnnotationsByType<TextAnnotation>(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1704,7 +1708,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.whereType<ThresholdAnnotation>().toList(),
+                annotations: _annotationController.getAnnotationsByType<ThresholdAnnotation>(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1731,7 +1735,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotations: _annotationExampleAnnotations.whereType<TrendAnnotation>().toList(),
+                annotations: _annotationController.getAnnotationsByType<TrendAnnotation>(),
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
