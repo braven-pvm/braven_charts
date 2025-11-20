@@ -119,8 +119,15 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
     // Check if moved beyond tap slop threshold
     final distance = (event.position - _downPosition!).distance;
     if (distance > _kTapSlop) {
-      // Moved too far - cancel tap, might be drag instead
-      _cancel();
+      // Moved too far - check if coordinator has claimed a higher priority mode
+      // If dragging/resizing annotation (priority 8-9), let it continue
+      // Otherwise cancel tap (might be drag/box-select)
+      if (!coordinator.currentMode.isDragging && coordinator.currentMode != InteractionMode.resizingAnnotation) {
+        _cancel();
+      } else {
+        // Higher priority drag in progress - silently cleanup without releasing mode
+        _cleanupWithoutRelease();
+      }
     }
   }
 
@@ -176,6 +183,24 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
       }
       _hasClaimedMode = false;
     }
+
+    _isCleaningUp = false;
+  }
+
+  /// Cleanup without releasing coordinator mode (for when higher priority mode has taken over).
+  void _cleanupWithoutRelease() {
+    if (_isCleaningUp) {
+      return;
+    }
+
+    _isCleaningUp = true;
+
+    if (_activePointer != null) {
+      stopTrackingPointer(_activePointer!);
+    }
+    _activePointer = null;
+    _downPosition = null;
+    _hasClaimedMode = false; // Clear flag without calling handleGestureRejected
 
     _isCleaningUp = false;
   }
