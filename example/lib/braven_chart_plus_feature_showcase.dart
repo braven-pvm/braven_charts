@@ -8,6 +8,7 @@ import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart' 
 import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
+import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
@@ -78,7 +79,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   bool _showDebugInfo = false;
 
   // Tooltips disabled for testing datapoint marker hover highlighting
-  static const _interactionConfig = InteractionConfig(tooltip: TooltipConfig(enabled: false));
+  static const _interactionConfig = InteractionConfig(tooltip: TooltipConfig(enabled: false), showFocusBorder: false);
 
   // Legend example state
   final Set<String> _hiddenSeriesIds = {};
@@ -738,93 +739,97 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               'Monotone',
               'Cardinal',
             ],
-            child: BravenChartPlus(
-              key: const ValueKey('chart_interpolation'),
-              chartType: ChartType.line,
-              showXScrollbar: true,
-              showYScrollbar: true,
-              // EXTREME SCROLLBAR THEME TEST - Verify all visual properties render
-              scrollbarTheme: ScrollbarConfig(
-                // Sizing properties
-                thickness: 20.0, // 20px thick (vs default 11.5)
-                minHandleSize: 80.0, // 80px minimum HANDLE LENGTH (vs default 23) - prevents tiny handle when zoomed out
-                padding: 0.0, // No padding for max visibility
-                borderRadius: 6.0, // 10px radius (vs default 4)
-                edgeGripWidth: 40.0, // 40px edge zone WIDTH (default) - each end of handle for zoom
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 0),
+              child: BravenChartPlus(
+                key: const ValueKey('chart_interpolation'),
+                chartType: ChartType.line,
+                showXScrollbar: true,
+                showYScrollbar: true,
+                // EXTREME SCROLLBAR THEME TEST - Verify all visual properties render
+                scrollbarTheme: ScrollbarConfig(
+                  // Sizing properties
+                  thickness: 18.0, // 20px thick (vs default 11.5)
+                  minHandleSize: 80.0, // 80px minimum HANDLE LENGTH (vs default 23) - prevents tiny handle when zoomed out
+                  padding: 5.0, // No padding for max visibility
+                  borderRadius: 6.0, // 10px radius (vs default 4)
+                  edgeGripWidth: 40.0, // 40px edge zone WIDTH (default) - each end of handle for zoom
 
-                // Track colors (bright yellow background with GREEN hover for testing)
-                trackColor: Colors.grey.shade200.withAlpha(75),
-                trackHoverColor: Colors.grey.shade300.withAlpha(100),
+                  // Track colors (bright yellow background with GREEN hover for testing)
+                  trackColor: Colors.grey.shade300.withAlpha(75),
+                  trackHoverColor: Colors.grey.shade400.withAlpha(85),
 
-                // Handle colors (cyan/teal)R
-                handleColor: Colors.grey.shade300.withAlpha(120),
-                handleHoverColor: Colors.grey.shade400.withAlpha(175),
-                handleActiveColor: Colors.grey.shade400.withAlpha(200), // Dark cyan active
-                handleDisabledColor: const Color(0xFFB2EBF2), // Light cyan disabled
+                  // Handle colors (cyan/teal)R
+                  handleColor: Colors.grey.shade300.withAlpha(100),
+                  handleHoverColor: Colors.grey.shade400.withAlpha(120),
+                  handleActiveColor: Colors.grey.shade400.withAlpha(200), // Dark cyan active
+                  handleDisabledColor: const Color(0xFFB2EBF2), // Light cyan disabled
 
-                // Edge zone colors (magenta/pink - dramatic contrast)
-                edgeZoneColor: Colors.blue.shade300.withAlpha(100),
-                edgeHoverColor: Colors.blue.shade400.withAlpha(125),
+                  // Edge zone colors (magenta/pink - dramatic contrast)
+                  edgeZoneColor: Colors.blue.shade300.withAlpha(100),
+                  edgeHoverColor: Colors.blue.shade400.withAlpha(125),
 
-                // Grip indicator (white for contrast)
-                showGripIndicator: true,
-                gripIndicatorColor: Colors.black38,
+                  // Grip indicator (white for contrast)
+                  showGripIndicator: true,
+                  gripIndicatorColor: Colors.black38,
 
-                // Behavior (note: some not implemented in chart_render_box yet)
-                autoHide: false, // Always visible for testing
-                enableResizeHandles: true, // Edge zones enabled
+                  // Behavior (note: some not implemented in chart_render_box yet)
+                  autoHide: true, // Always visible for testing
+                  autoHideDelay: const Duration(seconds: 5),
+                  enableResizeHandles: true, // Edge zones enabled
+                ),
+                series: [
+                  LineChartSeries(
+                    id: 'linear',
+                    name: 'Linear',
+                    interpolation: LineInterpolation.linear,
+                    strokeWidth: 2.5,
+                    showDataPointMarkers: true,
+                    dataPointMarkerRadius: 4.0,
+                    points: _generateSineWave(
+                      pointCount: 10,
+                      amplitude: 20,
+                      frequency: 0.8,
+                      phase: 0,
+                    ),
+                    isXOrdered: true,
+                  ),
+                  LineChartSeries(
+                    id: 'bezier',
+                    name: 'Bezier (0.5)',
+                    interpolation: LineInterpolation.bezier,
+                    tension: 0.5,
+                    strokeWidth: 2.5,
+                    showDataPointMarkers: true,
+                    dataPointMarkerRadius: 3.5,
+                    points: _generateSineWave(
+                      pointCount: 10,
+                      amplitude: 20,
+                      frequency: 0.8,
+                      phase: 0.5,
+                    ),
+                    isXOrdered: true,
+                  ),
+                  LineChartSeries(
+                    id: 'monotone',
+                    name: 'Monotone',
+                    interpolation: LineInterpolation.monotone,
+                    strokeWidth: 2.5,
+                    showDataPointMarkers: false,
+                    points: _generateSineWave(
+                      pointCount: 10,
+                      amplitude: 20,
+                      frequency: 0.8,
+                      phase: 1.0,
+                    ),
+                    isXOrdered: true,
+                  ),
+                ],
+                theme: _selectedTheme,
+                backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                showDebugInfo: _showDebugInfo,
+                interactionConfig: _interactionConfig,
               ),
-              series: [
-                LineChartSeries(
-                  id: 'linear',
-                  name: 'Linear',
-                  interpolation: LineInterpolation.linear,
-                  strokeWidth: 2.5,
-                  showDataPointMarkers: true,
-                  dataPointMarkerRadius: 4.0,
-                  points: _generateSineWave(
-                    pointCount: 10,
-                    amplitude: 20,
-                    frequency: 0.8,
-                    phase: 0,
-                  ),
-                  isXOrdered: true,
-                ),
-                LineChartSeries(
-                  id: 'bezier',
-                  name: 'Bezier (0.5)',
-                  interpolation: LineInterpolation.bezier,
-                  tension: 0.5,
-                  strokeWidth: 2.5,
-                  showDataPointMarkers: true,
-                  dataPointMarkerRadius: 3.5,
-                  points: _generateSineWave(
-                    pointCount: 10,
-                    amplitude: 20,
-                    frequency: 0.8,
-                    phase: 0.5,
-                  ),
-                  isXOrdered: true,
-                ),
-                LineChartSeries(
-                  id: 'monotone',
-                  name: 'Monotone',
-                  interpolation: LineInterpolation.monotone,
-                  strokeWidth: 2.5,
-                  showDataPointMarkers: false,
-                  points: _generateSineWave(
-                    pointCount: 10,
-                    amplitude: 20,
-                    frequency: 0.8,
-                    phase: 1.0,
-                  ),
-                  isXOrdered: true,
-                ),
-              ],
-              theme: _selectedTheme,
-              backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
-              showDebugInfo: _showDebugInfo,
-              interactionConfig: _interactionConfig,
             ),
           ),
 
@@ -844,6 +849,17 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               chartType: ChartType.line,
               showXScrollbar: true,
               showYScrollbar: true,
+              xAxis: const AxisConfig(
+                orientation: AxisOrientation.horizontal,
+                position: AxisPosition.bottom,
+                label: "This is the X Label",
+                axisColor: Colors.blue,
+                gridColor: Colors.orange,
+                tickLength: 50,
+                showTickMarks: true,
+                showGrid: true,
+                showAxisLine: true,
+              ),
               series: const [
                 LineChartSeries(
                   id: 'line_1',

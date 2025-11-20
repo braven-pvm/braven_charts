@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../axis/axis.dart' as chart_axis;
@@ -160,8 +161,20 @@ class ChartRenderBox extends RenderBox {
   HitTestZone? _yScrollbarHoverZone;
 
   // ==========================================================================
-  // Hit Test Throttling (Performance Optimization)
+  // Scrollbar Auto-Hide State
   // ==========================================================================
+
+  /// Timer for auto-hiding scrollbars after inactivity.
+  Timer? _scrollbarAutoHideTimer;
+
+  /// Whether scrollbars are currently visible.
+  /// When false, scrollbars don't render and don't respond to interaction.
+  /// Defaults to true - will be adjusted in performLayout based on autoHide config.
+  bool _scrollbarsVisible = true;
+
+  // ==========================================================================
+  // Hit Test Throttling (Performance Optimization)
+  // ===========================================================================
 
   /// Pending hover position for deferred hit testing.
   ///
@@ -342,6 +355,7 @@ class ChartRenderBox extends RenderBox {
     _cachedSeriesPicture = null;
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
+    _scrollbarAutoHideTimer?.cancel();
     super.dispose();
   }
 
@@ -550,6 +564,9 @@ class ChartRenderBox extends RenderBox {
     // Regenerate elements
     _rebuildElementsWithTransform();
 
+    // Show scrollbars on viewport change from programmatic zoom
+    _showScrollbarsAndScheduleHide();
+
     // Invalidate cache - transform changed
     _seriesCacheDirty = true;
 
@@ -582,6 +599,9 @@ class ChartRenderBox extends RenderBox {
     // NOTE: Element regeneration is deferred until pan ends for performance
     // See _handlePointerUp for the final regeneration
     // _rebuildElementsWithTransform();  // REMOVED - was causing massive slowdown during pan
+
+    // Show scrollbars on viewport change from programmatic pan
+    _showScrollbarsAndScheduleHide();
 
     // Mark for repaint (will paint existing elements with new transform)
     markNeedsPaint();
@@ -1049,6 +1069,25 @@ class ChartRenderBox extends RenderBox {
 
     // Rebuild spatial index when size changes (for static elements or after transform updates)
     _rebuildSpatialIndex();
+
+    // First render: handle scrollbar visibility based on autoHide config
+    final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+    if (_scrollbarAutoHideTimer == null) {
+      // Only run once on first layout
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (scrollbarConfig.autoHide) {
+          // Auto-hide enabled: show only if viewport is modified, then schedule hide
+          _scrollbarsVisible = _isViewportModified();
+          if (_scrollbarsVisible) {
+            _scheduleScrollbarAutoHide();
+          }
+        } else {
+          // Auto-hide disabled: always show scrollbars
+          _scrollbarsVisible = true;
+        }
+        markNeedsPaint();
+      });
+    }
   } // ============================================================================
   // Hit Testing
   // ============================================================================
@@ -1330,6 +1369,9 @@ class ChartRenderBox extends RenderBox {
         // Update last position for next move event
         _lastPanPosition = position;
 
+        // Show scrollbars on viewport change from middle-button pan
+        _showScrollbarsAndScheduleHide();
+
         // Repaint with updated transform (elements use _transform during paint)
         markNeedsPaint();
 
@@ -1386,6 +1428,9 @@ class ChartRenderBox extends RenderBox {
       _activeScrollbarAxis = null;
       _scrollbarDragStartPosition = null;
       _scrollbarDragStartZone = null;
+
+      // Schedule auto-hide after drag ends (start inactivity timer)
+      _scheduleScrollbarAutoHide();
 
       // Release scrollbar mode and end interaction
       coordinator.endInteraction();
@@ -1620,6 +1665,9 @@ class ChartRenderBox extends RenderBox {
 
       // Regenerate elements with new transform
       _rebuildElementsWithTransform();
+
+      // Show scrollbars on viewport change from mouse wheel zoom
+      _showScrollbarsAndScheduleHide();
 
       // Invalidate cache - transform changed from scroll zoom
       _seriesCacheDirty = true;
@@ -2025,12 +2073,18 @@ class ChartRenderBox extends RenderBox {
   bool _checkScrollbarHover(Offset position) {
     if (_transform == null || _originalTransform == null) return false;
 
+    // When scrollbars are hidden, they don't exist for interaction
+    if (!_scrollbarsVisible) return false;
+
     // Check X scrollbar hover
     if (_showXScrollbar && _xScrollbarRect != null && _xScrollbarRect!.contains(position)) {
       final localX = position.dx - _xScrollbarRect!.left;
       final zone = _getScrollbarZoneAtPosition(Axis.horizontal, localX);
       final cursor = _getCursorForScrollbarZone(zone, Axis.horizontal);
       onCursorChange?.call(cursor);
+
+      // Cancel auto-hide while hovering (user might be about to interact)
+      _cancelScrollbarAutoHide();
 
       // Store hover zone and repaint to show visual feedback
       if (_xScrollbarHoverZone != zone) {
@@ -2048,6 +2102,9 @@ class ChartRenderBox extends RenderBox {
       final cursor = _getCursorForScrollbarZone(zone, Axis.vertical);
       onCursorChange?.call(cursor);
 
+      // Cancel auto-hide while hovering (user might be about to interact)
+      _cancelScrollbarAutoHide();
+
       // Store hover zone and repaint to show visual feedback
       if (_yScrollbarHoverZone != zone) {
         _yScrollbarHoverZone = zone;
@@ -2061,6 +2118,10 @@ class ChartRenderBox extends RenderBox {
     if (_xScrollbarHoverZone != null || _yScrollbarHoverZone != null) {
       _xScrollbarHoverZone = null;
       _yScrollbarHoverZone = null;
+
+      // Resume auto-hide timer when mouse leaves scrollbar
+      _scheduleScrollbarAutoHide();
+
       markNeedsPaint();
     }
 
@@ -2228,6 +2289,10 @@ class ChartRenderBox extends RenderBox {
     _scrollbarLastDragPosition = position; // Initialize for incremental delta tracking
     _scrollbarDragStartZone = hitZone;
 
+    // Show scrollbars and cancel auto-hide during drag (don't hide while dragging!)
+    _scrollbarsVisible = true;
+    _cancelScrollbarAutoHide();
+
     // Handle track click immediately (doesn't require drag)
     if (hitZone == HitTestZone.track) {
       _handleScrollbarTrackClick(axis, localPos, trackLength, handleSize);
@@ -2334,6 +2399,51 @@ class ChartRenderBox extends RenderBox {
   }
 
   // ==========================================================================
+  // Scrollbar Auto-Hide Logic
+  // ==========================================================================
+
+  /// Schedules scrollbar auto-hide after configured inactivity delay.
+  ///
+  /// "Inactivity" means no zoom/pan actions (mouse, keyboard, or scrollbar).
+  /// Cancels any existing timer and starts fresh countdown.
+  void _scheduleScrollbarAutoHide() {
+    final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+    if (!scrollbarConfig.autoHide) return;
+
+    _cancelScrollbarAutoHide();
+
+    _scrollbarAutoHideTimer = Timer(scrollbarConfig.autoHideDelay, () {
+      _scrollbarsVisible = false;
+      markNeedsPaint();
+    });
+  }
+
+  /// Cancels scheduled auto-hide timer without changing visibility.
+  void _cancelScrollbarAutoHide() {
+    _scrollbarAutoHideTimer?.cancel();
+    _scrollbarAutoHideTimer = null;
+  }
+
+  /// Shows scrollbars and schedules auto-hide.
+  ///
+  /// Call on any zoom/pan action to show scrollbars and reset inactivity timer.
+  void _showScrollbarsAndScheduleHide() {
+    _scrollbarsVisible = true;
+    _scheduleScrollbarAutoHide();
+    markNeedsPaint();
+  }
+
+  /// Checks if viewport is zoomed or panned from original state.
+  bool _isViewportModified() {
+    if (_transform == null || _originalTransform == null) return false;
+
+    return _transform!.dataXMin != _originalTransform!.dataXMin ||
+        _transform!.dataXMax != _originalTransform!.dataXMax ||
+        _transform!.dataYMin != _originalTransform!.dataYMin ||
+        _transform!.dataYMax != _originalTransform!.dataYMax;
+  }
+
+  // ==========================================================================
   // Scrollbar Rendering
   // ==========================================================================
 
@@ -2383,6 +2493,9 @@ class ChartRenderBox extends RenderBox {
   /// missing features, but chart_render_box does direct rendering for performance.
   void _paintScrollbars(Canvas canvas, Size size) {
     if (_transform == null || _originalTransform == null) return;
+
+    // Don't render scrollbars when hidden (they shouldn't exist)
+    if (!_scrollbarsVisible) return;
 
     final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
 
@@ -2645,7 +2758,9 @@ class ChartRenderBox extends RenderBox {
 
     // Update axes and trigger repaint
     _updateAxesFromTransform();
-    markNeedsPaint();
+
+    // Show scrollbars and schedule auto-hide after viewport change
+    _showScrollbarsAndScheduleHide();
   }
 
   /// Handles vertical scrollbar pixel delta and converts to viewport change.
@@ -2762,7 +2877,9 @@ class ChartRenderBox extends RenderBox {
 
     // Update axes and trigger repaint
     _updateAxesFromTransform();
-    markNeedsPaint();
+
+    // Show scrollbars and schedule auto-hide after viewport change
+    _showScrollbarsAndScheduleHide();
   }
 
   /// Draws coordinate labels for the crosshair showing screen and data coordinates.

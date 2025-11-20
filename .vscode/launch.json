@@ -5,7 +5,8 @@
       "name": "Flutter for web (hot reloadable)",
       "type": "dart",
       "request": "launch",
-      "program": "example/lib/braven_chart_plus_feature_showcase.dart",
+      "program": "example/lib/main.dart",
+      // "program": "example/lib/braven_chart_plus_feature_showcase.dart",
       // "args": ["-d", "chrome", "--web-experimental-hot-reload"]
       "args": ["-d", "chrome"]
     }

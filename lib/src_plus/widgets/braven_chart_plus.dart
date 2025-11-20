@@ -1047,9 +1047,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         width: widget.theme?.focusBorderWidth ?? 2.0,
                       )
                     : null,
-                borderRadius: (widget.interactionConfig?.showFocusBorder ?? true) &&
-                        hasFocus &&
-                        (widget.theme?.focusBorderRadius ?? 0.0) > 0
+                borderRadius: (widget.interactionConfig?.showFocusBorder ?? true) && hasFocus && (widget.theme?.focusBorderRadius ?? 0.0) > 0
                     ? BorderRadius.circular(widget.theme?.focusBorderRadius ?? 0.0)
                     : null,
               ),
