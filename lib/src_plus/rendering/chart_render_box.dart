@@ -2538,8 +2538,9 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
-    if (cursorPos != null && _plotArea.contains(cursorPos)) {
-      // Only draw crosshair if cursor is inside plot area
+    if (cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
+      // Only draw crosshair if cursor is inside plot area AND not dragging
+      // Hide crosshair during all drag operations (datapoint, annotation, resize)
       // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
       final crosshairPaint = Paint()
         ..color = const Color(0x80666666) // Semi-transparent gray
