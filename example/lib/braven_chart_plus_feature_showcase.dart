@@ -9,6 +9,7 @@ import 'package:braven_charts/src/interaction/models/interaction_config.dart';
 import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
+import 'package:braven_charts/src_plus/models/annotation_style.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
@@ -199,50 +200,73 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     _annotationExampleAnnotations = [
       // Point annotation marking the peak value
       PointAnnotation(
-        id: 'peak',
-        seriesId: 'annotation_line',
-        dataPointIndex: 9,
-        markerShape: MarkerShape.star,
-        markerSize: 14.0,
-        markerColor: Colors.red,
-        label: 'Peak',
-      ),
+          id: 'peak',
+          seriesId: 'annotation_line',
+          dataPointIndex: 5,
+          markerShape: MarkerShape.circle,
+          markerSize: 14.0,
+          markerColor: Colors.red.withAlpha(120),
+          label: 'Peak',
+          style: AnnotationStyle(
+            borderColor: Colors.red.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.red.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(4),
+          )),
       // Range annotation highlighting weekend period
       RangeAnnotation(
-        id: 'weekend',
-        startX: 5.0,
-        endX: 7.0,
-        fillColor: Colors.orange.withOpacity(0.15),
-        borderColor: Colors.orange.withOpacity(0.3),
-        label: 'Weekend',
-        labelPosition: AnnotationLabelPosition.topRight,
-      ),
-      // Text annotation for important note
+          id: 'weekend',
+          startX: 5.0,
+          endX: 7.0,
+          fillColor: Colors.orange.withAlpha(50),
+          borderColor: Colors.orange.withAlpha(150),
+          label: 'Weekend',
+          labelPosition: AnnotationLabelPosition.topRight,
+          labelMargin: 15,
+          style: AnnotationStyle(
+            borderColor: Colors.orange.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.orange.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(5),
+          )),
+      // Text annotation for important noteR
       TextAnnotation(
-        id: 'note',
-        text: 'Trend Increasing',
-        position: const Offset(320, 30),
-        anchor: AnnotationAnchor.topRight,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        borderColor: Colors.green,
-      ),
+          id: 'note',
+          text: 'Trend Increasing',
+          position: const Offset(320, 30),
+          anchor: AnnotationAnchor.topRight,
+          backgroundColor: Colors.green.withAlpha(50),
+          borderColor: Colors.green,
+          style: AnnotationStyle(
+            borderRadius: BorderRadius.circular(5),
+            borderWidth: 0.5,
+            padding: const EdgeInsets.all(8),
+          )),
       // Threshold annotation - horizontal target line
       ThresholdAnnotation(
-        id: 'target_line',
-        axis: AnnotationAxis.y,
-        value: 70.0,
-        lineColor: Colors.green,
-        lineWidth: 2.0,
-        dashPattern: const [8, 4],
-        label: 'Target: 70°',
-        labelPosition: AnnotationLabelPosition.topRight,
-      ),
+          id: 'target_line',
+          axis: AnnotationAxis.y,
+          value: 70.0,
+          lineColor: Colors.green,
+          lineWidth: 2.0,
+          dashPattern: const [8, 4],
+          label: 'Target: 70°',
+          labelPosition: AnnotationLabelPosition.topLeft,
+          style: AnnotationStyle(
+            borderColor: Colors.green.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.green.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(3),
+          )),
       // Threshold annotation - horizontal minimum line
       ThresholdAnnotation(
         id: 'minimum_line',
         axis: AnnotationAxis.y,
         value: 55.0,
-        lineColor: Colors.red.withOpacity(0.7),
+        lineColor: Colors.red.withAlpha(50),
         lineWidth: 2.0,
         dashPattern: const [5, 3],
         label: 'Min: 55°',
@@ -250,24 +274,36 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       ),
       // Trend annotation - linear trend line
       TrendAnnotation(
-        id: 'linear_trend',
-        seriesId: 'annotation_line',
-        trendType: TrendType.linear,
-        lineColor: Colors.purple.withOpacity(0.8),
-        lineWidth: 2.5,
-        dashPattern: const [10, 5],
-        label: 'Linear Trend',
-      ),
+          id: 'linear_trend',
+          seriesId: 'annotation_line',
+          trendType: TrendType.linear,
+          lineColor: Colors.purple.withAlpha(200),
+          lineWidth: 2.5,
+          dashPattern: const [10, 5],
+          label: 'Linear Trend',
+          style: AnnotationStyle(
+            borderColor: Colors.purple.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.purple.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(8),
+          )),
       // Trend annotation - moving average
       TrendAnnotation(
-        id: 'moving_avg',
-        seriesId: 'annotation_line',
-        trendType: TrendType.movingAverage,
-        windowSize: 3,
-        lineColor: Colors.teal.withOpacity(0.8),
-        lineWidth: 2.0,
-        label: '3-pt MA',
-      ),
+          id: 'moving_avg',
+          seriesId: 'annotation_line',
+          trendType: TrendType.movingAverage,
+          windowSize: 3,
+          lineColor: Colors.teal.withAlpha(200),
+          lineWidth: 2.0,
+          label: '3-pt MA',
+          style: AnnotationStyle(
+            borderColor: Colors.teal.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.teal.withAlpha(80),
+            borderRadius: BorderRadius.circular(2),
+            padding: const EdgeInsets.all(2),
+          )),
     ];
 
     // REMOVED: Global listener that rebuilds entire page on pause/resume
