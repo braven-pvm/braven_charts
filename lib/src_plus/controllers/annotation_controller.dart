@@ -106,13 +106,8 @@ class AnnotationController extends ChangeNotifier {
       );
     }
 
-    print('🎯 Controller: Updating annotation "$id" at index $index');
-    print('🎯 Controller: Old annotation: ${_annotations[index]}');
-    print('🎯 Controller: New annotation: $updated');
     _annotations[index] = updated;
-    print('🎯 Controller: Calling notifyListeners() - ${_annotations.length} annotations total');
     notifyListeners();
-    print('🎯 Controller: notifyListeners() completed');
   }
 
   /// Removes an annotation by ID.

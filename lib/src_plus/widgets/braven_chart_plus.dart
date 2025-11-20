@@ -348,34 +348,23 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Called when annotation controller notifies of changes.
   void _onAnnotationControllerUpdate() {
-    print('🔔 Widget: _onAnnotationControllerUpdate called (listener notified)');
     if (!mounted) {
-      print('⚠️ Widget: Not mounted - skipping rebuild');
       return;
     }
 
-    print('🔔 Widget: Calling setState() to rebuild with ${widget.annotationController?.annotations.length ?? 0} annotations');
     // Annotations changed - rebuild elements
     // NOTE: setState() will trigger build() → updateRenderObject() → setElementGenerator()
     // automatically, so we don't need to call it manually here.
     setState(() {
       _rebuildElements();
     });
-    print('🔔 Widget: setState() completed - chart will rebuild via normal Flutter lifecycle');
   }
 
   /// Called when an annotation is modified through user interaction (e.g., drag-to-resize).
   void _handleAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
-    print('📊 Widget: _handleAnnotationChanged called for "$annotationId"');
-    print('📊 Widget: Controller is ${widget.annotationController != null ? "present" : "NULL"}');
-
     // Only update if we have a controller (otherwise annotations are read-only from widget.annotations)
     if (widget.annotationController != null) {
-      print('📊 Widget: Calling controller.updateAnnotation("$annotationId", ...)');
       widget.annotationController!.updateAnnotation(annotationId, updatedAnnotation);
-      print('📊 Widget: controller.updateAnnotation() completed');
-    } else {
-      print('⚠️ Widget: No controller - annotation changes will NOT persist!');
     }
   }
 
