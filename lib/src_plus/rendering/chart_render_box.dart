@@ -127,10 +127,15 @@ class ChartRenderBox extends RenderBox {
   RangeAnnotationElement? _resizingAnnotation;
   Rect? _resizeStartBounds;
 
-  /// Current move state (if moving annotation).
+  /// Current move state (if moving RangeAnnotation).
   RangeAnnotationElement? _movingAnnotation;
   Offset? _moveStartPosition;
   Rect? _moveStartBounds;
+
+  /// Current move state (if moving PointAnnotation).
+  PointAnnotationElement? _movingPointAnnotation;
+  int? _originalDataPointIndex;
+  int? _candidateDataPointIndex;
 
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
@@ -1243,6 +1248,72 @@ class ChartRenderBox extends RenderBox {
     _movingAnnotation!.updateBounds(newBounds);
   }
 
+  /// Performs move operation for PointAnnotation during drag.
+  ///
+  /// Finds the nearest data point in the same series and updates the candidate index
+  /// for visual preview. The annotation will snap to this point on pointer up.
+  void _performPointAnnotationMove(Offset currentPosition) {
+    if (_movingPointAnnotation == null) {
+      return;
+    }
+
+    final annotation = _movingPointAnnotation!.annotation;
+
+    // Find the series element for this annotation
+    final seriesElements = _elements.whereType<SeriesElement>();
+    SeriesElement? targetSeries;
+    for (final seriesElement in seriesElements) {
+      if (seriesElement.series.id == annotation.seriesId) {
+        targetSeries = seriesElement;
+        break;
+      }
+    }
+
+    if (targetSeries == null || targetSeries.series.points.isEmpty) {
+      return;
+    }
+
+    // Convert cursor position to data coordinates
+    final transform = targetSeries.transform;
+    final plotPos = widgetToPlot(currentPosition);
+    final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
+
+    // Find nearest data point in the series
+    final points = targetSeries.series.points;
+    double minDistance = double.infinity;
+    int nearestIndex = _originalDataPointIndex ?? 0;
+
+    for (int i = 0; i < points.length; i++) {
+      final point = points[i];
+      // Calculate Euclidean distance in data space
+      final dx = point.x - dataPos.dx;
+      final dy = point.y - dataPos.dy;
+      final distance = math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    // Calculate snap tolerance (5% of viewport range, similar to RangeAnnotation)
+    final xRange = transform.dataXMax - transform.dataXMin;
+    final yRange = transform.dataYMax - transform.dataYMin;
+    final snapTolerance = 0.05 * math.sqrt(xRange * xRange + yRange * yRange);
+
+    // Update candidate index if within snap tolerance
+    if (minDistance <= snapTolerance) {
+      _candidateDataPointIndex = nearestIndex;
+      // Update element's candidate index for visual preview
+      _movingPointAnnotation!.updateCandidateIndex(nearestIndex);
+    } else {
+      // Out of snap tolerance - keep the CURRENT candidate (last valid snap), not the original
+      // This allows smooth progression: point A -> point B -> point C (not A -> B -> A)
+      // The candidate stays at the last snapped position until we snap to a new one
+      _movingPointAnnotation!.updateCandidateIndex(_candidateDataPointIndex);
+    }
+  }
+
   // ============================================================================
   // Event Handling
   // ============================================================================
@@ -1325,14 +1396,29 @@ class ChartRenderBox extends RenderBox {
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
+        print('🔍 Left-click on element: type=${hitElement.runtimeType}, isSelected=${hitElement.isSelected}');
+        if (hitElement is PointAnnotationElement) {
+          print('🔍   PointAnnotation: id=${hitElement.annotation.id}, allowDragging=${hitElement.annotation.allowDragging}');
+        }
+
         // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
         // This allows moving the entire annotation region
         if (hitElement is RangeAnnotationElement && hitElement.isSelected) {
-          // Clicked on already-selected annotation body - prepare for move
+          // Clicked on already-selected RangeAnnotation body - prepare for move
           _movingAnnotation = hitElement;
           _moveStartPosition = position;
           _moveStartBounds = hitElement.bounds;
           coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+          // Don't call onElementClick - we're starting a move operation
+        } else if (hitElement is PointAnnotationElement && hitElement.isSelected && hitElement.annotation.allowDragging) {
+          // Clicked on already-selected PointAnnotation - prepare for move to different data point
+          print(
+              '🎯 PointAnnotation DRAG START: id=${hitElement.annotation.id}, isSelected=${hitElement.isSelected}, allowDragging=${hitElement.annotation.allowDragging}');
+          _movingPointAnnotation = hitElement;
+          _originalDataPointIndex = hitElement.annotation.dataPointIndex;
+          _candidateDataPointIndex = hitElement.annotation.dataPointIndex; // Start with current
+          coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+          print('🎯 Drag mode claimed, state stored');
           // Don't call onElementClick - we're starting a move operation
         } else {
           // Clicked on element - select it (or toggle if Ctrl)
@@ -1375,12 +1461,19 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
-    // Handle move dragging
+    // Handle RangeAnnotation move dragging
     if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
         _movingAnnotation != null &&
         _moveStartPosition != null &&
         _moveStartBounds != null) {
       _performMove(position);
+      markNeedsPaint();
+      return;
+    }
+
+    // Handle PointAnnotation move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPointAnnotation != null) {
+      _performPointAnnotationMove(position);
       markNeedsPaint();
       return;
     }
@@ -1695,6 +1788,32 @@ class ChartRenderBox extends RenderBox {
       }
       // Note: _movingAnnotation, _moveStartPosition, and _moveStartBounds
       // were already cleared above before the callback was emitted
+    }
+
+    // Clear PointAnnotation move state
+    if (_movingPointAnnotation != null) {
+      // CRITICAL: Store references BEFORE clearing state
+      final movedAnnotation = _movingPointAnnotation!.annotation;
+      final newIndex = _candidateDataPointIndex ?? _originalDataPointIndex ?? movedAnnotation.dataPointIndex;
+
+      // Clear candidate preview
+      _movingPointAnnotation!.clearCandidateIndex();
+
+      // Clear the moving state NOW, before emitting callback
+      _movingPointAnnotation = null;
+      _originalDataPointIndex = null;
+      _candidateDataPointIndex = null;
+
+      // Emit annotation changed callback with updated dataPointIndex (only if changed)
+      if (onAnnotationChanged != null && newIndex != movedAnnotation.dataPointIndex) {
+        // Create updated annotation with new dataPointIndex
+        final updatedAnnotation = movedAnnotation.copyWith(
+          dataPointIndex: newIndex,
+        );
+
+        // Emit callback
+        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+      }
     }
 
     // Clear pan state and regenerate elements if we were panning

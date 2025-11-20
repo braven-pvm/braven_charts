@@ -40,6 +40,7 @@ class PointAnnotationElement extends ChartElement {
   Offset? _dataPosition; // Data coordinates (never changes)
   bool _isSelected;
   bool _isHovered;
+  int? _candidateDataPointIndex; // For drag preview - shows where annotation will move to
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows annotations to move smoothly during pan without regenerating elements.
@@ -47,10 +48,30 @@ class PointAnnotationElement extends ChartElement {
     _currentTransform = newTransform;
   }
 
+  /// Update the candidate data point index for drag preview.
+  void updateCandidateIndex(int? candidateIndex) {
+    _candidateDataPointIndex = candidateIndex;
+  }
+
+  /// Clear the candidate data point index (end of drag).
+  void clearCandidateIndex() {
+    _candidateDataPointIndex = null;
+  }
+
   /// Recalculate screen position using current transform.
   Offset? _getScreenPosition() {
     if (_dataPosition == null) return null;
     final screenPos = _currentTransform.dataToPlot(_dataPosition!.dx, _dataPosition!.dy);
+    return screenPos + annotation.offset;
+  }
+
+  /// Get screen position for candidate data point (during drag preview).
+  Offset? _getCandidateScreenPosition() {
+    if (_candidateDataPointIndex == null || _candidateDataPointIndex! >= series.points.length) {
+      return null;
+    }
+    final candidatePoint = series.points[_candidateDataPointIndex!];
+    final screenPos = _currentTransform.dataToPlot(candidatePoint.x, candidatePoint.y);
     return screenPos + annotation.offset;
   }
 
@@ -70,7 +91,9 @@ class PointAnnotationElement extends ChartElement {
   }
 
   @override
-  ChartElementType get elementType => ChartElementType.annotation;
+  // PointAnnotations should have datapoint priority (9) so they're clickable over series (8)
+  // This allows the two-click drag-to-move interaction to work correctly
+  ChartElementType get elementType => ChartElementType.datapoint;
 
   @override
   bool get isSelected => _isSelected;
@@ -98,6 +121,33 @@ class PointAnnotationElement extends ChartElement {
   void paint(Canvas canvas, Size size) {
     final screenPos = _getScreenPosition();
     if (screenPos == null) return;
+
+    // If dragging, show preview at candidate position
+    if (_candidateDataPointIndex != null && _candidateDataPointIndex != annotation.dataPointIndex) {
+      final candidatePos = _getCandidateScreenPosition();
+      if (candidatePos != null) {
+        // Draw ghost marker at original position (semi-transparent)
+        final ghostPaint = Paint()
+          ..color = annotation.markerColor.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+        _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, ghostPaint);
+
+        // Draw preview marker at candidate position (highlighted)
+        final previewPaint = Paint()
+          ..color = annotation.markerColor.withOpacity(0.8)
+          ..style = PaintingStyle.fill;
+        _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, previewPaint);
+
+        // Draw outline on preview marker
+        final outlinePaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+        _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, outlinePaint);
+
+        return; // Don't draw the normal marker when showing preview
+      }
+    }
 
     final paint = Paint()
       ..color = annotation.markerColor
