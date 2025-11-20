@@ -22,6 +22,7 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../models/chart_annotation.dart';
 import '../models/chart_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../widgets/scrollbar/hit_test_zone.dart';
@@ -66,6 +67,7 @@ class ChartRenderBox extends RenderBox {
     this.onElementHover,
     this.onEmptyAreaClick,
     this.onCursorChange,
+    this.onAnnotationChanged,
   })  : _elementGenerator = elementGenerator,
         _theme = theme,
         _tooltipsEnabled = tooltipsEnabled,
@@ -111,6 +113,13 @@ class ChartRenderBox extends RenderBox {
 
   /// Callback for cursor changes.
   final void Function(MouseCursor cursor)? onCursorChange;
+
+  /// Callback for annotation changes (e.g., after drag-to-resize).
+  ///
+  /// Called when an annotation is modified through user interaction.
+  /// The [annotationId] is the ID of the modified annotation, and
+  /// [updatedAnnotation] is the new annotation object with updated values.
+  final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
 
   /// Current resize state (if resizing annotation).
   // Current resize state (if resizing annotation).
@@ -510,24 +519,28 @@ class ChartRenderBox extends RenderBox {
   /// This prevents unnecessary regeneration when parent widgets rebuild
   /// without actual data/theme changes.
   void setElementGenerator(ElementGenerator? generator, int version) {
-    // [DEBUG OUTPUT REMOVED] Element generator updates - fire on data changes
+    print('🔧 RenderBox: setElementGenerator called - currentVersion=$_elementGeneratorVersion, newVersion=$version');
 
     // Only update if version changed (indicates real data/theme change)
     if (_elementGeneratorVersion == version && _elementGenerator != null) {
-      // [DEBUG OUTPUT REMOVED] Version unchanged - fires frequently
+      print('⏭️ RenderBox: Version unchanged - skipping element regeneration');
       return;
     }
 
     _elementGenerator = generator;
     _elementGeneratorVersion = version;
+    print('✅ RenderBox: Version updated to $version');
 
     // Regenerate elements with new generator if we have a transform
     if (_transform != null && _elementGenerator != null) {
-      // [DEBUG OUTPUT REMOVED] Regenerating elements - fires on data updates
+      print('🔄 RenderBox: Calling _rebuildElementsWithTransform()');
       _rebuildElementsWithTransform();
 
       // Invalidate cache - element generator changed (new data/theme)
       _seriesCacheDirty = true;
+      print('✅ RenderBox: Elements regenerated, spatial index should be updated');
+    } else {
+      print('⚠️ RenderBox: Cannot regenerate - transform=${_transform != null}, generator=${_elementGenerator != null}');
     }
   }
 
@@ -891,7 +904,11 @@ class ChartRenderBox extends RenderBox {
   ///
   /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
   void _rebuildSpatialIndex() {
-    if (!hasSize || _plotArea.isEmpty) return;
+    print('🔄 RenderBox: _rebuildSpatialIndex() called - hasSize=$hasSize, plotArea=$_plotArea');
+    if (!hasSize || _plotArea.isEmpty) {
+      print('⚠️ RenderBox: Skipping spatial index rebuild - no size or empty plot area');
+      return;
+    }
 
     // QuadTree bounds = plot area (in plot space, not widget space)
     _spatialIndex = QuadTree(bounds: Offset.zero & _plotArea.size, maxElementsPerNode: 4, maxDepth: 8);
@@ -919,6 +936,8 @@ class ChartRenderBox extends RenderBox {
     // Keep original order, then add handles at the end
     final handleElements = allElements.skip(_elements.length).toList();
     _elements = [..._elements, ...handleElements];
+    print(
+        '✅ RenderBox: Spatial index rebuilt with ${allElements.length} elements (${_elements.length - allElements.length} original + ${handleElements.length} handles)');
   }
 
   /// Rebuilds elements using the element generator with current transform.
@@ -1229,6 +1248,7 @@ class ChartRenderBox extends RenderBox {
 
     // Modal states block all events except themselves
     if (coordinator.isModal) {
+      print('⚠️ POINTER EVENT BLOCKED: isModal=true');
       return;
     }
 
@@ -1238,12 +1258,14 @@ class ChartRenderBox extends RenderBox {
     final localPosition = event.localPosition;
 
     if (event is PointerDownEvent) {
+      print('🖱️ POINTER DOWN: position=$localPosition');
       _handlePointerDown(event, localPosition);
     } else if (event is PointerMoveEvent) {
       _handlePointerMove(event, localPosition);
     } else if (event is PointerUpEvent) {
       _handlePointerUp(event, localPosition);
     } else if (event is PointerHoverEvent) {
+      print('🖱️ POINTER HOVER: position=$localPosition');
       _handlePointerHover(event, localPosition);
     } else if (event is PointerScrollEvent) {
       _handlePointerScroll(event, localPosition);
@@ -1258,6 +1280,11 @@ class ChartRenderBox extends RenderBox {
 
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
+    String elementId = 'N/A';
+    if (hitElement is RangeAnnotationElement) {
+      elementId = hitElement.id;
+    }
+    print('🎯 HIT TEST RESULT: hitElement=${hitElement?.runtimeType}, id=$elementId');
 
     // [DEBUG OUTPUT REMOVED] Pointer down - fires on every mouse click
     coordinator.startInteraction(position, element: hitElement);
@@ -1451,19 +1478,144 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
-    // Rebuild spatial index if we just finished resizing
-    // (Updates resize handle positions to match new annotation bounds)
-    if (coordinator.currentMode == InteractionMode.resizingAnnotation) {
-      _rebuildSpatialIndex();
-    }
-
     // Clear resize state
     if (_resizingAnnotation != null) {
-      _resizingAnnotation!.clearTempBounds(); // Clear temporary resize bounds
+      // CRITICAL: Read temp bounds BEFORE clearing them!
+      // clearTempBounds() will null out _tempResizeBounds, causing bounds getter
+      // to fall back to original annotation data instead of the resized values.
+      final resizedBounds = _resizingAnnotation!.bounds; // Get resized bounds while temp bounds still exist
+
+      _resizingAnnotation!.clearTempBounds(); // Now safe to clear temporary resize bounds
+
+      // CRITICAL: Store references BEFORE clearing state
+      // We need to clear _resizingAnnotation BEFORE the callback to prevent old
+      // element references from being accessed during the rebuild cycle triggered
+      // by notifyListeners() in the callback.
+      // BUT we need to capture the values we need FIRST!
+      final resizedAnnotation = _resizingAnnotation!.annotation;
+      final resizeDirection = _activeResizeDirection; // Capture before clearing
+
+      // Clear the resizing state NOW, before emitting callback
+      // This ensures that when notifyListeners() triggers rebuilds, the old
+      // element reference is no longer accessible
+      _resizingAnnotation = null;
+      _activeResizeDirection = null;
+      _resizeStartBounds = null;
+
+      // Emit annotation changed callback with updated bounds
+      // Convert pixel bounds back to data coordinates for the annotation
+      if (onAnnotationChanged != null) {
+        print(
+            '🔍 DEBUG: resizedBounds from element: left=${resizedBounds.left}, top=${resizedBounds.top}, right=${resizedBounds.right}, bottom=${resizedBounds.bottom}');
+        print(
+            '🔍 DEBUG: Original annotation startX=${resizedAnnotation.startX}, endX=${resizedAnnotation.endX}, startY=${resizedAnnotation.startY}, endY=${resizedAnnotation.endY}');
+        print('🔍 DEBUG: Resize direction: $resizeDirection');
+
+        // Get transform from first series (all series share same transform)
+        if (_elements.whereType<SeriesElement>().isNotEmpty) {
+          final seriesElement = _elements.whereType<SeriesElement>().first;
+          final transform = seriesElement.transform;
+
+          print('🔍 DEBUG: Transform dataYMin=${transform.dataYMin}, dataYMax=${transform.dataYMax}, invertY=${transform.invertY}');
+
+          // Convert pixel bounds back to data coordinates
+          // plotToData returns Offset(dataX, dataY)
+          final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
+          final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
+
+          print('🔍 DEBUG: leftData (top-left corner): dx=${leftData.dx}, dy=${leftData.dy}');
+          print('🔍 DEBUG: rightData (bottom-right corner): dx=${rightData.dx}, dy=${rightData.dy}');
+
+          var newStartX = leftData.dx;
+          var newEndX = rightData.dx;
+          // Y axis: Only set Y coordinates if they were originally defined
+          // If original annotation had null Y values (full height), keep them null
+          double? newStartY;
+          double? newEndY;
+
+          if (resizedAnnotation.startY != null && resizedAnnotation.endY != null) {
+            // Y axis is inverted: top pixel (smaller value) = higher Y data
+            // bottom pixel (larger value) = lower Y data
+            // So we need to swap them to maintain startY < endY
+            newStartY = rightData.dy; // bottom pixel → lower Y data (startY)
+            newEndY = leftData.dy; // top pixel → higher Y data (endY)
+          }
+
+          print(
+              '🔍 DEBUG: After assignment: newStartX=$newStartX, newEndX=$newEndX, newStartY=$newStartY, newEndY=$newEndY'); // Apply snapping if enabled
+          if (resizedAnnotation.snapToValue) {
+            print('🧲 SNAP: snapToValue enabled, tolerance=${resizedAnnotation.snapTolerance}');
+
+            // Calculate tolerance distances in data units (percentage of visible range)
+            final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
+            final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
+
+            print('🧲 SNAP: xTolerance=$xTolerance, yTolerance=$yTolerance');
+
+            // Determine which edge was resized based on resize direction
+            final needsSnapStartX = resizeDirection == ResizeDirection.left ||
+                resizeDirection == ResizeDirection.topLeft ||
+                resizeDirection == ResizeDirection.bottomLeft;
+            final needsSnapEndX = resizeDirection == ResizeDirection.right ||
+                resizeDirection == ResizeDirection.topRight ||
+                resizeDirection == ResizeDirection.bottomRight;
+            final needsSnapStartY =
+                resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
+            final needsSnapEndY = resizeDirection == ResizeDirection.bottom ||
+                resizeDirection == ResizeDirection.bottomLeft ||
+                resizeDirection == ResizeDirection.bottomRight;
+
+            // Snap X coordinates if needed
+            if (needsSnapStartX) {
+              final snapped = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
+              if (snapped != null) {
+                print('🧲 SNAP: startX $newStartX -> $snapped');
+                newStartX = snapped;
+              }
+            }
+            if (needsSnapEndX) {
+              final snapped = _findNearestDataValue(newEndX, axis: 'x', tolerance: xTolerance);
+              if (snapped != null) {
+                print('🧲 SNAP: endX $newEndX -> $snapped');
+                newEndX = snapped;
+              }
+            }
+
+            // Snap Y coordinates if needed (only if they're defined)
+            if (needsSnapStartY && newStartY != null) {
+              final snapped = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
+              if (snapped != null) {
+                print('🧲 SNAP: startY $newStartY -> $snapped');
+                newStartY = snapped;
+              }
+            }
+            if (needsSnapEndY && newEndY != null) {
+              final snapped = _findNearestDataValue(newEndY, axis: 'y', tolerance: yTolerance);
+              if (snapped != null) {
+                print('🧲 SNAP: endY $newEndY -> $snapped');
+                newEndY = snapped;
+              }
+            }
+          }
+
+          // Create updated annotation with new bounds
+          final updatedAnnotation = resizedAnnotation.copyWith(
+            startX: newStartX,
+            endX: newEndX,
+            startY: newStartY,
+            endY: newEndY,
+          );
+
+          // Emit callback
+          print(
+              '🔺 RenderBox: Emitting onAnnotationChanged for "${resizedAnnotation.id}" with new bounds: ($newStartX, $newStartY) to ($newEndX, $newEndY)');
+          onAnnotationChanged!(resizedAnnotation.id, updatedAnnotation);
+          print('🔺 RenderBox: Callback emitted successfully');
+        }
+      }
+      // Note: _resizingAnnotation, _activeResizeDirection, and _resizeStartBounds
+      // were already cleared above before the callback was emitted
     }
-    _activeResizeDirection = null;
-    _resizingAnnotation = null;
-    _resizeStartBounds = null;
 
     // Clear pan state and regenerate elements if we were panning
     // (Elements were not regenerated during drag for performance)
@@ -1490,6 +1642,34 @@ class ChartRenderBox extends RenderBox {
     coordinator.endInteraction();
     coordinator.releaseMode();
     markNeedsPaint();
+  }
+
+  /// Find the nearest data point value on the specified axis within tolerance.
+  ///
+  /// Searches all series data points and returns the nearest X or Y value
+  /// that is within the specified tolerance distance from [targetValue].
+  ///
+  /// Returns null if no data point is within tolerance.
+  double? _findNearestDataValue(double targetValue, {required String axis, required double tolerance}) {
+    double? nearestValue;
+    double minDistance = double.infinity;
+
+    // Collect all data points from all series
+    for (final element in _elements.whereType<SeriesElement>()) {
+      for (final point in element.series.points) {
+        // Get the value for the specified axis
+        final value = axis == 'x' ? point.x : point.y;
+        final distance = (value - targetValue).abs();
+
+        // Check if this is the nearest point within tolerance
+        if (distance < minDistance && distance <= tolerance) {
+          minDistance = distance;
+          nearestValue = value;
+        }
+      }
+    }
+
+    return nearestValue;
   }
 
   void _handlePointerHover(PointerHoverEvent event, Offset position) {
@@ -1541,7 +1721,11 @@ class ChartRenderBox extends RenderBox {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = hitTestElements(position);
 
-    // [DEBUG OUTPUT REMOVED] Hit test - fires frequently on mouse movement
+    String elementId = 'N/A';
+    if (hitElement is RangeAnnotationElement) {
+      elementId = hitElement.id;
+    }
+    print('🎯 HOVER HIT TEST: hitElement=${hitElement?.runtimeType}, id=$elementId');
 
     // Check if we hit a resize handle (priority 7)
     if (hitElement is ResizeHandleElement) {

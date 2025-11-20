@@ -341,12 +341,14 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
     final bottom = annotation.endY != null ? _currentTransform.dataToPlot(0, annotation.endY!).dy : chartSize.height;
 
-    return Rect.fromLTRB(
+    final rect = Rect.fromLTRB(
       left.clamp(0.0, chartSize.width),
       top.clamp(0.0, chartSize.height),
       right.clamp(0.0, chartSize.width),
       bottom.clamp(0.0, chartSize.height),
     );
+
+    return rect;
   }
 
   @override

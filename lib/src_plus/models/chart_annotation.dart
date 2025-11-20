@@ -240,6 +240,7 @@ class RangeAnnotation extends ChartAnnotation {
     super.zIndex,
     super.snapToValue,
     super.snapIncrement,
+    this.snapTolerance = 0.05,
     this.startX,
     this.endX,
     this.startY,
@@ -260,6 +261,7 @@ class RangeAnnotation extends ChartAnnotation {
           startY == null || endY == null || startY < endY,
           'startY must be less than endY',
         ),
+        assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
         assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
@@ -274,6 +276,15 @@ class RangeAnnotation extends ChartAnnotation {
 
   /// The ending Y-axis value of the range (null = infinite positive).
   final double? endY;
+
+  /// The snap tolerance as a fraction of the visible viewport range (0.0 to 1.0).
+  ///
+  /// When [snapToValue] is enabled, this controls the maximum distance from a data
+  /// point for snapping to occur, expressed as a percentage of the visible range.
+  /// For example, 0.05 (default) means snap within 5% of the visible X or Y range.
+  ///
+  /// Defaults to 0.05 (5% of viewport).
+  final double snapTolerance;
 
   /// Optional fill color for the range rectangle.
   final Color? fillColor;
@@ -300,6 +311,7 @@ class RangeAnnotation extends ChartAnnotation {
     int? zIndex,
     bool? snapToValue,
     double? snapIncrement,
+    double? snapTolerance,
     double? startX,
     double? endX,
     double? startY,
@@ -318,6 +330,7 @@ class RangeAnnotation extends ChartAnnotation {
       zIndex: zIndex ?? this.zIndex,
       snapToValue: snapToValue ?? this.snapToValue,
       snapIncrement: snapIncrement ?? this.snapIncrement,
+      snapTolerance: snapTolerance ?? this.snapTolerance,
       startX: startX ?? this.startX,
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
