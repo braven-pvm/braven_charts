@@ -775,7 +775,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
                   // Behavior (note: some not implemented in chart_render_box yet)
                   autoHide: true, // Always visible for testing
-                  autoHideDelay: const Duration(seconds: 5),
+                  autoHideDelay: const Duration(seconds: 2),
                   enableResizeHandles: true, // Edge zones enabled
                 ),
                 series: [
