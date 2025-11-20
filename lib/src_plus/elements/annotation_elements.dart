@@ -211,17 +211,19 @@ class PointAnnotationElement extends ChartElement {
     // Get padding from style or use default
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
-    final offset = Offset(
-      position.dx + annotation.markerSize + 4,
-      position.dy - textPainter.height / 2,
-    );
+    // Calculate label container dimensions (includes padding)
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-    // Calculate background rect with padding
+    // Margin between marker edge and label container edge
+    const labelMargin = 4.0;
+
+    // Position label container to the right of the marker, vertically centered
     final bgRect = Rect.fromLTWH(
-      offset.dx - padding.left,
-      offset.dy - padding.top,
-      textPainter.width + padding.left + padding.right,
-      textPainter.height + padding.top + padding.bottom,
+      position.dx + annotation.markerSize + labelMargin,
+      position.dy - containerHeight / 2,
+      containerWidth,
+      containerHeight,
     );
 
     // Draw background if specified
@@ -247,7 +249,12 @@ class PointAnnotationElement extends ChartElement {
       canvas.drawRRect(rrect, borderPaint);
     }
 
-    textPainter.paint(canvas, offset);
+    // Draw text inside container (accounting for padding)
+    final textPosition = Offset(
+      bgRect.left + padding.left,
+      bgRect.top + padding.top,
+    );
+    textPainter.paint(canvas, textPosition);
   }
 
   @override
@@ -452,36 +459,63 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     // Get padding from style or use default
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
-    // Position label based on labelPosition
-    Offset position;
+    // Calculate label container dimensions (includes padding)
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+
+    // Margin between range edge and label container edge
+    const labelMargin = 8.0;
+
+    // Position label container (bgRect) based on labelPosition
+    // The container edge should be labelMargin away from the range edge
+    Rect bgRect;
     switch (annotation.labelPosition) {
       case AnnotationLabelPosition.topLeft:
-        position = Offset(rect.left + 8, rect.top + 8);
+        // Container's top-left corner is labelMargin from range's top-left corner
+        bgRect = Rect.fromLTWH(
+          rect.left + labelMargin,
+          rect.top + labelMargin,
+          containerWidth,
+          containerHeight,
+        );
         break;
       case AnnotationLabelPosition.topRight:
-        position = Offset(rect.right - textPainter.width - 8, rect.top + 8);
+        // Container's top-right corner is labelMargin from range's top-right corner
+        bgRect = Rect.fromLTWH(
+          rect.right - containerWidth - labelMargin,
+          rect.top + labelMargin,
+          containerWidth,
+          containerHeight,
+        );
         break;
       case AnnotationLabelPosition.bottomLeft:
-        position = Offset(rect.left + 8, rect.bottom - textPainter.height - 8);
+        // Container's bottom-left corner is labelMargin from range's bottom-left corner
+        bgRect = Rect.fromLTWH(
+          rect.left + labelMargin,
+          rect.bottom - containerHeight - labelMargin,
+          containerWidth,
+          containerHeight,
+        );
         break;
       case AnnotationLabelPosition.bottomRight:
-        position = Offset(rect.right - textPainter.width - 8, rect.bottom - textPainter.height - 8);
+        // Container's bottom-right corner is labelMargin from range's bottom-right corner
+        bgRect = Rect.fromLTWH(
+          rect.right - containerWidth - labelMargin,
+          rect.bottom - containerHeight - labelMargin,
+          containerWidth,
+          containerHeight,
+        );
         break;
       case AnnotationLabelPosition.center:
-        position = Offset(
-          rect.center.dx - textPainter.width / 2,
-          rect.center.dy - textPainter.height / 2,
+        // Container centered within the range
+        bgRect = Rect.fromLTWH(
+          rect.center.dx - containerWidth / 2,
+          rect.center.dy - containerHeight / 2,
+          containerWidth,
+          containerHeight,
         );
         break;
     }
-
-    // Calculate background rect with padding
-    final bgRect = Rect.fromLTWH(
-      position.dx - padding.left,
-      position.dy - padding.top,
-      textPainter.width + padding.left + padding.right,
-      textPainter.height + padding.top + padding.bottom,
-    );
 
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
@@ -502,7 +536,12 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       canvas.drawRRect(rrect, borderPaint);
     }
 
-    textPainter.paint(canvas, position);
+    // Draw text inside container (accounting for padding)
+    final textPosition = Offset(
+      bgRect.left + padding.left,
+      bgRect.top + padding.top,
+    );
+    textPainter.paint(canvas, textPosition);
   }
 
   @override
@@ -896,39 +935,119 @@ class ThresholdAnnotationElement extends ChartElement {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Position label based on labelPosition (before padding adjustment)
-      Offset baseLabelPos;
-      switch (annotation.labelPosition) {
-        case AnnotationLabelPosition.topLeft:
-          baseLabelPos = Offset(start.dx, start.dy - textPainter.height);
-          break;
-        case AnnotationLabelPosition.topRight:
-          baseLabelPos = Offset(end.dx - textPainter.width, end.dy - textPainter.height);
-          break;
-        case AnnotationLabelPosition.bottomLeft:
-          baseLabelPos = Offset(start.dx, start.dy);
-          break;
-        case AnnotationLabelPosition.bottomRight:
-          baseLabelPos = Offset(end.dx - textPainter.width, end.dy);
-          break;
-        case AnnotationLabelPosition.center:
-          baseLabelPos = Offset(
-            (start.dx + end.dx) / 2 - textPainter.width / 2,
-            (start.dy + end.dy) / 2 - textPainter.height / 2,
-          );
-          break;
-      }
-
       // Get padding from style or use default
       final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
-      // Calculate background rect with padding
-      final bgRect = Rect.fromLTWH(
-        baseLabelPos.dx - padding.left,
-        baseLabelPos.dy - padding.top,
-        textPainter.width + padding.left + padding.right,
-        textPainter.height + padding.top + padding.bottom,
-      );
+      // Calculate label container dimensions (includes padding)
+      final containerWidth = textPainter.width + padding.left + padding.right;
+      final containerHeight = textPainter.height + padding.top + padding.bottom;
+
+      // Margin between threshold line and label container edge
+      const labelMargin = 8.0;
+
+      // Position label container based on labelPosition and axis orientation
+      Rect bgRect;
+      if (annotation.axis == AnnotationAxis.y) {
+        // Horizontal line - position label relative to line Y coordinate
+        final lineY = start.dy;
+        switch (annotation.labelPosition) {
+          case AnnotationLabelPosition.topLeft:
+            // Container above line, aligned left
+            bgRect = Rect.fromLTWH(
+              start.dx + labelMargin,
+              lineY - containerHeight - labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.topRight:
+            // Container above line, aligned right
+            bgRect = Rect.fromLTWH(
+              end.dx - containerWidth - labelMargin,
+              lineY - containerHeight - labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.bottomLeft:
+            // Container below line, aligned left
+            bgRect = Rect.fromLTWH(
+              start.dx + labelMargin,
+              lineY + labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.bottomRight:
+            // Container below line, aligned right
+            bgRect = Rect.fromLTWH(
+              end.dx - containerWidth - labelMargin,
+              lineY + labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.center:
+            // Container centered on line
+            bgRect = Rect.fromLTWH(
+              (start.dx + end.dx) / 2 - containerWidth / 2,
+              lineY - containerHeight / 2,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+        }
+      } else {
+        // Vertical line - position label relative to line X coordinate
+        final lineX = start.dx;
+        switch (annotation.labelPosition) {
+          case AnnotationLabelPosition.topLeft:
+            // Container left of line, aligned top
+            bgRect = Rect.fromLTWH(
+              lineX - containerWidth - labelMargin,
+              start.dy + labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.topRight:
+            // Container right of line, aligned top
+            bgRect = Rect.fromLTWH(
+              lineX + labelMargin,
+              start.dy + labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.bottomLeft:
+            // Container left of line, aligned bottom
+            bgRect = Rect.fromLTWH(
+              lineX - containerWidth - labelMargin,
+              end.dy - containerHeight - labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.bottomRight:
+            // Container right of line, aligned bottom
+            bgRect = Rect.fromLTWH(
+              lineX + labelMargin,
+              end.dy - containerHeight - labelMargin,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+          case AnnotationLabelPosition.center:
+            // Container centered on line
+            bgRect = Rect.fromLTWH(
+              lineX - containerWidth / 2,
+              (start.dy + end.dy) / 2 - containerHeight / 2,
+              containerWidth,
+              containerHeight,
+            );
+            break;
+        }
+      }
 
       // Draw background if backgroundColor is set
       if (annotation.style.backgroundColor != null) {
@@ -951,8 +1070,12 @@ class ThresholdAnnotationElement extends ChartElement {
         canvas.drawRRect(rrect, borderPaint);
       }
 
-      // Draw text on top
-      textPainter.paint(canvas, baseLabelPos);
+      // Draw text inside container (accounting for padding)
+      final textPosition = Offset(
+        bgRect.left + padding.left,
+        bgRect.top + padding.top,
+      );
+      textPainter.paint(canvas, textPosition);
     }
   }
 
@@ -1236,15 +1359,19 @@ class TrendAnnotationElement extends ChartElement {
       // Get padding from style or use default
       final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
-      // Position at end of trend line (base position before padding)
-      final baseLabelPos = plotPoints.last + Offset(4, -textPainter.height / 2);
+      // Calculate label container dimensions (includes padding)
+      final containerWidth = textPainter.width + padding.left + padding.right;
+      final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-      // Calculate background rect with padding
+      // Margin between trend line end and label container edge
+      const labelMargin = 4.0;
+
+      // Position label container to the right of trend line end, vertically centered
       final bgRect = Rect.fromLTWH(
-        baseLabelPos.dx - padding.left,
-        baseLabelPos.dy - padding.top,
-        textPainter.width + padding.left + padding.right,
-        textPainter.height + padding.top + padding.bottom,
+        plotPoints.last.dx + labelMargin,
+        plotPoints.last.dy - containerHeight / 2,
+        containerWidth,
+        containerHeight,
       );
 
       // Draw background if backgroundColor is set
@@ -1268,8 +1395,12 @@ class TrendAnnotationElement extends ChartElement {
         canvas.drawRRect(rrect, borderPaint);
       }
 
-      // Draw text on top
-      textPainter.paint(canvas, baseLabelPos);
+      // Draw text inside container (accounting for padding)
+      final textPosition = Offset(
+        bgRect.left + padding.left,
+        bgRect.top + padding.top,
+      );
+      textPainter.paint(canvas, textPosition);
     }
   }
 
