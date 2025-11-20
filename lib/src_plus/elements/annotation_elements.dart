@@ -208,20 +208,43 @@ class PointAnnotationElement extends ChartElement {
       textDirection: TextDirection.ltr,
     )..layout();
 
+    // Get padding from style or use default
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
     final offset = Offset(
       position.dx + annotation.markerSize + 4,
       position.dy - textPainter.height / 2,
     );
 
+    // Calculate background rect with padding
+    final bgRect = Rect.fromLTWH(
+      offset.dx - padding.left,
+      offset.dy - padding.top,
+      textPainter.width + padding.left + padding.right,
+      textPainter.height + padding.top + padding.bottom,
+    );
+
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
-      final bgRect = Rect.fromLTWH(
-        offset.dx - 2,
-        offset.dy - 2,
-        textPainter.width + 4,
-        textPainter.height + 4,
-      );
-      canvas.drawRect(bgRect, Paint()..color = annotation.style.backgroundColor!);
+      final bgPaint = Paint()
+        ..color = annotation.style.backgroundColor!
+        ..style = PaintingStyle.fill;
+
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, bgPaint);
+    }
+
+    // Draw border if specified
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = annotation.style.borderColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = annotation.style.borderWidth;
+
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, borderPaint);
     }
 
     textPainter.paint(canvas, offset);
@@ -426,6 +449,9 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       textDirection: TextDirection.ltr,
     )..layout();
 
+    // Get padding from style or use default
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
     // Position label based on labelPosition
     Offset position;
     switch (annotation.labelPosition) {
@@ -449,23 +475,31 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         break;
     }
 
+    // Calculate background rect with padding
+    final bgRect = Rect.fromLTWH(
+      position.dx - padding.left,
+      position.dy - padding.top,
+      textPainter.width + padding.left + padding.right,
+      textPainter.height + padding.top + padding.bottom,
+    );
+
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
-      final bgRect = Rect.fromLTWH(
-        position.dx - 4,
-        position.dy - 2,
-        textPainter.width + 8,
-        textPainter.height + 4,
-      );
       final bgPaint = Paint()..color = annotation.style.backgroundColor!;
-      if (annotation.style.borderRadius != null) {
-        canvas.drawRRect(
-          RRect.fromRectAndCorners(bgRect, topLeft: annotation.style.borderRadius!.topLeft),
-          bgPaint,
-        );
-      } else {
-        canvas.drawRect(bgRect, bgPaint);
-      }
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, bgPaint);
+    }
+
+    // Draw border if specified
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = annotation.style.borderColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = annotation.style.borderWidth;
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, borderPaint);
     }
 
     textPainter.paint(canvas, position);
@@ -855,39 +889,70 @@ class ThresholdAnnotationElement extends ChartElement {
 
     // Draw label if present
     if (annotation.label != null && annotation.label!.isNotEmpty) {
-      final textStyle = annotation.style.textStyle.copyWith(
-        backgroundColor: annotation.style.backgroundColor,
-      );
+      final textStyle = annotation.style.textStyle;
       final textSpan = TextSpan(text: annotation.label, style: textStyle);
       final textPainter = TextPainter(
         text: textSpan,
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Position label based on labelPosition
-      Offset labelPos;
+      // Position label based on labelPosition (before padding adjustment)
+      Offset baseLabelPos;
       switch (annotation.labelPosition) {
         case AnnotationLabelPosition.topLeft:
-          labelPos = Offset(start.dx + 4, start.dy - textPainter.height - 4);
+          baseLabelPos = Offset(start.dx, start.dy - textPainter.height);
           break;
         case AnnotationLabelPosition.topRight:
-          labelPos = Offset(end.dx - textPainter.width - 4, end.dy - textPainter.height - 4);
+          baseLabelPos = Offset(end.dx - textPainter.width, end.dy - textPainter.height);
           break;
         case AnnotationLabelPosition.bottomLeft:
-          labelPos = Offset(start.dx + 4, start.dy + 4);
+          baseLabelPos = Offset(start.dx, start.dy);
           break;
         case AnnotationLabelPosition.bottomRight:
-          labelPos = Offset(end.dx - textPainter.width - 4, end.dy + 4);
+          baseLabelPos = Offset(end.dx - textPainter.width, end.dy);
           break;
         case AnnotationLabelPosition.center:
-          labelPos = Offset(
+          baseLabelPos = Offset(
             (start.dx + end.dx) / 2 - textPainter.width / 2,
             (start.dy + end.dy) / 2 - textPainter.height / 2,
           );
           break;
       }
 
-      textPainter.paint(canvas, labelPos);
+      // Get padding from style or use default
+      final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
+      // Calculate background rect with padding
+      final bgRect = Rect.fromLTWH(
+        baseLabelPos.dx - padding.left,
+        baseLabelPos.dy - padding.top,
+        textPainter.width + padding.left + padding.right,
+        textPainter.height + padding.top + padding.bottom,
+      );
+
+      // Draw background if backgroundColor is set
+      if (annotation.style.backgroundColor != null) {
+        final bgPaint = Paint()
+          ..color = annotation.style.backgroundColor!
+          ..style = PaintingStyle.fill;
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final rrect = borderRadius.toRRect(bgRect);
+        canvas.drawRRect(rrect, bgPaint);
+      }
+
+      // Draw border if borderColor and borderWidth are set
+      if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+        final borderPaint = Paint()
+          ..color = annotation.style.borderColor!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = annotation.style.borderWidth;
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final rrect = borderRadius.toRRect(bgRect);
+        canvas.drawRRect(rrect, borderPaint);
+      }
+
+      // Draw text on top
+      textPainter.paint(canvas, baseLabelPos);
     }
   }
 
@@ -1168,9 +1233,43 @@ class TrendAnnotationElement extends ChartElement {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Position at end of trend line
-      final labelPos = plotPoints.last + Offset(4, -textPainter.height / 2);
-      textPainter.paint(canvas, labelPos);
+      // Get padding from style or use default
+      final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
+      // Position at end of trend line (base position before padding)
+      final baseLabelPos = plotPoints.last + Offset(4, -textPainter.height / 2);
+
+      // Calculate background rect with padding
+      final bgRect = Rect.fromLTWH(
+        baseLabelPos.dx - padding.left,
+        baseLabelPos.dy - padding.top,
+        textPainter.width + padding.left + padding.right,
+        textPainter.height + padding.top + padding.bottom,
+      );
+
+      // Draw background if backgroundColor is set
+      if (annotation.style.backgroundColor != null) {
+        final bgPaint = Paint()
+          ..color = annotation.style.backgroundColor!
+          ..style = PaintingStyle.fill;
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final rrect = borderRadius.toRRect(bgRect);
+        canvas.drawRRect(rrect, bgPaint);
+      }
+
+      // Draw border if borderColor and borderWidth are set
+      if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+        final borderPaint = Paint()
+          ..color = annotation.style.borderColor!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = annotation.style.borderWidth;
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final rrect = borderRadius.toRRect(bgRect);
+        canvas.drawRRect(rrect, borderPaint);
+      }
+
+      // Draw text on top
+      textPainter.paint(canvas, baseLabelPos);
     }
   }
 
