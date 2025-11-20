@@ -159,6 +159,16 @@ class ChartRenderBox extends RenderBox {
   TextAnnotationElement? _potentialDragTextAnnotation;
   Offset? _potentialDragTextStartPosition;
 
+  /// Potential drag state for click-and-hold pattern on ThresholdAnnotation.
+  /// Wait for movement to decide: click (select) or drag (move along axis).
+  ThresholdAnnotationElement? _potentialDragThresholdAnnotation;
+  Offset? _potentialDragThresholdStartPosition;
+
+  /// Current move state (if moving ThresholdAnnotation).
+  ThresholdAnnotationElement? _movingThresholdAnnotation;
+  Offset? _moveThresholdStartPosition;
+  double? _moveThresholdStartValue; // Original value in data coordinates
+
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
@@ -1353,6 +1363,42 @@ class ChartRenderBox extends RenderBox {
     _movingTextAnnotation!.updateTempPosition(newPosition);
   }
 
+  /// Perform ThresholdAnnotation move with axis-constrained drag.
+  /// Converts screen delta to data delta and updates temp value for preview.
+  void _performThresholdAnnotationMove(Offset currentPosition) {
+    if (_movingThresholdAnnotation == null || _moveThresholdStartPosition == null || _moveThresholdStartValue == null) {
+      return;
+    }
+
+    final element = _movingThresholdAnnotation!;
+    final annotation = element.annotation;
+
+    // Convert screen coordinates to data coordinates (axis-constrained)
+    double newValue;
+    if (annotation.axis == AnnotationAxis.x) {
+      // Vertical line - only X movement matters
+      // Convert screen X to data X
+      final screenX1 = _moveThresholdStartPosition!.dx;
+      final screenX2 = currentPosition.dx;
+      final dataX1 = _transform!.plotToData(screenX1, 0).dx;
+      final dataX2 = _transform!.plotToData(screenX2, 0).dx;
+      final dataDelta = dataX2 - dataX1;
+      newValue = _moveThresholdStartValue! + dataDelta;
+    } else {
+      // Horizontal line (y-axis) - only Y movement matters
+      // Convert screen Y to data Y
+      final screenY1 = _moveThresholdStartPosition!.dy;
+      final screenY2 = currentPosition.dy;
+      final dataY1 = _transform!.plotToData(0, screenY1).dy;
+      final dataY2 = _transform!.plotToData(0, screenY2).dy;
+      final dataDelta = dataY2 - dataY1;
+      newValue = _moveThresholdStartValue! + dataDelta;
+    }
+
+    element.updateTempValue(newValue);
+    markNeedsPaint();
+  }
+
   // ============================================================================
   // Event Handling
   // ============================================================================
@@ -1455,6 +1501,12 @@ class ChartRenderBox extends RenderBox {
           _potentialDragTextAnnotation = hitElement;
           _potentialDragTextStartPosition = position;
           // Don't claim mode or call callbacks yet - wait for movement or release
+        } else if (hitElement is ThresholdAnnotationElement && hitElement.annotation.allowDragging) {
+          // Clicked on ThresholdAnnotation - store as potential drag
+          // Wait for movement to decide: click (to select) or drag (to move along axis)
+          _potentialDragThresholdAnnotation = hitElement;
+          _potentialDragThresholdStartPosition = position;
+          // Don't claim mode or call callbacks yet - wait for movement or release
         } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
           // Clicked on PointAnnotation with dragging enabled - store as potential drag
           // We don't know yet if this is a click (to select) or click-and-hold (to drag)
@@ -1503,6 +1555,34 @@ class ChartRenderBox extends RenderBox {
 
         // Perform initial move to current position
         _performTextAnnotationMove(position);
+        markNeedsPaint();
+        return;
+      }
+      // Still within threshold - keep waiting
+      return;
+    }
+
+    // PRIORITY 0B: Check for drag threshold on potential ThresholdAnnotation drag
+    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
+    if (_potentialDragThresholdAnnotation != null && _potentialDragThresholdStartPosition != null) {
+      final dragDistance = (position - _potentialDragThresholdStartPosition!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        // Threshold exceeded - convert potential drag to actual drag
+        final hitElement = _potentialDragThresholdAnnotation!;
+        _movingThresholdAnnotation = hitElement;
+        _moveThresholdStartPosition = _potentialDragThresholdStartPosition;
+        _moveThresholdStartValue = hitElement.annotation.value; // Store original value
+
+        coordinator.startInteraction(_potentialDragThresholdStartPosition!, element: hitElement);
+        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        // Clear potential drag state
+        _potentialDragThresholdAnnotation = null;
+        _potentialDragThresholdStartPosition = null;
+
+        // Perform initial move to current position
+        _performThresholdAnnotationMove(position);
         markNeedsPaint();
         return;
       }
@@ -1610,6 +1690,13 @@ class ChartRenderBox extends RenderBox {
     // Handle TextAnnotation move dragging
     if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingTextAnnotation != null && _moveTextStartPosition != null) {
       _performTextAnnotationMove(position);
+      markNeedsPaint();
+      return;
+    }
+
+    // Handle ThresholdAnnotation move dragging (axis-constrained)
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingThresholdAnnotation != null && _moveThresholdStartPosition != null) {
+      _performThresholdAnnotationMove(position);
       markNeedsPaint();
       return;
     }
@@ -1954,6 +2041,27 @@ class ChartRenderBox extends RenderBox {
       markNeedsPaint();
     }
 
+    // Handle potential ThresholdAnnotation drag that never exceeded threshold (treat as selection click)
+    if (_potentialDragThresholdAnnotation != null) {
+      final hitElement = _potentialDragThresholdAnnotation!;
+
+      // This was a quick click without dragging - toggle selection
+      if (coordinator.isCtrlPressed) {
+        coordinator.toggleElementSelection(hitElement);
+      } else {
+        coordinator.selectElement(hitElement);
+      }
+
+      // Emit click callback
+      onElementClick?.call(hitElement, event);
+
+      // Clear potential drag state
+      _potentialDragThresholdAnnotation = null;
+      _potentialDragThresholdStartPosition = null;
+
+      markNeedsPaint();
+    }
+
     // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
     if (_potentialDragRangeAnnotation != null) {
       final hitElement = _potentialDragRangeAnnotation!;
@@ -2046,6 +2154,36 @@ class ChartRenderBox extends RenderBox {
         // Create updated annotation with new position
         final updatedAnnotation = movedAnnotation.copyWith(
           position: newPosition,
+        );
+
+        // Emit callback
+        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+      }
+    }
+
+    // Clear ThresholdAnnotation move state
+    if (_movingThresholdAnnotation != null) {
+      // Get the final moved value from the element's temp value
+      final originalValue = _movingThresholdAnnotation!.annotation.value;
+      final tempValue = _movingThresholdAnnotation!.tempValue;
+      final newValue = tempValue ?? originalValue; // Use temp if available, else original
+
+      // Clear temp value
+      _movingThresholdAnnotation!.clearTempValue();
+
+      // CRITICAL: Store references BEFORE clearing state
+      final movedAnnotation = _movingThresholdAnnotation!.annotation;
+
+      // Clear the moving state NOW, before emitting callback
+      _movingThresholdAnnotation = null;
+      _moveThresholdStartPosition = null;
+      _moveThresholdStartValue = null;
+
+      // Emit annotation changed callback with updated value (only if changed)
+      if (onAnnotationChanged != null && newValue != originalValue) {
+        // Create updated annotation with new value
+        final updatedAnnotation = movedAnnotation.copyWith(
+          value: newValue,
         );
 
         // Emit callback
