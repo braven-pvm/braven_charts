@@ -691,25 +691,117 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Shows context menu at the interaction start position.
   /// Called when coordinator enters contextMenuOpen mode.
-  void _showContextMenu() {
-    final position = _coordinator.interactionStartPosition;
+  void _showContextMenu() async {
+    final localPosition = _coordinator.interactionStartPosition;
     final element = _coordinator.interactionStartElement;
 
-    if (position == null) {
+    if (localPosition == null) {
       debugPrint('⚠️ Context menu requested but no interaction start position');
       _coordinator.releaseMode();
       return;
     }
 
-    debugPrint('🟢 Showing context menu at: $position');
+    // Convert local position to global coordinates for menu positioning
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) {
+      debugPrint('⚠️ Context menu requested but render box not found');
+      _coordinator.releaseMode();
+      return;
+    }
+
+    final globalPosition = renderBox.localToGlobal(localPosition);
+
+    debugPrint('🟢 Showing context menu at local: $localPosition, global: $globalPosition');
     debugPrint('🟢 Element: ${element?.runtimeType ?? 'null (empty area)'}');
 
-    // TODO: Convert local position to global for menu positioning
-    // TODO: Detect context type (empty area, data point, annotation)
-    // TODO: Build appropriate menu items
-    // TODO: Show menu using showMenu<String>()
+    // Build context menu items (placeholder for now)
+    final List<PopupMenuEntry<String>> menuItems = [
+      const PopupMenuItem<String>(
+        value: 'add_text',
+        child: Row(
+          children: [
+            Icon(Icons.text_fields, size: 18),
+            SizedBox(width: 8),
+            Text('Add Text Annotation'),
+          ],
+        ),
+      ),
+      const PopupMenuItem<String>(
+        value: 'add_point',
+        child: Row(
+          children: [
+            Icon(Icons.place, size: 18),
+            SizedBox(width: 8),
+            Text('Add Point Annotation'),
+          ],
+        ),
+      ),
+      const PopupMenuItem<String>(
+        value: 'add_range',
+        child: Row(
+          children: [
+            Icon(Icons.width_full, size: 18),
+            SizedBox(width: 8),
+            Text('Add Range Annotation'),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(),
+      const PopupMenuItem<String>(
+        value: 'add_threshold',
+        child: Row(
+          children: [
+            Icon(Icons.horizontal_rule, size: 18),
+            SizedBox(width: 8),
+            Text('Add Threshold Line'),
+          ],
+        ),
+      ),
+      if (element != null) ...[
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit, size: 18),
+              SizedBox(width: 8),
+              Text('Edit'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, size: 18, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Delete', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    ];
 
-    // For now, just release the mode
+    // Show the menu
+    final result = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        globalPosition.dx,
+        globalPosition.dy,
+        globalPosition.dx,
+        globalPosition.dy,
+      ),
+      items: menuItems,
+      elevation: 8.0,
+    );
+
+    // Handle menu selection
+    if (result != null) {
+      debugPrint('🎯 Context menu action selected: $result');
+      // TODO: Handle menu actions (show dialogs, etc.)
+    }
+
+    // Release mode after menu is dismissed
     _coordinator.releaseMode();
   }
 
