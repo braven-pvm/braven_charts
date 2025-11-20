@@ -152,7 +152,9 @@ class PointAnnotation extends ChartAnnotation {
     this.markerShape = MarkerShape.circle,
     this.markerSize = 8.0,
     this.markerColor = Colors.blue,
+    this.labelMargin = 4.0,
   })  : assert(dataPointIndex >= 0, 'Data point index must be non-negative'),
+        assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series containing the data point to annotate.
@@ -173,6 +175,12 @@ class PointAnnotation extends ChartAnnotation {
   /// The fill color of the marker.
   final Color markerColor;
 
+  /// The spacing between the marker edge and the label container edge.
+  ///
+  /// Controls how far the label is positioned from the marker.
+  /// Defaults to 4.0 logical pixels.
+  final double labelMargin;
+
   /// Creates a copy with modified properties.
   PointAnnotation copyWith({
     String? id,
@@ -187,6 +195,7 @@ class PointAnnotation extends ChartAnnotation {
     MarkerShape? markerShape,
     double? markerSize,
     Color? markerColor,
+    double? labelMargin,
   }) {
     return PointAnnotation(
       id: id ?? this.id,
@@ -201,6 +210,7 @@ class PointAnnotation extends ChartAnnotation {
       markerShape: markerShape ?? this.markerShape,
       markerSize: markerSize ?? this.markerSize,
       markerColor: markerColor ?? this.markerColor,
+      labelMargin: labelMargin ?? this.labelMargin,
     );
   }
 }
@@ -237,6 +247,7 @@ class RangeAnnotation extends ChartAnnotation {
     this.fillColor,
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
+    this.labelMargin = 8.0,
   })  : assert(
           startX != null || startY != null,
           'At least one range (X or Y) must be specified',
@@ -249,6 +260,7 @@ class RangeAnnotation extends ChartAnnotation {
           startY == null || endY == null || startY < endY,
           'startY must be less than endY',
         ),
+        assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
   /// The starting X-axis value of the range (null = infinite negative).
@@ -272,6 +284,12 @@ class RangeAnnotation extends ChartAnnotation {
   /// Where to position the label text within the range.
   final AnnotationLabelPosition labelPosition;
 
+  /// The spacing between the range edge and the label container edge.
+  ///
+  /// Controls how far the label is positioned from the range boundary.
+  /// Defaults to 8.0 logical pixels.
+  final double labelMargin;
+
   /// Creates a copy with modified properties.
   RangeAnnotation copyWith({
     String? id,
@@ -289,6 +307,7 @@ class RangeAnnotation extends ChartAnnotation {
     Color? fillColor,
     Color? borderColor,
     AnnotationLabelPosition? labelPosition,
+    double? labelMargin,
   }) {
     return RangeAnnotation(
       id: id ?? this.id,
@@ -306,6 +325,7 @@ class RangeAnnotation extends ChartAnnotation {
       fillColor: fillColor ?? this.fillColor,
       borderColor: borderColor ?? this.borderColor,
       labelPosition: labelPosition ?? this.labelPosition,
+      labelMargin: labelMargin ?? this.labelMargin,
     );
   }
 }
@@ -428,7 +448,9 @@ class ThresholdAnnotation extends ChartAnnotation {
     this.lineWidth = 1.0,
     this.dashPattern,
     this.labelPosition = AnnotationLabelPosition.topLeft,
+    this.labelMargin = 8.0,
   })  : assert(value.isFinite, 'Threshold value must be finite'),
+        assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
   /// Which axis this threshold line is perpendicular to.
@@ -449,6 +471,12 @@ class ThresholdAnnotation extends ChartAnnotation {
   /// Where to position the label text along the threshold line.
   final AnnotationLabelPosition labelPosition;
 
+  /// The spacing between the threshold line and the label container edge.
+  ///
+  /// Controls how far the label is positioned from the threshold line.
+  /// Defaults to 8.0 logical pixels.
+  final double labelMargin;
+
   /// Creates a copy with modified properties.
   ThresholdAnnotation copyWith({
     String? id,
@@ -463,6 +491,7 @@ class ThresholdAnnotation extends ChartAnnotation {
     double? lineWidth,
     List<double>? dashPattern,
     AnnotationLabelPosition? labelPosition,
+    double? labelMargin,
   }) {
     return ThresholdAnnotation(
       id: id ?? this.id,
@@ -477,6 +506,7 @@ class ThresholdAnnotation extends ChartAnnotation {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       labelPosition: labelPosition ?? this.labelPosition,
+      labelMargin: labelMargin ?? this.labelMargin,
     );
   }
 }
@@ -527,6 +557,7 @@ class TrendAnnotation extends ChartAnnotation {
     this.lineColor = Colors.blue,
     this.lineWidth = 2.0,
     this.dashPattern,
+    this.labelMargin = 4.0,
   })  : assert(
           trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
           'windowSize must be positive when trendType is movingAverage',
@@ -535,6 +566,7 @@ class TrendAnnotation extends ChartAnnotation {
           degree > 0,
           'degree must be positive',
         ),
+        assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series to calculate the trend for.
@@ -558,6 +590,12 @@ class TrendAnnotation extends ChartAnnotation {
   /// Optional dash pattern for the trend line.
   final List<double>? dashPattern;
 
+  /// The spacing between the trend line endpoint and the label container edge.
+  ///
+  /// Controls how far the label is positioned from the trend line end.
+  /// Defaults to 4.0 logical pixels.
+  final double labelMargin;
+
   /// Creates a copy with modified properties.
   TrendAnnotation copyWith({
     String? id,
@@ -573,6 +611,7 @@ class TrendAnnotation extends ChartAnnotation {
     Color? lineColor,
     double? lineWidth,
     List<double>? dashPattern,
+    double? labelMargin,
   }) {
     return TrendAnnotation(
       id: id ?? this.id,
@@ -588,6 +627,7 @@ class TrendAnnotation extends ChartAnnotation {
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
+      labelMargin: labelMargin ?? this.labelMargin,
     );
   }
 }

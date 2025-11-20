@@ -215,8 +215,8 @@ class PointAnnotationElement extends ChartElement {
     final containerWidth = textPainter.width + padding.left + padding.right;
     final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-    // Margin between marker edge and label container edge
-    const labelMargin = 4.0;
+    // Use labelMargin from annotation
+    final labelMargin = annotation.labelMargin;
 
     // Position label container to the right of the marker, vertically centered
     final bgRect = Rect.fromLTWH(
@@ -463,8 +463,8 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     final containerWidth = textPainter.width + padding.left + padding.right;
     final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-    // Margin between range edge and label container edge
-    const labelMargin = 8.0;
+    // Use labelMargin from annotation
+    final labelMargin = annotation.labelMargin;
 
     // Position label container (bgRect) based on labelPosition
     // The container edge should be labelMargin away from the range edge
@@ -942,8 +942,8 @@ class ThresholdAnnotationElement extends ChartElement {
       final containerWidth = textPainter.width + padding.left + padding.right;
       final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-      // Margin between threshold line and label container edge
-      const labelMargin = 8.0;
+      // Use labelMargin from annotation
+      final labelMargin = annotation.labelMargin;
 
       // Position label container based on labelPosition and axis orientation
       Rect bgRect;
@@ -1363,8 +1363,8 @@ class TrendAnnotationElement extends ChartElement {
       final containerWidth = textPainter.width + padding.left + padding.right;
       final containerHeight = textPainter.height + padding.top + padding.bottom;
 
-      // Margin between trend line end and label container edge
-      const labelMargin = 4.0;
+      // Use labelMargin from annotation
+      final labelMargin = annotation.labelMargin;
 
       // Position label container to the right of trend line end, vertically centered
       final bgRect = Rect.fromLTWH(
