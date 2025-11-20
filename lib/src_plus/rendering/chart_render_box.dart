@@ -127,6 +127,11 @@ class ChartRenderBox extends RenderBox {
   RangeAnnotationElement? _resizingAnnotation;
   Rect? _resizeStartBounds;
 
+  /// Current move state (if moving annotation).
+  RangeAnnotationElement? _movingAnnotation;
+  Offset? _moveStartPosition;
+  Rect? _moveStartBounds;
+
   /// Current cursor position (for crosshair rendering).
   Offset? _cursorPosition;
 
@@ -1216,7 +1221,34 @@ class ChartRenderBox extends RenderBox {
     // Update annotation bounds
     // Note: Spatial index will be rebuilt on pointer up for performance
     _resizingAnnotation!.updateBounds(newBounds);
-  } // ============================================================================
+  }
+
+  /// Performs move operation for RangeAnnotation during drag.
+  ///
+  /// Moves the entire annotation region by updating both start and end coordinates
+  /// while maintaining the original width/height of the region.
+  void _performMove(Offset currentPosition) {
+    if (_movingAnnotation == null || _moveStartPosition == null || _moveStartBounds == null) {
+      return;
+    }
+
+    final delta = currentPosition - _moveStartPosition!;
+    final oldBounds = _moveStartBounds!;
+
+    // Calculate new bounds by shifting entire region
+    final newBounds = Rect.fromLTRB(
+      oldBounds.left + delta.dx,
+      oldBounds.top + delta.dy,
+      oldBounds.right + delta.dx,
+      oldBounds.bottom + delta.dy,
+    );
+
+    // Update annotation bounds
+    // Note: Spatial index will be rebuilt on pointer up for performance
+    _movingAnnotation!.updateBounds(newBounds);
+  }
+
+  // ============================================================================
   // Event Handling
   // ============================================================================
 
@@ -1301,14 +1333,25 @@ class ChartRenderBox extends RenderBox {
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
-        // Clicked on element - select it (or toggle if Ctrl)
-        if (coordinator.isCtrlPressed) {
-          coordinator.toggleElementSelection(hitElement);
+        // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
+        // This allows moving the entire annotation region
+        if (hitElement is RangeAnnotationElement && hitElement.isSelected) {
+          // Clicked on already-selected annotation body - prepare for move
+          _movingAnnotation = hitElement;
+          _moveStartPosition = position;
+          _moveStartBounds = hitElement.bounds;
+          coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+          // Don't call onElementClick - we're starting a move operation
         } else {
-          coordinator.selectElement(hitElement);
+          // Clicked on element - select it (or toggle if Ctrl)
+          if (coordinator.isCtrlPressed) {
+            coordinator.toggleElementSelection(hitElement);
+          } else {
+            coordinator.selectElement(hitElement);
+          }
+          coordinator.claimMode(InteractionMode.selecting, element: hitElement);
+          onElementClick?.call(hitElement, event);
         }
-        coordinator.claimMode(InteractionMode.selecting, element: hitElement);
-        onElementClick?.call(hitElement, event);
       } else {
         // Clicked on empty area - clear selection and prepare for box select
         coordinator.clearSelection();
@@ -1336,6 +1379,16 @@ class ChartRenderBox extends RenderBox {
         _activeResizeDirection != null &&
         _resizeStartBounds != null) {
       _performResize(position, startPos);
+      markNeedsPaint();
+      return;
+    }
+
+    // Handle move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingAnnotation != null &&
+        _moveStartPosition != null &&
+        _moveStartBounds != null) {
+      _performMove(position);
       markNeedsPaint();
       return;
     }
@@ -1504,7 +1557,6 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (resizedAnnotation.snapToValue) {
-
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
@@ -1564,6 +1616,92 @@ class ChartRenderBox extends RenderBox {
         }
       }
       // Note: _resizingAnnotation, _activeResizeDirection, and _resizeStartBounds
+      // were already cleared above before the callback was emitted
+    }
+
+    // Clear move state
+    if (_movingAnnotation != null) {
+      // CRITICAL: Read temp bounds BEFORE clearing them!
+      final movedBounds = _movingAnnotation!.bounds; // Get moved bounds while temp bounds still exist
+
+      _movingAnnotation!.clearTempBounds(); // Now safe to clear temporary bounds
+
+      // CRITICAL: Store references BEFORE clearing state
+      final movedAnnotation = _movingAnnotation!.annotation;
+
+      // Clear the moving state NOW, before emitting callback
+      _movingAnnotation = null;
+      _moveStartPosition = null;
+      _moveStartBounds = null;
+
+      // Emit annotation changed callback with updated bounds
+      // Convert pixel bounds back to data coordinates for the annotation
+      if (onAnnotationChanged != null) {
+        // Get transform from first series (all series share same transform)
+        if (_elements.whereType<SeriesElement>().isNotEmpty) {
+          final seriesElement = _elements.whereType<SeriesElement>().first;
+          final transform = seriesElement.transform;
+
+          // Convert pixel bounds back to data coordinates
+          // plotToData returns Offset(dataX, dataY)
+          final leftData = transform.plotToData(movedBounds.left, movedBounds.top);
+          final rightData = transform.plotToData(movedBounds.right, movedBounds.bottom);
+
+          var newStartX = leftData.dx;
+          var newEndX = rightData.dx;
+          // Y axis: Only set Y coordinates if they were originally defined
+          // If original annotation had null Y values (full height), keep them null
+          double? newStartY;
+          double? newEndY;
+
+          if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
+            // Y axis is inverted: top pixel (smaller value) = higher Y data
+            // bottom pixel (larger value) = lower Y data
+            // So we need to swap them to maintain startY < endY
+            newStartY = rightData.dy; // bottom pixel → lower Y data (startY)
+            newEndY = leftData.dy; // top pixel → higher Y data (endY)
+          }
+
+          // Apply snapping if enabled
+          if (movedAnnotation.snapToValue) {
+            // Calculate tolerance distances in data units (percentage of visible range)
+            final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
+            final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
+
+            // For move operations, snap both edges
+            final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
+            if (snappedStartX != null) {
+              // Maintain width by shifting both edges
+              final width = newEndX - newStartX;
+              newStartX = snappedStartX;
+              newEndX = newStartX + width;
+            }
+
+            // Snap Y coordinates if needed (only if they're defined)
+            if (newStartY != null && newEndY != null) {
+              final snappedStartY = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
+              if (snappedStartY != null) {
+                // Maintain height by shifting both edges
+                final height = newEndY - newStartY;
+                newStartY = snappedStartY;
+                newEndY = newStartY + height;
+              }
+            }
+          }
+
+          // Create updated annotation with new bounds
+          final updatedAnnotation = movedAnnotation.copyWith(
+            startX: newStartX,
+            endX: newEndX,
+            startY: newStartY,
+            endY: newEndY,
+          );
+
+          // Emit callback
+          onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+        }
+      }
+      // Note: _movingAnnotation, _moveStartPosition, and _moveStartBounds
       // were already cleared above before the callback was emitted
     }
 
