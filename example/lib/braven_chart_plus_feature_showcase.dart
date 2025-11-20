@@ -251,10 +251,12 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             padding: const EdgeInsets.all(8),
           )),
       // Threshold annotation - horizontal target line
+      // Threshold annotation - horizontal target line
       ThresholdAnnotation(
           id: 'target_line',
           axis: AnnotationAxis.y,
           value: 70.0,
+          allowDragging: true, // Enable click-and-hold drag to move threshold
           lineColor: Colors.green,
           lineWidth: 2.0,
           dashPattern: const [8, 4],
@@ -272,11 +274,31 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         id: 'minimum_line',
         axis: AnnotationAxis.y,
         value: 55.0,
+        allowDragging: true, // Enable click-and-hold drag to move threshold
         lineColor: Colors.red.withAlpha(50),
         lineWidth: 2.0,
         dashPattern: const [5, 3],
         label: 'Min: 55°',
         labelPosition: AnnotationLabelPosition.bottomRight,
+      ),
+      // Threshold annotation - vertical marker line
+      ThresholdAnnotation(
+        id: 'marker_line',
+        axis: AnnotationAxis.x,
+        value: 8.0,
+        allowDragging: true, // Enable click-and-hold drag to move threshold
+        lineColor: Colors.blue.withAlpha(150),
+        lineWidth: 2.0,
+        dashPattern: const [6, 3],
+        label: 'Event',
+        labelPosition: AnnotationLabelPosition.topRight,
+        style: AnnotationStyle(
+          borderColor: Colors.blue.shade700,
+          borderWidth: 0.5,
+          backgroundColor: Colors.blue.withAlpha(80),
+          borderRadius: BorderRadius.circular(5),
+          padding: const EdgeInsets.all(3),
+        ),
       ),
       // Trend annotation - linear trend line
       TrendAnnotation(

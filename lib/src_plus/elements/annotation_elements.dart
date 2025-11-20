@@ -919,6 +919,22 @@ class ThresholdAnnotationElement extends ChartElement {
   bool _isSelected;
   bool _isHovered;
 
+  /// Temporary value during drag operations (in data coordinates).
+  double? _tempValue;
+
+  /// Get the temporary value being previewed during drag (if any).
+  double? get tempValue => _tempValue;
+
+  /// Update temporary value for drag preview.
+  void updateTempValue(double newValue) {
+    _tempValue = newValue;
+  }
+
+  /// Clear temporary value after drag completes.
+  void clearTempValue() {
+    _tempValue = null;
+  }
+
   /// Update the current transform before painting.
   void updateTransform(ChartTransform newTransform) {
     _currentTransform = newTransform;
@@ -929,23 +945,28 @@ class ThresholdAnnotationElement extends ChartElement {
 
   @override
   Rect get bounds {
+    // Use temp value during drag, otherwise use annotation value
+    final value = _tempValue ?? annotation.value;
+
     // Threshold spans the entire plot area in one direction
+    const hitMargin = 20.0; // 20px margin on each side of line for easier clicking
+
     if (annotation.axis == AnnotationAxis.y) {
       // Horizontal line at Y value
-      final plotY = _currentTransform.dataToPlot(0, annotation.value).dy;
+      final plotY = _currentTransform.dataToPlot(0, value).dy;
       return Rect.fromLTWH(
         0,
-        plotY - annotation.lineWidth / 2,
+        plotY - annotation.lineWidth / 2 - hitMargin, // Center line, then add margin above
         _currentTransform.plotWidth,
-        annotation.lineWidth + 8, // Add hit test margin
+        annotation.lineWidth + (hitMargin * 2), // Line width plus margin on both sides
       );
     } else {
       // Vertical line at X value
-      final plotX = _currentTransform.dataToPlot(annotation.value, 0).dx;
+      final plotX = _currentTransform.dataToPlot(value, 0).dx;
       return Rect.fromLTWH(
-        plotX - annotation.lineWidth / 2,
+        plotX - annotation.lineWidth / 2 - hitMargin, // Center line, then add margin to left
         0,
-        annotation.lineWidth + 8, // Add hit test margin
+        annotation.lineWidth + (hitMargin * 2), // Line width plus margin on both sides
         _currentTransform.plotHeight,
       );
     }
@@ -973,24 +994,72 @@ class ThresholdAnnotationElement extends ChartElement {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = annotation.lineColor
-      ..strokeWidth = _isSelected ? annotation.lineWidth * 1.5 : annotation.lineWidth
-      ..style = PaintingStyle.stroke;
+    // Use temp value during drag, otherwise use annotation value
+    final value = _tempValue ?? annotation.value;
+    final isDragging = _tempValue != null;
 
     // Calculate line position
     Offset start, end;
     if (annotation.axis == AnnotationAxis.y) {
       // Horizontal line
-      final plotY = _currentTransform.dataToPlot(0, annotation.value).dy;
+      final plotY = _currentTransform.dataToPlot(0, value).dy;
       start = Offset(0, plotY);
       end = Offset(_currentTransform.plotWidth, plotY);
     } else {
       // Vertical line
-      final plotX = _currentTransform.dataToPlot(annotation.value, 0).dx;
+      final plotX = _currentTransform.dataToPlot(value, 0).dx;
       start = Offset(plotX, 0);
       end = Offset(plotX, _currentTransform.plotHeight);
     }
+
+    // Draw halo effect during drag (transparent box around threshold)
+    if (isDragging) {
+      final haloPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(30)
+        ..style = PaintingStyle.fill;
+
+      const haloWidth = 8.0; // Width of halo on each side
+      Rect haloRect;
+      if (annotation.axis == AnnotationAxis.y) {
+        // Horizontal line - halo above and below
+        haloRect = Rect.fromLTRB(
+          0,
+          start.dy - haloWidth,
+          _currentTransform.plotWidth,
+          start.dy + haloWidth,
+        );
+      } else {
+        // Vertical line - halo left and right
+        haloRect = Rect.fromLTRB(
+          start.dx - haloWidth,
+          0,
+          start.dx + haloWidth,
+          _currentTransform.plotHeight,
+        );
+      }
+      canvas.drawRect(haloRect, haloPaint);
+    }
+
+    // Draw selection glow (behind the line)
+    if (_isSelected) {
+      final glowPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(100)
+        ..strokeWidth = annotation.lineWidth * 3.0
+        ..style = PaintingStyle.stroke
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, start, end, glowPaint, annotation.dashPattern!);
+      } else {
+        canvas.drawLine(start, end, glowPaint);
+      }
+    }
+
+    // Draw main line
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 2.0 : annotation.lineWidth
+      ..style = PaintingStyle.stroke;
 
     // Draw line (with dash pattern if specified)
     if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
