@@ -796,7 +796,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final showMenuTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$showMenuTime] Calling showMenu (${showMenuTime - startTime}ms)...');
 
-    // Show the menu
+    // Show the menu with zero animation duration for instant appearance
     final result = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -807,6 +807,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ),
       items: menuItems,
       elevation: 8.0,
+      // PERFORMANCE: Disable Material Design fade/scale animation for instant reveal
+      popUpAnimationStyle: const AnimationStyle(duration: Duration.zero),
     );
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
