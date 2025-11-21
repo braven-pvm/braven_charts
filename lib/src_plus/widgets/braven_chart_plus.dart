@@ -807,8 +807,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ),
       items: menuItems,
       elevation: 8.0,
-      // PERFORMANCE: Disable Material Design fade/scale animation for instant reveal
-      popUpAnimationStyle: const AnimationStyle(duration: Duration.zero),
+      // PERFORMANCE: Fast animation (75ms) for snappy reveal without jarring instant appearance
+      popUpAnimationStyle: const AnimationStyle(duration: Duration(milliseconds: 75)),
     );
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
