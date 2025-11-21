@@ -672,23 +672,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _onCoordinatorChanged() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$timestamp] _onCoordinatorChanged: mode=${_coordinator.currentMode.name}');
-    
+
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
-      debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, scheduling post-frame callback');
-      // Right-click detected by RenderBox - show context menu
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final callbackTime = DateTime.now().millisecondsSinceEpoch;
-        debugPrint('⏱️ [$callbackTime] Post-frame callback executing (${callbackTime - timestamp}ms after schedule)');
-        if (mounted) {
-          _showContextMenu();
-        } else {
-          debugPrint('⚠️ Widget not mounted in post-frame callback');
-        }
-      });
-    }
-
-    // CRITICAL FIX: Only call setState() if debug overlay is visible!
+      debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
+      // PERFORMANCE FIX: Call immediately instead of post-frame callback
+      // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
+      // frame scheduler was busy or browser was throttling frames.
+      // Context menus need immediate response for good UX.
+      _showContextMenu();
+    } // CRITICAL FIX: Only call setState() if debug overlay is visible!
     // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
     // so we don't need setState() for cursor movement.
     // setState() triggers expensive widget tree rebuilds.
@@ -702,7 +695,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _showContextMenu() async {
     final startTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$startTime] 🎯 _showContextMenu START');
-    
+
     final localPosition = _coordinator.interactionStartPosition;
     final element = _coordinator.interactionStartElement;
 
@@ -728,7 +721,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final globalPosition = renderBox.localToGlobal(localPosition);
     debugPrint('⏱️ [$convertTime] Position converted (${convertTime - startTime}ms): local=$localPosition, global=$globalPosition');
     debugPrint('⏱️ [$convertTime] Element: ${element?.runtimeType ?? 'null (empty area)'}');
-    
+
     final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$buildMenuTime] Building menu items (${buildMenuTime - startTime}ms)...');
 
@@ -802,7 +795,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final showMenuTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$showMenuTime] Calling showMenu (${showMenuTime - startTime}ms)...');
-    
+
     // Show the menu
     final result = await showMenu<String>(
       context: context,
@@ -818,7 +811,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$menuClosedTime] showMenu returned (menu was open for ${menuClosedTime - showMenuTime}ms)');
-    
+
     // Handle menu selection
     if (result != null) {
       debugPrint('⏱️ [$menuClosedTime] 🎯 Menu action selected: $result');
@@ -831,7 +824,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final releaseTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$releaseTime] Releasing coordinator mode (force=true)...');
     _coordinator.releaseMode(force: true);
-    
+
     final endTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$endTime] 🎯 _showContextMenu END (total: ${endTime - startTime}ms, release: ${endTime - releaseTime}ms)');
   }
