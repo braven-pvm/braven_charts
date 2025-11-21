@@ -697,7 +697,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (localPosition == null) {
       debugPrint('⚠️ Context menu requested but no interaction start position');
-      _coordinator.releaseMode();
+      _coordinator.releaseMode(force: true);
       return;
     }
 
@@ -705,7 +705,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       debugPrint('⚠️ Context menu requested but render box not found');
-      _coordinator.releaseMode();
+      _coordinator.releaseMode(force: true);
       return;
     }
 
@@ -801,8 +801,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // TODO: Handle menu actions (show dialogs, etc.)
     }
 
-    // Release mode after menu is dismissed
-    _coordinator.releaseMode();
+    // Release mode after menu is dismissed (force=true because contextMenuOpen is modal)
+    _coordinator.releaseMode(force: true);
   }
 
   void _handlePanStart(DragStartDetails details) {
