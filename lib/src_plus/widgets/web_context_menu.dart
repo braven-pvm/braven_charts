@@ -55,22 +55,22 @@ class WebContextMenu extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: items.map((item) {
-            if (item is WebContextMenuDivider) {
-              return const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0xFFE0E0E0),
-              );
-            } else if (item is WebContextMenuAction) {
-              return _WebContextMenuItemWidget(
-                item: item,
-                onTap: () {
-                  Navigator.of(context).pop(item.value);
-                },
-              );
-            }
-            return const SizedBox.shrink();
-          }).toList(),
+              if (item is WebContextMenuDivider) {
+                return const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFE0E0E0),
+                );
+              } else if (item is WebContextMenuAction) {
+                return _WebContextMenuItemWidget(
+                  item: item,
+                  onTap: () {
+                    Navigator.of(context).pop(item.value);
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            }).toList(),
           ),
         ),
       ),
