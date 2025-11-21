@@ -670,12 +670,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _onCoordinatorChanged() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$timestamp] _onCoordinatorChanged: mode=${_coordinator.currentMode.name}');
+    
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
+      debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, scheduling post-frame callback');
       // Right-click detected by RenderBox - show context menu
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        final callbackTime = DateTime.now().millisecondsSinceEpoch;
+        debugPrint('⏱️ [$callbackTime] Post-frame callback executing (${callbackTime - timestamp}ms after schedule)');
         if (mounted) {
           _showContextMenu();
+        } else {
+          debugPrint('⚠️ Widget not mounted in post-frame callback');
         }
       });
     }
@@ -692,27 +700,37 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// Shows context menu at the interaction start position.
   /// Called when coordinator enters contextMenuOpen mode.
   void _showContextMenu() async {
+    final startTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$startTime] 🎯 _showContextMenu START');
+    
     final localPosition = _coordinator.interactionStartPosition;
     final element = _coordinator.interactionStartElement;
 
     if (localPosition == null) {
-      debugPrint('⚠️ Context menu requested but no interaction start position');
+      final errorTime = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('⏱️ [$errorTime] ⚠️ No interaction position, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
+      debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
       return;
     }
 
     // Convert local position to global coordinates for menu positioning
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
-      debugPrint('⚠️ Context menu requested but render box not found');
+      final errorTime = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('⏱️ [$errorTime] ⚠️ No render box, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
+      debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
       return;
     }
 
+    final convertTime = DateTime.now().millisecondsSinceEpoch;
     final globalPosition = renderBox.localToGlobal(localPosition);
-
-    debugPrint('🟢 Showing context menu at local: $localPosition, global: $globalPosition');
-    debugPrint('🟢 Element: ${element?.runtimeType ?? 'null (empty area)'}');
+    debugPrint('⏱️ [$convertTime] Position converted (${convertTime - startTime}ms): local=$localPosition, global=$globalPosition');
+    debugPrint('⏱️ [$convertTime] Element: ${element?.runtimeType ?? 'null (empty area)'}');
+    
+    final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$buildMenuTime] Building menu items (${buildMenuTime - startTime}ms)...');
 
     // Build context menu items (placeholder for now)
     final List<PopupMenuEntry<String>> menuItems = [
@@ -782,6 +800,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ],
     ];
 
+    final showMenuTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$showMenuTime] Calling showMenu (${showMenuTime - startTime}ms)...');
+    
     // Show the menu
     final result = await showMenu<String>(
       context: context,
@@ -795,14 +816,24 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       elevation: 8.0,
     );
 
+    final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$menuClosedTime] showMenu returned (menu was open for ${menuClosedTime - showMenuTime}ms)');
+    
     // Handle menu selection
     if (result != null) {
-      debugPrint('🎯 Context menu action selected: $result');
+      debugPrint('⏱️ [$menuClosedTime] 🎯 Menu action selected: $result');
       // TODO: Handle menu actions (show dialogs, etc.)
+    } else {
+      debugPrint('⏱️ [$menuClosedTime] Menu dismissed without selection');
     }
 
     // Release mode after menu is dismissed (force=true because contextMenuOpen is modal)
+    final releaseTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$releaseTime] Releasing coordinator mode (force=true)...');
     _coordinator.releaseMode(force: true);
+    
+    final endTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$endTime] 🎯 _showContextMenu END (total: ${endTime - startTime}ms, release: ${endTime - releaseTime}ms)');
   }
 
   void _handlePanStart(DragStartDetails details) {

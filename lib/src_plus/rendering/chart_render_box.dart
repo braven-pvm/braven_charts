@@ -1477,7 +1477,10 @@ class ChartRenderBox extends RenderBox {
       // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('⏱️ [$timestamp] 🖱️ RIGHT-CLICK detected in RenderBox at position: $position, element: ${hitElement?.runtimeType}');
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
+      debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] contextMenuOpen mode claimed (${DateTime.now().millisecondsSinceEpoch - timestamp}ms)');
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
