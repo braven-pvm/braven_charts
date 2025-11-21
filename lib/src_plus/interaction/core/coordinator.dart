@@ -160,27 +160,40 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// [requestedMode] is the mode being requested.
   /// [element] is the element associated with this mode (if any).
   bool claimMode(InteractionMode requestedMode, {ChartElement? element}) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$timestamp] claimMode: Requesting $requestedMode (current: $_currentMode, modal: ${_currentMode.isModal})');
+    
     // Modal states block everything except themselves
     if (_currentMode.isModal && requestedMode != _currentMode) {
+      debugPrint('⏱️ [$timestamp] claimMode: BLOCKED (current mode is modal)');
       return false;
     }
 
     // Check priority: higher priority can interrupt lower priority
     if (_currentMode.priority > requestedMode.priority) {
+      debugPrint('⏱️ [$timestamp] claimMode: BLOCKED (current priority ${_currentMode.priority} > requested ${requestedMode.priority})');
       return false;
     }
 
     // Allow mode claim
+    debugPrint('⏱️ [$timestamp] claimMode: GRANTED, calling _setMode...');
     _setMode(requestedMode, element: element);
+    debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] claimMode: Complete');
     return true;
   }
 
   /// Sets the interaction mode (internal).
   void _setMode(InteractionMode mode, {ChartElement? element}) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    
     if (_currentMode == mode && _activeElement == element) {
+      debugPrint('⏱️ [$timestamp] _setMode: No change (already $mode)');
       return; // No change
     }
 
+    final oldMode = _currentMode;
+    debugPrint('⏱️ [$timestamp] _setMode: $oldMode → $mode');
+    
     _currentMode = mode;
     _activeElement = element;
 
@@ -191,18 +204,28 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       _boxSelectionRect = null;
     }
 
+    final notifyTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$notifyTime] _setMode calling notifyListeners() (${notifyTime - timestamp}ms)');
     notifyListeners();
+    
+    final endTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$endTime] _setMode notifyListeners() complete (${endTime - notifyTime}ms)');
   }
 
   /// Releases the current interaction mode and returns to idle.
   ///
   /// [force] if true, releases even modal modes (use with caution).
   void releaseMode({bool force = false}) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$timestamp] releaseMode called: currentMode=$_currentMode, force=$force');
+    
     if (_currentMode.isModal && !force) {
+      debugPrint('⏱️ [$timestamp] releaseMode: Blocked (modal mode requires force=true)');
       return; // Don't release modal modes unless forced
     }
 
     _setMode(InteractionMode.idle);
+    debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] releaseMode: Mode set to idle');
   }
 
   /// Forces the mode to idle regardless of current state.
