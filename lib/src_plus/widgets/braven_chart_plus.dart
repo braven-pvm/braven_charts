@@ -16,6 +16,7 @@ import '../axis/axis_config.dart';
 import '../controllers/annotation_controller.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
+import '../elements/series_element.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/interaction_mode.dart';
@@ -726,30 +727,57 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$buildMenuTime] Building menu items (${buildMenuTime - startTime}ms)...');
 
-    // Build web-native context menu items
+    // Determine context for menu items
+    final bool isDataPointClick = element is SeriesElement && _coordinator.hoveredMarker != null;
+    final bool isSeriesLineClick = element is SeriesElement && _coordinator.hoveredMarker == null;
+    final bool isEmptyArea = element == null;
+    final bool isExistingAnnotation = element != null && element is! SeriesElement;
+
+    debugPrint('⏱️ [$buildMenuTime] Context: isDataPointClick=$isDataPointClick, isSeriesLineClick=$isSeriesLineClick, isEmptyArea=$isEmptyArea, isExistingAnnotation=$isExistingAnnotation');
+
+    // Build context-aware web-native menu items
     final List<WebContextMenuItem> menuItems = [
+      // TextAnnotation - ALWAYS available
       const WebContextMenuAction(
         value: 'add_text',
         icon: Icons.text_fields,
         label: 'Add Text Annotation',
       ),
-      const WebContextMenuAction(
-        value: 'add_point',
-        icon: Icons.place,
-        label: 'Add Point Annotation',
-      ),
-      const WebContextMenuAction(
-        value: 'add_range',
-        icon: Icons.width_full,
-        label: 'Add Range Annotation',
-      ),
+      
+      // PointAnnotation - ONLY when clicking on data point marker
+      if (isDataPointClick)
+        const WebContextMenuAction(
+          value: 'add_point',
+          icon: Icons.place,
+          label: 'Add Point Annotation',
+        ),
+      
+      // TrendAnnotation - ONLY when clicking on series line (not marker)
+      if (isSeriesLineClick)
+        const WebContextMenuAction(
+          value: 'add_trend',
+          icon: Icons.trending_up,
+          label: 'Add Trend Annotation',
+        ),
+      
+      // RangeAnnotation - TODO: Define separately per user
+      // const WebContextMenuAction(
+      //   value: 'add_range',
+      //   icon: Icons.width_full,
+      //   label: 'Add Range Annotation',
+      // ),
+      
       const WebContextMenuDivider(),
+      
+      // ThresholdAnnotation - ALWAYS available
       const WebContextMenuAction(
         value: 'add_threshold',
         icon: Icons.horizontal_rule,
         label: 'Add Threshold Line',
       ),
-      if (element != null) ...[
+      
+      // Edit/Delete for existing annotations
+      if (isExistingAnnotation) ...[
         const WebContextMenuDivider(),
         const WebContextMenuAction(
           value: 'edit',
