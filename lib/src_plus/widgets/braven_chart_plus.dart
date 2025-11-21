@@ -34,6 +34,7 @@ import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
+import 'dialogs/text_annotation_dialog.dart';
 import 'web_context_menu.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -733,7 +734,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final bool isEmptyArea = element == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
 
-    debugPrint('⏱️ [$buildMenuTime] Context: isDataPointClick=$isDataPointClick, isSeriesLineClick=$isSeriesLineClick, isEmptyArea=$isEmptyArea, isExistingAnnotation=$isExistingAnnotation');
+    debugPrint(
+        '⏱️ [$buildMenuTime] Context: isDataPointClick=$isDataPointClick, isSeriesLineClick=$isSeriesLineClick, isEmptyArea=$isEmptyArea, isExistingAnnotation=$isExistingAnnotation');
 
     // Build context-aware web-native menu items
     final List<WebContextMenuItem> menuItems = [
@@ -743,7 +745,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         icon: Icons.text_fields,
         label: 'Add Text Annotation',
       ),
-      
+
       // PointAnnotation - ONLY when clicking on data point marker
       if (isDataPointClick)
         const WebContextMenuAction(
@@ -751,7 +753,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           icon: Icons.place,
           label: 'Add Point Annotation',
         ),
-      
+
       // TrendAnnotation - ONLY when clicking on series line (not marker)
       if (isSeriesLineClick)
         const WebContextMenuAction(
@@ -759,23 +761,23 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           icon: Icons.trending_up,
           label: 'Add Trend Annotation',
         ),
-      
+
       // RangeAnnotation - TODO: Define separately per user
       // const WebContextMenuAction(
       //   value: 'add_range',
       //   icon: Icons.width_full,
       //   label: 'Add Range Annotation',
       // ),
-      
+
       const WebContextMenuDivider(),
-      
+
       // ThresholdAnnotation - ALWAYS available
       const WebContextMenuAction(
         value: 'add_threshold',
         icon: Icons.horizontal_rule,
         label: 'Add Threshold Line',
       ),
-      
+
       // Edit/Delete for existing annotations
       if (isExistingAnnotation) ...[
         const WebContextMenuDivider(),
@@ -810,7 +812,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Handle menu selection
     if (result != null) {
       debugPrint('⏱️ [$menuClosedTime] 🎯 Menu action selected: $result');
-      // TODO: Handle menu actions (show dialogs, etc.)
+      await _handleMenuAction(result, localPosition, element);
     } else {
       debugPrint('⏱️ [$menuClosedTime] Menu dismissed without selection');
     }
@@ -822,6 +824,58 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final endTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$endTime] 🎯 _showContextMenu END (total: ${endTime - startTime}ms, release: ${endTime - releaseTime}ms)');
+  }
+
+  /// Handles menu action selection from context menu.
+  Future<void> _handleMenuAction(String action, Offset localPosition, ChartElement? element) async {
+    debugPrint('🎯 Handling menu action: $action');
+
+    switch (action) {
+      case 'add_text':
+        await _showAddTextAnnotationDialog(localPosition);
+        break;
+      case 'add_point':
+        // TODO: Implement PointAnnotation dialog
+        debugPrint('⏳ TODO: Show PointAnnotation dialog');
+        break;
+      case 'add_trend':
+        // TODO: Implement TrendAnnotation dialog
+        debugPrint('⏳ TODO: Show TrendAnnotation dialog');
+        break;
+      case 'add_threshold':
+        // TODO: Implement ThresholdAnnotation dialog
+        debugPrint('⏳ TODO: Show ThresholdAnnotation dialog');
+        break;
+      case 'edit':
+        // TODO: Implement edit dialog based on annotation type
+        debugPrint('⏳ TODO: Show Edit dialog for ${element?.runtimeType}');
+        break;
+      case 'delete':
+        // TODO: Implement delete confirmation
+        debugPrint('⏳ TODO: Show Delete confirmation for ${element?.runtimeType}');
+        break;
+      default:
+        debugPrint('⚠️ Unknown menu action: $action');
+    }
+  }
+
+  /// Shows the TextAnnotation creation dialog.
+  Future<void> _showAddTextAnnotationDialog(Offset localPosition) async {
+    if (!mounted) return;
+
+    final result = await showDialog<TextAnnotation>(
+      context: context,
+      builder: (context) => TextAnnotationDialog(
+        clickPosition: localPosition,
+      ),
+    );
+
+    if (result != null && mounted) {
+      debugPrint('✅ Created TextAnnotation: ${result.id} at ${result.position}');
+      widget.annotationController?.addAnnotation(result);
+    } else {
+      debugPrint('❌ TextAnnotation creation cancelled');
+    }
   }
 
   void _handlePanStart(DragStartDetails details) {
