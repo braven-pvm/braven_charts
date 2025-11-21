@@ -33,6 +33,7 @@ import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
+import 'web_context_menu.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
 ///
@@ -725,90 +726,54 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$buildMenuTime] Building menu items (${buildMenuTime - startTime}ms)...');
 
-    // Build context menu items (placeholder for now)
-    final List<PopupMenuEntry<String>> menuItems = [
-      const PopupMenuItem<String>(
+    // Build web-native context menu items
+    final List<WebContextMenuItem> menuItems = [
+      const WebContextMenuAction(
         value: 'add_text',
-        child: Row(
-          children: [
-            Icon(Icons.text_fields, size: 18),
-            SizedBox(width: 8),
-            Text('Add Text Annotation'),
-          ],
-        ),
+        icon: Icons.text_fields,
+        label: 'Add Text Annotation',
       ),
-      const PopupMenuItem<String>(
+      const WebContextMenuAction(
         value: 'add_point',
-        child: Row(
-          children: [
-            Icon(Icons.place, size: 18),
-            SizedBox(width: 8),
-            Text('Add Point Annotation'),
-          ],
-        ),
+        icon: Icons.place,
+        label: 'Add Point Annotation',
       ),
-      const PopupMenuItem<String>(
+      const WebContextMenuAction(
         value: 'add_range',
-        child: Row(
-          children: [
-            Icon(Icons.width_full, size: 18),
-            SizedBox(width: 8),
-            Text('Add Range Annotation'),
-          ],
-        ),
+        icon: Icons.width_full,
+        label: 'Add Range Annotation',
       ),
-      const PopupMenuDivider(),
-      const PopupMenuItem<String>(
+      const WebContextMenuDivider(),
+      const WebContextMenuAction(
         value: 'add_threshold',
-        child: Row(
-          children: [
-            Icon(Icons.horizontal_rule, size: 18),
-            SizedBox(width: 8),
-            Text('Add Threshold Line'),
-          ],
-        ),
+        icon: Icons.horizontal_rule,
+        label: 'Add Threshold Line',
       ),
       if (element != null) ...[
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
+        const WebContextMenuDivider(),
+        const WebContextMenuAction(
           value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit, size: 18),
-              SizedBox(width: 8),
-              Text('Edit'),
-            ],
-          ),
+          icon: Icons.edit,
+          label: 'Edit',
         ),
-        const PopupMenuItem<String>(
+        const WebContextMenuAction(
           value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete, size: 18, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Delete', style: TextStyle(color: Colors.red)),
-            ],
-          ),
+          icon: Icons.delete,
+          label: 'Delete',
+          iconColor: Colors.red,
+          textColor: Colors.red,
         ),
       ],
     ];
 
     final showMenuTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$showMenuTime] Calling showMenu (${showMenuTime - startTime}ms)...');
+    debugPrint('⏱️ [$showMenuTime] Calling WebContextMenu.show (${showMenuTime - startTime}ms)...');
 
-    // Show the menu with zero animation duration for instant appearance
-    final result = await showMenu<String>(
+    // Show the web-native context menu
+    final result = await WebContextMenu.show(
       context: context,
-      position: RelativeRect.fromLTRB(
-        globalPosition.dx,
-        globalPosition.dy,
-        globalPosition.dx,
-        globalPosition.dy,
-      ),
+      position: globalPosition,
       items: menuItems,
-      elevation: 8.0,
-      // PERFORMANCE: Fast animation (75ms) for snappy reveal without jarring instant appearance
-      popUpAnimationStyle: const AnimationStyle(duration: Duration(milliseconds: 75)),
     );
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
