@@ -162,7 +162,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   bool claimMode(InteractionMode requestedMode, {ChartElement? element}) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$timestamp] claimMode: Requesting $requestedMode (current: $_currentMode, modal: ${_currentMode.isModal})');
-    
+
     // Modal states block everything except themselves
     if (_currentMode.isModal && requestedMode != _currentMode) {
       debugPrint('⏱️ [$timestamp] claimMode: BLOCKED (current mode is modal)');
@@ -185,7 +185,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Sets the interaction mode (internal).
   void _setMode(InteractionMode mode, {ChartElement? element}) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    
+
     if (_currentMode == mode && _activeElement == element) {
       debugPrint('⏱️ [$timestamp] _setMode: No change (already $mode)');
       return; // No change
@@ -193,7 +193,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
     final oldMode = _currentMode;
     debugPrint('⏱️ [$timestamp] _setMode: $oldMode → $mode');
-    
+
     _currentMode = mode;
     _activeElement = element;
 
@@ -207,7 +207,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     final notifyTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$notifyTime] _setMode calling notifyListeners() (${notifyTime - timestamp}ms)');
     notifyListeners();
-    
+
     final endTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$endTime] _setMode notifyListeners() complete (${endTime - notifyTime}ms)');
   }
@@ -218,7 +218,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   void releaseMode({bool force = false}) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$timestamp] releaseMode called: currentMode=$_currentMode, force=$force');
-    
+
     if (_currentMode.isModal && !force) {
       debugPrint('⏱️ [$timestamp] releaseMode: Blocked (modal mode requires force=true)');
       return; // Don't release modal modes unless forced
