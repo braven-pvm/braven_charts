@@ -38,22 +38,23 @@ class WebContextMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(
-        minWidth: 200,
-        maxWidth: 300,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: items.map((item) {
+    return IntrinsicWidth(
+      child: Container(
+        constraints: const BoxConstraints(
+          minWidth: 180,
+          maxWidth: 320,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: items.map((item) {
             if (item is WebContextMenuDivider) {
               return const Divider(
                 height: 1,
@@ -70,6 +71,7 @@ class WebContextMenu extends StatelessWidget {
             }
             return const SizedBox.shrink();
           }).toList(),
+          ),
         ),
       ),
     );
