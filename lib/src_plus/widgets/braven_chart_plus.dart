@@ -34,10 +34,8 @@ import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
-import '../interaction/core/element_types.dart';
-import '../elements/annotation_elements.dart';
-import 'dialogs/text_annotation_dialog.dart';
 import 'dialogs/point_annotation_dialog.dart';
+import 'dialogs/text_annotation_dialog.dart';
 import 'web_context_menu.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -883,32 +881,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showAddPointAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
 
-    // PointAnnotation requires a data point - must be clicked on a marker
-    if (element == null || element.elementType != ChartElementType.datapoint) {
-      debugPrint('⚠️ PointAnnotation requires clicking on a data point');
+    // PointAnnotation requires a data point - get info from coordinator's hoveredMarker
+    final markerInfo = _coordinator.hoveredMarker;
+    if (markerInfo == null) {
+      debugPrint('⚠️ PointAnnotation requires clicking on a data point marker');
       return;
     }
 
-    // Extract series and point index from element ID
-    // DataPoint element IDs are in format: "datapoint_{seriesId}_{pointIndex}"
-    final parts = element.id.split('_');
-    if (parts.length < 3) {
-      debugPrint('⚠️ Invalid data point element ID format: ${element.id}');
-      return;
-    }
-
-    final seriesId = parts[1];
-    final pointIndex = int.tryParse(parts[2]);
-    if (pointIndex == null) {
-      debugPrint('⚠️ Invalid point index in element ID: ${element.id}');
-      return;
-    }
+    debugPrint('🎯 Creating PointAnnotation for marker: series=${markerInfo.seriesId}, index=${markerInfo.markerIndex}');
 
     final result = await showDialog<PointAnnotation>(
       context: context,
       builder: (context) => PointAnnotationDialog(
-        seriesId: seriesId,
-        dataPointIndex: pointIndex,
+        seriesId: markerInfo.seriesId,
+        dataPointIndex: markerInfo.markerIndex,
       ),
     );
 
@@ -924,13 +910,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showEditAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
 
-    if (element == null || element.elementType != ChartElementType.annotation) {
-      debugPrint('⚠️ Edit action requires an annotation element');
+    debugPrint('🔧 Edit dialog requested for element: ${element?.runtimeType}, elementType: ${element?.elementType}');
+
+    // Check for annotation element types directly (PointAnnotationElement uses datapoint type for priority)
+    if (element == null || (element is! TextAnnotationElement && element is! PointAnnotationElement)) {
+      debugPrint('⚠️ Edit action requires an annotation element (got ${element?.runtimeType})');
       return;
     }
 
+    debugPrint('🔧 Annotation element confirmed, checking type...');
+
     // Cast to annotation element types to access annotation field and route to dialog
     if (element is TextAnnotationElement) {
+      debugPrint('🔧 TextAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<TextAnnotation>(
         context: context,
@@ -947,6 +939,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         debugPrint('❌ TextAnnotation edit cancelled');
       }
     } else if (element is PointAnnotationElement) {
+      debugPrint('🔧 PointAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<PointAnnotation>(
         context: context,
