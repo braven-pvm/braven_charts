@@ -9,12 +9,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../src/foundation/data_models/chart_data_point.dart' as src_point;
-import '../../src/interaction/models/interaction_config.dart';
-import '../../src/widgets/controller/chart_controller.dart';
+// All dependencies are now in src_plus - NO references to src!
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
 import '../controllers/annotation_controller.dart';
+import '../controllers/chart_controller.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/series_element.dart';
@@ -30,6 +29,7 @@ import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/chart_type.dart';
 import '../models/enums.dart';
+import '../models/interaction_config.dart';
 import '../models/streaming_config.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
@@ -1800,17 +1800,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         // Determine series ID - use first series ID or default to 'stream'
         final seriesId = widget.series.isNotEmpty ? widget.series.first.id : 'stream';
 
-        // Convert src_plus ChartDataPoint to src ChartDataPoint for controller
-        final srcPoint = src_point.ChartDataPoint(
-          x: point.x,
-          y: point.y,
-          timestamp: point.timestamp,
-          label: point.label,
-          metadata: point.metadata,
-        );
-
         // Add to controller - this will trigger _onControllerUpdate -> setState -> rebuild
-        widget.controller!.addPoint(seriesId, srcPoint);
+        // No conversion needed - both use src_plus ChartDataPoint now
+        widget.controller!.addPoint(seriesId, point);
 
         // Auto-scroll if enabled
         final autoScrollEnabled = widget.autoScrollConfig?.enabled ?? config.autoScroll;
@@ -1925,14 +1917,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final seriesId = widget.series.isNotEmpty ? widget.series.first.id : 'stream';
 
       for (final point in bufferedPoints) {
-        final srcPoint = src_point.ChartDataPoint(
-          x: point.x,
-          y: point.y,
-          timestamp: point.timestamp,
-          label: point.label,
-          metadata: point.metadata,
-        );
-        widget.controller!.addPoint(seriesId, srcPoint);
+        // No conversion needed - both use src_plus ChartDataPoint now
+        widget.controller!.addPoint(seriesId, point);
       }
       // Controller will trigger _onControllerUpdate -> setState -> rebuild
     } else {
