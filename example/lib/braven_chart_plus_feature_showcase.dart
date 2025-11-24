@@ -4,12 +4,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart' as src_point; // For controller
-import 'package:braven_charts/src/interaction/models/interaction_config.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
-import 'package:braven_charts/src/widgets/controller/chart_controller.dart'; // Import ChartController
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
+import 'package:braven_charts/src_plus/controllers/chart_controller.dart';
 import 'package:braven_charts/src_plus/models/annotation_style.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
@@ -17,6 +14,7 @@ import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart';
 import 'package:braven_charts/src_plus/models/streaming_config.dart';
 import 'package:braven_charts/src_plus/streaming/streaming_controller.dart';
 import 'package:braven_charts/src_plus/theming/components/scrollbar_config.dart';
@@ -611,7 +609,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
       }
 
       // Add directly to controller
-      _chart2Controller.addPoint('controller_data', src_point.ChartDataPoint(x: point.x, y: point.y));
+      _chart2Controller.addPoint('controller_data', ChartDataPoint(x: point.x, y: point.y));
       // Removed excessive print - was flooding console 10-50 times per second
     });
     setState(() {}); // Rebuild UI to reflect timer state

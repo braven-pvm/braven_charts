@@ -1,10 +1,9 @@
-import 'package:braven_charts/src/interaction/models/interaction_config.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 
