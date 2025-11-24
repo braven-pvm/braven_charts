@@ -36,6 +36,8 @@ import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
 import 'dialogs/point_annotation_dialog.dart';
 import 'dialogs/text_annotation_dialog.dart';
+import 'dialogs/threshold_annotation_dialog.dart';
+import 'dialogs/trend_annotation_dialog.dart';
 import 'web_context_menu.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -844,12 +846,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         await _showAddPointAnnotationDialog(element);
         break;
       case 'add_trend':
-        // TODO: Implement TrendAnnotation dialog
-        debugPrint('⏳ TODO: Show TrendAnnotation dialog');
+        await _showAddTrendAnnotationDialog(element);
         break;
       case 'add_threshold':
-        // TODO: Implement ThresholdAnnotation dialog
-        debugPrint('⏳ TODO: Show ThresholdAnnotation dialog');
+        await _showAddThresholdAnnotationDialog();
         break;
       case 'edit':
         await _showEditAnnotationDialog(element);
@@ -911,6 +911,57 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
+  /// Shows the ThresholdAnnotation creation dialog.
+  Future<void> _showAddThresholdAnnotationDialog() async {
+    if (!mounted) return;
+
+    final result = await showDialog<ThresholdAnnotation>(
+      context: context,
+      builder: (context) => const ThresholdAnnotationDialog(),
+    );
+
+    if (result != null && mounted) {
+      debugPrint('✅ Created ThresholdAnnotation: ${result.id} at ${result.axis} = ${result.value}');
+      widget.annotationController?.addAnnotation(result);
+    } else {
+      debugPrint('❌ ThresholdAnnotation creation cancelled');
+    }
+  }
+
+  /// Shows the TrendAnnotation creation dialog.
+  Future<void> _showAddTrendAnnotationDialog(ChartElement? element) async {
+    if (!mounted) return;
+
+    // Get available series IDs
+    final availableSeries = widget.series.map((s) => s.id).toList();
+    if (availableSeries.isEmpty) {
+      debugPrint('⚠️ No series available for trend annotation');
+      return;
+    }
+
+    // If clicked on series line, preselect that series
+    String? preselectedSeriesId;
+    if (element is SeriesElement) {
+      preselectedSeriesId = element.series.id;
+      debugPrint('🎯 Creating TrendAnnotation for series: $preselectedSeriesId');
+    }
+
+    final result = await showDialog<TrendAnnotation>(
+      context: context,
+      builder: (context) => TrendAnnotationDialog(
+        availableSeries: availableSeries,
+        preselectedSeriesId: preselectedSeriesId,
+      ),
+    );
+
+    if (result != null && mounted) {
+      debugPrint('✅ Created TrendAnnotation: ${result.id} for series ${result.seriesId} (${result.trendType})');
+      widget.annotationController?.addAnnotation(result);
+    } else {
+      debugPrint('❌ TrendAnnotation creation cancelled');
+    }
+  }
+
   /// Shows the appropriate edit dialog based on annotation type.
   Future<void> _showEditAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
@@ -960,6 +1011,38 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
         debugPrint('❌ PointAnnotation edit cancelled');
+      }
+    } else if (element is ThresholdAnnotationElement) {
+      debugPrint('🔧 ThresholdAnnotationElement detected');
+      final annotation = element.annotation;
+      final result = await showDialog<ThresholdAnnotation>(
+        context: context,
+        builder: (context) => ThresholdAnnotationDialog(annotation: annotation),
+      );
+
+      if (result != null && mounted) {
+        debugPrint('✅ Updated ThresholdAnnotation: ${result.id}');
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      } else {
+        debugPrint('❌ ThresholdAnnotation edit cancelled');
+      }
+    } else if (element is TrendAnnotationElement) {
+      debugPrint('🔧 TrendAnnotationElement detected');
+      final annotation = element.annotation;
+      final availableSeries = widget.series.map((s) => s.id).toList();
+      final result = await showDialog<TrendAnnotation>(
+        context: context,
+        builder: (context) => TrendAnnotationDialog(
+          annotation: annotation,
+          availableSeries: availableSeries,
+        ),
+      );
+
+      if (result != null && mounted) {
+        debugPrint('✅ Updated TrendAnnotation: ${result.id}');
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      } else {
+        debugPrint('❌ TrendAnnotation edit cancelled');
       }
     } else {
       debugPrint('⏳ TODO: Edit dialog for ${element.runtimeType} not implemented yet');

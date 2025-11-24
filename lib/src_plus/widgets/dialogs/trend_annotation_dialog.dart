@@ -1,8 +1,8 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // TrendAnnotation Dialog - Material Design 3
 
-import 'package:flutter/material.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/chart_annotation.dart';
 
@@ -196,7 +196,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       Text('Target Series', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedSeriesId,
+                        initialValue: _selectedSeriesId,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.show_chart),
@@ -214,7 +214,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -222,7 +222,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                             Icon(Icons.show_chart, color: theme.colorScheme.onSurfaceVariant),
                             const SizedBox(width: 12),
                             Text(
-                              'Series: ${_selectedSeriesId}',
+                              'Series: $_selectedSeriesId',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -254,12 +254,12 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                     if (_trendType == TrendType.movingAverage || _trendType == TrendType.exponentialMovingAverage) ...[
                       TextField(
                         controller: _windowSizeController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Window Size *',
                           hintText: 'Number of data points',
                           helperText: 'Number of data points to average',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.view_week),
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.view_week),
                         ),
                         keyboardType: TextInputType.number,
                       ),
@@ -269,12 +269,12 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                     if (_trendType == TrendType.polynomial) ...[
                       TextField(
                         controller: _degreeController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Polynomial Degree *',
                           hintText: 'e.g., 2 for quadratic',
                           helperText: '2 = quadratic, 3 = cubic, etc.',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.functions),
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.functions),
                         ),
                         keyboardType: TextInputType.number,
                       ),
