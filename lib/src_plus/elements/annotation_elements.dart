@@ -1504,7 +1504,7 @@ class TrendAnnotationElement extends ChartElement {
     if (windowSize < 1) return [];
 
     final result = <Offset>[];
-    
+
     // Calculate moving average with right-aligned window
     for (int i = windowSize - 1; i < points.length; i++) {
       double sum = 0;
@@ -1514,7 +1514,7 @@ class TrendAnnotationElement extends ChartElement {
       final average = sum / windowSize;
       result.add(Offset(points[i].x, average));
     }
-    
+
     return result;
   }
 
@@ -1526,7 +1526,7 @@ class TrendAnnotationElement extends ChartElement {
 
     final alpha = 2.0 / (period + 1);
     final result = <Offset>[];
-    
+
     // Initialize EMA with first data point
     double ema = points.first.y;
     result.add(Offset(points.first.x, ema));
@@ -1536,7 +1536,7 @@ class TrendAnnotationElement extends ChartElement {
       ema = alpha * points[i].y + (1 - alpha) * ema;
       result.add(Offset(points[i].x, ema));
     }
-    
+
     return result;
   }
 
