@@ -17,7 +17,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Scrollbar, ScrollbarPainter;
 
-import '../../foundation/foundation.dart' as braven;
+import '../../models/data_range.dart';
 import '../../theming/components/scrollbar_config.dart';
 import 'hit_test_zone.dart';
 import 'scrollbar_controller.dart';
@@ -76,7 +76,7 @@ class ChartScrollbar extends StatefulWidget {
   /// ```
   ///
   /// **Invariant**: dataRange.span > 0 (enforced by DataRange)
-  final braven.DataRange dataRange;
+  final DataRange dataRange;
 
   /// Currently visible range within the data.
   ///
@@ -86,7 +86,7 @@ class ChartScrollbar extends StatefulWidget {
   /// ```
   ///
   /// **Invariant**: viewportRange ⊆ dataRange (must be subset)
-  final braven.DataRange viewportRange;
+  final DataRange viewportRange;
 
   /// Callback fired when user interacts with scrollbar (pixel-delta pattern).
   ///

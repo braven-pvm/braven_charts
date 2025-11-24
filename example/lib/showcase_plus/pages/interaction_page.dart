@@ -26,7 +26,6 @@ class _InteractionPageState extends State<InteractionPage> {
   bool _enableTooltip = true;
   bool _enableSelection = true;
   bool _showScrollbars = true;
-  bool _showDataPointMarkers = true;
 
   // Crosshair options
   CrosshairMode _crosshairMode = CrosshairMode.both;
@@ -66,7 +65,7 @@ class _InteractionPageState extends State<InteractionPage> {
         points: data1,
         color: Colors.blue,
         interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: _showDataPointMarkers,
+        showDataPointMarkers: true,
       ),
       LineChartSeries(
         id: 'sine-2',
@@ -74,7 +73,7 @@ class _InteractionPageState extends State<InteractionPage> {
         points: data2,
         color: Colors.orange,
         interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: _showDataPointMarkers,
+        showDataPointMarkers: true,
       ),
     ];
 
@@ -233,11 +232,6 @@ class _InteractionPageState extends State<InteractionPage> {
                     label: 'Enable Crosshair',
                     value: _enableCrosshair,
                     onChanged: (value) => setState(() => _enableCrosshair = value),
-                  ),
-                  BoolOption(
-                    label: 'Show Data Point Markers',
-                    value: _showDataPointMarkers,
-                    onChanged: (value) => setState(() => _showDataPointMarkers = value),
                   ),
                   EnumOption<CrosshairMode>(
                     label: 'Crosshair Mode',

@@ -10,7 +10,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
-import '../../src/interaction/models/interaction_config.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
@@ -25,6 +24,7 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_theme.dart';
+import '../models/interaction_config.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../widgets/scrollbar/hit_test_zone.dart';
 import '../widgets/scrollbar/scrollbar_controller.dart';
