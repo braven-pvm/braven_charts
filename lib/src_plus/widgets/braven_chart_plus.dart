@@ -34,7 +34,10 @@ import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
+import '../interaction/core/element_types.dart';
+import '../elements/annotation_elements.dart';
 import 'dialogs/text_annotation_dialog.dart';
+import 'dialogs/point_annotation_dialog.dart';
 import 'web_context_menu.dart';
 
 /// Next-generation BravenChart with prototype interaction system.
@@ -835,8 +838,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         await _showAddTextAnnotationDialog(localPosition);
         break;
       case 'add_point':
-        // TODO: Implement PointAnnotation dialog
-        debugPrint('⏳ TODO: Show PointAnnotation dialog');
+        await _showAddPointAnnotationDialog(element);
         break;
       case 'add_trend':
         // TODO: Implement TrendAnnotation dialog
@@ -847,8 +849,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         debugPrint('⏳ TODO: Show ThresholdAnnotation dialog');
         break;
       case 'edit':
-        // TODO: Implement edit dialog based on annotation type
-        debugPrint('⏳ TODO: Show Edit dialog for ${element?.runtimeType}');
+        await _showEditAnnotationDialog(element);
         break;
       case 'delete':
         // TODO: Implement delete confirmation
@@ -875,6 +876,95 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       widget.annotationController?.addAnnotation(result);
     } else {
       debugPrint('❌ TextAnnotation creation cancelled');
+    }
+  }
+
+  /// Shows the PointAnnotation creation dialog.
+  Future<void> _showAddPointAnnotationDialog(ChartElement? element) async {
+    if (!mounted) return;
+
+    // PointAnnotation requires a data point - must be clicked on a marker
+    if (element == null || element.elementType != ChartElementType.datapoint) {
+      debugPrint('⚠️ PointAnnotation requires clicking on a data point');
+      return;
+    }
+
+    // Extract series and point index from element ID
+    // DataPoint element IDs are in format: "datapoint_{seriesId}_{pointIndex}"
+    final parts = element.id.split('_');
+    if (parts.length < 3) {
+      debugPrint('⚠️ Invalid data point element ID format: ${element.id}');
+      return;
+    }
+
+    final seriesId = parts[1];
+    final pointIndex = int.tryParse(parts[2]);
+    if (pointIndex == null) {
+      debugPrint('⚠️ Invalid point index in element ID: ${element.id}');
+      return;
+    }
+
+    final result = await showDialog<PointAnnotation>(
+      context: context,
+      builder: (context) => PointAnnotationDialog(
+        seriesId: seriesId,
+        dataPointIndex: pointIndex,
+      ),
+    );
+
+    if (result != null && mounted) {
+      debugPrint('✅ Created PointAnnotation: ${result.id} on ${result.seriesId}[${result.dataPointIndex}]');
+      widget.annotationController?.addAnnotation(result);
+    } else {
+      debugPrint('❌ PointAnnotation creation cancelled');
+    }
+  }
+
+  /// Shows the appropriate edit dialog based on annotation type.
+  Future<void> _showEditAnnotationDialog(ChartElement? element) async {
+    if (!mounted) return;
+
+    if (element == null || element.elementType != ChartElementType.annotation) {
+      debugPrint('⚠️ Edit action requires an annotation element');
+      return;
+    }
+
+    // Cast to annotation element types to access annotation field and route to dialog
+    if (element is TextAnnotationElement) {
+      final annotation = element.annotation;
+      final result = await showDialog<TextAnnotation>(
+        context: context,
+        builder: (context) => TextAnnotationDialog(
+          annotation: annotation,
+          clickPosition: annotation.position,
+        ),
+      );
+
+      if (result != null && mounted) {
+        debugPrint('✅ Updated TextAnnotation: ${result.id}');
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      } else {
+        debugPrint('❌ TextAnnotation edit cancelled');
+      }
+    } else if (element is PointAnnotationElement) {
+      final annotation = element.annotation;
+      final result = await showDialog<PointAnnotation>(
+        context: context,
+        builder: (context) => PointAnnotationDialog(
+          annotation: annotation,
+          seriesId: annotation.seriesId,
+          dataPointIndex: annotation.dataPointIndex,
+        ),
+      );
+
+      if (result != null && mounted) {
+        debugPrint('✅ Updated PointAnnotation: ${result.id}');
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      } else {
+        debugPrint('❌ PointAnnotation edit cancelled');
+      }
+    } else {
+      debugPrint('⏳ TODO: Edit dialog for ${element.runtimeType} not implemented yet');
     }
   }
 
