@@ -855,8 +855,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         await _showEditAnnotationDialog(element);
         break;
       case 'delete':
-        // TODO: Implement delete confirmation
-        debugPrint('⏳ TODO: Show Delete confirmation for ${element?.runtimeType}');
+        await _showDeleteAnnotationConfirmation(element);
         break;
       default:
         debugPrint('⚠️ Unknown menu action: $action');
@@ -1071,6 +1070,80 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
     } else {
       debugPrint('⏳ TODO: Edit dialog for ${element.runtimeType} not implemented yet');
+    }
+  }
+
+  /// Shows delete confirmation dialog and removes annotation if confirmed.
+  Future<void> _showDeleteAnnotationConfirmation(ChartElement? element) async {
+    if (!mounted) return;
+
+    // Verify element is an annotation type
+    if (element == null ||
+        (element is! TextAnnotationElement &&
+            element is! PointAnnotationElement &&
+            element is! RangeAnnotationElement &&
+            element is! ThresholdAnnotationElement &&
+            element is! TrendAnnotationElement)) {
+      debugPrint('⚠️ Delete action requires an annotation element (got ${element?.runtimeType})');
+      return;
+    }
+
+    // Extract annotation ID and type name
+    String annotationId;
+    String annotationType;
+
+    if (element is TextAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Text Annotation';
+    } else if (element is PointAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Point Annotation';
+    } else if (element is RangeAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Range Annotation';
+    } else if (element is ThresholdAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Threshold Annotation';
+    } else if (element is TrendAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Trend Annotation';
+    } else {
+      debugPrint('⚠️ Unknown annotation element type: ${element.runtimeType}');
+      return;
+    }
+
+    debugPrint('🗑️ Showing delete confirmation for $annotationType: $annotationId');
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Annotation'),
+        content: Text('Are you sure you want to delete this $annotationType?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    // Delete if confirmed
+    if (confirmed == true && mounted) {
+      final wasRemoved = widget.annotationController?.removeAnnotation(annotationId) ?? false;
+      if (wasRemoved) {
+        debugPrint('✅ Deleted $annotationType: $annotationId');
+      } else {
+        debugPrint('⚠️ Failed to delete $annotationType: $annotationId (not found)');
+      }
+    } else {
+      debugPrint('❌ Delete cancelled for $annotationType: $annotationId');
     }
   }
 
