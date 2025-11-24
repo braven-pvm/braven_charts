@@ -140,6 +140,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
       lineWidth: _lineWidth,
       dashPattern: _dashPattern,
       labelMargin: _labelMargin,
+      allowDragging: true, // Enable dragging by default
     );
 
     Navigator.of(context).pop(annotation);
