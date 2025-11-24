@@ -213,6 +213,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   double? _cachedDataYMin;
   double? _cachedDataYMax;
 
+  // Double-click detection for annotation editing
+  ChartElement? _lastTappedElement;
+  DateTime? _lastTapTime;
+  static const Duration _doubleTapTimeout = Duration(milliseconds: 300);
+
   @override
   void initState() {
     super.initState();
@@ -984,7 +989,32 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
-  void _handleTapUp(TapUpDetails details) {}
+  void _handleTapUp(TapUpDetails details) {
+    // Double-click detection for annotation editing
+    final now = DateTime.now();
+    final currentElement = _coordinator.activeElement;
+
+    // Check if this is a double-click on an annotation
+    if (_lastTapTime != null &&
+        _lastTappedElement != null &&
+        currentElement != null &&
+        currentElement == _lastTappedElement &&
+        now.difference(_lastTapTime!) <= _doubleTapTimeout) {
+      // Double-click detected - open edit dialog if it's an annotation
+      if (currentElement is TextAnnotationElement || currentElement is PointAnnotationElement) {
+        debugPrint('🖱️ Double-click detected on ${currentElement.runtimeType}, opening edit dialog');
+        _showEditAnnotationDialog(currentElement);
+        // Reset to prevent triple-click triggering another edit
+        _lastTapTime = null;
+        _lastTappedElement = null;
+        return;
+      }
+    }
+
+    // Update tracking for next potential double-click
+    _lastTapTime = now;
+    _lastTappedElement = currentElement;
+  }
 
   void _handleCursorChange(MouseCursor cursor) {
     if (_currentCursor != cursor) {
