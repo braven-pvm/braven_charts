@@ -1497,36 +1497,46 @@ class TrendAnnotationElement extends ChartElement {
   }
 
   /// Calculate simple moving average.
+  /// Uses right-aligned window: each average is placed at the last point in the window.
+  /// This is the standard approach used in financial charting.
   List<Offset> _calculateMovingAverage(List<ChartDataPoint> points, int windowSize) {
     if (points.length < windowSize) return [];
+    if (windowSize < 1) return [];
 
     final result = <Offset>[];
-    for (int i = 0; i <= points.length - windowSize; i++) {
+    
+    // Calculate moving average with right-aligned window
+    for (int i = windowSize - 1; i < points.length; i++) {
       double sum = 0;
-      double xCenter = 0;
       for (int j = 0; j < windowSize; j++) {
-        sum += points[i + j].y;
-        xCenter += points[i + j].x;
+        sum += points[i - j].y;
       }
-      result.add(Offset(xCenter / windowSize, sum / windowSize));
+      final average = sum / windowSize;
+      result.add(Offset(points[i].x, average));
     }
+    
     return result;
   }
 
   /// Calculate exponential moving average.
+  /// Uses standard EMA formula with smoothing factor alpha = 2 / (period + 1).
   List<Offset> _calculateExponentialMovingAverage(List<ChartDataPoint> points, int period) {
     if (points.isEmpty) return [];
+    if (period < 1) return [];
 
     final alpha = 2.0 / (period + 1);
     final result = <Offset>[];
+    
+    // Initialize EMA with first data point
     double ema = points.first.y;
+    result.add(Offset(points.first.x, ema));
 
-    for (int i = 0; i < points.length; i++) {
-      if (i > 0) {
-        ema = alpha * points[i].y + (1 - alpha) * ema;
-      }
+    // Calculate EMA for remaining points
+    for (int i = 1; i < points.length; i++) {
+      ema = alpha * points[i].y + (1 - alpha) * ema;
       result.add(Offset(points[i].x, ema));
     }
+    
     return result;
   }
 
