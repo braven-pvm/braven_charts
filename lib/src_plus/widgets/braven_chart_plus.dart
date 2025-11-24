@@ -982,40 +982,45 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _handlePanEnd(DragEndDetails details) {}
 
   void _handleTapDown(TapDownDetails details) {
+    // Capture element at tap down for double-click detection
+    // (activeElement gets cleared by tap up, so we need to capture it now)
+    final tappedElement = _coordinator.activeElement ?? _coordinator.hoveredElement;
+
+    debugPrint('👇 TapDown: tappedElement=${tappedElement?.runtimeType}');
+
+    // Check for double-click on annotation
+    if (_lastTapTime != null && _lastTappedElement != null && tappedElement != null) {
+      final now = DateTime.now();
+      final timeDiff = now.difference(_lastTapTime!);
+      debugPrint('   Time since last tap: ${timeDiff.inMilliseconds}ms, same element: ${tappedElement == _lastTappedElement}');
+
+      if (tappedElement == _lastTappedElement && timeDiff <= _doubleTapTimeout) {
+        // Double-click detected!
+        if (tappedElement is TextAnnotationElement || tappedElement is PointAnnotationElement) {
+          debugPrint('🖱️ Double-click detected on ${tappedElement.runtimeType}, opening edit dialog');
+          _showEditAnnotationDialog(tappedElement);
+          // Reset to prevent triple-click
+          _lastTapTime = null;
+          _lastTappedElement = null;
+          return;
+        }
+      }
+    }
+
+    // Update tracking for potential double-click
+    _lastTapTime = DateTime.now();
+    _lastTappedElement = tappedElement;
+
     // Request focus on tap to enable keyboard controls
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
-      // Removed excessive debugPrint (focus requested via tap)
     }
   }
 
   void _handleTapUp(TapUpDetails details) {
-    // Double-click detection for annotation editing
-    final now = DateTime.now();
-    final currentElement = _coordinator.activeElement;
-
-    // Check if this is a double-click on an annotation
-    if (_lastTapTime != null &&
-        _lastTappedElement != null &&
-        currentElement != null &&
-        currentElement == _lastTappedElement &&
-        now.difference(_lastTapTime!) <= _doubleTapTimeout) {
-      // Double-click detected - open edit dialog if it's an annotation
-      if (currentElement is TextAnnotationElement || currentElement is PointAnnotationElement) {
-        debugPrint('🖱️ Double-click detected on ${currentElement.runtimeType}, opening edit dialog');
-        _showEditAnnotationDialog(currentElement);
-        // Reset to prevent triple-click triggering another edit
-        _lastTapTime = null;
-        _lastTappedElement = null;
-        return;
-      }
-    }
-
-    // Update tracking for next potential double-click
-    _lastTapTime = now;
-    _lastTappedElement = currentElement;
+    // Double-click detection now handled in _handleTapDown
+    // (since activeElement is cleared by the time we get here)
   }
-
   void _handleCursorChange(MouseCursor cursor) {
     if (_currentCursor != cursor) {
       setState(() => _currentCursor = cursor);
