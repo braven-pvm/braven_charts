@@ -392,6 +392,10 @@ class ChartRenderBox extends RenderBox {
   /// Public getter for plot height.
   double get plotHeight => _plotArea.height;
 
+  /// Public getter for current coordinate transform.
+  /// Returns null if chart hasn't been laid out yet.
+  ChartTransform? get transform => _transform;
+
   // ==========================================================================
   // Lifecycle
   // ==========================================================================
