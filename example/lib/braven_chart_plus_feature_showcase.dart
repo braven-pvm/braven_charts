@@ -16,6 +16,7 @@ import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
+import 'package:braven_charts/src_plus/models/enums.dart';
 import 'package:braven_charts/src_plus/models/streaming_config.dart';
 import 'package:braven_charts/src_plus/streaming/streaming_controller.dart';
 import 'package:braven_charts/src_plus/theming/components/scrollbar_config.dart';

@@ -78,8 +78,10 @@ class _ScatterChartScreenState extends State<ScatterChartScreen> {
       chart: LayoutBuilder(
         builder: (context, constraints) => BravenChart(
           chartType: ChartType.scatter,
+
           series: [
             ChartSeries(
+              
               id: 'scatter_data',
               name: 'Random Points',
               points: ChartDataGenerator.generateRandomData(pointCount: 40).map((dp) => ChartDataPoint(x: dp.x, y: dp.y)).toList(),
