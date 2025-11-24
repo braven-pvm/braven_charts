@@ -89,7 +89,12 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
 
   // Annotation example state
   late final List<ChartSeries> _annotationExampleSeries;
-  late final AnnotationController _annotationController;
+  late final AnnotationController _annotationController; // For main demo chart
+  late final AnnotationController _pointAnnotationController;
+  late final AnnotationController _rangeAnnotationController;
+  late final AnnotationController _textAnnotationController;
+  late final AnnotationController _thresholdAnnotationController;
+  late final AnnotationController _trendAnnotationController;
 
   // Streaming Test 1: dataStream approach
   final StreamController<ChartDataPoint> _stream1Controller = StreamController<ChartDataPoint>.broadcast();
@@ -333,6 +338,146 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             padding: const EdgeInsets.all(2),
           )),
     ]); // REMOVED: Global listener that rebuilds entire page on pause/resume
+
+    // Initialize separate controllers for each annotation type showcase
+    // This prevents ALL showcases from rebuilding when ONE annotation is added
+    _pointAnnotationController = AnnotationController(initialAnnotations: [
+      PointAnnotation(
+          id: 'peak',
+          seriesId: 'annotation_line',
+          dataPointIndex: 5,
+          allowDragging: true,
+          markerShape: MarkerShape.circle,
+          markerSize: 14.0,
+          markerColor: Colors.red.withAlpha(120),
+          label: 'Peak',
+          style: AnnotationStyle(
+            borderColor: Colors.red.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.red.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(4),
+          )),
+    ]);
+
+    _rangeAnnotationController = AnnotationController(initialAnnotations: [
+      RangeAnnotation(
+          id: 'weekend',
+          startX: 5.0,
+          endX: 7.0,
+          snapToValue: true,
+          snapTolerance: 0.05,
+          fillColor: Colors.orange.withAlpha(50),
+          borderColor: Colors.orange.withAlpha(150),
+          label: 'Weekend',
+          labelPosition: AnnotationLabelPosition.topRight,
+          labelMargin: 15,
+          style: AnnotationStyle(
+            borderColor: Colors.orange.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.orange.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(5),
+          )),
+    ]);
+
+    _textAnnotationController = AnnotationController(initialAnnotations: [
+      TextAnnotation(
+          id: 'note',
+          text: 'Trend Increasing',
+          position: const Offset(320, 30),
+          anchor: AnnotationAnchor.topRight,
+          allowDragging: true,
+          backgroundColor: Colors.green.withAlpha(50),
+          borderColor: Colors.green,
+          style: AnnotationStyle(
+            borderRadius: BorderRadius.circular(5),
+            borderWidth: 0.5,
+            padding: const EdgeInsets.all(8),
+          )),
+    ]);
+
+    _thresholdAnnotationController = AnnotationController(initialAnnotations: [
+      ThresholdAnnotation(
+          id: 'target_line',
+          axis: AnnotationAxis.y,
+          value: 70.0,
+          allowDragging: true,
+          lineColor: Colors.green,
+          lineWidth: 2.0,
+          dashPattern: const [8, 4],
+          label: 'Target: 70°',
+          labelPosition: AnnotationLabelPosition.topLeft,
+          style: AnnotationStyle(
+            borderColor: Colors.green.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.green.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(3),
+          )),
+      ThresholdAnnotation(
+        id: 'minimum_line',
+        axis: AnnotationAxis.y,
+        value: 55.0,
+        allowDragging: true,
+        lineColor: Colors.red.withAlpha(50),
+        lineWidth: 2.0,
+        dashPattern: const [5, 3],
+        label: 'Min: 55°',
+        labelPosition: AnnotationLabelPosition.bottomRight,
+      ),
+      ThresholdAnnotation(
+        id: 'marker_line',
+        axis: AnnotationAxis.x,
+        value: 8.0,
+        allowDragging: true,
+        lineColor: Colors.blue.withAlpha(150),
+        lineWidth: 2.0,
+        dashPattern: const [6, 3],
+        label: 'Event',
+        labelPosition: AnnotationLabelPosition.topRight,
+        style: AnnotationStyle(
+          borderColor: Colors.blue.shade700,
+          borderWidth: 0.5,
+          backgroundColor: Colors.blue.withAlpha(80),
+          borderRadius: BorderRadius.circular(5),
+          padding: const EdgeInsets.all(3),
+        ),
+      ),
+    ]);
+
+    _trendAnnotationController = AnnotationController(initialAnnotations: [
+      TrendAnnotation(
+          id: 'linear_trend',
+          seriesId: 'annotation_line',
+          trendType: TrendType.linear,
+          lineColor: Colors.purple.withAlpha(200),
+          lineWidth: 2.5,
+          dashPattern: const [10, 5],
+          label: 'Linear Trend',
+          style: AnnotationStyle(
+            borderColor: Colors.purple.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.purple.withAlpha(80),
+            borderRadius: BorderRadius.circular(5),
+            padding: const EdgeInsets.all(8),
+          )),
+      TrendAnnotation(
+          id: 'moving_avg',
+          seriesId: 'annotation_line',
+          trendType: TrendType.movingAverage,
+          windowSize: 3,
+          lineColor: Colors.teal.withAlpha(200),
+          lineWidth: 2.0,
+          label: '3-pt MA',
+          style: AnnotationStyle(
+            borderColor: Colors.teal.shade700,
+            borderWidth: 0.5,
+            backgroundColor: Colors.teal.withAlpha(80),
+            borderRadius: BorderRadius.circular(2),
+            padding: const EdgeInsets.all(2),
+          )),
+    ]);
     // Buttons now use ListenableBuilder to rebuild only themselves
   }
 
@@ -542,6 +687,11 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     _chart1Controller.dispose();
     _chart2Controller.dispose();
     _annotationController.dispose();
+    _pointAnnotationController.dispose();
+    _rangeAnnotationController.dispose();
+    _textAnnotationController.dispose();
+    _thresholdAnnotationController.dispose();
+    _trendAnnotationController.dispose();
     super.dispose();
   }
 
@@ -1651,7 +1801,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotationController: _annotationController,
+                annotationController: _pointAnnotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1678,7 +1828,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotationController: _annotationController,
+                annotationController: _rangeAnnotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1705,7 +1855,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotationController: _annotationController,
+                annotationController: _textAnnotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1732,7 +1882,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotationController: _annotationController,
+                annotationController: _thresholdAnnotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
@@ -1759,7 +1909,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
                 showXScrollbar: true,
                 showYScrollbar: true,
                 series: _annotationExampleSeries,
-                annotationController: _annotationController,
+                annotationController: _trendAnnotationController,
                 theme: _selectedTheme,
                 backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
                 showDebugInfo: _showDebugInfo,
