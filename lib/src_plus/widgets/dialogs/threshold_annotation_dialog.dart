@@ -18,20 +18,18 @@ class ThresholdAnnotationDialog extends StatefulWidget {
   const ThresholdAnnotationDialog({
     super.key,
     this.annotation,
-    this.initialAxis,
-    this.initialValue,
+    this.initialXValue,
+    this.initialYValue,
   });
 
   /// Existing annotation to edit, or null to create new.
   final ThresholdAnnotation? annotation;
   
-  /// Initial axis selection (when creating from click position).
-  final AnnotationAxis? initialAxis;
+  /// Initial X-axis value from click position.
+  final double? initialXValue;
   
-  /// Initial threshold value (when creating from click position).
-  final double? initialValue;
-
-  @override
+  /// Initial Y-axis value from click position.
+  final double? initialYValue;  @override
   State<ThresholdAnnotationDialog> createState() => _ThresholdAnnotationDialogState();
 }
 
@@ -59,10 +57,20 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
-    _selectedAxis = annotation?.axis ?? widget.initialAxis ?? AnnotationAxis.y;
-    _valueController = TextEditingController(
-      text: annotation?.value.toString() ?? widget.initialValue?.toStringAsFixed(2) ?? '',
-    );
+    _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
+    
+    // Set initial value based on selected axis
+    String initialValue = '';
+    if (annotation != null) {
+      initialValue = annotation.value.toString();
+    } else {
+      // For new annotations, use Y-axis value by default
+      if (widget.initialYValue != null) {
+        initialValue = widget.initialYValue!.toStringAsFixed(2);
+      }
+    }
+    
+    _valueController = TextEditingController(text: initialValue);
     _labelController = TextEditingController(text: annotation?.label ?? '');
     _lineColor = annotation?.lineColor ?? Colors.red;
     _lineWidth = annotation?.lineWidth ?? 1.0;
@@ -185,7 +193,17 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                       ],
                       selected: {_selectedAxis},
                       onSelectionChanged: (Set<AnnotationAxis> selection) {
-                        setState(() => _selectedAxis = selection.first);
+                        setState(() {
+                          _selectedAxis = selection.first;
+                          // Update value field when switching axes (only for new annotations)
+                          if (widget.annotation == null) {
+                            if (_selectedAxis == AnnotationAxis.x && widget.initialXValue != null) {
+                              _valueController.text = widget.initialXValue!.toStringAsFixed(2);
+                            } else if (_selectedAxis == AnnotationAxis.y && widget.initialYValue != null) {
+                              _valueController.text = widget.initialYValue!.toStringAsFixed(2);
+                            }
+                          }
+                        });
                       },
                     ),
 
