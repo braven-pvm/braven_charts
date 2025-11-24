@@ -84,7 +84,8 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     for (final entry in _dashPatterns.entries) {
       if (_listEquals(entry.value, _dashPattern)) return entry.key;
     }
-    return 'Custom';
+    // If custom pattern not in map, default to Solid to avoid dropdown error
+    return 'Solid';
   }
 
   bool _listEquals(List<double>? a, List<double>? b) {
