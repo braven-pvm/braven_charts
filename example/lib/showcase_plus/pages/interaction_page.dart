@@ -1,10 +1,8 @@
-import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
-import 'package:braven_charts/src/interaction/models/interaction_config.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart' as tooltip;
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart' as braven;
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 
@@ -28,11 +26,11 @@ class _InteractionPageState extends State<InteractionPage> {
   bool _showScrollbars = true;
 
   // Crosshair options
-  CrosshairMode _crosshairMode = CrosshairMode.both;
+  braven.CrosshairMode _crosshairMode = braven.CrosshairMode.both;
   bool _snapToDataPoint = true;
 
   // Tooltip options
-  tooltip.TooltipTriggerMode _tooltipTrigger = tooltip.TooltipTriggerMode.hover;
+  braven.TooltipTriggerMode _tooltipTrigger = braven.TooltipTriggerMode.hover;
 
   // Data
   String _tappedPoint = 'None';
@@ -78,19 +76,19 @@ class _InteractionPageState extends State<InteractionPage> {
     ];
 
     // Create interaction config
-    final interactionConfig = InteractionConfig(
+    final interactionConfig = braven.InteractionConfig(
       enabled: true,
       enableZoom: _enableZoom,
       enablePan: _enablePan,
       enableSelection: _enableSelection,
       showXScrollbar: _showScrollbars,
       showYScrollbar: _showScrollbars,
-      crosshair: CrosshairConfig(
+      crosshair: braven.CrosshairConfig(
         enabled: _enableCrosshair,
         mode: _crosshairMode,
         snapToDataPoint: _snapToDataPoint,
       ),
-      tooltip: tooltip.TooltipConfig(
+      tooltip: braven.TooltipConfig(
         enabled: _enableTooltip,
         triggerMode: _tooltipTrigger,
       ),
@@ -233,10 +231,10 @@ class _InteractionPageState extends State<InteractionPage> {
                     value: _enableCrosshair,
                     onChanged: (value) => setState(() => _enableCrosshair = value),
                   ),
-                  EnumOption<CrosshairMode>(
+                  EnumOption<braven.CrosshairMode>(
                     label: 'Crosshair Mode',
                     value: _crosshairMode,
-                    values: CrosshairMode.values,
+                    values: braven.CrosshairMode.values,
                     labelBuilder: (mode) => mode.toString().split('.').last,
                     onChanged: (value) => setState(() => _crosshairMode = value),
                   ),
@@ -255,10 +253,10 @@ class _InteractionPageState extends State<InteractionPage> {
                     value: _enableTooltip,
                     onChanged: (value) => setState(() => _enableTooltip = value),
                   ),
-                  EnumOption<tooltip.TooltipTriggerMode>(
+                  EnumOption<braven.TooltipTriggerMode>(
                     label: 'Tooltip Trigger',
                     value: _tooltipTrigger,
-                    values: tooltip.TooltipTriggerMode.values,
+                    values: braven.TooltipTriggerMode.values,
                     labelBuilder: (trigger) => trigger.toString().split('.').last,
                     onChanged: (value) => setState(() => _tooltipTrigger = value),
                   ),
