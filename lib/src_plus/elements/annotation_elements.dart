@@ -1350,9 +1350,150 @@ class TrendAnnotationElement extends ChartElement {
 
   /// Calculate polynomial regression trend line.
   List<Offset> _calculatePolynomialTrend(List<ChartDataPoint> points, int degree) {
-    // Simplified polynomial - for now use linear (full polynomial regression is complex)
-    // TODO: Implement proper polynomial regression
-    return _calculateLinearTrend(points);
+    if (points.isEmpty) return [];
+    if (degree < 1) return _calculateLinearTrend(points);
+    if (points.length <= degree) {
+      // Not enough points for the requested degree, fall back to linear
+      return _calculateLinearTrend(points);
+    }
+
+    // Extract x and y values
+    final xValues = points.map((p) => p.x).toList();
+    final yValues = points.map((p) => p.y).toList();
+
+    // Solve for polynomial coefficients using least squares
+    // We need to solve: X * coefficients = Y
+    // Where X is the Vandermonde matrix
+    final coefficients = _solvePolynomialLeastSquares(xValues, yValues, degree);
+
+    // Generate trend line points using the polynomial
+    final minX = xValues.reduce((a, b) => a < b ? a : b);
+    final maxX = xValues.reduce((a, b) => a > b ? a : b);
+
+    // Generate smooth curve with more points than input data
+    final numPoints = (points.length * 3).clamp(20, 100);
+    final step = (maxX - minX) / (numPoints - 1);
+
+    final result = <Offset>[];
+    for (int i = 0; i < numPoints; i++) {
+      final x = minX + (step * i);
+      double y = 0;
+
+      // Calculate y = a0 + a1*x + a2*x^2 + ... + an*x^n
+      for (int j = 0; j <= degree; j++) {
+        y += coefficients[j] * _pow(x, j);
+      }
+
+      result.add(Offset(x, y));
+    }
+
+    return result;
+  }
+
+  /// Solve polynomial least squares using normal equations.
+  /// Returns coefficients [a0, a1, a2, ..., an] for polynomial y = a0 + a1*x + a2*x^2 + ... + an*x^n
+  List<double> _solvePolynomialLeastSquares(List<double> xValues, List<double> yValues, int degree) {
+    final n = xValues.length;
+    final m = degree + 1; // Number of coefficients
+
+    // Build the design matrix (Vandermonde matrix) and solve normal equations
+    // Normal equations: (X^T * X) * coefficients = X^T * y
+
+    // Create X^T * X matrix (m x m)
+    final xtx = List.generate(m, (_) => List<double>.filled(m, 0.0));
+    final xty = List<double>.filled(m, 0.0);
+
+    // Fill X^T * X and X^T * y
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < m; j++) {
+        double sum = 0;
+        for (int k = 0; k < n; k++) {
+          sum += _pow(xValues[k], i + j);
+        }
+        xtx[i][j] = sum;
+      }
+
+      double sum = 0;
+      for (int k = 0; k < n; k++) {
+        sum += yValues[k] * _pow(xValues[k], i);
+      }
+      xty[i] = sum;
+    }
+
+    // Solve using Gaussian elimination
+    return _gaussianElimination(xtx, xty);
+  }
+
+  /// Fast integer power function.
+  double _pow(double base, int exponent) {
+    if (exponent == 0) return 1.0;
+    if (exponent == 1) return base;
+
+    double result = 1.0;
+    double currentBase = base;
+    int currentExp = exponent;
+
+    while (currentExp > 0) {
+      if (currentExp.isOdd) {
+        result *= currentBase;
+      }
+      currentBase *= currentBase;
+      currentExp ~/= 2;
+    }
+
+    return result;
+  }
+
+  /// Solve linear system Ax = b using Gaussian elimination with partial pivoting.
+  List<double> _gaussianElimination(List<List<double>> a, List<double> b) {
+    final n = b.length;
+
+    // Create augmented matrix
+    final aug = List.generate(n, (i) => [...a[i], b[i]]);
+
+    // Forward elimination with partial pivoting
+    for (int i = 0; i < n; i++) {
+      // Find pivot
+      int maxRow = i;
+      for (int k = i + 1; k < n; k++) {
+        if (aug[k][i].abs() > aug[maxRow][i].abs()) {
+          maxRow = k;
+        }
+      }
+
+      // Swap rows
+      if (maxRow != i) {
+        final temp = aug[i];
+        aug[i] = aug[maxRow];
+        aug[maxRow] = temp;
+      }
+
+      // Check for singular matrix
+      if (aug[i][i].abs() < 1e-10) {
+        // Singular matrix, return zero coefficients
+        return List<double>.filled(n, 0.0);
+      }
+
+      // Eliminate column
+      for (int k = i + 1; k < n; k++) {
+        final factor = aug[k][i] / aug[i][i];
+        for (int j = i; j <= n; j++) {
+          aug[k][j] -= factor * aug[i][j];
+        }
+      }
+    }
+
+    // Back substitution
+    final x = List<double>.filled(n, 0.0);
+    for (int i = n - 1; i >= 0; i--) {
+      double sum = aug[i][n];
+      for (int j = i + 1; j < n; j++) {
+        sum -= aug[i][j] * x[j];
+      }
+      x[i] = sum / aug[i][i];
+    }
+
+    return x;
   }
 
   /// Calculate simple moving average.
