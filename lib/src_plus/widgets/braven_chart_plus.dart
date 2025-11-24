@@ -915,9 +915,49 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showAddThresholdAnnotationDialog() async {
     if (!mounted) return;
 
+    // Get clicked position and convert to data coordinates
+    final localPosition = _coordinator.interactionStartPosition;
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+
+    AnnotationAxis? suggestedAxis;
+    double? suggestedValue;
+
+    if (localPosition != null && renderBox != null) {
+      final transform = renderBox.transform;
+      if (transform != null) {
+        // Convert local plot position to data coordinates
+        final dataPos = transform.plotToData(localPosition.dx, localPosition.dy);
+
+        // Auto-select axis based on which is closer to center
+        // If clicked near center horizontally, suggest Y-axis (horizontal line)
+        // If clicked near center vertically, suggest X-axis (vertical line)
+        final relativeX = localPosition.dx / renderBox.plotWidth;
+        final relativeY = localPosition.dy / renderBox.plotHeight;
+
+        // Use distance from center to determine which axis makes more sense
+        final xDistanceFromCenter = (relativeX - 0.5).abs();
+        final yDistanceFromCenter = (relativeY - 0.5).abs();
+
+        if (xDistanceFromCenter < yDistanceFromCenter) {
+          // Closer to center horizontally → suggest Y-axis (horizontal line at this Y value)
+          suggestedAxis = AnnotationAxis.y;
+          suggestedValue = dataPos.dy;
+          debugPrint('🎯 Creating ThresholdAnnotation: suggested Y-axis at value ${dataPos.dy.toStringAsFixed(2)}');
+        } else {
+          // Closer to center vertically → suggest X-axis (vertical line at this X value)
+          suggestedAxis = AnnotationAxis.x;
+          suggestedValue = dataPos.dx;
+          debugPrint('🎯 Creating ThresholdAnnotation: suggested X-axis at value ${dataPos.dx.toStringAsFixed(2)}');
+        }
+      }
+    }
+
     final result = await showDialog<ThresholdAnnotation>(
       context: context,
-      builder: (context) => const ThresholdAnnotationDialog(),
+      builder: (context) => ThresholdAnnotationDialog(
+        initialAxis: suggestedAxis,
+        initialValue: suggestedValue,
+      ),
     );
 
     if (result != null && mounted) {
@@ -969,7 +1009,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     debugPrint('🔧 Edit dialog requested for element: ${element?.runtimeType}, elementType: ${element?.elementType}');
 
     // Check for annotation element types directly (PointAnnotationElement uses datapoint type for priority)
-    if (element == null || (element is! TextAnnotationElement && element is! PointAnnotationElement)) {
+    if (element == null ||
+        (element is! TextAnnotationElement &&
+            element is! PointAnnotationElement &&
+            element is! ThresholdAnnotationElement &&
+            element is! TrendAnnotationElement)) {
       debugPrint('⚠️ Edit action requires an annotation element (got ${element?.runtimeType})');
       return;
     }

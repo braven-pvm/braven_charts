@@ -18,10 +18,18 @@ class ThresholdAnnotationDialog extends StatefulWidget {
   const ThresholdAnnotationDialog({
     super.key,
     this.annotation,
+    this.initialAxis,
+    this.initialValue,
   });
 
   /// Existing annotation to edit, or null to create new.
   final ThresholdAnnotation? annotation;
+  
+  /// Initial axis selection (when creating from click position).
+  final AnnotationAxis? initialAxis;
+  
+  /// Initial threshold value (when creating from click position).
+  final double? initialValue;
 
   @override
   State<ThresholdAnnotationDialog> createState() => _ThresholdAnnotationDialogState();
@@ -51,8 +59,10 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
-    _selectedAxis = annotation?.axis ?? AnnotationAxis.y;
-    _valueController = TextEditingController(text: annotation?.value.toString() ?? '');
+    _selectedAxis = annotation?.axis ?? widget.initialAxis ?? AnnotationAxis.y;
+    _valueController = TextEditingController(
+      text: annotation?.value.toString() ?? widget.initialValue?.toStringAsFixed(2) ?? '',
+    );
     _labelController = TextEditingController(text: annotation?.label ?? '');
     _lineColor = annotation?.lineColor ?? Colors.red;
     _lineWidth = annotation?.lineWidth ?? 1.0;
@@ -105,6 +115,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       dashPattern: _dashPattern,
       labelPosition: _labelPosition,
       labelMargin: _labelMargin,
+      allowDragging: true, // Enable dragging by default
     );
 
     Navigator.of(context).pop(annotation);
