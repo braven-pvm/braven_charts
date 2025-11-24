@@ -24,12 +24,13 @@ class ThresholdAnnotationDialog extends StatefulWidget {
 
   /// Existing annotation to edit, or null to create new.
   final ThresholdAnnotation? annotation;
-  
+
   /// Initial X-axis value from click position.
   final double? initialXValue;
-  
+
   /// Initial Y-axis value from click position.
-  final double? initialYValue;  @override
+  final double? initialYValue;
+  @override
   State<ThresholdAnnotationDialog> createState() => _ThresholdAnnotationDialogState();
 }
 
@@ -58,7 +59,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
 
     final annotation = widget.annotation;
     _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
-    
+
     // Set initial value based on selected axis
     String initialValue = '';
     if (annotation != null) {
@@ -69,7 +70,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
         initialValue = widget.initialYValue!.toStringAsFixed(2);
       }
     }
-    
+
     _valueController = TextEditingController(text: initialValue);
     _labelController = TextEditingController(text: annotation?.label ?? '');
     _lineColor = annotation?.lineColor ?? Colors.red;
