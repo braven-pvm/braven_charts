@@ -1,0 +1,70 @@
+/// Shared enums for BravenChartPlus
+library;
+
+/// Style of line rendering
+///
+/// Determines how the line connects data points:
+/// - [straight]: Direct linear connection between points
+/// - [smooth]: Smooth bezier curve through points
+/// - [stepped]: Horizontal-then-vertical steps between points
+enum LineStyle {
+  /// Connect points with straight line segments
+  straight,
+
+  /// Connect points with smooth bezier curves
+  smooth,
+
+  /// Connect points with horizontal-then-vertical steps (step chart)
+  stepped,
+}
+
+/// Shape of chart markers (data points)
+///
+/// Defines the visual representation of individual data points:
+/// - [circle]: Circular marker
+/// - [square]: Square marker
+/// - [triangle]: Triangular marker pointing up
+/// - [diamond]: Diamond/rhombus marker
+/// - [cross]: Cross (+) marker
+/// - [plus]: Plus (x) marker rotated 45°
+/// - [none]: No marker (useful for line charts without points)
+enum MarkerShape {
+  /// Circular marker (●)
+  circle,
+
+  /// Square marker (■)
+  square,
+
+  /// Triangular marker (▲)
+  triangle,
+
+  /// Diamond marker (◆)
+  diamond,
+
+  /// Star marker (★)
+  star,
+
+  /// Cross marker (+)
+  cross,
+
+  /// Plus marker (x) - cross rotated 45°
+  plus,
+
+  /// No marker - just the line
+  none,
+}
+
+/// Position of the axis relative to the chart area.
+enum AxisPosition {
+  /// Axis at the bottom of the chart (default for X-axis).
+  bottom,
+
+  /// Axis at the top of the chart.
+  top,
+
+  /// Axis at the left of the chart (default for Y-axis).
+  left,
+
+  /// Axis at the right of the chart.
+  right,
+}

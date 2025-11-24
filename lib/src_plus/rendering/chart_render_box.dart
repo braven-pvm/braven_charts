@@ -10,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../../src/interaction/models/interaction_config.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
@@ -63,6 +64,7 @@ class ChartRenderBox extends RenderBox {
     bool showXScrollbar = false,
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
+    InteractionConfig? interactionConfig,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
@@ -74,6 +76,7 @@ class ChartRenderBox extends RenderBox {
         _showXScrollbar = showXScrollbar,
         _showYScrollbar = showYScrollbar,
         _scrollbarTheme = scrollbarTheme,
+        _interactionConfig = interactionConfig,
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
@@ -106,7 +109,7 @@ class ChartRenderBox extends RenderBox {
   final void Function(ChartElement element, PointerEvent event)? onElementClick;
 
   /// Callback for element hover events.
-  final void Function(ChartElement? element)? onElementHover;
+  void Function(ChartElement? element)? onElementHover;
 
   /// Callback for empty area click (for box select start).
   final void Function(Offset position, PointerEvent event)? onEmptyAreaClick;
@@ -173,17 +176,20 @@ class ChartRenderBox extends RenderBox {
   Offset? _cursorPosition;
 
   /// Whether tooltips are enabled.
-  final bool _tooltipsEnabled;
+  bool _tooltipsEnabled;
 
   /// Whether to show horizontal scrollbar at bottom of chart.
-  final bool _showXScrollbar;
+  bool _showXScrollbar;
 
   /// Whether to show vertical scrollbar on right side of chart.
-  final bool _showYScrollbar;
+  bool _showYScrollbar;
 
   /// Theme configuration for scrollbars.
   /// If null, defaults to ScrollbarConfig.defaultLight().
   final ScrollbarConfig? _scrollbarTheme;
+
+  /// Interaction configuration for controlling enabled interactions.
+  InteractionConfig? _interactionConfig;
 
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
@@ -503,6 +509,34 @@ class ChartRenderBox extends RenderBox {
     if (_theme == theme) return;
     _theme = theme;
     _seriesCacheDirty = true; // Invalidate cache - theme changed
+    markNeedsPaint();
+  }
+
+  /// Updates tooltip visibility.
+  void setTooltipsEnabled(bool enabled) {
+    if (_tooltipsEnabled == enabled) return;
+    _tooltipsEnabled = enabled;
+    markNeedsPaint();
+  }
+
+  /// Updates X scrollbar visibility.
+  void setShowXScrollbar(bool show) {
+    if (_showXScrollbar == show) return;
+    _showXScrollbar = show;
+    markNeedsPaint();
+  }
+
+  /// Updates Y scrollbar visibility.
+  void setShowYScrollbar(bool show) {
+    if (_showYScrollbar == show) return;
+    _showYScrollbar = show;
+    markNeedsPaint();
+  }
+
+  /// Updates interaction configuration.
+  void setInteractionConfig(InteractionConfig? config) {
+    if (_interactionConfig == config) return;
+    _interactionConfig = config;
     markNeedsPaint();
   }
 
@@ -1019,13 +1053,13 @@ class ChartRenderBox extends RenderBox {
     const double topMargin = 10;
     double bottomMargin = 10 + bottomReserved; // Add scrollbar space
 
-    // Reserve space for Y-axis (left side)
-    if (_yAxis != null) {
+    // Reserve space for Y-axis (left side) - only if axis is visible
+    if (_yAxis != null && _yAxis!.config.showAxisLine) {
       leftMargin = 60; // Space for Y-axis labels + axis label + padding
     }
 
-    // Reserve space for X-axis (bottom)
-    if (_xAxis != null) {
+    // Reserve space for X-axis (bottom) - only if axis is visible
+    if (_xAxis != null && _xAxis!.config.showAxisLine) {
       bottomMargin = 50 + bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
     }
 
@@ -1471,6 +1505,12 @@ class ChartRenderBox extends RenderBox {
 
     // Per conflict resolution: Different buttons have different behaviors
     if (event.buttons == kMiddleMouseButton) {
+      // Check if pan is enabled
+      final enablePan = _interactionConfig?.enablePan ?? true;
+      if (!enablePan) {
+        return;
+      }
+
       // Middle-click: EXCLUSIVELY pan (per scenario 6)
       // [DEBUG OUTPUT REMOVED] Middle button down - fires on user interaction
       coordinator.claimMode(InteractionMode.panning);
@@ -1524,6 +1564,12 @@ class ChartRenderBox extends RenderBox {
           _potentialDragStartPosition = position;
           // Don't claim mode or call callbacks yet - wait for movement or release
         } else {
+          // Check if selection is enabled
+          final enableSelection = _interactionConfig?.enableSelection ?? true;
+          if (!enableSelection) {
+            return;
+          }
+
           // Clicked on element - select it (or toggle if Ctrl)
           if (coordinator.isCtrlPressed) {
             coordinator.toggleElementSelection(hitElement);
@@ -2271,9 +2317,15 @@ class ChartRenderBox extends RenderBox {
     // Per scenario 12: Hover/tooltips suspended during panning
     if (coordinator.isPanning) {
       coordinator.setHoveredElement(null);
+      coordinator.setHoveredMarker(null);
       onCursorChange?.call(SystemMouseCursors.basic);
       return;
     }
+
+    // IMMEDIATE marker highlighting for snappy response (not deferred!)
+    // This must be instant - moving from one marker to another should immediately
+    // unhighlight the old and highlight the new without any delay
+    _updateHoveredMarker(position);
 
     // Throttle expensive hit testing during rapid mouse movement
     // Strategy: Update crosshair immediately, defer hit testing until movement slows
@@ -2320,22 +2372,50 @@ class ChartRenderBox extends RenderBox {
     coordinator.setHoveredElement(hitElement);
     onElementHover?.call(hitElement);
 
-    // Check for per-marker hover within series elements
-    // This provides finer-grained hover feedback without creating individual
-    // marker elements (performance optimization)
-    if (hitElement is SeriesElement) {
-      final plotPosition = widgetToPlot(position);
-      final markerInfo = _findNearestMarker(hitElement, plotPosition);
-      coordinator.setHoveredMarker(markerInfo);
-      // Invalidate series cache to trigger marker highlight repaint
-      _seriesCacheDirty = true;
-    } else {
+    markNeedsPaint(); // Repaint for hover highlight
+  }
+
+  /// Updates the hovered marker state immediately (no debounce).
+  ///
+  /// Called on every hover event for instant snappy marker highlighting.
+  /// When moving from one marker to another, this immediately clears the old
+  /// and highlights the new without any delay.
+  void _updateHoveredMarker(Offset widgetPosition) {
+    if (_transform == null) {
       coordinator.setHoveredMarker(null);
-      // Invalidate series cache to clear marker highlight
-      _seriesCacheDirty = true;
+      return;
     }
 
-    markNeedsPaint(); // Repaint for hover highlight
+    final plotPosition = widgetToPlot(widgetPosition);
+    const snapRadius = 20.0; // Match BravenChart's precise snap radius
+
+    HoveredMarkerInfo? nearestMarker;
+    double minDistance = snapRadius;
+
+    // Search all series elements for nearest marker
+    for (final element in _elements.whereType<SeriesElement>()) {
+      for (int i = 0; i < element.series.points.length; i++) {
+        final point = element.series.points[i];
+        final markerPlotPos = _transform!.dataToPlot(point.x, point.y);
+        final distance = (plotPosition - markerPlotPos).distance;
+
+        // Only consider markers WITHIN snap radius
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestMarker = HoveredMarkerInfo(
+            seriesId: element.id,
+            markerIndex: i,
+            plotPosition: markerPlotPos,
+          );
+        }
+      }
+    }
+
+    // Update coordinator state immediately
+    coordinator.setHoveredMarker(nearestMarker);
+
+    // Invalidate series cache if marker state changed
+    _seriesCacheDirty = true;
   }
 
   /// Finds the nearest marker within a series element.
@@ -2345,36 +2425,6 @@ class ChartRenderBox extends RenderBox {
   ///
   /// **Performance**: Only called after debounced hit testing (50ms throttle),
   /// and only on the series that was hit by priority-based resolution.
-  HoveredMarkerInfo? _findNearestMarker(SeriesElement series, Offset plotPosition) {
-    if (_transform == null) return null;
-
-    const snapRadius = 20.0; // Same as BravenChart's default snap radius
-    double minDistance = snapRadius;
-    int? nearestIndex;
-
-    // Use current transform for accurate marker positions
-    for (int i = 0; i < series.series.points.length; i++) {
-      final point = series.series.points[i];
-      final plotPos = _transform!.dataToPlot(point.x, point.y);
-      final distance = (plotPosition - plotPos).distance;
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestIndex = i;
-      }
-    }
-
-    if (nearestIndex != null) {
-      return HoveredMarkerInfo(
-        seriesId: series.id,
-        markerIndex: nearestIndex,
-        plotPosition: plotPosition,
-      );
-    }
-
-    return null;
-  }
-
   /// Gets the appropriate cursor for a resize direction.
   MouseCursor _getCursorForResizeDirection(ResizeDirection direction) {
     switch (direction) {
@@ -2394,6 +2444,12 @@ class ChartRenderBox extends RenderBox {
   }
 
   void _handlePointerScroll(PointerScrollEvent event, Offset position) {
+    // Check if zoom is enabled
+    final enableZoom = _interactionConfig?.enableZoom ?? true;
+    if (!enableZoom) {
+      return;
+    }
+
     // Prevent scroll wheel zoom during scrollbar drag
     if (coordinator.currentMode == InteractionMode.scrollbarDragging) {
       return;
@@ -2684,7 +2740,8 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
-    if (cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
+    final crosshairEnabled = _interactionConfig?.crosshair.enabled ?? true;
+    if (crosshairEnabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
       // Only draw crosshair if cursor is inside plot area AND not dragging
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
       // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
@@ -2703,15 +2760,11 @@ class ChartRenderBox extends RenderBox {
       _drawCrosshairLabels(canvas, size, cursorPos);
     }
 
-    // Draw tooltip for hovered element (if any)
-    // Show tooltips for datapoints or series (with nearest point lookup)
-    final hoveredElement = coordinator.hoveredElement;
-    if (_tooltipsEnabled &&
-        hoveredElement != null &&
-        !coordinator.isPanning &&
-        (hoveredElement.elementType == ChartElementType.datapoint || hoveredElement.elementType == ChartElementType.series) &&
-        _cursorPosition != null) {
-      _drawTooltip(canvas, size, hoveredElement, _cursorPosition!);
+    // Draw tooltip for hovered marker (if any)
+    // Only show tooltips when actually hovering near a data point marker
+    final hoveredMarker = coordinator.hoveredMarker;
+    if (_tooltipsEnabled && hoveredMarker != null && !coordinator.isPanning) {
+      _drawMarkerTooltip(canvas, size, hoveredMarker);
     }
 
     // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
@@ -3748,54 +3801,23 @@ class ChartRenderBox extends RenderBox {
   /// - Renders with semi-transparent background
   ///
   /// For series elements, finds the nearest datapoint to cursor position.
-  void _drawTooltip(Canvas canvas, Size size, ChartElement element, Offset cursorPosition) {
-    // For series elements, find nearest datapoint to cursor
-    Offset tooltipAnchor = plotToWidget(element.bounds.center);
-    String tooltipText;
+  /// Draws tooltip at the exact position of a hovered data point marker.
+  void _drawMarkerTooltip(Canvas canvas, Size size, HoveredMarkerInfo markerInfo) {
+    // Find the series element containing this marker
+    final seriesElement = _elements.whereType<SeriesElement>().firstWhere(
+          (e) => e.id == markerInfo.seriesId,
+          orElse: () => throw StateError('Series ${markerInfo.seriesId} not found'),
+        );
 
-    if (element.elementType == ChartElementType.series && element is SeriesElement) {
-      // Convert cursor to plot space
-      final plotCursor = widgetToPlot(cursorPosition);
+    // Get the exact data point
+    final dataPoint = seriesElement.series.points[markerInfo.markerIndex];
 
-      // Get series datapoints and transform them to plot space
-      final dataPoints = element.series.points;
-      if (dataPoints.isEmpty || _transform == null) {
-        tooltipText = element.series.name ?? 'Series: ${element.id}';
-      } else {
-        // Find closest datapoint to cursor
-        var minDist = double.infinity;
-        var closestDataPoint = dataPoints.first;
-        Offset closestPlotPoint = _transform!.dataToPlot(closestDataPoint.x, closestDataPoint.y);
+    // Convert data point to screen coordinates for tooltip anchor
+    final tooltipAnchor = plotToWidget(markerInfo.plotPosition);
 
-        for (final dataPoint in dataPoints) {
-          final plotPoint = _transform!.dataToPlot(dataPoint.x, dataPoint.y);
-          final dist = (plotPoint.dx - plotCursor.dx).abs() + (plotPoint.dy - plotCursor.dy).abs();
-          if (dist < minDist) {
-            minDist = dist;
-            closestDataPoint = dataPoint;
-            closestPlotPoint = plotPoint;
-          }
-        }
-
-        // Show tooltip with nearest datapoint's coordinates
-        tooltipText = '${element.series.name ?? element.id}\nX: ${_formatDataValue(closestDataPoint.x)}\nY: ${_formatDataValue(closestDataPoint.y)}';
-        tooltipAnchor = plotToWidget(closestPlotPoint); // Position tooltip at the datapoint
-      }
-    } else if (element.elementType == ChartElementType.datapoint) {
-      // For actual datapoint elements (if they exist)
-      final center = element.bounds.center;
-      if (_transform != null) {
-        final dataPos = _transform!.plotToData(center.dx, center.dy);
-        tooltipText = '${element.id}\nX: ${_formatDataValue(dataPos.dx)}\nY: ${_formatDataValue(dataPos.dy)}';
-      } else {
-        tooltipText = element.id;
-      }
-      tooltipAnchor = plotToWidget(center);
-    } else {
-      // Fallback for other elements
-      tooltipText = '${element.elementType.name}: ${element.id}';
-      tooltipAnchor = plotToWidget(element.bounds.center);
-    }
+    // Build tooltip text
+    final seriesName = seriesElement.series.name ?? seriesElement.id;
+    final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}';
 
     // Create text painter
     const textStyle = TextStyle(

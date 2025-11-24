@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' show TextPainter, TextSpan, TextDirection;
 
+import '../models/enums.dart';
 import 'axis.dart';
 import 'axis_config.dart';
 
@@ -87,20 +88,22 @@ class AxisRenderer {
         );
       }
 
-      // Draw tick label
-      final textPainter = TextPainter(
-        text: TextSpan(text: tick.label, style: config.tickLabelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      // Draw tick label (only if axis is visible)
+      if (config.showAxisLine) {
+        final textPainter = TextPainter(
+          text: TextSpan(text: tick.label, style: config.tickLabelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
 
-      final labelY = config.position == AxisPosition.bottom
-          ? axisY + config.tickLength + config.labelPadding
-          : axisY - config.tickLength - config.labelPadding - textPainter.height;
+        final labelY = config.position == AxisPosition.bottom
+            ? axisY + config.tickLength + config.labelPadding
+            : axisY - config.tickLength - config.labelPadding - textPainter.height;
 
-      textPainter.paint(
-        canvas,
-        Offset(x - textPainter.width / 2, labelY),
-      );
+        textPainter.paint(
+          canvas,
+          Offset(x - textPainter.width / 2, labelY),
+        );
+      }
     }
 
     // Draw axis label
@@ -179,20 +182,22 @@ class AxisRenderer {
         );
       }
 
-      // Draw tick label
-      final textPainter = TextPainter(
-        text: TextSpan(text: tick.label, style: config.tickLabelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      // Draw tick label (only if axis is visible)
+      if (config.showAxisLine) {
+        final textPainter = TextPainter(
+          text: TextSpan(text: tick.label, style: config.tickLabelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
 
-      final labelX = config.position == AxisPosition.left
-          ? axisX - config.tickLength - config.labelPadding - textPainter.width
-          : axisX + config.tickLength + config.labelPadding;
+        final labelX = config.position == AxisPosition.left
+            ? axisX - config.tickLength - config.labelPadding - textPainter.width
+            : axisX + config.tickLength + config.labelPadding;
 
-      textPainter.paint(
-        canvas,
-        Offset(labelX, y - textPainter.height / 2),
-      );
+        textPainter.paint(
+          canvas,
+          Offset(labelX, y - textPainter.height / 2),
+        );
+      }
     }
 
     // Draw axis label (rotated 90°)

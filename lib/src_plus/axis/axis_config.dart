@@ -3,8 +3,25 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/enums.dart';
+
 /// Configuration for axis appearance and behavior.
 class AxisConfig {
+  const AxisConfig({
+    this.label = '',
+    required this.orientation,
+    required this.position,
+    this.labelStyle = const TextStyle(fontSize: 12, color: Colors.black87),
+    this.tickLabelStyle = const TextStyle(fontSize: 10, color: Colors.black54),
+    this.axisColor = Colors.black87,
+    this.gridColor = const Color(0xFFE0E0E0),
+    this.showGrid = true,
+    this.showAxisLine = true,
+    this.showTickMarks = true,
+    this.tickLength = 6,
+    this.labelPadding = 8,
+  });
+
   /// Label for the entire axis (e.g., "Time", "Price").
   final String label;
 
@@ -40,21 +57,6 @@ class AxisConfig {
 
   /// Padding between tick mark and label.
   final double labelPadding;
-
-  const AxisConfig({
-    this.label = '',
-    required this.orientation,
-    required this.position,
-    this.labelStyle = const TextStyle(fontSize: 12, color: Colors.black87),
-    this.tickLabelStyle = const TextStyle(fontSize: 10, color: Colors.black54),
-    this.axisColor = Colors.black87,
-    this.gridColor = const Color(0xFFE0E0E0),
-    this.showGrid = true,
-    this.showAxisLine = true,
-    this.showTickMarks = true,
-    this.tickLength = 6,
-    this.labelPadding = 8,
-  });
 
   AxisConfig copyWith({
     String? label,
@@ -94,19 +96,4 @@ enum AxisOrientation {
 
   /// Vertical axis (Y-axis).
   vertical,
-}
-
-/// Position of an axis relative to the chart.
-enum AxisPosition {
-  /// Bottom of chart (typical for X-axis).
-  bottom,
-
-  /// Top of chart.
-  top,
-
-  /// Left side of chart (typical for Y-axis).
-  left,
-
-  /// Right side of chart.
-  right,
 }

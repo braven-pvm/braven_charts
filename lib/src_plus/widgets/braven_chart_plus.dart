@@ -3,6 +3,7 @@
 // NO REFERENCES TO lib/src - COMPLETELY ISOLATED
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -22,11 +23,13 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../interaction/recognizers/priority_pan_recognizer.dart';
 import '../interaction/recognizers/priority_tap_recognizer.dart';
+import '../models/auto_scroll_config.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/chart_type.dart';
+import '../models/enums.dart';
 import '../models/streaming_config.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
@@ -34,6 +37,7 @@ import '../streaming/buffer_manager.dart';
 import '../streaming/streaming_controller.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
+import 'chart_legend.dart';
 import 'dialogs/point_annotation_dialog.dart';
 import 'dialogs/text_annotation_dialog.dart';
 import 'dialogs/threshold_annotation_dialog.dart';
@@ -55,6 +59,7 @@ class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,
     required this.chartType,
+    this.lineStyle = LineStyle.straight,
     required this.series,
     this.annotations = const [],
     this.annotationController,
@@ -73,9 +78,341 @@ class BravenChartPlus extends StatefulWidget {
     this.streamingController,
     this.controller,
     this.interactionConfig,
+    this.title,
+    this.subtitle,
+    this.showLegend = true,
+    this.showToolbar = false,
+    this.interactiveAnnotations = true,
+    this.loadingWidget,
+    this.errorWidget,
+    this.autoScrollConfig,
+    this.onPointTap,
+    this.onPointHover,
+    this.onBackgroundTap,
+    this.onSeriesSelected,
+    this.onAnnotationTap,
+    this.onAnnotationDragged,
   });
 
+  // ==================== FACTORY CONSTRUCTORS ====================
+
+  /// Creates a chart from a simple list of y-values.
+  factory BravenChartPlus.fromValues({
+    Key? key,
+    required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
+    required String seriesId,
+    required List<double> yValues,
+    List<double>? xValues,
+    String? seriesName,
+    Color? seriesColor,
+    double? width,
+    double? height,
+    ChartTheme? theme,
+    AxisConfig? xAxis,
+    AxisConfig? yAxis,
+    List<ChartAnnotation> annotations = const [],
+    ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
+    String? title,
+    String? subtitle,
+    bool showLegend = true,
+    bool showToolbar = false,
+    bool interactiveAnnotations = true,
+    Widget? loadingWidget,
+    Widget Function(Object error)? errorWidget,
+    void Function(ChartDataPoint point, String seriesId)? onPointTap,
+    void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    void Function(Offset position)? onBackgroundTap,
+    void Function(String seriesId)? onSeriesSelected,
+    void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
+  }) {
+    // Generate x-values if not provided
+    final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
+
+    // Validate lengths match
+    assert(xVals.length == yValues.length, 'X and Y value lists must have the same length');
+
+    // Create data points
+    final points = List.generate(yValues.length, (i) => ChartDataPoint(x: xVals[i], y: yValues[i]));
+
+    // Create series
+    final series = LineChartSeries(
+      id: seriesId,
+      name: seriesName ?? seriesId,
+      points: points,
+      color: seriesColor ?? Colors.blue,
+      interpolation: switch (lineStyle) {
+        LineStyle.straight => LineInterpolation.linear,
+        LineStyle.smooth => LineInterpolation.bezier,
+        LineStyle.stepped => LineInterpolation.stepped,
+      },
+    );
+
+    return BravenChartPlus(
+      key: key,
+      chartType: chartType,
+      lineStyle: lineStyle,
+      series: [series],
+      width: width,
+      height: height,
+      theme: theme,
+      xAxis: xAxis,
+      yAxis: yAxis,
+      annotations: annotations,
+      controller: controller,
+      autoScrollConfig: autoScrollConfig,
+      title: title,
+      subtitle: subtitle,
+      showLegend: showLegend,
+      showToolbar: showToolbar,
+      interactiveAnnotations: interactiveAnnotations,
+      loadingWidget: loadingWidget,
+      errorWidget: errorWidget,
+      onPointTap: onPointTap,
+      onPointHover: onPointHover,
+      onBackgroundTap: onBackgroundTap,
+      onSeriesSelected: onSeriesSelected,
+      onAnnotationTap: onAnnotationTap,
+      onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
+    );
+  }
+
+  /// Creates a chart from a Map of x->y values.
+  factory BravenChartPlus.fromMap({
+    Key? key,
+    required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
+    required String seriesId,
+    required Map<dynamic, double> data,
+    String? seriesName,
+    Color? seriesColor,
+    double? width,
+    double? height,
+    ChartTheme? theme,
+    AxisConfig? xAxis,
+    AxisConfig? yAxis,
+    List<ChartAnnotation> annotations = const [],
+    ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
+    String? title,
+    String? subtitle,
+    bool showLegend = true,
+    bool showToolbar = false,
+    bool interactiveAnnotations = true,
+    Widget? loadingWidget,
+    Widget Function(Object error)? errorWidget,
+    void Function(ChartDataPoint point, String seriesId)? onPointTap,
+    void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    void Function(Offset position)? onBackgroundTap,
+    void Function(String seriesId)? onSeriesSelected,
+    void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
+  }) {
+    // Convert map to data points
+    final points = data.entries.map((entry) {
+      // Convert key to double (supports int, double, String numbers)
+      final x = switch (entry.key) {
+        final int v => v.toDouble(),
+        final double v => v,
+        final String v => double.parse(v),
+        _ => throw ArgumentError('Map keys must be numeric or numeric strings'),
+      };
+      return ChartDataPoint(x: x, y: entry.value);
+    }).toList();
+
+    // Create series
+    final series = LineChartSeries(
+      id: seriesId,
+      name: seriesName ?? seriesId,
+      points: points,
+      color: seriesColor ?? Colors.blue,
+      interpolation: switch (lineStyle) {
+        LineStyle.straight => LineInterpolation.linear,
+        LineStyle.smooth => LineInterpolation.bezier,
+        LineStyle.stepped => LineInterpolation.stepped,
+      },
+    );
+
+    return BravenChartPlus(
+      key: key,
+      chartType: chartType,
+      lineStyle: lineStyle,
+      series: [series],
+      width: width,
+      height: height,
+      theme: theme,
+      xAxis: xAxis,
+      yAxis: yAxis,
+      annotations: annotations,
+      controller: controller,
+      autoScrollConfig: autoScrollConfig,
+      title: title,
+      subtitle: subtitle,
+      showLegend: showLegend,
+      showToolbar: showToolbar,
+      interactiveAnnotations: interactiveAnnotations,
+      loadingWidget: loadingWidget,
+      errorWidget: errorWidget,
+      onPointTap: onPointTap,
+      onPointHover: onPointHover,
+      onBackgroundTap: onBackgroundTap,
+      onSeriesSelected: onSeriesSelected,
+      onAnnotationTap: onAnnotationTap,
+      onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
+    );
+  }
+
+  /// Creates a chart from a JSON string.
+  factory BravenChartPlus.fromJson({
+    Key? key,
+    required ChartType chartType,
+    LineStyle lineStyle = LineStyle.straight,
+    required String seriesId,
+    required String json,
+    String? seriesName,
+    Color? seriesColor,
+    double? width,
+    double? height,
+    ChartTheme? theme,
+    AxisConfig? xAxis,
+    AxisConfig? yAxis,
+    List<ChartAnnotation> annotations = const [],
+    ChartController? controller,
+    AutoScrollConfig? autoScrollConfig,
+    String? title,
+    String? subtitle,
+    bool showLegend = true,
+    bool showToolbar = false,
+    bool interactiveAnnotations = true,
+    Widget? loadingWidget,
+    Widget Function(Object error)? errorWidget,
+    void Function(ChartDataPoint point, String seriesId)? onPointTap,
+    void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    void Function(Offset position)? onBackgroundTap,
+    void Function(String seriesId)? onSeriesSelected,
+    void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged,
+    InteractionConfig? interactionConfig,
+    StreamingConfig? streamingConfig,
+    Stream<ChartDataPoint>? dataStream,
+    StreamingController? streamingController,
+    bool showDebugInfo = false,
+    bool showXScrollbar = false,
+    bool showYScrollbar = false,
+    ScrollbarConfig? scrollbarTheme,
+    AnnotationController? annotationController,
+  }) {
+    // Parse JSON
+    final dynamic decoded = jsonDecode(json);
+
+    // Convert to list of points
+    final List<ChartDataPoint> points;
+    if (decoded is List) {
+      points = decoded.map((item) {
+        if (item is Map<String, dynamic>) {
+          return ChartDataPoint(
+            x: (item['x'] as num).toDouble(),
+            y: (item['y'] as num).toDouble(),
+            label: item['label'] as String?,
+          );
+        } else {
+          throw ArgumentError('JSON array must contain objects with x and y properties');
+        }
+      }).toList();
+    } else {
+      throw ArgumentError('JSON must be an array of data points');
+    }
+
+    // Create series
+    final ChartSeries series;
+    switch (chartType) {
+      case ChartType.line:
+        series = LineChartSeries(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          points: points,
+          color: seriesColor ?? Colors.blue,
+          interpolation: switch (lineStyle) {
+            LineStyle.straight => LineInterpolation.linear,
+            LineStyle.smooth => LineInterpolation.bezier,
+            LineStyle.stepped => LineInterpolation.stepped,
+          },
+        );
+      case ChartType.area:
+        series = AreaChartSeries(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          points: points,
+          color: seriesColor ?? Colors.blue,
+          interpolation: switch (lineStyle) {
+            LineStyle.straight => LineInterpolation.linear,
+            LineStyle.smooth => LineInterpolation.bezier,
+            LineStyle.stepped => LineInterpolation.stepped,
+          },
+        );
+      case ChartType.bar:
+        series = BarChartSeries(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          points: points,
+          color: seriesColor ?? Colors.blue,
+          barWidthPercent: 0.8,
+        );
+      case ChartType.scatter:
+        series = ScatterChartSeries(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          points: points,
+          color: seriesColor ?? Colors.blue,
+        );
+    }
+
+    return BravenChartPlus(
+      key: key,
+      chartType: chartType,
+      lineStyle: lineStyle,
+      series: [series],
+      width: width,
+      height: height,
+      theme: theme,
+      xAxis: xAxis,
+      yAxis: yAxis,
+      annotations: annotations,
+      controller: controller,
+      autoScrollConfig: autoScrollConfig,
+      title: title,
+      subtitle: subtitle,
+      showLegend: showLegend,
+      showToolbar: showToolbar,
+      interactiveAnnotations: interactiveAnnotations,
+      loadingWidget: loadingWidget,
+      errorWidget: errorWidget,
+      onPointTap: onPointTap,
+      onPointHover: onPointHover,
+      onBackgroundTap: onBackgroundTap,
+      onSeriesSelected: onSeriesSelected,
+      onAnnotationTap: onAnnotationTap,
+      onAnnotationDragged: onAnnotationDragged,
+      interactionConfig: interactionConfig,
+      streamingConfig: streamingConfig,
+      dataStream: dataStream,
+      streamingController: streamingController,
+      showDebugInfo: showDebugInfo,
+      showXScrollbar: showXScrollbar,
+      showYScrollbar: showYScrollbar,
+      scrollbarTheme: scrollbarTheme,
+      annotationController: annotationController,
+    );
+  }
+
   final ChartType chartType;
+  final LineStyle lineStyle;
   final List<ChartSeries> series;
 
   /// **Deprecated**: Use [annotationController] for reactive annotation management.
@@ -175,6 +512,63 @@ class BravenChartPlus extends StatefulWidget {
   /// If null, defaults to enabled tooltips with standard behavior.
   final InteractionConfig? interactionConfig;
 
+  // ==================== NEW PARAMETERS FOR COMPATIBILITY ====================
+
+  /// Chart title displayed at the top.
+  final String? title;
+
+  /// Chart subtitle displayed below the title.
+  final String? subtitle;
+
+  /// Whether to show the legend.
+  ///
+  /// Legend displays all series with their colors and names.
+  final bool showLegend;
+
+  /// Whether to show the toolbar.
+  ///
+  /// Toolbar provides refresh, download, and settings controls.
+  final bool showToolbar;
+
+  /// Whether annotations should be interactive (draggable, editable).
+  ///
+  /// Requires annotations to have `allowDragging = true`.
+  final bool interactiveAnnotations;
+
+  /// Widget to display while loading data.
+  ///
+  /// Defaults to CircularProgressIndicator.
+  final Widget? loadingWidget;
+
+  /// Widget to display when an error occurs.
+  ///
+  /// Receives the error object for custom error messages.
+  /// Defaults to Text('Error: ...').
+  final Widget Function(Object error)? errorWidget;
+
+  /// Configuration for automatic scrolling in streaming scenarios.
+  final AutoScrollConfig? autoScrollConfig;
+
+  // ==================== CALLBACKS ====================
+
+  /// Called when a data point is tapped.
+  final void Function(ChartDataPoint point, String seriesId)? onPointTap;
+
+  /// Called when a data point is hovered (desktop/web).
+  final void Function(ChartDataPoint? point, String? seriesId)? onPointHover;
+
+  /// Called when the chart background is tapped.
+  final void Function(Offset position)? onBackgroundTap;
+
+  /// Called when a series is selected.
+  final void Function(String seriesId)? onSeriesSelected;
+
+  /// Called when an annotation is tapped.
+  final void Function(ChartAnnotation annotation)? onAnnotationTap;
+
+  /// Called when an annotation is dragged to a new position.
+  final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
+
   @override
   State<BravenChartPlus> createState() => _BravenChartPlusState();
 }
@@ -219,6 +613,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   ChartElement? _lastTappedElement;
   DateTime? _lastTapTime;
   static const Duration _doubleTapTimeout = Duration(milliseconds: 300);
+
+  // Hidden series IDs for legend toggling
+  final Set<String> _hiddenSeriesIds = {};
 
   @override
   void initState() {
@@ -379,6 +776,17 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (widget.annotationController != null) {
       widget.annotationController!.updateAnnotation(annotationId, updatedAnnotation);
     }
+
+    // Call user callback
+    if (widget.onAnnotationDragged != null) {
+      Offset position = Offset.zero;
+      if (updatedAnnotation is TextAnnotation) {
+        position = updatedAnnotation.position;
+      } else if (updatedAnnotation is PointAnnotation) {
+        position = updatedAnnotation.offset;
+      }
+      widget.onAnnotationDragged!(updatedAnnotation, position);
+    }
   }
 
   void _rebuildElements() {
@@ -388,6 +796,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Start with widget.series as base
     List<ChartSeries> effectiveSeries = widget.series;
+
+    // Filter out hidden series
+    effectiveSeries = effectiveSeries.where((s) => !_hiddenSeriesIds.contains(s.id)).toList();
 
     // Merge controller data if controller is provided (matches BravenChart pattern)
     if (widget.controller != null) {
@@ -407,6 +818,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // First, update existing series with controller data
       for (final series in widget.series) {
+        // Skip if hidden
+        if (_hiddenSeriesIds.contains(series.id)) continue;
+
         final controllerPoints = controllerData[series.id];
         if (controllerPoints != null && controllerPoints.isNotEmpty) {
           // Removed excessive debugPrints - was firing on every frame
@@ -516,14 +930,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       dataBounds = _lockedPausedBounds!;
     } else {
       // NOT PAUSED: Calculate bounds based on viewport mode
-      final shouldUseWindowBounds = widget.streamingConfig?.autoScroll == true &&
-          widget.streamingController?.viewportMode == ViewportMode.followLatest &&
-          effectiveSeries.isNotEmpty;
+      final autoScrollEnabled = widget.autoScrollConfig?.enabled ?? widget.streamingConfig?.autoScroll ?? false;
+      // If streamingController is null, assume followLatest behavior when autoScroll is enabled
+      final isFollowingLatest = widget.streamingController?.viewportMode == ViewportMode.followLatest || widget.streamingController == null;
+      final shouldUseWindowBounds = autoScrollEnabled && isFollowingLatest && effectiveSeries.isNotEmpty;
 
       if (shouldUseWindowBounds) {
         // Calculate sliding window bounds using CONFIGURABLE NUMBER of recent points
         final allPoints = effectiveSeries.expand((s) => s.points).toList();
-        final windowSize = widget.streamingConfig?.autoScrollWindowSize ?? 150;
+        final windowSize = widget.autoScrollConfig?.maxVisiblePoints ?? widget.streamingConfig?.autoScrollWindowSize ?? 150;
         // Removed excessive debugPrint (sliding window calculation)
 
         if (allPoints.isNotEmpty) {
@@ -577,15 +992,35 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
 
     // Create axes from data bounds with theme colors
+    // Use user's axis config if provided, otherwise create default
+    final xAxisConfig = widget.xAxis ??
+        const AxisConfig(
+          label: 'X',
+          orientation: AxisOrientation.horizontal,
+          position: AxisPosition.bottom,
+        );
+
+    final yAxisConfig = widget.yAxis ??
+        const AxisConfig(
+          label: 'Y',
+          orientation: AxisOrientation.vertical,
+          position: AxisPosition.left,
+        );
+
     _xAxis = chart_axis.Axis(
       config: AxisConfig(
-        label: widget.xAxis?.label ?? 'X',
-        orientation: AxisOrientation.horizontal,
-        position: AxisPosition.bottom,
-        axisColor: widget.theme?.axisColor ?? Colors.black87,
-        gridColor: widget.theme?.gridColor ?? const Color(0xFFE0E0E0),
+        label: xAxisConfig.label,
+        orientation: xAxisConfig.orientation,
+        position: xAxisConfig.position,
+        axisColor: widget.theme?.axisColor ?? xAxisConfig.axisColor,
+        gridColor: widget.theme?.gridColor ?? xAxisConfig.gridColor,
         labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
         tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
+        showGrid: xAxisConfig.showGrid,
+        showAxisLine: xAxisConfig.showAxisLine,
+        showTickMarks: xAxisConfig.showTickMarks,
+        tickLength: xAxisConfig.tickLength,
+        labelPadding: xAxisConfig.labelPadding,
       ),
       dataMin: dataBounds.xMin,
       dataMax: dataBounds.xMax,
@@ -593,13 +1028,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     _yAxis = chart_axis.Axis(
       config: AxisConfig(
-        label: widget.yAxis?.label ?? 'Y',
-        orientation: AxisOrientation.vertical,
-        position: AxisPosition.left,
-        axisColor: widget.theme?.axisColor ?? Colors.black87,
-        gridColor: widget.theme?.gridColor ?? const Color(0xFFE0E0E0),
+        label: yAxisConfig.label,
+        orientation: yAxisConfig.orientation,
+        position: yAxisConfig.position,
+        axisColor: widget.theme?.axisColor ?? yAxisConfig.axisColor,
+        gridColor: widget.theme?.gridColor ?? yAxisConfig.gridColor,
         labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
         tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
+        showGrid: yAxisConfig.showGrid,
+        showAxisLine: yAxisConfig.showAxisLine,
+        showTickMarks: yAxisConfig.showTickMarks,
+        tickLength: yAxisConfig.tickLength,
+        labelPadding: yAxisConfig.labelPadding,
       ),
       dataMin: dataBounds.yMin,
       dataMax: dataBounds.yMax,
@@ -1192,6 +1632,32 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _lastTapTime = DateTime.now();
     _lastTappedElement = tappedElement;
 
+    // Trigger callbacks
+    if (tappedElement != null) {
+      if (tappedElement is PointAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is TextAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is RangeAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is ThresholdAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is TrendAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is SeriesElement) {
+        // Check if a specific marker was tapped
+        final marker = _coordinator.hoveredMarker;
+        if (marker != null && marker.seriesId == tappedElement.series.id) {
+          final point = tappedElement.series.points[marker.markerIndex];
+          widget.onPointTap?.call(point, tappedElement.series.id);
+        } else {
+          widget.onSeriesSelected?.call(tappedElement.series.id);
+        }
+      }
+    } else {
+      widget.onBackgroundTap?.call(details.localPosition);
+    }
+
     // Request focus on tap to enable keyboard controls
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
@@ -1202,6 +1668,25 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Double-click detection now handled in _handleTapDown
     // (since activeElement is cleared by the time we get here)
   }
+
+  void _handleElementHover(ChartElement? element) {
+    if (widget.onPointHover == null) return;
+
+    if (element is SeriesElement) {
+      final marker = _coordinator.hoveredMarker;
+      if (marker != null && marker.seriesId == element.series.id) {
+        final point = element.series.points[marker.markerIndex];
+        widget.onPointHover!(point, element.series.id);
+      } else {
+        // Hovering series line but not a specific point
+        widget.onPointHover!(null, element.series.id);
+      }
+    } else {
+      // Not hovering a series (empty space or other element)
+      widget.onPointHover!(null, null);
+    }
+  }
+
   void _handleCursorChange(MouseCursor cursor) {
     if (_currentCursor != cursor) {
       setState(() => _currentCursor = cursor);
@@ -1229,29 +1714,47 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
       // Arrow keys for panning
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        // Removed excessive debugPrint (arrow left)
-        renderBox.panChart(-20.0, 0.0);
+        // Check if pan is enabled
+        if (widget.interactionConfig?.enablePan ?? true) {
+          // Removed excessive debugPrint (arrow left)
+          renderBox.panChart(-20.0, 0.0);
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        // Removed excessive debugPrint (arrow right)
-        renderBox.panChart(20.0, 0.0);
+        // Check if pan is enabled
+        if (widget.interactionConfig?.enablePan ?? true) {
+          // Removed excessive debugPrint (arrow right)
+          renderBox.panChart(20.0, 0.0);
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        // Removed excessive debugPrint (arrow up)
-        renderBox.panChart(0.0, -20.0);
+        // Check if pan is enabled
+        if (widget.interactionConfig?.enablePan ?? true) {
+          // Removed excessive debugPrint (arrow up)
+          renderBox.panChart(0.0, -20.0);
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        // Removed excessive debugPrint (arrow down)
-        renderBox.panChart(0.0, 20.0);
+        // Check if pan is enabled
+        if (widget.interactionConfig?.enablePan ?? true) {
+          // Removed excessive debugPrint (arrow down)
+          renderBox.panChart(0.0, 20.0);
+        }
       }
       // Zoom in with + or = or numpad +
       else if (event.logicalKey == LogicalKeyboardKey.equal ||
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
-        // Removed excessive debugPrint (zoom in)
-        renderBox.zoomChart(1.1);
+        // Check if zoom is enabled
+        if (widget.interactionConfig?.enableZoom ?? true) {
+          // Removed excessive debugPrint (zoom in)
+          renderBox.zoomChart(1.1);
+        }
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
-        // Removed excessive debugPrint (zoom out)
-        renderBox.zoomChart(0.9);
+        // Check if zoom is enabled
+        if (widget.interactionConfig?.enableZoom ?? true) {
+          // Removed excessive debugPrint (zoom out)
+          renderBox.zoomChart(0.9);
+        }
       }
     } else if (event is KeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
@@ -1310,7 +1813,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         widget.controller!.addPoint(seriesId, srcPoint);
 
         // Auto-scroll if enabled
-        if (config.autoScroll) {
+        final autoScrollEnabled = widget.autoScrollConfig?.enabled ?? config.autoScroll;
+        if (autoScrollEnabled) {
           setState(() {
             _autoScrollToLatest();
           });
@@ -1322,7 +1826,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           _rebuildElements();
 
           // Auto-scroll if enabled
-          if (config.autoScroll) {
+          final autoScrollEnabled = widget.autoScrollConfig?.enabled ?? config.autoScroll;
+          if (autoScrollEnabled) {
             _autoScrollToLatest();
           }
         });
@@ -1440,7 +1945,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Auto-scroll and notify regardless of path
     final config = widget.streamingConfig ?? const StreamingConfig();
-    if (config.autoScroll) {
+    final autoScrollEnabled = widget.autoScrollConfig?.enabled ?? config.autoScroll;
+    if (autoScrollEnabled) {
       setState(() {
         _autoScrollToLatest();
       });
@@ -1576,13 +2082,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   @override
   Widget build(BuildContext context) {
     // Disable browser context menu on web platform
-    // This allows our custom context menu to work properly
     if (kIsWeb) {
       BrowserContextMenu.disableContextMenu();
     }
 
-    // Removed excessive debugPrint (build called)
-    return Focus(
+    final Widget chartContent = Focus(
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
@@ -1593,14 +2097,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         builder: (context) {
           final hasFocus = _focusNode.hasFocus;
           return MouseRegion(
-            // Request focus when mouse enters this chart (for keyboard controls)
             onEnter: (_) {
               if (!_focusNode.hasFocus) {
                 _focusNode.requestFocus();
-                // Removed excessive debugPrint (focus requested via mouse enter)
               }
             },
-            // Unfocus when mouse exits this chart
             onExit: (_) {
               if (_focusNode.hasFocus) {
                 _focusNode.unfocus();
@@ -1646,11 +2147,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         yAxis: _yAxis,
                         theme: widget.theme,
                         tooltipsEnabled: widget.interactionConfig?.tooltip.enabled ?? true,
-                        showXScrollbar: widget.showXScrollbar,
-                        showYScrollbar: widget.showYScrollbar,
+                        showXScrollbar: widget.interactionConfig?.showXScrollbar ?? widget.showXScrollbar,
+                        showYScrollbar: widget.interactionConfig?.showYScrollbar ?? widget.showYScrollbar,
                         scrollbarTheme: widget.scrollbarTheme,
+                        interactionConfig: widget.interactionConfig,
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
+                        onElementHover: _handleElementHover,
                       ),
                     ),
                   ),
@@ -1662,6 +2165,67 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         },
       ),
     );
+
+    // Add title, subtitle, and legend
+    if (widget.title != null || widget.subtitle != null || widget.showLegend) {
+      final children = <Widget>[];
+
+      if (widget.title != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              widget.title!,
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+
+      if (widget.subtitle != null) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              widget.subtitle!,
+              style: Theme.of(context).textTheme.titleSmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+
+      // Chart content takes available space
+      children.add(Expanded(child: chartContent));
+
+      if (widget.showLegend) {
+        children.add(
+          ChartLegend(
+            series: widget.series,
+            hiddenSeriesIds: _hiddenSeriesIds,
+            onSeriesToggle: (seriesId) {
+              setState(() {
+                if (_hiddenSeriesIds.contains(seriesId)) {
+                  _hiddenSeriesIds.remove(seriesId);
+                } else {
+                  _hiddenSeriesIds.add(seriesId);
+                }
+                _rebuildElements();
+              });
+            },
+          ),
+        );
+      }
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
+
+    return chartContent;
   }
 }
 
@@ -1679,8 +2243,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     required this.showXScrollbar,
     required this.showYScrollbar,
     this.scrollbarTheme,
+    this.interactionConfig,
     this.onCursorChange,
     this.onAnnotationChanged,
+    this.onElementHover,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -1694,8 +2260,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final bool showXScrollbar;
   final bool showYScrollbar;
   final ScrollbarConfig? scrollbarTheme;
+  final InteractionConfig? interactionConfig;
   final void Function(MouseCursor cursor)? onCursorChange;
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
+  final void Function(ChartElement? element)? onElementHover;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -1707,8 +2275,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       showXScrollbar: showXScrollbar,
       showYScrollbar: showYScrollbar,
       scrollbarTheme: scrollbarTheme,
+      interactionConfig: interactionConfig,
       onCursorChange: onCursorChange,
       onAnnotationChanged: onAnnotationChanged,
+      onElementHover: onElementHover,
     )
       ..setXAxis(xAxis)
       ..setYAxis(yAxis);
@@ -1720,7 +2290,12 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
       ..setYAxis(yAxis)
-      ..setTheme(theme);
+      ..setTheme(theme)
+      ..setTooltipsEnabled(tooltipsEnabled)
+      ..setShowXScrollbar(showXScrollbar)
+      ..setShowYScrollbar(showYScrollbar)
+      ..setInteractionConfig(interactionConfig)
+      ..onElementHover = onElementHover;
   }
 }
 

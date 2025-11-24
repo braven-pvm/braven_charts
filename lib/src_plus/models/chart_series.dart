@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 
 /// Interpolation methods for line and area charts.
@@ -13,23 +14,37 @@ enum LineInterpolation {
   monotone,
 }
 
-/// Base sealed class for chart series (Dart 3.0+ exhaustive pattern matching).
-sealed class ChartSeries {
+/// Rendering style hints for series visualization.
+enum SeriesStyle {
+  line,
+  bar,
+  scatter,
+  area,
+}
+
+/// Base class for chart series.
+///
+/// Now concrete to support generic usage like in BravenChart.
+class ChartSeries {
   const ChartSeries({
     required this.id,
     this.name,
     required this.points,
     this.color,
+    this.style,
     this.isXOrdered = false,
     this.metadata,
+    this.annotations = const [],
   });
 
   final String id;
   final String? name;
   final List<ChartDataPoint> points;
   final Color? color;
+  final SeriesStyle? style;
   final bool isXOrdered;
   final Map<String, dynamic>? metadata;
+  final List<ChartAnnotation> annotations;
 
   int get length => points.length;
   bool get isEmpty => points.isEmpty;

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import 'annotation_style.dart';
+import 'enums.dart';
 
 /// Counter for auto-generating annotation IDs.
 int _annotationIdCounter = 0;
@@ -89,17 +90,6 @@ sealed class ChartAnnotation {
 
   /// Generates a unique annotation ID.
   static String generateId() => 'annotation_${_annotationIdCounter++}';
-}
-
-/// Marker shapes for point annotations.
-enum MarkerShape {
-  circle,
-  square,
-  triangle,
-  diamond,
-  star,
-  cross,
-  plus,
 }
 
 /// Anchor point for text annotations positioning.
