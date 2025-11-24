@@ -12,6 +12,7 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/enums.dart';
 import 'resize_handle_element.dart';
 
 /// A chart element that renders a point annotation marker.
@@ -246,6 +247,9 @@ class PointAnnotationElement extends ChartElement {
               ..color = paint.color
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2.0);
+        break;
+
+      case MarkerShape.none:
         break;
     }
   }

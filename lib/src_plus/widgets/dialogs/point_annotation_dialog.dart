@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/enums.dart';
 import 'annotation_style_editor.dart';
 
 /// Dialog for creating or editing PointAnnotations.
@@ -359,6 +360,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         return Icon(Icons.star, size: size, color: color);
       case MarkerShape.plus:
         return Icon(Icons.add, size: size, color: color);
+      case MarkerShape.none:
+        return Icon(Icons.not_interested, size: size, color: color);
     }
   }
 
@@ -378,6 +381,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         return 'Star';
       case MarkerShape.plus:
         return 'Plus';
+      case MarkerShape.none:
+        return 'None';
     }
   }
 

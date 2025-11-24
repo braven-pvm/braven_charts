@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'landing_screen.dart';
 
 void main() {
   runApp(const BravenChartsExampleApp());
@@ -41,7 +41,7 @@ class BravenChartsExampleApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+      home: const LandingScreen(),
     );
   }
 }
