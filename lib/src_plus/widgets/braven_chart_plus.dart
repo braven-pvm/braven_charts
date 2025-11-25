@@ -1453,7 +1453,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     // Release rangeAnnotationCreation mode after dialog closes (regardless of result)
-    _coordinator.releaseMode();
+    // CRITICAL: Must use force=true because rangeAnnotationCreation is modal (priority 10)
+    _coordinator.releaseMode(force: true);
     debugPrint('🎯 Released rangeAnnotationCreation mode after dialog closed');
 
     if (result != null && mounted) {
