@@ -59,8 +59,8 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
       initialAnnotations.add(
         RangeAnnotation(
           id: 'range-1',
-          startX: 15.0,
-          endX: 35.0,
+          startY: 85,
+          endY: 120,
           fillColor: Colors.orange.withOpacity(0.2),
           borderColor: Colors.orange,
           label: 'Important Range',
