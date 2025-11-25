@@ -1856,6 +1856,14 @@ class ChartRenderBox extends RenderBox {
         return;
       }
 
+      // Update range annotation creation rectangle if in rangeAnnotationCreation mode (Option 4)
+      if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+        debugPrint('🎯 Range creation drag: updating box selection rectangle');
+        coordinator.updateBoxSelection(startPos, position);
+        markNeedsPaint(); // Trigger rubber-band rendering
+        return;
+      }
+
       if (startElement != null && startElement.isDraggable) {
         // Dragging an element (per scenarios 5, 10, 13)
         if (startElement.elementType == ChartElementType.datapoint) {
