@@ -2052,17 +2052,16 @@ class ChartRenderBox extends RenderBox {
             final needsSnapEndX = resizeDirection == ResizeDirection.right ||
                 resizeDirection == ResizeDirection.topRight ||
                 resizeDirection == ResizeDirection.bottomRight;
-            
+
             // CRITICAL: Y-axis mapping is INVERTED from screen pixels
             // Screen: top pixel (small Y) = higher data value (endY)
             // Screen: bottom pixel (large Y) = lower data value (startY)
             // So when dragging BOTTOM handle, we're changing startY (not endY!)
-            final needsSnapStartY = resizeDirection == ResizeDirection.bottom || 
-                resizeDirection == ResizeDirection.bottomLeft || 
+            final needsSnapStartY = resizeDirection == ResizeDirection.bottom ||
+                resizeDirection == ResizeDirection.bottomLeft ||
                 resizeDirection == ResizeDirection.bottomRight;
-            final needsSnapEndY = resizeDirection == ResizeDirection.top ||
-                resizeDirection == ResizeDirection.topLeft ||
-                resizeDirection == ResizeDirection.topRight;
+            final needsSnapEndY =
+                resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
 
             print('   needsSnapStartY=$needsSnapStartY, needsSnapEndY=$needsSnapEndY');
 
@@ -2420,47 +2419,7 @@ class ChartRenderBox extends RenderBox {
     double? nearestValue;
     double minDistance = double.infinity;
 
-    // For Y-axis, snap to sensible axis grid values instead of data points
-    // This provides better UX when there are many data points
-    if (axis == 'y' && _transform != null) {
-      // Calculate a sensible grid interval based on the Y-axis range
-      final range = _transform!.dataYMax - _transform!.dataYMin;
-
-      // Determine appropriate interval (power of 10 or nice fractions)
-      double interval;
-      if (range <= 10) {
-        interval = 1.0;
-      } else if (range <= 20) {
-        interval = 2.0;
-      } else if (range <= 50) {
-        interval = 5.0;
-      } else if (range <= 100) {
-        interval = 10.0;
-      } else if (range <= 200) {
-        interval = 20.0;
-      } else if (range <= 500) {
-        interval = 50.0;
-      } else {
-        interval = 100.0;
-      }
-
-      // Find nearest grid value
-      final snappedValue = (targetValue / interval).round() * interval;
-      final distance = (snappedValue - targetValue).abs();
-
-      // DEBUG: Print snap calculation details
-      print('🎯 Y-SNAP: target=$targetValue, range=$range, interval=$interval, snappedValue=$snappedValue, distance=$distance, tolerance=$tolerance');
-
-      // Check if within tolerance
-      if (distance <= tolerance) {
-        print('✅ Y-SNAP: SNAPPED to $snappedValue');
-        return snappedValue.toDouble();
-      }
-      print('❌ Y-SNAP: NO SNAP (distance $distance > tolerance $tolerance)');
-      return null;
-    }
-
-    // For X-axis, collect all data points from all series
+    // Collect all data points from all series for both X and Y axes
     for (final element in _elements.whereType<SeriesElement>()) {
       for (final point in element.series.points) {
         // Get the value for the specified axis
