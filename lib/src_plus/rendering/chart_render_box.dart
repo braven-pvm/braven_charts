@@ -1242,8 +1242,22 @@ class ChartRenderBox extends RenderBox {
 
     if (hits.isEmpty) return null;
 
-    // Return highest priority element
-    hits.sort((a, b) => b.priority.compareTo(a.priority));
+    // Return highest priority element (highest priority = painted last = on top = should receive hits)
+    // Within same priority, NON-Range annotations should be hit-tested first (they're on top)
+    hits.sort((a, b) {
+      // First, sort by priority (higher priority = painted last = on top = should be hit first)
+      final priorityCompare = b.priority.compareTo(a.priority);
+      if (priorityCompare != 0) return priorityCompare;
+
+      // Within same priority, RangeAnnotations should be hit-tested LAST (they're in back)
+      final aIsRange = a is RangeAnnotationElement;
+      final bIsRange = b is RangeAnnotationElement;
+
+      if (aIsRange && !bIsRange) return 1;  // b (non-Range) hit-tested first
+      if (!aIsRange && bIsRange) return -1; // a (non-Range) hit-tested first
+
+      return 0; // Equal priority and type
+    });
     return hits.first;
   }
 
