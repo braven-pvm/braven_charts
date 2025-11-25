@@ -1127,12 +1127,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
-      debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
-      // PERFORMANCE FIX: Call immediately instead of post-frame callback
-      // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
-      // frame scheduler was busy or browser was throttling frames.
-      // Context menus need immediate response for good UX.
-      _showContextMenu();
+      // Only show context menu if annotationController is provided
+      // (all current menu items are annotation-related)
+      if (widget.annotationController != null) {
+        debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
+        // PERFORMANCE FIX: Call immediately instead of post-frame callback
+        // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
+        // frame scheduler was busy or browser was throttling frames.
+        // Context menus need immediate response for good UX.
+        _showContextMenu();
+      } else {
+        debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode but no annotationController, releasing mode immediately');
+        _coordinator.releaseMode(force: true);
+      }
     } // CRITICAL FIX: Only call setState() if debug overlay is visible!
     // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
     // so we don't need setState() for cursor movement.
