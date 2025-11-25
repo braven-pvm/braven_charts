@@ -292,7 +292,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         points: data,
         color: Colors.blue,
         interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: false,
+        showDataPointMarkers: true,
       ),
     ];
 

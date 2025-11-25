@@ -2034,9 +2034,13 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (resizedAnnotation.snapToValue) {
+            print('🔍 RESIZE SNAP: enabled, direction=$resizeDirection');
+            print('   newStartY=$newStartY, newEndY=$newEndY');
+            
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
+            print('   xTolerance=$xTolerance, yTolerance=$yTolerance');
 
             // Determine which edge was resized based on resize direction
             final needsSnapStartX = resizeDirection == ResizeDirection.left ||
@@ -2050,6 +2054,8 @@ class ChartRenderBox extends RenderBox {
             final needsSnapEndY = resizeDirection == ResizeDirection.bottom ||
                 resizeDirection == ResizeDirection.bottomLeft ||
                 resizeDirection == ResizeDirection.bottomRight;
+            
+            print('   needsSnapStartY=$needsSnapStartY, needsSnapEndY=$needsSnapEndY');
 
             // Snap X coordinates if needed
             if (needsSnapStartX) {
