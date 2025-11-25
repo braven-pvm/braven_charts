@@ -1253,7 +1253,7 @@ class ChartRenderBox extends RenderBox {
       final aIsRange = a is RangeAnnotationElement;
       final bIsRange = b is RangeAnnotationElement;
 
-      if (aIsRange && !bIsRange) return 1;  // b (non-Range) hit-tested first
+      if (aIsRange && !bIsRange) return 1; // b (non-Range) hit-tested first
       if (!aIsRange && bIsRange) return -1; // a (non-Range) hit-tested first
 
       return 0; // Equal priority and type
