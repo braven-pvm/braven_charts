@@ -3053,7 +3053,21 @@ class ChartRenderBox extends RenderBox {
 
     // Paint non-series elements (annotations, handles, etc.)
     // These are not cached because they're less expensive and change frequently
-    final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()..sort((a, b) => a.priority.compareTo(b.priority));
+    // Sort by: 1) priority (lower = paint first/back), 2) annotation type (Range < others)
+    final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()
+      ..sort((a, b) {
+        // First, sort by priority (lower priority = paint first = in back)
+        final priorityCompare = a.priority.compareTo(b.priority);
+        if (priorityCompare != 0) return priorityCompare;
+
+        // Within same priority, RangeAnnotations paint FIRST (in back)
+        final aIsRange = a is RangeAnnotationElement;
+        final bIsRange = b is RangeAnnotationElement;
+        if (aIsRange && !bIsRange) return -1; // a (Range) paints first
+        if (!aIsRange && bIsRange) return 1; // b (Range) paints first
+
+        return 0; // Equal priority and type
+      });
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
     for (final element in nonSeriesElements) {
