@@ -2410,7 +2410,7 @@ class ChartRenderBox extends RenderBox {
     if (axis == 'y' && _transform != null) {
       // Calculate a sensible grid interval based on the Y-axis range
       final range = _transform!.dataYMax - _transform!.dataYMin;
-      
+
       // Determine appropriate interval (power of 10 or nice fractions)
       double interval;
       if (range <= 10) {
@@ -2428,14 +2428,20 @@ class ChartRenderBox extends RenderBox {
       } else {
         interval = 100.0;
       }
-      
+
       // Find nearest grid value
       final snappedValue = (targetValue / interval).round() * interval;
-      
+      final distance = (snappedValue - targetValue).abs();
+
+      // DEBUG: Print snap calculation details
+      print('🎯 Y-SNAP: target=$targetValue, range=$range, interval=$interval, snappedValue=$snappedValue, distance=$distance, tolerance=$tolerance');
+
       // Check if within tolerance
-      if ((snappedValue - targetValue).abs() <= tolerance) {
+      if (distance <= tolerance) {
+        print('✅ Y-SNAP: SNAPPED to $snappedValue');
         return snappedValue.toDouble();
       }
+      print('❌ Y-SNAP: NO SNAP (distance $distance > tolerance $tolerance)');
       return null;
     }
 
