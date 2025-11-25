@@ -220,6 +220,9 @@ class _WebContextMenuRoute extends PopupRoute<String> {
   Duration get transitionDuration => const Duration(milliseconds: 75);
 
   @override
+  Duration get reverseTransitionDuration => Duration.zero;
+
+  @override
   Widget buildPage(
     BuildContext context,
     Animation<double> animation,
