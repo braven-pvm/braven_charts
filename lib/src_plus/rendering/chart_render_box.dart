@@ -71,6 +71,7 @@ class ChartRenderBox extends RenderBox {
     this.onEmptyAreaClick,
     this.onCursorChange,
     this.onAnnotationChanged,
+    this.onRangeCreationComplete,
   })  : _elementGenerator = elementGenerator,
         _theme = theme,
         _tooltipsEnabled = tooltipsEnabled,
@@ -124,6 +125,12 @@ class ChartRenderBox extends RenderBox {
   /// The [annotationId] is the ID of the modified annotation, and
   /// [updatedAnnotation] is the new annotation object with updated values.
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
+
+  /// Callback for range annotation creation completion.
+  ///
+  /// Called when user completes drag in rangeAnnotationCreation mode.
+  /// Provides data coordinates of dragged rectangle (startX, endX, startY, endY).
+  final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
 
   /// Current resize state (if resizing annotation).
   // Current resize state (if resizing annotation).
@@ -1894,6 +1901,52 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
+    // Complete range annotation creation if active (Option 4 workflow)
+    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+      final boxRect = coordinator.boxSelectionRect;
+      if (boxRect != null && onRangeCreationComplete != null) {
+        debugPrint('🎯 Range creation drag complete, converting to data coords...');
+
+        // Get transform from first series to convert plot coords to data coords
+        if (_elements.whereType<SeriesElement>().isNotEmpty) {
+          final seriesElement = _elements.whereType<SeriesElement>().first;
+          final transform = seriesElement.transform;
+
+          // Convert plot coordinates to data coordinates
+          final topLeft = transform.plotToData(boxRect.left, boxRect.top);
+          final bottomRight = transform.plotToData(boxRect.right, boxRect.bottom);
+
+          // Calculate data bounds (note: Y axis is inverted in plot space)
+          final startX = topLeft.dx < bottomRight.dx ? topLeft.dx : bottomRight.dx;
+          final endX = topLeft.dx > bottomRight.dx ? topLeft.dx : bottomRight.dx;
+          final startY = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
+          final endY = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
+
+          debugPrint('   Plot rect: $boxRect');
+          debugPrint('   Data bounds: X[$startX, $endX], Y[$startY, $endY]');
+
+          // Release mode BEFORE calling callback (callback may show dialog)
+          coordinator.endInteraction();
+          coordinator.releaseMode();
+
+          // Notify widget to open dialog with pre-filled coordinates
+          onRangeCreationComplete!(startX, endX, startY, endY);
+          markNeedsPaint();
+          return;
+        } else {
+          debugPrint('❌ No series elements found, cannot convert to data coords');
+        }
+      } else if (boxRect == null) {
+        debugPrint('❌ Range creation cancelled (no drag or too small)');
+      }
+
+      // Release mode even if cancelled
+      coordinator.endInteraction();
+      coordinator.releaseMode();
+      markNeedsPaint();
+      return;
+    }
+
     // Clear resize state
     if (_resizingAnnotation != null) {
       // CRITICAL: Read temp bounds BEFORE clearing them!
@@ -2772,6 +2825,71 @@ class ChartRenderBox extends RenderBox {
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1,
         );
+      }
+    }
+
+    // Paint range annotation creation rectangle if active (Option 4 rubber-band)
+    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+      final boxRect = coordinator.boxSelectionRect;
+      if (boxRect != null) {
+        // Draw semi-transparent filled rectangle (lighter blue than box select)
+        canvas.drawRect(
+          boxRect,
+          Paint()
+            ..color = const ui.Color(0x26448AFF) // Blue with 15% opacity
+            ..style = PaintingStyle.fill,
+        );
+
+        // Draw solid border (dashed would require path, keeping simple for now)
+        final borderPaint = Paint()
+          ..color = const ui.Color(0xFF448AFF) // Blue
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+        canvas.drawRect(boxRect, borderPaint);
+
+        // Draw coordinate labels showing data bounds
+        if (_transform != null) {
+          final topLeft = _transform!.plotToData(boxRect.left, boxRect.top);
+          final bottomRight = _transform!.plotToData(boxRect.right, boxRect.bottom);
+
+          // Calculate min/max coordinates
+          final xMin = topLeft.dx < bottomRight.dx ? topLeft.dx : bottomRight.dx;
+          final xMax = topLeft.dx > bottomRight.dx ? topLeft.dx : bottomRight.dx;
+          final yMin = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
+          final yMax = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
+
+          // Format coordinate text
+          final coordText = 'X: [${xMin.toStringAsFixed(2)}, ${xMax.toStringAsFixed(2)}]  '
+              'Y: [${yMin.toStringAsFixed(2)}, ${yMax.toStringAsFixed(2)}]';
+
+          // Draw text near bottom-right corner of rectangle
+          final textPainter = TextPainter(
+            text: TextSpan(
+              text: coordText,
+              style: const TextStyle(
+                color: ui.Color(0xFF000000),
+                fontSize: 11,
+                backgroundColor: ui.Color(0xE6FFFFFF), // White with 90% opacity
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          );
+          textPainter.layout();
+
+          // Position tooltip below and to the left of bottom-right corner
+          var tooltipOffset = boxRect.bottomRight + const Offset(5, 5);
+
+          // Keep tooltip inside widget bounds
+          if (tooltipOffset.dx + textPainter.width > size.width) {
+            tooltipOffset = Offset(size.width - textPainter.width - 5, tooltipOffset.dy);
+          }
+          if (tooltipOffset.dy + textPainter.height > size.height) {
+            tooltipOffset = Offset(tooltipOffset.dx, boxRect.top - textPainter.height - 5);
+          }
+
+          textPainter.paint(canvas, tooltipOffset);
+        }
       }
     }
 
