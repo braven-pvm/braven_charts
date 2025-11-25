@@ -3063,11 +3063,21 @@ class ChartRenderBox extends RenderBox {
         // Within same priority, RangeAnnotations paint FIRST (in back)
         final aIsRange = a is RangeAnnotationElement;
         final bIsRange = b is RangeAnnotationElement;
+
         if (aIsRange && !bIsRange) return -1; // a (Range) paints first
         if (!aIsRange && bIsRange) return 1; // b (Range) paints first
 
         return 0; // Equal priority and type
       });
+
+    // DEBUG: Print final paint order (only annotations)
+    final annotations = nonSeriesElements.where((e) => e.elementType == ChartElementType.annotation).toList();
+    if (annotations.isNotEmpty) {
+      print('🎨 PAINT ORDER (annotations only):');
+      for (var i = 0; i < annotations.length; i++) {
+        print('  $i: ${annotations[i].runtimeType} (priority=${annotations[i].priority}, id=${annotations[i].id})');
+      }
+    }
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
     for (final element in nonSeriesElements) {
