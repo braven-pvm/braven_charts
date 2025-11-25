@@ -2155,6 +2155,9 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (movedAnnotation.snapToValue) {
+            print('🔍 MOVE SNAP: enabled');
+            print('   Before: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
+            
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
@@ -2166,6 +2169,7 @@ class ChartRenderBox extends RenderBox {
               final width = newEndX - newStartX;
               newStartX = snappedStartX;
               newEndX = newStartX + width;
+              print('   X snapped: startX=$newStartX, endX=$newEndX');
             }
 
             // Snap Y coordinates if needed (only if they're defined)
@@ -2176,8 +2180,11 @@ class ChartRenderBox extends RenderBox {
                 final height = newEndY - newStartY;
                 newStartY = snappedStartY;
                 newEndY = newStartY + height;
+                print('   Y snapped: startY=$newStartY, endY=$newEndY');
               }
             }
+            
+            print('   After: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
           }
 
           // Create updated annotation with new bounds
