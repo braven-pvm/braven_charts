@@ -1745,6 +1745,24 @@ class ChartRenderBox extends RenderBox {
       return; // Scrollbar is handling the event
     }
 
+    // PRIORITY 1.5: Handle range annotation creation mode (Option 4)
+    // This must happen BEFORE isInteracting check because we enter this mode from menu (not pointer down)
+    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation && event.buttons == kPrimaryMouseButton) {
+      // First move after entering mode - start interaction
+      if (!coordinator.isInteracting) {
+        debugPrint('🎯 Range creation: First drag detected, starting interaction');
+        coordinator.startInteraction(position);
+      }
+      
+      final startPos = coordinator.interactionStartPosition;
+      if (startPos != null) {
+        debugPrint('🎯 Range creation drag: updating box selection rectangle from $startPos to $position');
+        coordinator.updateBoxSelection(startPos, position);
+        markNeedsPaint(); // Trigger rubber-band rendering
+      }
+      return;
+    }
+
     if (!coordinator.isInteracting) return;
 
     final startPos = coordinator.interactionStartPosition;
@@ -1853,14 +1871,6 @@ class ChartRenderBox extends RenderBox {
         }
 
         markNeedsPaint();
-        return;
-      }
-
-      // Update range annotation creation rectangle if in rangeAnnotationCreation mode (Option 4)
-      if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
-        debugPrint('🎯 Range creation drag: updating box selection rectangle');
-        coordinator.updateBoxSelection(startPos, position);
-        markNeedsPaint(); // Trigger rubber-band rendering
         return;
       }
 
