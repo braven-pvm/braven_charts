@@ -1452,6 +1452,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ),
     );
 
+    // Release rangeAnnotationCreation mode after dialog closes (regardless of result)
+    _coordinator.releaseMode();
+    debugPrint('🎯 Released rangeAnnotationCreation mode after dialog closed');
+
     if (result != null && mounted) {
       debugPrint('✅ Created RangeAnnotation: ${result.id}');
       debugPrint('   X: [${result.startX}, ${result.endX}], Y: [${result.startY}, ${result.endY}]');
