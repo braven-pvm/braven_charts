@@ -1258,6 +1258,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$menuClosedTime] showMenu returned (menu was open for ${menuClosedTime - showMenuTime}ms)');
 
+    // Release mode BEFORE handling action (so action handlers can claim new modes)
+    // This is critical for modal-to-modal transitions (e.g., contextMenuOpen → rangeAnnotationCreation)
+    final releaseTime = DateTime.now().millisecondsSinceEpoch;
+    debugPrint('⏱️ [$releaseTime] Releasing coordinator mode (force=true) BEFORE handling action...');
+    _coordinator.releaseMode(force: true);
+
     // Handle menu selection
     if (result != null) {
       debugPrint('⏱️ [$menuClosedTime] 🎯 Menu action selected: $result');
@@ -1265,11 +1271,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     } else {
       debugPrint('⏱️ [$menuClosedTime] Menu dismissed without selection');
     }
-
-    // Release mode after menu is dismissed (force=true because contextMenuOpen is modal)
-    final releaseTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$releaseTime] Releasing coordinator mode (force=true)...');
-    _coordinator.releaseMode(force: true);
 
     final endTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$endTime] 🎯 _showContextMenu END (total: ${endTime - startTime}ms, release: ${endTime - releaseTime}ms)');
@@ -2231,6 +2232,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
+                        onRangeCreationComplete: _onRangeCreationComplete,
                       ),
                     ),
                   ),
