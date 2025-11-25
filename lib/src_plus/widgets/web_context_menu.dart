@@ -65,7 +65,9 @@ class WebContextMenu extends StatelessWidget {
                 return _WebContextMenuItemWidget(
                   item: item,
                   onTap: () {
+                    debugPrint('🔘 Menu item tapped: ${item.value}');
                     Navigator.of(context).pop(item.value);
+                    debugPrint('🔘 Navigator.pop called for: ${item.value}');
                   },
                 );
               }
@@ -137,7 +139,12 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
       onExit: (_) => setState(() => _isHovered = false),
       cursor: isEnabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GestureDetector(
-        onTap: isEnabled ? widget.onTap : null,
+        onTap: isEnabled
+            ? () {
+                debugPrint('🔘 Menu item GestureDetector.onTap: ${widget.item.label}');
+                widget.onTap();
+              }
+            : null,
         behavior: HitTestBehavior.opaque,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -218,38 +225,41 @@ class _WebContextMenuRoute extends PopupRoute<String> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    return GestureDetector(
-      onTap: () {
-        // Close menu when clicking outside
-        Navigator.of(context).pop();
-      },
-      behavior: HitTestBehavior.translucent,
-      child: Stack(
-        children: [
-          Positioned(
-            left: position.dx,
-            top: position.dy,
-            child: GestureDetector(
-              // Prevent taps on menu from dismissing via barrier
-              onTap: () {},
-              behavior: HitTestBehavior.opaque,
-              child: FadeTransition(
-                opacity: CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: WebContextMenu(
-                    items: items,
-                    onDismiss: () => Navigator.of(context).pop(),
-                  ),
-                ),
+    return Stack(
+      children: [
+        // Barrier to detect clicks outside menu
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () {
+              debugPrint('🔘 Barrier tapped - closing menu');
+              Navigator.of(context).pop();
+            },
+            behavior: HitTestBehavior.translucent,
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+        // Menu positioned at click location
+        Positioned(
+          left: position.dx,
+          top: position.dy,
+          child: FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: WebContextMenu(
+                items: items,
+                onDismiss: () {
+                  debugPrint('🔘 onDismiss called');
+                  Navigator.of(context).pop();
+                },
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
