@@ -2405,7 +2405,41 @@ class ChartRenderBox extends RenderBox {
     double? nearestValue;
     double minDistance = double.infinity;
 
-    // Collect all data points from all series
+    // For Y-axis, snap to sensible axis grid values instead of data points
+    // This provides better UX when there are many data points
+    if (axis == 'y' && _transform != null) {
+      // Calculate a sensible grid interval based on the Y-axis range
+      final range = _transform!.dataYMax - _transform!.dataYMin;
+      
+      // Determine appropriate interval (power of 10 or nice fractions)
+      double interval;
+      if (range <= 10) {
+        interval = 1.0;
+      } else if (range <= 20) {
+        interval = 2.0;
+      } else if (range <= 50) {
+        interval = 5.0;
+      } else if (range <= 100) {
+        interval = 10.0;
+      } else if (range <= 200) {
+        interval = 20.0;
+      } else if (range <= 500) {
+        interval = 50.0;
+      } else {
+        interval = 100.0;
+      }
+      
+      // Find nearest grid value
+      final snappedValue = (targetValue / interval).round() * interval;
+      
+      // Check if within tolerance
+      if ((snappedValue - targetValue).abs() <= tolerance) {
+        return snappedValue.toDouble();
+      }
+      return null;
+    }
+
+    // For X-axis, collect all data points from all series
     for (final element in _elements.whereType<SeriesElement>()) {
       for (final point in element.series.points) {
         // Get the value for the specified axis
