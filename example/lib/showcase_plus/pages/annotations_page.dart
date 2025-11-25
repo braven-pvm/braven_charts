@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
+import 'package:braven_charts/src_plus/axis/axis_config.dart';
+import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
+import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
-import 'package:braven_charts/src_plus/models/chart_annotation.dart';
-import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
-import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart';
+import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
+import 'package:flutter/material.dart';
+
 import '../data/data_generator.dart';
 import '../widgets/options_panel.dart';
 
@@ -18,7 +20,7 @@ class AnnotationsPage extends StatefulWidget {
 
 class _AnnotationsPageState extends State<AnnotationsPage> {
   late final AnnotationController _annotationController;
-  
+
   // Annotation visibility toggles
   bool _showPoint = true;
   bool _showRange = true;
@@ -33,10 +35,10 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize AnnotationController with initial annotations
     final initialAnnotations = <ChartAnnotation>[];
-    
+
     if (_showPoint) {
       initialAnnotations.add(
         PointAnnotation(
@@ -129,7 +131,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         ),
       );
     }
-    
+
     _annotationController = AnnotationController(
       initialAnnotations: initialAnnotations,
     );
@@ -295,14 +297,14 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     ];
 
     // Create axis configs
-    final xAxis = AxisConfig(
+    final xAxis = const AxisConfig(
       orientation: AxisOrientation.horizontal,
       position: AxisPosition.bottom,
       showGrid: true,
       showAxisLine: true,
     );
 
-    final yAxis = AxisConfig(
+    final yAxis = const AxisConfig(
       orientation: AxisOrientation.vertical,
       position: AxisPosition.left,
       showGrid: true,
@@ -341,6 +343,9 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                     interactiveAnnotations: _allowDragging || _allowEditing,
                     showLegend: true,
                     backgroundColor: Colors.white,
+                    interactionConfig: InteractionConfig.defaultConfig().copyWith(
+                      showFocusBorder: false,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

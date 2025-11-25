@@ -772,7 +772,7 @@ class InteractionConfig {
     this.enableZoom = true,
     this.enablePan = true,
     this.enableSelection = true,
-    this.showFocusBorder = true,
+    this.showFocusBorder = false,
     this.showXScrollbar = false,
     this.showYScrollbar = false,
     // Callback functions for user interaction events (FR-007)
