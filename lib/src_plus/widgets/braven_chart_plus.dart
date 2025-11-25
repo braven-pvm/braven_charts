@@ -39,6 +39,7 @@ import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
 import 'chart_legend.dart';
 import 'dialogs/point_annotation_dialog.dart';
+import 'dialogs/range_annotation_dialog.dart';
 import 'dialogs/text_annotation_dialog.dart';
 import 'dialogs/threshold_annotation_dialog.dart';
 import 'dialogs/trend_annotation_dialog.dart';
@@ -1393,19 +1394,61 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Shows the RangeAnnotation creation dialog.
   ///
-  /// Option 4 Implementation: Right-click → Add Range → Interactive drag → Dialog
-  /// TODO: Implement interactive drag mode for rubber-band rectangle selection
+  /// **Option 4 Implementation**: Right-click → "Add Range" → Interactive drag → Dialog
+  ///
+  /// **Workflow**:
+  /// 1. User selects "Add Range Annotation" from context menu
+  /// 2. Enter `rangeAnnotationCreation` mode (cursor changes to crosshair)
+  /// 3. User click-drags to define rectangular region (rubber-band preview shown)
+  /// 4. On release (handled in RenderBox), callback opens dialog with pre-filled coords
+  ///
+  /// **Cancellation**: ESC key, right-click, or release without drag cancels mode
   Future<void> _showAddRangeAnnotationDialog() async {
     if (!mounted) return;
 
     debugPrint('🎯 Starting RangeAnnotation creation (Option 4: Interactive drag mode)');
 
-    // TODO Phase 2: Enter rangeAnnotationCreation mode, handle drag, capture bounds
-    // For now, open dialog directly with empty values (user fills manually)
+    // Enter rangeAnnotationCreation mode (priority 10, modal)
+    if (!_coordinator.claimMode(InteractionMode.rangeAnnotationCreation)) {
+      debugPrint('❌ Failed to claim rangeAnnotationCreation mode');
+      return;
+    }
 
+    debugPrint('✅ Entered rangeAnnotationCreation mode - cursor should change to crosshair');
+    debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
+
+    // Change cursor to crosshair to indicate range creation mode
+    setState(() {
+      _currentCursor = SystemMouseCursors.precise;
+    });
+
+    // Completion is handled via _onRangeCreationComplete callback
+    // (called from ChartRenderBox when drag finishes)
+  }
+
+  /// Called when user completes drag in rangeAnnotationCreation mode.
+  /// Opens dialog with pre-filled coordinates from drag bounds.
+  Future<void> _onRangeCreationComplete(double startX, double endX, double startY, double endY) async {
+    if (!mounted) return;
+
+    debugPrint('🎯 Range creation drag complete:');
+    debugPrint('   X: [$startX, $endX]');
+    debugPrint('   Y: [$startY, $endY]');
+
+    // Reset cursor
+    setState(() {
+      _currentCursor = SystemMouseCursors.basic;
+    });
+
+    // Open dialog with pre-filled values from drag
     final result = await showDialog<RangeAnnotation>(
       context: context,
-      builder: (context) => const RangeAnnotationDialog(),
+      builder: (context) => RangeAnnotationDialog(
+        initialStartX: startX,
+        initialEndX: endX,
+        initialStartY: startY,
+        initialEndY: endY,
+      ),
     );
 
     if (result != null && mounted) {
@@ -1413,7 +1456,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       debugPrint('   X: [${result.startX}, ${result.endX}], Y: [${result.startY}, ${result.endY}]');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ RangeAnnotation creation cancelled');
+      debugPrint('❌ RangeAnnotation creation cancelled in dialog');
     }
   }
 
@@ -2281,6 +2324,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onElementHover,
+    this.onRangeCreationComplete,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -2298,6 +2342,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final void Function(MouseCursor cursor)? onCursorChange;
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
   final void Function(ChartElement? element)? onElementHover;
+  final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -2313,6 +2358,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       onCursorChange: onCursorChange,
       onAnnotationChanged: onAnnotationChanged,
       onElementHover: onElementHover,
+      onRangeCreationComplete: onRangeCreationComplete,
     )
       ..setXAxis(xAxis)
       ..setYAxis(yAxis);

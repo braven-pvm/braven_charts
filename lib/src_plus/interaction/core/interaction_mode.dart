@@ -57,13 +57,18 @@ enum InteractionMode {
   /// Context menu is open (right-click).
   /// Priority: 10 (MODAL - blocks ALL chart interactions - per conflict resolution scenario 8)
   contextMenuOpen,
+
+  /// Range annotation creation mode is active (right-click → "Add Range Annotation").
+  /// Priority: 10 (MODAL - blocks ALL chart interactions, awaits drag to create range)
+  /// User drags to define rectangular region, then dialog opens with pre-filled coordinates.
+  rangeAnnotationCreation,
 }
 
 /// Extension methods for InteractionMode
 extension InteractionModeExtensions on InteractionMode {
   /// Returns true if this mode blocks other interactions (modal states).
   bool get isModal {
-    return this == InteractionMode.contextMenuOpen || this == InteractionMode.editingAnnotation;
+    return this == InteractionMode.contextMenuOpen || this == InteractionMode.editingAnnotation || this == InteractionMode.rangeAnnotationCreation;
   }
 
   /// Returns true if this mode represents an active drag operation.
@@ -96,6 +101,7 @@ extension InteractionModeExtensions on InteractionMode {
   int get priority {
     switch (this) {
       case InteractionMode.contextMenuOpen:
+      case InteractionMode.rangeAnnotationCreation:
         return 10;
       case InteractionMode.resizingAnnotation:
       case InteractionMode.editingAnnotation:
@@ -146,6 +152,8 @@ extension InteractionModeExtensions on InteractionMode {
         return 'Editing annotation';
       case InteractionMode.contextMenuOpen:
         return 'Context menu open';
+      case InteractionMode.rangeAnnotationCreation:
+        return 'Creating range annotation (drag to define region)';
     }
   }
 }
