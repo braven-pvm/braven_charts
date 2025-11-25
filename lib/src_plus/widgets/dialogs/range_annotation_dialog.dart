@@ -53,6 +53,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   Color? _borderColor;
   AnnotationLabelPosition _labelPosition = AnnotationLabelPosition.topLeft;
   AnnotationStyle? _labelStyle;
+  bool _snapToDataPoints = true;
 
   @override
   void initState() {
@@ -77,6 +78,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       _borderColor = annotation.borderColor;
       _labelPosition = annotation.labelPosition;
       _labelStyle = annotation.style;
+      _snapToDataPoints = annotation.snapToValue;
     }
   }
 
@@ -164,6 +166,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                     endController: _endYController,
                     hint: 'Leave blank for full range',
                   ),
+                  const SizedBox(height: 20),
+
+                  // Snap to data points checkbox
+                  _buildSnapToDataPointsCheckbox(),
                   const SizedBox(height: 20),
 
                   // Fill color picker
@@ -338,6 +344,51 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildSnapToDataPointsCheckbox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: _snapToDataPoints,
+            onChanged: (value) {
+              setState(() {
+                _snapToDataPoints = value ?? true;
+              });
+            },
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Snap to Data Points',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Automatically snap range edges to nearby data points when dragging',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -722,6 +773,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       fillColor: _fillColor,
       borderColor: _borderColor,
       labelPosition: _labelPosition,
+      snapToValue: _snapToDataPoints,
     );
 
     Navigator.of(context).pop(annotation);
