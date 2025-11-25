@@ -1450,13 +1450,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-    debugPrint('✅ Entered rangeAnnotationCreation mode - custom crosshair overlay will appear');
+    debugPrint('✅ Entered rangeAnnotationCreation mode');
     debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
     debugPrint('   Press ESC or click without dragging to cancel');
-
-    // Trigger overlay to appear (no cursor changes needed - overlay draws on top)
-    // The _RangeCreationCrosshairOverlay will paint the custom crosshair
-    setState(() {});
 
     // Completion is handled via _onRangeCreationComplete callback
     // (called from ChartRenderBox when drag finishes)
@@ -1803,7 +1799,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // it means the user just clicked without dragging
       debugPrint('⏹️ Click detected in rangeAnnotationCreation mode - cancelling (no drag detected)');
       _coordinator.releaseMode(force: true);
-      setState(() {}); // Trigger rebuild to hide overlay
     }
   }
 
@@ -2294,14 +2289,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                     ),
                   ),
                   if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
-
-                  // Red crosshair overlay for range annotation creation mode
-                  // CRITICAL: Do NOT wrap in IgnorePointer here - the MouseRegion needs to receive events!
-                  // IgnorePointer is used INSIDE the overlay to prevent CustomPaint from blocking clicks
-                  if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation)
-                    const Positioned.fill(
-                      child: _RangeCreationCrosshairOverlay(),
-                    ),
                 ],
               ),
             ),
@@ -2469,111 +2456,5 @@ class _DebugOverlay extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Red crosshair overlay for range annotation creation mode.
-/// Provides visual feedback that the chart is in range selection mode.
-class _RangeCreationCrosshairOverlay extends StatefulWidget {
-  const _RangeCreationCrosshairOverlay();
-
-  @override
-  State<_RangeCreationCrosshairOverlay> createState() => _RangeCreationCrosshairOverlayState();
-}
-
-class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairOverlay> {
-  Offset? _mousePosition;
-
-  @override
-  Widget build(BuildContext context) {
-    // Use Listener with translucent behavior to track position while allowing events through
-    // This works better than MouseRegion + IgnorePointer combination
-    return Listener(
-      behavior: HitTestBehavior.translucent, // Allows events to pass through while still receiving them
-      onPointerHover: (event) {
-        setState(() {
-          _mousePosition = event.localPosition;
-        });
-      },
-      onPointerMove: (event) {
-        setState(() {
-          _mousePosition = event.localPosition;
-        });
-      },
-      child: IgnorePointer(
-        child: CustomPaint(
-          painter: _CrosshairPainter(
-            position: _mousePosition,
-            color: Colors.red.withOpacity(0.8),
-          ),
-          size: Size.infinite,
-        ),
-      ),
-    );
-  }
-}
-
-/// Custom painter for red crosshair lines.
-class _CrosshairPainter extends CustomPainter {
-  _CrosshairPainter({
-    required this.position,
-    required this.color,
-  });
-
-  final Offset? position;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Don't paint if no mouse position yet
-    if (position == null) return;
-
-    // Professional localized crosshair - NOT full-screen arcade style
-    const crosshairSize = 16.0; // Length of each arm from center
-    const strokeWidth = 1.5;
-    const centerGap = 3.0; // Small gap in the middle for better visibility
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round; // Rounded ends for smoother look
-
-    final center = position!;
-
-    // Vertical line (top and bottom arms with center gap)
-    canvas.drawLine(
-      Offset(center.dx, center.dy - crosshairSize),
-      Offset(center.dx, center.dy - centerGap),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(center.dx, center.dy + centerGap),
-      Offset(center.dx, center.dy + crosshairSize),
-      paint,
-    );
-
-    // Horizontal line (left and right arms with center gap)
-    canvas.drawLine(
-      Offset(center.dx - crosshairSize, center.dy),
-      Offset(center.dx - centerGap, center.dy),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(center.dx + centerGap, center.dy),
-      Offset(center.dx + crosshairSize, center.dy),
-      paint,
-    );
-
-    // Optional: Small center dot for precise positioning
-    final dotPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 1.5, dotPaint);
-  }
-
-  @override
-  bool shouldRepaint(_CrosshairPainter oldDelegate) {
-    return oldDelegate.position != position || oldDelegate.color != color;
   }
 }
