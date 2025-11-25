@@ -2501,14 +2501,23 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
   Offset? _mousePosition;
 
   @override
+  void initState() {
+    super.initState();
+    debugPrint('🎨 _RangeCreationCrosshairOverlay initState - overlay widget created');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    debugPrint('🎨 _RangeCreationCrosshairOverlay build - position: $_mousePosition');
     return MouseRegion(
       onHover: (event) {
+        debugPrint('🎨 Crosshair overlay onHover: ${event.localPosition}');
         setState(() {
           _mousePosition = event.localPosition;
         });
       },
       onExit: (_) {
+        debugPrint('🎨 Crosshair overlay onExit');
         setState(() {
           _mousePosition = null;
         });
@@ -2518,6 +2527,7 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
           position: _mousePosition,
           color: Colors.red.withOpacity(0.8),
         ),
+        size: Size.infinite, // CRITICAL: Ensure CustomPaint fills available space
       ),
     );
   }
@@ -2535,8 +2545,15 @@ class _CrosshairPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    debugPrint('🎨 _CrosshairPainter.paint called - position: $position, size: $size');
+    
     // Don't paint if no mouse position yet
-    if (position == null) return;
+    if (position == null) {
+      debugPrint('🎨 _CrosshairPainter.paint - position is null, skipping paint');
+      return;
+    }
+
+    debugPrint('🎨 _CrosshairPainter.paint - painting red crosshair at $position');
 
     final paint = Paint()
       ..color = color
@@ -2563,6 +2580,8 @@ class _CrosshairPainter extends CustomPainter {
       ..style = PaintingStyle.fill; // Fill the circle for better visibility
 
     canvas.drawCircle(position!, 6.0, circlePaint); // Larger circle
+    
+    debugPrint('🎨 _CrosshairPainter.paint - completed drawing crosshair');
   }
 
   @override
