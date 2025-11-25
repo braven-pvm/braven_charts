@@ -23,6 +23,7 @@ import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_annotation.dart';
+import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -177,6 +178,25 @@ class ChartRenderBox extends RenderBox {
 
   /// Whether tooltips are enabled.
   bool _tooltipsEnabled;
+
+  /// Tracks the tapped marker for tap-triggered tooltips.
+  /// Used when triggerMode is tap or both.
+  HoveredMarkerInfo? _tappedMarker;
+
+  /// Current tooltip opacity for fade animation (0.0 = hidden, 1.0 = visible)
+  double _tooltipOpacity = 0.0;
+
+  /// Timer for delaying tooltip show
+  Timer? _tooltipShowTimer;
+
+  /// Timer for delaying tooltip hide
+  Timer? _tooltipHideTimer;
+
+  /// Timer for fade animation steps (incremental opacity changes)
+  Timer? _tooltipFadeTimer;
+
+  /// Target marker for tooltip display (cached to detect marker changes)
+  HoveredMarkerInfo? _tooltipTargetMarker;
 
   /// Whether to show horizontal scrollbar at bottom of chart.
   bool _showXScrollbar;
@@ -417,6 +437,8 @@ class ChartRenderBox extends RenderBox {
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
     _scrollbarAutoHideTimer?.cancel();
+    // Cancel tooltip animation timers to prevent memory leaks
+    _cancelTooltipTimers();
     super.dispose();
   }
 
@@ -2263,6 +2285,21 @@ class ChartRenderBox extends RenderBox {
       // [DEBUG OUTPUT REMOVED] Pan ended - fires on user interaction
     }
 
+    // Handle tap on marker for tap-triggered tooltips
+    // Check if we're still hovering the same marker we started with (indicates a tap, not a drag)
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+    if ((config.triggerMode == TooltipTriggerMode.tap || config.triggerMode == TooltipTriggerMode.both) &&
+        coordinator.hoveredMarker != null &&
+        !coordinator.isPanning &&
+        !wasPanning) {
+      // Toggle tapped marker: if same marker, clear it (hide tooltip), else set it (show tooltip)
+      if (_tappedMarker == coordinator.hoveredMarker) {
+        _tappedMarker = null; // Tap same marker again = hide tooltip
+      } else {
+        _tappedMarker = coordinator.hoveredMarker; // Tap new marker = show tooltip
+      }
+    }
+
     // Clear cursor position
     _cursorPosition = null;
 
@@ -2760,11 +2797,55 @@ class ChartRenderBox extends RenderBox {
       _drawCrosshairLabels(canvas, size, cursorPos);
     }
 
-    // Draw tooltip for hovered marker (if any)
-    // Only show tooltips when actually hovering near a data point marker
-    final hoveredMarker = coordinator.hoveredMarker;
-    if (_tooltipsEnabled && hoveredMarker != null && !coordinator.isPanning) {
-      _drawMarkerTooltip(canvas, size, hoveredMarker);
+    // Draw tooltip for hovered/tapped marker (if any)
+    // Show based on tooltip trigger mode configuration with animations
+    if (_tooltipsEnabled && !coordinator.isPanning) {
+      final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+      HoveredMarkerInfo? markerToShow;
+
+      switch (config.triggerMode) {
+        case TooltipTriggerMode.hover:
+          // Show tooltip only when hovering
+          markerToShow = coordinator.hoveredMarker;
+          break;
+        case TooltipTriggerMode.tap:
+          // Show tooltip only for tapped marker
+          markerToShow = _tappedMarker;
+          break;
+        case TooltipTriggerMode.both:
+          // Show tooltip for either hover or tap (prefer tapped if both exist)
+          markerToShow = _tappedMarker ?? coordinator.hoveredMarker;
+          break;
+      }
+
+      // Handle show/hide animations based on marker presence
+      if (markerToShow != null) {
+        // Start show animation if marker changed or newly appeared
+        if (_tooltipTargetMarker != markerToShow) {
+          _showTooltipWithDelay(markerToShow);
+        }
+
+        // Only draw tooltip if it has some opacity (visible or fading)
+        if (_tooltipOpacity > 0.001) {
+          _drawMarkerTooltip(canvas, size, markerToShow);
+        }
+      } else {
+        // Start hide animation if marker disappeared
+        if (_tooltipTargetMarker != null) {
+          _hideTooltipWithDelay();
+        }
+
+        // Still draw tooltip during fade-out
+        if (_tooltipOpacity > 0.001 && _tooltipTargetMarker != null) {
+          _drawMarkerTooltip(canvas, size, _tooltipTargetMarker!);
+        }
+      }
+    } else {
+      // Tooltips disabled or panning - cancel animations and hide
+      if (_tooltipOpacity > 0) {
+        _cancelTooltipTimers();
+        _tooltipOpacity = 0.0;
+      }
     }
 
     // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
@@ -3802,7 +3883,142 @@ class ChartRenderBox extends RenderBox {
   ///
   /// For series elements, finds the nearest datapoint to cursor position.
   /// Draws tooltip at the exact position of a hovered data point marker.
+
+  /// Creates a tooltip path with an arrow pointer pointing to the data point.
+  ///
+  /// [tooltipRect] The rectangle bounds of the tooltip
+  /// [arrowAnchor] The exact point the arrow should point to (data point position)
+  /// [arrowSize] The height/width of the arrow pointer
+  /// [borderRadius] The corner radius of the tooltip
+  ///
+  /// Returns a Path that includes rounded corners and an arrow pointer
+  /// positioned on the side closest to the anchor point.
+  Path _createTooltipPath({
+    required Rect tooltipRect,
+    required Offset arrowAnchor,
+    required double arrowSize,
+    required double borderRadius,
+  }) {
+    final path = Path();
+
+    // Determine which side should have the arrow based on anchor position
+    // Arrow points TO the anchor from the tooltip
+
+    // Calculate which edge is closest to anchor
+    final leftDist = (arrowAnchor.dx - tooltipRect.left).abs();
+    final rightDist = (arrowAnchor.dx - tooltipRect.right).abs();
+    final topDist = (arrowAnchor.dy - tooltipRect.top).abs();
+    final bottomDist = (arrowAnchor.dy - tooltipRect.bottom).abs();
+
+    final minHorizDist = leftDist < rightDist ? leftDist : rightDist;
+    final minVertDist = topDist < bottomDist ? topDist : bottomDist;
+
+    // Determine arrow position (prefer vertical positioning for typical top/bottom tooltips)
+    final bool arrowOnTop = topDist < bottomDist && minVertDist < minHorizDist;
+    final bool arrowOnBottom = bottomDist <= topDist && minVertDist < minHorizDist;
+    final bool arrowOnLeft = !arrowOnTop && !arrowOnBottom && leftDist < rightDist;
+    // arrowOnRight is the else case    // Calculate arrow offset along the edge (clamped to stay within rect with margin)
+    const edgeMargin = 10.0; // Keep arrow away from corners
+
+    if (arrowOnTop) {
+      // Arrow on top edge pointing up to anchor
+      final arrowX = (arrowAnchor.dx - tooltipRect.left).clamp(
+        edgeMargin + arrowSize / 2,
+        tooltipRect.width - edgeMargin - arrowSize / 2,
+      );
+      final arrowLeft = arrowX - arrowSize / 2;
+      final arrowRight = arrowX + arrowSize / 2;
+      final arrowTop = tooltipRect.top - arrowSize;
+
+      path.moveTo(tooltipRect.left + borderRadius, tooltipRect.top);
+      path.lineTo(tooltipRect.left + arrowLeft, tooltipRect.top);
+      path.lineTo(tooltipRect.left + arrowX, arrowTop); // Arrow point
+      path.lineTo(tooltipRect.left + arrowRight, tooltipRect.top);
+      path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+    } else if (arrowOnBottom) {
+      // Arrow on bottom edge pointing down to anchor
+      final arrowX = (arrowAnchor.dx - tooltipRect.left).clamp(
+        edgeMargin + arrowSize / 2,
+        tooltipRect.width - edgeMargin - arrowSize / 2,
+      );
+      final arrowLeft = arrowX - arrowSize / 2;
+      final arrowRight = arrowX + arrowSize / 2;
+      final arrowBottom = tooltipRect.bottom + arrowSize;
+
+      path.moveTo(tooltipRect.left + borderRadius, tooltipRect.top);
+      path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.lineTo(tooltipRect.left + arrowRight, tooltipRect.bottom);
+      path.lineTo(tooltipRect.left + arrowX, arrowBottom); // Arrow point
+      path.lineTo(tooltipRect.left + arrowLeft, tooltipRect.bottom);
+      path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+    } else if (arrowOnLeft) {
+      // Arrow on left edge pointing left to anchor
+      final arrowY = (arrowAnchor.dy - tooltipRect.top).clamp(
+        edgeMargin + arrowSize / 2,
+        tooltipRect.height - edgeMargin - arrowSize / 2,
+      );
+      final arrowTop = arrowY - arrowSize / 2;
+      final arrowBottom = arrowY + arrowSize / 2;
+      final arrowLeft = tooltipRect.left - arrowSize;
+
+      path.moveTo(tooltipRect.left, tooltipRect.top + borderRadius);
+      path.lineTo(tooltipRect.left, tooltipRect.top + arrowTop);
+      path.lineTo(arrowLeft, tooltipRect.top + arrowY); // Arrow point
+      path.lineTo(tooltipRect.left, tooltipRect.top + arrowBottom);
+      path.lineTo(tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left + borderRadius, tooltipRect.bottom);
+      path.lineTo(tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right, tooltipRect.bottom - borderRadius);
+      path.lineTo(tooltipRect.right, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right - borderRadius, tooltipRect.top);
+      path.lineTo(tooltipRect.left + borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left, tooltipRect.top + borderRadius);
+    } else {
+      // arrowOnRight
+      // Arrow on right edge pointing right to anchor
+      final arrowY = (arrowAnchor.dy - tooltipRect.top).clamp(
+        edgeMargin + arrowSize / 2,
+        tooltipRect.height - edgeMargin - arrowSize / 2,
+      );
+      final arrowTop = arrowY - arrowSize / 2;
+      final arrowBottom = arrowY + arrowSize / 2;
+      final arrowRight = tooltipRect.right + arrowSize;
+
+      path.moveTo(tooltipRect.left + borderRadius, tooltipRect.top);
+      path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.lineTo(tooltipRect.right, tooltipRect.top + arrowTop);
+      path.lineTo(arrowRight, tooltipRect.top + arrowY); // Arrow point
+      path.lineTo(tooltipRect.right, tooltipRect.top + arrowBottom);
+      path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+    }
+
+    path.close();
+    return path;
+  }
+
   void _drawMarkerTooltip(Canvas canvas, Size size, HoveredMarkerInfo markerInfo) {
+    // Get tooltip configuration (use default if not provided)
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+
     // Find the series element containing this marker
     final seriesElement = _elements.whereType<SeriesElement>().firstWhere(
           (e) => e.id == markerInfo.seriesId,
@@ -3813,16 +4029,17 @@ class ChartRenderBox extends RenderBox {
     final dataPoint = seriesElement.series.points[markerInfo.markerIndex];
 
     // Convert data point to screen coordinates for tooltip anchor
-    final tooltipAnchor = plotToWidget(markerInfo.plotPosition);
+    // If followCursor is enabled, use current cursor position instead of marker position
+    final tooltipAnchor = config.followCursor && _cursorPosition != null ? _cursorPosition! : plotToWidget(markerInfo.plotPosition);
 
     // Build tooltip text
     final seriesName = seriesElement.series.name ?? seriesElement.id;
     final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}';
 
-    // Create text painter
-    const textStyle = TextStyle(
-      color: Color(0xFFFFFFFF),
-      fontSize: 12,
+    // Create text painter with configured style
+    final textStyle = TextStyle(
+      color: config.style.textColor,
+      fontSize: config.style.fontSize,
       fontWeight: FontWeight.w500,
     );
 
@@ -3832,49 +4049,224 @@ class ChartRenderBox extends RenderBox {
       textAlign: TextAlign.center,
     )..layout();
 
-    // Calculate tooltip size with padding
-    const padding = 8.0;
+    // Calculate tooltip size with configured padding
+    final padding = config.style.padding;
     final tooltipWidth = textPainter.width + padding * 2;
     final tooltipHeight = textPainter.height + padding * 2;
 
-    // Smart positioning: Position above datapoint anchor, but flip if it would clip top
-    var tooltipX = tooltipAnchor.dx - tooltipWidth / 2;
-    var tooltipY = tooltipAnchor.dy - tooltipHeight - 12;
-
-    // Avoid clipping left/right edges
-    if (tooltipX < 10) {
-      tooltipX = 10;
-    } else if (tooltipX + tooltipWidth > size.width - 10) {
-      tooltipX = size.width - tooltipWidth - 10;
+    // Get marker radius to offset tooltip position
+    double markerRadius = 0.0;
+    if (seriesElement.series is LineChartSeries) {
+      markerRadius = (seriesElement.series as LineChartSeries).dataPointMarkerRadius;
+    } else if (seriesElement.series is ScatterChartSeries) {
+      markerRadius = (seriesElement.series as ScatterChartSeries).markerRadius;
+    } else if (seriesElement.series is AreaChartSeries) {
+      markerRadius = (seriesElement.series as AreaChartSeries).dataPointMarkerRadius;
     }
 
-    // Flip to below if it would clip top
-    if (tooltipY < 10) {
-      tooltipY = tooltipAnchor.dy + 12;
+    // Smart positioning: Respect preferredPosition, but auto-adjust to avoid clipping
+    // Add marker radius to offset so arrow starts at marker edge, not center
+    final offset = config.offsetFromPoint + markerRadius;
+    const edgeMargin = 10.0; // Margin from canvas edges
+
+    double tooltipX;
+    double tooltipY;
+
+    // Determine initial position based on preferredPosition
+    switch (config.preferredPosition) {
+      case TooltipPosition.top:
+        tooltipX = tooltipAnchor.dx - tooltipWidth / 2;
+        tooltipY = tooltipAnchor.dy - tooltipHeight - offset;
+        break;
+      case TooltipPosition.bottom:
+        tooltipX = tooltipAnchor.dx - tooltipWidth / 2;
+        tooltipY = tooltipAnchor.dy + offset;
+        break;
+      case TooltipPosition.left:
+        tooltipX = tooltipAnchor.dx - tooltipWidth - offset;
+        tooltipY = tooltipAnchor.dy - tooltipHeight / 2;
+        break;
+      case TooltipPosition.right:
+        tooltipX = tooltipAnchor.dx + offset;
+        tooltipY = tooltipAnchor.dy - tooltipHeight / 2;
+        break;
+      case TooltipPosition.auto:
+        // Auto mode: default to top, but will flip if needed
+        tooltipX = tooltipAnchor.dx - tooltipWidth / 2;
+        tooltipY = tooltipAnchor.dy - tooltipHeight - offset;
+        break;
     }
 
-    // Draw tooltip background (rounded rectangle with shadow)
-    final tooltipRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
-      const Radius.circular(4),
+    // Adjust X position to avoid clipping left/right edges
+    if (tooltipX < edgeMargin) {
+      tooltipX = edgeMargin;
+    } else if (tooltipX + tooltipWidth > size.width - edgeMargin) {
+      tooltipX = size.width - tooltipWidth - edgeMargin;
+    }
+
+    // Adjust Y position to avoid clipping top/bottom edges
+    if (tooltipY < edgeMargin) {
+      // Would clip top - flip to bottom if in top/auto mode
+      if (config.preferredPosition == TooltipPosition.top || config.preferredPosition == TooltipPosition.auto) {
+        tooltipY = tooltipAnchor.dy + offset;
+      } else {
+        // Otherwise just push down
+        tooltipY = edgeMargin;
+      }
+    } else if (tooltipY + tooltipHeight > size.height - edgeMargin) {
+      // Would clip bottom - flip to top if in bottom mode
+      if (config.preferredPosition == TooltipPosition.bottom) {
+        tooltipY = tooltipAnchor.dy - tooltipHeight - offset;
+      } else {
+        // Otherwise just push up
+        tooltipY = size.height - tooltipHeight - edgeMargin;
+      }
+    }
+
+    // Create tooltip path with arrow pointer
+    const arrowSize = 8.0; // Height/width of arrow
+
+    final tooltipRect = Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+
+    final tooltipPath = _createTooltipPath(
+      tooltipRect: tooltipRect,
+      arrowAnchor: tooltipAnchor,
+      arrowSize: arrowSize,
+      borderRadius: config.style.borderRadius,
     );
 
-    // Draw shadow
-    canvas.drawRRect(
-      tooltipRect.shift(const Offset(0, 2)),
+    // Draw shadow if configured (with opacity)
+    if (config.style.shadowBlurRadius > 0) {
+      final shadowPath = tooltipPath.shift(const Offset(0, 2));
+      canvas.drawPath(
+        shadowPath,
+        Paint()
+          ..color = config.style.shadowColor.withOpacity(config.style.shadowColor.opacity * _tooltipOpacity)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, config.style.shadowBlurRadius),
+      );
+    }
+
+    // Draw background with configured color (with opacity)
+    canvas.drawPath(
+      tooltipPath,
       Paint()
-        ..color = const Color(0x40000000)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+        ..color = config.style.backgroundColor.withOpacity(config.style.backgroundColor.opacity * _tooltipOpacity)
+        ..style = PaintingStyle.fill,
     );
 
-    // Draw background
-    canvas.drawRRect(
-      tooltipRect,
-      Paint()..color = const Color(0xE0000000), // Semi-transparent black
-    );
+    // Draw border if configured (with opacity)
+    if (config.style.borderWidth > 0) {
+      canvas.drawPath(
+        tooltipPath,
+        Paint()
+          ..color = config.style.borderColor.withOpacity(config.style.borderColor.opacity * _tooltipOpacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = config.style.borderWidth,
+      );
+    }
 
-    // Draw text
-    textPainter.paint(canvas, Offset(tooltipX + padding, tooltipY + padding));
+    // Draw text (with opacity)
+    final textPaintWithOpacity = TextPainter(
+      text: TextSpan(
+        text: tooltipText,
+        style: textStyle.copyWith(color: config.style.textColor.withOpacity(_tooltipOpacity)),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    textPaintWithOpacity.paint(canvas, Offset(tooltipX + padding, tooltipY + padding));
+  }
+
+  /// Shows tooltip with configured delay and fade-in animation.
+  void _showTooltipWithDelay(HoveredMarkerInfo markerInfo) {
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+
+    // Cancel existing timers
+    _tooltipShowTimer?.cancel();
+    _tooltipHideTimer?.cancel();
+
+    // Cache target marker to detect changes
+    _tooltipTargetMarker = markerInfo;
+
+    // If showDelay is zero, show immediately
+    if (config.showDelay == Duration.zero) {
+      _animateTooltipOpacity(1.0, const Duration(milliseconds: 150));
+      return;
+    }
+
+    // Start show delay timer
+    _tooltipShowTimer = Timer(config.showDelay, () {
+      // Only show if still targeting same marker
+      if (_tooltipTargetMarker == markerInfo) {
+        _animateTooltipOpacity(1.0, const Duration(milliseconds: 150));
+      }
+    });
+  }
+
+  /// Hides tooltip with configured delay and fade-out animation.
+  void _hideTooltipWithDelay() {
+    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+
+    // Cancel show timer (user moved away before delay finished)
+    _tooltipShowTimer?.cancel();
+    _tooltipTargetMarker = null;
+
+    // If hideDelay is zero, hide immediately
+    if (config.hideDelay == Duration.zero) {
+      _animateTooltipOpacity(0.0, const Duration(milliseconds: 100));
+      return;
+    }
+
+    // Start hide delay timer
+    _tooltipHideTimer = Timer(config.hideDelay, () {
+      _animateTooltipOpacity(0.0, const Duration(milliseconds: 100));
+    });
+  }
+
+  /// Animates tooltip opacity to target value over specified duration.
+  void _animateTooltipOpacity(double target, Duration duration) {
+    _tooltipFadeTimer?.cancel();
+
+    final startOpacity = _tooltipOpacity;
+    final delta = target - startOpacity;
+
+    // If already at target, nothing to do
+    if (delta.abs() < 0.001) {
+      _tooltipOpacity = target;
+      markNeedsPaint();
+      return;
+    }
+
+    // Animate in small steps for smooth fade
+    const fps = 60;
+    const stepDuration = Duration(milliseconds: 1000 ~/ fps);
+    final totalSteps = (duration.inMilliseconds * fps / 1000).round();
+    var currentStep = 0;
+
+    _tooltipFadeTimer = Timer.periodic(stepDuration, (timer) {
+      currentStep++;
+
+      if (currentStep >= totalSteps) {
+        _tooltipOpacity = target;
+        timer.cancel();
+        markNeedsPaint();
+      } else {
+        final progress = currentStep / totalSteps;
+        _tooltipOpacity = startOpacity + delta * progress;
+        markNeedsPaint();
+      }
+    });
+  }
+
+  /// Cancels all tooltip timers and resets animation state.
+  void _cancelTooltipTimers() {
+    _tooltipShowTimer?.cancel();
+    _tooltipShowTimer = null;
+    _tooltipHideTimer?.cancel();
+    _tooltipHideTimer = null;
+    _tooltipFadeTimer?.cancel();
+    _tooltipFadeTimer = null;
+    _tooltipTargetMarker = null;
   }
 
   // ============================================================================
