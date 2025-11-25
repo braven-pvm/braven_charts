@@ -2255,7 +2255,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
               child: Stack(
                 children: [
                   MouseRegion(
-                    cursor: _currentCursor,
+                    cursor: _coordinator.currentMode == InteractionMode.rangeAnnotationCreation
+                        ? SystemMouseCursors.precise // Precise crosshair cursor for range selection
+                        : _currentCursor,
                     child: RawGestureDetector(
                       gestures: {
                         PriorityPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<PriorityPanGestureRecognizer>(
@@ -2289,6 +2291,37 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                     ),
                   ),
                   if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
+                  // Range creation mode instruction overlay
+                  if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation)
+                    Positioned(
+                      top: 16,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xE6448AFF), // Semi-opaque blue
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'Range Creation Mode: Drag to select region • ESC to cancel',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
