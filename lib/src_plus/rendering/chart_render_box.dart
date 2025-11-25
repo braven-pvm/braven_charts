@@ -2096,11 +2096,12 @@ class ChartRenderBox extends RenderBox {
           }
 
           // Create updated annotation with new bounds
+          // CRITICAL: Preserve null for axes that were originally unbound
           final updatedAnnotation = resizedAnnotation.copyWith(
-            startX: newStartX,
-            endX: newEndX,
-            startY: newStartY,
-            endY: newEndY,
+            startX: resizedAnnotation.startX != null ? newStartX : null,
+            endX: resizedAnnotation.endX != null ? newEndX : null,
+            startY: resizedAnnotation.startY != null ? newStartY : null,
+            endY: resizedAnnotation.endY != null ? newEndY : null,
           );
 
           // Emit callback
