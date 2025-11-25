@@ -23,6 +23,7 @@ import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_annotation.dart';
+import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
@@ -2157,33 +2158,40 @@ class ChartRenderBox extends RenderBox {
           if (movedAnnotation.snapToValue) {
             print('🔍 MOVE SNAP: enabled');
             print('   Before: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
-            
+            print('   Original bounds: startX=${movedAnnotation.startX}, endX=${movedAnnotation.endX}, startY=${movedAnnotation.startY}, endY=${movedAnnotation.endY}');
+
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
 
-            // For move operations, snap both edges
-            final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
-            if (snappedStartX != null) {
-              // Maintain width by shifting both edges
-              final width = newEndX - newStartX;
-              newStartX = snappedStartX;
-              newEndX = newStartX + width;
-              print('   X snapped: startX=$newStartX, endX=$newEndX');
+            // Snap X coordinates only if they're defined in the original annotation
+            if (movedAnnotation.startX != null && movedAnnotation.endX != null) {
+              final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
+              if (snappedStartX != null) {
+                // Maintain width by shifting both edges
+                final width = newEndX - newStartX;
+                newStartX = snappedStartX;
+                newEndX = newStartX + width;
+                print('   X snapped: startX=$newStartX, endX=$newEndX');
+              }
+            } else {
+              print('   X snap SKIPPED (unbound X-axis)');
             }
 
-            // Snap Y coordinates if needed (only if they're defined)
-            if (newStartY != null && newEndY != null) {
-              final snappedStartY = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
+            // Snap Y coordinates only if they're defined in the original annotation
+            if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
+              final snappedStartY = _findNearestDataValue(newStartY!, axis: 'y', tolerance: yTolerance);
               if (snappedStartY != null) {
                 // Maintain height by shifting both edges
-                final height = newEndY - newStartY;
+                final height = newEndY! - newStartY;
                 newStartY = snappedStartY;
                 newEndY = newStartY + height;
                 print('   Y snapped: startY=$newStartY, endY=$newEndY');
               }
+            } else {
+              print('   Y snap SKIPPED (unbound Y-axis)');
             }
-            
+
             print('   After: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
           }
 
@@ -2425,6 +2433,7 @@ class ChartRenderBox extends RenderBox {
   double? _findNearestDataValue(double targetValue, {required String axis, required double tolerance}) {
     double? nearestValue;
     double minDistance = double.infinity;
+    ChartDataPoint? nearestPoint; // Track the full point for debugging
 
     // Collect all data points from all series for both X and Y axes
     for (final element in _elements.whereType<SeriesElement>()) {
@@ -2437,8 +2446,14 @@ class ChartRenderBox extends RenderBox {
         if (distance < minDistance && distance <= tolerance) {
           minDistance = distance;
           nearestValue = value;
+          nearestPoint = point; // Store the full point
         }
       }
+    }
+
+    // Debug output to show which data point was found
+    if (nearestValue != null && nearestPoint != null) {
+      print('   🎯 Found snap point: axis=$axis, target=$targetValue, snapped=$nearestValue, dataPoint(x=${nearestPoint.x}, y=${nearestPoint.y})');
     }
 
     return nearestValue;
