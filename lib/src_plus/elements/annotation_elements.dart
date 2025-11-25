@@ -391,9 +391,10 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
     final right = annotation.endX != null ? _currentTransform.dataToPlot(annotation.endX!, 0).dx : chartSize.width;
 
-    final top = annotation.startY != null ? _currentTransform.dataToPlot(0, annotation.startY!).dy : 0.0;
+    // Y-axis: endY (higher value) maps to top (lower screen Y), startY (lower value) maps to bottom (higher screen Y)
+    final top = annotation.endY != null ? _currentTransform.dataToPlot(0, annotation.endY!).dy : 0.0;
 
-    final bottom = annotation.endY != null ? _currentTransform.dataToPlot(0, annotation.endY!).dy : chartSize.height;
+    final bottom = annotation.startY != null ? _currentTransform.dataToPlot(0, annotation.startY!).dy : chartSize.height;
 
     final rect = Rect.fromLTRB(
       left.clamp(0.0, chartSize.width),
@@ -457,8 +458,8 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
       // Draw individual border lines based on annotation bounds
       // Skip borders when the annotation spans the entire axis (null values)
-      
-      // Top border - only if endY is defined (not spanning to top)
+
+      // Top border - only if endY is defined (endY = higher Y value = top of range)
       if (annotation.endY != null) {
         canvas.drawLine(
           Offset(fillRect.left, fillRect.top),
@@ -476,7 +477,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         );
       }
 
-      // Bottom border - only if startY is defined (not spanning to bottom)
+      // Bottom border - only if startY is defined (startY = lower Y value = bottom of range)
       if (annotation.startY != null) {
         canvas.drawLine(
           Offset(fillRect.right, fillRect.bottom),
