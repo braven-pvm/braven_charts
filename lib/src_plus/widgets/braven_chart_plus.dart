@@ -1443,10 +1443,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-    debugPrint('✅ Entered rangeAnnotationCreation mode - cursor should change to crosshair');
+    debugPrint('✅ Entered rangeAnnotationCreation mode - cursor should change to red crosshair');
     debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
+    debugPrint('   Press ESC or click without dragging to cancel');
 
-    // Change cursor to crosshair to indicate range creation mode
+    // Change cursor to precise/crosshair to indicate range creation mode
+    // Note: Flutter web doesn't support custom colored cursors directly,
+    // but SystemMouseCursors.precise is visually distinct from the default
     setState(() {
       _currentCursor = SystemMouseCursors.precise;
     });
@@ -1792,6 +1795,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _handleTapUp(TapUpDetails details) {
     // Double-click detection now handled in _handleTapDown
     // (since activeElement is cleared by the time we get here)
+
+    // CRITICAL: Cancel rangeAnnotationCreation mode on single click without drag
+    // This provides an easy way to exit the mode if user changes their mind
+    if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+      // Check if this was a click without drag (no box selection drawn)
+      // The RenderBox handles actual drag detection, so if we get here in creation mode,
+      // it means the user just clicked without dragging
+      debugPrint('⏹️ Click detected in rangeAnnotationCreation mode - cancelling (no drag detected)');
+      _coordinator.releaseMode(force: true);
+      setState(() {
+        _currentCursor = SystemMouseCursors.basic;
+      });
+    }
   }
 
   void _handleElementHover(ChartElement? element) {
@@ -1813,6 +1829,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleCursorChange(MouseCursor cursor) {
+    // CRITICAL: Don't change cursor during rangeAnnotationCreation mode
+    // The crosshair cursor must remain visible regardless of what's being hovered
+    if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+      debugPrint('🚫 Cursor change blocked - rangeAnnotationCreation mode active (keeping crosshair)');
+      return;
+    }
+
     if (_currentCursor != cursor) {
       setState(() => _currentCursor = cursor);
     }
@@ -1827,8 +1850,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (renderBox == null) return;
 
+      // Cancel range annotation creation mode
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+          debugPrint('⏹️ ESC pressed - cancelling rangeAnnotationCreation mode');
+          _coordinator.releaseMode(force: true);
+          setState(() {
+            _currentCursor = SystemMouseCursors.basic;
+          });
+          return;
+        }
+      }
       // Reset view
-      if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
+      else if (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.keyR) {
         // Removed excessive debugPrint (calling resetView)
         renderBox.resetView();
       }
@@ -2270,6 +2304,14 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                     ),
                   ),
                   if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
+                  
+                  // Red crosshair overlay for range annotation creation mode
+                  if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation)
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: _RangeCreationCrosshairOverlay(),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -2437,5 +2479,88 @@ class _DebugOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Red crosshair overlay for range annotation creation mode.
+/// Provides visual feedback that the chart is in range selection mode.
+class _RangeCreationCrosshairOverlay extends StatefulWidget {
+  const _RangeCreationCrosshairOverlay();
+
+  @override
+  State<_RangeCreationCrosshairOverlay> createState() => _RangeCreationCrosshairOverlayState();
+}
+
+class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairOverlay> {
+  Offset? _mousePosition;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onHover: (event) {
+        setState(() {
+          _mousePosition = event.localPosition;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _mousePosition = null;
+        });
+      },
+      child: _mousePosition == null
+          ? const SizedBox.shrink()
+          : CustomPaint(
+              painter: _CrosshairPainter(
+                position: _mousePosition!,
+                color: Colors.red.withOpacity(0.8),
+              ),
+            ),
+    );
+  }
+}
+
+/// Custom painter for red crosshair lines.
+class _CrosshairPainter extends CustomPainter {
+  _CrosshairPainter({
+    required this.position,
+    required this.color,
+  });
+
+  final Offset position;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    // Vertical line
+    canvas.drawLine(
+      Offset(position.dx, 0),
+      Offset(position.dx, size.height),
+      paint,
+    );
+
+    // Horizontal line
+    canvas.drawLine(
+      Offset(0, position.dy),
+      Offset(size.width, position.dy),
+      paint,
+    );
+
+    // Draw small circle at intersection for emphasis
+    final circlePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawCircle(position, 4.0, circlePaint);
+  }
+
+  @override
+  bool shouldRepaint(_CrosshairPainter oldDelegate) {
+    return oldDelegate.position != position || oldDelegate.color != color;
   }
 }
