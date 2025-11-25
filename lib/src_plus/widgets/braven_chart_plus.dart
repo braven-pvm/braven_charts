@@ -620,6 +620,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   // Guard flag to prevent duplicate context menu opens
   bool _isShowingContextMenu = false;
+  
+  // Track range creation mode to trigger UI updates
+  bool _wasInRangeCreationMode = false;
 
   @override
   void initState() {
@@ -1147,11 +1150,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode but no annotationController, releasing mode immediately');
         _coordinator.releaseMode(force: true);
       }
-    } // CRITICAL FIX: Only call setState() if debug overlay is visible!
-    // Crosshair rendering happens in RenderBox.paint() via markNeedsPaint(),
-    // so we don't need setState() for cursor movement.
-    // setState() triggers expensive widget tree rebuilds.
-    if (widget.showDebugInfo) {
+    }
+    
+    // CRITICAL: Call setState() when mode changes to update overlays (debug, crosshair)
+    // Debug overlay and range creation crosshair both depend on coordinator mode
+    final isInRangeCreation = _coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
+    final modeChanged = isInRangeCreation != _wasInRangeCreationMode;
+    
+    if (widget.showDebugInfo || modeChanged) {
+      _wasInRangeCreationMode = isInRangeCreation;
       setState(() {});
     }
   }
@@ -2304,7 +2311,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                     ),
                   ),
                   if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
-                  
+
                   // Red crosshair overlay for range annotation creation mode
                   if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation)
                     const Positioned.fill(
