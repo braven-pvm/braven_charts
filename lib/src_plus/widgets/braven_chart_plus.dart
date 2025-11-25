@@ -620,7 +620,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   // Guard flag to prevent duplicate context menu opens
   bool _isShowingContextMenu = false;
-  
+
   // Track range creation mode to trigger UI updates
   bool _wasInRangeCreationMode = false;
 
@@ -1151,12 +1151,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         _coordinator.releaseMode(force: true);
       }
     }
-    
+
     // CRITICAL: Call setState() when mode changes to update overlays (debug, crosshair)
     // Debug overlay and range creation crosshair both depend on coordinator mode
     final isInRangeCreation = _coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
     final modeChanged = isInRangeCreation != _wasInRangeCreationMode;
-    
+
     if (widget.showDebugInfo || modeChanged) {
       _wasInRangeCreationMode = isInRangeCreation;
       setState(() {});
@@ -2514,14 +2514,12 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
           _mousePosition = null;
         });
       },
-      child: _mousePosition == null
-          ? const SizedBox.shrink()
-          : CustomPaint(
-              painter: _CrosshairPainter(
-                position: _mousePosition!,
-                color: Colors.red.withOpacity(0.8),
-              ),
-            ),
+      child: CustomPaint(
+        painter: _CrosshairPainter(
+          position: _mousePosition,
+          color: Colors.red.withOpacity(0.8),
+        ),
+      ),
     );
   }
 }
@@ -2533,11 +2531,14 @@ class _CrosshairPainter extends CustomPainter {
     required this.color,
   });
 
-  final Offset position;
+  final Offset? position;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Don't paint if no mouse position yet
+    if (position == null) return;
+
     final paint = Paint()
       ..color = color
       ..strokeWidth = 1.5
@@ -2545,15 +2546,15 @@ class _CrosshairPainter extends CustomPainter {
 
     // Vertical line
     canvas.drawLine(
-      Offset(position.dx, 0),
-      Offset(position.dx, size.height),
+      Offset(position!.dx, 0),
+      Offset(position!.dx, size.height),
       paint,
     );
 
     // Horizontal line
     canvas.drawLine(
-      Offset(0, position.dy),
-      Offset(size.width, position.dy),
+      Offset(0, position!.dy),
+      Offset(size.width, position!.dy),
       paint,
     );
 
@@ -2563,7 +2564,7 @@ class _CrosshairPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    canvas.drawCircle(position, 4.0, circlePaint);
+    canvas.drawCircle(position!, 4.0, circlePaint);
   }
 
   @override
