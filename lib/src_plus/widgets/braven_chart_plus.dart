@@ -1454,11 +1454,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
     debugPrint('   Press ESC or click without dragging to cancel');
 
-    // Change cursor to precise/crosshair to indicate range creation mode
-    // Note: Flutter web doesn't support custom colored cursors directly,
-    // but SystemMouseCursors.precise is visually distinct from the default
+    // Hide system cursor completely - we'll show custom red crosshair via overlay
+    // The _RangeCreationCrosshairOverlay widget will paint the red crosshair
     setState(() {
-      _currentCursor = SystemMouseCursors.precise;
+      _currentCursor = SystemMouseCursors.none;
     });
 
     // Completion is handled via _onRangeCreationComplete callback
@@ -2541,7 +2540,7 @@ class _CrosshairPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2.5 // Thicker for better visibility
       ..style = PaintingStyle.stroke;
 
     // Vertical line
@@ -2561,10 +2560,9 @@ class _CrosshairPainter extends CustomPainter {
     // Draw small circle at intersection for emphasis
     final circlePaint = Paint()
       ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..style = PaintingStyle.fill; // Fill the circle for better visibility
 
-    canvas.drawCircle(position!, 4.0, circlePaint);
+    canvas.drawCircle(position!, 6.0, circlePaint); // Larger circle
   }
 
   @override
