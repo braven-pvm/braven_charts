@@ -1186,49 +1186,55 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     debugPrint(
         '⏱️ [$buildMenuTime] Context: isDataPointClick=$isDataPointClick, isSeriesLineClick=$isSeriesLineClick, isEmptyArea=$isEmptyArea, isExistingAnnotation=$isExistingAnnotation');
 
+    // Check if annotations are supported (annotationController is provided)
+    final bool hasAnnotationController = widget.annotationController != null;
+
     // Build context-aware web-native menu items
     final List<WebContextMenuItem> menuItems = [
-      // TextAnnotation - ALWAYS available
-      const WebContextMenuAction(
-        value: 'add_text',
-        icon: Icons.text_fields,
-        label: 'Add Text Annotation',
-      ),
-
-      // PointAnnotation - ONLY when clicking on data point marker
-      if (isDataPointClick)
+      // Annotation creation items - ONLY show when annotationController is available
+      if (hasAnnotationController) ...[
+        // TextAnnotation - ALWAYS available
         const WebContextMenuAction(
-          value: 'add_point',
-          icon: Icons.place,
-          label: 'Add Point Annotation',
+          value: 'add_text',
+          icon: Icons.text_fields,
+          label: 'Add Text Annotation',
         ),
 
-      // TrendAnnotation - ONLY when clicking on series line (not marker)
-      if (isSeriesLineClick)
+        // PointAnnotation - ONLY when clicking on data point marker
+        if (isDataPointClick)
+          const WebContextMenuAction(
+            value: 'add_point',
+            icon: Icons.place,
+            label: 'Add Point Annotation',
+          ),
+
+        // TrendAnnotation - ONLY when clicking on series line (not marker)
+        if (isSeriesLineClick)
+          const WebContextMenuAction(
+            value: 'add_trend',
+            icon: Icons.trending_up,
+            label: 'Add Trend Annotation',
+          ),
+
+        // RangeAnnotation - ALWAYS available (interactive drag mode)
         const WebContextMenuAction(
-          value: 'add_trend',
-          icon: Icons.trending_up,
-          label: 'Add Trend Annotation',
+          value: 'add_range',
+          icon: Icons.width_full,
+          label: 'Add Range Annotation',
         ),
 
-      // RangeAnnotation - ALWAYS available (interactive drag mode)
-      const WebContextMenuAction(
-        value: 'add_range',
-        icon: Icons.width_full,
-        label: 'Add Range Annotation',
-      ),
+        const WebContextMenuDivider(),
 
-      const WebContextMenuDivider(),
+        // ThresholdAnnotation - ALWAYS available
+        const WebContextMenuAction(
+          value: 'add_threshold',
+          icon: Icons.horizontal_rule,
+          label: 'Add Threshold Line',
+        ),
+      ],
 
-      // ThresholdAnnotation - ALWAYS available
-      const WebContextMenuAction(
-        value: 'add_threshold',
-        icon: Icons.horizontal_rule,
-        label: 'Add Threshold Line',
-      ),
-
-      // Edit/Delete for existing annotations
-      if (isExistingAnnotation) ...[
+      // Edit/Delete for existing annotations - ONLY show when annotationController is available
+      if (hasAnnotationController && isExistingAnnotation) ...[
         const WebContextMenuDivider(),
         const WebContextMenuAction(
           value: 'edit',
