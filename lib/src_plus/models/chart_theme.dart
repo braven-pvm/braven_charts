@@ -1,25 +1,85 @@
-// Copyright 2025 Braven Charts - Simplified for BravenChartPlus
+// Copyright 2025 Braven Charts - Comprehensive Theming System
 // SPDX-License-Identifier: MIT
 
 import 'package:flutter/material.dart';
 
-/// Simplified ChartTheme for BravenChartPlus.
+import '../theming/components/animation_theme.dart';
+import '../theming/components/axis_style.dart';
+import '../theming/components/grid_style.dart';
+import '../theming/components/interaction_theme.dart';
+import '../theming/components/scrollbar_config.dart';
+import '../theming/components/series_theme.dart';
+import '../theming/components/typography_theme.dart';
+
+/// Comprehensive chart theme with component-based styling.
+///
+/// Integrates multiple theme components for complete visual control:
+/// - [gridStyle]: Grid line styling (major/minor)
+/// - [axisStyle]: Axis lines, labels, titles, ticks
+/// - [seriesTheme]: Data series colors, line widths, markers
+/// - [interactionTheme]: Crosshair, tooltips, selection
+/// - [typographyTheme]: Font families, sizes, responsive scaling
+/// - [animationTheme]: Animation durations and curves
+/// - [scrollbarConfig]: Scrollbar appearance and behavior
+///
+/// Example:
+/// ```dart
+/// final theme = ChartTheme(
+///   gridStyle: GridStyle.defaultLight,
+///   axisStyle: AxisStyle.defaultLight,
+///   seriesTheme: SeriesTheme.defaultLight,
+///   interactionTheme: InteractionTheme.defaultLight,
+///   typographyTheme: TypographyTheme.defaultLight,
+///   animationTheme: AnimationTheme.defaultLight,
+///   scrollbarConfig: ScrollbarConfig.defaultLight,
+/// );
+/// ```
 class ChartTheme {
   const ChartTheme({
-    this.backgroundColor = Colors.white,
-    this.gridColor = const Color(0xFFE0E0E0),
-    this.axisColor = Colors.black87,
-    this.textColor = Colors.black87,
-    this.seriesColors = const [Colors.blue, Colors.red, Colors.green, Colors.orange, Colors.purple],
+    required this.backgroundColor,
+    required this.gridStyle,
+    required this.axisStyle,
+    required this.seriesTheme,
+    required this.interactionTheme,
+    required this.typographyTheme,
+    required this.animationTheme,
+    required this.scrollbarConfig,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
     this.focusBorderRadius = 0.0,
-  });
+    // Deprecated fields for backward compatibility
+    @Deprecated('Use gridStyle.majorColor instead') Color? gridColor,
+    @Deprecated('Use axisStyle.lineColor instead') Color? axisColor,
+    @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead') Color? textColor,
+    @Deprecated('Use seriesTheme.colors instead') List<Color>? seriesColors,
+  })  : _gridColor = gridColor,
+        _axisColor = axisColor,
+        _textColor = textColor,
+        _seriesColors = seriesColors;
+
+  /// Chart background color.
   final Color backgroundColor;
-  final Color gridColor;
-  final Color axisColor;
-  final Color textColor;
-  final List<Color> seriesColors;
+
+  /// Grid line styling (major and optional minor lines).
+  final GridStyle gridStyle;
+
+  /// Axis styling (lines, labels, titles, ticks).
+  final AxisStyle axisStyle;
+
+  /// Series data styling (colors, line widths, markers).
+  final SeriesTheme seriesTheme;
+
+  /// Interactive element styling (crosshair, tooltips, selection).
+  final InteractionTheme interactionTheme;
+
+  /// Typography settings (fonts, sizes, responsive scaling).
+  final TypographyTheme typographyTheme;
+
+  /// Animation settings (durations, curves).
+  final AnimationTheme animationTheme;
+
+  /// Scrollbar configuration.
+  final ScrollbarConfig scrollbarConfig;
 
   /// Focus border color when chart has keyboard focus.
   final Color focusBorderColor;
@@ -30,56 +90,168 @@ class ChartTheme {
   /// Focus border corner radius in pixels (0 = sharp corners).
   final double focusBorderRadius;
 
+  // Deprecated fields (private, for backward compatibility)
+  final Color? _gridColor;
+  final Color? _axisColor;
+  final Color? _textColor;
+  final List<Color>? _seriesColors;
+
+  // Deprecated getters for backward compatibility
+  @Deprecated('Use gridStyle.majorColor instead')
+  Color get gridColor => _gridColor ?? gridStyle.majorColor;
+
+  @Deprecated('Use axisStyle.lineColor instead')
+  Color get axisColor => _axisColor ?? axisStyle.lineColor;
+
+  @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead')
+  Color get textColor => _textColor ?? axisStyle.labelStyle.color ?? Colors.black87;
+
+  @Deprecated('Use seriesTheme.colors instead')
+  List<Color> get seriesColors => _seriesColors ?? seriesTheme.colors;
+
+  // ========== Predefined Themes ==========
+
+  static final ChartTheme light = ChartTheme(
+    backgroundColor: Colors.white,
+    gridStyle: GridStyle.defaultLight,
+    axisStyle: AxisStyle.defaultLight,
+    seriesTheme: SeriesTheme.defaultLight,
+    interactionTheme: InteractionTheme.defaultLight,
+    typographyTheme: TypographyTheme.defaultLight,
+    animationTheme: AnimationTheme.defaultLight,
+    scrollbarConfig: ScrollbarConfig.defaultLight,
+  );
+
+  static final ChartTheme dark = ChartTheme(
+    backgroundColor: const Color(0xFF1E1E1E),
+    gridStyle: GridStyle.defaultDark,
+    axisStyle: AxisStyle.defaultDark,
+    seriesTheme: SeriesTheme.defaultDark,
+    interactionTheme: InteractionTheme.defaultDark,
+    typographyTheme: TypographyTheme.defaultDark,
+    animationTheme: AnimationTheme.defaultDark,
+    scrollbarConfig: ScrollbarConfig.defaultDark,
+  );
+
+  static final ChartTheme corporateBlue = ChartTheme(
+    backgroundColor: Colors.white,
+    gridStyle: GridStyle.corporateBlue,
+    axisStyle: AxisStyle.corporateBlue,
+    seriesTheme: SeriesTheme.corporateBlue,
+    interactionTheme: InteractionTheme.corporateBlue,
+    typographyTheme: TypographyTheme.corporateBlue,
+    animationTheme: AnimationTheme.corporateBlue,
+    scrollbarConfig: ScrollbarConfig.defaultLight,
+  );
+
+  static final ChartTheme vibrant = ChartTheme(
+    backgroundColor: Colors.white,
+    gridStyle: GridStyle.vibrant,
+    axisStyle: AxisStyle.vibrant,
+    seriesTheme: SeriesTheme.vibrant,
+    interactionTheme: InteractionTheme.vibrant,
+    typographyTheme: TypographyTheme.vibrant,
+    animationTheme: AnimationTheme.vibrant,
+    scrollbarConfig: ScrollbarConfig.defaultLight,
+  );
+
+  static final ChartTheme minimal = ChartTheme(
+    backgroundColor: const Color(0xFFFAFAFA),
+    gridStyle: GridStyle.minimal,
+    axisStyle: AxisStyle.minimal,
+    seriesTheme: SeriesTheme.minimal,
+    interactionTheme: InteractionTheme.minimal,
+    typographyTheme: TypographyTheme.minimal,
+    animationTheme: AnimationTheme.minimal,
+    scrollbarConfig: ScrollbarConfig.defaultLight,
+  );
+
+  static final ChartTheme highContrast = ChartTheme(
+    backgroundColor: Colors.white,
+    gridStyle: GridStyle.highContrast,
+    axisStyle: AxisStyle.highContrast,
+    seriesTheme: SeriesTheme.highContrast,
+    interactionTheme: InteractionTheme.highContrast,
+    typographyTheme: TypographyTheme.highContrast,
+    animationTheme: AnimationTheme.highContrast,
+    scrollbarConfig: ScrollbarConfig.highContrast,
+  );
+
+  static final ChartTheme colorblindFriendly = ChartTheme(
+    backgroundColor: Colors.white,
+    gridStyle: GridStyle.colorblindFriendly,
+    axisStyle: AxisStyle.colorblindFriendly,
+    seriesTheme: SeriesTheme.colorblindFriendly,
+    interactionTheme: InteractionTheme.colorblindFriendly,
+    typographyTheme: TypographyTheme.colorblindFriendly,
+    animationTheme: AnimationTheme.colorblindFriendly,
+    scrollbarConfig: ScrollbarConfig.defaultLight,
+  );
+
+  // ========== Customization ==========
+
+  ChartTheme copyWith({
+    Color? backgroundColor,
+    GridStyle? gridStyle,
+    AxisStyle? axisStyle,
+    SeriesTheme? seriesTheme,
+    InteractionTheme? interactionTheme,
+    TypographyTheme? typographyTheme,
+    AnimationTheme? animationTheme,
+    ScrollbarConfig? scrollbarConfig,
+    Color? focusBorderColor,
+    double? focusBorderWidth,
+    double? focusBorderRadius,
+  }) {
+    return ChartTheme(
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      gridStyle: gridStyle ?? this.gridStyle,
+      axisStyle: axisStyle ?? this.axisStyle,
+      seriesTheme: seriesTheme ?? this.seriesTheme,
+      interactionTheme: interactionTheme ?? this.interactionTheme,
+      typographyTheme: typographyTheme ?? this.typographyTheme,
+      animationTheme: animationTheme ?? this.animationTheme,
+      scrollbarConfig: scrollbarConfig ?? this.scrollbarConfig,
+      focusBorderColor: focusBorderColor ?? this.focusBorderColor,
+      focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
+      focusBorderRadius: focusBorderRadius ?? this.focusBorderRadius,
+    );
+  }
+
+  // ========== Equality ==========
+
+  // ========== Equality ==========
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! ChartTheme) return false;
 
-    // Compare all fields
-    if (backgroundColor != other.backgroundColor) return false;
-    if (gridColor != other.gridColor) return false;
-    if (axisColor != other.axisColor) return false;
-    if (textColor != other.textColor) return false;
-
-    // Compare seriesColors lists
-    if (seriesColors.length != other.seriesColors.length) return false;
-    for (int i = 0; i < seriesColors.length; i++) {
-      if (seriesColors[i] != other.seriesColors[i]) return false;
-    }
-
-    // Compare focus border properties
-    if (focusBorderColor != other.focusBorderColor) return false;
-    if (focusBorderWidth != other.focusBorderWidth) return false;
-    if (focusBorderRadius != other.focusBorderRadius) return false;
-
-    return true;
+    return backgroundColor == other.backgroundColor &&
+        gridStyle == other.gridStyle &&
+        axisStyle == other.axisStyle &&
+        seriesTheme == other.seriesTheme &&
+        interactionTheme == other.interactionTheme &&
+        typographyTheme == other.typographyTheme &&
+        animationTheme == other.animationTheme &&
+        scrollbarConfig == other.scrollbarConfig &&
+        focusBorderColor == other.focusBorderColor &&
+        focusBorderWidth == other.focusBorderWidth &&
+        focusBorderRadius == other.focusBorderRadius;
   }
 
   @override
   int get hashCode => Object.hash(
         backgroundColor,
-        gridColor,
-        axisColor,
-        textColor,
-        Object.hashAll(seriesColors),
+        gridStyle,
+        axisStyle,
+        seriesTheme,
+        interactionTheme,
+        typographyTheme,
+        animationTheme,
+        scrollbarConfig,
         focusBorderColor,
         focusBorderWidth,
         focusBorderRadius,
       );
-
-  static const ChartTheme light = ChartTheme();
-
-  static const ChartTheme dark = ChartTheme(
-    backgroundColor: Color(0xFF1E1E1E),
-    gridColor: Color(0xFF404040),
-    axisColor: Colors.white70,
-    textColor: Colors.white70,
-    seriesColors: [
-      Color(0xFF00BCD4), // Cyan
-      Color(0xFFFFEB3B), // Yellow
-      Color(0xFFCDDC39), // Lime
-      Color(0xFFE91E63), // Pink
-      Color(0xFFFFC107), // Amber
-    ],
-  );
 }
