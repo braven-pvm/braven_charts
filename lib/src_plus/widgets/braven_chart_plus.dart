@@ -2486,21 +2486,21 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
 
   @override
   Widget build(BuildContext context) {
-    // CRITICAL: Wrap entire widget tree with IgnorePointer to allow drag/click events
-    // to pass through to ChartRenderBox below, while MouseRegion still tracks position
-    // for drawing the crosshair (mouse tracking works even through IgnorePointer)
-    return IgnorePointer(
-      child: MouseRegion(
-        onHover: (event) {
-          setState(() {
-            _mousePosition = event.localPosition;
-          });
-        },
-        onExit: (_) {
-          setState(() {
-            _mousePosition = null;
-          });
-        },
+    // Use Listener with translucent behavior to track position while allowing events through
+    // This works better than MouseRegion + IgnorePointer combination
+    return Listener(
+      behavior: HitTestBehavior.translucent, // Allows events to pass through while still receiving them
+      onPointerHover: (event) {
+        setState(() {
+          _mousePosition = event.localPosition;
+        });
+      },
+      onPointerMove: (event) {
+        setState(() {
+          _mousePosition = event.localPosition;
+        });
+      },
+      child: IgnorePointer(
         child: CustomPaint(
           painter: _CrosshairPainter(
             position: _mousePosition,
