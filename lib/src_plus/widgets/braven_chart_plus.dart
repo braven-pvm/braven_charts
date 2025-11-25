@@ -2501,23 +2501,14 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
   Offset? _mousePosition;
 
   @override
-  void initState() {
-    super.initState();
-    debugPrint('🎨 _RangeCreationCrosshairOverlay initState - overlay widget created');
-  }
-
-  @override
   Widget build(BuildContext context) {
-    debugPrint('🎨 _RangeCreationCrosshairOverlay build - position: $_mousePosition');
     return MouseRegion(
       onHover: (event) {
-        debugPrint('🎨 Crosshair overlay onHover: ${event.localPosition}');
         setState(() {
           _mousePosition = event.localPosition;
         });
       },
       onExit: (_) {
-        debugPrint('🎨 Crosshair overlay onExit');
         setState(() {
           _mousePosition = null;
         });
@@ -2549,43 +2540,51 @@ class _CrosshairPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    debugPrint('🎨 _CrosshairPainter.paint called - position: $position, size: $size');
-
     // Don't paint if no mouse position yet
-    if (position == null) {
-      debugPrint('🎨 _CrosshairPainter.paint - position is null, skipping paint');
-      return;
-    }
+    if (position == null) return;
 
-    debugPrint('🎨 _CrosshairPainter.paint - painting red crosshair at $position');
+    // Professional localized crosshair - NOT full-screen arcade style
+    const crosshairSize = 16.0; // Length of each arm from center
+    const strokeWidth = 1.5;
+    const centerGap = 3.0; // Small gap in the middle for better visibility
 
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.5 // Thicker for better visibility
-      ..style = PaintingStyle.stroke;
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round; // Rounded ends for smoother look
 
-    // Vertical line
+    final center = position!;
+
+    // Vertical line (top and bottom arms with center gap)
     canvas.drawLine(
-      Offset(position!.dx, 0),
-      Offset(position!.dx, size.height),
+      Offset(center.dx, center.dy - crosshairSize),
+      Offset(center.dx, center.dy - centerGap),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy + centerGap),
+      Offset(center.dx, center.dy + crosshairSize),
       paint,
     );
 
-    // Horizontal line
+    // Horizontal line (left and right arms with center gap)
     canvas.drawLine(
-      Offset(0, position!.dy),
-      Offset(size.width, position!.dy),
+      Offset(center.dx - crosshairSize, center.dy),
+      Offset(center.dx - centerGap, center.dy),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx + centerGap, center.dy),
+      Offset(center.dx + crosshairSize, center.dy),
       paint,
     );
 
-    // Draw small circle at intersection for emphasis
-    final circlePaint = Paint()
+    // Optional: Small center dot for precise positioning
+    final dotPaint = Paint()
       ..color = color
-      ..style = PaintingStyle.fill; // Fill the circle for better visibility
-
-    canvas.drawCircle(position!, 6.0, circlePaint); // Larger circle
-
-    debugPrint('🎨 _CrosshairPainter.paint - completed drawing crosshair');
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 1.5, dotPaint);
   }
 
   @override
