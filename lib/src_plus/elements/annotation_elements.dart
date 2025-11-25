@@ -15,6 +15,14 @@ import '../models/chart_series.dart';
 import '../models/enums.dart';
 import 'resize_handle_element.dart';
 
+/// Position for edge value labels during range annotation resize.
+enum EdgeLabelPosition {
+  left,
+  right,
+  top,
+  bottom,
+}
+
 /// A chart element that renders a point annotation marker.
 ///
 /// Marks a specific data point with a custom marker shape and color.
@@ -362,6 +370,12 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   // Temporary resize bounds (in screen space)
   Rect? _tempResizeBounds;
 
+  // Temporary values during resize (in data coordinates)
+  double? _tempStartX;
+  double? _tempEndX;
+  double? _tempStartY;
+  double? _tempEndY;
+
   /// Update the current transform before painting (for real-time pan/zoom).
   void updateTransform(ChartTransform newTransform) {
     _currentTransform = newTransform;
@@ -378,6 +392,23 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   /// Clears temporary resize bounds (called when resize operation completes).
   void clearTempBounds() {
     _tempResizeBounds = null;
+    _tempStartX = null;
+    _tempEndX = null;
+    _tempStartY = null;
+    _tempEndY = null;
+  }
+
+  /// Updates temporary edge values during resize (in data coordinates).
+  void updateTempValues({
+    double? startX,
+    double? endX,
+    double? startY,
+    double? endY,
+  }) {
+    _tempStartX = startX;
+    _tempEndX = endX;
+    _tempStartY = startY;
+    _tempEndY = endY;
   }
 
   /// Calculate bounds and fill rect using current transform.
@@ -504,6 +535,11 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     // Draw resize handles if selected
     if (_isSelected) {
       _drawResizeHandles(canvas, fillRect);
+    }
+
+    // Draw value labels during resize (similar to threshold drag labels)
+    if (_tempStartX != null || _tempEndX != null || _tempStartY != null || _tempEndY != null) {
+      _drawResizeValueLabels(canvas, size, fillRect);
     }
   }
 
@@ -636,6 +672,136 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       bgRect.top + padding.top,
     );
     textPainter.paint(canvas, textPosition);
+  }
+
+  /// Draws value labels for edges being resized (similar to threshold drag labels).
+  void _drawResizeValueLabels(Canvas canvas, Size size, Rect fillRect) {
+    const textStyle = TextStyle(
+      color: Color(0xFF000000),
+      fontSize: 10,
+      backgroundColor: Color(0xF0FFFFFF), // Almost opaque white
+    );
+
+    const labelPadding = 4.0;
+    final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
+
+    // Draw label for each edge being resized
+    // Left edge (startX)
+    if (_tempStartX != null) {
+      final displayValue = _formatDataValue(_tempStartX!);
+      final labelText = 'X: $displayValue';
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
+          fillRect.left, fillRect.center.dy, EdgeLabelPosition.left);
+    }
+
+    // Right edge (endX)
+    if (_tempEndX != null) {
+      final displayValue = _formatDataValue(_tempEndX!);
+      final labelText = 'X: $displayValue';
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
+          fillRect.right, fillRect.center.dy, EdgeLabelPosition.right);
+    }
+
+    // Top edge (endY - higher value)
+    if (_tempEndY != null) {
+      final displayValue = _formatDataValue(_tempEndY!);
+      final labelText = 'Y: $displayValue';
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
+          fillRect.center.dx, fillRect.top, EdgeLabelPosition.top);
+    }
+
+    // Bottom edge (startY - lower value)
+    if (_tempStartY != null) {
+      final displayValue = _formatDataValue(_tempStartY!);
+      final labelText = 'Y: $displayValue';
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
+          fillRect.center.dx, fillRect.bottom, EdgeLabelPosition.bottom);
+    }
+  }
+
+  /// Helper to draw a single edge label at the specified position.
+  void _drawEdgeLabel(
+    Canvas canvas,
+    String labelText,
+    TextStyle textStyle,
+    Paint backgroundPaint,
+    double padding,
+    double edgeX,
+    double edgeY,
+    EdgeLabelPosition position,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: labelText, style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    double labelX, labelY;
+
+    switch (position) {
+      case EdgeLabelPosition.left:
+        // Position label to the left of the edge
+        labelX = edgeX - textPainter.width - padding * 3;
+        labelY = edgeY - textPainter.height / 2;
+        // Clamp to keep within bounds
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
+        break;
+      case EdgeLabelPosition.right:
+        // Position label to the right of the edge
+        labelX = edgeX + padding * 3;
+        labelY = edgeY - textPainter.height / 2;
+        // Clamp to keep within bounds
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
+        break;
+      case EdgeLabelPosition.top:
+        // Position label above the edge
+        labelX = edgeX - textPainter.width / 2;
+        labelY = edgeY - textPainter.height - padding * 3;
+        // Clamp to keep within bounds
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
+        break;
+      case EdgeLabelPosition.bottom:
+        // Position label below the edge
+        labelX = edgeX - textPainter.width / 2;
+        labelY = edgeY + padding * 3;
+        // Clamp to keep within bounds
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
+        break;
+    }
+
+    // Draw background
+    final bgRect = Rect.fromLTWH(
+      labelX - padding,
+      labelY - padding,
+      textPainter.width + padding * 2,
+      textPainter.height + padding * 2,
+    );
+    canvas.drawRect(bgRect, backgroundPaint);
+
+    // Draw text
+    textPainter.paint(canvas, Offset(labelX, labelY));
+  }
+
+  /// Formats data values for display (same logic as axis labels).
+  String _formatDataValue(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
   }
 
   @override

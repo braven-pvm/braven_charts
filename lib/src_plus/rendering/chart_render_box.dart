@@ -1335,6 +1335,60 @@ class ChartRenderBox extends RenderBox {
     // Update annotation bounds
     // Note: Spatial index will be rebuilt on pointer up for performance
     _resizingAnnotation!.updateBounds(newBounds);
+
+    // Update temporary edge values for value label display (only if we have a transform)
+    if (_elements.whereType<SeriesElement>().isNotEmpty) {
+      final seriesElement = _elements.whereType<SeriesElement>().first;
+      final transform = seriesElement.transform;
+      final annotation = _resizingAnnotation!.annotation;
+
+      // Convert pixel bounds to data coordinates
+      final leftData = transform.plotToData(newBounds.left, newBounds.top);
+      final rightData = transform.plotToData(newBounds.right, newBounds.bottom);
+
+      // Determine which edges are being resized
+      double? tempStartX;
+      double? tempEndX;
+      double? tempStartY;
+      double? tempEndY;
+
+      // Only set temp values for edges that are being resized AND are bound
+      if ((_activeResizeDirection == ResizeDirection.left ||
+              _activeResizeDirection == ResizeDirection.topLeft ||
+              _activeResizeDirection == ResizeDirection.bottomLeft) &&
+          annotation.startX != null) {
+        tempStartX = leftData.dx;
+      }
+
+      if ((_activeResizeDirection == ResizeDirection.right ||
+              _activeResizeDirection == ResizeDirection.topRight ||
+              _activeResizeDirection == ResizeDirection.bottomRight) &&
+          annotation.endX != null) {
+        tempEndX = rightData.dx;
+      }
+
+      if ((_activeResizeDirection == ResizeDirection.bottom ||
+              _activeResizeDirection == ResizeDirection.bottomLeft ||
+              _activeResizeDirection == ResizeDirection.bottomRight) &&
+          annotation.startY != null) {
+        tempStartY = rightData.dy; // Bottom pixel → lower Y data
+      }
+
+      if ((_activeResizeDirection == ResizeDirection.top ||
+              _activeResizeDirection == ResizeDirection.topLeft ||
+              _activeResizeDirection == ResizeDirection.topRight) &&
+          annotation.endY != null) {
+        tempEndY = leftData.dy; // Top pixel → higher Y data
+      }
+
+      // Update element with temporary values for label display
+      _resizingAnnotation!.updateTempValues(
+        startX: tempStartX,
+        endX: tempEndX,
+        startY: tempStartY,
+        endY: tempEndY,
+      );
+    }
   }
 
   /// Performs move operation for RangeAnnotation during drag.
