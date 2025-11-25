@@ -1210,12 +1210,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           label: 'Add Trend Annotation',
         ),
 
-      // RangeAnnotation - TODO: Define separately per user
-      // const WebContextMenuAction(
-      //   value: 'add_range',
-      //   icon: Icons.width_full,
-      //   label: 'Add Range Annotation',
-      // ),
+      // RangeAnnotation - ALWAYS available (interactive drag mode)
+      const WebContextMenuAction(
+        value: 'add_range',
+        icon: Icons.width_full,
+        label: 'Add Range Annotation',
+      ),
 
       const WebContextMenuDivider(),
 
@@ -1287,6 +1287,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         break;
       case 'add_trend':
         await _showAddTrendAnnotationDialog(element);
+        break;
+      case 'add_range':
+        await _showAddRangeAnnotationDialog();
         break;
       case 'add_threshold':
         await _showAddThresholdAnnotationDialog();
@@ -1388,6 +1391,32 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
+  /// Shows the RangeAnnotation creation dialog.
+  ///
+  /// Option 4 Implementation: Right-click → Add Range → Interactive drag → Dialog
+  /// TODO: Implement interactive drag mode for rubber-band rectangle selection
+  Future<void> _showAddRangeAnnotationDialog() async {
+    if (!mounted) return;
+
+    debugPrint('🎯 Starting RangeAnnotation creation (Option 4: Interactive drag mode)');
+
+    // TODO Phase 2: Enter rangeAnnotationCreation mode, handle drag, capture bounds
+    // For now, open dialog directly with empty values (user fills manually)
+
+    final result = await showDialog<RangeAnnotation>(
+      context: context,
+      builder: (context) => const RangeAnnotationDialog(),
+    );
+
+    if (result != null && mounted) {
+      debugPrint('✅ Created RangeAnnotation: ${result.id}');
+      debugPrint('   X: [${result.startX}, ${result.endX}], Y: [${result.startY}, ${result.endY}]');
+      widget.annotationController?.addAnnotation(result);
+    } else {
+      debugPrint('❌ RangeAnnotation creation cancelled');
+    }
+  }
+
   /// Shows the TrendAnnotation creation dialog.
   Future<void> _showAddTrendAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
@@ -1433,7 +1462,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         (element is! TextAnnotationElement &&
             element is! PointAnnotationElement &&
             element is! ThresholdAnnotationElement &&
-            element is! TrendAnnotationElement)) {
+            element is! TrendAnnotationElement &&
+            element is! RangeAnnotationElement)) {
       debugPrint('⚠️ Edit action requires an annotation element (got ${element?.runtimeType})');
       return;
     }
@@ -1504,6 +1534,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         debugPrint('✅ Updated TrendAnnotation: ${result.id}');
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      } else {
+        debugPrint('❌ TrendAnnotation edit cancelled');
+      }
+    } else if (element is RangeAnnotationElement) {
+      debugPrint('🔧 RangeAnnotationElement detected');
+      final annotation = element.annotation;
+      final result = await showDialog<RangeAnnotation>(
+        context: context,
+        builder: (context) => RangeAnnotationDialog(annotation: annotation),
+      );
+
+      if (result != null && mounted) {
+        debugPrint('✅ Updated RangeAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
         debugPrint('❌ TrendAnnotation edit cancelled');
@@ -1620,7 +1664,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         if (tappedElement is TextAnnotationElement ||
             tappedElement is PointAnnotationElement ||
             tappedElement is ThresholdAnnotationElement ||
-            tappedElement is TrendAnnotationElement) {
+            tappedElement is TrendAnnotationElement ||
+            tappedElement is RangeAnnotationElement) {
           debugPrint('🖱️ Double-click detected on ${tappedElement.runtimeType}, opening edit dialog');
           _showEditAnnotationDialog(tappedElement);
           // Reset to prevent triple-click
