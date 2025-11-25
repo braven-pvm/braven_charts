@@ -448,14 +448,51 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       canvas.drawRect(fillRect, fillPaint);
     }
 
-    // Draw border
+    // Draw border (conditionally skip borders when range spans entire axis)
     if (annotation.borderColor != null) {
       final borderPaint = Paint()
         ..color = annotation.borderColor!
         ..style = PaintingStyle.stroke
         ..strokeWidth = _isSelected ? 2.0 : 1.0;
 
-      canvas.drawRect(fillRect, borderPaint);
+      // Draw individual border lines based on annotation bounds
+      // Skip borders when the annotation spans the entire axis (null values)
+      
+      // Top border - only if endY is defined (not spanning to top)
+      if (annotation.endY != null) {
+        canvas.drawLine(
+          Offset(fillRect.left, fillRect.top),
+          Offset(fillRect.right, fillRect.top),
+          borderPaint,
+        );
+      }
+
+      // Right border - only if endX is defined (not spanning to right)
+      if (annotation.endX != null) {
+        canvas.drawLine(
+          Offset(fillRect.right, fillRect.top),
+          Offset(fillRect.right, fillRect.bottom),
+          borderPaint,
+        );
+      }
+
+      // Bottom border - only if startY is defined (not spanning to bottom)
+      if (annotation.startY != null) {
+        canvas.drawLine(
+          Offset(fillRect.right, fillRect.bottom),
+          Offset(fillRect.left, fillRect.bottom),
+          borderPaint,
+        );
+      }
+
+      // Left border - only if startX is defined (not spanning to left)
+      if (annotation.startX != null) {
+        canvas.drawLine(
+          Offset(fillRect.left, fillRect.bottom),
+          Offset(fillRect.left, fillRect.top),
+          borderPaint,
+        );
+      }
     }
 
     // Draw label if present
@@ -1042,6 +1079,9 @@ class ThresholdAnnotationElement extends ChartElement {
         );
       }
       canvas.drawRect(haloRect, haloPaint);
+
+      // Draw value label during drag (similar to crosshair labels)
+      _drawDragValueLabel(canvas, size, value, start, end);
     }
 
     // Draw selection glow (behind the line)
@@ -1247,6 +1287,74 @@ class ThresholdAnnotationElement extends ChartElement {
       currentLength = nextLength;
       patternIndex++;
       isDash = !isDash;
+    }
+  }
+
+  /// Draws a value label during threshold drag (similar to crosshair labels).
+  void _drawDragValueLabel(Canvas canvas, Size size, double value, Offset start, Offset end) {
+    const textStyle = TextStyle(
+      color: Color(0xFF000000),
+      fontSize: 10,
+      backgroundColor: Color(0xF0FFFFFF), // Almost opaque white
+    );
+
+    const labelPadding = 4.0;
+    final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
+
+    // Format the value for display
+    final displayValue = _formatDataValue(value);
+    final labelText = annotation.axis == AnnotationAxis.y ? 'Y: $displayValue' : 'X: $displayValue';
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: labelText, style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    double labelX, labelY;
+
+    if (annotation.axis == AnnotationAxis.y) {
+      // Horizontal line - position label at left edge of chart
+      labelX = 8; // 8px from left edge
+      labelY = start.dy - textPainter.height / 2;
+      // Clamp Y position to keep within plot bounds
+      labelY = labelY.clamp(labelPadding, _currentTransform.plotHeight - textPainter.height - labelPadding);
+    } else {
+      // Vertical line - position label at bottom of chart
+      labelX = start.dx - textPainter.width / 2;
+      labelY = _currentTransform.plotHeight - textPainter.height - 8; // 8px from bottom
+      // Clamp X position to keep within plot bounds
+      labelX = labelX.clamp(labelPadding, _currentTransform.plotWidth - textPainter.width - labelPadding);
+    }
+
+    // Draw background
+    final bgRect = Rect.fromLTWH(
+      labelX - labelPadding,
+      labelY - labelPadding,
+      textPainter.width + labelPadding * 2,
+      textPainter.height + labelPadding * 2,
+    );
+    canvas.drawRect(bgRect, labelBackgroundPaint);
+
+    // Draw text
+    textPainter.paint(canvas, Offset(labelX, labelY));
+  }
+
+  /// Formats data values for display (same logic as axis labels).
+  String _formatDataValue(double value) {
+    // If the value is very close to an integer, show it as an integer
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+
+    // Otherwise, show with appropriate decimal places
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
     }
   }
 
