@@ -3026,10 +3026,17 @@ class ChartRenderBox extends RenderBox {
       // Only draw crosshair if cursor is inside plot area AND not dragging
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
       // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
+
+      // Use blue color when in range creation mode, gray otherwise
+      final isRangeCreationMode = coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
+      final crosshairColor = isRangeCreationMode
+          ? const Color(0xFF448AFF) // Solid blue for range creation mode
+          : const Color(0x80666666); // Semi-transparent gray for normal mode
+
       final crosshairPaint = Paint()
-        ..color = const Color(0x80666666) // Semi-transparent gray
+        ..color = crosshairColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1;
+        ..strokeWidth = isRangeCreationMode ? 1.5 : 1;
 
       // Horizontal line across plot area
       canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
