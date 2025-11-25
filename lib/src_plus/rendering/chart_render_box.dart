@@ -2158,7 +2158,8 @@ class ChartRenderBox extends RenderBox {
           if (movedAnnotation.snapToValue) {
             print('🔍 MOVE SNAP: enabled');
             print('   Before: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
-            print('   Original bounds: startX=${movedAnnotation.startX}, endX=${movedAnnotation.endX}, startY=${movedAnnotation.startY}, endY=${movedAnnotation.endY}');
+            print(
+                '   Original bounds: startX=${movedAnnotation.startX}, endX=${movedAnnotation.endX}, startY=${movedAnnotation.startY}, endY=${movedAnnotation.endY}');
 
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
@@ -2196,11 +2197,12 @@ class ChartRenderBox extends RenderBox {
           }
 
           // Create updated annotation with new bounds
+          // CRITICAL: Preserve null for axes that were originally unbound
           final updatedAnnotation = movedAnnotation.copyWith(
-            startX: newStartX,
-            endX: newEndX,
-            startY: newStartY,
-            endY: newEndY,
+            startX: movedAnnotation.startX != null ? newStartX : null,
+            endX: movedAnnotation.endX != null ? newEndX : null,
+            startY: movedAnnotation.startY != null ? newStartY : null,
+            endY: movedAnnotation.endY != null ? newEndY : null,
           );
 
           // Emit callback
