@@ -138,6 +138,7 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
       cursor: isEnabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: isEnabled ? widget.onTap : null,
+        behavior: HitTestBehavior.opaque,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -218,23 +219,31 @@ class _WebContextMenuRoute extends PopupRoute<String> {
     Animation<double> secondaryAnimation,
   ) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pop(),
+      onTap: () {
+        // Close menu when clicking outside
+        Navigator.of(context).pop();
+      },
       behavior: HitTestBehavior.translucent,
       child: Stack(
         children: [
           Positioned(
             left: position.dx,
             top: position.dy,
-            child: FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: WebContextMenu(
-                  items: items,
-                  onDismiss: () => Navigator.of(context).pop(),
+            child: GestureDetector(
+              // Prevent taps on menu from dismissing via barrier
+              onTap: () {},
+              behavior: HitTestBehavior.opaque,
+              child: FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: WebContextMenu(
+                    items: items,
+                    onDismiss: () => Navigator.of(context).pop(),
+                  ),
                 ),
               ),
             ),
