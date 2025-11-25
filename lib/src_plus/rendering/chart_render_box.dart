@@ -1475,7 +1475,8 @@ class ChartRenderBox extends RenderBox {
     assert(debugHandleEvent(event, entry));
 
     // Modal states block all events except themselves
-    if (coordinator.isModal) {
+    // EXCEPTION: rangeAnnotationCreation mode needs pointer events to work
+    if (coordinator.isModal && coordinator.currentMode != InteractionMode.rangeAnnotationCreation) {
       return;
     }
 
@@ -1753,7 +1754,7 @@ class ChartRenderBox extends RenderBox {
         debugPrint('🎯 Range creation: First drag detected, starting interaction');
         coordinator.startInteraction(position);
       }
-      
+
       final startPos = coordinator.interactionStartPosition;
       if (startPos != null) {
         debugPrint('🎯 Range creation drag: updating box selection rectangle from $startPos to $position');
