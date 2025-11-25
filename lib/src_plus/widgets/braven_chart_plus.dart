@@ -618,6 +618,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Hidden series IDs for legend toggling
   final Set<String> _hiddenSeriesIds = {};
 
+  // Guard flag to prevent duplicate context menu opens
+  bool _isShowingContextMenu = false;
+
   @override
   void initState() {
     super.initState();
@@ -1130,12 +1133,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Only show context menu if annotationController is provided
       // (all current menu items are annotation-related)
       if (widget.annotationController != null) {
-        debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
-        // PERFORMANCE FIX: Call immediately instead of post-frame callback
-        // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
-        // frame scheduler was busy or browser was throttling frames.
-        // Context menus need immediate response for good UX.
-        _showContextMenu();
+        if (_isShowingContextMenu) {
+          debugPrint('⏱️ [$timestamp] Context menu already showing, ignoring duplicate request');
+        } else {
+          debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
+          // PERFORMANCE FIX: Call immediately instead of post-frame callback
+          // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
+          // frame scheduler was busy or browser was throttling frames.
+          // Context menus need immediate response for good UX.
+          _showContextMenu();
+        }
       } else {
         debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode but no annotationController, releasing mode immediately');
         _coordinator.releaseMode(force: true);
@@ -1155,6 +1162,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final startTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$startTime] 🎯 _showContextMenu START');
 
+    // Set guard flag to prevent duplicate menu opens
+    _isShowingContextMenu = true;
+
     final localPosition = _coordinator.interactionStartPosition;
     final element = _coordinator.interactionStartElement;
 
@@ -1163,6 +1173,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       debugPrint('⏱️ [$errorTime] ⚠️ No interaction position, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
       debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
+      _isShowingContextMenu = false;
       return;
     }
 
@@ -1173,6 +1184,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       debugPrint('⏱️ [$errorTime] ⚠️ No render box, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
       debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
+      _isShowingContextMenu = false;
       return;
     }
 
@@ -1270,6 +1282,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
     debugPrint('⏱️ [$menuClosedTime] showMenu returned (menu was open for ${menuClosedTime - showMenuTime}ms)');
+
+    // Clear guard flag now that menu is closed
+    _isShowingContextMenu = false;
 
     // Release mode BEFORE handling action (so action handlers can claim new modes)
     // This is critical for modal-to-modal transitions (e.g., contextMenuOpen → rangeAnnotationCreation)
