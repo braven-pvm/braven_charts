@@ -1450,15 +1450,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-    debugPrint('✅ Entered rangeAnnotationCreation mode - cursor should change to red crosshair');
+    debugPrint('✅ Entered rangeAnnotationCreation mode - custom crosshair overlay will appear');
     debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
     debugPrint('   Press ESC or click without dragging to cancel');
 
-    // Hide system cursor completely - we'll show custom red crosshair via overlay
-    // The _RangeCreationCrosshairOverlay widget will paint the red crosshair
-    setState(() {
-      _currentCursor = SystemMouseCursors.none;
-    });
+    // Trigger overlay to appear (no cursor changes needed - overlay draws on top)
+    // The _RangeCreationCrosshairOverlay will paint the custom crosshair
+    setState(() {});
 
     // Completion is handled via _onRangeCreationComplete callback
     // (called from ChartRenderBox when drag finishes)
@@ -1472,11 +1470,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     debugPrint('🎯 Range creation drag complete:');
     debugPrint('   X: [$startX, $endX]');
     debugPrint('   Y: [$startY, $endY]');
-
-    // Reset cursor
-    setState(() {
-      _currentCursor = SystemMouseCursors.basic;
-    });
 
     // Open dialog with pre-filled values from drag
     final result = await showDialog<RangeAnnotation>(
@@ -1810,9 +1803,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // it means the user just clicked without dragging
       debugPrint('⏹️ Click detected in rangeAnnotationCreation mode - cancelling (no drag detected)');
       _coordinator.releaseMode(force: true);
-      setState(() {
-        _currentCursor = SystemMouseCursors.basic;
-      });
+      setState(() {}); // Trigger rebuild to hide overlay
     }
   }
 
@@ -1835,13 +1826,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _handleCursorChange(MouseCursor cursor) {
-    // CRITICAL: Don't change cursor during rangeAnnotationCreation mode
-    // The crosshair cursor must remain visible regardless of what's being hovered
-    if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
-      debugPrint('🚫 Cursor change blocked - rangeAnnotationCreation mode active (keeping crosshair)');
-      return;
-    }
-
     if (_currentCursor != cursor) {
       setState(() => _currentCursor = cursor);
     }
@@ -2502,26 +2486,27 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onHover: (event) {
-        setState(() {
-          _mousePosition = event.localPosition;
-        });
-      },
-      onExit: (_) {
-        setState(() {
-          _mousePosition = null;
-        });
-      },
-      // CRITICAL: IgnorePointer here prevents CustomPaint from blocking clicks
-      // but MouseRegion (parent) still receives hover events
-      child: IgnorePointer(
+    // CRITICAL: Wrap entire widget tree with IgnorePointer to allow drag/click events
+    // to pass through to ChartRenderBox below, while MouseRegion still tracks position
+    // for drawing the crosshair (mouse tracking works even through IgnorePointer)
+    return IgnorePointer(
+      child: MouseRegion(
+        onHover: (event) {
+          setState(() {
+            _mousePosition = event.localPosition;
+          });
+        },
+        onExit: (_) {
+          setState(() {
+            _mousePosition = null;
+          });
+        },
         child: CustomPaint(
           painter: _CrosshairPainter(
             position: _mousePosition,
             color: Colors.red.withOpacity(0.8),
           ),
-          size: Size.infinite, // CRITICAL: Ensure CustomPaint fills available space
+          size: Size.infinite,
         ),
       ),
     );
