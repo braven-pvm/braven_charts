@@ -1617,7 +1617,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (tappedElement == _lastTappedElement && timeDiff <= _doubleTapTimeout) {
         // Double-click detected!
-        if (tappedElement is TextAnnotationElement || tappedElement is PointAnnotationElement) {
+        if (tappedElement is TextAnnotationElement ||
+            tappedElement is PointAnnotationElement ||
+            tappedElement is ThresholdAnnotationElement ||
+            tappedElement is TrendAnnotationElement) {
           debugPrint('🖱️ Double-click detected on ${tappedElement.runtimeType}, opening edit dialog');
           _showEditAnnotationDialog(tappedElement);
           // Reset to prevent triple-click
