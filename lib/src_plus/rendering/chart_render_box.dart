@@ -1944,9 +1944,9 @@ class ChartRenderBox extends RenderBox {
           debugPrint('   Plot rect: $boxRect');
           debugPrint('   Data bounds: X[$startX, $endX], Y[$startY, $endY]');
 
-          // Release mode BEFORE calling callback (callback may show dialog)
+          // End interaction (clear boxSelectionRect) but DON'T release mode yet
+          // The widget callback will release mode after dialog closes
           coordinator.endInteraction();
-          coordinator.releaseMode();
 
           // Notify widget to open dialog with pre-filled coordinates
           onRangeCreationComplete!(startX, endX, startY, endY);
