@@ -5,6 +5,7 @@ import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
+import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
 import '../data/data_generator.dart';
 import '../widgets/options_panel.dart';
 
@@ -16,6 +17,8 @@ class AnnotationsPage extends StatefulWidget {
 }
 
 class _AnnotationsPageState extends State<AnnotationsPage> {
+  late final AnnotationController _annotationController;
+  
   // Annotation visibility toggles
   bool _showPoint = true;
   bool _showRange = true;
@@ -28,32 +31,14 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   bool _allowEditing = true;
 
   @override
-  Widget build(BuildContext context) {
-    // Generate sample data
-    final data = DataGenerator.generateSineWave(
-      count: 50,
-      amplitude: 40,
-      frequency: 0.3,
-      yOffset: 100,
-    );
-
-    // Create series
-    final series = [
-      LineChartSeries(
-        id: 'data-series',
-        name: 'Sample Data',
-        points: data,
-        color: Colors.blue,
-        interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: false,
-      ),
-    ];
-
-    // Create annotations list
-    final annotations = <ChartAnnotation>[];
-
+  void initState() {
+    super.initState();
+    
+    // Initialize AnnotationController with initial annotations
+    final initialAnnotations = <ChartAnnotation>[];
+    
     if (_showPoint) {
-      annotations.add(
+      initialAnnotations.add(
         PointAnnotation(
           id: 'point-1',
           seriesId: 'data-series',
@@ -69,7 +54,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     }
 
     if (_showRange) {
-      annotations.add(
+      initialAnnotations.add(
         RangeAnnotation(
           id: 'range-1',
           startX: 15.0,
@@ -86,7 +71,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     }
 
     if (_showText) {
-      annotations.add(
+      initialAnnotations.add(
         TextAnnotation(
           id: 'text-1',
           text: 'Chart Title',
@@ -101,7 +86,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     }
 
     if (_showThreshold) {
-      annotations.addAll([
+      initialAnnotations.addAll([
         ThresholdAnnotation(
           id: 'threshold-y',
           axis: AnnotationAxis.y,
@@ -130,7 +115,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     }
 
     if (_showTrend) {
-      annotations.add(
+      initialAnnotations.add(
         TrendAnnotation(
           id: 'trend-1',
           seriesId: 'data-series',
@@ -144,6 +129,170 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         ),
       );
     }
+    
+    _annotationController = AnnotationController(
+      initialAnnotations: initialAnnotations,
+    );
+  }
+
+  @override
+  void dispose() {
+    _annotationController.dispose();
+    super.dispose();
+  }
+
+  void _togglePointAnnotation(bool show) {
+    setState(() {
+      _showPoint = show;
+      if (show) {
+        _annotationController.addAnnotation(
+          PointAnnotation(
+            id: 'point-1',
+            seriesId: 'data-series',
+            dataPointIndex: 12,
+            markerShape: MarkerShape.star,
+            markerSize: 16.0,
+            markerColor: Colors.red,
+            label: 'Peak Point',
+            allowDragging: _allowDragging,
+            allowEditing: _allowEditing,
+          ),
+        );
+      } else {
+        _annotationController.removeAnnotation('point-1');
+      }
+    });
+  }
+
+  void _toggleRangeAnnotation(bool show) {
+    setState(() {
+      _showRange = show;
+      if (show) {
+        _annotationController.addAnnotation(
+          RangeAnnotation(
+            id: 'range-1',
+            startX: 15.0,
+            endX: 35.0,
+            fillColor: Colors.orange.withOpacity(0.2),
+            borderColor: Colors.orange,
+            label: 'Important Range',
+            labelPosition: AnnotationLabelPosition.topLeft,
+            allowDragging: _allowDragging,
+            allowEditing: _allowEditing,
+            snapToValue: true,
+          ),
+        );
+      } else {
+        _annotationController.removeAnnotation('range-1');
+      }
+    });
+  }
+
+  void _toggleTextAnnotation(bool show) {
+    setState(() {
+      _showText = show;
+      if (show) {
+        _annotationController.addAnnotation(
+          TextAnnotation(
+            id: 'text-1',
+            text: 'Chart Title',
+            position: const Offset(20, 20),
+            anchor: AnnotationAnchor.topLeft,
+            backgroundColor: Colors.white.withOpacity(0.8),
+            borderColor: Colors.grey,
+            allowDragging: _allowDragging,
+            allowEditing: _allowEditing,
+          ),
+        );
+      } else {
+        _annotationController.removeAnnotation('text-1');
+      }
+    });
+  }
+
+  void _toggleThresholdAnnotations(bool show) {
+    setState(() {
+      _showThreshold = show;
+      if (show) {
+        _annotationController.addAnnotation(
+          ThresholdAnnotation(
+            id: 'threshold-y',
+            axis: AnnotationAxis.y,
+            value: 120.0,
+            lineColor: Colors.green,
+            lineWidth: 2.0,
+            dashPattern: const [5, 5],
+            label: 'Target',
+            labelPosition: AnnotationLabelPosition.topRight,
+            allowDragging: _allowDragging,
+            allowEditing: _allowEditing,
+          ),
+        );
+        _annotationController.addAnnotation(
+          ThresholdAnnotation(
+            id: 'threshold-x',
+            axis: AnnotationAxis.x,
+            value: 25.0,
+            lineColor: Colors.purple,
+            lineWidth: 2.0,
+            dashPattern: const [10, 5],
+            label: 'Milestone',
+            labelPosition: AnnotationLabelPosition.bottomRight,
+            allowDragging: _allowDragging,
+            allowEditing: _allowEditing,
+          ),
+        );
+      } else {
+        _annotationController.removeAnnotation('threshold-y');
+        _annotationController.removeAnnotation('threshold-x');
+      }
+    });
+  }
+
+  void _toggleTrendAnnotation(bool show) {
+    setState(() {
+      _showTrend = show;
+      if (show) {
+        _annotationController.addAnnotation(
+          TrendAnnotation(
+            id: 'trend-1',
+            seriesId: 'data-series',
+            trendType: TrendType.linear,
+            lineColor: Colors.red.withOpacity(0.7),
+            lineWidth: 2.0,
+            dashPattern: const [8, 4],
+            label: 'Linear Trend',
+            allowDragging: false,
+            allowEditing: _allowEditing,
+          ),
+        );
+      } else {
+        _annotationController.removeAnnotation('trend-1');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Generate sample data
+    final data = DataGenerator.generateSineWave(
+      count: 50,
+      amplitude: 40,
+      frequency: 0.3,
+      yOffset: 100,
+    );
+
+    // Create series
+    final series = [
+      LineChartSeries(
+        id: 'data-series',
+        name: 'Sample Data',
+        points: data,
+        color: Colors.blue,
+        interpolation: LineInterpolation.bezier,
+        showDataPointMarkers: false,
+      ),
+    ];
 
     // Create axis configs
     final xAxis = AxisConfig(
@@ -186,7 +335,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                   child: BravenChartPlus(
                     chartType: ChartType.line,
                     series: series,
-                    annotations: annotations,
+                    annotationController: _annotationController,
                     xAxis: xAxis,
                     yAxis: yAxis,
                     interactiveAnnotations: _allowDragging || _allowEditing,
@@ -237,27 +386,27 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                   BoolOption(
                     label: 'Show Point Annotations',
                     value: _showPoint,
-                    onChanged: (value) => setState(() => _showPoint = value),
+                    onChanged: _togglePointAnnotation,
                   ),
                   BoolOption(
                     label: 'Show Range Annotations',
                     value: _showRange,
-                    onChanged: (value) => setState(() => _showRange = value),
+                    onChanged: _toggleRangeAnnotation,
                   ),
                   BoolOption(
                     label: 'Show Text Annotations',
                     value: _showText,
-                    onChanged: (value) => setState(() => _showText = value),
+                    onChanged: _toggleTextAnnotation,
                   ),
                   BoolOption(
                     label: 'Show Threshold Annotations',
                     value: _showThreshold,
-                    onChanged: (value) => setState(() => _showThreshold = value),
+                    onChanged: _toggleThresholdAnnotations,
                   ),
                   BoolOption(
                     label: 'Show Trend Annotations',
                     value: _showTrend,
-                    onChanged: (value) => setState(() => _showTrend = value),
+                    onChanged: _toggleTrendAnnotation,
                   ),
                 ],
               ),
