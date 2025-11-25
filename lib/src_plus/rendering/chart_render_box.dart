@@ -1986,6 +1986,7 @@ class ChartRenderBox extends RenderBox {
       // clearTempBounds() will null out _tempResizeBounds, causing bounds getter
       // to fall back to original annotation data instead of the resized values.
       final resizedBounds = _resizingAnnotation!.bounds; // Get resized bounds while temp bounds still exist
+      print('📐 RESIZED BOUNDS: $resizedBounds');
 
       _resizingAnnotation!.clearTempBounds(); // Now safe to clear temporary resize bounds
 
@@ -2016,6 +2017,8 @@ class ChartRenderBox extends RenderBox {
           // plotToData returns Offset(dataX, dataY)
           final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
           final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
+          print('📍 PIXEL: top=${resizedBounds.top}, bottom=${resizedBounds.bottom}');
+          print('📍 DATA: leftData=$leftData, rightData=$rightData');
 
           var newStartX = leftData.dx;
           var newEndX = rightData.dx;
@@ -2036,7 +2039,7 @@ class ChartRenderBox extends RenderBox {
           if (resizedAnnotation.snapToValue) {
             print('🔍 RESIZE SNAP: enabled, direction=$resizeDirection');
             print('   newStartY=$newStartY, newEndY=$newEndY');
-            
+
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
@@ -2054,7 +2057,7 @@ class ChartRenderBox extends RenderBox {
             final needsSnapEndY = resizeDirection == ResizeDirection.bottom ||
                 resizeDirection == ResizeDirection.bottomLeft ||
                 resizeDirection == ResizeDirection.bottomRight;
-            
+
             print('   needsSnapStartY=$needsSnapStartY, needsSnapEndY=$needsSnapEndY');
 
             // Snap X coordinates if needed
