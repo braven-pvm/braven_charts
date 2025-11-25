@@ -2052,11 +2052,17 @@ class ChartRenderBox extends RenderBox {
             final needsSnapEndX = resizeDirection == ResizeDirection.right ||
                 resizeDirection == ResizeDirection.topRight ||
                 resizeDirection == ResizeDirection.bottomRight;
-            final needsSnapStartY =
-                resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
-            final needsSnapEndY = resizeDirection == ResizeDirection.bottom ||
-                resizeDirection == ResizeDirection.bottomLeft ||
+            
+            // CRITICAL: Y-axis mapping is INVERTED from screen pixels
+            // Screen: top pixel (small Y) = higher data value (endY)
+            // Screen: bottom pixel (large Y) = lower data value (startY)
+            // So when dragging BOTTOM handle, we're changing startY (not endY!)
+            final needsSnapStartY = resizeDirection == ResizeDirection.bottom || 
+                resizeDirection == ResizeDirection.bottomLeft || 
                 resizeDirection == ResizeDirection.bottomRight;
+            final needsSnapEndY = resizeDirection == ResizeDirection.top ||
+                resizeDirection == ResizeDirection.topLeft ||
+                resizeDirection == ResizeDirection.topRight;
 
             print('   needsSnapStartY=$needsSnapStartY, needsSnapEndY=$needsSnapEndY');
 
