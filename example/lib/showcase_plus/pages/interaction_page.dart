@@ -31,6 +31,11 @@ class _InteractionPageState extends State<InteractionPage> {
 
   // Tooltip options
   braven.TooltipTriggerMode _tooltipTrigger = braven.TooltipTriggerMode.hover;
+  braven.TooltipPosition _tooltipPosition = braven.TooltipPosition.auto;
+  bool _tooltipFollowCursor = false;
+  double _tooltipShowDelay = 100.0;
+  double _tooltipHideDelay = 200.0;
+  double _tooltipOffsetFromPoint = 8.0;
 
   // Data
   String _tappedPoint = 'None';
@@ -91,6 +96,11 @@ class _InteractionPageState extends State<InteractionPage> {
       tooltip: braven.TooltipConfig(
         enabled: _enableTooltip,
         triggerMode: _tooltipTrigger,
+        preferredPosition: _tooltipPosition,
+        followCursor: _tooltipFollowCursor,
+        showDelay: Duration(milliseconds: _tooltipShowDelay.toInt()),
+        hideDelay: Duration(milliseconds: _tooltipHideDelay.toInt()),
+        offsetFromPoint: _tooltipOffsetFromPoint,
       ),
       onDataPointTap: (point, position) {
         setState(() {
@@ -259,6 +269,42 @@ class _InteractionPageState extends State<InteractionPage> {
                     values: braven.TooltipTriggerMode.values,
                     labelBuilder: (trigger) => trigger.toString().split('.').last,
                     onChanged: (value) => setState(() => _tooltipTrigger = value),
+                  ),
+                  EnumOption<braven.TooltipPosition>(
+                    label: 'Tooltip Position',
+                    value: _tooltipPosition,
+                    values: braven.TooltipPosition.values,
+                    labelBuilder: (position) => position.toString().split('.').last,
+                    onChanged: (value) => setState(() => _tooltipPosition = value),
+                  ),
+                  BoolOption(
+                    label: 'Follow Cursor',
+                    value: _tooltipFollowCursor,
+                    onChanged: (value) => setState(() => _tooltipFollowCursor = value),
+                  ),
+                  SliderOption(
+                    label: 'Show Delay (ms)',
+                    value: _tooltipShowDelay,
+                    min: 0,
+                    max: 1000,
+                    divisions: 20,
+                    onChanged: (value) => setState(() => _tooltipShowDelay = value),
+                  ),
+                  SliderOption(
+                    label: 'Hide Delay (ms)',
+                    value: _tooltipHideDelay,
+                    min: 0,
+                    max: 1000,
+                    divisions: 20,
+                    onChanged: (value) => setState(() => _tooltipHideDelay = value),
+                  ),
+                  SliderOption(
+                    label: 'Offset from Point (px)',
+                    value: _tooltipOffsetFromPoint,
+                    min: 0,
+                    max: 30,
+                    divisions: 30,
+                    onChanged: (value) => setState(() => _tooltipOffsetFromPoint = value),
                   ),
                 ],
               ),

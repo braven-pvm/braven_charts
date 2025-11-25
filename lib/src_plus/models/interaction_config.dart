@@ -412,6 +412,10 @@ typedef TooltipBuilder = Widget Function(
 /// ```
 class TooltipConfig {
   /// Creates a tooltip configuration with the specified properties.
+  ///
+  /// Constraints:
+  /// - [offsetFromPoint] must be non-negative
+  /// - [showDelay] and [hideDelay] should be reasonable durations (no validation enforced in const constructor)
   const TooltipConfig({
     this.enabled = true,
     this.triggerMode = TooltipTriggerMode.hover,
@@ -419,10 +423,10 @@ class TooltipConfig {
     this.showDelay = const Duration(milliseconds: 100),
     this.hideDelay = const Duration(milliseconds: 200),
     this.followCursor = false,
-    this.offsetFromPoint = 2.0,
+    this.offsetFromPoint = 8.0,
     this.style = const TooltipStyle(),
     this.customBuilder,
-  });
+  }) : assert(offsetFromPoint >= 0, 'offsetFromPoint must be non-negative');
 
   /// Creates a default tooltip configuration.
   ///

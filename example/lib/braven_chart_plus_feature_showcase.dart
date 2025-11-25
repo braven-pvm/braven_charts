@@ -14,7 +14,8 @@ import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
-import 'package:braven_charts/src_plus/models/interaction_config.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart' as chart show TooltipTriggerMode, TooltipPosition;
+import 'package:braven_charts/src_plus/models/interaction_config.dart' hide TooltipTriggerMode;
 import 'package:braven_charts/src_plus/models/streaming_config.dart';
 import 'package:braven_charts/src_plus/streaming/streaming_controller.dart';
 import 'package:braven_charts/src_plus/theming/components/scrollbar_config.dart';
@@ -36,7 +37,7 @@ import 'package:flutter/material.dart';
 /// - QuadTree spatial indexing (O(log n) hit testing)
 /// - Multiple chart types (Line, Bar, Scatter, Area)
 /// - Data point markers with configurable sizes
-/// - Tooltips (basic - shown on hover)
+/// - Tooltips (100% feature parity: trigger modes, positioning, styling, animations, arrow pointers)
 /// - Performance optimizations (Picture caching, hit test throttling)
 /// - Focus management for keyboard interaction
 /// - Legend widget (show/hide series with click interaction)
@@ -116,6 +117,24 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   String _data2Pattern = 'sine'; // 'sine', 'linear', 'random'
   bool _autoScroll2 = true;
   int _total2DataPoints = 0;
+
+  // Tooltip showcase state
+  final bool _tooltipEnabled = true;
+  final chart.TooltipTriggerMode _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
+  final chart.TooltipPosition _tooltipPosition = chart.TooltipPosition.auto;
+  final bool _tooltipFollowCursor = false;
+  final double _tooltipShowDelay = 100.0; // milliseconds
+  final double _tooltipHideDelay = 200.0; // milliseconds
+  final double _tooltipOffsetFromPoint = 8.0;
+  final Color _tooltipBackgroundColor = const Color(0xE6FFFFFF);
+  final Color _tooltipBorderColor = const Color(0xFF999999);
+  final double _tooltipBorderWidth = 1.0;
+  final double _tooltipBorderRadius = 4.0;
+  final Color _tooltipShadowColor = const Color(0x66000000);
+  final double _tooltipShadowBlurRadius = 4.0;
+  final double _tooltipPadding = 8.0;
+  final Color _tooltipTextColor = const Color(0xFF333333);
+  final double _tooltipFontSize = 12.0;
 
   @override
   void initState() {
@@ -803,7 +822,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -848,6 +867,7 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             tabs: [
               Tab(icon: Icon(Icons.dashboard), text: 'Features'),
               Tab(icon: Icon(Icons.label), text: 'Annotations'),
+              Tab(icon: Icon(Icons.info_outline), text: 'Tooltips'),
               Tab(icon: Icon(Icons.stream), text: 'Streaming'),
             ],
           ),
@@ -859,7 +879,9 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
             _buildFeaturesTab(),
             // Tab 2: Annotations showcase
             _buildAnnotationsTab(),
-            // Tab 3: Streaming tests
+            // Tab 3: Tooltips showcase
+            _buildTooltipsTab(),
+            // Tab 4: Streaming tests
             _buildStreamingTestsTab(),
           ],
         ),
@@ -2498,5 +2520,658 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildTooltipsTab() {
+    final tooltipConfig = TooltipConfig(
+      enabled: _tooltipEnabled,
+      triggerMode: _tooltipTriggerMode,
+      preferredPosition: _tooltipPosition,
+      showDelay: Duration(milliseconds: _tooltipShowDelay.toInt()),
+      hideDelay: Duration(milliseconds: _tooltipHideDelay.toInt()),
+      followCursor: _tooltipFollowCursor,
+      offsetFromPoint: _tooltipOffsetFromPoint,
+      style: TooltipStyle(
+        backgroundColor: _tooltipBackgroundColor,
+        borderColor: _tooltipBorderColor,
+        borderWidth: _tooltipBorderWidth,
+        borderRadius: _tooltipBorderRadius,
+        shadowColor: _tooltipShadowColor,
+        shadowBlurRadius: _tooltipShadowBlurRadius,
+        padding: _tooltipPadding,
+        textColor: _tooltipTextColor,
+        fontSize: _tooltipFontSize,
+      ),
+    );
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Info banner
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.teal.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.teal.shade900, size: 32),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Tooltip Configuration Showcase',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.teal.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Interactive tooltip configuration with live preview. Adjust settings below to see changes in real-time.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.teal.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Live Preview Chart
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.visibility, color: Colors.teal.shade700),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Live Preview',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hover over or tap data points to see tooltip behavior',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 400,
+                      child: BravenChartPlus(
+                        key: ValueKey('tooltip_preview_${_tooltipEnabled}_${_tooltipTriggerMode}_${_tooltipPosition}_$_tooltipFollowCursor'),
+                        chartType: ChartType.line,
+                        showXScrollbar: true,
+                        showYScrollbar: true,
+                        series: [
+                          LineChartSeries(
+                            id: 'tooltip_demo',
+                            name: 'Temperature',
+                            interpolation: LineInterpolation.bezier,
+                            tension: 0.4,
+                            strokeWidth: 2.5,
+                            showDataPointMarkers: true,
+                            dataPointMarkerRadius: 5.0,
+                            color: Colors.blue,
+                            points: List.generate(12, (i) {
+                              final x = i.toDouble();
+                              final y = 60 + 20 * math.sin(i * 0.5) + (i > 6 ? (i - 6) * 2 : 0);
+                              return ChartDataPoint(x: x, y: y);
+                            }),
+                            isXOrdered: true,
+                          ),
+                          BarChartSeries(
+                            id: 'tooltip_demo_bar',
+                            name: 'Humidity',
+                            barWidthPercent: 0.5,
+                            color: Colors.green,
+                            points: List.generate(8, (i) {
+                              final x = i * 1.5;
+                              final y = 50 + 15 * math.cos(i * 0.6);
+                              return ChartDataPoint(x: x, y: y);
+                            }),
+                            isXOrdered: true,
+                          ),
+                        ],
+                        theme: _selectedTheme,
+                        backgroundColor: _selectedTheme == ChartTheme.dark ? Colors.grey.shade900 : Colors.white,
+                        showDebugInfo: _showDebugInfo,
+                        interactionConfig: InteractionConfig(
+                          tooltip: tooltipConfig,
+                          showFocusBorder: false,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Configuration Panel
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.settings, color: Colors.teal.shade700),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Tooltip Configuration',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Behavior Section
+                    _buildTooltipConfigSection(
+                      title: '⚙️ Behavior',
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Enabled'),
+                          subtitle: const Text('Show/hide tooltips'),
+                          value: _tooltipEnabled,
+                          onChanged: (value) => setState(() => _tooltipEnabled = value),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Trigger Mode'),
+                          subtitle: Text(_tooltipTriggerMode.name.toUpperCase()),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: SegmentedButton<chart.TooltipTriggerMode>(
+                            segments: const [
+                              ButtonSegment(
+                                value: chart.TooltipTriggerMode.hover,
+                                label: Text('Hover'),
+                                icon: Icon(Icons.mouse, size: 16),
+                              ),
+                              ButtonSegment(
+                                value: chart.TooltipTriggerMode.tap,
+                                label: Text('Tap'),
+                                icon: Icon(Icons.touch_app, size: 16),
+                              ),
+                              ButtonSegment(
+                                value: chart.TooltipTriggerMode.both,
+                                label: Text('Both'),
+                                icon: Icon(Icons.touch_app, size: 16),
+                              ),
+                            ],
+                            selected: {_tooltipTriggerMode},
+                            onSelectionChanged: (Set<chart.TooltipTriggerMode> newSelection) {
+                              setState(() => _tooltipTriggerMode = newSelection.first);
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        SwitchListTile(
+                          title: const Text('Follow Cursor'),
+                          subtitle: const Text('Tooltip moves with mouse/touch'),
+                          value: _tooltipFollowCursor,
+                          onChanged: (value) => setState(() => _tooltipFollowCursor = value),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Positioning Section
+                    _buildTooltipConfigSection(
+                      title: '📍 Positioning',
+                      children: [
+                        ListTile(
+                          title: const Text('Preferred Position'),
+                          subtitle: Text(_tooltipPosition.name.toUpperCase()),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: chart.TooltipPosition.values.map((position) {
+                              final isSelected = _tooltipPosition == position;
+                              return ChoiceChip(
+                                label: Text(position.name.toUpperCase()),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() => _tooltipPosition = position);
+                                  }
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Offset from Point'),
+                          subtitle: Text('${_tooltipOffsetFromPoint.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipOffsetFromPoint,
+                            min: 0,
+                            max: 30,
+                            divisions: 30,
+                            label: _tooltipOffsetFromPoint.toStringAsFixed(0),
+                            onChanged: (value) => setState(() => _tooltipOffsetFromPoint = value),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Animation Section
+                    _buildTooltipConfigSection(
+                      title: '✨ Animation',
+                      children: [
+                        ListTile(
+                          title: const Text('Show Delay'),
+                          subtitle: Text('${_tooltipShowDelay.toInt()} ms'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipShowDelay,
+                            min: 0,
+                            max: 1000,
+                            divisions: 20,
+                            label: '${_tooltipShowDelay.toInt()} ms',
+                            onChanged: (value) => setState(() => _tooltipShowDelay = value),
+                          ),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Hide Delay'),
+                          subtitle: Text('${_tooltipHideDelay.toInt()} ms'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipHideDelay,
+                            min: 0,
+                            max: 1000,
+                            divisions: 20,
+                            label: '${_tooltipHideDelay.toInt()} ms',
+                            onChanged: (value) => setState(() => _tooltipHideDelay = value),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Styling Section
+                    _buildTooltipConfigSection(
+                      title: '🎨 Styling',
+                      children: [
+                        _buildTooltipColorPicker(
+                          'Background Color',
+                          _tooltipBackgroundColor,
+                          (color) => setState(() => _tooltipBackgroundColor = color),
+                        ),
+                        const Divider(),
+                        _buildTooltipColorPicker(
+                          'Border Color',
+                          _tooltipBorderColor,
+                          (color) => setState(() => _tooltipBorderColor = color),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Border Width'),
+                          subtitle: Text('${_tooltipBorderWidth.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipBorderWidth,
+                            min: 0,
+                            max: 5,
+                            divisions: 50,
+                            label: _tooltipBorderWidth.toStringAsFixed(1),
+                            onChanged: (value) => setState(() => _tooltipBorderWidth = value),
+                          ),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Border Radius'),
+                          subtitle: Text('${_tooltipBorderRadius.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipBorderRadius,
+                            min: 0,
+                            max: 20,
+                            divisions: 40,
+                            label: _tooltipBorderRadius.toStringAsFixed(0),
+                            onChanged: (value) => setState(() => _tooltipBorderRadius = value),
+                          ),
+                        ),
+                        const Divider(),
+                        _buildTooltipColorPicker(
+                          'Shadow Color',
+                          _tooltipShadowColor,
+                          (color) => setState(() => _tooltipShadowColor = color),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Shadow Blur Radius'),
+                          subtitle: Text('${_tooltipShadowBlurRadius.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipShadowBlurRadius,
+                            min: 0,
+                            max: 20,
+                            divisions: 40,
+                            label: _tooltipShadowBlurRadius.toStringAsFixed(0),
+                            onChanged: (value) => setState(() => _tooltipShadowBlurRadius = value),
+                          ),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Padding'),
+                          subtitle: Text('${_tooltipPadding.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipPadding,
+                            min: 0,
+                            max: 24,
+                            divisions: 24,
+                            label: _tooltipPadding.toStringAsFixed(0),
+                            onChanged: (value) => setState(() => _tooltipPadding = value),
+                          ),
+                        ),
+                        const Divider(),
+                        _buildTooltipColorPicker(
+                          'Text Color',
+                          _tooltipTextColor,
+                          (color) => setState(() => _tooltipTextColor = color),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          title: const Text('Font Size'),
+                          subtitle: Text('${_tooltipFontSize.toStringAsFixed(1)} px'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Slider(
+                            value: _tooltipFontSize,
+                            min: 8,
+                            max: 24,
+                            divisions: 32,
+                            label: _tooltipFontSize.toStringAsFixed(0),
+                            onChanged: (value) => setState(() => _tooltipFontSize = value),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Quick Presets
+                    _buildTooltipConfigSection(
+                      title: '🚀 Quick Presets',
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _applyDefaultPreset,
+                              icon: const Icon(Icons.restore, size: 16),
+                              label: const Text('Default'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _applyMinimalPreset,
+                              icon: const Icon(Icons.minimize, size: 16),
+                              label: const Text('Minimal'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _applyBoldPreset,
+                              icon: const Icon(Icons.format_bold, size: 16),
+                              label: const Text('Bold'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _applyGlassPreset,
+                              icon: const Icon(Icons.blur_on, size: 16),
+                              label: const Text('Glass'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTooltipConfigSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildTooltipColorPicker(
+    String label,
+    Color currentColor,
+    Function(Color) onColorChanged,
+  ) {
+    return ListTile(
+      title: Text(label),
+      subtitle: Text('#${currentColor.value.toRadixString(16).toUpperCase().padLeft(8, '0')}'),
+      trailing: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: currentColor,
+          border: Border.all(color: Colors.grey.shade400),
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      onTap: () => _showTooltipColorPickerDialog(label, currentColor, onColorChanged),
+    );
+  }
+
+  void _showTooltipColorPickerDialog(
+    String label,
+    Color currentColor,
+    Function(Color) onColorChanged,
+  ) {
+    // Predefined colors for quick selection
+    final colors = [
+      Colors.white,
+      const Color(0xE6FFFFFF), // Semi-transparent white
+      Colors.black,
+      const Color(0xE6000000), // Semi-transparent black
+      Colors.grey.shade100,
+      Colors.grey.shade300,
+      Colors.grey.shade700,
+      Colors.blue,
+      Colors.blue.shade100,
+      Colors.green,
+      Colors.green.shade100,
+      Colors.red,
+      Colors.red.shade100,
+      Colors.orange,
+      Colors.orange.shade100,
+      Colors.purple,
+      Colors.purple.shade100,
+      Colors.teal,
+      Colors.teal.shade100,
+      Colors.transparent,
+      const Color(0x66000000), // Semi-transparent shadow
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Select $label'),
+        content: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: colors.map((color) {
+            return GestureDetector(
+              onTap: () {
+                onColorChanged(color);
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color,
+                  border: Border.all(
+                    color: color == currentColor ? Colors.blue : Colors.grey.shade400,
+                    width: color == currentColor ? 3 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // Preset configurations
+  void _applyDefaultPreset() {
+    setState(() {
+      _tooltipEnabled = true;
+      _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
+      _tooltipPosition = chart.TooltipPosition.auto;
+      _tooltipFollowCursor = false;
+      _tooltipShowDelay = 100.0;
+      _tooltipHideDelay = 200.0;
+      _tooltipOffsetFromPoint = 8.0;
+      _tooltipBackgroundColor = const Color(0xE6FFFFFF);
+      _tooltipBorderColor = const Color(0xFF999999);
+      _tooltipBorderWidth = 1.0;
+      _tooltipBorderRadius = 4.0;
+      _tooltipShadowColor = const Color(0x66000000);
+      _tooltipShadowBlurRadius = 4.0;
+      _tooltipPadding = 8.0;
+      _tooltipTextColor = const Color(0xFF333333);
+      _tooltipFontSize = 12.0;
+    });
+  }
+
+  void _applyMinimalPreset() {
+    setState(() {
+      _tooltipEnabled = true;
+      _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
+      _tooltipPosition = chart.TooltipPosition.top;
+      _tooltipFollowCursor = false;
+      _tooltipShowDelay = 50.0;
+      _tooltipHideDelay = 100.0;
+      _tooltipOffsetFromPoint = 4.0;
+      _tooltipBackgroundColor = Colors.white;
+      _tooltipBorderColor = Colors.grey.shade300;
+      _tooltipBorderWidth = 0.5;
+      _tooltipBorderRadius = 2.0;
+      _tooltipShadowColor = Colors.transparent;
+      _tooltipShadowBlurRadius = 0.0;
+      _tooltipPadding = 4.0;
+      _tooltipTextColor = Colors.black87;
+      _tooltipFontSize = 11.0;
+    });
+  }
+
+  void _applyBoldPreset() {
+    setState(() {
+      _tooltipEnabled = true;
+      _tooltipTriggerMode = chart.TooltipTriggerMode.both;
+      _tooltipPosition = chart.TooltipPosition.auto;
+      _tooltipFollowCursor = true;
+      _tooltipShowDelay = 0.0;
+      _tooltipHideDelay = 300.0;
+      _tooltipOffsetFromPoint = 12.0;
+      _tooltipBackgroundColor = Colors.blue.shade700;
+      _tooltipBorderColor = Colors.blue.shade900;
+      _tooltipBorderWidth = 2.0;
+      _tooltipBorderRadius = 8.0;
+      _tooltipShadowColor = const Color(0x88000000);
+      _tooltipShadowBlurRadius = 8.0;
+      _tooltipPadding = 12.0;
+      _tooltipTextColor = Colors.white;
+      _tooltipFontSize = 14.0;
+    });
+  }
+
+  void _applyGlassPreset() {
+    setState(() {
+      _tooltipEnabled = true;
+      _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
+      _tooltipPosition = chart.TooltipPosition.auto;
+      _tooltipFollowCursor = false;
+      _tooltipShowDelay = 150.0;
+      _tooltipHideDelay = 250.0;
+      _tooltipOffsetFromPoint = 10.0;
+      _tooltipBackgroundColor = const Color(0xCCFFFFFF); // 80% transparent white
+      _tooltipBorderColor = const Color(0x44FFFFFF); // Very transparent white
+      _tooltipBorderWidth = 1.5;
+      _tooltipBorderRadius = 12.0;
+      _tooltipShadowColor = const Color(0x44000000);
+      _tooltipShadowBlurRadius = 12.0;
+      _tooltipPadding = 10.0;
+      _tooltipTextColor = Colors.black87;
+      _tooltipFontSize = 12.0;
+    });
   }
 }
