@@ -2312,11 +2312,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                   if (widget.showDebugInfo) Positioned(top: 8, left: 8, child: _DebugOverlay(coordinator: _coordinator)),
 
                   // Red crosshair overlay for range annotation creation mode
+                  // CRITICAL: Do NOT wrap in IgnorePointer here - the MouseRegion needs to receive events!
+                  // IgnorePointer is used INSIDE the overlay to prevent CustomPaint from blocking clicks
                   if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation)
                     const Positioned.fill(
-                      child: IgnorePointer(
-                        child: _RangeCreationCrosshairOverlay(),
-                      ),
+                      child: _RangeCreationCrosshairOverlay(),
                     ),
                 ],
               ),
@@ -2522,12 +2522,16 @@ class _RangeCreationCrosshairOverlayState extends State<_RangeCreationCrosshairO
           _mousePosition = null;
         });
       },
-      child: CustomPaint(
-        painter: _CrosshairPainter(
-          position: _mousePosition,
-          color: Colors.red.withOpacity(0.8),
+      // CRITICAL: IgnorePointer here prevents CustomPaint from blocking clicks
+      // but MouseRegion (parent) still receives hover events
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _CrosshairPainter(
+            position: _mousePosition,
+            color: Colors.red.withOpacity(0.8),
+          ),
+          size: Size.infinite, // CRITICAL: Ensure CustomPaint fills available space
         ),
-        size: Size.infinite, // CRITICAL: Ensure CustomPaint fills available space
       ),
     );
   }
@@ -2546,7 +2550,7 @@ class _CrosshairPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     debugPrint('🎨 _CrosshairPainter.paint called - position: $position, size: $size');
-    
+
     // Don't paint if no mouse position yet
     if (position == null) {
       debugPrint('🎨 _CrosshairPainter.paint - position is null, skipping paint');
@@ -2580,7 +2584,7 @@ class _CrosshairPainter extends CustomPainter {
       ..style = PaintingStyle.fill; // Fill the circle for better visibility
 
     canvas.drawCircle(position!, 6.0, circlePaint); // Larger circle
-    
+
     debugPrint('🎨 _CrosshairPainter.paint - completed drawing crosshair');
   }
 
