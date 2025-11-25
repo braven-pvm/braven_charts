@@ -690,32 +690,28 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     if (_tempStartX != null) {
       final displayValue = _formatDataValue(_tempStartX!);
       final labelText = 'X: $displayValue';
-      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
-          fillRect.left, fillRect.center.dy, EdgeLabelPosition.left);
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.left, fillRect.center.dy, EdgeLabelPosition.left);
     }
 
     // Right edge (endX)
     if (_tempEndX != null) {
       final displayValue = _formatDataValue(_tempEndX!);
       final labelText = 'X: $displayValue';
-      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
-          fillRect.right, fillRect.center.dy, EdgeLabelPosition.right);
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.right, fillRect.center.dy, EdgeLabelPosition.right);
     }
 
     // Top edge (endY - higher value)
     if (_tempEndY != null) {
       final displayValue = _formatDataValue(_tempEndY!);
       final labelText = 'Y: $displayValue';
-      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
-          fillRect.center.dx, fillRect.top, EdgeLabelPosition.top);
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.center.dx, fillRect.top, EdgeLabelPosition.top);
     }
 
     // Bottom edge (startY - lower value)
     if (_tempStartY != null) {
       final displayValue = _formatDataValue(_tempStartY!);
       final labelText = 'Y: $displayValue';
-      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding,
-          fillRect.center.dx, fillRect.bottom, EdgeLabelPosition.bottom);
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.center.dx, fillRect.bottom, EdgeLabelPosition.bottom);
     }
   }
 
