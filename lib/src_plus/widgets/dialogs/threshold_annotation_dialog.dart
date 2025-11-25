@@ -92,7 +92,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     for (final entry in _dashPatterns.entries) {
       if (_listEquals(entry.value, _dashPattern)) return entry.key;
     }
-    return 'Custom';
+    // If custom pattern not recognized, default to Solid
+    return 'Solid';
   }
 
   bool _listEquals(List<double>? a, List<double>? b) {

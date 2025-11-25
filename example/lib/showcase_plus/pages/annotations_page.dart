@@ -335,18 +335,15 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                 const SizedBox(height: 16),
                 Expanded(
                   child: BravenChartPlus(
-                    chartType: ChartType.line,
-                    series: series,
-                    annotationController: _annotationController,
-                    xAxis: xAxis,
-                    yAxis: yAxis,
-                    interactiveAnnotations: _allowDragging || _allowEditing,
-                    showLegend: true,
-                    backgroundColor: Colors.white,
-                    interactionConfig: InteractionConfig.defaultConfig().copyWith(
-                      showFocusBorder: false,
-                    ),
-                  ),
+                      chartType: ChartType.line,
+                      series: series,
+                      annotationController: _annotationController,
+                      xAxis: xAxis,
+                      yAxis: yAxis,
+                      interactiveAnnotations: _allowDragging || _allowEditing,
+                      showLegend: true,
+                      backgroundColor: Colors.white,
+                      interactionConfig: InteractionConfig.defaultConfig()),
                 ),
                 const SizedBox(height: 16),
                 // Legend
