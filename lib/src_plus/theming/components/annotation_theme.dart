@@ -678,7 +678,7 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xF0FFFFFF),
     borderColor: Color(0xFFBDBDBD),
-    borderWidth: 1.0,
+    borderWidth: 0.5,
     borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
   );
@@ -692,7 +692,7 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xE6212121),
     borderColor: Color(0xFF616161),
-    borderWidth: 1.0,
+    borderWidth: 0.5,
     borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
   );
@@ -706,8 +706,8 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xF0FFFFFF),
     borderColor: Color(0xFF1976D2),
-    borderWidth: 2.0,
-    borderRadius: 2.0,
+    borderWidth: 0.5,
+    borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
   );
 
@@ -720,8 +720,8 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xF0FFFFFF),
     borderColor: Color(0xFFE91E63),
-    borderWidth: 2.5,
-    borderRadius: 6.0,
+    borderWidth: 0.5,
+    borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
   );
 
@@ -748,8 +748,8 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xFFFFFFFF),
     borderColor: Color(0xFF000000),
-    borderWidth: 3.0,
-    borderRadius: 2.0,
+    borderWidth: 0.5,
+    borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
   );
 
@@ -762,7 +762,7 @@ class TextAnnotationDefaults {
     ),
     backgroundColor: Color(0xF0FFFFFF),
     borderColor: Color(0xFF0173B2),
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderRadius: 4.0,
     padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
   );
