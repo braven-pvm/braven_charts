@@ -3124,10 +3124,10 @@ class ChartRenderBox extends RenderBox {
 
     // Paint axes (behind all chart elements)
     if (_xAxis != null) {
-      AxisRenderer(_xAxis!).paint(canvas, size, _plotArea);
+      AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
     }
     if (_yAxis != null) {
-      AxisRenderer(_yAxis!).paint(canvas, size, _plotArea);
+      AxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
     }
 
     // ==========================================================================

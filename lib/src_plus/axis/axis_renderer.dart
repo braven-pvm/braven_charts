@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' show TextPainter, TextSpan, TextDirection;
 
 import '../models/enums.dart';
+import '../models/chart_theme.dart';
 import 'axis.dart';
 import 'axis_config.dart';
 
@@ -16,12 +17,13 @@ import 'axis_config.dart';
 ///
 /// **Usage**:
 /// ```dart
-/// final renderer = AxisRenderer(axis);
+/// final renderer = AxisRenderer(axis, theme: chartTheme);
 /// renderer.paint(canvas, chartSize, plotArea);
 /// ```
 class AxisRenderer {
-  AxisRenderer(this.axis);
+  AxisRenderer(this.axis, {this.theme});
   final Axis axis;
+  final ChartTheme? theme;
 
   /// Paints the axis on the canvas.
   ///
@@ -47,12 +49,13 @@ class AxisRenderer {
 
     // Draw axis line
     if (config.showAxisLine) {
+      final axisStyle = theme?.axisStyle;
       canvas.drawLine(
         Offset(plotArea.left, axisY),
         Offset(plotArea.right, axisY),
         Paint()
-          ..color = config.axisColor
-          ..strokeWidth = 1,
+          ..color = axisStyle?.lineColor ?? config.axisColor
+          ..strokeWidth = axisStyle?.lineWidth ?? 1,
       );
     }
 
@@ -65,17 +68,19 @@ class AxisRenderer {
 
       // Draw grid line
       if (config.showGrid) {
+        final gridStyle = theme?.gridStyle;
         canvas.drawLine(
           Offset(x, plotArea.top),
           Offset(x, plotArea.bottom),
           Paint()
-            ..color = config.gridColor
-            ..strokeWidth = 0.5,
+            ..color = gridStyle?.majorColor ?? config.gridColor
+            ..strokeWidth = gridStyle?.majorWidth ?? 0.5,
         );
       }
 
       // Draw tick mark
       if (config.showTickMarks) {
+        final axisStyle = theme?.axisStyle;
         final tickY1 = config.position == AxisPosition.bottom ? axisY : axisY - config.tickLength;
         final tickY2 = config.position == AxisPosition.bottom ? axisY + config.tickLength : axisY;
 
@@ -83,8 +88,8 @@ class AxisRenderer {
           Offset(x, tickY1),
           Offset(x, tickY2),
           Paint()
-            ..color = config.axisColor
-            ..strokeWidth = 1,
+            ..color = axisStyle?.tickColor ?? config.axisColor
+            ..strokeWidth = axisStyle?.tickWidth ?? 1,
         );
       }
 
@@ -141,12 +146,13 @@ class AxisRenderer {
 
     // Draw axis line
     if (config.showAxisLine) {
+      final axisStyle = theme?.axisStyle;
       canvas.drawLine(
         Offset(axisX, plotArea.top),
         Offset(axisX, plotArea.bottom),
         Paint()
-          ..color = config.axisColor
-          ..strokeWidth = 1,
+          ..color = axisStyle?.lineColor ?? config.axisColor
+          ..strokeWidth = axisStyle?.lineWidth ?? 1,
       );
     }
 
@@ -159,17 +165,19 @@ class AxisRenderer {
 
       // Draw grid line
       if (config.showGrid) {
+        final gridStyle = theme?.gridStyle;
         canvas.drawLine(
           Offset(plotArea.left, y),
           Offset(plotArea.right, y),
           Paint()
-            ..color = config.gridColor
-            ..strokeWidth = 0.5,
+            ..color = gridStyle?.majorColor ?? config.gridColor
+            ..strokeWidth = gridStyle?.majorWidth ?? 0.5,
         );
       }
 
       // Draw tick mark
       if (config.showTickMarks) {
+        final axisStyle = theme?.axisStyle;
         final tickX1 = config.position == AxisPosition.left ? axisX - config.tickLength : axisX;
         final tickX2 = config.position == AxisPosition.left ? axisX : axisX + config.tickLength;
 
@@ -177,8 +185,8 @@ class AxisRenderer {
           Offset(tickX1, y),
           Offset(tickX2, y),
           Paint()
-            ..color = config.axisColor
-            ..strokeWidth = 1,
+            ..color = axisStyle?.tickColor ?? config.axisColor
+            ..strokeWidth = axisStyle?.tickWidth ?? 1,
         );
       }
 
