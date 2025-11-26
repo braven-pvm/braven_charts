@@ -2924,8 +2924,9 @@ class ChartRenderBox extends RenderBox {
           final radius = plotBounds.width / 2;
 
           // Draw dashed preview ring (different from solid selection ring)
+          final interactionTheme = _theme?.interactionTheme;
           final previewPaint = Paint()
-            ..color = const Color(0x8000AAFF) // Semi-transparent blue
+            ..color = (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF)).withOpacity(0.5)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
           canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
@@ -2938,16 +2939,17 @@ class ChartRenderBox extends RenderBox {
       final boxRect = coordinator.boxSelectionRect;
       if (boxRect != null) {
         // boxRect is already in widget space, draw it directly
+        final interactionTheme = _theme?.interactionTheme;
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = const Color(0x4000AAFF)
+            ..color = interactionTheme?.selectionColor.withOpacity(0.25) ?? const Color(0x4000AAFF)
             ..style = PaintingStyle.fill,
         );
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = const Color(0xFF0088FF)
+            ..color = interactionTheme?.selectionColor ?? const Color(0xFF0088FF)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1,
         );
@@ -2958,17 +2960,19 @@ class ChartRenderBox extends RenderBox {
     if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
       final boxRect = coordinator.boxSelectionRect;
       if (boxRect != null) {
-        // Draw semi-transparent filled rectangle (lighter blue than box select)
+        // Draw semi-transparent filled rectangle (use theme color or default blue)
+        final interactionTheme = _theme?.interactionTheme;
+        final rangeColor = interactionTheme?.crosshairColor ?? const ui.Color(0xFF448AFF);
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = const ui.Color(0x26448AFF) // Blue with 15% opacity
+            ..color = rangeColor.withOpacity(0.15) // 15% opacity for fill
             ..style = PaintingStyle.fill,
         );
 
-        // Draw solid border (dashed would require path, keeping simple for now)
+        // Draw solid border (use same theme color)
         final borderPaint = Paint()
-          ..color = const ui.Color(0xFF448AFF) // Blue
+          ..color = rangeColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2;
 
@@ -3027,16 +3031,18 @@ class ChartRenderBox extends RenderBox {
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
       // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
 
-      // Use blue color when in range creation mode, gray otherwise
+      // Use theme colors with mode-aware behavior: blue for range creation, theme default otherwise
       final isRangeCreationMode = coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
+      final interactionTheme = _theme?.interactionTheme;
       final crosshairColor = isRangeCreationMode
-          ? const Color(0xFF448AFF) // Solid blue for range creation mode
-          : const Color(0x80666666); // Semi-transparent gray for normal mode
+          ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF)) // Theme color or default blue for range creation
+          : (interactionTheme?.crosshairColor ?? const Color(0x80666666)); // Theme color or default gray for normal mode
+      final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
 
       final crosshairPaint = Paint()
         ..color = crosshairColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = isRangeCreationMode ? 1.5 : 1;
+        ..strokeWidth = crosshairWidth;
 
       // Horizontal line across plot area
       canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
