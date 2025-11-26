@@ -17,111 +17,42 @@ class ThemingPage extends StatefulWidget {
 }
 
 class _ThemingPageState extends State<ThemingPage> {
-  // Theme selection
-  String _themeMode = 'light';
-  bool _useCustomColors = false;
+  // Theme selection - now with all 7 presets
+  String _selectedTheme = 'light';
+  ChartType _chartType = ChartType.line;
+  bool _showMultipleCharts = false;
 
-  // Custom colors
-  Color _backgroundColor = Colors.white;
-  Color _gridColor = const Color(0xFFE0E0E0);
-  Color _axisColor = Colors.black87;
-  Color _textColor = Colors.black87;
-  Color _seriesColor1 = Colors.blue;
-  Color _seriesColor2 = Colors.red;
-  Color _seriesColor3 = Colors.green;
+  // Map of theme names to ChartTheme instances
+  final Map<String, ChartTheme> _themes = {
+    'light': ChartTheme.light,
+    'dark': ChartTheme.dark,
+    'corporateBlue': ChartTheme.corporateBlue,
+    'vibrant': ChartTheme.vibrant,
+    'minimal': ChartTheme.minimal,
+    'highContrast': ChartTheme.highContrast,
+    'colorblindFriendly': ChartTheme.colorblindFriendly,
+  };
 
-  ChartTheme get _currentTheme {
-    if (_useCustomColors) {
-      return ChartTheme(
-        backgroundColor: _backgroundColor,
-        gridColor: _gridColor,
-        axisColor: _axisColor,
-        textColor: _textColor,
-        seriesColors: [_seriesColor1, _seriesColor2, _seriesColor3],
-      );
-    }
+  // Theme display names for UI
+  final Map<String, String> _themeDisplayNames = {
+    'light': 'Light',
+    'dark': 'Dark',
+    'corporateBlue': 'Corporate Blue',
+    'vibrant': 'Vibrant',
+    'minimal': 'Minimal',
+    'highContrast': 'High Contrast',
+    'colorblindFriendly': 'Colorblind Friendly',
+  };
 
-    switch (_themeMode) {
-      case 'dark':
-        return ChartTheme.dark;
-      case 'light':
-      default:
-        return ChartTheme.light;
-    }
-  }
+  ChartTheme get _currentTheme => _themes[_selectedTheme]!;
 
   @override
   Widget build(BuildContext context) {
-    // Generate sample data
-    final data1 = DataGenerator.generateSineWave(
-      count: 40,
-      amplitude: 30,
-      frequency: 0.4,
-      yOffset: 100,
-    );
-    final data2 = DataGenerator.generateSineWave(
-      count: 40,
-      amplitude: 25,
-      frequency: 0.5,
-      phase: 1,
-      yOffset: 100,
-    );
-    final data3 = DataGenerator.generateSineWave(
-      count: 40,
-      amplitude: 20,
-      frequency: 0.3,
-      phase: 2,
-      yOffset: 100,
-    );
-
-    // Create series
-    final series = [
-      LineChartSeries(
-        id: 'series-1',
-        name: 'Series 1',
-        points: data1,
-        color: _currentTheme.seriesColors[0],
-        interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: true,
-      ),
-      LineChartSeries(
-        id: 'series-2',
-        name: 'Series 2',
-        points: data2,
-        color: _currentTheme.seriesColors[1],
-        interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: true,
-      ),
-      LineChartSeries(
-        id: 'series-3',
-        name: 'Series 3',
-        points: data3,
-        color: _currentTheme.seriesColors[2],
-        interpolation: LineInterpolation.bezier,
-        showDataPointMarkers: true,
-      ),
-    ];
-
-    // Create axis configs
-    final xAxis = const AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
-      showAxisLine: true,
-    );
-
-    final yAxis = const AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
-      showAxisLine: true,
-    );
-
     return Container(
       color: _currentTheme.backgroundColor,
       child: Row(
         children: [
-          // Chart
+          // Chart(s) Display
           Expanded(
             flex: 3,
             child: Padding(
@@ -129,30 +60,36 @@ class _ThemingPageState extends State<ThemingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Chart Theming',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: _currentTheme.textColor,
+                  Row(
+                    children: [
+                      Icon(Icons.palette, color: _currentTheme.axisStyle.lineColor, size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chart Theming Showcase',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: _currentTheme.axisStyle.lineColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Theme: ${_themeDisplayNames[_selectedTheme]} • Explore all 7 preset themes',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: _currentTheme.axisStyle.lineColor.withOpacity(0.7),
+                                  ),
+                            ),
+                          ],
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Switch between light/dark themes or customize colors',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: _currentTheme.textColor.withOpacity(0.7),
-                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: BravenChartPlus(
-                      chartType: ChartType.line,
-                      series: series,
-                      theme: _currentTheme,
-                      xAxis: xAxis,
-                      yAxis: yAxis,
-                      showLegend: true,
-                      backgroundColor: _currentTheme.backgroundColor,
-                    ),
+                    child: _showMultipleCharts ? _buildMultipleChartsView() : _buildSingleChartView(),
                   ),
                 ],
               ),
@@ -161,88 +98,52 @@ class _ThemingPageState extends State<ThemingPage> {
 
           // Options Panel
           Container(
-            width: 320,
-            color: _themeMode == 'dark' ? const Color(0xFF2D2D2D) : Colors.white,
+            width: 340,
+            decoration: BoxDecoration(
+              color: _currentTheme.backgroundColor,
+              border: Border(
+                left: BorderSide(
+                  color: _currentTheme.gridStyle.majorColor,
+                  width: 1,
+                ),
+              ),
+            ),
             child: OptionsPanel(
               title: 'Theme Options',
               children: [
                 OptionSection(
-                  title: 'Theme Mode',
+                  title: 'Theme Preset',
                   children: [
-                    EnumOption<String>(
-                      label: 'Preset Theme',
-                      value: _themeMode,
-                      values: const ['light', 'dark'],
-                      labelBuilder: (mode) => mode[0].toUpperCase() + mode.substring(1),
-                      onChanged: (value) => setState(() {
-                        _themeMode = value;
-                        _useCustomColors = false;
-                      }),
+                    _buildThemeSelector(),
+                  ],
+                ),
+                OptionSection(
+                  title: 'Display Options',
+                  children: [
+                    EnumOption<ChartType>(
+                      label: 'Chart Type',
+                      value: _chartType,
+                      values: const [ChartType.line, ChartType.scatter, ChartType.area],
+                      labelBuilder: (type) => type.toString().split('.').last.toUpperCase(),
+                      onChanged: (value) => setState(() => _chartType = value),
                     ),
                     BoolOption(
-                      label: 'Use Custom Colors',
-                      value: _useCustomColors,
-                      onChanged: (value) => setState(() => _useCustomColors = value),
+                      label: 'Show Multiple Charts',
+                      value: _showMultipleCharts,
+                      onChanged: (value) => setState(() => _showMultipleCharts = value),
                     ),
                   ],
                 ),
-                if (_useCustomColors)
-                  OptionSection(
-                    title: 'Custom Colors',
-                    children: [
-                      _buildColorOption('Background', _backgroundColor, (c) => setState(() => _backgroundColor = c)),
-                      _buildColorOption('Grid', _gridColor, (c) => setState(() => _gridColor = c)),
-                      _buildColorOption('Axis', _axisColor, (c) => setState(() => _axisColor = c)),
-                      _buildColorOption('Text', _textColor, (c) => setState(() => _textColor = c)),
-                      _buildColorOption('Series 1', _seriesColor1, (c) => setState(() => _seriesColor1 = c)),
-                      _buildColorOption('Series 2', _seriesColor2, (c) => setState(() => _seriesColor2 = c)),
-                      _buildColorOption('Series 3', _seriesColor3, (c) => setState(() => _seriesColor3 = c)),
-                    ],
-                  ),
                 OptionSection(
-                  title: 'Theme Preview',
+                  title: 'Theme Components',
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _currentTheme.backgroundColor,
-                        border: Border.all(color: _currentTheme.gridColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildPreviewSwatch('Background', _currentTheme.backgroundColor),
-                          _buildPreviewSwatch('Grid', _currentTheme.gridColor),
-                          _buildPreviewSwatch('Axis', _currentTheme.axisColor),
-                          _buildPreviewSwatch('Text', _currentTheme.textColor),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Series Colors:',
-                            style: TextStyle(
-                              color: _currentTheme.textColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: _currentTheme.seriesColors
-                                .map((color) => Container(
-                                      width: 30,
-                                      height: 30,
-                                      margin: const EdgeInsets.only(right: 8),
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        border: Border.all(color: _currentTheme.gridColor),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ))
-                                .toList(),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildThemeComponentPreview(),
+                  ],
+                ),
+                OptionSection(
+                  title: 'All Available Themes',
+                  children: [
+                    _buildAllThemesPreview(),
                   ],
                 ),
               ],
@@ -253,56 +154,233 @@ class _ThemingPageState extends State<ThemingPage> {
     );
   }
 
-  Widget _buildColorOption(String label, Color color, Function(Color) onChanged) {
-    final colorOptions = [
-      Colors.white,
-      Colors.black,
-      Colors.grey,
-      const Color(0xFF1E1E1E),
-      const Color(0xFFE0E0E0),
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.cyan,
-      Colors.yellow,
-      Colors.pink,
-    ];
-
+  Widget _buildThemeSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: colorOptions.map((c) {
-            final isSelected = c == color;
-            return GestureDetector(
-              onTap: () => onChanged(c),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: c,
-                  border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.grey.shade300,
-                    width: isSelected ? 3 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
+        ..._themes.keys.map((key) {
+          final theme = _themes[key]!;
+          final isSelected = key == _selectedTheme;
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedTheme = key),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.backgroundColor,
+                border: Border.all(
+                  color: isSelected ? theme.seriesTheme.colorAt(0) : theme.gridStyle.majorColor,
+                  width: isSelected ? 3 : 1,
                 ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: theme.seriesTheme.colorAt(0).withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        )
+                      ]
+                    : null,
               ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 12),
+              child: Row(
+                children: [
+                  // Color swatches
+                  ...List.generate(
+                    3,
+                    (i) => Container(
+                      width: 16,
+                      height: 16,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: theme.seriesTheme.colorAt(i),
+                        border: Border.all(color: theme.gridStyle.majorColor.withOpacity(0.3)),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _themeDisplayNames[key]!,
+                      style: TextStyle(
+                        color: theme.axisStyle.lineColor,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(
+                      Icons.check_circle,
+                      color: theme.seriesTheme.colorAt(0),
+                      size: 20,
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildPreviewSwatch(String label, Color color) {
+  Widget _buildSingleChartView() {
+    final series = _generateSeries(_currentTheme);
+    final xAxis = const AxisConfig(
+      orientation: AxisOrientation.horizontal,
+      position: AxisPosition.bottom,
+      showGrid: true,
+      showAxisLine: true,
+      label: 'Time (samples)',
+    );
+    final yAxis = const AxisConfig(
+      orientation: AxisOrientation.vertical,
+      position: AxisPosition.left,
+      showGrid: true,
+      showAxisLine: true,
+      label: 'Value',
+    );
+
+    return Card(
+      color: _currentTheme.backgroundColor,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _currentTheme.gridStyle.majorColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: BravenChartPlus(
+          chartType: _chartType,
+          series: series,
+          theme: _currentTheme,
+          xAxis: xAxis,
+          yAxis: yAxis,
+          showLegend: true,
+          backgroundColor: _currentTheme.backgroundColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMultipleChartsView() {
+    return GridView.count(
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      children: [
+        _buildMiniChart(ChartType.line, 'Line Chart'),
+        _buildMiniChart(ChartType.scatter, 'Scatter Chart'),
+        _buildMiniChart(ChartType.area, 'Area Chart'),
+        _buildMiniChart(ChartType.line, 'Multi-Series'),
+      ],
+    );
+  }
+
+  Widget _buildMiniChart(ChartType type, String title) {
+    final series = _generateSeries(_currentTheme, mini: true);
+    final xAxis = const AxisConfig(
+      orientation: AxisOrientation.horizontal,
+      position: AxisPosition.bottom,
+      showGrid: true,
+      showAxisLine: true,
+    );
+    final yAxis = const AxisConfig(
+      orientation: AxisOrientation.vertical,
+      position: AxisPosition.left,
+      showGrid: true,
+      showAxisLine: true,
+    );
+
+    return Card(
+      color: _currentTheme.backgroundColor,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: _currentTheme.gridStyle.majorColor),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              title,
+              style: TextStyle(
+                color: _currentTheme.axisStyle.lineColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: BravenChartPlus(
+                chartType: type,
+                series: series,
+                theme: _currentTheme,
+                xAxis: xAxis,
+                yAxis: yAxis,
+                showLegend: false,
+                backgroundColor: _currentTheme.backgroundColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemeComponentPreview() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _currentTheme.backgroundColor,
+        border: Border.all(color: _currentTheme.gridStyle.majorColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildComponentRow('Background', _currentTheme.backgroundColor),
+          _buildComponentRow('Grid Lines', _currentTheme.gridStyle.majorColor),
+          _buildComponentRow('Axis Lines', _currentTheme.axisStyle.lineColor),
+          _buildComponentRow('Crosshair', _currentTheme.interactionTheme.crosshairColor),
+          _buildComponentRow('Selection', _currentTheme.interactionTheme.selectionColor),
+          const SizedBox(height: 8),
+          Text(
+            'Series Colors:',
+            style: TextStyle(
+              color: _currentTheme.axisStyle.lineColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: List.generate(
+              6,
+              (i) => Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _currentTheme.seriesTheme.colorAt(i),
+                  border: Border.all(color: _currentTheme.gridStyle.majorColor.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComponentRow(String label, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -312,17 +390,176 @@ class _ThemingPageState extends State<ThemingPage> {
             height: 20,
             decoration: BoxDecoration(
               color: color,
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: _currentTheme.gridStyle.majorColor.withOpacity(0.5)),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(color: _currentTheme.textColor, fontSize: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: _currentTheme.axisStyle.lineColor,
+                fontSize: 11,
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildAllThemesPreview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Preview',
+          style: TextStyle(
+            color: _currentTheme.axisStyle.lineColor,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ..._themes.entries.map((entry) {
+          final theme = entry.value;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedTheme = entry.key),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.backgroundColor,
+                border: Border.all(
+                  color: theme.gridStyle.majorColor,
+                  width: 0.5,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  ...List.generate(
+                    4,
+                    (i) => Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(right: 3),
+                      decoration: BoxDecoration(
+                        color: theme.seriesTheme.colorAt(i),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _themeDisplayNames[entry.key]!,
+                      style: TextStyle(
+                        color: theme.axisStyle.lineColor,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  List<ChartSeries> _generateSeries(ChartTheme theme, {bool mini = false}) {
+    final count = mini ? 20 : 40;
+
+    // Generate sample data
+    final data1 = DataGenerator.generateSineWave(
+      count: count,
+      amplitude: 30,
+      frequency: 0.4,
+      yOffset: 100,
+    );
+    final data2 = DataGenerator.generateSineWave(
+      count: count,
+      amplitude: 25,
+      frequency: 0.5,
+      phase: 1,
+      yOffset: 100,
+    );
+    final data3 = DataGenerator.generateSineWave(
+      count: count,
+      amplitude: 20,
+      frequency: 0.3,
+      phase: 2,
+      yOffset: 100,
+    );
+
+    // Create series based on chart type
+    if (_chartType == ChartType.scatter) {
+      return [
+        ScatterChartSeries(
+          id: 'series-1',
+          name: 'Dataset A',
+          points: data1,
+        ),
+        ScatterChartSeries(
+          id: 'series-2',
+          name: 'Dataset B',
+          points: data2,
+        ),
+        ScatterChartSeries(
+          id: 'series-3',
+          name: 'Dataset C',
+          points: data3,
+        ),
+      ];
+    } else if (_chartType == ChartType.area) {
+      return [
+        AreaChartSeries(
+          id: 'series-1',
+          name: 'Series Alpha',
+          points: data1,
+          interpolation: LineInterpolation.bezier,
+        ),
+        AreaChartSeries(
+          id: 'series-2',
+          name: 'Series Beta',
+          points: data2,
+          interpolation: LineInterpolation.bezier,
+        ),
+        AreaChartSeries(
+          id: 'series-3',
+          name: 'Series Gamma',
+          points: data3,
+          interpolation: LineInterpolation.bezier,
+        ),
+      ];
+    } else {
+      // Line chart (default)
+      return [
+        LineChartSeries(
+          id: 'series-1',
+          name: 'Trend 1',
+          points: data1,
+          interpolation: LineInterpolation.bezier,
+          showDataPointMarkers: !mini,
+        ),
+        LineChartSeries(
+          id: 'series-2',
+          name: 'Trend 2',
+          points: data2,
+          interpolation: LineInterpolation.bezier,
+          showDataPointMarkers: !mini,
+        ),
+        LineChartSeries(
+          id: 'series-3',
+          name: 'Trend 3',
+          points: data3,
+          interpolation: LineInterpolation.bezier,
+          showDataPointMarkers: !mini,
+        ),
+      ];
+    }
   }
 }
