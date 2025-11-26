@@ -9,6 +9,7 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../theming/components/series_theme.dart';
 
 /// Wraps a ChartSeries as a ChartElement for the interaction system.
 ///
@@ -27,19 +28,39 @@ class SeriesElement implements ChartElement {
     required this.transform,
     this.isSelected = false,
     this.isHovered = false,
-    this.strokeWidth = 2.0,
-    this.themeColor,
+    this.seriesTheme,
+    this.seriesIndex = 0,
     this.coordinator,
-  }) : _currentTransform = transform {
+    @Deprecated('Use seriesTheme instead') double? strokeWidth,
+    @Deprecated('Use seriesTheme instead') Color? themeColor,
+  })  : _deprecatedStrokeWidth = strokeWidth,
+        _deprecatedThemeColor = themeColor,
+        _currentTransform = transform {
     _computeBounds();
   }
 
   final ChartSeries series;
   final ChartTransform transform; // Initial transform for bounds computation
   ChartTransform _currentTransform; // Current transform for painting
-  final double strokeWidth;
-  final Color? themeColor;
+  final SeriesTheme? seriesTheme;
+  final int seriesIndex;
   final ChartInteractionCoordinator? coordinator;
+  
+  // Deprecated fields for backward compatibility
+  final double? _deprecatedStrokeWidth;
+  final Color? _deprecatedThemeColor;
+  
+  // Get effective stroke width from theme or deprecated parameter
+  double get strokeWidth => seriesTheme?.lineWidthAt(seriesIndex) ?? _deprecatedStrokeWidth ?? 2.0;
+  
+  // Get effective color from theme, deprecated parameter, series, or default
+  Color get themeColor => seriesTheme?.colorAt(seriesIndex) ?? _deprecatedThemeColor ?? series.color ?? const Color(0xFF2196F3);
+  
+  // Get effective marker size from theme or series default
+  double get markerSize => seriesTheme?.markerSizeAt(seriesIndex) ?? 6.0;
+  
+  // Get effective marker shape from theme or default
+  MarkerShape get markerShape => seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows path caching to work - transform stored at construction stays fixed,
@@ -154,8 +175,8 @@ class SeriesElement implements ChartElement {
   void paint(Canvas canvas, Size size) {
     if (series.isEmpty) return;
 
-    // Use themeColor if provided, otherwise fall back to series color or default
-    final baseColor = themeColor ?? series.color ?? const Color(0xFF2196F3);
+    // Use theme color from getter (theme -> deprecated -> series -> default)
+    final baseColor = themeColor;
 
     // Use exhaustive pattern matching on sealed type (Dart 3.0)
     switch (series) {
@@ -175,14 +196,15 @@ class SeriesElement implements ChartElement {
   }
 
   void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
+    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    // Use theme-based stroke width with selection multiplier
+    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    
     final paint = Paint()
-      ..color = isSelected
-          ? baseColor.withOpacity(1.0)
-          : isHovered
-              ? baseColor.withOpacity(0.8)
-              : baseColor.withOpacity(0.7)
+      ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? series.strokeWidth * 1.5 : series.strokeWidth
+      ..strokeWidth = effectiveStrokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
@@ -226,22 +248,25 @@ class SeriesElement implements ChartElement {
 
     // Draw data point markers if enabled (use cached transforms!)
     if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
-      _paintDataPointMarkers(canvas, _cachedTransformedPoints!, series.dataPointMarkerRadius, baseColor);
+      // Use theme marker size if available, otherwise series-specific size
+      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      _paintDataPointMarkers(canvas, _cachedTransformedPoints!, effectiveMarkerSize, baseColor);
     }
   }
 
   void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
+    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    // Use theme marker size if available, otherwise series-specific size
+    final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
+    
     final pointPaint = Paint()
-      ..color = isSelected
-          ? baseColor.withOpacity(1.0)
-          : isHovered
-              ? baseColor.withOpacity(0.8)
-              : baseColor.withOpacity(0.7)
+      ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
       final plotPos = _currentTransform.dataToPlot(point.x, point.y);
-      canvas.drawCircle(plotPos, series.markerRadius, pointPaint);
+      canvas.drawCircle(plotPos, effectiveMarkerSize, pointPaint);
     }
   }
 
@@ -288,14 +313,15 @@ class SeriesElement implements ChartElement {
     canvas.drawPath(path, fillPaint);
 
     // Draw line on top (reuse cached transforms!)
+    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    // Use theme-based stroke width with selection multiplier
+    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    
     final linePaint = Paint()
-      ..color = isSelected
-          ? baseColor.withOpacity(1.0)
-          : isHovered
-              ? baseColor.withOpacity(0.8)
-              : baseColor.withOpacity(0.7)
+      ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? series.strokeWidth * 1.5 : series.strokeWidth
+      ..strokeWidth = effectiveStrokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
@@ -323,17 +349,18 @@ class SeriesElement implements ChartElement {
 
     // Draw data point markers if enabled (reuse cached transforms!)
     if (series.showDataPointMarkers) {
-      _paintDataPointMarkers(canvas, transformedPoints, series.dataPointMarkerRadius, baseColor);
+      // Use theme marker size if available, otherwise series-specific size
+      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
     }
   }
 
   void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
+    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    
     final barPaint = Paint()
-      ..color = isSelected
-          ? baseColor.withOpacity(1.0)
-          : isHovered
-              ? baseColor.withOpacity(0.8)
-              : baseColor.withOpacity(0.7)
+      ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.fill;
 
     for (final point in series.points) {
@@ -488,7 +515,8 @@ class SeriesElement implements ChartElement {
       transform: transform,
       isSelected: isSelected ?? this.isSelected,
       isHovered: isHovered ?? this.isHovered,
-      strokeWidth: strokeWidth,
+      seriesTheme: seriesTheme,
+      seriesIndex: seriesIndex,
       coordinator: coordinator,
     );
   }
