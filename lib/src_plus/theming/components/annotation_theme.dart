@@ -3,6 +3,7 @@
 
 import 'package:flutter/painting.dart';
 
+import '../../models/annotation_style.dart';
 import 'series_theme.dart'; // For MarkerShape enum
 
 /// Theming for chart annotations with state-based styling.
@@ -668,6 +669,18 @@ class TextAnnotationDefaults {
   final double borderWidth;
   final double borderRadius;
   final EdgeInsets padding;
+
+  /// Convert theme defaults to AnnotationStyle for use with annotations
+  AnnotationStyle toAnnotationStyle() {
+    return AnnotationStyle(
+      textStyle: textStyle,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      borderRadius: BorderRadius.circular(borderRadius),
+      padding: padding,
+    );
+  }
 
   static const TextAnnotationDefaults defaultLight = TextAnnotationDefaults(
     textStyle: TextStyle(

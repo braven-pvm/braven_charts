@@ -49,7 +49,7 @@ class DataConverter {
     return series.asMap().entries.map((entry) {
       final index = entry.key;
       final s = entry.value;
-      
+
       return SeriesElement(
         series: s,
         transform: transform,

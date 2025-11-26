@@ -6,8 +6,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' show TextPainter, TextSpan, TextDirection;
 
-import '../models/enums.dart';
 import '../models/chart_theme.dart';
+import '../models/enums.dart';
 import 'axis.dart';
 import 'axis_config.dart';
 

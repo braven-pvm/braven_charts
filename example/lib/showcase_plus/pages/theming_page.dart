@@ -368,8 +368,7 @@ class _ThemingPageState extends State<ThemingPage> {
         text: 'Trend Rising',
         position: const Offset(200, 50),
         anchor: AnnotationAnchor.topRight,
-        backgroundColor: _currentTheme.backgroundColor.withOpacity(0.9),
-        borderColor: _currentTheme.axisStyle.lineColor,
+        style: _currentTheme.annotationTheme.textDefaults.toAnnotationStyle(),
       ),
       // 4. Threshold annotation - reference line
       ThresholdAnnotation(
