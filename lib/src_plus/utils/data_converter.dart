@@ -34,8 +34,7 @@ class DataConverter {
   /// **Parameters**:
   /// - `series`: List of ChartSeries to convert
   /// - `transform`: Current ChartTransform for coordinate conversion
-  /// - `theme`: Optional ChartTheme for styling (if null, uses series colors)
-  /// - `strokeWidth`: Line stroke width (default 2.0)
+  /// - `theme`: Optional ChartTheme for styling (uses theme.seriesTheme for colors/widths/markers)
   /// - `coordinator`: Optional interaction coordinator for per-marker hover state
   ///
   /// **Returns**: List of SeriesElements ready for spatial index insertion
@@ -43,21 +42,19 @@ class DataConverter {
     required List<ChartSeries> series,
     required ChartTransform transform,
     ChartTheme? theme,
-    double strokeWidth = 2.0,
+    @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
-    // Silent mode - this is called on every mouse movement during pan
-    // print(' DataConverter: theme=$theme, seriesColors=${theme?.seriesColors}');
+    // Use theme.seriesTheme if available, otherwise backward compatibility mode
     return series.asMap().entries.map((entry) {
       final index = entry.key;
       final s = entry.value;
-      final themeColor = theme?.seriesColors[index % theme.seriesColors.length];
-      // print('   Series[$index] "${s.name}": themeColor=$themeColor, seriesColor=${s.color}');
+      
       return SeriesElement(
         series: s,
         transform: transform,
-        strokeWidth: strokeWidth,
-        themeColor: themeColor,
+        seriesTheme: theme?.seriesTheme,
+        seriesIndex: index,
         coordinator: coordinator,
       );
     }).toList();
