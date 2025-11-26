@@ -4026,9 +4026,16 @@ class ChartRenderBox extends RenderBox {
     final labelStyle = interactionTheme?.crosshairLabelStyle;
     final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
     final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
+    final borderWidth = labelStyle?.borderWidth ?? 1.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
 
     final labelPadding = labelStyle?.padding.left ?? 4.0;
     final labelBackgroundPaint = Paint()..color = backgroundColor;
+    final labelBorderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
 
     // X coordinate label (positioned at bottom of chart area)
     final xDisplayValue = _formatDataValue(dataX);
@@ -4044,14 +4051,20 @@ class ChartRenderBox extends RenderBox {
     // Clamp X position to keep label within plot bounds
     xLabelX = xLabelX.clamp(_plotArea.left + labelPadding, _plotArea.right - xTextPainter.width - labelPadding);
 
-    // Draw background
-    final xBgRect = Rect.fromLTWH(
-      xLabelX - labelPadding,
-      xLabelY - labelPadding,
-      xTextPainter.width + labelPadding * 2,
-      xTextPainter.height + labelPadding * 2,
+    // Draw background with border and rounded corners
+    final xBgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        xLabelX - labelPadding,
+        xLabelY - labelPadding,
+        xTextPainter.width + labelPadding * 2,
+        xTextPainter.height + labelPadding * 2,
+      ),
+      Radius.circular(borderRadius),
     );
-    canvas.drawRect(xBgRect, labelBackgroundPaint);
+    canvas.drawRRect(xBgRect, labelBackgroundPaint);
+    if (borderWidth > 0) {
+      canvas.drawRRect(xBgRect, labelBorderPaint);
+    }
 
     // Draw text
     xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
@@ -4070,14 +4083,20 @@ class ChartRenderBox extends RenderBox {
     // Clamp Y position to keep label within plot bounds
     yLabelY = yLabelY.clamp(_plotArea.top + labelPadding, _plotArea.bottom - yTextPainter.height - labelPadding);
 
-    // Draw background
-    final yBgRect = Rect.fromLTWH(
-      yLabelX - labelPadding,
-      yLabelY - labelPadding,
-      yTextPainter.width + labelPadding * 2,
-      yTextPainter.height + labelPadding * 2,
+    // Draw background with border and rounded corners
+    final yBgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        yLabelX - labelPadding,
+        yLabelY - labelPadding,
+        yTextPainter.width + labelPadding * 2,
+        yTextPainter.height + labelPadding * 2,
+      ),
+      Radius.circular(borderRadius),
     );
-    canvas.drawRect(yBgRect, labelBackgroundPaint);
+    canvas.drawRRect(yBgRect, labelBackgroundPaint);
+    if (borderWidth > 0) {
+      canvas.drawRRect(yBgRect, labelBorderPaint);
+    }
 
     // Draw text
     yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));

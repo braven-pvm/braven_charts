@@ -5,6 +5,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/chart_annotation.dart';
+import '../../models/chart_theme.dart';
 
 /// Dialog for creating or editing a ThresholdAnnotation.
 ///
@@ -20,10 +21,14 @@ class ThresholdAnnotationDialog extends StatefulWidget {
     this.annotation,
     this.initialXValue,
     this.initialYValue,
+    this.chartTheme,
   });
 
   /// Existing annotation to edit, or null to create new.
   final ThresholdAnnotation? annotation;
+
+  /// Optional chart theme for default styling.
+  final ChartTheme? chartTheme;
 
   /// Initial X-axis value from click position.
   final double? initialXValue;
@@ -58,6 +63,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
+    final thresholdDefaults = widget.chartTheme?.annotationTheme.thresholdDefaults;
     _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
 
     // Set initial value based on selected axis
@@ -73,11 +79,29 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
 
     _valueController = TextEditingController(text: initialValue);
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    _lineColor = annotation?.lineColor ?? Colors.red;
-    _lineWidth = annotation?.lineWidth ?? 1.0;
-    _dashPattern = annotation?.dashPattern;
-    _labelPosition = annotation?.labelPosition ?? AnnotationLabelPosition.topLeft;
-    _labelMargin = annotation?.labelMargin ?? 8.0;
+    
+    if (annotation != null) {
+      // Edit mode - use existing annotation values
+      _lineColor = annotation.lineColor;
+      _lineWidth = annotation.lineWidth;
+      _dashPattern = annotation.dashPattern;
+      _labelPosition = annotation.labelPosition;
+      _labelMargin = annotation.labelMargin;
+    } else if (thresholdDefaults != null) {
+      // Create mode with theme defaults
+      _lineColor = thresholdDefaults.lineColor;
+      _lineWidth = thresholdDefaults.lineWidth;
+      _dashPattern = thresholdDefaults.dashPattern.isNotEmpty ? thresholdDefaults.dashPattern : null;
+      _labelPosition = AnnotationLabelPosition.topLeft;
+      _labelMargin = 8.0;
+    } else {
+      // Fallback defaults (no theme provided)
+      _lineColor = Colors.red;
+      _lineWidth = 1.0;
+      _dashPattern = null;
+      _labelPosition = AnnotationLabelPosition.topLeft;
+      _labelMargin = 8.0;
+    }
   }
 
   @override

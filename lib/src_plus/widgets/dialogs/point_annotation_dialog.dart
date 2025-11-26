@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/chart_theme.dart';
 import '../../models/enums.dart';
 import 'annotation_style_editor.dart';
 
@@ -22,16 +23,19 @@ class PointAnnotationDialog extends StatefulWidget {
   /// [annotation] - If provided, dialog is in edit mode
   /// [seriesId] - ID of the series containing the data point
   /// [dataPointIndex] - Index of the data point in the series
+  /// [chartTheme] - Optional chart theme for default styling
   const PointAnnotationDialog({
     super.key,
     this.annotation,
     required this.seriesId,
     required this.dataPointIndex,
+    this.chartTheme,
   });
 
   final PointAnnotation? annotation;
   final String seriesId;
   final int dataPointIndex;
+  final ChartTheme? chartTheme;
 
   @override
   State<PointAnnotationDialog> createState() => _PointAnnotationDialogState();
@@ -54,18 +58,33 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
+    final pointDefaults = widget.chartTheme?.annotationTheme.pointDefaults;
 
     // Initialize label controller
     _labelController = TextEditingController(text: annotation?.label ?? '');
 
     if (annotation != null) {
+      // Edit mode - use existing annotation values
       _markerShape = annotation.markerShape;
       _markerSize = annotation.markerSize;
       _markerColor = annotation.markerColor;
       _offset = annotation.offset;
       _currentStyle = annotation.style;
+    } else if (pointDefaults != null) {
+      // Create mode with theme defaults
+      _markerShape = _convertMarkerShape(pointDefaults.markerShape);
+      _markerSize = pointDefaults.markerSize;
+      _markerColor = pointDefaults.normalColor;
+      _currentStyle = AnnotationStyle(
+        textStyle: pointDefaults.labelStyle.textStyle,
+        backgroundColor: pointDefaults.labelStyle.backgroundColor,
+        borderColor: pointDefaults.labelStyle.borderColor,
+        borderWidth: pointDefaults.labelStyle.borderWidth,
+        borderRadius: BorderRadius.circular(pointDefaults.labelStyle.borderRadius),
+        padding: pointDefaults.labelStyle.padding,
+      );
     } else {
-      // Default style for new annotations
+      // Fallback defaults (no theme provided)
       _currentStyle = AnnotationStyle(
         textStyle: const TextStyle(
           fontSize: 12,
@@ -78,6 +97,31 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         borderRadius: BorderRadius.circular(4),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       );
+    }
+  }
+
+  /// Convert theme MarkerShape enum to annotation MarkerShape enum
+  /// TODO: Fix duplicate MarkerShape enums - they should use the same enum
+  MarkerShape _convertMarkerShape(dynamic themeMarkerShape) {
+    final shapeName = themeMarkerShape.toString().split('.').last;
+    switch (shapeName) {
+      case 'circle':
+        return MarkerShape.circle;
+      case 'square':
+        return MarkerShape.square;
+      case 'triangle':
+        return MarkerShape.triangle;
+      case 'diamond':
+        return MarkerShape.diamond;
+      case 'star':
+        return MarkerShape.star;
+      case 'cross':
+        return MarkerShape.cross;
+      case 'plus':
+        return MarkerShape.plus;
+      case 'none':
+      default:
+        return MarkerShape.none;
     }
   }
 
