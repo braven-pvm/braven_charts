@@ -1,4 +1,8 @@
+import 'dart:math';
+
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
+import 'package:braven_charts/src_plus/models/chart_annotation.dart';
+import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
@@ -17,10 +21,16 @@ class ThemingPage extends StatefulWidget {
 }
 
 class _ThemingPageState extends State<ThemingPage> {
-  // Theme selection - now with all 7 presets
+  // Theme selection - all 7 presets
   String _selectedTheme = 'light';
-  ChartType _chartType = ChartType.line;
   bool _showMultipleCharts = false;
+
+  // Element visibility toggles
+  bool _showAnnotations = true;
+  bool _showMarkers = true;
+  bool _showTooltips = true;
+  bool _showLegend = true;
+  final bool _showScrollbars = true;
 
   // Map of theme names to ChartTheme instances
   final Map<String, ChartTheme> _themes = {
@@ -60,36 +70,10 @@ class _ThemingPageState extends State<ThemingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.palette, color: _currentTheme.axisStyle.lineColor, size: 32),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Chart Theming Showcase',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: _currentTheme.axisStyle.lineColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Theme: ${_themeDisplayNames[_selectedTheme]} • Explore all 7 preset themes',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: _currentTheme.axisStyle.lineColor.withOpacity(0.7),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildHeader(context),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: _showMultipleCharts ? _buildMultipleChartsView() : _buildSingleChartView(),
+                    child: _showMultipleCharts ? _buildMultipleChartsView() : _buildComprehensiveChart(),
                   ),
                 ],
               ),
@@ -98,7 +82,7 @@ class _ThemingPageState extends State<ThemingPage> {
 
           // Options Panel
           Container(
-            width: 340,
+            width: 360,
             decoration: BoxDecoration(
               color: _currentTheme.backgroundColor,
               border: Border(
@@ -109,24 +93,15 @@ class _ThemingPageState extends State<ThemingPage> {
               ),
             ),
             child: OptionsPanel(
-              title: 'Theme Options',
+              title: 'Theme & Elements',
               children: [
                 OptionSection(
                   title: 'Theme Preset',
-                  children: [
-                    _buildThemeSelector(),
-                  ],
+                  children: [_buildThemeSelector()],
                 ),
                 OptionSection(
-                  title: 'Display Options',
+                  title: 'Display Mode',
                   children: [
-                    EnumOption<ChartType>(
-                      label: 'Chart Type',
-                      value: _chartType,
-                      values: const [ChartType.line, ChartType.scatter, ChartType.area],
-                      labelBuilder: (type) => type.toString().split('.').last.toUpperCase(),
-                      onChanged: (value) => setState(() => _chartType = value),
-                    ),
                     BoolOption(
                       label: 'Show Multiple Charts',
                       value: _showMultipleCharts,
@@ -135,22 +110,73 @@ class _ThemingPageState extends State<ThemingPage> {
                   ],
                 ),
                 OptionSection(
-                  title: 'Theme Components',
+                  title: 'Element Visibility',
                   children: [
-                    _buildThemeComponentPreview(),
+                    BoolOption(
+                      label: 'Show Annotations',
+                      value: _showAnnotations,
+                      onChanged: (value) => setState(() => _showAnnotations = value),
+                    ),
+                    BoolOption(
+                      label: 'Show Markers',
+                      value: _showMarkers,
+                      onChanged: (value) => setState(() => _showMarkers = value),
+                    ),
+                    BoolOption(
+                      label: 'Show Tooltips',
+                      value: _showTooltips,
+                      onChanged: (value) => setState(() => _showTooltips = value),
+                    ),
+                    BoolOption(
+                      label: 'Show Legend',
+                      value: _showLegend,
+                      onChanged: (value) => setState(() => _showLegend = value),
+                    ),
                   ],
                 ),
                 OptionSection(
-                  title: 'All Available Themes',
-                  children: [
-                    _buildAllThemesPreview(),
-                  ],
+                  title: 'Theme Components',
+                  children: [_buildThemeComponentPreview()],
+                ),
+                OptionSection(
+                  title: 'All Themes',
+                  children: [_buildAllThemesPreview()],
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.palette, color: _currentTheme.axisStyle.lineColor, size: 32),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Comprehensive Theming Showcase',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: _currentTheme.axisStyle.lineColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Theme: ${_themeDisplayNames[_selectedTheme]} • Mixed chart types, annotations, markers, tooltips',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: _currentTheme.axisStyle.lineColor.withOpacity(0.7),
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -226,8 +252,9 @@ class _ThemingPageState extends State<ThemingPage> {
     );
   }
 
-  Widget _buildSingleChartView() {
-    final series = _generateSeries(_currentTheme);
+  /// Build comprehensive chart showing ALL elements: mixed chart types, annotations, markers, tooltips
+  Widget _buildComprehensiveChart() {
+    final series = _generateMixedSeries();
     final xAxis = const AxisConfig(
       orientation: AxisOrientation.horizontal,
       position: AxisPosition.bottom,
@@ -253,16 +280,118 @@ class _ThemingPageState extends State<ThemingPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: BravenChartPlus(
-          chartType: _chartType,
+          chartType: ChartType.line, // Base type for mixed series
           series: series,
+          annotations: _showAnnotations ? _generateAnnotations() : [],
           theme: _currentTheme,
           xAxis: xAxis,
           yAxis: yAxis,
-          showLegend: true,
+          showLegend: _showLegend,
           backgroundColor: _currentTheme.backgroundColor,
         ),
       ),
     );
+  }
+
+  /// Generate mixed series: line, area, scatter showing on one chart
+  List<ChartSeries> _generateMixedSeries() {
+    const count = 40;
+    final random = Random(42);
+
+    // Line series with trend
+    final linePoints = List.generate(count, (i) {
+      final x = i.toDouble();
+      final y = 50 + i * 2 + random.nextDouble() * 20 - 10;
+      return ChartDataPoint(x: x, y: y);
+    });
+
+    // Area series with different pattern
+    final areaPoints = List.generate(count, (i) {
+      final x = i.toDouble();
+      final y = 30 + sin(i * 0.3) * 15 + random.nextDouble() * 10;
+      return ChartDataPoint(x: x, y: y);
+    });
+
+    // Scatter points
+    final scatterPoints = List.generate(count ~/ 2, (i) {
+      final x = (i * 2).toDouble();
+      final y = 80 + random.nextDouble() * 40 - 20;
+      return ChartDataPoint(x: x, y: y);
+    });
+
+    return [
+      LineChartSeries(
+        id: 'line-series',
+        name: 'Line Trend',
+        points: linePoints,
+        interpolation: LineInterpolation.bezier,
+        showDataPointMarkers: _showMarkers,
+      ),
+      AreaChartSeries(
+        id: 'area-series',
+        name: 'Area Pattern',
+        points: areaPoints,
+        interpolation: LineInterpolation.bezier,
+      ),
+      ScatterChartSeries(
+        id: 'scatter-series',
+        name: 'Data Points',
+        points: scatterPoints,
+      ),
+    ];
+  }
+
+  /// Generate all 5 annotation types for comprehensive showcase
+  List<ChartAnnotation> _generateAnnotations() {
+    return [
+      // 1. Point annotation - highlights specific data point
+      PointAnnotation(
+        id: 'peak-point',
+        seriesId: 'line-series',
+        dataPointIndex: 30,
+        markerShape: MarkerShape.star,
+        markerSize: 20.0,
+        label: 'Peak',
+      ),
+      // 2. Range annotation - highlights region
+      RangeAnnotation(
+        id: 'interest-range',
+        startX: 15,
+        endX: 25,
+        fillColor: _currentTheme.seriesTheme.colorAt(1).withOpacity(0.15),
+        borderColor: _currentTheme.seriesTheme.colorAt(1),
+        label: 'Focus Period',
+      ),
+      // 3. Text annotation - free-form label
+      TextAnnotation(
+        id: 'note-text',
+        text: 'Trend Rising',
+        position: const Offset(200, 50),
+        anchor: AnnotationAnchor.topRight,
+        backgroundColor: _currentTheme.backgroundColor.withOpacity(0.9),
+        borderColor: _currentTheme.axisStyle.lineColor,
+      ),
+      // 4. Threshold annotation - reference line
+      ThresholdAnnotation(
+        id: 'target-threshold',
+        axis: AnnotationAxis.y,
+        value: 90,
+        lineColor: _currentTheme.seriesTheme.colorAt(3),
+        lineWidth: 2.5,
+        dashPattern: const [8, 4],
+        label: 'Target (90)',
+        labelPosition: AnnotationLabelPosition.topLeft,
+      ),
+      // 5. Trend annotation - shows trend line
+      TrendAnnotation(
+        id: 'series-trend',
+        seriesId: 'line-series',
+        trendType: TrendType.linear,
+        lineColor: _currentTheme.seriesTheme.colorAt(4).withOpacity(0.7),
+        lineWidth: 3.0,
+        label: 'Linear Trend',
+      ),
+    ];
   }
 
   Widget _buildMultipleChartsView() {
@@ -271,16 +400,16 @@ class _ThemingPageState extends State<ThemingPage> {
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
       children: [
-        _buildMiniChart(ChartType.line, 'Line Chart'),
-        _buildMiniChart(ChartType.scatter, 'Scatter Chart'),
-        _buildMiniChart(ChartType.area, 'Area Chart'),
-        _buildMiniChart(ChartType.line, 'Multi-Series'),
+        _buildMiniChart(ChartType.line, 'Line Chart with Trend'),
+        _buildMiniChart(ChartType.scatter, 'Scatter Plot'),
+        _buildMiniChart(ChartType.area, 'Area Chart with Range'),
+        _buildMiniChart(ChartType.line, 'Mixed Series'),
       ],
     );
   }
 
   Widget _buildMiniChart(ChartType type, String title) {
-    final series = _generateSeries(_currentTheme, mini: true);
+    final series = _generateSeries(_currentTheme, type, mini: true);
     final xAxis = const AxisConfig(
       orientation: AxisOrientation.horizontal,
       position: AxisPosition.bottom,
@@ -470,7 +599,7 @@ class _ThemingPageState extends State<ThemingPage> {
     );
   }
 
-  List<ChartSeries> _generateSeries(ChartTheme theme, {bool mini = false}) {
+  List<ChartSeries> _generateSeries(ChartTheme theme, ChartType chartType, {bool mini = false}) {
     final count = mini ? 20 : 40;
 
     // Generate sample data
@@ -496,7 +625,7 @@ class _ThemingPageState extends State<ThemingPage> {
     );
 
     // Create series based on chart type
-    if (_chartType == ChartType.scatter) {
+    if (chartType == ChartType.scatter) {
       return [
         ScatterChartSeries(
           id: 'series-1',
@@ -514,7 +643,7 @@ class _ThemingPageState extends State<ThemingPage> {
           points: data3,
         ),
       ];
-    } else if (_chartType == ChartType.area) {
+    } else if (chartType == ChartType.area) {
       return [
         AreaChartSeries(
           id: 'series-1',
