@@ -445,14 +445,14 @@ class _BravenChartPlusExamplePageState extends State<BravenChartPlusExamplePage>
           // Theme selector dropdown
           DropdownButton<ChartTheme>(
             value: _selectedTheme,
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: ChartTheme.light,
-                child: Text('Light'),
+                child: const Text('Light'),
               ),
               DropdownMenuItem(
                 value: ChartTheme.dark,
-                child: Text('Dark'),
+                child: const Text('Dark'),
               ),
             ],
             onChanged: (theme) {
