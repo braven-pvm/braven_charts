@@ -361,6 +361,9 @@ class _ThemingPageState extends State<ThemingPage> {
         fillColor: _currentTheme.seriesTheme.colorAt(1).withOpacity(0.15),
         borderColor: _currentTheme.seriesTheme.colorAt(1),
         label: 'Focus Period',
+        style: _currentTheme.annotationTheme.rangeDefaults.toAnnotationStyle(
+          borderColor: _currentTheme.seriesTheme.colorAt(1),
+        ),
       ),
       // 3. Text annotation - free-form label
       TextAnnotation(
@@ -380,6 +383,7 @@ class _ThemingPageState extends State<ThemingPage> {
         dashPattern: const [8, 4],
         label: 'Target (90)',
         labelPosition: AnnotationLabelPosition.topLeft,
+        style: _currentTheme.annotationTheme.thresholdDefaults.toAnnotationStyle(),
       ),
       // 5. Trend annotation - shows trend line
       TrendAnnotation(
@@ -389,6 +393,7 @@ class _ThemingPageState extends State<ThemingPage> {
         lineColor: _currentTheme.seriesTheme.colorAt(4).withOpacity(0.7),
         lineWidth: 3.0,
         label: 'Linear Trend',
+        style: _currentTheme.annotationTheme.trendDefaults.toAnnotationStyle(),
       ),
     ];
   }

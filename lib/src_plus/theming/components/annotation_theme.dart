@@ -436,6 +436,18 @@ class RangeAnnotationDefaults {
   final double labelBorderRadius;
   final double labelMargin;
 
+  /// Convert theme defaults to AnnotationStyle for label styling
+  AnnotationStyle toAnnotationStyle({Color? borderColor}) {
+    return AnnotationStyle(
+      textStyle: labelTextStyle,
+      backgroundColor: labelBackgroundColor,
+      borderColor: borderColor ?? normalBorderColor,
+      borderWidth: 0.5,
+      borderRadius: BorderRadius.circular(labelBorderRadius),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    );
+  }
+
   static const RangeAnnotationDefaults defaultLight = RangeAnnotationDefaults(
     normalFillColor: Color(0x332196F3), // 20% blue
     selectedFillColor: Color(0x4D2196F3), // 30% blue
@@ -841,6 +853,18 @@ class ThresholdAnnotationDefaults {
   final double labelBorderRadius;
   final double labelMargin;
 
+  /// Convert theme defaults to AnnotationStyle for label styling
+  AnnotationStyle toAnnotationStyle() {
+    return AnnotationStyle(
+      textStyle: labelTextStyle,
+      backgroundColor: labelBackgroundColor,
+      borderColor: lineColor,
+      borderWidth: 0.5,
+      borderRadius: BorderRadius.circular(labelBorderRadius),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    );
+  }
+
   static const ThresholdAnnotationDefaults defaultLight = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFF44336), // Red
     lineWidth: 2.0,
@@ -1022,6 +1046,18 @@ class TrendAnnotationDefaults {
   final Color labelBackgroundColor;
   final double labelBorderRadius;
   final double labelMargin;
+
+  /// Convert theme defaults to AnnotationStyle for label styling
+  AnnotationStyle toAnnotationStyle() {
+    return AnnotationStyle(
+      textStyle: labelTextStyle,
+      backgroundColor: labelBackgroundColor,
+      borderColor: lineColor,
+      borderWidth: 0.5,
+      borderRadius: BorderRadius.circular(labelBorderRadius),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    );
+  }
 
   static const TrendAnnotationDefaults defaultLight = TrendAnnotationDefaults(
     lineColor: Color(0xFF4CAF50), // Green
