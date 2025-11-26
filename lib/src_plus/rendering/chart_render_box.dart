@@ -4035,14 +4035,14 @@ class ChartRenderBox extends RenderBox {
     final dataX = dataPos.dx;
     final dataY = dataPos.dy;
 
-    const textStyle = TextStyle(
-      color: Color(0xFF000000),
-      fontSize: 10,
-      backgroundColor: Color(0xF0FFFFFF), // Almost opaque white
-    );
+    // Use theme for crosshair label styling
+    final interactionTheme = _theme?.interactionTheme;
+    final textStyle = interactionTheme?.tooltipTextStyle.copyWith(fontSize: 10) ??
+        const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = interactionTheme?.tooltipBackground ?? const Color(0xF0FFFFFF);
 
     const labelPadding = 4.0;
-    final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
+    final labelBackgroundPaint = Paint()..color = backgroundColor;
 
     // X coordinate label (positioned at bottom of chart area)
     final xDisplayValue = _formatDataValue(dataX);
