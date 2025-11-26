@@ -590,7 +590,6 @@ class ChartRenderBox extends RenderBox {
   /// See also: [clearPanConstraintBounds] to restore normal pan constraints.
   void setPanConstraintBounds(double xMin, double xMax, double yMin, double yMax) {
     if (_transform == null) {
-      debugPrint('⚠️ Cannot set pan constraints: transform not initialized');
       return;
     }
 
@@ -724,7 +723,6 @@ class ChartRenderBox extends RenderBox {
   /// Reset view to original zoom/pan state.
   void resetView() {
     if (_originalTransform == null || _elementGenerator == null) {
-      debugPrint('⚠️ Cannot reset: originalTransform or elementGenerator not available');
       return;
     }
 
@@ -1621,16 +1619,11 @@ class ChartRenderBox extends RenderBox {
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      debugPrint('⏱️ [$timestamp] 🖱️ RIGHT-CLICK detected in RenderBox at position: $position, element: ${hitElement?.runtimeType}');
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
-      debugPrint(
-          '⏱️ [${DateTime.now().millisecondsSinceEpoch}] contextMenuOpen mode claimed (${DateTime.now().millisecondsSinceEpoch - timestamp}ms)');
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
-        print('🔍 Left-click on element: type=${hitElement.runtimeType}, isSelected=${hitElement.isSelected}');
         if (hitElement is PointAnnotationElement) {
-          print('🔍   PointAnnotation: id=${hitElement.annotation.id}, allowDragging=${hitElement.annotation.allowDragging}');
         }
 
         // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
@@ -1658,7 +1651,6 @@ class ChartRenderBox extends RenderBox {
           // Clicked on PointAnnotation with dragging enabled - store as potential drag
           // We don't know yet if this is a click (to select) or click-and-hold (to drag)
           // Wait for pointer movement to decide
-          print('🎯 PointAnnotation POTENTIAL DRAG: id=${hitElement.annotation.id}, allowDragging=${hitElement.annotation.allowDragging}');
           _potentialDragPointAnnotation = hitElement;
           _potentialDragStartPosition = position;
           // Don't claim mode or call callbacks yet - wait for movement or release
@@ -1778,7 +1770,6 @@ class ChartRenderBox extends RenderBox {
       final dragDistance = (position - _potentialDragStartPosition!).distance;
       if (dragDistance >= _dragThresholdPixels) {
         // Pointer moved beyond threshold - convert to actual drag
-        print('🎯 PointAnnotation DRAG START (threshold met): distance=${dragDistance.toStringAsFixed(1)}px');
         final hitElement = _potentialDragPointAnnotation!;
 
         // Initialize drag state
@@ -1787,14 +1778,11 @@ class ChartRenderBox extends RenderBox {
         _candidateDataPointIndex = hitElement.annotation.dataPointIndex;
 
         // Check coordinator state BEFORE claiming
-        print(
-            '🎯 BEFORE claim: currentMode=${coordinator.currentMode}, priority=${coordinator.currentMode.priority}, isModal=${coordinator.currentMode.isModal}');
 
         // Start interaction and claim drag mode
         coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
         final claimSuccess = coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
 
-        print('🎯 Drag mode claim attempt: success=$claimSuccess, isInteracting=${coordinator.isInteracting}, mode=${coordinator.currentMode}');
 
         // Clear potential drag state
         _potentialDragPointAnnotation = null;
@@ -1820,13 +1808,11 @@ class ChartRenderBox extends RenderBox {
     if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation && event.buttons == kPrimaryMouseButton) {
       // First move after entering mode - start interaction
       if (!coordinator.isInteracting) {
-        debugPrint('🎯 Range creation: First drag detected, starting interaction');
         coordinator.startInteraction(position);
       }
 
       final startPos = coordinator.interactionStartPosition;
       if (startPos != null) {
-        debugPrint('🎯 Range creation drag: updating box selection rectangle from $startPos to $position');
         coordinator.updateBoxSelection(startPos, position);
         markNeedsPaint(); // Trigger rubber-band rendering
       }
@@ -1993,7 +1979,6 @@ class ChartRenderBox extends RenderBox {
     if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
       final boxRect = coordinator.boxSelectionRect;
       if (boxRect != null && onRangeCreationComplete != null) {
-        debugPrint('🎯 Range creation drag complete, converting to data coords...');
 
         // Get transform from first series to convert plot coords to data coords
         if (_elements.whereType<SeriesElement>().isNotEmpty) {
@@ -2010,8 +1995,6 @@ class ChartRenderBox extends RenderBox {
           final startY = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
           final endY = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
 
-          debugPrint('   Plot rect: $boxRect');
-          debugPrint('   Data bounds: X[$startX, $endX], Y[$startY, $endY]');
 
           // End interaction (clear boxSelectionRect) but DON'T release mode yet
           // The widget callback will release mode after dialog closes
@@ -2022,10 +2005,8 @@ class ChartRenderBox extends RenderBox {
           markNeedsPaint();
           return;
         } else {
-          debugPrint('❌ No series elements found, cannot convert to data coords');
         }
       } else if (boxRect == null) {
-        debugPrint('❌ Range creation cancelled (no drag or too small)');
       }
 
       // Release mode even if cancelled
@@ -2041,7 +2022,6 @@ class ChartRenderBox extends RenderBox {
       // clearTempBounds() will null out _tempResizeBounds, causing bounds getter
       // to fall back to original annotation data instead of the resized values.
       final resizedBounds = _resizingAnnotation!.bounds; // Get resized bounds while temp bounds still exist
-      print('📐 RESIZED BOUNDS: $resizedBounds');
 
       _resizingAnnotation!.clearTempBounds(); // Now safe to clear temporary resize bounds
 
@@ -2072,8 +2052,6 @@ class ChartRenderBox extends RenderBox {
           // plotToData returns Offset(dataX, dataY)
           final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
           final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
-          print('📍 PIXEL: top=${resizedBounds.top}, bottom=${resizedBounds.bottom}');
-          print('📍 DATA: leftData=$leftData, rightData=$rightData');
 
           var newStartX = leftData.dx;
           var newEndX = rightData.dx;
@@ -2092,13 +2070,10 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (resizedAnnotation.snapToValue) {
-            print('🔍 RESIZE SNAP: enabled, direction=$resizeDirection');
-            print('   newStartY=$newStartY, newEndY=$newEndY');
 
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
-            print('   xTolerance=$xTolerance, yTolerance=$yTolerance');
 
             // Determine which edge was resized based on resize direction
             final needsSnapStartX = resizeDirection == ResizeDirection.left ||
@@ -2118,7 +2093,6 @@ class ChartRenderBox extends RenderBox {
             final needsSnapEndY =
                 resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
 
-            print('   needsSnapStartY=$needsSnapStartY, needsSnapEndY=$needsSnapEndY');
 
             // Snap X coordinates if needed
             if (needsSnapStartX) {
@@ -2211,10 +2185,6 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (movedAnnotation.snapToValue) {
-            print('🔍 MOVE SNAP: enabled');
-            print('   Before: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
-            print(
-                '   Original bounds: startX=${movedAnnotation.startX}, endX=${movedAnnotation.endX}, startY=${movedAnnotation.startY}, endY=${movedAnnotation.endY}');
 
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
@@ -2228,10 +2198,8 @@ class ChartRenderBox extends RenderBox {
                 final width = newEndX - newStartX;
                 newStartX = snappedStartX;
                 newEndX = newStartX + width;
-                print('   X snapped: startX=$newStartX, endX=$newEndX');
               }
             } else {
-              print('   X snap SKIPPED (unbound X-axis)');
             }
 
             // Snap Y coordinates only if they're defined in the original annotation
@@ -2242,13 +2210,10 @@ class ChartRenderBox extends RenderBox {
                 final height = newEndY! - newStartY;
                 newStartY = snappedStartY;
                 newEndY = newStartY + height;
-                print('   Y snapped: startY=$newStartY, endY=$newEndY');
               }
             } else {
-              print('   Y snap SKIPPED (unbound Y-axis)');
             }
 
-            print('   After: startX=$newStartX, endX=$newEndX, startY=$newStartY, endY=$newEndY');
           }
 
           // Create updated annotation with new bounds
@@ -2334,7 +2299,6 @@ class ChartRenderBox extends RenderBox {
 
     // Handle potential PointAnnotation drag that never exceeded threshold (treat as selection click)
     if (_potentialDragPointAnnotation != null) {
-      print('🎯 PointAnnotation CLICK (no drag): id=${_potentialDragPointAnnotation!.annotation.id}');
       final hitElement = _potentialDragPointAnnotation!;
 
       // This was a quick click without dragging - toggle selection
@@ -2510,7 +2474,6 @@ class ChartRenderBox extends RenderBox {
 
     // Debug output to show which data point was found
     if (nearestValue != null && nearestPoint != null) {
-      print('   🎯 Found snap point: axis=$axis, target=$targetValue, snapped=$nearestValue, dataPoint(x=${nearestPoint.x}, y=${nearestPoint.y})');
     }
 
     return nearestValue;
@@ -3193,9 +3156,7 @@ class ChartRenderBox extends RenderBox {
     // DEBUG: Print final paint order (only annotations)
     final annotations = nonSeriesElements.where((e) => e.elementType == ChartElementType.annotation).toList();
     if (annotations.isNotEmpty) {
-      print('🎨 PAINT ORDER (annotations only):');
       for (var i = 0; i < annotations.length; i++) {
-        print('  $i: ${annotations[i].runtimeType} (priority=${annotations[i].priority}, id=${annotations[i].id})');
       }
     }
 
