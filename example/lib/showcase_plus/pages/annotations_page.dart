@@ -32,6 +32,10 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   bool _allowDragging = true;
   bool _allowEditing = true;
 
+  // Annotation change tracking
+  String _lastChangeMessage = 'No changes yet';
+  int _changeCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -135,10 +139,29 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     _annotationController = AnnotationController(
       initialAnnotations: initialAnnotations,
     );
+
+    // Listen to annotation changes to show persistence feedback
+    _annotationController.addListener(_onAnnotationControllerChanged);
+  }
+
+  void _onAnnotationControllerChanged() {
+    if (!mounted) return;
+
+    setState(() {
+      _changeCount++;
+
+      // Get the most recently modified annotation (if any)
+      final annotations = _annotationController.annotations;
+      if (annotations.isNotEmpty) {
+        final lastAnnotation = annotations.last;
+        _lastChangeMessage = 'Updated: ${lastAnnotation.id} (${lastAnnotation.runtimeType})';
+      }
+    });
   }
 
   @override
   void dispose() {
+    _annotationController.removeListener(_onAnnotationControllerChanged);
     _annotationController.dispose();
     super.dispose();
   }
@@ -346,6 +369,48 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                       interactionConfig: InteractionConfig.defaultConfig()),
                 ),
                 const SizedBox(height: 16),
+                // Persistence Status Panel
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    border: Border.all(color: Colors.green[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Annotation Persistence Active',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[900],
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Changes: $_changeCount',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                      Text(
+                        _lastChangeMessage,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '💡 Try dragging annotations - they persist automatically!',
+                        style: TextStyle(fontSize: 11, color: Colors.green[800]),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Legend
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -427,11 +492,78 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                   ),
                 ],
               ),
+              OptionSection(
+                title: 'Current Annotations',
+                children: [
+                  ..._annotationController.annotations.map((annotation) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: _annotationController.selectedAnnotationId == annotation.id ? Colors.blue : Colors.grey[300]!,
+                            width: _annotationController.selectedAnnotationId == annotation.id ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  _annotationController.selectedAnnotationId == annotation.id ? Icons.check_box : Icons.check_box_outline_blank,
+                                  size: 16,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    annotation.id,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _getAnnotationDetails(annotation),
+                              style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  if (_annotationController.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'No annotations active',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  String _getAnnotationDetails(ChartAnnotation annotation) {
+    return switch (annotation) {
+      PointAnnotation a => 'Point at index ${a.dataPointIndex}',
+      RangeAnnotation a =>
+        'Range: X[${a.startX?.toStringAsFixed(1) ?? '∞'}-${a.endX?.toStringAsFixed(1) ?? '∞'}] Y[${a.startY?.toStringAsFixed(1) ?? '∞'}-${a.endY?.toStringAsFixed(1) ?? '∞'}]',
+      TextAnnotation a => 'Text at (${a.position.dx.toStringAsFixed(0)}, ${a.position.dy.toStringAsFixed(0)})',
+      ThresholdAnnotation a => '${a.axis == AnnotationAxis.x ? 'X' : 'Y'} = ${a.value.toStringAsFixed(1)}',
+      TrendAnnotation a => 'Trend: ${a.trendType.name}',
+    };
   }
 
   Widget _buildLegendItem(Color color, String symbol, String description) {

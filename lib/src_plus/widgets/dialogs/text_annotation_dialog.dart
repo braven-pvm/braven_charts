@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/chart_theme.dart';
 import 'annotation_style_editor.dart';
 
 /// Dialog for creating or editing TextAnnotations in BravenChartPlus.
@@ -20,6 +21,7 @@ import 'annotation_style_editor.dart';
 ///   context: context,
 ///   builder: (context) => TextAnnotationDialog(
 ///     clickPosition: Offset(100, 50),
+///     chartTheme: myTheme,
 ///   ),
 /// );
 /// if (result != null) {
@@ -31,14 +33,19 @@ class TextAnnotationDialog extends StatefulWidget {
   ///
   /// [annotation] - If provided, dialog is in edit mode
   /// [clickPosition] - Screen position where user right-clicked (for add mode)
+  /// [chartTheme] - Optional chart theme for default styling
   const TextAnnotationDialog({
     super.key,
     this.annotation,
     required this.clickPosition,
+    this.chartTheme,
   });
 
   /// The annotation to edit (null for add mode).
   final TextAnnotation? annotation;
+
+  /// Optional chart theme for default styling.
+  final ChartTheme? chartTheme;
 
   /// The screen position where the user right-clicked.
   final Offset clickPosition;
@@ -62,6 +69,7 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
+    final textDefaults = widget.chartTheme?.annotationTheme.textDefaults;
 
     // Initialize text controller
     _textController = TextEditingController(text: annotation?.text ?? '');
@@ -71,8 +79,11 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       _anchor = annotation.anchor;
       _allowDragging = annotation.allowDragging;
       _currentStyle = annotation.style;
+    } else if (textDefaults != null) {
+      // Create mode with theme defaults
+      _currentStyle = textDefaults.toAnnotationStyle();
     } else {
-      // Add mode - use defaults
+      // Fallback defaults (no theme provided)
       _currentStyle = const AnnotationStyle(
         textStyle: TextStyle(
           color: Colors.black,

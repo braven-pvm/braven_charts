@@ -119,22 +119,22 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
   int _total2DataPoints = 0;
 
   // Tooltip showcase state
-  final bool _tooltipEnabled = true;
-  final chart.TooltipTriggerMode _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
-  final chart.TooltipPosition _tooltipPosition = chart.TooltipPosition.auto;
-  final bool _tooltipFollowCursor = false;
-  final double _tooltipShowDelay = 100.0; // milliseconds
-  final double _tooltipHideDelay = 200.0; // milliseconds
-  final double _tooltipOffsetFromPoint = 8.0;
-  final Color _tooltipBackgroundColor = const Color(0xE6FFFFFF);
-  final Color _tooltipBorderColor = const Color(0xFF999999);
-  final double _tooltipBorderWidth = 1.0;
-  final double _tooltipBorderRadius = 4.0;
-  final Color _tooltipShadowColor = const Color(0x66000000);
-  final double _tooltipShadowBlurRadius = 4.0;
-  final double _tooltipPadding = 8.0;
-  final Color _tooltipTextColor = const Color(0xFF333333);
-  final double _tooltipFontSize = 12.0;
+  bool _tooltipEnabled = true;
+  chart.TooltipTriggerMode _tooltipTriggerMode = chart.TooltipTriggerMode.hover;
+  chart.TooltipPosition _tooltipPosition = chart.TooltipPosition.auto;
+  bool _tooltipFollowCursor = false;
+  double _tooltipShowDelay = 100.0; // milliseconds
+  double _tooltipHideDelay = 200.0; // milliseconds
+  double _tooltipOffsetFromPoint = 8.0;
+  Color _tooltipBackgroundColor = const Color(0xE6FFFFFF);
+  Color _tooltipBorderColor = const Color(0xFF999999);
+  double _tooltipBorderWidth = 1.0;
+  double _tooltipBorderRadius = 4.0;
+  Color _tooltipShadowColor = const Color(0x66000000);
+  double _tooltipShadowBlurRadius = 4.0;
+  double _tooltipPadding = 8.0;
+  Color _tooltipTextColor = const Color(0xFF333333);
+  double _tooltipFontSize = 12.0;
 
   @override
   void initState() {

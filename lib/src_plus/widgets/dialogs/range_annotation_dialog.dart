@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/chart_theme.dart';
 
 /// Dialog for creating or editing RangeAnnotations.
 ///
@@ -20,10 +21,14 @@ class RangeAnnotationDialog extends StatefulWidget {
     this.initialEndX,
     this.initialStartY,
     this.initialEndY,
+    this.chartTheme,
   });
 
   /// The annotation to edit, or null to create a new one.
   final RangeAnnotation? annotation;
+
+  /// Optional chart theme for default styling.
+  final ChartTheme? chartTheme;
 
   /// Initial X-axis start value (from interactive drag).
   final double? initialStartX;
@@ -60,6 +65,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
+    final rangeDefaults = widget.chartTheme?.annotationTheme.rangeDefaults;
 
     // Prefer annotation values, fallback to initial values from drag
     final startX = annotation?.startX ?? widget.initialStartX;
@@ -74,12 +80,19 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     _endYController = TextEditingController(text: endY != null ? endY.toStringAsFixed(2) : '');
 
     if (annotation != null) {
+      // Edit mode - use existing annotation values
       _fillColor = annotation.fillColor ?? Colors.blue.withOpacity(0.2);
       _borderColor = annotation.borderColor;
       _labelPosition = annotation.labelPosition;
       _labelStyle = annotation.style;
       _snapToDataPoints = annotation.snapToValue;
+    } else if (rangeDefaults != null) {
+      // Create mode with theme defaults
+      _fillColor = rangeDefaults.normalFillColor;
+      _borderColor = rangeDefaults.normalBorderColor;
+      _labelStyle = rangeDefaults.toAnnotationStyle();
     }
+    // else: fallback to field initialization defaults
   }
 
   @override

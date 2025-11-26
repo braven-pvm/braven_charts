@@ -10,7 +10,6 @@ import 'components/interaction_theme.dart';
 import 'components/scrollbar_theme.dart';
 import 'components/series_theme.dart';
 import 'components/typography_theme.dart';
-import 'styles/label_style.dart';
 
 /// The root theme class that aggregates all chart styling components.
 ///

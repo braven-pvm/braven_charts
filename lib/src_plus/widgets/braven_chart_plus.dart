@@ -739,8 +739,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         }
       }
       // Only log occasionally to avoid spam
-      if (totalPoints % 50 == 0 || totalPoints < 10) {
-      }
+      if (totalPoints % 50 == 0 || totalPoints < 10) {}
     }
 
     // When paused, don't rebuild - let data accumulate silently
@@ -1101,8 +1100,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             elements.addAll(handleElements);
             // Removed excessive debugPrint (resize handles added)
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       return elements;
@@ -1183,7 +1181,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final bool isSeriesLineClick = element is SeriesElement && _coordinator.hoveredMarker == null;
     final bool isEmptyArea = element == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
-
 
     // Check if annotations are supported (annotationController is provided)
     final bool hasAnnotationController = widget.annotationController != null;
@@ -1272,15 +1269,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Handle menu selection
     if (result != null) {
       await _handleMenuAction(result, localPosition, element);
-    } else {
-    }
+    } else {}
 
     final endTime = DateTime.now().millisecondsSinceEpoch;
   }
 
   /// Handles menu action selection from context menu.
   Future<void> _handleMenuAction(String action, Offset localPosition, ChartElement? element) async {
-
     switch (action) {
       case 'add_text':
         await _showAddTextAnnotationDialog(localPosition);
@@ -1320,8 +1315,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
-    } else {
-    }
+    } else {}
   }
 
   /// Shows the PointAnnotation creation dialog.
@@ -1334,19 +1328,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-
     final result = await showDialog<PointAnnotation>(
       context: context,
       builder: (context) => PointAnnotationDialog(
         seriesId: markerInfo.seriesId,
         dataPointIndex: markerInfo.markerIndex,
+        chartTheme: widget.theme,
       ),
     );
 
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
-    } else {
-    }
+    } else {}
   }
 
   /// Shows the ThresholdAnnotation creation dialog.
@@ -1380,8 +1373,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
-    } else {
-    }
+    } else {}
   }
 
   /// Shows the RangeAnnotation creation dialog.
@@ -1398,12 +1390,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showAddRangeAnnotationDialog() async {
     if (!mounted) return;
 
-
     // Enter rangeAnnotationCreation mode (priority 10, modal)
     if (!_coordinator.claimMode(InteractionMode.rangeAnnotationCreation)) {
       return;
     }
-
 
     // Completion is handled via _onRangeCreationComplete callback
     // (called from ChartRenderBox when drag finishes)
@@ -1413,7 +1403,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// Opens dialog with pre-filled coordinates from drag bounds.
   Future<void> _onRangeCreationComplete(double startX, double endX, double startY, double endY) async {
     if (!mounted) return;
-
 
     // Open dialog with pre-filled values from drag
     final result = await showDialog<RangeAnnotation>(
@@ -1432,8 +1421,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
-    } else {
-    }
+    } else {}
   }
 
   /// Shows the TrendAnnotation creation dialog.
@@ -1462,14 +1450,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
-    } else {
-    }
+    } else {}
   }
 
   /// Shows the appropriate edit dialog based on annotation type.
   Future<void> _showEditAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
-
 
     // Check for annotation element types directly (PointAnnotationElement uses datapoint type for priority)
     if (element == null ||
@@ -1480,7 +1466,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             element is! RangeAnnotationElement)) {
       return;
     }
-
 
     // Cast to annotation element types to access annotation field and route to dialog
     if (element is TextAnnotationElement) {
@@ -1495,8 +1480,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
-      } else {
-      }
+      } else {}
     } else if (element is PointAnnotationElement) {
       final annotation = element.annotation;
       final result = await showDialog<PointAnnotation>(
@@ -1510,8 +1494,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
-      } else {
-      }
+      } else {}
     } else if (element is ThresholdAnnotationElement) {
       final annotation = element.annotation;
       final result = await showDialog<ThresholdAnnotation>(
@@ -1521,8 +1504,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
-      } else {
-      }
+      } else {}
     } else if (element is TrendAnnotationElement) {
       final annotation = element.annotation;
       final availableSeries = widget.series.map((s) => s.id).toList();
@@ -1536,8 +1518,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
-      } else {
-      }
+      } else {}
     } else if (element is RangeAnnotationElement) {
       final annotation = element.annotation;
       final result = await showDialog<RangeAnnotation>(
@@ -1547,10 +1528,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
-      } else {
-      }
-    } else {
-    }
+      } else {}
+    } else {}
   }
 
   /// Shows delete confirmation dialog and removes annotation if confirmed.
@@ -1590,7 +1569,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1615,10 +1593,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (confirmed == true && mounted) {
       final wasRemoved = widget.annotationController?.removeAnnotation(annotationId) ?? false;
       if (wasRemoved) {
-      } else {
-      }
-    } else {
-    }
+      } else {}
+    } else {}
   }
 
   void _handlePanStart(DragStartDetails details) {
@@ -1640,7 +1616,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Capture element at tap down for double-click detection
     // (activeElement gets cleared by tap up, so we need to capture it now)
     final tappedElement = _coordinator.activeElement ?? _coordinator.hoveredElement;
-
 
     // Check for double-click on annotation
     if (_lastTapTime != null && _lastTappedElement != null && tappedElement != null) {
@@ -1890,7 +1865,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _pauseStreaming() {
     if (!_isStreaming) return; // Already paused
 
-
     // STEP 1: Capture current viewport bounds from axes
     // This is what the user sees RIGHT NOW - we must preserve it exactly
     if (_xAxis != null && _yAxis != null) {
@@ -1916,7 +1890,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // STEP 3: Update streaming state
     _isStreaming = false;
 
-
     // STEP 4: Force rebuild with locked bounds to prevent race condition
     // This ensures _lockedPausedBounds is used IMMEDIATELY, before any other rebuild
     setState(() {
@@ -1928,7 +1901,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// FUNDAMENTAL FIX: Unlock the viewport bounds to resume dynamic calculation.
   void _resumeStreaming() {
     if (_isStreaming) return; // Already streaming
-
 
     // STEP 1: Clear pan constraint bounds to restore sliding window constraints (Option 4)
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -2057,7 +2029,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     for (final point in allPoints.skip(1)) {
       _updateCachedDataBounds(point.x, point.y);
     }
-
   }
 
   /// Auto-scrolls the viewport to show the latest data.

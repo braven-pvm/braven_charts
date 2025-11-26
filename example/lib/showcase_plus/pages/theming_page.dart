@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:braven_charts/src_plus/axis/axis_config.dart';
+import 'package:braven_charts/src_plus/controllers/annotation_controller.dart';
+import 'package:braven_charts/src_plus/models/annotation_style.dart';
 import 'package:braven_charts/src_plus/models/chart_annotation.dart';
 import 'package:braven_charts/src_plus/models/chart_data_point.dart';
 import 'package:braven_charts/src_plus/models/chart_series.dart';
@@ -32,6 +34,9 @@ class _ThemingPageState extends State<ThemingPage> {
   bool _showLegend = true;
   final bool _showScrollbars = true;
 
+  // Annotation controller for editable annotations with persistence
+  late final AnnotationController _annotationController;
+
   // Map of theme names to ChartTheme instances
   final Map<String, ChartTheme> _themes = {
     'light': ChartTheme.light,
@@ -55,6 +60,55 @@ class _ThemingPageState extends State<ThemingPage> {
   };
 
   ChartTheme get _currentTheme => _themes[_selectedTheme]!;
+
+  /// Helper method to change theme and update annotations with new theme colors
+  void _changeTheme(String newTheme) {
+    setState(() {
+      _selectedTheme = newTheme;
+      // Regenerate annotations with new theme colors
+      _annotationController.replaceAll(_generateAnnotations());
+    });
+  }
+
+  /// Convert theme MarkerShape enum to annotation MarkerShape enum
+  /// TODO: Fix duplicate MarkerShape enums - they should use the same enum
+  MarkerShape _convertMarkerShape(dynamic themeMarkerShape) {
+    final shapeName = themeMarkerShape.toString().split('.').last;
+    switch (shapeName) {
+      case 'circle':
+        return MarkerShape.circle;
+      case 'square':
+        return MarkerShape.square;
+      case 'triangle':
+        return MarkerShape.triangle;
+      case 'diamond':
+        return MarkerShape.diamond;
+      case 'star':
+        return MarkerShape.star;
+      case 'cross':
+        return MarkerShape.cross;
+      case 'plus':
+        return MarkerShape.plus;
+      case 'none':
+      default:
+        return MarkerShape.none;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize annotation controller with comprehensive annotation set
+    _annotationController = AnnotationController(
+      initialAnnotations: _generateAnnotations(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _annotationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +243,7 @@ class _ThemingPageState extends State<ThemingPage> {
           final isSelected = key == _selectedTheme;
 
           return GestureDetector(
-            onTap: () => setState(() => _selectedTheme = key),
+            onTap: () => _changeTheme(key),
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
@@ -282,7 +336,7 @@ class _ThemingPageState extends State<ThemingPage> {
         child: BravenChartPlus(
           chartType: ChartType.line, // Base type for mixed series
           series: series,
-          annotations: _showAnnotations ? _generateAnnotations() : [],
+          annotationController: _showAnnotations ? _annotationController : null,
           theme: _currentTheme,
           xAxis: xAxis,
           yAxis: yAxis,
@@ -343,15 +397,29 @@ class _ThemingPageState extends State<ThemingPage> {
 
   /// Generate all 5 annotation types for comprehensive showcase
   List<ChartAnnotation> _generateAnnotations() {
+    final pointDefaults = _currentTheme.annotationTheme.pointDefaults;
+
+    // Convert theme MarkerShape enum to annotation MarkerShape enum
+    final markerShape = _convertMarkerShape(pointDefaults.markerShape);
+
     return [
-      // 1. Point annotation - highlights specific data point
+      // 1. Point annotation - uses theme defaults for styling
       PointAnnotation(
         id: 'peak-point',
         seriesId: 'line-series',
         dataPointIndex: 30,
-        markerShape: MarkerShape.star,
-        markerSize: 20.0,
+        markerShape: markerShape,
+        markerSize: pointDefaults.markerSize,
+        markerColor: pointDefaults.normalColor,
         label: 'Peak',
+        style: AnnotationStyle(
+          textStyle: pointDefaults.labelStyle.textStyle,
+          backgroundColor: pointDefaults.labelStyle.backgroundColor,
+          borderColor: pointDefaults.labelStyle.borderColor,
+          borderWidth: pointDefaults.labelStyle.borderWidth,
+          borderRadius: BorderRadius.circular(pointDefaults.labelStyle.borderRadius),
+          padding: pointDefaults.labelStyle.padding,
+        ),
       ),
       // 2. Range annotation - highlights region
       RangeAnnotation(
@@ -558,7 +626,7 @@ class _ThemingPageState extends State<ThemingPage> {
         ..._themes.entries.map((entry) {
           final theme = entry.value;
           return GestureDetector(
-            onTap: () => setState(() => _selectedTheme = entry.key),
+            onTap: () => _changeTheme(entry.key),
             child: Container(
               margin: const EdgeInsets.only(bottom: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

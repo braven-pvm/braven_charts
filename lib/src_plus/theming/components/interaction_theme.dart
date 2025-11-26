@@ -25,6 +25,16 @@ import '../styles/label_style.dart';
 /// );
 /// ```
 class InteractionTheme {
+  factory InteractionTheme.fromJson(Map<String, dynamic> json) {
+    return InteractionTheme(
+      crosshairColor: _parseColor(json['crosshairColor'] as String),
+      crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
+      crosshairDashPattern: (json['crosshairDashPattern'] as List).map((e) => (e as num).toDouble()).toList(),
+      crosshairLabelStyle: LabelStyle.fromJson(json['crosshairLabelStyle'] as Map<String, dynamic>),
+      tooltipStyle: LabelStyle.fromJson(json['tooltipStyle'] as Map<String, dynamic>),
+      selectionColor: _parseColor(json['selectionColor'] as String),
+    );
+  }
   const InteractionTheme({
     required this.crosshairColor,
     required this.crosshairWidth,
@@ -55,11 +65,11 @@ class InteractionTheme {
 
   // ========== Predefined Themes ==========
 
-  static final InteractionTheme defaultLight = InteractionTheme(
-    crosshairColor: const Color(0xFF757575),
+  static const InteractionTheme defaultLight = InteractionTheme(
+    crosshairColor: Color(0xFF757575),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF212121), fontSize: 10.0),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFFBDBDBD),
@@ -67,7 +77,7 @@ class InteractionTheme {
       borderRadius: 3.0,
       padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF212121), fontSize: 12.0),
       backgroundColor: Color(0xE6FFFFFF),
       borderColor: Color(0xFFBDBDBD),
@@ -80,11 +90,11 @@ class InteractionTheme {
     selectionColor: Color(0x4D2196F3),
   );
 
-  static final InteractionTheme defaultDark = InteractionTheme(
-    crosshairColor: const Color(0xFFBDBDBD),
+  static const InteractionTheme defaultDark = InteractionTheme(
+    crosshairColor: Color(0xFFBDBDBD),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 10.0),
       backgroundColor: Color(0xE6212121),
       borderColor: Color(0xFF616161),
@@ -92,7 +102,7 @@ class InteractionTheme {
       borderRadius: 3.0,
       padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 12.0),
       backgroundColor: Color(0xE6212121),
       borderColor: Color(0xFF616161),
@@ -105,11 +115,11 @@ class InteractionTheme {
     selectionColor: Color(0x4D64B5F6),
   );
 
-  static final InteractionTheme corporateBlue = InteractionTheme(
-    crosshairColor: const Color(0xFF1976D2),
+  static const InteractionTheme corporateBlue = InteractionTheme(
+    crosshairColor: Color(0xFF1976D2),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [4.0, 2.0],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [4.0, 2.0],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF1976D2), fontSize: 10.0, fontWeight: FontWeight.w500),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF1976D2),
@@ -117,7 +127,7 @@ class InteractionTheme {
       borderRadius: 2.0,
       padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF1565C0), fontSize: 12.0, fontWeight: FontWeight.w500),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF1976D2),
@@ -128,11 +138,11 @@ class InteractionTheme {
     selectionColor: Color(0x4D1976D2),
   );
 
-  static final InteractionTheme vibrant = InteractionTheme(
-    crosshairColor: const Color(0xFFE91E63),
+  static const InteractionTheme vibrant = InteractionTheme(
+    crosshairColor: Color(0xFFE91E63),
     crosshairWidth: 1.5,
-    crosshairDashPattern: const [6.0, 3.0],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [6.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFFE91E63), fontSize: 10.0, fontWeight: FontWeight.w600),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFFE91E63),
@@ -140,7 +150,7 @@ class InteractionTheme {
       borderRadius: 6.0,
       padding: EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF880E4F), fontSize: 12.0, fontWeight: FontWeight.w600),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFFE91E63),
@@ -153,11 +163,11 @@ class InteractionTheme {
     selectionColor: Color(0x4DE91E63),
   );
 
-  static final InteractionTheme minimal = InteractionTheme(
-    crosshairColor: const Color(0xFF9E9E9E),
+  static const InteractionTheme minimal = InteractionTheme(
+    crosshairColor: Color(0xFF9E9E9E),
     crosshairWidth: 0.5,
-    crosshairDashPattern: const [],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF616161), fontSize: 9.0),
       backgroundColor: Color(0xF5F5F5F5),
       borderColor: Color(0xFFE0E0E0),
@@ -165,7 +175,7 @@ class InteractionTheme {
       borderRadius: 3.0,
       padding: EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.5),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF424242), fontSize: 11.0),
       backgroundColor: Color(0xF5F5F5F5),
       borderColor: Color(0xFFE0E0E0),
@@ -176,11 +186,11 @@ class InteractionTheme {
     selectionColor: Color(0x33757575),
   );
 
-  static final InteractionTheme highContrast = InteractionTheme(
-    crosshairColor: const Color(0xFFFF0000),
+  static const InteractionTheme highContrast = InteractionTheme(
+    crosshairColor: Color(0xFFFF0000),
     crosshairWidth: 2.0,
-    crosshairDashPattern: const [],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFFFFFF00), fontSize: 12.0, fontWeight: FontWeight.bold),
       backgroundColor: Color(0xFF000000),
       borderColor: Color(0xFFFFFFFF),
@@ -188,7 +198,7 @@ class InteractionTheme {
       borderRadius: 0.0,
       padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 14.0, fontWeight: FontWeight.bold),
       backgroundColor: Color(0xFF000000),
       borderColor: Color(0xFFFFFFFF),
@@ -199,11 +209,11 @@ class InteractionTheme {
     selectionColor: Color(0x80FFFF00),
   );
 
-  static final InteractionTheme colorblindFriendly = InteractionTheme(
-    crosshairColor: const Color(0xFF0173B2),
+  static const InteractionTheme colorblindFriendly = InteractionTheme(
+    crosshairColor: Color(0xFF0173B2),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    crosshairLabelStyle: const LabelStyle(
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF0173B2), fontSize: 10.0),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF0173B2),
@@ -211,7 +221,7 @@ class InteractionTheme {
       borderRadius: 4.0,
       padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    tooltipStyle: const LabelStyle(
+    tooltipStyle: LabelStyle(
       textStyle: TextStyle(color: Color(0xFF000000), fontSize: 12.0),
       backgroundColor: Color(0xF0FFFFFF),
       borderColor: Color(0xFF0173B2),
@@ -251,17 +261,6 @@ class InteractionTheme {
       'tooltipStyle': tooltipStyle.toJson(),
       'selectionColor': '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
     };
-  }
-
-  factory InteractionTheme.fromJson(Map<String, dynamic> json) {
-    return InteractionTheme(
-      crosshairColor: _parseColor(json['crosshairColor'] as String),
-      crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
-      crosshairDashPattern: (json['crosshairDashPattern'] as List).map((e) => (e as num).toDouble()).toList(),
-      crosshairLabelStyle: LabelStyle.fromJson(json['crosshairLabelStyle'] as Map<String, dynamic>),
-      tooltipStyle: LabelStyle.fromJson(json['tooltipStyle'] as Map<String, dynamic>),
-      selectionColor: _parseColor(json['selectionColor'] as String),
-    );
   }
 
   @override
