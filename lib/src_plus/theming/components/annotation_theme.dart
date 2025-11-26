@@ -4,6 +4,7 @@
 import 'package:flutter/painting.dart';
 
 import '../../models/annotation_style.dart';
+import '../styles/label_style.dart';
 import 'series_theme.dart'; // For MarkerShape enum
 
 /// Theming for chart annotations with state-based styling.
@@ -168,10 +169,7 @@ class PointAnnotationDefaults {
     required this.ghostOpacity,
     required this.previewOpacity,
     required this.previewScale,
-    required this.labelTextStyle,
-    required this.labelBackgroundColor,
-    required this.labelBorderRadius,
-    required this.labelMargin,
+    required this.labelStyle,
   });
 
   final MarkerShape markerShape;
@@ -183,10 +181,7 @@ class PointAnnotationDefaults {
   final double ghostOpacity;
   final double previewOpacity;
   final double previewScale;
-  final TextStyle labelTextStyle;
-  final Color labelBackgroundColor;
-  final double labelBorderRadius;
-  final double labelMargin;
+  final LabelStyle labelStyle;
 
   static const PointAnnotationDefaults defaultLight = PointAnnotationDefaults(
     markerShape: MarkerShape.circle,
@@ -198,15 +193,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.3,
     previewOpacity: 0.8,
     previewScale: 1.2,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF212121),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF212121),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF0FFFFFF), // 94% white
+      borderColor: Color(0xFF2196F3),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF), // 94% white
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const PointAnnotationDefaults defaultDark = PointAnnotationDefaults(
@@ -219,15 +218,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.3,
     previewOpacity: 0.8,
     previewScale: 1.2,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFFFFFFFF),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFFFFFFFF),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xE6212121), // 90% dark grey
+      borderColor: Color(0xFF64B5F6),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xE6212121), // 90% dark grey
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const PointAnnotationDefaults corporateBlue = PointAnnotationDefaults(
@@ -240,15 +243,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.3,
     previewOpacity: 0.8,
     previewScale: 1.2,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF1565C0),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF1565C0),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF1976D2),
+      borderWidth: 0.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 4.0,
   );
 
   static const PointAnnotationDefaults vibrant = PointAnnotationDefaults(
@@ -261,15 +268,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.3,
     previewOpacity: 0.9,
     previewScale: 1.3,
-    labelTextStyle: TextStyle(
-      fontSize: 13.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF880E4F),
-      fontWeight: FontWeight.w600,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF880E4F),
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFE91E63),
+      borderWidth: 0.5,
+      borderRadius: 6.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 6.0,
-    labelMargin: 6.0,
   );
 
   static const PointAnnotationDefaults minimal = PointAnnotationDefaults(
@@ -282,15 +293,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.2,
     previewOpacity: 0.7,
     previewScale: 1.1,
-    labelTextStyle: TextStyle(
-      fontSize: 11.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF424242),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 11.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF424242),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF5F5F5F5), // 96% grey
+      borderColor: Color(0xFF757575),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF5F5F5F5), // 96% grey
-    labelBorderRadius: 3.0,
-    labelMargin: 3.0,
   );
 
   static const PointAnnotationDefaults highContrast = PointAnnotationDefaults(
@@ -303,15 +318,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.4,
     previewOpacity: 1.0,
     previewScale: 1.4,
-    labelTextStyle: TextStyle(
-      fontSize: 14.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xFFFFFFFF),
+      borderColor: Color(0xFFFF0000),
+      borderWidth: 1.0,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xFFFFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 6.0,
   );
 
   static const PointAnnotationDefaults colorblindFriendly = PointAnnotationDefaults(
@@ -324,15 +343,19 @@ class PointAnnotationDefaults {
     ghostOpacity: 0.3,
     previewOpacity: 0.8,
     previewScale: 1.2,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF0173B2),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   PointAnnotationDefaults copyWith({
@@ -345,10 +368,7 @@ class PointAnnotationDefaults {
     double? ghostOpacity,
     double? previewOpacity,
     double? previewScale,
-    TextStyle? labelTextStyle,
-    Color? labelBackgroundColor,
-    double? labelBorderRadius,
-    double? labelMargin,
+    LabelStyle? labelStyle,
   }) {
     return PointAnnotationDefaults(
       markerShape: markerShape ?? this.markerShape,
@@ -360,10 +380,7 @@ class PointAnnotationDefaults {
       ghostOpacity: ghostOpacity ?? this.ghostOpacity,
       previewOpacity: previewOpacity ?? this.previewOpacity,
       previewScale: previewScale ?? this.previewScale,
-      labelTextStyle: labelTextStyle ?? this.labelTextStyle,
-      labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
-      labelBorderRadius: labelBorderRadius ?? this.labelBorderRadius,
-      labelMargin: labelMargin ?? this.labelMargin,
+      labelStyle: labelStyle ?? this.labelStyle,
     );
   }
 
@@ -380,10 +397,7 @@ class PointAnnotationDefaults {
         ghostOpacity == other.ghostOpacity &&
         previewOpacity == other.previewOpacity &&
         previewScale == other.previewScale &&
-        labelTextStyle == other.labelTextStyle &&
-        labelBackgroundColor == other.labelBackgroundColor &&
-        labelBorderRadius == other.labelBorderRadius &&
-        labelMargin == other.labelMargin;
+        labelStyle == other.labelStyle;
   }
 
   @override
@@ -397,10 +411,7 @@ class PointAnnotationDefaults {
         ghostOpacity,
         previewOpacity,
         previewScale,
-        labelTextStyle,
-        labelBackgroundColor,
-        labelBorderRadius,
-        labelMargin,
+        labelStyle,
       );
 }
 
@@ -416,10 +427,7 @@ class RangeAnnotationDefaults {
     required this.hoveredBorderColor,
     required this.draggingBorderColor,
     required this.borderWidth,
-    required this.labelTextStyle,
-    required this.labelBackgroundColor,
-    required this.labelBorderRadius,
-    required this.labelMargin,
+    required this.labelStyle,
   });
 
   final Color normalFillColor;
@@ -431,20 +439,17 @@ class RangeAnnotationDefaults {
   final Color hoveredBorderColor;
   final Color draggingBorderColor;
   final double borderWidth;
-  final TextStyle labelTextStyle;
-  final Color labelBackgroundColor;
-  final double labelBorderRadius;
-  final double labelMargin;
+  final LabelStyle labelStyle;
 
   /// Convert theme defaults to AnnotationStyle for label styling
   AnnotationStyle toAnnotationStyle({Color? borderColor}) {
     return AnnotationStyle(
-      textStyle: labelTextStyle,
-      backgroundColor: labelBackgroundColor,
+      textStyle: labelStyle.textStyle,
+      backgroundColor: labelStyle.backgroundColor,
       borderColor: borderColor ?? normalBorderColor,
-      borderWidth: 0.5,
-      borderRadius: BorderRadius.circular(labelBorderRadius),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      borderWidth: labelStyle.borderWidth,
+      borderRadius: BorderRadius.circular(labelStyle.borderRadius),
+      padding: labelStyle.padding,
     );
   }
 
@@ -458,15 +463,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFF64B5F6),
     draggingBorderColor: Color(0xFF1976D2),
     borderWidth: 1.5,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF212121),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF212121),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF2196F3),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 8.0,
   );
 
   static const RangeAnnotationDefaults defaultDark = RangeAnnotationDefaults(
@@ -479,15 +488,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFF42A5F5),
     draggingBorderColor: Color(0xFF90CAF9),
     borderWidth: 1.5,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFFFFFFFF),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFFFFFFFF),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xE6212121),
+      borderColor: Color(0xFF64B5F6),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xE6212121),
-    labelBorderRadius: 4.0,
-    labelMargin: 8.0,
   );
 
   static const RangeAnnotationDefaults corporateBlue = RangeAnnotationDefaults(
@@ -500,15 +513,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFF2196F3),
     draggingBorderColor: Color(0xFF1565C0),
     borderWidth: 2.0,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF1565C0),
-      fontWeight: FontWeight.w600,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF1565C0),
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF1976D2),
+      borderWidth: 0.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 8.0,
   );
 
   static const RangeAnnotationDefaults vibrant = RangeAnnotationDefaults(
@@ -521,15 +538,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFFF06292),
     draggingBorderColor: Color(0xFFC2185B),
     borderWidth: 2.5,
-    labelTextStyle: TextStyle(
-      fontSize: 13.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF880E4F),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF880E4F),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFE91E63),
+      borderWidth: 0.5,
+      borderRadius: 6.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 6.0,
-    labelMargin: 10.0,
   );
 
   static const RangeAnnotationDefaults minimal = RangeAnnotationDefaults(
@@ -542,15 +563,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFF9E9E9E),
     draggingBorderColor: Color(0xFF616161),
     borderWidth: 1.0,
-    labelTextStyle: TextStyle(
-      fontSize: 11.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF424242),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 11.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF424242),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF5F5F5F5),
+      borderColor: Color(0xFF757575),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF5F5F5F5),
-    labelBorderRadius: 3.0,
-    labelMargin: 6.0,
   );
 
   static const RangeAnnotationDefaults highContrast = RangeAnnotationDefaults(
@@ -563,15 +588,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFF0000FF),
     draggingBorderColor: Color(0xFFFF0000),
     borderWidth: 3.0,
-    labelTextStyle: TextStyle(
-      fontSize: 14.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xFFFFFFFF),
+      borderColor: Color(0xFF000000),
+      borderWidth: 1.0,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xFFFFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 10.0,
   );
 
   static const RangeAnnotationDefaults colorblindFriendly = RangeAnnotationDefaults(
@@ -584,15 +613,19 @@ class RangeAnnotationDefaults {
     hoveredBorderColor: Color(0xFFF0A030),
     draggingBorderColor: Color(0xFFC07004),
     borderWidth: 2.0,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFDE8F05),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 8.0,
   );
 
   RangeAnnotationDefaults copyWith({
@@ -605,10 +638,7 @@ class RangeAnnotationDefaults {
     Color? hoveredBorderColor,
     Color? draggingBorderColor,
     double? borderWidth,
-    TextStyle? labelTextStyle,
-    Color? labelBackgroundColor,
-    double? labelBorderRadius,
-    double? labelMargin,
+    LabelStyle? labelStyle,
   }) {
     return RangeAnnotationDefaults(
       normalFillColor: normalFillColor ?? this.normalFillColor,
@@ -620,10 +650,7 @@ class RangeAnnotationDefaults {
       hoveredBorderColor: hoveredBorderColor ?? this.hoveredBorderColor,
       draggingBorderColor: draggingBorderColor ?? this.draggingBorderColor,
       borderWidth: borderWidth ?? this.borderWidth,
-      labelTextStyle: labelTextStyle ?? this.labelTextStyle,
-      labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
-      labelBorderRadius: labelBorderRadius ?? this.labelBorderRadius,
-      labelMargin: labelMargin ?? this.labelMargin,
+      labelStyle: labelStyle ?? this.labelStyle,
     );
   }
 
@@ -640,10 +667,7 @@ class RangeAnnotationDefaults {
         hoveredBorderColor == other.hoveredBorderColor &&
         draggingBorderColor == other.draggingBorderColor &&
         borderWidth == other.borderWidth &&
-        labelTextStyle == other.labelTextStyle &&
-        labelBackgroundColor == other.labelBackgroundColor &&
-        labelBorderRadius == other.labelBorderRadius &&
-        labelMargin == other.labelMargin;
+        labelStyle == other.labelStyle;
   }
 
   @override
@@ -657,10 +681,7 @@ class RangeAnnotationDefaults {
         hoveredBorderColor,
         draggingBorderColor,
         borderWidth,
-        labelTextStyle,
-        labelBackgroundColor,
-        labelBorderRadius,
-        labelMargin,
+        labelStyle,
       );
 }
 
@@ -839,29 +860,23 @@ class ThresholdAnnotationDefaults {
     required this.lineColor,
     required this.lineWidth,
     required this.dashPattern,
-    required this.labelTextStyle,
-    required this.labelBackgroundColor,
-    required this.labelBorderRadius,
-    required this.labelMargin,
+    required this.labelStyle,
   });
 
   final Color lineColor;
   final double lineWidth;
   final List<double> dashPattern;
-  final TextStyle labelTextStyle;
-  final Color labelBackgroundColor;
-  final double labelBorderRadius;
-  final double labelMargin;
+  final LabelStyle labelStyle;
 
   /// Convert theme defaults to AnnotationStyle for label styling
   AnnotationStyle toAnnotationStyle() {
     return AnnotationStyle(
-      textStyle: labelTextStyle,
-      backgroundColor: labelBackgroundColor,
+      textStyle: labelStyle.textStyle,
+      backgroundColor: labelStyle.backgroundColor,
       borderColor: lineColor,
-      borderWidth: 0.5,
-      borderRadius: BorderRadius.circular(labelBorderRadius),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      borderWidth: labelStyle.borderWidth,
+      borderRadius: BorderRadius.circular(labelStyle.borderRadius),
+      padding: labelStyle.padding,
     );
   }
 
@@ -869,124 +884,146 @@ class ThresholdAnnotationDefaults {
     lineColor: Color(0xFFF44336), // Red
     lineWidth: 2.0,
     dashPattern: [5.0, 3.0],
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFFF44336),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFFF44336),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFF44336),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const ThresholdAnnotationDefaults defaultDark = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFEF5350), // Light red
     lineWidth: 2.0,
     dashPattern: [5.0, 3.0],
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFFEF5350),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFFEF5350),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xE6212121),
+      borderColor: Color(0xFFEF5350),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xE6212121),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const ThresholdAnnotationDefaults corporateBlue = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFD32F2F), // Dark red
     lineWidth: 2.5,
     dashPattern: [6.0, 3.0],
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Arial',
-      color: Color(0xFFD32F2F),
-      fontWeight: FontWeight.w600,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Arial',
+        color: Color(0xFFD32F2F),
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFD32F2F),
+      borderWidth: 0.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 4.0,
   );
 
   static const ThresholdAnnotationDefaults vibrant = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFFF5722), // Deep orange
     lineWidth: 3.0,
     dashPattern: [8.0, 4.0],
-    labelTextStyle: TextStyle(
-      fontSize: 13.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFFBF360C),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFFBF360C),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFFF5722),
+      borderWidth: 0.5,
+      borderRadius: 6.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 6.0,
-    labelMargin: 6.0,
   );
 
   static const ThresholdAnnotationDefaults minimal = ThresholdAnnotationDefaults(
     lineColor: Color(0xFF757575), // Grey
     lineWidth: 1.5,
     dashPattern: [4.0, 2.0],
-    labelTextStyle: TextStyle(
-      fontSize: 11.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF616161),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 11.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF616161),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF5F5F5F5),
+      borderColor: Color(0xFF757575),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF5F5F5F5),
-    labelBorderRadius: 3.0,
-    labelMargin: 3.0,
   );
 
   static const ThresholdAnnotationDefaults highContrast = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFFF0000), // Pure red
     lineWidth: 4.0,
     dashPattern: [],
-    labelTextStyle: TextStyle(
-      fontSize: 14.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xFFFFFFFF),
+      borderColor: Color(0xFFFF0000),
+      borderWidth: 2.0,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xFFFFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 6.0,
   );
 
   static const ThresholdAnnotationDefaults colorblindFriendly = ThresholdAnnotationDefaults(
     lineColor: Color(0xFFCC78BC), // Pink (Okabe-Ito)
     lineWidth: 2.5,
     dashPattern: [6.0, 3.0],
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF9C4B99),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF9C4B99),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFCC78BC),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   ThresholdAnnotationDefaults copyWith({
     Color? lineColor,
     double? lineWidth,
     List<double>? dashPattern,
-    TextStyle? labelTextStyle,
-    Color? labelBackgroundColor,
-    double? labelBorderRadius,
-    double? labelMargin,
+    LabelStyle? labelStyle,
   }) {
     return ThresholdAnnotationDefaults(
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
-      labelTextStyle: labelTextStyle ?? this.labelTextStyle,
-      labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
-      labelBorderRadius: labelBorderRadius ?? this.labelBorderRadius,
-      labelMargin: labelMargin ?? this.labelMargin,
+      labelStyle: labelStyle ?? this.labelStyle,
     );
   }
 
@@ -997,10 +1034,7 @@ class ThresholdAnnotationDefaults {
         lineColor == other.lineColor &&
         lineWidth == other.lineWidth &&
         _listEquals(dashPattern, other.dashPattern) &&
-        labelTextStyle == other.labelTextStyle &&
-        labelBackgroundColor == other.labelBackgroundColor &&
-        labelBorderRadius == other.labelBorderRadius &&
-        labelMargin == other.labelMargin;
+        labelStyle == other.labelStyle;
   }
 
   @override
@@ -1008,10 +1042,7 @@ class ThresholdAnnotationDefaults {
         lineColor,
         lineWidth,
         Object.hashAll(dashPattern),
-        labelTextStyle,
-        labelBackgroundColor,
-        labelBorderRadius,
-        labelMargin,
+        labelStyle,
       );
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
@@ -1031,10 +1062,7 @@ class TrendAnnotationDefaults {
     required this.dashPattern,
     required this.confidenceBandColor,
     required this.confidenceBandOpacity,
-    required this.labelTextStyle,
-    required this.labelBackgroundColor,
-    required this.labelBorderRadius,
-    required this.labelMargin,
+    required this.labelStyle,
   });
 
   final Color lineColor;
@@ -1042,20 +1070,17 @@ class TrendAnnotationDefaults {
   final List<double> dashPattern;
   final Color confidenceBandColor;
   final double confidenceBandOpacity;
-  final TextStyle labelTextStyle;
-  final Color labelBackgroundColor;
-  final double labelBorderRadius;
-  final double labelMargin;
+  final LabelStyle labelStyle;
 
   /// Convert theme defaults to AnnotationStyle for label styling
   AnnotationStyle toAnnotationStyle() {
     return AnnotationStyle(
-      textStyle: labelTextStyle,
-      backgroundColor: labelBackgroundColor,
+      textStyle: labelStyle.textStyle,
+      backgroundColor: labelStyle.backgroundColor,
       borderColor: lineColor,
-      borderWidth: 0.5,
-      borderRadius: BorderRadius.circular(labelBorderRadius),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      borderWidth: labelStyle.borderWidth,
+      borderRadius: BorderRadius.circular(labelStyle.borderRadius),
+      padding: labelStyle.padding,
     );
   }
 
@@ -1065,15 +1090,19 @@ class TrendAnnotationDefaults {
     dashPattern: [5.0, 5.0],
     confidenceBandColor: Color(0xFF4CAF50),
     confidenceBandOpacity: 0.1,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF2E7D32),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF2E7D32),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF4CAF50),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const TrendAnnotationDefaults defaultDark = TrendAnnotationDefaults(
@@ -1082,15 +1111,19 @@ class TrendAnnotationDefaults {
     dashPattern: [5.0, 5.0],
     confidenceBandColor: Color(0xFF66BB6A),
     confidenceBandOpacity: 0.1,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF81C784),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF81C784),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xE6212121),
+      borderColor: Color(0xFF66BB6A),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xE6212121),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   static const TrendAnnotationDefaults corporateBlue = TrendAnnotationDefaults(
@@ -1099,15 +1132,19 @@ class TrendAnnotationDefaults {
     dashPattern: [6.0, 4.0],
     confidenceBandColor: Color(0xFF388E3C),
     confidenceBandOpacity: 0.15,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF1B5E20),
-      fontWeight: FontWeight.w600,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF1B5E20),
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF388E3C),
+      borderWidth: 0.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 4.0,
   );
 
   static const TrendAnnotationDefaults vibrant = TrendAnnotationDefaults(
@@ -1116,15 +1153,19 @@ class TrendAnnotationDefaults {
     dashPattern: [8.0, 4.0],
     confidenceBandColor: Color(0xFFCDDC39),
     confidenceBandOpacity: 0.2,
-    labelTextStyle: TextStyle(
-      fontSize: 13.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF827717),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF827717),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFCDDC39),
+      borderWidth: 0.5,
+      borderRadius: 6.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 6.0,
-    labelMargin: 6.0,
   );
 
   static const TrendAnnotationDefaults minimal = TrendAnnotationDefaults(
@@ -1133,15 +1174,19 @@ class TrendAnnotationDefaults {
     dashPattern: [4.0, 4.0],
     confidenceBandColor: Color(0xFF9E9E9E),
     confidenceBandOpacity: 0.05,
-    labelTextStyle: TextStyle(
-      fontSize: 11.0,
-      fontFamily: 'Helvetica',
-      color: Color(0xFF757575),
-      fontWeight: FontWeight.normal,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 11.0,
+        fontFamily: 'Helvetica',
+        color: Color(0xFF757575),
+        fontWeight: FontWeight.normal,
+      ),
+      backgroundColor: Color(0xF5F5F5F5),
+      borderColor: Color(0xFF9E9E9E),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF5F5F5F5),
-    labelBorderRadius: 3.0,
-    labelMargin: 3.0,
   );
 
   static const TrendAnnotationDefaults highContrast = TrendAnnotationDefaults(
@@ -1150,15 +1195,19 @@ class TrendAnnotationDefaults {
     dashPattern: [],
     confidenceBandColor: Color(0xFF0000FF),
     confidenceBandOpacity: 0.3,
-    labelTextStyle: TextStyle(
-      fontSize: 14.0,
-      fontFamily: 'Arial',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.bold,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Arial',
+        color: Color(0xFF000000),
+        fontWeight: FontWeight.bold,
+      ),
+      backgroundColor: Color(0xFFFFFFFF),
+      borderColor: Color(0xFF0000FF),
+      borderWidth: 2.0,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xFFFFFFFF),
-    labelBorderRadius: 2.0,
-    labelMargin: 6.0,
   );
 
   static const TrendAnnotationDefaults colorblindFriendly = TrendAnnotationDefaults(
@@ -1167,15 +1216,19 @@ class TrendAnnotationDefaults {
     dashPattern: [6.0, 4.0],
     confidenceBandColor: Color(0xFF029E73),
     confidenceBandOpacity: 0.15,
-    labelTextStyle: TextStyle(
-      fontSize: 12.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF017A5A),
-      fontWeight: FontWeight.w500,
+    labelStyle: LabelStyle(
+      textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        color: Color(0xFF017A5A),
+        fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF029E73),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     ),
-    labelBackgroundColor: Color(0xF0FFFFFF),
-    labelBorderRadius: 4.0,
-    labelMargin: 4.0,
   );
 
   TrendAnnotationDefaults copyWith({
@@ -1184,10 +1237,7 @@ class TrendAnnotationDefaults {
     List<double>? dashPattern,
     Color? confidenceBandColor,
     double? confidenceBandOpacity,
-    TextStyle? labelTextStyle,
-    Color? labelBackgroundColor,
-    double? labelBorderRadius,
-    double? labelMargin,
+    LabelStyle? labelStyle,
   }) {
     return TrendAnnotationDefaults(
       lineColor: lineColor ?? this.lineColor,
@@ -1195,10 +1245,7 @@ class TrendAnnotationDefaults {
       dashPattern: dashPattern ?? this.dashPattern,
       confidenceBandColor: confidenceBandColor ?? this.confidenceBandColor,
       confidenceBandOpacity: confidenceBandOpacity ?? this.confidenceBandOpacity,
-      labelTextStyle: labelTextStyle ?? this.labelTextStyle,
-      labelBackgroundColor: labelBackgroundColor ?? this.labelBackgroundColor,
-      labelBorderRadius: labelBorderRadius ?? this.labelBorderRadius,
-      labelMargin: labelMargin ?? this.labelMargin,
+      labelStyle: labelStyle ?? this.labelStyle,
     );
   }
 
@@ -1211,10 +1258,7 @@ class TrendAnnotationDefaults {
         _listEquals(dashPattern, other.dashPattern) &&
         confidenceBandColor == other.confidenceBandColor &&
         confidenceBandOpacity == other.confidenceBandOpacity &&
-        labelTextStyle == other.labelTextStyle &&
-        labelBackgroundColor == other.labelBackgroundColor &&
-        labelBorderRadius == other.labelBorderRadius &&
-        labelMargin == other.labelMargin;
+        labelStyle == other.labelStyle;
   }
 
   @override
@@ -1224,10 +1268,7 @@ class TrendAnnotationDefaults {
         Object.hashAll(dashPattern),
         confidenceBandColor,
         confidenceBandOpacity,
-        labelTextStyle,
-        labelBackgroundColor,
-        labelBorderRadius,
-        labelMargin,
+        labelStyle,
       );
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
