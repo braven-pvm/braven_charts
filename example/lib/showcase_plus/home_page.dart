@@ -1,10 +1,11 @@
+import 'package:braven_charts_example/showcase_plus/pages/streaming_page.dart';
 import 'package:flutter/material.dart';
 
 import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/performance_page.dart';
-import 'pages/streaming_page.dart';
+import 'pages/scientific_data_page.dart';
 import 'pages/theming_page.dart';
 
 class ShowcaseHomePage extends StatefulWidget {
@@ -24,6 +25,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     const StreamingPage(),
     const ThemingPage(),
     const PerformancePage(),
+    const ScientificDataPage(),
   ];
 
   final List<NavigationDestination> _destinations = const [
@@ -33,6 +35,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     NavigationDestination(icon: Icon(Icons.stream), label: 'Streaming'),
     NavigationDestination(icon: Icon(Icons.palette), label: 'Theming'),
     NavigationDestination(icon: Icon(Icons.speed), label: 'Performance'),
+    NavigationDestination(icon: Icon(Icons.science), label: 'Scientific'),
   ];
 
   @override
