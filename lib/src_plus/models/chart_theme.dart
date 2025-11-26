@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../theming/components/animation_theme.dart';
+import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
@@ -20,6 +21,7 @@ import '../theming/components/typography_theme.dart';
 /// - [interactionTheme]: Crosshair, tooltips, selection
 /// - [typographyTheme]: Font families, sizes, responsive scaling
 /// - [animationTheme]: Animation durations and curves
+/// - [annotationTheme]: Annotation styling (point, range, text, threshold, trend)
 /// - [scrollbarConfig]: Scrollbar appearance and behavior
 ///
 /// Example:
@@ -31,6 +33,7 @@ import '../theming/components/typography_theme.dart';
 ///   interactionTheme: InteractionTheme.defaultLight,
 ///   typographyTheme: TypographyTheme.defaultLight,
 ///   animationTheme: AnimationTheme.defaultLight,
+///   annotationTheme: AnnotationTheme.defaultLight,
 ///   scrollbarConfig: ScrollbarConfig.defaultLight,
 /// );
 /// ```
@@ -43,6 +46,7 @@ class ChartTheme {
     required this.interactionTheme,
     required this.typographyTheme,
     required this.animationTheme,
+    required this.annotationTheme,
     required this.scrollbarConfig,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
@@ -77,6 +81,9 @@ class ChartTheme {
 
   /// Animation settings (durations, curves).
   final AnimationTheme animationTheme;
+
+  /// Annotation styling (point, range, text, threshold, trend).
+  final AnnotationTheme annotationTheme;
 
   /// Scrollbar configuration.
   final ScrollbarConfig scrollbarConfig;
@@ -119,6 +126,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.defaultLight,
     typographyTheme: TypographyTheme.defaultLight,
     animationTheme: AnimationTheme.defaultLight,
+    annotationTheme: AnnotationTheme.defaultLight,
     scrollbarConfig: ScrollbarConfig.defaultLight,
   );
 
@@ -130,6 +138,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.defaultDark,
     typographyTheme: TypographyTheme.defaultDark,
     animationTheme: AnimationTheme.defaultDark,
+    annotationTheme: AnnotationTheme.defaultDark,
     scrollbarConfig: ScrollbarConfig.defaultDark,
   );
 
@@ -141,6 +150,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.corporateBlue,
     typographyTheme: TypographyTheme.corporateBlue,
     animationTheme: AnimationTheme.corporateBlue,
+    annotationTheme: AnnotationTheme.corporateBlue,
     scrollbarConfig: ScrollbarConfig.defaultLight,
   );
 
@@ -152,6 +162,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.vibrant,
     typographyTheme: TypographyTheme.vibrant,
     animationTheme: AnimationTheme.vibrant,
+    annotationTheme: AnnotationTheme.vibrant,
     scrollbarConfig: ScrollbarConfig.defaultLight,
   );
 
@@ -163,6 +174,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.minimal,
     typographyTheme: TypographyTheme.minimal,
     animationTheme: AnimationTheme.minimal,
+    annotationTheme: AnnotationTheme.minimal,
     scrollbarConfig: ScrollbarConfig.defaultLight,
   );
 
@@ -174,6 +186,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.highContrast,
     typographyTheme: TypographyTheme.highContrast,
     animationTheme: AnimationTheme.highContrast,
+    annotationTheme: AnnotationTheme.highContrast,
     scrollbarConfig: ScrollbarConfig.highContrast,
   );
 
@@ -185,6 +198,7 @@ class ChartTheme {
     interactionTheme: InteractionTheme.colorblindFriendly,
     typographyTheme: TypographyTheme.colorblindFriendly,
     animationTheme: AnimationTheme.colorblindFriendly,
+    annotationTheme: AnnotationTheme.colorblindFriendly,
     scrollbarConfig: ScrollbarConfig.defaultLight,
   );
 
@@ -198,6 +212,7 @@ class ChartTheme {
     InteractionTheme? interactionTheme,
     TypographyTheme? typographyTheme,
     AnimationTheme? animationTheme,
+    AnnotationTheme? annotationTheme,
     ScrollbarConfig? scrollbarConfig,
     Color? focusBorderColor,
     double? focusBorderWidth,
@@ -211,6 +226,7 @@ class ChartTheme {
       interactionTheme: interactionTheme ?? this.interactionTheme,
       typographyTheme: typographyTheme ?? this.typographyTheme,
       animationTheme: animationTheme ?? this.animationTheme,
+      annotationTheme: annotationTheme ?? this.annotationTheme,
       scrollbarConfig: scrollbarConfig ?? this.scrollbarConfig,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
       focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
@@ -234,6 +250,7 @@ class ChartTheme {
         interactionTheme == other.interactionTheme &&
         typographyTheme == other.typographyTheme &&
         animationTheme == other.animationTheme &&
+        annotationTheme == other.annotationTheme &&
         scrollbarConfig == other.scrollbarConfig &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
@@ -249,6 +266,7 @@ class ChartTheme {
         interactionTheme,
         typographyTheme,
         animationTheme,
+        annotationTheme,
         scrollbarConfig,
         focusBorderColor,
         focusBorderWidth,
