@@ -65,9 +65,7 @@ class WebContextMenu extends StatelessWidget {
                 return _WebContextMenuItemWidget(
                   item: item,
                   onTap: () {
-                    debugPrint('🔘 Menu item tapped: ${item.value}');
                     Navigator.of(context).pop(item.value);
-                    debugPrint('🔘 Navigator.pop called for: ${item.value}');
                   },
                 );
               }
@@ -141,7 +139,6 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
       child: GestureDetector(
         onTap: isEnabled
             ? () {
-                debugPrint('🔘 Menu item GestureDetector.onTap: ${widget.item.label}');
                 widget.onTap();
               }
             : null,
@@ -234,7 +231,6 @@ class _WebContextMenuRoute extends PopupRoute<String> {
         Positioned.fill(
           child: GestureDetector(
             onTap: () {
-              debugPrint('🔘 Barrier tapped - closing menu');
               Navigator.of(context).pop();
             },
             behavior: HitTestBehavior.translucent,
@@ -255,7 +251,6 @@ class _WebContextMenuRoute extends PopupRoute<String> {
               child: WebContextMenu(
                 items: items,
                 onDismiss: () {
-                  debugPrint('🔘 onDismiss called');
                   Navigator.of(context).pop();
                 },
               ),

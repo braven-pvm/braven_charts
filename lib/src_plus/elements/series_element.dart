@@ -45,20 +45,20 @@ class SeriesElement implements ChartElement {
   final SeriesTheme? seriesTheme;
   final int seriesIndex;
   final ChartInteractionCoordinator? coordinator;
-  
+
   // Deprecated fields for backward compatibility
   final double? _deprecatedStrokeWidth;
   final Color? _deprecatedThemeColor;
-  
+
   // Get effective stroke width from theme or deprecated parameter
   double get strokeWidth => seriesTheme?.lineWidthAt(seriesIndex) ?? _deprecatedStrokeWidth ?? 2.0;
-  
+
   // Get effective color from theme, deprecated parameter, series, or default
   Color get themeColor => seriesTheme?.colorAt(seriesIndex) ?? _deprecatedThemeColor ?? series.color ?? const Color(0xFF2196F3);
-  
+
   // Get effective marker size from theme or series default
   double get markerSize => seriesTheme?.markerSizeAt(seriesIndex) ?? 6.0;
-  
+
   // Get effective marker shape from theme or default
   MarkerShape get markerShape => seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
 
@@ -197,10 +197,14 @@ class SeriesElement implements ChartElement {
 
   void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    final opacity = isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
     // Use theme-based stroke width with selection multiplier
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
-    
+
     final paint = Paint()
       ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.stroke
@@ -256,10 +260,14 @@ class SeriesElement implements ChartElement {
 
   void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    final opacity = isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
     // Use theme marker size if available, otherwise series-specific size
     final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
-    
+
     final pointPaint = Paint()
       ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.fill;
@@ -314,10 +322,14 @@ class SeriesElement implements ChartElement {
 
     // Draw line on top (reuse cached transforms!)
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
+    final opacity = isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
     // Use theme-based stroke width with selection multiplier
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
-    
+
     final linePaint = Paint()
       ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.stroke
@@ -357,8 +369,12 @@ class SeriesElement implements ChartElement {
 
   void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected ? 1.0 : isHovered ? 0.8 : 0.7;
-    
+    final opacity = isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
+
     final barPaint = Paint()
       ..color = baseColor.withOpacity(opacity)
       ..style = PaintingStyle.fill;
@@ -455,7 +471,6 @@ class SeriesElement implements ChartElement {
 
     // ignore: avoid_print
     if (isThisSeriesHovered) {
-      print('🎨 Painting markers for ${series.id}: hoveredIndex=${hoveredMarker!.markerIndex}, totalMarkers=${transformedPoints.length}');
     }
 
     // Paint setup
@@ -478,7 +493,6 @@ class SeriesElement implements ChartElement {
       if (isThisSeriesHovered && i == hoveredMarker!.markerIndex) {
         // Paint highlighted marker (larger with border)
         // ignore: avoid_print
-        print('✨ Painting HIGHLIGHTED marker at index $i: pos=$plotPos, radius=${radius * 1.5}');
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
         canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
       } else {

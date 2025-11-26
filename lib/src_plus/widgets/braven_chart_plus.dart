@@ -718,13 +718,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Called when controller notifies of changes (matches BravenChart pattern).
   void _onControllerUpdate() {
-    debugPrint('🔔 _onControllerUpdate called, mounted=$mounted, controller=${widget.controller != null}');
     if (!mounted) return;
 
     // Update cached bounds even when paused - needed for pan constraints
     if (widget.controller != null) {
       final controllerData = widget.controller!.getAllSeries();
-      debugPrint('🔔 Controller has ${controllerData.length} series');
       int totalPoints = 0;
       for (final points in controllerData.values) {
         totalPoints += points.length;
@@ -735,8 +733,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             _cachedDataXMax = point.x;
             _cachedDataYMin = point.y;
             _cachedDataYMax = point.y;
-            debugPrint('📊 Controller: Initialized cached bounds with first point: '
-                'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
           } else {
             _updateCachedDataBounds(point.x, point.y);
           }
@@ -744,15 +740,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
       // Only log occasionally to avoid spam
       if (totalPoints % 50 == 0 || totalPoints < 10) {
-        debugPrint('📊 Controller: Updated cached bounds from $totalPoints points: '
-            'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
       }
     }
 
     // When paused, don't rebuild - let data accumulate silently
     // This prevents visual jumps when exploring the viewport
     if (!_isStreaming) {
-      debugPrint('⏸️  Controller updated while paused - data accumulating, no rebuild');
       return;
     }
 
@@ -980,7 +973,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // CRITICAL: Ensure valid bounds before creating axes (prevent dataMax <= dataMin assertion)
     if (dataBounds.xMax <= dataBounds.xMin) {
-      print('⚠️ INVALID X BOUNDS: xMin=${dataBounds.xMin}, xMax=${dataBounds.xMax}, forcing default [0,1]');
       dataBounds = DataBounds(
         xMin: 0,
         xMax: 1,
@@ -989,7 +981,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
     }
     if (dataBounds.yMax <= dataBounds.yMin) {
-      print('⚠️ INVALID Y BOUNDS: yMin=${dataBounds.yMin}, yMax=${dataBounds.yMax}, forcing default [0,1]');
       dataBounds = DataBounds(
         xMin: dataBounds.xMin,
         xMax: dataBounds.xMax,
@@ -1070,8 +1061,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Removed excessive debugPrints (annotation conversion details)
       // Use annotation controller if provided, otherwise fall back to annotations list
       final effectiveAnnotations = widget.annotationController?.annotations ?? widget.annotations;
-      print(
-          '📊 _rebuildElements: Using ${widget.annotationController != null ? "CONTROLLER" : "WIDGET"} annotations (${effectiveAnnotations.length} total)');
       for (final annotation in effectiveAnnotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -1105,7 +1094,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
               ),
           };
           elements.add(element);
-          debugPrint('  ✅ Created ${annotation.runtimeType} element: ${annotation.id}');
 
           // For resizable elements, also insert their resize handle elements
           if (element is ResizableElement && element.isResizable) {
@@ -1114,7 +1102,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             // Removed excessive debugPrint (resize handles added)
           }
         } catch (e) {
-          debugPrint('⚠️ Warning: Failed to create annotation element for ${annotation.id}: $e');
         }
       }
 
@@ -1129,7 +1116,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   void _onCoordinatorChanged() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$timestamp] _onCoordinatorChanged: mode=${_coordinator.currentMode.name}');
 
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
@@ -1137,9 +1123,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // (all current menu items are annotation-related)
       if (widget.annotationController != null) {
         if (_isShowingContextMenu) {
-          debugPrint('⏱️ [$timestamp] Context menu already showing, ignoring duplicate request');
         } else {
-          debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode, calling _showContextMenu immediately');
           // PERFORMANCE FIX: Call immediately instead of post-frame callback
           // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
           // frame scheduler was busy or browser was throttling frames.
@@ -1147,7 +1131,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           _showContextMenu();
         }
       } else {
-        debugPrint('⏱️ [$timestamp] Detected contextMenuOpen mode but no annotationController, releasing mode immediately');
         _coordinator.releaseMode(force: true);
       }
     }
@@ -1167,7 +1150,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// Called when coordinator enters contextMenuOpen mode.
   void _showContextMenu() async {
     final startTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$startTime] 🎯 _showContextMenu START');
 
     // Set guard flag to prevent duplicate menu opens
     _isShowingContextMenu = true;
@@ -1177,9 +1159,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     if (localPosition == null) {
       final errorTime = DateTime.now().millisecondsSinceEpoch;
-      debugPrint('⏱️ [$errorTime] ⚠️ No interaction position, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
-      debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
       _isShowingContextMenu = false;
       return;
     }
@@ -1188,20 +1168,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
       final errorTime = DateTime.now().millisecondsSinceEpoch;
-      debugPrint('⏱️ [$errorTime] ⚠️ No render box, releasing mode (${errorTime - startTime}ms)');
       _coordinator.releaseMode(force: true);
-      debugPrint('⏱️ [${DateTime.now().millisecondsSinceEpoch}] Mode released (force=true)');
       _isShowingContextMenu = false;
       return;
     }
 
     final convertTime = DateTime.now().millisecondsSinceEpoch;
     final globalPosition = renderBox.localToGlobal(localPosition);
-    debugPrint('⏱️ [$convertTime] Position converted (${convertTime - startTime}ms): local=$localPosition, global=$globalPosition');
-    debugPrint('⏱️ [$convertTime] Element: ${element?.runtimeType ?? 'null (empty area)'}');
 
     final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$buildMenuTime] Building menu items (${buildMenuTime - startTime}ms)...');
 
     // Determine context for menu items
     final bool isDataPointClick = element is SeriesElement && _coordinator.hoveredMarker != null;
@@ -1209,8 +1184,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final bool isEmptyArea = element == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
 
-    debugPrint(
-        '⏱️ [$buildMenuTime] Context: isDataPointClick=$isDataPointClick, isSeriesLineClick=$isSeriesLineClick, isEmptyArea=$isEmptyArea, isExistingAnnotation=$isExistingAnnotation');
 
     // Check if annotations are supported (annotationController is provided)
     final bool hasAnnotationController = widget.annotationController != null;
@@ -1278,7 +1251,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     ];
 
     final showMenuTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$showMenuTime] Calling WebContextMenu.show (${showMenuTime - startTime}ms)...');
 
     // Show the web-native context menu
     final result = await WebContextMenu.show(
@@ -1288,7 +1260,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$menuClosedTime] showMenu returned (menu was open for ${menuClosedTime - showMenuTime}ms)');
 
     // Clear guard flag now that menu is closed
     _isShowingContextMenu = false;
@@ -1296,24 +1267,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Release mode BEFORE handling action (so action handlers can claim new modes)
     // This is critical for modal-to-modal transitions (e.g., contextMenuOpen → rangeAnnotationCreation)
     final releaseTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$releaseTime] Releasing coordinator mode (force=true) BEFORE handling action...');
     _coordinator.releaseMode(force: true);
 
     // Handle menu selection
     if (result != null) {
-      debugPrint('⏱️ [$menuClosedTime] 🎯 Menu action selected: $result');
       await _handleMenuAction(result, localPosition, element);
     } else {
-      debugPrint('⏱️ [$menuClosedTime] Menu dismissed without selection');
     }
 
     final endTime = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('⏱️ [$endTime] 🎯 _showContextMenu END (total: ${endTime - startTime}ms, release: ${endTime - releaseTime}ms)');
   }
 
   /// Handles menu action selection from context menu.
   Future<void> _handleMenuAction(String action, Offset localPosition, ChartElement? element) async {
-    debugPrint('🎯 Handling menu action: $action');
 
     switch (action) {
       case 'add_text':
@@ -1338,7 +1304,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         await _showDeleteAnnotationConfirmation(element);
         break;
       default:
-        debugPrint('⚠️ Unknown menu action: $action');
     }
   }
 
@@ -1354,10 +1319,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      debugPrint('✅ Created TextAnnotation: ${result.id} at ${result.position}');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ TextAnnotation creation cancelled');
     }
   }
 
@@ -1368,11 +1331,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // PointAnnotation requires a data point - get info from coordinator's hoveredMarker
     final markerInfo = _coordinator.hoveredMarker;
     if (markerInfo == null) {
-      debugPrint('⚠️ PointAnnotation requires clicking on a data point marker');
       return;
     }
 
-    debugPrint('🎯 Creating PointAnnotation for marker: series=${markerInfo.seriesId}, index=${markerInfo.markerIndex}');
 
     final result = await showDialog<PointAnnotation>(
       context: context,
@@ -1383,10 +1344,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      debugPrint('✅ Created PointAnnotation: ${result.id} on ${result.seriesId}[${result.dataPointIndex}]');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ PointAnnotation creation cancelled');
     }
   }
 
@@ -1408,7 +1367,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         final dataPos = transform.plotToData(localPosition.dx, localPosition.dy);
         initialXValue = dataPos.dx;
         initialYValue = dataPos.dy;
-        debugPrint('🎯 Creating ThresholdAnnotation at position: X=${dataPos.dx.toStringAsFixed(2)}, Y=${dataPos.dy.toStringAsFixed(2)}');
       }
     }
 
@@ -1421,10 +1379,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      debugPrint('✅ Created ThresholdAnnotation: ${result.id} at ${result.axis} = ${result.value}');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ ThresholdAnnotation creation cancelled');
     }
   }
 
@@ -1442,17 +1398,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showAddRangeAnnotationDialog() async {
     if (!mounted) return;
 
-    debugPrint('🎯 Starting RangeAnnotation creation (Option 4: Interactive drag mode)');
 
     // Enter rangeAnnotationCreation mode (priority 10, modal)
     if (!_coordinator.claimMode(InteractionMode.rangeAnnotationCreation)) {
-      debugPrint('❌ Failed to claim rangeAnnotationCreation mode');
       return;
     }
 
-    debugPrint('✅ Entered rangeAnnotationCreation mode');
-    debugPrint('   Now awaiting user drag... (drag to define rectangular region)');
-    debugPrint('   Press ESC or click without dragging to cancel');
 
     // Completion is handled via _onRangeCreationComplete callback
     // (called from ChartRenderBox when drag finishes)
@@ -1463,9 +1414,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _onRangeCreationComplete(double startX, double endX, double startY, double endY) async {
     if (!mounted) return;
 
-    debugPrint('🎯 Range creation drag complete:');
-    debugPrint('   X: [$startX, $endX]');
-    debugPrint('   Y: [$startY, $endY]');
 
     // Open dialog with pre-filled values from drag
     final result = await showDialog<RangeAnnotation>(
@@ -1481,14 +1429,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Release rangeAnnotationCreation mode after dialog closes (regardless of result)
     // CRITICAL: Must use force=true because rangeAnnotationCreation is modal (priority 10)
     _coordinator.releaseMode(force: true);
-    debugPrint('🎯 Released rangeAnnotationCreation mode after dialog closed');
 
     if (result != null && mounted) {
-      debugPrint('✅ Created RangeAnnotation: ${result.id}');
-      debugPrint('   X: [${result.startX}, ${result.endX}], Y: [${result.startY}, ${result.endY}]');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ RangeAnnotation creation cancelled in dialog');
     }
   }
 
@@ -1499,7 +1443,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Get available series IDs
     final availableSeries = widget.series.map((s) => s.id).toList();
     if (availableSeries.isEmpty) {
-      debugPrint('⚠️ No series available for trend annotation');
       return;
     }
 
@@ -1507,7 +1450,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     String? preselectedSeriesId;
     if (element is SeriesElement) {
       preselectedSeriesId = element.series.id;
-      debugPrint('🎯 Creating TrendAnnotation for series: $preselectedSeriesId');
     }
 
     final result = await showDialog<TrendAnnotation>(
@@ -1519,10 +1461,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      debugPrint('✅ Created TrendAnnotation: ${result.id} for series ${result.seriesId} (${result.trendType})');
       widget.annotationController?.addAnnotation(result);
     } else {
-      debugPrint('❌ TrendAnnotation creation cancelled');
     }
   }
 
@@ -1530,7 +1470,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Future<void> _showEditAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
 
-    debugPrint('🔧 Edit dialog requested for element: ${element?.runtimeType}, elementType: ${element?.elementType}');
 
     // Check for annotation element types directly (PointAnnotationElement uses datapoint type for priority)
     if (element == null ||
@@ -1539,15 +1478,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             element is! ThresholdAnnotationElement &&
             element is! TrendAnnotationElement &&
             element is! RangeAnnotationElement)) {
-      debugPrint('⚠️ Edit action requires an annotation element (got ${element?.runtimeType})');
       return;
     }
 
-    debugPrint('🔧 Annotation element confirmed, checking type...');
 
     // Cast to annotation element types to access annotation field and route to dialog
     if (element is TextAnnotationElement) {
-      debugPrint('🔧 TextAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<TextAnnotation>(
         context: context,
@@ -1558,13 +1494,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        debugPrint('✅ Updated TextAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
-        debugPrint('❌ TextAnnotation edit cancelled');
       }
     } else if (element is PointAnnotationElement) {
-      debugPrint('🔧 PointAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<PointAnnotation>(
         context: context,
@@ -1576,13 +1509,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        debugPrint('✅ Updated PointAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
-        debugPrint('❌ PointAnnotation edit cancelled');
       }
     } else if (element is ThresholdAnnotationElement) {
-      debugPrint('🔧 ThresholdAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<ThresholdAnnotation>(
         context: context,
@@ -1590,13 +1520,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        debugPrint('✅ Updated ThresholdAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
-        debugPrint('❌ ThresholdAnnotation edit cancelled');
       }
     } else if (element is TrendAnnotationElement) {
-      debugPrint('🔧 TrendAnnotationElement detected');
       final annotation = element.annotation;
       final availableSeries = widget.series.map((s) => s.id).toList();
       final result = await showDialog<TrendAnnotation>(
@@ -1608,13 +1535,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        debugPrint('✅ Updated TrendAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
-        debugPrint('❌ TrendAnnotation edit cancelled');
       }
     } else if (element is RangeAnnotationElement) {
-      debugPrint('🔧 RangeAnnotationElement detected');
       final annotation = element.annotation;
       final result = await showDialog<RangeAnnotation>(
         context: context,
@@ -1622,13 +1546,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        debugPrint('✅ Updated RangeAnnotation: ${result.id}');
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {
-        debugPrint('❌ TrendAnnotation edit cancelled');
       }
     } else {
-      debugPrint('⏳ TODO: Edit dialog for ${element.runtimeType} not implemented yet');
     }
   }
 
@@ -1643,7 +1564,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             element is! RangeAnnotationElement &&
             element is! ThresholdAnnotationElement &&
             element is! TrendAnnotationElement)) {
-      debugPrint('⚠️ Delete action requires an annotation element (got ${element?.runtimeType})');
       return;
     }
 
@@ -1667,11 +1587,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       annotationId = element.annotation.id;
       annotationType = 'Trend Annotation';
     } else {
-      debugPrint('⚠️ Unknown annotation element type: ${element.runtimeType}');
       return;
     }
 
-    debugPrint('🗑️ Showing delete confirmation for $annotationType: $annotationId');
 
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -1697,12 +1615,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (confirmed == true && mounted) {
       final wasRemoved = widget.annotationController?.removeAnnotation(annotationId) ?? false;
       if (wasRemoved) {
-        debugPrint('✅ Deleted $annotationType: $annotationId');
       } else {
-        debugPrint('⚠️ Failed to delete $annotationType: $annotationId (not found)');
       }
     } else {
-      debugPrint('❌ Delete cancelled for $annotationType: $annotationId');
     }
   }
 
@@ -1726,13 +1641,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // (activeElement gets cleared by tap up, so we need to capture it now)
     final tappedElement = _coordinator.activeElement ?? _coordinator.hoveredElement;
 
-    debugPrint('👇 TapDown: tappedElement=${tappedElement?.runtimeType}');
 
     // Check for double-click on annotation
     if (_lastTapTime != null && _lastTappedElement != null && tappedElement != null) {
       final now = DateTime.now();
       final timeDiff = now.difference(_lastTapTime!);
-      debugPrint('   Time since last tap: ${timeDiff.inMilliseconds}ms, same element: ${tappedElement == _lastTappedElement}');
 
       if (tappedElement == _lastTappedElement && timeDiff <= _doubleTapTimeout) {
         // Double-click detected!
@@ -1741,7 +1654,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             tappedElement is ThresholdAnnotationElement ||
             tappedElement is TrendAnnotationElement ||
             tappedElement is RangeAnnotationElement) {
-          debugPrint('🖱️ Double-click detected on ${tappedElement.runtimeType}, opening edit dialog');
           _showEditAnnotationDialog(tappedElement);
           // Reset to prevent triple-click
           _lastTapTime = null;
@@ -1797,7 +1709,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Check if this was a click without drag (no box selection drawn)
       // The RenderBox handles actual drag detection, so if we get here in creation mode,
       // it means the user just clicked without dragging
-      debugPrint('⏹️ Click detected in rangeAnnotationCreation mode - cancelling (no drag detected)');
       _coordinator.releaseMode(force: true);
     }
   }
@@ -1838,7 +1749,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Cancel range annotation creation mode
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
-          debugPrint('⏹️ ESC pressed - cancelling rangeAnnotationCreation mode');
           _coordinator.releaseMode(force: true);
           setState(() {
             _currentCursor = SystemMouseCursors.basic;
@@ -1922,7 +1832,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       _onStreamData,
       onError: (error) {
         config.onStreamError?.call(error);
-        debugPrint('❌ Stream error: $error');
       },
     );
   }
@@ -1981,7 +1890,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _pauseStreaming() {
     if (!_isStreaming) return; // Already paused
 
-    print('⏸️  ===== PAUSE STREAMING STARTED =====');
 
     // STEP 1: Capture current viewport bounds from axes
     // This is what the user sees RIGHT NOW - we must preserve it exactly
@@ -1992,8 +1900,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         yMin: _yAxis!.dataMin,
         yMax: _yAxis!.dataMax,
       );
-      print(
-          '🔒 LOCKED viewport bounds: X=[${_lockedPausedBounds!.xMin}, ${_lockedPausedBounds!.xMax}], Y=[${_lockedPausedBounds!.yMin}, ${_lockedPausedBounds!.yMax}]');
     }
 
     // STEP 2: Set pan constraints to full dataset bounds (Option 4)
@@ -2010,13 +1916,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // STEP 3: Update streaming state
     _isStreaming = false;
 
-    print('⏸️  ===== PAUSE COMPLETE - Viewport LOCKED =====');
 
     // STEP 4: Force rebuild with locked bounds to prevent race condition
     // This ensures _lockedPausedBounds is used IMMEDIATELY, before any other rebuild
     setState(() {
       // Locked bounds are already set, this just triggers rebuild
-      print('⏸️  Forcing rebuild with locked bounds to prevent race condition');
     });
   }
 
@@ -2025,7 +1929,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _resumeStreaming() {
     if (_isStreaming) return; // Already streaming
 
-    print('▶️  ===== RESUME STREAMING STARTED =====');
 
     // STEP 1: Clear pan constraint bounds to restore sliding window constraints (Option 4)
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -2155,8 +2058,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       _updateCachedDataBounds(point.x, point.y);
     }
 
-    debugPrint('📊 Initialized cached bounds from ${allPoints.length} points: '
-        'X=[$_cachedDataXMin, $_cachedDataXMax], Y=[$_cachedDataYMin, $_cachedDataYMax]');
   }
 
   /// Auto-scrolls the viewport to show the latest data.
@@ -2189,7 +2090,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
       if (renderBox == null) {
         // Keep this warning - it's important
-        debugPrint('⚠️  Cannot jump to latest: renderBox not found');
         return;
       }
 

@@ -100,13 +100,10 @@ class StreamingController extends ChangeNotifier {
 
   /// Updates the streaming state (called by BravenChartPlus internally).
   void updateState(bool isStreaming) {
-    debugPrint('🎮 updateState called: old=$_isStreaming, new=$isStreaming');
     if (_isStreaming != isStreaming) {
       _isStreaming = isStreaming;
-      debugPrint('🎮 State changed, notifying listeners');
       notifyListeners();
     } else {
-      debugPrint('🎮 No state change, skipping notification');
     }
   }
 
@@ -127,16 +124,12 @@ class StreamingController extends ChangeNotifier {
   /// - Custom gesture to resume (e.g., double-tap)
   /// - Keyboard shortcut (e.g., Spacebar)
   void resumeStreaming() {
-    print('🎮 resumeStreaming called: _isStreaming=$_isStreaming');
     if (!_isStreaming) {
-      print('🎮 Setting viewport to followLatest and calling callback FIRST');
       _isStreaming = true; // Update state immediately
       _viewportMode = ViewportMode.followLatest;
       _resumeStreamingCallback?.call(); // Call widget callback FIRST
-      print('🎮 Callback complete, now notifying listeners');
       notifyListeners(); // Notify AFTER callback
     } else {
-      print('🎮 Already streaming, ignoring');
     }
   }
 
@@ -155,16 +148,12 @@ class StreamingController extends ChangeNotifier {
   /// - "Pause" button in your UI
   /// - Automatic pause on user interaction
   void pauseStreaming() async {
-    print('🎮 pauseStreaming called: _isStreaming=$_isStreaming');
     if (_isStreaming) {
-      print('🎮 Setting viewport to explore and calling callback FIRST');
       _isStreaming = false; // Update state immediately
       _viewportMode = ViewportMode.explore;
       _pauseStreamingCallback?.call(); // Call widget callback FIRST (sets _preserveAxesOnRebuild flag)
-      print('🎮 Callback complete, now notifying listeners');
       notifyListeners(); // Notify AFTER callback so flag is already set
     } else {
-      print('🎮 Already paused, ignoring');
     }
   }
 
