@@ -1623,8 +1623,7 @@ class ChartRenderBox extends RenderBox {
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
-        if (hitElement is PointAnnotationElement) {
-        }
+        if (hitElement is PointAnnotationElement) {}
 
         // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
         // This allows moving the entire annotation region
@@ -1782,7 +1781,6 @@ class ChartRenderBox extends RenderBox {
         // Start interaction and claim drag mode
         coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
         final claimSuccess = coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
 
         // Clear potential drag state
         _potentialDragPointAnnotation = null;
@@ -1979,7 +1977,6 @@ class ChartRenderBox extends RenderBox {
     if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
       final boxRect = coordinator.boxSelectionRect;
       if (boxRect != null && onRangeCreationComplete != null) {
-
         // Get transform from first series to convert plot coords to data coords
         if (_elements.whereType<SeriesElement>().isNotEmpty) {
           final seriesElement = _elements.whereType<SeriesElement>().first;
@@ -1995,7 +1992,6 @@ class ChartRenderBox extends RenderBox {
           final startY = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
           final endY = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
 
-
           // End interaction (clear boxSelectionRect) but DON'T release mode yet
           // The widget callback will release mode after dialog closes
           coordinator.endInteraction();
@@ -2004,10 +2000,8 @@ class ChartRenderBox extends RenderBox {
           onRangeCreationComplete!(startX, endX, startY, endY);
           markNeedsPaint();
           return;
-        } else {
-        }
-      } else if (boxRect == null) {
-      }
+        } else {}
+      } else if (boxRect == null) {}
 
       // Release mode even if cancelled
       coordinator.endInteraction();
@@ -2070,7 +2064,6 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (resizedAnnotation.snapToValue) {
-
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
@@ -2092,7 +2085,6 @@ class ChartRenderBox extends RenderBox {
                 resizeDirection == ResizeDirection.bottomRight;
             final needsSnapEndY =
                 resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
-
 
             // Snap X coordinates if needed
             if (needsSnapStartX) {
@@ -2185,7 +2177,6 @@ class ChartRenderBox extends RenderBox {
 
           // Apply snapping if enabled
           if (movedAnnotation.snapToValue) {
-
             // Calculate tolerance distances in data units (percentage of visible range)
             final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
             final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
@@ -2199,8 +2190,7 @@ class ChartRenderBox extends RenderBox {
                 newStartX = snappedStartX;
                 newEndX = newStartX + width;
               }
-            } else {
-            }
+            } else {}
 
             // Snap Y coordinates only if they're defined in the original annotation
             if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
@@ -2211,9 +2201,7 @@ class ChartRenderBox extends RenderBox {
                 newStartY = snappedStartY;
                 newEndY = newStartY + height;
               }
-            } else {
-            }
-
+            } else {}
           }
 
           // Create updated annotation with new bounds
@@ -2473,8 +2461,7 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Debug output to show which data point was found
-    if (nearestValue != null && nearestPoint != null) {
-    }
+    if (nearestValue != null && nearestPoint != null) {}
 
     return nearestValue;
   }
@@ -3156,8 +3143,7 @@ class ChartRenderBox extends RenderBox {
     // DEBUG: Print final paint order (only annotations)
     final annotations = nonSeriesElements.where((e) => e.elementType == ChartElementType.annotation).toList();
     if (annotations.isNotEmpty) {
-      for (var i = 0; i < annotations.length; i++) {
-      }
+      for (var i = 0; i < annotations.length; i++) {}
     }
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
@@ -4035,11 +4021,10 @@ class ChartRenderBox extends RenderBox {
     final dataX = dataPos.dx;
     final dataY = dataPos.dy;
 
-    // Use theme for crosshair label styling
+    // Use theme for crosshair label styling (separate from tooltip theme)
     final interactionTheme = _theme?.interactionTheme;
-    final textStyle = interactionTheme?.tooltipTextStyle.copyWith(fontSize: 10) ??
-        const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor = interactionTheme?.tooltipBackground ?? const Color(0xF0FFFFFF);
+    final textStyle = interactionTheme?.crosshairLabelTextStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = interactionTheme?.crosshairLabelBackground ?? const Color(0xF0FFFFFF);
 
     const labelPadding = 4.0;
     final labelBackgroundPaint = Paint()..color = backgroundColor;
@@ -4261,6 +4246,9 @@ class ChartRenderBox extends RenderBox {
     // Get tooltip configuration (use default if not provided)
     final config = _interactionConfig?.tooltip ?? const TooltipConfig();
 
+    // Get effective tooltip style (uses theme defaults when config doesn't specify)
+    final style = _getEffectiveTooltipStyle();
+
     // Find the series element containing this marker
     final seriesElement = _elements.whereType<SeriesElement>().firstWhere(
           (e) => e.id == markerInfo.seriesId,
@@ -4280,8 +4268,8 @@ class ChartRenderBox extends RenderBox {
 
     // Create text painter with configured style
     final textStyle = TextStyle(
-      color: config.style.textColor,
-      fontSize: config.style.fontSize,
+      color: style.textColor,
+      fontSize: style.fontSize,
       fontWeight: FontWeight.w500,
     );
 
@@ -4292,7 +4280,7 @@ class ChartRenderBox extends RenderBox {
     )..layout();
 
     // Calculate tooltip size with configured padding
-    final padding = config.style.padding;
+    final padding = style.padding;
     final tooltipWidth = textPainter.width + padding * 2;
     final tooltipHeight = textPainter.height + padding * 2;
 
@@ -4374,17 +4362,17 @@ class ChartRenderBox extends RenderBox {
       tooltipRect: tooltipRect,
       arrowAnchor: tooltipAnchor,
       arrowSize: arrowSize,
-      borderRadius: config.style.borderRadius,
+      borderRadius: style.borderRadius,
     );
 
     // Draw shadow if configured (with opacity)
-    if (config.style.shadowBlurRadius > 0) {
+    if (style.shadowBlurRadius > 0) {
       final shadowPath = tooltipPath.shift(const Offset(0, 2));
       canvas.drawPath(
         shadowPath,
         Paint()
-          ..color = config.style.shadowColor.withOpacity(config.style.shadowColor.opacity * _tooltipOpacity)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, config.style.shadowBlurRadius),
+          ..color = style.shadowColor.withOpacity(style.shadowColor.opacity * _tooltipOpacity)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.shadowBlurRadius),
       );
     }
 
@@ -4392,18 +4380,18 @@ class ChartRenderBox extends RenderBox {
     canvas.drawPath(
       tooltipPath,
       Paint()
-        ..color = config.style.backgroundColor.withOpacity(config.style.backgroundColor.opacity * _tooltipOpacity)
+        ..color = style.backgroundColor.withOpacity(style.backgroundColor.opacity * _tooltipOpacity)
         ..style = PaintingStyle.fill,
     );
 
     // Draw border if configured (with opacity)
-    if (config.style.borderWidth > 0) {
+    if (style.borderWidth > 0) {
       canvas.drawPath(
         tooltipPath,
         Paint()
-          ..color = config.style.borderColor.withOpacity(config.style.borderColor.opacity * _tooltipOpacity)
+          ..color = style.borderColor.withOpacity(style.borderColor.opacity * _tooltipOpacity)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = config.style.borderWidth,
+          ..strokeWidth = style.borderWidth,
       );
     }
 
@@ -4411,7 +4399,7 @@ class ChartRenderBox extends RenderBox {
     final textPaintWithOpacity = TextPainter(
       text: TextSpan(
         text: tooltipText,
-        style: textStyle.copyWith(color: config.style.textColor.withOpacity(_tooltipOpacity)),
+        style: textStyle.copyWith(color: style.textColor.withOpacity(_tooltipOpacity)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
@@ -4509,6 +4497,33 @@ class ChartRenderBox extends RenderBox {
     _tooltipFadeTimer?.cancel();
     _tooltipFadeTimer = null;
     _tooltipTargetMarker = null;
+  }
+
+  /// Gets the effective tooltip style, using theme defaults when config is not provided.
+  TooltipStyle _getEffectiveTooltipStyle() {
+    final configStyle = _interactionConfig?.tooltip.style;
+    final themeInteraction = _theme?.interactionTheme;
+
+    // If user provided a config, use it as-is
+    if (configStyle != null) {
+      return configStyle;
+    }
+
+    // Otherwise, create a style from theme defaults
+    if (themeInteraction != null) {
+      return TooltipStyle(
+        backgroundColor: themeInteraction.tooltipBackground,
+        textColor: themeInteraction.tooltipTextStyle.color ?? const Color(0xFF333333),
+        fontSize: themeInteraction.tooltipTextStyle.fontSize ?? 12.0,
+        borderColor: themeInteraction.tooltipBorderColor,
+        borderWidth: themeInteraction.tooltipBorderWidth,
+        borderRadius: themeInteraction.tooltipBorderRadius,
+        padding: themeInteraction.tooltipPadding,
+      );
+    }
+
+    // Fallback to hardcoded defaults if no theme
+    return const TooltipStyle();
   }
 
   // ============================================================================
