@@ -70,7 +70,7 @@
 - [X] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [X] T021 [US1] Implement axis layout positioning (left/right) in `lib/src_plus/layout/axis_layout_manager.dart`
 - [X] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src_plus/rendering/chart_painter.dart`
-- [ ] T023 [US1] Update tooltip to display original Y-values with units in `lib/src_plus/interaction/tooltip_builder.dart`
+- [X] T023 [US1] Update tooltip to display original Y-values with units in `lib/src_plus/interaction/tooltip_builder.dart`
 - [ ] T024 [US1] Add example multi-axis chart to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 1 complete - multi-scale visualization working independently
