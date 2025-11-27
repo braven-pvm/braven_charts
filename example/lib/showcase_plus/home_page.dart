@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/interaction_page.dart';
+import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/scientific_data_page.dart';
 import 'pages/theming_page.dart';
@@ -23,6 +24,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     const InteractionPage(),
     const AnnotationsPage(),
     const StreamingPage(),
+    const MultiAxisPage(),
     const ThemingPage(),
     const PerformancePage(),
     const ScientificDataPage(),
@@ -33,6 +35,7 @@ class _ShowcaseHomePageState extends State<ShowcaseHomePage> {
     NavigationDestination(icon: Icon(Icons.touch_app), label: 'Interaction'),
     NavigationDestination(icon: Icon(Icons.label), label: 'Annotations'),
     NavigationDestination(icon: Icon(Icons.stream), label: 'Streaming'),
+    NavigationDestination(icon: Icon(Icons.stacked_line_chart), label: 'Multi-Axis'),
     NavigationDestination(icon: Icon(Icons.palette), label: 'Theming'),
     NavigationDestination(icon: Icon(Icons.speed), label: 'Performance'),
     NavigationDestination(icon: Icon(Icons.science), label: 'Scientific'),
