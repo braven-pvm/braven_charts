@@ -66,8 +66,7 @@ void main() {
     }
 
     group('Axis Renders with Series Color', () {
-      testWidgets('renders chart with derived axis color from series',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with derived axis color from series', (WidgetTester tester) async {
         // Given: A chart with a blue series bound to an axis without explicit color
         const seriesColor = Color(0xFF2196F3); // Blue
         final chart = buildTestChart(
@@ -93,8 +92,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders chart with explicit axis color',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with explicit axis color', (WidgetTester tester) async {
         // Given: A chart with explicit axis color different from series color
         const seriesColor = Color(0xFF2196F3); // Blue series
         const axisColor = Color(0xFFE91E63); // Pink axis
@@ -122,8 +120,7 @@ void main() {
     });
 
     group('Multiple Axes with Different Colors', () {
-      testWidgets('renders multiple axes with distinct colors',
-          (WidgetTester tester) async {
+      testWidgets('renders multiple axes with distinct colors', (WidgetTester tester) async {
         // Given: A chart with multiple series and axes, each with different colors
         const powerColor = Color(0xFF2196F3); // Blue
         const hrColor = Color(0xFFF44336); // Red
@@ -131,14 +128,9 @@ void main() {
 
         final chart = buildTestChart(
           series: [
-            createSeries(
-                id: 'power', color: powerColor, yAxisId: 'power', unit: 'W'),
+            createSeries(id: 'power', color: powerColor, yAxisId: 'power', unit: 'W'),
             createSeries(id: 'hr', color: hrColor, yAxisId: 'hr', unit: 'bpm'),
-            createSeries(
-                id: 'cadence',
-                color: cadenceColor,
-                yAxisId: 'cadence',
-                unit: 'rpm'),
+            createSeries(id: 'cadence', color: cadenceColor, yAxisId: 'cadence', unit: 'rpm'),
           ],
           yAxes: const [
             YAxisConfig(
@@ -167,8 +159,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders mixed explicit and derived colors',
-          (WidgetTester tester) async {
+      testWidgets('renders mixed explicit and derived colors', (WidgetTester tester) async {
         // Given: Chart with mix of explicit and derived axis colors
         const seriesColor = Color(0xFF2196F3);
         const explicitColor = Color(0xFFFF9800); // Orange explicit
@@ -203,8 +194,7 @@ void main() {
     });
 
     group('Edge Cases', () {
-      testWidgets('renders axis with neutral color when no series bound',
-          (WidgetTester tester) async {
+      testWidgets('renders axis with neutral color when no series bound', (WidgetTester tester) async {
         // Given: An axis with no series bound to it
         final chart = buildTestChart(
           series: [
@@ -232,8 +222,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders shared axis with first series color',
-          (WidgetTester tester) async {
+      testWidgets('renders shared axis with first series color', (WidgetTester tester) async {
         // Given: Multiple series bound to the same axis
         const firstColor = Color(0xFF2196F3); // Blue - should be used
         const secondColor = Color(0xFFF44336); // Red - should be ignored
@@ -260,8 +249,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders unbound series with first axis',
-          (WidgetTester tester) async {
+      testWidgets('renders unbound series with first axis', (WidgetTester tester) async {
         // Given: A series with null yAxisId (should bind to first axis)
         final chart = buildTestChart(
           series: [
@@ -286,8 +274,7 @@ void main() {
     });
 
     group('Axis Components Rendering', () {
-      testWidgets('renders axis with all components enabled',
-          (WidgetTester tester) async {
+      testWidgets('renders axis with all components enabled', (WidgetTester tester) async {
         // Given: A chart with explicit axis color and all components
         const axisColor = Color(0xFF9C27B0); // Purple
 
@@ -319,8 +306,7 @@ void main() {
     });
 
     group('Theme Integration', () {
-      testWidgets('renders chart with dark theme',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with dark theme', (WidgetTester tester) async {
         // Given: A chart using dark theme
         final chart = buildTestChart(
           series: [
@@ -345,8 +331,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders chart with high contrast theme',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with high contrast theme', (WidgetTester tester) async {
         // Given: A chart using high contrast theme
         final chart = buildTestChart(
           series: [

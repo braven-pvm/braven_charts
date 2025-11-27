@@ -159,17 +159,11 @@ class MultiAxisPainter {
 
       final renderer = YAxisRenderer(
         config: config,
-        plotArea: plotArea,
+        bounds: (min: axisMin, max: axisMax),
         axisRect: rect,
-        minValue: axisMin,
-        maxValue: axisMax,
-        axisColor: axisColor,
-        labelColor: labelColor,
-        gridColor: gridColor,
-        showGrid: showGrid,
       );
 
-      renderer.paint(canvas);
+      renderer.paint(canvas, plotArea);
     }
   }
 
@@ -195,13 +189,8 @@ class MultiAxisPainter {
 
   /// Creates a normalizer for transforming series data to plot coordinates.
   MultiAxisNormalizer createNormalizer() {
-    final bounds = computeAxisBounds();
-    return MultiAxisNormalizer.fromConfigs(
-      configs: axisConfigs,
-      series: series,
-      plotHeight: plotArea.height,
-      axisBounds: bounds,
-    );
+    // MultiAxisNormalizer is stateless - just return a new instance
+    return const MultiAxisNormalizer();
   }
 }
 

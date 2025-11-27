@@ -51,6 +51,8 @@ class CrosshairSeriesValue {
     required this.y,
     required this.dataPointIndex,
     required this.isInterpolated,
+    this.unit,
+    this.yAxisId,
   });
 
   final String seriesId;
@@ -60,6 +62,12 @@ class CrosshairSeriesValue {
   final double y;
   final int dataPointIndex;
   final bool isInterpolated;
+
+  /// Unit for the Y-value (e.g., 'W', 'bpm', 'rpm')
+  final String? unit;
+
+  /// The Y-axis ID this series is bound to (for multi-axis charts)
+  final String? yAxisId;
 }
 
 /// Complete tracking state for crosshair rendering.
@@ -189,6 +197,22 @@ class CrosshairStyle {
 /// );
 /// ```
 class CrosshairConfig {
+  /// Creates a CrosshairConfig optimized for tracking mode.
+  factory CrosshairConfig.tracking({
+    bool interpolate = true,
+    bool showTooltip = true,
+    bool showMarkers = true,
+    double markerRadius = 4.0,
+  }) {
+    return CrosshairConfig(
+      displayMode: CrosshairDisplayMode.tracking,
+      interpolateValues: interpolate,
+      showTrackingTooltip: showTooltip,
+      showIntersectionMarkers: showMarkers,
+      intersectionMarkerRadius: markerRadius,
+    );
+  }
+
   /// Creates a crosshair configuration with the specified properties.
   const CrosshairConfig({
     this.enabled = true,
@@ -365,22 +389,6 @@ class CrosshairConfig {
       showIntersectionMarkers,
       intersectionMarkerRadius,
     ]);
-  }
-
-  /// Creates a CrosshairConfig optimized for tracking mode.
-  factory CrosshairConfig.tracking({
-    bool interpolate = true,
-    bool showTooltip = true,
-    bool showMarkers = true,
-    double markerRadius = 4.0,
-  }) {
-    return CrosshairConfig(
-      displayMode: CrosshairDisplayMode.tracking,
-      interpolateValues: interpolate,
-      showTrackingTooltip: showTooltip,
-      showIntersectionMarkers: showMarkers,
-      intersectionMarkerRadius: markerRadius,
-    );
   }
 }
 

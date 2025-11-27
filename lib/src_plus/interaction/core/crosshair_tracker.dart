@@ -128,6 +128,8 @@ abstract final class CrosshairTracker {
         y: points.first.y,
         dataPointIndex: 0,
         isInterpolated: false,
+        unit: series.unit,
+        yAxisId: series.yAxisId,
       );
     }
 
@@ -140,6 +142,8 @@ abstract final class CrosshairTracker {
         y: points.last.y,
         dataPointIndex: points.length - 1,
         isInterpolated: false,
+        unit: series.unit,
+        yAxisId: series.yAxisId,
       );
     }
 
@@ -167,6 +171,8 @@ abstract final class CrosshairTracker {
         y: leftPoint.y,
         dataPointIndex: leftIndex,
         isInterpolated: false,
+        unit: series.unit,
+        yAxisId: series.yAxisId,
       );
     }
 
@@ -179,6 +185,8 @@ abstract final class CrosshairTracker {
         y: rightPoint.y,
         dataPointIndex: rightIndex,
         isInterpolated: false,
+        unit: series.unit,
+        yAxisId: series.yAxisId,
       );
     }
 
@@ -214,6 +222,8 @@ abstract final class CrosshairTracker {
         y: interpolatedY,
         dataPointIndex: leftIndex, // Use left point as reference
         isInterpolated: interpolationType != TrackingInterpolation.stepped,
+        unit: series.unit,
+        yAxisId: series.yAxisId,
       );
     } else {
       // Return the nearest point
@@ -229,6 +239,8 @@ abstract final class CrosshairTracker {
           y: leftPoint.y,
           dataPointIndex: leftIndex,
           isInterpolated: false,
+          unit: series.unit,
+          yAxisId: series.yAxisId,
         );
       } else {
         return CrosshairSeriesValue(
@@ -239,6 +251,8 @@ abstract final class CrosshairTracker {
           y: rightPoint.y,
           dataPointIndex: rightIndex,
           isInterpolated: false,
+          unit: series.unit,
+          yAxisId: series.yAxisId,
         );
       }
     }

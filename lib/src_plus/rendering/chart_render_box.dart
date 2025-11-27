@@ -4280,7 +4280,8 @@ class ChartRenderBox extends RenderBox {
 
     for (final value in state.seriesValues) {
       final displayY = _formatDataValue(value.y);
-      final label = '${value.seriesName}: $displayY';
+      final unitSuffix = value.unit != null && value.unit!.isNotEmpty ? ' ${value.unit}' : '';
+      final label = '${value.seriesName}: $displayY$unitSuffix';
       final tp = TextPainter(
         text: TextSpan(
           text: label,
@@ -4617,9 +4618,12 @@ class ChartRenderBox extends RenderBox {
     // If followCursor is enabled, use current cursor position instead of marker position
     final tooltipAnchor = config.followCursor && _cursorPosition != null ? _cursorPosition! : plotToWidget(markerInfo.plotPosition);
 
-    // Build tooltip text
+    // Build tooltip text with optional unit suffix
     final seriesName = seriesElement.series.name ?? seriesElement.id;
-    final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}';
+    final unitSuffix = seriesElement.series.unit != null && seriesElement.series.unit!.isNotEmpty 
+        ? ' ${seriesElement.series.unit}' 
+        : '';
+    final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}$unitSuffix';
 
     // Create text painter with configured style
     final textStyle = TextStyle(

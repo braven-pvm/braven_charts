@@ -71,8 +71,7 @@ void main() {
     }
 
     group('Multi-Axis Crosshair Rendering', () {
-      testWidgets('renders chart with crosshair enabled',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with crosshair enabled', (WidgetTester tester) async {
         // Given: A multi-axis chart with crosshair enabled
         final chart = buildTestChart(
           series: [
@@ -121,8 +120,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('displays crosshair on tap/hover',
-          (WidgetTester tester) async {
+      testWidgets('displays crosshair on tap/hover', (WidgetTester tester) async {
         // Given: A multi-axis chart
         final chart = buildTestChart(
           series: [
@@ -161,8 +159,7 @@ void main() {
     });
 
     group('Original Value Display', () {
-      testWidgets('chart with power and heart rate renders correctly',
-          (WidgetTester tester) async {
+      testWidgets('chart with power and heart rate renders correctly', (WidgetTester tester) async {
         // This test verifies the chart can render with multi-scale data
         // The actual crosshair value display is verified through golden tests
         // and manual testing since tooltip text is canvas-painted
@@ -220,8 +217,7 @@ void main() {
     });
 
     group('Tracking Mode', () {
-      testWidgets('renders chart with tracking enabled',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with tracking enabled', (WidgetTester tester) async {
         // Given: A chart with tracking mode configured
         final chart = buildTestChart(
           series: [
@@ -269,8 +265,7 @@ void main() {
     });
 
     group('Decimal Value Formatting', () {
-      testWidgets('renders chart with decimal values correctly',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with decimal values correctly', (WidgetTester tester) async {
         // Given: A chart with decimal values
         final chart = buildTestChart(
           series: [
@@ -307,8 +302,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders chart with very small values',
-          (WidgetTester tester) async {
+      testWidgets('renders chart with very small values', (WidgetTester tester) async {
         // Given: A chart with micro-scale values
         final chart = buildTestChart(
           series: [
@@ -369,8 +363,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('handles series with zero range',
-          (WidgetTester tester) async {
+      testWidgets('handles series with zero range', (WidgetTester tester) async {
         // Given: A series where all values are identical
         final chart = buildTestChart(
           series: [

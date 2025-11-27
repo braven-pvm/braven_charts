@@ -61,9 +61,7 @@ class AxisColorResolver {
     }
 
     // Determine if this is the first (default) axis
-    final isFirstAxis = allAxes == null ||
-        allAxes.isEmpty ||
-        (allAxes.isNotEmpty && allAxes.first.id == axisConfig.id);
+    final isFirstAxis = allAxes == null || allAxes.isEmpty || (allAxes.isNotEmpty && allAxes.first.id == axisConfig.id);
 
     // Priority 2 & 3: Get bound series and use first one's color
     final boundSeries = getBoundSeries(
@@ -149,9 +147,7 @@ class AxisColorResolver {
       return false;
     }
 
-    final isFirstAxis = allAxes == null ||
-        allAxes.isEmpty ||
-        (allAxes.isNotEmpty && allAxes.first.id == axisConfig.id);
+    final isFirstAxis = allAxes == null || allAxes.isEmpty || (allAxes.isNotEmpty && allAxes.first.id == axisConfig.id);
 
     final boundSeries = getBoundSeries(
       axisId: axisConfig.id,
