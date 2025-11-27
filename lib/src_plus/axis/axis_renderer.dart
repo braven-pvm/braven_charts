@@ -21,9 +21,16 @@ import 'axis_config.dart';
 /// renderer.paint(canvas, chartSize, plotArea);
 /// ```
 class AxisRenderer {
-  AxisRenderer(this.axis, {this.theme});
+  AxisRenderer(this.axis, {this.theme, this.suppressGrid = false});
   final Axis axis;
   final ChartTheme? theme;
+
+  /// When true, grid lines are not rendered regardless of axis config.
+  ///
+  /// Used in multi-axis mode where grid lines are disabled because
+  /// they would visually conflict with multiple Y-axes with different scales.
+  /// See FR-009 in 011-multi-axis-normalization spec.
+  final bool suppressGrid;
 
   /// Paints the axis on the canvas.
   ///
@@ -66,8 +73,8 @@ class AxisRenderer {
       // Skip if outside plot area
       if (x < plotArea.left || x > plotArea.right) continue;
 
-      // Draw grid line
-      if (config.showGrid) {
+      // Draw grid line (skip if suppressGrid is true)
+      if (config.showGrid && !suppressGrid) {
         final gridStyle = theme?.gridStyle;
         canvas.drawLine(
           Offset(x, plotArea.top),
@@ -163,8 +170,8 @@ class AxisRenderer {
       // Skip if outside plot area
       if (y < plotArea.top || y > plotArea.bottom) continue;
 
-      // Draw grid line
-      if (config.showGrid) {
+      // Draw grid line (skip if suppressGrid is true)
+      if (config.showGrid && !suppressGrid) {
         final gridStyle = theme?.gridStyle;
         canvas.drawLine(
           Offset(plotArea.left, y),

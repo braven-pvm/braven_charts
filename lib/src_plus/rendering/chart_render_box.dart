@@ -220,6 +220,13 @@ class ChartRenderBox extends RenderBox {
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
 
+  /// Whether multi-axis mode is active.
+  ///
+  /// When true, grid lines are suppressed (FR-009) because they would
+  /// visually conflict with multiple Y-axes with different scales.
+  /// Updated via [setMultiAxisMode].
+  bool _isMultiAxisMode = false;
+
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
 
@@ -561,6 +568,16 @@ class ChartRenderBox extends RenderBox {
   void setShowYScrollbar(bool show) {
     if (_showYScrollbar == show) return;
     _showYScrollbar = show;
+    markNeedsPaint();
+  }
+
+  /// Updates multi-axis mode state.
+  ///
+  /// When true, grid lines are suppressed (FR-009) because they would
+  /// visually conflict with multiple Y-axes with different scales.
+  void setMultiAxisMode(bool enabled) {
+    if (_isMultiAxisMode == enabled) return;
+    _isMultiAxisMode = enabled;
     markNeedsPaint();
   }
 
@@ -3095,11 +3112,15 @@ class ChartRenderBox extends RenderBox {
     // This avoids unnecessary tick regeneration during crosshair hover.
 
     // Paint axes (behind all chart elements)
+    // Note: In multi-axis mode, grid lines are suppressed (FR-009) because
+    // they would visually conflict with multiple Y-axes with different scales.
     if (_xAxis != null) {
-      AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      AxisRenderer(_xAxis!, theme: _theme, suppressGrid: _isMultiAxisMode)
+          .paint(canvas, size, _plotArea);
     }
     if (_yAxis != null) {
-      AxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      AxisRenderer(_yAxis!, theme: _theme, suppressGrid: _isMultiAxisMode)
+          .paint(canvas, size, _plotArea);
     }
 
     // ==========================================================================
