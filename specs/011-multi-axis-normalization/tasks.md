@@ -67,7 +67,7 @@
 
 - [X] T018 [US1] Implement series-to-axis binding resolution in `lib/src_plus/axis/series_axis_resolver.dart`
 - [X] T019 [US1] Implement per-axis Y normalization in `lib/src_plus/rendering/multi_axis_normalizer.dart`
-- [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src_plus/rendering/y_axis_renderer.dart`
+- [X] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src_plus/layout/axis_layout_manager.dart`
 - [ ] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src_plus/rendering/chart_painter.dart`
 - [ ] T023 [US1] Update tooltip to display original Y-values with units in `lib/src_plus/interaction/tooltip_builder.dart`
