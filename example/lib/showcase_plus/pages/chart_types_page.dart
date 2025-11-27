@@ -32,12 +32,16 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
 
   // Line Options
   bool _fillArea = true;
-  bool _curved = true;
+  LineStyle _lineStyle = LineStyle.smooth;
   bool _showPoints = true;
 
   // Bar Options
   double _barWidth = 10.0;
   double _barSpacing = 5.0;
+
+  // Crosshair Options
+  CrosshairMode _crosshairMode = CrosshairMode.both;
+  CrosshairDisplayMode _crosshairDisplayMode = CrosshairDisplayMode.auto;
 
   @override
   void initState() {
@@ -138,10 +142,11 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                       value: _fillArea,
                       onChanged: (v) => setState(() => _fillArea = v),
                     ),
-                    BoolOption(
-                      label: 'Curved Line',
-                      value: _curved,
-                      onChanged: (v) => setState(() => _curved = v),
+                    EnumOption<LineStyle>(
+                      label: 'Line Style',
+                      value: _lineStyle,
+                      values: LineStyle.values,
+                      onChanged: (v) => setState(() => _lineStyle = v),
                     ),
                     BoolOption(
                       label: 'Show Points',
@@ -170,6 +175,23 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                     ),
                   ],
                 ),
+              OptionSection(
+                title: 'Crosshair',
+                children: [
+                  EnumOption<CrosshairMode>(
+                    label: 'Mode',
+                    value: _crosshairMode,
+                    values: CrosshairMode.values,
+                    onChanged: (v) => setState(() => _crosshairMode = v),
+                  ),
+                  EnumOption<CrosshairDisplayMode>(
+                    label: 'Display',
+                    value: _crosshairDisplayMode,
+                    values: CrosshairDisplayMode.values,
+                    onChanged: (v) => setState(() => _crosshairDisplayMode = v),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -178,6 +200,13 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   }
 
   Widget _buildChart() {
+    // Convert LineStyle to LineInterpolation
+    final interpolation = switch (_lineStyle) {
+      LineStyle.straight => LineInterpolation.linear,
+      LineStyle.smooth => LineInterpolation.bezier,
+      LineStyle.stepped => LineInterpolation.stepped,
+    };
+
     // Create series based on chart type
     final List<ChartSeries> series;
     if (_isLineChart) {
@@ -189,7 +218,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             name: 'Data Series',
             points: _data,
             color: Colors.blue,
-            interpolation: _curved ? LineInterpolation.bezier : LineInterpolation.linear,
+            interpolation: interpolation,
             showDataPointMarkers: _showPoints,
             fillOpacity: 0.3,
           ),
@@ -201,7 +230,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             name: 'Data Series',
             points: _data,
             color: Colors.blue,
-            interpolation: _curved ? LineInterpolation.bezier : LineInterpolation.linear,
+            interpolation: interpolation,
             showDataPointMarkers: _showPoints,
           ),
         ];
@@ -220,6 +249,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
 
     final chart = BravenChartPlus(
       chartType: _isLineChart ? ChartType.line : ChartType.bar,
+      lineStyle: _lineStyle,
       series: series,
       xAxis: AxisConfig(
         orientation: AxisOrientation.horizontal,
@@ -238,6 +268,15 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       interactionConfig: InteractionConfig(
         tooltip: TooltipConfig(enabled: _showTooltip),
         showFocusBorder: false, // Disable auto-select border on hover
+        crosshair: CrosshairConfig(
+          mode: _crosshairMode,
+          displayMode: _crosshairDisplayMode,
+          showCoordinateLabels: true,
+          trackingModeThreshold: 250,
+          interpolateValues: true,
+          showTrackingTooltip: true,
+          showIntersectionMarkers: true,
+        ),
       ),
     );
 

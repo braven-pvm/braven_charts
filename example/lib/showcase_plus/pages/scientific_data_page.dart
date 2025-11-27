@@ -27,6 +27,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   bool _showRawData = true;
   bool _selectionMode = false;
   String _selectedTheme = 'Light';
+  LineStyle _lineStyle = LineStyle.straight;
   final AnnotationController _annotationController = AnnotationController();
 
   @override
@@ -170,6 +171,24 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                     }
                   },
                 ),
+                const SizedBox(width: 24),
+                Text('Style:', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+                const SizedBox(width: 8),
+                DropdownButton<LineStyle>(
+                  value: _lineStyle,
+                  dropdownColor: isDark ? Colors.grey[800] : null,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  items: const [
+                    DropdownMenuItem(value: LineStyle.straight, child: Text('Straight')),
+                    DropdownMenuItem(value: LineStyle.smooth, child: Text('Smooth')),
+                    DropdownMenuItem(value: LineStyle.stepped, child: Text('Stepped')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _lineStyle = value);
+                    }
+                  },
+                ),
                 const Spacer(),
                 Text('Selection mode', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
                 const SizedBox(width: 8),
@@ -182,6 +201,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
               padding: const EdgeInsets.all(16),
               child: BravenChartPlus(
                 chartType: ChartType.line,
+                lineStyle: _lineStyle,
                 series: [
                   if (_showRawData)
                     LineChartSeries(
@@ -224,7 +244,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                     showCoordinateLabels: true,
                     displayMode: CrosshairDisplayMode.auto,
                     trackingModeThreshold: 250,
-                    mode: CrosshairMode.horizontal,
+                    mode: CrosshairMode.vertical,
                     interpolateValues: true,
                     showTrackingTooltip: true,
                     showIntersectionMarkers: true,
