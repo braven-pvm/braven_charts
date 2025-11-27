@@ -39,7 +39,7 @@
 - [X] T008 Create test directory structure at `test/widget/multi_axis/`
 - [X] T009 Create test directory structure at `test/golden/multi_axis/`
 - [X] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src_plus/widgets/braven_chart_plus.dart`
-- [ ] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src_plus/layout/multi_axis_layout.dart`
+- [X] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src_plus/layout/multi_axis_layout.dart`
 - [ ] T012 Create axis bounds computation utility in `lib/src_plus/axis/axis_bounds_calculator.dart`
 - [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src_plus/rendering/grid_renderer.dart`
 - [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
