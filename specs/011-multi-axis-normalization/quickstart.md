@@ -17,6 +17,7 @@ Multi-axis normalization allows you to display multiple data series with vastly 
 
 ```dart
 BravenChartPlus(
+  chartType: ChartType.line,
   yAxes: [
     YAxisConfig(
       id: 'power',
@@ -56,6 +57,7 @@ Let the system decide when multi-axis is needed:
 
 ```dart
 BravenChartPlus(
+  chartType: ChartType.line,
   normalizationMode: NormalizationMode.auto,  // Detects when ranges differ >10x
   series: [
     LineChartSeries(id: 'power', points: powerData),      // 0-300W
@@ -70,6 +72,7 @@ Maximum configuration with 4 Y-axes:
 
 ```dart
 BravenChartPlus(
+  chartType: ChartType.line,
   yAxes: [
     YAxisConfig(id: 'ventilation', position: YAxisPosition.leftOuter, unit: 'L/min'),
     YAxisConfig(id: 'tidalVolume', position: YAxisPosition.left, unit: 'L'),
@@ -136,14 +139,17 @@ BravenChartPlus(
 Multiple series can share the same Y-axis:
 
 ```dart
-yAxes: [
-  YAxisConfig(id: 'percentage', position: YAxisPosition.left, unit: '%'),
-],
-series: [
-  LineChartSeries(id: 'cpu', yAxisId: 'percentage', ...),
-  LineChartSeries(id: 'memory', yAxisId: 'percentage', ...),  // Same axis
-  LineChartSeries(id: 'disk', yAxisId: 'percentage', ...),    // Same axis
-],
+BravenChartPlus(
+  chartType: ChartType.line,
+  yAxes: [
+    YAxisConfig(id: 'percentage', position: YAxisPosition.left, unit: '%'),
+  ],
+  series: [
+    LineChartSeries(id: 'cpu', yAxisId: 'percentage', ...),
+    LineChartSeries(id: 'memory', yAxisId: 'percentage', ...),  // Same axis
+    LineChartSeries(id: 'disk', yAxisId: 'percentage', ...),    // Same axis
+  ],
+)
 ```
 
 ### Explicit Bounds
@@ -182,6 +188,7 @@ YAxisConfig(
 ```dart
 // This still works exactly as before
 BravenChartPlus(
+  chartType: ChartType.line,
   series: [series1, series2],  // All use primary axis
 )
 ```
@@ -191,6 +198,7 @@ BravenChartPlus(
 ```dart
 // Add yAxes config and yAxisId to series
 BravenChartPlus(
+  chartType: ChartType.line,
   yAxes: [
     YAxisConfig(id: 'primary', position: YAxisPosition.left),
     YAxisConfig(id: 'secondary', position: YAxisPosition.right),
