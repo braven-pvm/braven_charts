@@ -1,15 +1,15 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Golden tests for 4-axis chart rendering (US1: Multi-Scale Data Visualization)
 
+import 'package:braven_charts/src_plus/axis/y_axis_config.dart';
+import 'package:braven_charts/src_plus/models/chart_data_point.dart';
+import 'package:braven_charts/src_plus/models/chart_series.dart';
+import 'package:braven_charts/src_plus/models/chart_type.dart';
+import 'package:braven_charts/src_plus/models/normalization_mode.dart';
+import 'package:braven_charts/src_plus/models/y_axis_position.dart';
+import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
-import 'package:braven_charts/src_plus/axis/y_axis_config.dart';
-import 'package:braven_charts/src_plus/models/y_axis_position.dart';
-import 'package:braven_charts/src_plus/models/normalization_mode.dart';
-import 'package:braven_charts/src_plus/models/chart_series.dart';
-import 'package:braven_charts/src_plus/models/chart_data_point.dart';
-import 'package:braven_charts/src_plus/models/chart_type.dart';
 
 /// Golden tests for 4-axis chart rendering.
 ///

@@ -13,6 +13,7 @@ export '../models/y_axis_position.dart';
 // Multi-axis normalization exports
 export 'axis_bounds_calculator.dart';
 export 'multi_axis_state.dart';
+export 'series_axis_resolver.dart';
 export 'y_axis_config.dart';
 
 /// Represents an axis with scale, ticks, and configuration.
