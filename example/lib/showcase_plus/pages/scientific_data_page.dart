@@ -31,6 +31,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   bool _selectionMode = false;
   bool _multiAxisMode = false;
   bool _autoDetectMode = false; // New: Auto-detection mode toggle
+  bool _derivedColors = false; // New: Derived colors mode (axis colors from series)
   String _selectedTheme = 'Light';
   LineStyle _lineStyle = LineStyle.straight;
   final AnnotationController _annotationController = AnnotationController();
@@ -357,6 +358,43 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                   ),
                 ),
                 const SizedBox(width: 16),
+                // Derived Colors toggle (only visible when multi-axis is on)
+                if (_multiAxisMode)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _derivedColors ? Colors.amber[100] : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _derivedColors ? Colors.amber : Colors.grey[400]!,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.palette,
+                          size: 16,
+                          color: _derivedColors ? Colors.amber[700] : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Derived Colors',
+                          style: TextStyle(
+                            color: _derivedColors ? Colors.amber[700] : Colors.grey[600],
+                            fontWeight: _derivedColors ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Switch(
+                          value: _derivedColors,
+                          onChanged: (value) => setState(() => _derivedColors = value),
+                          activeThumbColor: Colors.amber,
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(width: 8),
                 Text('Selection mode', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
                 const SizedBox(width: 8),
                 Switch(value: _selectionMode, onChanged: (value) => setState(() => _selectionMode = value)),
@@ -446,7 +484,11 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   }
 
   /// Builds the multi-axis chart showing Power (100-250W), Heart Rate (60-180 bpm),
-  /// and Cadence (50-120 rpm) - each with its own Y-axis
+  /// and Cadence (50-120 rpm) - each with its own Y-axis.
+  ///
+  /// When [_derivedColors] is true, axis colors are automatically derived from
+  /// their bound series colors (no explicit color in YAxisConfig).
+  /// When [_derivedColors] is false, explicit colors are set on each axis.
   Widget _buildMultiAxisChart(
     List<ChartDataPoint> powerData,
     List<ChartDataPoint> heartRateData,
@@ -454,6 +496,11 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
     ChartTheme theme,
     bool isDark,
   ) {
+    // Series colors - these are the source of truth for derived mode
+    final powerColor = Colors.blue[600]!;
+    final hrColor = Colors.red[600]!;
+    final cadenceColor = Colors.green[600]!;
+
     return BravenChartPlus(
       chartType: ChartType.line,
       lineStyle: _lineStyle,
@@ -463,7 +510,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
           id: 'power',
           name: 'Power',
           points: powerData,
-          color: Colors.blue[600]!,
+          color: powerColor,
           strokeWidth: 2.0,
           showDataPointMarkers: false,
           yAxisId: 'power',
@@ -474,7 +521,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
           id: 'heart-rate',
           name: 'Heart Rate',
           points: heartRateData,
-          color: Colors.red[600]!,
+          color: hrColor,
           strokeWidth: 2.0,
           showDataPointMarkers: false,
           yAxisId: 'hr',
@@ -485,7 +532,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
           id: 'cadence',
           name: 'Cadence',
           points: cadenceData,
-          color: Colors.green[600]!,
+          color: cadenceColor,
           strokeWidth: 1.5,
           showDataPointMarkers: false,
           yAxisId: 'cadence',
@@ -493,26 +540,51 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
         ),
       ],
       // Configure multiple Y-axes
-      yAxes: [
-        YAxisConfig(
-          id: 'power',
-          position: YAxisPosition.left,
-          label: 'Power (W)',
-          color: Colors.blue[600],
-        ),
-        YAxisConfig(
-          id: 'hr',
-          position: YAxisPosition.right,
-          label: 'Heart Rate (bpm)',
-          color: Colors.red[600],
-        ),
-        YAxisConfig(
-          id: 'cadence',
-          position: YAxisPosition.leftOuter,
-          label: 'Cadence (rpm)',
-          color: Colors.green[600],
-        ),
-      ],
+      // When _derivedColors is true, we omit explicit colors and let
+      // the AxisColorResolver derive them from the bound series.
+      yAxes: _derivedColors
+          ? const [
+              // No explicit colors - derived from series
+              YAxisConfig(
+                id: 'power',
+                position: YAxisPosition.left,
+                label: 'Power (W)',
+                // color omitted - will be derived from 'power' series (blue)
+              ),
+              YAxisConfig(
+                id: 'hr',
+                position: YAxisPosition.right,
+                label: 'Heart Rate (bpm)',
+                // color omitted - will be derived from 'heart-rate' series (red)
+              ),
+              YAxisConfig(
+                id: 'cadence',
+                position: YAxisPosition.leftOuter,
+                label: 'Cadence (rpm)',
+                // color omitted - will be derived from 'cadence' series (green)
+              ),
+            ]
+          : [
+              // Explicit colors - same as series for visual consistency
+              YAxisConfig(
+                id: 'power',
+                position: YAxisPosition.left,
+                label: 'Power (W)',
+                color: powerColor,
+              ),
+              YAxisConfig(
+                id: 'hr',
+                position: YAxisPosition.right,
+                label: 'Heart Rate (bpm)',
+                color: hrColor,
+              ),
+              YAxisConfig(
+                id: 'cadence',
+                position: YAxisPosition.leftOuter,
+                label: 'Cadence (rpm)',
+                color: cadenceColor,
+              ),
+            ],
       // Use per-series normalization for multi-scale data
       normalizationMode: NormalizationMode.perSeries,
       xAxis: const AxisConfig(

@@ -118,9 +118,9 @@
 - [X] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [X] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [X] T038 [US3] Handle shared axis color (neutral or first series) in `lib/src_plus/axis/axis_color_resolver.dart`
-- [ ] T039 [US3] Add themed axis color example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
+- [X] T039 [US3] Add themed axis color example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
-**Checkpoint**: User Story 3 complete - color-coded axes working independently
+**Checkpoint**: User Story 3 complete - color-coded axes working independently ✅
 
 ---
 
