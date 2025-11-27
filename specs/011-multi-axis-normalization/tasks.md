@@ -58,7 +58,7 @@
 ### Tests for User Story 1
 
 - [X] T013 [P] [US1] Unit test for per-axis normalization in `test/unit/multi_axis/normalization_test.dart`
-- [ ] T014 [P] [US1] Unit test for axis bounds computation in `test/unit/multi_axis/axis_bounds_test.dart`
+- [X] T014 [P] [US1] Unit test for axis bounds computation in `test/unit/multi_axis/axis_bounds_test.dart`
 - [ ] T015 [P] [US1] Widget test for multi-axis rendering in `test/widget/multi_axis/multi_axis_chart_test.dart`
 - [ ] T016 [P] [US1] Golden test for 2-axis chart in `test/golden/multi_axis/two_axis_chart_test.dart`
 - [ ] T017 [P] [US1] Golden test for 4-axis chart in `test/golden/multi_axis/four_axis_chart_test.dart`
