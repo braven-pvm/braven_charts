@@ -8,8 +8,7 @@
 /// - [MultiAxisState] for runtime axis state
 library;
 
-import 'package:flutter/widgets.dart'
-    show Size, TextPainter, TextDirection, TextSpan;
+import 'package:flutter/widgets.dart' show Size, TextPainter, TextDirection, TextSpan;
 
 import '../axis/y_axis_config.dart';
 import '../models/y_axis_position.dart';
@@ -40,8 +39,7 @@ class AxisLayoutResult {
   final double offset;
 
   @override
-  String toString() =>
-      'AxisLayoutResult(id: $axisId, position: $position, width: $width, offset: $offset)';
+  String toString() => 'AxisLayoutResult(id: $axisId, position: $position, width: $width, offset: $offset)';
 }
 
 /// Complete layout result for all axes.
@@ -75,9 +73,7 @@ class MultiAxisLayoutResult {
 
   /// Gets all left-side axis layouts in order (leftOuter first, then left).
   List<AxisLayoutResult> get leftAxisLayouts {
-    return axisLayouts.values
-        .where((layout) => layout.position.isLeft)
-        .toList()
+    return axisLayouts.values.where((layout) => layout.position.isLeft).toList()
       ..sort((a, b) {
         // leftOuter comes before left
         if (a.position == YAxisPosition.leftOuter) return -1;
@@ -88,9 +84,7 @@ class MultiAxisLayoutResult {
 
   /// Gets all right-side axis layouts in order (right first, then rightOuter).
   List<AxisLayoutResult> get rightAxisLayouts {
-    return axisLayouts.values
-        .where((layout) => layout.position.isRight)
-        .toList()
+    return axisLayouts.values.where((layout) => layout.position.isRight).toList()
       ..sort((a, b) {
         // right comes before rightOuter
         if (a.position == YAxisPosition.right) return -1;
@@ -100,8 +94,7 @@ class MultiAxisLayoutResult {
   }
 
   @override
-  String toString() =>
-      'MultiAxisLayoutResult(leftWidth: $leftWidth, rightWidth: $rightWidth, plotArea: ${plotAreaWidth}x$plotAreaHeight)';
+  String toString() => 'MultiAxisLayoutResult(leftWidth: $leftWidth, rightWidth: $rightWidth, plotArea: ${plotAreaWidth}x$plotAreaHeight)';
 }
 
 /// Delegate for computing multi-axis layout dimensions.
@@ -178,9 +171,7 @@ class MultiAxisLayoutDelegate {
     final axisLayouts = <String, AxisLayoutResult>{};
 
     // Separate axes by side
-    final leftConfigs = axisConfigs
-        .where((c) => c.position.isLeft)
-        .toList()
+    final leftConfigs = axisConfigs.where((c) => c.position.isLeft).toList()
       ..sort((a, b) {
         // leftOuter comes before left
         if (a.position == YAxisPosition.leftOuter) return -1;
@@ -188,9 +179,7 @@ class MultiAxisLayoutDelegate {
         return 0;
       });
 
-    final rightConfigs = axisConfigs
-        .where((c) => c.position.isRight)
-        .toList()
+    final rightConfigs = axisConfigs.where((c) => c.position.isRight).toList()
       ..sort((a, b) {
         // right comes before rightOuter
         if (a.position == YAxisPosition.right) return -1;
@@ -247,8 +236,7 @@ class MultiAxisLayoutDelegate {
     }
 
     // Compute plot area dimensions
-    final plotAreaWidth =
-        chartSize.width - totalLeftWidth - totalRightWidth - (padding * 2);
+    final plotAreaWidth = chartSize.width - totalLeftWidth - totalRightWidth - (padding * 2);
     final plotAreaHeight = chartSize.height - (padding * 2);
 
     return MultiAxisLayoutResult(

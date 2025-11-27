@@ -6,15 +6,13 @@
 // - AxisBoundsCalculator computations
 // - NormalizationMode logic
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src_plus/axis/axis.dart';
-import 'package:braven_charts/src_plus/models/y_axis_position.dart';
-import 'package:braven_charts/src_plus/models/normalization_mode.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('YAxisConfig', () {
     test('creates with required parameters', () {
-      final config = YAxisConfig(
+      final config = const YAxisConfig(
         id: 'price',
         position: YAxisPosition.left,
       );
@@ -80,7 +78,7 @@ void main() {
     });
 
     test('copyWith creates new instance with updated values', () {
-      final original = YAxisConfig(
+      final original = const YAxisConfig(
         id: 'price',
         position: YAxisPosition.left,
         showLabels: true,
@@ -95,15 +93,15 @@ void main() {
     });
 
     test('equality compares all properties', () {
-      final config1 = YAxisConfig(
+      final config1 = const YAxisConfig(
         id: 'price',
         position: YAxisPosition.left,
       );
-      final config2 = YAxisConfig(
+      final config2 = const YAxisConfig(
         id: 'price',
         position: YAxisPosition.left,
       );
-      final config3 = YAxisConfig(
+      final config3 = const YAxisConfig(
         id: 'volume',
         position: YAxisPosition.left,
       );

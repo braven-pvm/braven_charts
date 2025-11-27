@@ -65,8 +65,7 @@ class AxisBounds {
   }
 
   @override
-  String toString() =>
-      'AxisBounds(id: $axisId, min: $min, max: $max, series: $seriesIds)';
+  String toString() => 'AxisBounds(id: $axisId, min: $min, max: $max, series: $seriesIds)';
 
   @override
   bool operator ==(Object other) =>
@@ -123,8 +122,7 @@ class MultiAxisBounds {
   bool get allValid => axisBounds.values.every((b) => b.isValid);
 
   @override
-  String toString() =>
-      'MultiAxisBounds(axes: ${axisBounds.keys.join(', ')}, series: ${seriesAxisMapping.length})';
+  String toString() => 'MultiAxisBounds(axes: ${axisBounds.keys.join(', ')}, series: ${seriesAxisMapping.length})';
 }
 
 /// Calculator for computing per-axis bounds from series data.

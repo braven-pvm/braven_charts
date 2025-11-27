@@ -3115,12 +3115,10 @@ class ChartRenderBox extends RenderBox {
     // Note: In multi-axis mode, grid lines are suppressed (FR-009) because
     // they would visually conflict with multiple Y-axes with different scales.
     if (_xAxis != null) {
-      AxisRenderer(_xAxis!, theme: _theme, suppressGrid: _isMultiAxisMode)
-          .paint(canvas, size, _plotArea);
+      AxisRenderer(_xAxis!, theme: _theme, suppressGrid: _isMultiAxisMode).paint(canvas, size, _plotArea);
     }
     if (_yAxis != null) {
-      AxisRenderer(_yAxis!, theme: _theme, suppressGrid: _isMultiAxisMode)
-          .paint(canvas, size, _plotArea);
+      AxisRenderer(_yAxis!, theme: _theme, suppressGrid: _isMultiAxisMode).paint(canvas, size, _plotArea);
     }
 
     // ==========================================================================
