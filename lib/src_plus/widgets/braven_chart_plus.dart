@@ -12,6 +12,8 @@ import 'package:flutter/services.dart';
 // All dependencies are now in src_plus - NO references to src!
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_config.dart';
+import '../axis/multi_axis_state.dart';
+import '../axis/y_axis_config.dart';
 import '../controllers/annotation_controller.dart';
 import '../controllers/chart_controller.dart';
 import '../coordinates/chart_transform.dart';
@@ -30,6 +32,7 @@ import '../models/chart_theme.dart';
 import '../models/chart_type.dart';
 import '../models/enums.dart';
 import '../models/interaction_config.dart';
+import '../models/normalization_mode.dart';
 import '../models/streaming_config.dart';
 import '../rendering/chart_render_box.dart';
 import '../rendering/spatial_index.dart';
@@ -67,6 +70,8 @@ class BravenChartPlus extends StatefulWidget {
     this.theme,
     this.xAxis,
     this.yAxis,
+    this.yAxes,
+    this.normalizationMode,
     this.width,
     this.height,
     this.backgroundColor = Colors.white,
@@ -445,9 +450,62 @@ class BravenChartPlus extends StatefulWidget {
   final ChartTheme? theme;
   final AxisConfig? xAxis;
   final AxisConfig? yAxis;
+
+  /// Configuration for multiple Y-axes in multi-axis charts.
+  ///
+  /// When provided, enables multi-axis mode where series with different
+  /// Y-ranges are normalized to share the vertical space. Each axis can be
+  /// positioned at leftOuter, left, right, or rightOuter.
+  ///
+  /// Series bind to axes via their [ChartSeries.yAxisId] property.
+  /// If a series has no yAxisId, it uses the first axis by default.
+  ///
+  /// Maximum of 4 axes supported (one per position).
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   yAxes: [
+  ///     YAxisConfig(id: 'power', position: YAxisPosition.left, color: Colors.blue),
+  ///     YAxisConfig(id: 'heartRate', position: YAxisPosition.right, color: Colors.red),
+  ///   ],
+  ///   series: [
+  ///     LineChartSeries(id: 'power', yAxisId: 'power', ...),
+  ///     LineChartSeries(id: 'hr', yAxisId: 'heartRate', ...),
+  ///   ],
+  /// )
+  /// ```
+  ///
+  /// See also:
+  /// - [YAxisConfig] for axis configuration options
+  /// - [normalizationMode] for normalization behavior control
+  final List<YAxisConfig>? yAxes;
+
+  /// Controls how series are normalized in multi-axis mode.
+  ///
+  /// - [NormalizationMode.none]: No normalization (uses [yAxis] bounds only)
+  /// - [NormalizationMode.auto]: Auto-detect when ranges differ >10x
+  /// - [NormalizationMode.perSeries]: Per-axis normalization (requires [yAxes])
+  ///
+  /// Defaults to [NormalizationMode.auto] when [yAxes] is provided.
+  /// Defaults to [NormalizationMode.none] when only [yAxis] is provided.
+  ///
+  /// See also:
+  /// - [yAxes] for multi-axis configuration
+  /// - [MultiAxisState] for runtime normalization state
+  final NormalizationMode? normalizationMode;
+
   final double? width;
   final double? height;
   final Color backgroundColor;
+
+  /// Whether multi-axis mode is active.
+  ///
+  /// Returns true when [yAxes] is provided with at least one axis configuration.
+  /// In multi-axis mode, series are normalized to share the vertical space
+  /// while displaying their original values on separate Y-axes.
+  bool get isMultiAxisMode => yAxes != null && yAxes!.isNotEmpty;
+
   final bool showDebugInfo;
 
   /// Whether to show horizontal scrollbar at the bottom of the chart.
