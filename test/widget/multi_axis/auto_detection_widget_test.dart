@@ -322,7 +322,7 @@ void main() {
           name: 'Positive',
           points: List.generate(
             100,
-            (i) => ChartDataPoint(x: i.toDouble(), y: 100 + i),
+            (i) => ChartDataPoint(x: i.toDouble(), y: 100.0 + i),
           ),
           color: Colors.blue,
         );
@@ -367,7 +367,7 @@ void main() {
             name: 'Power',
             points: List.generate(
               50,
-              (i) => ChartDataPoint(x: i.toDouble(), y: 100 + i),
+              (i) => ChartDataPoint(x: i.toDouble(), y: 100.0 + i),
             ),
             color: Colors.blue,
           ),
@@ -376,7 +376,7 @@ void main() {
             name: 'Heart Rate',
             points: List.generate(
               50,
-              (i) => ChartDataPoint(x: i.toDouble(), y: 60 + i * 2),
+              (i) => ChartDataPoint(x: i.toDouble(), y: 60.0 + i * 2),
             ),
             color: Colors.red,
           ),

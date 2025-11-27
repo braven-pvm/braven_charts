@@ -86,9 +86,9 @@ void main() {
     group('computeRangeRatio', () {
       test('computes correct ratio for Power vs Heart Rate (typical ~2x)', () {
         // Power: 100-250W (span: 150)
-        final powerRange = SeriesRange(min: 100, max: 250);
+        final powerRange = const SeriesRange(min: 100, max: 250);
         // Heart Rate: 60-180bpm (span: 120)
-        final hrRange = SeriesRange(min: 60, max: 180);
+        final hrRange = const SeriesRange(min: 60, max: 180);
 
         final ratio = RangeRatioCalculator.computeRangeRatio(powerRange, hrRange);
 
@@ -97,9 +97,9 @@ void main() {
 
       test('computes correct ratio for vastly different ranges (>10x)', () {
         // Power: 100-250W (span: 150)
-        final powerRange = SeriesRange(min: 100, max: 250);
+        final powerRange = const SeriesRange(min: 100, max: 250);
         // Micro-volts: 0.001-0.005 (span: 0.004)
-        final microVoltRange = SeriesRange(min: 0.001, max: 0.005);
+        final microVoltRange = const SeriesRange(min: 0.001, max: 0.005);
 
         final ratio = RangeRatioCalculator.computeRangeRatio(powerRange, microVoltRange);
 
@@ -107,8 +107,8 @@ void main() {
       });
 
       test('returns 1.0 for identical ranges', () {
-        final range1 = SeriesRange(min: 0, max: 100);
-        final range2 = SeriesRange(min: 0, max: 100);
+        final range1 = const SeriesRange(min: 0, max: 100);
+        final range2 = const SeriesRange(min: 0, max: 100);
 
         final ratio = RangeRatioCalculator.computeRangeRatio(range1, range2);
 
@@ -116,8 +116,8 @@ void main() {
       });
 
       test('handles zero span in one series (avoids division by zero)', () {
-        final zeroSpan = SeriesRange(min: 100, max: 100);
-        final normalRange = SeriesRange(min: 0, max: 100);
+        final zeroSpan = const SeriesRange(min: 100, max: 100);
+        final normalRange = const SeriesRange(min: 0, max: 100);
 
         final ratio = RangeRatioCalculator.computeRangeRatio(zeroSpan, normalRange);
 
@@ -125,8 +125,8 @@ void main() {
       });
 
       test('ratio is always >= 1 (larger/smaller)', () {
-        final small = SeriesRange(min: 0, max: 10);
-        final large = SeriesRange(min: 0, max: 1000);
+        final small = const SeriesRange(min: 0, max: 10);
+        final large = const SeriesRange(min: 0, max: 1000);
 
         // Regardless of argument order, ratio should be >= 1
         final ratio1 = RangeRatioCalculator.computeRangeRatio(small, large);
