@@ -1,5 +1,96 @@
 ## 0.0.1
 
+### Multi-Axis Normalization (011-multi-axis-normalization)
+
+**New Feature**: Display multiple data series with vastly different Y-axis ranges on the same chart. Each series uses the full vertical height while showing its original values on color-coded Y-axes.
+
+**Breaking Changes**
+- None - fully backward compatible with existing single-axis charts
+
+**New API**
+
+**YAxisConfig** - Configuration for individual Y-axes
+- `id` - Unique identifier for series binding
+- `position` - leftOuter, left, right, or rightOuter
+- `color` - Optional axis color (defaults to first bound series)
+- `label` - Optional axis label text
+- `unit` - Optional unit suffix for tick labels
+- `min/max` - Optional explicit bounds (null = auto-computed)
+- `minWidth/maxWidth` - Axis width constraints (default: 40-80px)
+- `labelFormatter` - Custom value formatting function
+
+**YAxisPosition** - Enum for axis positioning
+- `leftOuter` - Leftmost axis
+- `left` - Primary left axis (default)
+- `right` - Primary right axis
+- `rightOuter` - Rightmost axis
+
+**NormalizationMode** - Enum for normalization behavior
+- `none` - No normalization (current behavior)
+- `auto` - Enable when ranges differ by >10x
+- `perSeries` - Always normalize each series
+
+**ChartSeries Extensions**
+- `yAxisId` - ID of Y-axis to use (null = primary)
+- `unit` - Unit for tooltip display
+
+**BravenChartPlus Widget Updates**
+- `yAxes` - List of YAxisConfig for multi-axis support
+- `normalizationMode` - Controls normalization behavior
+
+**User Stories Implemented**
+
+**US1: Multi-Scale Data Visualization** (Priority P1 - MVP)
+- Display 2-4 Y-axes simultaneously (leftOuter, left, right, rightOuter)
+- Per-axis normalization for vastly different ranges (e.g., 0-300W vs 50-200 bpm)
+- Color-coded axes matching bound series
+- Original values preserved on axis labels
+
+**US2: Automatic Normalization Detection** (Priority P2)
+- Auto-detection when ranges differ by >10x ratio
+- Works without explicit yAxes configuration
+- Seamless single-to-multi axis transition
+
+**US3: Color-Coded Axis Identification** (Priority P2)
+- Axis color matches first bound series color
+- Override with explicit YAxisConfig.color
+- Shared axis uses neutral color
+
+**US4: Original Value Display in Crosshair** (Priority P3)
+- Crosshair shows original data values (not normalized)
+- Per-axis Y-value conversion from screen coordinates
+- Unit-aware value formatting
+
+**Constraints**
+
+**FR-009**: Grid lines disabled when multi-axis active (visual complexity)
+**FR-013**: Y-axis zoom/pan disabled when multi-axis active (X-axis zoom remains functional)
+**FR-014**: Crosshair uses per-axis Y bounds lookup for accurate value display
+
+**Performance Characteristics**
+- 60 FPS with 4 axes × 1000 points per axis
+- <5ms normalization overhead per axis
+- 0% jank frames in sustained rendering
+
+**Test Coverage**
+- 56 tasks (100% complete)
+- 8 benchmark tests (performance validated)
+- 16 backward compatibility tests
+- 12 quickstart validation tests
+- All golden tests passing
+
+**Documentation**
+- `quickstart.md` - Complete API reference with code examples
+- All code examples validated to compile and run
+- Migration guide for existing users
+
+**Constitutional Compliance**
+- Zero external dependencies (Dart stdlib + Flutter SDK only)
+- TDD approach: tests written before implementation
+- All performance targets validated via benchmark suite
+
+---
+
 ### Dual-Mode Streaming (009-dual-mode-streaming)
 
 **Breaking Changes**

@@ -157,7 +157,7 @@
 - [X] T050 Run performance benchmark (60 FPS with 4 series × 1000 points) in `test/benchmarks/multi_axis_benchmark.dart`
 - [X] T051 Validate backward compatibility (single-axis mode unchanged) in `test/widget/multi_axis/backward_compat_test.dart`
 - [X] T052 Run quickstart.md validation - test all code examples compile
-- [ ] T053 Update CHANGELOG.md with multi-axis normalization feature
+- [X] T053 Update CHANGELOG.md with multi-axis normalization feature
 
 ---
 
