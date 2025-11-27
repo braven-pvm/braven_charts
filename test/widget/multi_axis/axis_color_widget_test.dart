@@ -62,8 +62,7 @@ void main() {
     }
 
     group('Axis Renders with Series Color', () {
-      testWidgets('axis label uses series color when no explicit color configured',
-          (WidgetTester tester) async {
+      testWidgets('axis label uses series color when no explicit color configured', (WidgetTester tester) async {
         // Given: A chart with a blue series bound to an axis without explicit color
         const seriesColor = Color(0xFF2196F3); // Blue
         final chart = buildTestChart(
@@ -94,17 +93,13 @@ void main() {
           final style = text.style;
           return style?.color == seriesColor ||
               // Allow for slight color variations in theming
-              (style?.color != null &&
-                  (style!.color!.blue - seriesColor.blue).abs() < 10 &&
-                  (style.color!.red - seriesColor.red).abs() < 10);
+              (style?.color != null && (style!.color!.blue - seriesColor.blue).abs() < 10 && (style.color!.red - seriesColor.red).abs() < 10);
         });
 
-        expect(hasBlueText, isTrue,
-            reason: 'Axis label should use series color when no explicit color');
+        expect(hasBlueText, isTrue, reason: 'Axis label should use series color when no explicit color');
       });
 
-      testWidgets('axis uses explicit color when configured',
-          (WidgetTester tester) async {
+      testWidgets('axis uses explicit color when configured', (WidgetTester tester) async {
         // Given: A chart with explicit axis color different from series color
         const seriesColor = Color(0xFF2196F3); // Blue series
         const axisColor = Color(0xFFE91E63); // Pink axis
@@ -134,19 +129,15 @@ void main() {
         final hasPinkText = textWidgets.any((text) {
           final style = text.style;
           return style?.color == axisColor ||
-              (style?.color != null &&
-                  (style!.color!.red - axisColor.red).abs() < 10 &&
-                  (style.color!.green - axisColor.green).abs() < 10);
+              (style?.color != null && (style!.color!.red - axisColor.red).abs() < 10 && (style.color!.green - axisColor.green).abs() < 10);
         });
 
-        expect(hasPinkText, isTrue,
-            reason: 'Axis should use explicit color, not series color');
+        expect(hasPinkText, isTrue, reason: 'Axis should use explicit color, not series color');
       });
     });
 
     group('Multiple Axes with Different Colors', () {
-      testWidgets('renders multiple axes with distinct colors',
-          (WidgetTester tester) async {
+      testWidgets('renders multiple axes with distinct colors', (WidgetTester tester) async {
         // Given: A chart with multiple series and axes, each with different colors
         const powerColor = Color(0xFF2196F3); // Blue
         const hrColor = Color(0xFFF44336); // Red
@@ -190,8 +181,7 @@ void main() {
         expect(find.text('Cadence'), findsWidgets);
       });
 
-      testWidgets('mixed explicit and derived colors work correctly',
-          (WidgetTester tester) async {
+      testWidgets('mixed explicit and derived colors work correctly', (WidgetTester tester) async {
         // Given: Chart with mix of explicit and derived axis colors
         const seriesColor = Color(0xFF2196F3);
         const explicitColor = Color(0xFFFF9800); // Orange explicit
@@ -228,8 +218,7 @@ void main() {
     });
 
     group('Edge Cases', () {
-      testWidgets('unbound axis uses neutral color',
-          (WidgetTester tester) async {
+      testWidgets('unbound axis uses neutral color', (WidgetTester tester) async {
         // Given: An axis with no series bound to it
         final chart = buildTestChart(
           series: [
@@ -258,8 +247,7 @@ void main() {
         expect(find.text('Orphan Axis'), findsWidgets);
       });
 
-      testWidgets('shared axis uses first series color',
-          (WidgetTester tester) async {
+      testWidgets('shared axis uses first series color', (WidgetTester tester) async {
         // Given: Multiple series bound to the same axis
         const firstColor = Color(0xFF2196F3); // Blue - should be used
         const secondColor = Color(0xFFF44336); // Red - should be ignored
@@ -291,8 +279,7 @@ void main() {
         expect(textWidgets, isNotEmpty);
       });
 
-      testWidgets('unbound series uses first axis color',
-          (WidgetTester tester) async {
+      testWidgets('unbound series uses first axis color', (WidgetTester tester) async {
         // Given: A series with null yAxisId (should bind to first axis)
         final chart = buildTestChart(
           series: [
@@ -317,8 +304,7 @@ void main() {
     });
 
     group('Axis Components Color Consistency', () {
-      testWidgets('axis line, ticks, and labels use same color',
-          (WidgetTester tester) async {
+      testWidgets('axis line, ticks, and labels use same color', (WidgetTester tester) async {
         // Given: A chart with explicit axis color
         const axisColor = Color(0xFF9C27B0); // Purple
 
@@ -352,8 +338,7 @@ void main() {
     });
 
     group('Theme Integration', () {
-      testWidgets('axis colors respect chart theme',
-          (WidgetTester tester) async {
+      testWidgets('axis colors respect chart theme', (WidgetTester tester) async {
         // Given: A chart using dark theme
         final chart = MaterialApp(
           home: Scaffold(
@@ -389,8 +374,7 @@ void main() {
         expect(find.text('Dark Theme Axis'), findsWidgets);
       });
 
-      testWidgets('high contrast theme maintains axis colors',
-          (WidgetTester tester) async {
+      testWidgets('high contrast theme maintains axis colors', (WidgetTester tester) async {
         // Given: A chart using high contrast theme
         final chart = MaterialApp(
           home: Scaffold(
