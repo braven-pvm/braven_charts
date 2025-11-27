@@ -29,6 +29,52 @@ enum CrosshairMode {
   none,
 }
 
+/// Display mode for high-density data visualization.
+enum CrosshairDisplayMode {
+  /// Standard mode: Show data point markers and pop-up tooltips on hover.
+  standard,
+
+  /// Tracking mode: Hide markers, show persistent tooltip following cursor.
+  tracking,
+
+  /// Auto mode: Switch between standard and tracking based on data point count.
+  auto,
+}
+
+/// Represents a series value at a specific X position during tracking mode.
+class CrosshairSeriesValue {
+  const CrosshairSeriesValue({
+    required this.seriesId,
+    required this.seriesName,
+    required this.seriesColor,
+    required this.x,
+    required this.y,
+    required this.dataPointIndex,
+    required this.isInterpolated,
+  });
+
+  final String seriesId;
+  final String seriesName;
+  final Color seriesColor;
+  final double x;
+  final double y;
+  final int dataPointIndex;
+  final bool isInterpolated;
+}
+
+/// Complete tracking state for crosshair rendering.
+class CrosshairTrackingState {
+  const CrosshairTrackingState({
+    required this.dataX,
+    required this.screenX,
+    required this.seriesValues,
+  });
+
+  final double dataX;
+  final double screenX;
+  final List<CrosshairSeriesValue> seriesValues;
+}
+
 /// Style configuration for crosshair lines.
 class CrosshairStyle {
   /// Creates a crosshair style with the specified properties.
@@ -152,7 +198,16 @@ class CrosshairConfig {
     this.showCoordinateLabels = true,
     this.coordinateLabelStyle,
     this.style = const CrosshairStyle(),
-  }) : assert(snapRadius >= 0, 'snapRadius must be non-negative');
+    // Tracking mode properties for high-density data
+    this.displayMode = CrosshairDisplayMode.auto,
+    this.trackingModeThreshold = 250,
+    this.interpolateValues = true,
+    this.showTrackingTooltip = true,
+    this.showIntersectionMarkers = true,
+    this.intersectionMarkerRadius = 4.0,
+  })  : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
+        assert(trackingModeThreshold > 0, 'trackingModeThreshold must be positive'),
+        assert(intersectionMarkerRadius > 0, 'intersectionMarkerRadius must be positive');
 
   /// Creates a default crosshair configuration.
   ///
@@ -190,6 +245,54 @@ class CrosshairConfig {
   /// The visual style of the crosshair.
   final CrosshairStyle style;
 
+  // ===========================================================================
+  // Tracking Mode Properties (for high-density data visualization)
+  // ===========================================================================
+
+  /// The display mode for crosshair visualization.
+  ///
+  /// - [CrosshairDisplayMode.standard]: Show individual data point markers
+  /// - [CrosshairDisplayMode.tracking]: Hide markers, show tracking tooltip
+  /// - [CrosshairDisplayMode.auto]: Switch based on [trackingModeThreshold]
+  final CrosshairDisplayMode displayMode;
+
+  /// The threshold for auto-switching to tracking mode.
+  ///
+  /// When [displayMode] is [CrosshairDisplayMode.auto], tracking mode
+  /// activates when total data points exceed this threshold.
+  final int trackingModeThreshold;
+
+  /// Whether to interpolate Y values between data points.
+  ///
+  /// When true, calculates the exact Y value at the cursor X position
+  /// using linear interpolation. When false, shows the nearest data point.
+  final bool interpolateValues;
+
+  /// Whether to show the tracking tooltip in tracking mode.
+  final bool showTrackingTooltip;
+
+  /// Whether to show intersection markers on series lines.
+  ///
+  /// In tracking mode, small colored circles appear at the intersection
+  /// of the vertical crosshair line and each series line.
+  final bool showIntersectionMarkers;
+
+  /// The radius of intersection markers in pixels.
+  final double intersectionMarkerRadius;
+
+  /// Determines if tracking mode should be used based on configuration
+  /// and data point count.
+  bool shouldUseTrackingMode(int totalDataPoints) {
+    switch (displayMode) {
+      case CrosshairDisplayMode.standard:
+        return false;
+      case CrosshairDisplayMode.tracking:
+        return true;
+      case CrosshairDisplayMode.auto:
+        return totalDataPoints > trackingModeThreshold;
+    }
+  }
+
   /// Creates a copy of this configuration with the specified properties updated.
   ///
   /// All properties are optional. Omitted properties retain their current values.
@@ -201,6 +304,12 @@ class CrosshairConfig {
     bool? showCoordinateLabels,
     TextStyle? coordinateLabelStyle,
     CrosshairStyle? style,
+    CrosshairDisplayMode? displayMode,
+    int? trackingModeThreshold,
+    bool? interpolateValues,
+    bool? showTrackingTooltip,
+    bool? showIntersectionMarkers,
+    double? intersectionMarkerRadius,
   }) {
     return CrosshairConfig(
       enabled: enabled ?? this.enabled,
@@ -210,6 +319,12 @@ class CrosshairConfig {
       showCoordinateLabels: showCoordinateLabels ?? this.showCoordinateLabels,
       coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
       style: style ?? this.style,
+      displayMode: displayMode ?? this.displayMode,
+      trackingModeThreshold: trackingModeThreshold ?? this.trackingModeThreshold,
+      interpolateValues: interpolateValues ?? this.interpolateValues,
+      showTrackingTooltip: showTrackingTooltip ?? this.showTrackingTooltip,
+      showIntersectionMarkers: showIntersectionMarkers ?? this.showIntersectionMarkers,
+      intersectionMarkerRadius: intersectionMarkerRadius ?? this.intersectionMarkerRadius,
     );
   }
 
@@ -224,12 +339,18 @@ class CrosshairConfig {
         other.snapRadius == snapRadius &&
         other.showCoordinateLabels == showCoordinateLabels &&
         other.coordinateLabelStyle == coordinateLabelStyle &&
-        other.style == style;
+        other.style == style &&
+        other.displayMode == displayMode &&
+        other.trackingModeThreshold == trackingModeThreshold &&
+        other.interpolateValues == interpolateValues &&
+        other.showTrackingTooltip == showTrackingTooltip &&
+        other.showIntersectionMarkers == showIntersectionMarkers &&
+        other.intersectionMarkerRadius == intersectionMarkerRadius;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       enabled,
       mode,
       snapToDataPoint,
@@ -237,6 +358,28 @@ class CrosshairConfig {
       showCoordinateLabels,
       coordinateLabelStyle,
       style,
+      displayMode,
+      trackingModeThreshold,
+      interpolateValues,
+      showTrackingTooltip,
+      showIntersectionMarkers,
+      intersectionMarkerRadius,
+    ]);
+  }
+
+  /// Creates a CrosshairConfig optimized for tracking mode.
+  factory CrosshairConfig.tracking({
+    bool interpolate = true,
+    bool showTooltip = true,
+    bool showMarkers = true,
+    double markerRadius = 4.0,
+  }) {
+    return CrosshairConfig(
+      displayMode: CrosshairDisplayMode.tracking,
+      interpolateValues: interpolate,
+      showTrackingTooltip: showTooltip,
+      showIntersectionMarkers: showMarkers,
+      intersectionMarkerRadius: markerRadius,
     );
   }
 }

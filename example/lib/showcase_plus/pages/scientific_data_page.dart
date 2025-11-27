@@ -11,6 +11,7 @@ import 'package:braven_charts/src_plus/models/chart_series.dart';
 import 'package:braven_charts/src_plus/models/chart_theme.dart';
 import 'package:braven_charts/src_plus/models/chart_type.dart';
 import 'package:braven_charts/src_plus/models/enums.dart';
+import 'package:braven_charts/src_plus/models/interaction_config.dart';
 import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
 import 'package:flutter/material.dart';
 
@@ -189,7 +190,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                       points: rawData,
                       color: Colors.blue[400]!,
                       strokeWidth: 1.5,
-                      showDataPointMarkers: true,
+                      showDataPointMarkers: false,
                       dataPointMarkerRadius: 4,
                     ),
                   LineChartSeries(
@@ -201,14 +202,14 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                     showDataPointMarkers: false,
                   ),
                 ],
-                xAxis: AxisConfig(
+                xAxis: const AxisConfig(
                   orientation: AxisOrientation.horizontal,
                   position: AxisPosition.bottom,
                   label: 'Time (hours)',
                   showGrid: true,
                   showAxisLine: true,
                 ),
-                yAxis: AxisConfig(
+                yAxis: const AxisConfig(
                   orientation: AxisOrientation.vertical,
                   position: AxisPosition.left,
                   label: 'Watts',
@@ -218,6 +219,17 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                 theme: theme,
                 annotationController: _annotationController,
                 interactiveAnnotations: true,
+                interactionConfig: const InteractionConfig(
+                  crosshair: CrosshairConfig(
+                    showCoordinateLabels: true,
+                    displayMode: CrosshairDisplayMode.auto,
+                    trackingModeThreshold: 250,
+                    mode: CrosshairMode.horizontal,
+                    interpolateValues: true,
+                    showTrackingTooltip: true,
+                    showIntersectionMarkers: true,
+                  ),
+                ),
               ),
             ),
           ),
