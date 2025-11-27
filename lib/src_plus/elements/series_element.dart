@@ -419,25 +419,33 @@ class SeriesElement implements ChartElement {
   // ==================== OPTIMIZED INTERPOLATION METHODS ====================
 
   /// Add bezier curves using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
+  /// Uses Catmull-Rom spline converted to cubic bezier, ensuring curve passes through all data points.
   void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
     if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
 
     final alpha = tension;
 
     for (int i = startIndex; i < transformedPoints.length; i++) {
-      // Access pre-transformed points by index - NO TRANSFORMS IN LOOP!
-      final plot0 = transformedPoints[i > 0 ? i - 1 : i];
-      final plot1 = transformedPoints[i];
-      final plot2 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : i];
-      final plot3 = transformedPoints[i < transformedPoints.length - 2 ? i + 2 : i];
+      // For segment from point[i-1] to point[i], we need 4 points for Catmull-Rom:
+      // p0 = point before start (or start if at beginning)
+      // p1 = start of segment (point[i-1])
+      // p2 = end of segment (point[i])
+      // p3 = point after end (or end if at end)
+      final p0 = transformedPoints[i > 1 ? i - 2 : 0];
+      final p1 = transformedPoints[i - 1];
+      final p2 = transformedPoints[i];
+      final p3 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : transformedPoints.length - 1];
 
       // Catmull-Rom to cubic bezier control points
-      final cp1x = plot1.dx + (plot2.dx - plot0.dx) * alpha / 6;
-      final cp1y = plot1.dy + (plot2.dy - plot0.dy) * alpha / 6;
-      final cp2x = plot2.dx - (plot3.dx - plot1.dx) * alpha / 6;
-      final cp2y = plot2.dy - (plot3.dy - plot1.dy) * alpha / 6;
+      // Control point 1: 1/3 of the way from p1 toward the tangent direction
+      // Control point 2: 1/3 of the way from p2 toward the tangent direction (reversed)
+      final cp1x = p1.dx + (p2.dx - p0.dx) * alpha / 6;
+      final cp1y = p1.dy + (p2.dy - p0.dy) * alpha / 6;
+      final cp2x = p2.dx - (p3.dx - p1.dx) * alpha / 6;
+      final cp2y = p2.dy - (p3.dy - p1.dy) * alpha / 6;
 
-      path.cubicTo(cp1x, cp1y, cp2x, cp2y, plot2.dx, plot2.dy);
+      // Draw cubic bezier from current position (p1) to p2
+      path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
     }
   }
 
@@ -470,8 +478,7 @@ class SeriesElement implements ChartElement {
     final isThisSeriesHovered = hoveredMarker?.seriesId == series.id;
 
     // ignore: avoid_print
-    if (isThisSeriesHovered) {
-    }
+    if (isThisSeriesHovered) {}
 
     // Paint setup
     final normalPaint = Paint()

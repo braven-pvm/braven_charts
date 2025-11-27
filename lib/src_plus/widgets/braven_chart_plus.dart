@@ -918,6 +918,47 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
     }
 
+    // Apply widget's lineStyle to all LineChartSeries and AreaChartSeries
+    // This allows widget-level control of interpolation style
+    final targetInterpolation = switch (widget.lineStyle) {
+      LineStyle.straight => LineInterpolation.linear,
+      LineStyle.smooth => LineInterpolation.bezier,
+      LineStyle.stepped => LineInterpolation.stepped,
+    };
+    effectiveSeries = effectiveSeries.map((series) {
+      if (series is LineChartSeries) {
+        return LineChartSeries(
+          id: series.id,
+          name: series.name,
+          points: series.points,
+          color: series.color,
+          isXOrdered: series.isXOrdered,
+          metadata: series.metadata,
+          interpolation: targetInterpolation,
+          strokeWidth: series.strokeWidth,
+          tension: series.tension,
+          showDataPointMarkers: series.showDataPointMarkers,
+          dataPointMarkerRadius: series.dataPointMarkerRadius,
+        );
+      } else if (series is AreaChartSeries) {
+        return AreaChartSeries(
+          id: series.id,
+          name: series.name,
+          points: series.points,
+          color: series.color,
+          isXOrdered: series.isXOrdered,
+          metadata: series.metadata,
+          interpolation: targetInterpolation,
+          strokeWidth: series.strokeWidth,
+          tension: series.tension,
+          showDataPointMarkers: series.showDataPointMarkers,
+          dataPointMarkerRadius: series.dataPointMarkerRadius,
+          fillOpacity: series.fillOpacity,
+        );
+      }
+      return series;
+    }).toList();
+
     // Compute data bounds from effective series
     // FUNDAMENTAL FIX: Use locked bounds when paused to prevent visual jump
     // Otherwise calculate bounds based on viewport mode
