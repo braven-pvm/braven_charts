@@ -84,9 +84,7 @@ class TooltipBuilder {
     final xValue = formatValue(dataPoint.x);
 
     // Denormalize Y if needed
-    final originalY = isNormalized
-        ? denormalizeY(dataPoint.y, axisBounds.min, axisBounds.max)
-        : dataPoint.y;
+    final originalY = isNormalized ? denormalizeY(dataPoint.y, axisBounds.min, axisBounds.max) : dataPoint.y;
 
     final yValue = formatValueWithUnit(originalY, effectiveUnit);
 

@@ -105,14 +105,14 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   List<ChartDataPoint> _generateHeartRateData() {
     final random = math.Random(43); // Different seed for variety
     final points = <ChartDataPoint>[];
-    
+
     // Simulate ~23 hours of data with 1-minute intervals (1380 points)
     const totalMinutes = 1380;
-    
+
     for (int i = 0; i < totalMinutes; i++) {
       final x = i / 60.0; // Convert to hours
       double baseHR = 100.0; // Resting + activity baseline
-      
+
       // HR correlates with power phases but with physiological lag
       if (i < 120) {
         // Warm-up: HR ramps up
@@ -126,7 +126,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
       } else if (i < 720) {
         // Intervals (HR spikes during high power)
         final phase = (i % 60) / 60.0;
-        baseHR = phase < 0.3 
+        baseHR = phase < 0.3
             ? 165.0 + random.nextDouble() * 15 // High intensity
             : 125.0 + random.nextDouble() * 10; // Recovery
       } else if (i < 960) {
@@ -139,13 +139,13 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
         // Cool down
         baseHR = 100.0 + (1380 - i) / 180.0 * 20 + random.nextDouble() * 8;
       }
-      
+
       // Add realistic HR variability
       final hrv = (random.nextDouble() - 0.5) * 6;
       final y = (baseHR + hrv).clamp(60.0, 185.0);
       points.add(ChartDataPoint(x: x, y: y));
     }
-    
+
     return points;
   }
 
@@ -153,30 +153,28 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   List<ChartDataPoint> _generateCadenceData() {
     final random = math.Random(44);
     final points = <ChartDataPoint>[];
-    
+
     const totalMinutes = 1380;
-    
+
     for (int i = 0; i < totalMinutes; i++) {
       final x = i / 60.0;
       double baseCadence = 85.0; // Typical cycling cadence
-      
+
       if (i < 120) {
         baseCadence = 75.0 + random.nextDouble() * 15;
       } else if (i < 720) {
         // Intervals affect cadence
         final phase = (i % 60) / 60.0;
-        baseCadence = phase < 0.3 
-            ? 95.0 + random.nextDouble() * 15 
-            : 80.0 + random.nextDouble() * 10;
+        baseCadence = phase < 0.3 ? 95.0 + random.nextDouble() * 15 : 80.0 + random.nextDouble() * 10;
       } else {
         baseCadence = 82.0 + random.nextDouble() * 12;
       }
-      
+
       final noise = (random.nextDouble() - 0.5) * 8;
       final y = (baseCadence + noise).clamp(50.0, 120.0);
       points.add(ChartDataPoint(x: x, y: y));
     }
-    
+
     return points;
   }
 
@@ -310,7 +308,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                       Switch(
                         value: _multiAxisMode,
                         onChanged: (value) => setState(() => _multiAxisMode = value),
-                        activeColor: Colors.green,
+                        activeThumbColor: Colors.green,
                       ),
                     ],
                   ),
@@ -402,7 +400,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
     );
   }
 
-  /// Builds the multi-axis chart showing Power (100-250W), Heart Rate (60-180 bpm), 
+  /// Builds the multi-axis chart showing Power (100-250W), Heart Rate (60-180 bpm),
   /// and Cadence (50-120 rpm) - each with its own Y-axis
   Widget _buildMultiAxisChart(
     List<ChartDataPoint> powerData,

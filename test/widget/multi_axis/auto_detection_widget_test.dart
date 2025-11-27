@@ -57,7 +57,7 @@ void main() {
 
         // Chart should render without errors
         expect(find.byType(BravenChartPlus), findsOneWidget);
-        
+
         // With auto mode and >10x ratio, multi-axis should be active
         // The chart should detect and apply per-series normalization
       });
@@ -105,7 +105,7 @@ void main() {
 
         // Chart should render without errors
         expect(find.byType(BravenChartPlus), findsOneWidget);
-        
+
         // With auto mode and <10x ratio, single-axis mode should remain
       });
     });
@@ -145,7 +145,7 @@ void main() {
                   chartType: ChartType.line,
                   normalizationMode: NormalizationMode.perSeries,
                   series: [series1, series2],
-                  yAxes: [
+                  yAxes: const [
                     YAxisConfig(
                       id: 'axis1',
                       position: YAxisPosition.left,
@@ -212,7 +212,7 @@ void main() {
 
         // Chart should render without errors
         expect(find.byType(BravenChartPlus), findsOneWidget);
-        
+
         // Even with >10x difference, single-axis mode forced
       });
     });
@@ -253,7 +253,7 @@ void main() {
 
       testWidgets('handles empty series list with auto mode', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -261,7 +261,7 @@ void main() {
                 child: BravenChartPlus(
                   chartType: ChartType.line,
                   normalizationMode: NormalizationMode.auto,
-                  series: const [],
+                  series: [],
                 ),
               ),
             ),

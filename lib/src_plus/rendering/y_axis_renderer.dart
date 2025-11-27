@@ -84,8 +84,7 @@ class YAxisRenderer {
     }
 
     final axisColor = config.color ?? Colors.grey;
-    final isLeftSide = config.position == YAxisPosition.left ||
-        config.position == YAxisPosition.leftOuter;
+    final isLeftSide = config.position == YAxisPosition.left || config.position == YAxisPosition.leftOuter;
 
     // Calculate axis line X position
     final axisLineX = isLeftSide ? axisRect.right : axisRect.left;
@@ -124,7 +123,7 @@ class YAxisRenderer {
   void _paintAxisLine(Canvas canvas, Rect plotArea, double axisX, Color color) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = theme?.axisStyle?.lineWidth ?? 1.0;
+      ..strokeWidth = theme?.axisStyle.lineWidth ?? 1.0;
 
     canvas.drawLine(
       Offset(axisX, plotArea.top),
@@ -135,10 +134,10 @@ class YAxisRenderer {
 
   /// Paints a single tick mark.
   void _paintTick(Canvas canvas, double y, double axisX, Color color, bool isLeftSide) {
-    final tickLength = theme?.axisStyle?.tickLength ?? 6.0;
+    final tickLength = theme?.axisStyle.tickLength ?? 6.0;
     final paint = Paint()
       ..color = color
-      ..strokeWidth = theme?.axisStyle?.tickWidth ?? 1.0;
+      ..strokeWidth = theme?.axisStyle.tickWidth ?? 1.0;
 
     final x1 = isLeftSide ? axisX - tickLength : axisX;
     final x2 = isLeftSide ? axisX : axisX + tickLength;
@@ -155,21 +154,18 @@ class YAxisRenderer {
     Color color,
     bool isLeftSide,
   ) {
-    final tickLength = theme?.axisStyle?.tickLength ?? 6.0;
-    final labelPadding = theme?.axisStyle?.labelPadding ?? 4.0;
+    final tickLength = theme?.axisStyle.tickLength ?? 6.0;
+    final labelPadding = theme?.axisStyle.labelPadding ?? 4.0;
 
     final textPainter = TextPainter(
       text: TextSpan(
         text: label,
-        style: theme?.axisStyle?.labelStyle?.copyWith(color: color) ??
-            TextStyle(fontSize: 10, color: color),
+        style: theme?.axisStyle.labelStyle.copyWith(color: color) ?? TextStyle(fontSize: 10, color: color),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    final labelX = isLeftSide
-        ? axisX - tickLength - labelPadding - textPainter.width
-        : axisX + tickLength + labelPadding;
+    final labelX = isLeftSide ? axisX - tickLength - labelPadding - textPainter.width : axisX + tickLength + labelPadding;
 
     textPainter.paint(
       canvas,
@@ -181,9 +177,7 @@ class YAxisRenderer {
   void _paintAxisLabel(Canvas canvas, Rect plotArea, Color color, bool isLeftSide) {
     canvas.save();
 
-    final labelX = isLeftSide
-        ? axisRect.left + 12
-        : axisRect.right - 12;
+    final labelX = isLeftSide ? axisRect.left + 12 : axisRect.right - 12;
     final labelY = plotArea.top + plotArea.height / 2;
 
     canvas.translate(labelX, labelY);
@@ -197,8 +191,7 @@ class YAxisRenderer {
     final labelPainter = TextPainter(
       text: TextSpan(
         text: labelText,
-        style: theme?.axisStyle?.axisLabelStyle?.copyWith(color: color) ??
-            TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
+        style: theme?.axisStyle.axisLabelStyle?.copyWith(color: color) ?? TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -427,8 +420,7 @@ class MultiYAxisRenderer {
   double get leftAxesWidth {
     double width = 0;
     for (final config in configs) {
-      if (config.position == YAxisPosition.left ||
-          config.position == YAxisPosition.leftOuter) {
+      if (config.position == YAxisPosition.left || config.position == YAxisPosition.leftOuter) {
         final rect = axisRects[config.id];
         if (rect != null) width += rect.width;
       }
@@ -440,8 +432,7 @@ class MultiYAxisRenderer {
   double get rightAxesWidth {
     double width = 0;
     for (final config in configs) {
-      if (config.position == YAxisPosition.right ||
-          config.position == YAxisPosition.rightOuter) {
+      if (config.position == YAxisPosition.right || config.position == YAxisPosition.rightOuter) {
         final rect = axisRects[config.id];
         if (rect != null) width += rect.width;
       }

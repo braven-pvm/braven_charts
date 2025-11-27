@@ -239,8 +239,7 @@ class AxisLayoutManager {
     final maxValue = config.max ?? bounds?.max ?? 100.0;
 
     // Estimate label width based on value range
-    final maxAbsValue = [minValue.abs(), maxValue.abs()]
-        .reduce((a, b) => a > b ? a : b);
+    final maxAbsValue = [minValue.abs(), maxValue.abs()].reduce((a, b) => a > b ? a : b);
 
     // Estimate digits needed
     int digits;
@@ -280,12 +279,8 @@ class AxisLayoutManager {
 
   /// Gets axes grouped by their side (left vs right).
   ({List<YAxisConfig> left, List<YAxisConfig> right}) get axesBySide {
-    final leftAxes = axisConfigs
-        .where((c) => c.position == YAxisPosition.left || c.position == YAxisPosition.leftOuter)
-        .toList();
-    final rightAxes = axisConfigs
-        .where((c) => c.position == YAxisPosition.right || c.position == YAxisPosition.rightOuter)
-        .toList();
+    final leftAxes = axisConfigs.where((c) => c.position == YAxisPosition.left || c.position == YAxisPosition.leftOuter).toList();
+    final rightAxes = axisConfigs.where((c) => c.position == YAxisPosition.right || c.position == YAxisPosition.rightOuter).toList();
     return (left: leftAxes, right: rightAxes);
   }
 
