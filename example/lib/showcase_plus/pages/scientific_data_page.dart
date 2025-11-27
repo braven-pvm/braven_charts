@@ -30,6 +30,7 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
   bool _showRawData = true;
   bool _selectionMode = false;
   bool _multiAxisMode = false;
+  bool _autoDetectMode = false; // New: Auto-detection mode toggle
   String _selectedTheme = 'Light';
   LineStyle _lineStyle = LineStyle.straight;
   final AnnotationController _annotationController = AnnotationController();
@@ -278,6 +279,45 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                   },
                 ),
                 const Spacer(),
+                // Auto-detect toggle (new)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _autoDetectMode ? Colors.purple[100] : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _autoDetectMode ? Colors.purple : Colors.grey[400]!,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_fix_high,
+                        size: 16,
+                        color: _autoDetectMode ? Colors.purple[700] : Colors.grey[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Auto-Detect',
+                        style: TextStyle(
+                          color: _autoDetectMode ? Colors.purple[700] : Colors.grey[600],
+                          fontWeight: _autoDetectMode ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Switch(
+                        value: _autoDetectMode,
+                        onChanged: (value) => setState(() {
+                          _autoDetectMode = value;
+                          if (value) _multiAxisMode = false; // Disable explicit multi-axis when auto-detect is on
+                        }),
+                        activeThumbColor: Colors.purple,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Multi-axis toggle
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -307,7 +347,10 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                       const SizedBox(width: 4),
                       Switch(
                         value: _multiAxisMode,
-                        onChanged: (value) => setState(() => _multiAxisMode = value),
+                        onChanged: (value) => setState(() {
+                          _multiAxisMode = value;
+                          if (value) _autoDetectMode = false; // Disable auto-detect when explicit multi-axis is on
+                        }),
                         activeThumbColor: Colors.green,
                       ),
                     ],
@@ -323,15 +366,17 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: _multiAxisMode
-                  ? _buildMultiAxisChart(smoothedData, heartRateData, cadenceData, theme, isDark)
-                  : _buildSingleAxisChart(rawData, smoothedData, theme),
+              child: _autoDetectMode
+                  ? _buildAutoDetectChart(smoothedData, heartRateData, cadenceData, theme, isDark)
+                  : _multiAxisMode
+                      ? _buildMultiAxisChart(smoothedData, heartRateData, cadenceData, theme, isDark)
+                      : _buildSingleAxisChart(rawData, smoothedData, theme),
             ),
           ),
           Container(
             padding: const EdgeInsets.all(16),
             color: isDark ? Colors.grey[850] : Colors.white,
-            child: _multiAxisMode
+            child: (_multiAxisMode || _autoDetectMode)
                 ? _buildMultiAxisStatsPanel(smoothedData, heartRateData, cadenceData, isDark)
                 : _buildStatsPanel(rawData, smoothedData, isDark),
           ),
@@ -483,6 +528,101 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
         position: AxisPosition.left,
         label: 'Power (W)',
         showGrid: false, // Grid disabled in multi-axis mode
+        showAxisLine: true,
+      ),
+      theme: theme,
+      interactionConfig: const InteractionConfig(
+        crosshair: CrosshairConfig(
+          showCoordinateLabels: true,
+          displayMode: CrosshairDisplayMode.auto,
+          trackingModeThreshold: 250,
+          mode: CrosshairMode.vertical,
+          interpolateValues: true,
+          showTrackingTooltip: true,
+          showIntersectionMarkers: true,
+        ),
+      ),
+    );
+  }
+
+  /// Builds a chart using NormalizationMode.auto to demonstrate auto-detection.
+  ///
+  /// The system automatically detects when series have vastly different ranges
+  /// and enables multi-axis mode without explicit yAxes configuration.
+  ///
+  /// Power (~100-250W) vs Heart Rate (~60-185 bpm) vs Cadence (~50-120 rpm)
+  /// have similar magnitude ranges (<10x ratio) so won't trigger auto-mode.
+  ///
+  /// To demonstrate auto-detection, we add a micro-scale series (0.001-0.005)
+  /// which creates a >10x ratio and triggers auto-normalization.
+  Widget _buildAutoDetectChart(
+    List<ChartDataPoint> powerData,
+    List<ChartDataPoint> heartRateData,
+    List<ChartDataPoint> cadenceData,
+    ChartTheme theme,
+    bool isDark,
+  ) {
+    // Create a micro-scale series to trigger auto-detection (simulating micro-volts)
+    final microData = List.generate(
+      powerData.length,
+      (i) => ChartDataPoint(
+        x: powerData[i].x,
+        y: 0.001 + (i % 100) * 0.00004, // 0.001 to 0.005 range
+      ),
+    );
+
+    return BravenChartPlus(
+      chartType: ChartType.line,
+      lineStyle: _lineStyle,
+      series: [
+        // Power: ~100-250W range
+        LineChartSeries(
+          id: 'power',
+          name: 'Power',
+          points: powerData,
+          color: Colors.blue[600]!,
+          strokeWidth: 2.0,
+          showDataPointMarkers: false,
+          unit: 'W',
+        ),
+        // Heart Rate: ~60-185 bpm range
+        LineChartSeries(
+          id: 'heart-rate',
+          name: 'Heart Rate',
+          points: heartRateData,
+          color: Colors.red[600]!,
+          strokeWidth: 2.0,
+          showDataPointMarkers: false,
+          unit: 'bpm',
+        ),
+        // Micro-scale: ~0.001-0.005 range (simulating micro-volts)
+        // This creates a >10x ratio with Power, triggering auto-detection
+        LineChartSeries(
+          id: 'micro',
+          name: 'Micro Scale',
+          points: microData,
+          color: Colors.orange[600]!,
+          strokeWidth: 1.5,
+          showDataPointMarkers: false,
+          unit: 'µV',
+        ),
+      ],
+      // NO yAxes provided - let auto-detection handle it!
+      // The system will detect that Power (150 span) vs Micro (0.004 span)
+      // has a ~37,500x ratio, which exceeds the 10x threshold.
+      normalizationMode: NormalizationMode.auto,
+      xAxis: const AxisConfig(
+        orientation: AxisOrientation.horizontal,
+        position: AxisPosition.bottom,
+        label: 'Time (hours)',
+        showGrid: true,
+        showAxisLine: true,
+      ),
+      yAxis: const AxisConfig(
+        orientation: AxisOrientation.vertical,
+        position: AxisPosition.left,
+        label: 'Auto-Detected Axes',
+        showGrid: true,
         showAxisLine: true,
       ),
       theme: theme,
