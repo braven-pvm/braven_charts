@@ -69,10 +69,10 @@
 
 | ID | Question | Resolution | Date |
 |----|----------|------------|------|
-| OQ-001 | Series-to-Axis Binding Syntax | ⏳ Pending | - |
-| OQ-002 | Default Axis Assignment | ⏳ Pending | - |
-| OQ-003 | Axis Spacing Algorithm | ⏳ Pending | - |
-| OQ-004 | Legend Enhancement | ⏳ Pending | - |
+| OQ-001 | Series-to-Axis Binding Syntax | `yAxisId` on series, separate `yAxes` list on chart | 2025-11-27 |
+| OQ-002 | Default Axis Assignment | Primary (left) axis for backward compatibility | 2025-11-27 |
+| OQ-003 | Axis Spacing Algorithm | Dynamic based on label width, with configurable min/max | 2025-11-27 |
+| OQ-004 | Legend Enhancement | Color + name only (keep simple for now) | 2025-11-27 |
 
 ---
 
@@ -93,9 +93,9 @@
 
 | Phase | Description | Status | Artifacts |
 |-------|-------------|--------|-----------|
-| Phase 0 | Research & Technical Decisions | ⏳ Pending | research.md |
-| Phase 1 | Design & Contracts | ⏳ Pending | data-model.md, contracts/, quickstart.md |
-| Phase 2 | Task Breakdown | ⏳ Pending | tasks.md |
+| Phase 0 | Research & Technical Decisions | ✅ Complete | research.md |
+| Phase 1 | Design & Contracts | ✅ Complete | data-model.md, contracts/, quickstart.md |
+| Phase 2 | Task Breakdown | ✅ Complete | tasks.md |
 | Phase 3 | Implementation | ⏳ Pending | Source code, tests |
 | Phase 4 | Validation | ⏳ Pending | Test results, benchmarks |
 
