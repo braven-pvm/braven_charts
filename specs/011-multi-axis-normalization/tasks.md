@@ -18,10 +18,10 @@
 
 **Purpose**: Create core types and foundational structure for multi-axis support
 
-- [ ] T001 [P] Create YAxisPosition enum in `lib/src_plus/models/y_axis_position.dart`
-- [ ] T002 [P] Create NormalizationMode enum in `lib/src_plus/models/normalization_mode.dart`
-- [ ] T003 [P] Create YAxisConfig class in `lib/src_plus/axis/y_axis_config.dart`
-- [ ] T004 [P] Create MultiAxisState class in `lib/src_plus/axis/multi_axis_state.dart`
+- [X] T001 [P] Create YAxisPosition enum in `lib/src_plus/models/y_axis_position.dart`
+- [X] T002 [P] Create NormalizationMode enum in `lib/src_plus/models/normalization_mode.dart`
+- [X] T003 [P] Create YAxisConfig class in `lib/src_plus/axis/y_axis_config.dart`
+- [X] T004 [P] Create MultiAxisState class in `lib/src_plus/axis/multi_axis_state.dart`
 - [ ] T005 Create barrel export for new types in `lib/src_plus/axis/axis.dart`
 - [ ] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src_plus/models/chart_series.dart`
 
