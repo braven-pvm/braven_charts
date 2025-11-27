@@ -11,6 +11,7 @@ import 'tick_generator.dart';
 export '../models/normalization_mode.dart';
 export '../models/y_axis_position.dart';
 // Multi-axis normalization exports
+export 'axis_bounds_calculator.dart';
 export 'multi_axis_state.dart';
 export 'y_axis_config.dart';
 
