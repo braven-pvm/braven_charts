@@ -113,7 +113,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Implement axis color resolver (from config or series) in `lib/src_plus/axis/axis_color_resolver.dart`
+- [X] T034 [US3] Implement axis color resolver (from config or series) in `lib/src_plus/axis/axis_color_resolver.dart`
 - [ ] T035 [US3] Apply color to axis labels in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [ ] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
 - [ ] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`

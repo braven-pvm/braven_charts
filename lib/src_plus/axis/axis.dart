@@ -12,6 +12,7 @@ export '../models/normalization_mode.dart';
 export '../models/y_axis_position.dart';
 // Multi-axis normalization exports
 export 'axis_bounds_calculator.dart';
+export 'axis_color_resolver.dart';
 export 'multi_axis_state.dart';
 export 'normalization_detector.dart';
 export 'range_ratio_calculator.dart';
