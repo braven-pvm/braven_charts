@@ -22,10 +22,10 @@
 - [X] T002 [P] Create NormalizationMode enum in `lib/src_plus/models/normalization_mode.dart`
 - [X] T003 [P] Create YAxisConfig class in `lib/src_plus/axis/y_axis_config.dart`
 - [X] T004 [P] Create MultiAxisState class in `lib/src_plus/axis/multi_axis_state.dart`
-- [ ] T005 Create barrel export for new types in `lib/src_plus/axis/axis.dart`
-- [ ] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src_plus/models/chart_series.dart`
+- [X] T005 Create barrel export for new types in `lib/src_plus/axis/axis.dart`
+- [X] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src_plus/models/chart_series.dart`
 
-**Checkpoint**: Core types available for user story implementation
+**Checkpoint**: Core types available for user story implementation ✅
 
 ---
 

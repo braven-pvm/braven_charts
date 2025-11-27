@@ -35,6 +35,8 @@ class ChartSeries {
     this.isXOrdered = false,
     this.metadata,
     this.annotations = const [],
+    this.yAxisId,
+    this.unit,
   });
 
   final String id;
@@ -45,6 +47,37 @@ class ChartSeries {
   final bool isXOrdered;
   final Map<String, dynamic>? metadata;
   final List<ChartAnnotation> annotations;
+
+  /// ID of the Y-axis to use for this series.
+  ///
+  /// When null, the series uses the primary (left) Y-axis.
+  /// Set this to bind the series to a specific Y-axis configuration
+  /// in multi-axis mode.
+  ///
+  /// Example:
+  /// ```dart
+  /// final powerSeries = LineChartSeries(
+  ///   id: 'power',
+  ///   yAxisId: 'power', // Binds to YAxisConfig with id: 'power'
+  ///   points: powerData,
+  /// );
+  /// ```
+  final String? yAxisId;
+
+  /// Unit of measurement for this series (e.g., "W", "bpm", "°C").
+  ///
+  /// Displayed in tooltips and crosshair overlays alongside values.
+  /// If not specified, no unit suffix is shown.
+  ///
+  /// Example:
+  /// ```dart
+  /// final powerSeries = LineChartSeries(
+  ///   id: 'power',
+  ///   unit: 'W', // Shows values as "250 W" in tooltips
+  ///   points: powerData,
+  /// );
+  /// ```
+  final String? unit;
 
   int get length => points.length;
   bool get isEmpty => points.isEmpty;
@@ -61,6 +94,8 @@ class LineChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.yAxisId,
+    super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.5,
@@ -87,6 +122,8 @@ class ScatterChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.yAxisId,
+    super.unit,
     this.markerRadius = 5.0,
   });
 
@@ -105,6 +142,8 @@ class AreaChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.yAxisId,
+    super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
     this.tension = 0.5,
@@ -133,6 +172,8 @@ class BarChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.yAxisId,
+    super.unit,
     this.barWidthPercent,
     this.barWidthPixels,
     this.minWidth = 4.0,

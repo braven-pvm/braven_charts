@@ -8,6 +8,12 @@ import 'linear_scale.dart';
 import 'tick.dart';
 import 'tick_generator.dart';
 
+export '../models/normalization_mode.dart';
+export '../models/y_axis_position.dart';
+// Multi-axis normalization exports
+export 'multi_axis_state.dart';
+export 'y_axis_config.dart';
+
 /// Represents an axis with scale, ticks, and configuration.
 ///
 /// **Purpose**: Combines data-to-pixel mapping, tick generation, and
