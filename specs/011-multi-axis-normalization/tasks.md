@@ -90,7 +90,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement range ratio calculator in `lib/src_plus/axis/range_ratio_calculator.dart`
+- [X] T027 [US2] Implement range ratio calculator in `lib/src_plus/axis/range_ratio_calculator.dart`
 - [ ] T028 [US2] Implement auto-detection logic in `lib/src_plus/axis/normalization_detector.dart`
 - [ ] T029 [US2] Integrate auto-detection with chart initialization in `lib/src_plus/widgets/braven_chart_plus.dart`
 - [ ] T030 [US2] Add auto-detection example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
