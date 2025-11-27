@@ -86,7 +86,7 @@
 ### Tests for User Story 2
 
 - [X] T025 [P] [US2] Unit test for auto-detection algorithm in `test/unit/multi_axis/auto_detection_test.dart`
-- [ ] T026 [P] [US2] Widget test for auto-mode triggering in `test/widget/multi_axis/auto_detection_widget_test.dart`
+- [X] T026 [P] [US2] Widget test for auto-mode triggering in `test/widget/multi_axis/auto_detection_widget_test.dart`
 
 ### Implementation for User Story 2
 
