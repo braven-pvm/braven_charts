@@ -1,386 +1,130 @@
 # Feature Specification: Multi-Axis Normalization
 
-**Spec ID**: 011-multi-axis-normalization  
-**Date**: 2025-11-27  
-**Status**: DRAFT - Awaiting SpecKit Process  
-**Author**: Copilot + User Collaboration
+**Feature Branch**: `011-multi-axis-normalization`  
+**Created**: 2025-11-27  
+**Status**: Draft  
+**Input**: User description: "Multi-axis normalization for displaying multiple data series with vastly different Y-axis ranges on the same chart, with color-coded axes showing original values"
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Multi-Scale Data Visualization (Priority: P1)
+
+A sports scientist needs to display power output, heart rate, and respiratory metrics on a single chart during an athletic performance review. Currently, when metrics like Power (0-300W), Tidal Volume (0.5-4.0L), and Respiratory Rate (10-40 bpm) are plotted together, the smaller-range series appear as flat lines near the bottom, making the data unreadable.
+
+With multi-axis normalization, each series uses the full vertical height of the chart while displaying its own properly-scaled Y-axis. The scientist can now correlate all physiological responses in a single view.
+
+**Why this priority**: This is the core value proposition. Without proper visualization of multi-scale data, the chart is unusable for its primary purpose. This delivers immediate, high-impact user value.
+
+**Independent Test**: Can be fully tested by creating a chart with 2+ series having >10x range difference and verifying all series are visible and distinguishable using full vertical space.
+
+**Acceptance Scenarios**:
+
+1. **Given** a chart with two series (Power: 0-300W, Tidal Volume: 0.5-4.0L), **When** the chart renders, **Then** both series span the full vertical height of the plot area
+2. **Given** a chart with four series with vastly different ranges, **When** the chart renders, **Then** each series has its own color-coded Y-axis displaying original values
+3. **Given** a multi-axis chart, **When** the user hovers over any data point, **Then** the tooltip displays the original Y-value (not a normalized percentage)
 
 ---
 
-## 1. Executive Summary
+### User Story 2 - Automatic Normalization Detection (Priority: P2)
 
-### Problem Statement
+A developer integrating the chart library wants the system to automatically detect when multiple series need separate axes without manual configuration. When the developer adds series with significantly different Y-ranges (e.g., 10x or more difference), the chart should automatically enable multi-axis mode.
 
-Scientific and athletic performance visualization frequently requires displaying multiple data series with vastly different Y-axis ranges on the same chart. For example:
+**Why this priority**: Reduces developer friction and makes the feature work "out of the box" for common cases. Depends on P1 being functional first.
 
-| Series | Unit | Typical Range | Scale Factor |
-|--------|------|---------------|--------------|
-| Power | W (Watts) | 0-300 | 1x |
-| Heart Rate | bpm | 60-200 | ~0.7x |
-| Cadence | rpm | 60-120 | ~0.4x |
-| Tidal Volume | L | 0.5-4.0 | ~0.01x |
-| Respiratory Rate | bpm | 10-40 | ~0.13x |
+**Independent Test**: Can be tested by creating a chart with series whose ranges differ by >10x and verifying multi-axis mode activates automatically without explicit configuration.
 
-When plotted on a single Y-axis, series with smaller ranges appear as flat lines, making the data unreadable.
+**Acceptance Scenarios**:
 
-### Proposed Solution
-
-Implement **multi-axis normalization** where:
-1. Each series is internally normalized to fit the full chart height
-2. Multiple color-coded Y-axes display original values for each series
-3. All user-facing displays (tooltips, crosshair, labels) show original values
-4. Auto-detection triggers normalization when series ranges differ significantly
-
-### Reference Implementation
-
-See attached VO2master screenshot showing:
-- 4 distinct Y-axes (2 left, 2 right)
-- Color-coded axes matching series colors
-- Original values displayed on each axis
-- All series rendered in same plot area despite 100x+ scale differences
+1. **Given** a chart with series A (range 0-10) and series B (range 0-1000), **When** no explicit axis configuration is provided, **Then** the chart automatically enables multi-axis mode
+2. **Given** a chart with series having similar ranges (within 10x), **When** no explicit configuration is provided, **Then** the chart uses single-axis mode (current behavior)
+3. **Given** auto-detection is enabled, **When** the developer provides explicit axis configuration, **Then** the explicit configuration takes precedence
 
 ---
 
-## 2. User Stories
+### User Story 3 - Color-Coded Axis Identification (Priority: P2)
 
-### US-001: Multi-Scale Data Visualization
-**As a** sports scientist  
-**I want to** display power, heart rate, and respiratory metrics on one chart  
-**So that** I can correlate physiological responses without switching views
+A user viewing a multi-axis chart with 4 different series needs to quickly identify which Y-axis corresponds to which data line. Each Y-axis should match the color of its associated series, providing an immediate visual connection.
 
-**Acceptance Criteria**:
-- [ ] All series visible and distinguishable regardless of Y-range differences
-- [ ] Each series uses full vertical space (not squashed to bottom)
-- [ ] Original Y values displayed on corresponding axis
+**Why this priority**: Essential for usability of multi-axis charts. Without clear visual association, users cannot interpret the data correctly. Equal priority with P2 as both enhance core functionality.
 
-### US-002: Automatic Normalization Detection
-**As a** developer  
-**I want** the chart to automatically detect when series need normalization  
-**So that** I don't need to manually configure multi-axis mode
+**Independent Test**: Can be tested by verifying that each Y-axis (labels, ticks, axis line) uses the same color as its bound series.
 
-**Acceptance Criteria**:
-- [ ] Auto-detection when series ranges differ by >10x
-- [ ] Opt-out available via configuration
-- [ ] Manual override to force single/multi axis mode
+**Acceptance Scenarios**:
 
-### US-003: Color-Coded Axis Identification
-**As a** user viewing a multi-axis chart  
-**I want** each Y-axis to match the color of its series  
-**So that** I can easily identify which axis corresponds to which data
-
-**Acceptance Criteria**:
-- [ ] Axis labels/ticks use series color
-- [ ] Clear visual association between axis and line
-- [ ] Works in light and dark themes
-
-### US-004: Crosshair with Original Values
-**As a** user hovering over the chart  
-**I want** the crosshair to show original Y values for each series  
-**So that** I can read actual data values, not normalized percentages
-
-**Acceptance Criteria**:
-- [ ] Tooltip shows original Y value per series
-- [ ] Value formatted with appropriate unit (W, bpm, L, etc.)
-- [ ] Tracking mode displays all intersected series values
+1. **Given** a chart with a blue Power series bound to the left axis, **When** the chart renders, **Then** the left Y-axis labels and ticks are displayed in blue
+2. **Given** a chart with multiple color-coded axes, **When** viewed in dark mode, **Then** axis colors remain distinguishable and match their series
+3. **Given** multiple series share the same axis, **When** the chart renders, **Then** the axis uses a neutral color or the first series' color
 
 ---
 
-## 3. Functional Requirements
+### User Story 4 - Original Value Display in Crosshair (Priority: P3)
 
-### FR-001: Y-Axis Binding
-Each series MUST be bindable to a specific Y-axis configuration.
+A user analyzing data with the crosshair/tracking feature wants to see the actual data values for each series at the current position, not normalized percentages. The crosshair tooltip should display formatted original values with appropriate units.
 
-```dart
-LineChartSeries(
-  id: 'power',
-  yAxisId: 'primary',  // NEW: Links to YAxisConfig
-  ...
-)
-```
+**Why this priority**: Important for detailed data analysis but depends on core rendering (P1) and axis display (P2) working first.
 
-### FR-002: Multiple Y-Axis Configuration
-The chart MUST support up to 4 Y-axes with configurable positions.
+**Independent Test**: Can be tested by enabling crosshair mode, moving over data points, and verifying displayed values match the original data values with correct formatting.
 
-```dart
-enum YAxisPosition {
-  leftOuter,   // Leftmost axis
-  left,        // Inner left axis (default primary)
-  right,       // Inner right axis
-  rightOuter,  // Rightmost axis
-}
-```
+**Acceptance Scenarios**:
 
-### FR-003: Per-Axis Data Bounds
-Each Y-axis MUST maintain its own min/max bounds, either:
-- Auto-computed from bound series data
-- Explicitly configured by developer
-
-### FR-004: Internal Normalization
-When multiple Y-axes are active, the rendering engine MUST:
-1. Normalize each series Y-values to [0, 1] range using its axis bounds
-2. Render all series in the same plot area
-3. Maintain original Y values for all display purposes
-
-### FR-005: Axis Label Rendering
-Each Y-axis MUST render tick labels using:
-- Original data values (not normalized)
-- Appropriate number formatting
-- Optional unit suffix (W, bpm, L/min, etc.)
-
-### FR-006: Color-Coded Axes
-When a Y-axis is bound to a single series, the axis MUST:
-- Use the series color for tick labels and axis line
-- Support explicit color override
-
-### FR-007: Auto-Detection Mode
-The chart MUST support automatic multi-axis activation when:
-- Multiple series present
-- Series Y-ranges differ by more than configurable threshold (default: 10x)
-
-### FR-008: Grid Lines Behavior
-When multi-axis normalization is active:
-- Grid lines MUST be disabled (avoids confusion with multiple scales)
-- Option to show grid for primary axis only (future consideration)
-
-### FR-009: Shared Axis Support
-Multiple series MAY share the same Y-axis if they:
-- Have the same or similar units
-- Have comparable ranges
-- Are explicitly bound to same axis ID
-
-### FR-010: Threshold Annotation Handling
-When threshold annotations are used with normalized series:
-- Threshold MUST specify which Y-axis it applies to
-- OR threshold displays values for all series at that screen position
+1. **Given** a multi-axis chart with crosshair enabled, **When** the user hovers at X position where Power=240W and HeartRate=165bpm, **Then** the tooltip shows "Power: 240 W" and "Heart Rate: 165 bpm"
+2. **Given** tracking mode is enabled, **When** the user moves along the chart, **Then** all intersected series display their original Y-values
+3. **Given** a series with decimal values (Tidal Volume: 2.3L), **When** displayed in crosshair, **Then** the value is formatted appropriately (not truncated or over-precise)
 
 ---
 
-## 4. Success Criteria
+### Edge Cases
 
-### SC-001: Rendering Performance
-- 60 FPS maintained with 4 series, 1000+ points each, 4 Y-axes
-- Normalization calculation adds <1ms per frame
-- No increased memory per data point
+- What happens when all series have identical or very similar ranges?
+  - Single-axis mode should be used (no normalization needed)
+- What happens when a series has zero range (all Y values identical)?
+  - Series should render as a horizontal line at the configured position
+- What happens when a series has only one data point?
+  - Single point should render using reasonable default bounds
+- How does the system handle mixed configured and unconfigured axes?
+  - Unconfigured series use the primary (left) axis by default
+- What happens when more than 4 axes are requested?
+  - System should use a maximum of 4 axes; additional series share existing axes
+- How are threshold annotations displayed across multiple axes?
+  - Thresholds specify which axis they apply to, or display values for all axes at that Y-position
+  - **Future Scope**: Threshold annotation axis binding is deferred to a separate enhancement
+- **How does zoom/pan interact with multi-axis normalization?**
+  - **X-axis zoom/pan**: Works normally, scrolls through time/horizontal data
+  - **Y-axis zoom**: DISABLED in multi-axis mode - each axis always shows full range
+  - **Rationale**: Independent Y-zoom per axis is confusing UX; normalized series should always use full vertical space
 
-### SC-002: Visual Clarity
-- Each series fully visible using complete vertical plot space
-- Axis-to-series association immediately clear via color coding
-- No overlapping axis labels (automatic spacing)
+## Requirements *(mandatory)*
 
-### SC-003: Value Accuracy
-- All displayed Y-values match original data values exactly
-- No rounding errors from normalization visible to user
-- Crosshair/tooltip values consistent with axis labels
+### Functional Requirements
 
-### SC-004: Backward Compatibility
-- Single Y-axis mode (current behavior) unchanged when:
-  - Only one series present
-  - Auto-detection disabled and no explicit multi-axis config
-  - All series have similar Y-ranges
+- **FR-001**: System MUST support up to 4 Y-axes positioned as: leftOuter, left, right, rightOuter
+- **FR-002**: Each data series MUST be bindable to a specific Y-axis by identifier
+- **FR-003**: Each Y-axis MUST maintain its own data bounds (min/max), either auto-computed from bound series or explicitly configured
+- **FR-004**: System MUST internally normalize each series to the full plot height while preserving original values for all display purposes
+- **FR-005**: All Y-axis labels and ticks MUST display original data values (not normalized values)
+- **FR-006**: Tooltips and crosshair displays MUST show original data values for each series
+- **FR-007**: Each Y-axis MUST support color-coding to match its bound series
+- **FR-008**: System MUST support automatic multi-axis detection when series Y-ranges differ by more than a configurable threshold (default: 10x)
+- **FR-009**: Grid lines MUST be disabled when multi-axis normalization is active (to avoid confusion with multiple scales)
+- **FR-010**: Multiple series MUST be able to share the same Y-axis when they have compatible ranges or units
+- **FR-011**: Series without explicit axis binding MUST default to the primary (left) Y-axis for backward compatibility
+- **FR-012**: Y-axis labels MUST support optional unit suffixes (e.g., "W", "bpm", "L/min")
+- **FR-013**: When multi-axis mode is active, Y-axis zoom MUST be disabled (X-axis zoom/pan remains functional)
+- **FR-014**: Crosshair Y-coordinate calculations MUST use per-axis bounds to convert screen position to original data values
 
----
+### Key Entities
 
-## 5. Non-Functional Requirements
+- **Y-Axis Configuration**: Defines a single Y-axis with unique identifier, position (left/right variants), color, label text, unit suffix, and optional explicit min/max bounds
+- **Series-Axis Binding**: Associates a data series with a specific Y-axis configuration by identifier
+- **Normalization Mode**: Controls whether normalization is disabled, automatic based on range detection, or always active
 
-### NFR-001: Performance Budget
-- Normalization computation: O(1) per point (pre-computed bounds)
-- Axis rendering: <2ms per axis
-- Total multi-axis overhead: <5ms per frame
+## Success Criteria *(mandatory)*
 
-### NFR-002: Memory Constraints
-- No additional memory per data point
-- Per-axis metadata: O(A) where A = number of axes (max 4)
-- Per-series metadata: O(S) where S = number of series
+### Measurable Outcomes
 
-### NFR-003: API Ergonomics
-- Simple cases (2 series, auto-detect) require zero configuration
-- Complex cases (4 axes, custom colors) remain declarative
-- Progressive disclosure of complexity
+- **SC-001**: Charts with 4 series (1000+ points each) across 4 Y-axes render at 60 frames per second without visible lag or stutter
+- **SC-002**: 100% of series in a multi-axis chart visually span at least 80% of the available vertical plot height (no "flat line" effect)
+- **SC-003**: Users can correctly identify which Y-axis corresponds to which series within 2 seconds of viewing the chart (via color-coding)
+- **SC-004**: All displayed Y-values (axes, tooltips, crosshair, legend) exactly match the original data values with no visible rounding errors
+- **SC-005**: Existing single-axis charts (one series, or similar-range series) continue to work identically with zero configuration changes required
 
----
-
-## 6. Technical Constraints
-
-### TC-001: Coordinate Space
-Must integrate with existing `ChartTransform` without breaking:
-- Pan/zoom functionality
-- Hit testing
-- Crosshair tracking
-- Viewport culling
-
-### TC-002: Existing Axis System
-Must extend, not replace, current `AxisConfig`:
-- Backward compatible API
-- Reuse axis rendering logic where possible
-- Support existing axis features (grid, labels, ticks)
-
-### TC-003: Series Types
-Must work with all series types:
-- LineChartSeries
-- AreaChartSeries
-- ScatterChartSeries
-- BarChartSeries (may need special handling)
-
----
-
-## 7. Out of Scope (Phase 1)
-
-- Logarithmic Y-axis scale
-- Secondary X-axes
-- Axis break/discontinuity
-- Interactive axis dragging to reorder
-- Per-axis zoom (all axes zoom together)
-
----
-
-## 8. Open Questions
-
-### OQ-001: Series-to-Axis Binding Syntax
-**Options**:
-A) `yAxisId` on series, separate `yAxes` list on chart
-B) Inline `YAxisConfig` on each series
-C) Grouped series configuration
-
-**Current Preference**: Option A (cleaner separation)
-
-### OQ-002: Default Axis Assignment
-When no `yAxisId` specified:
-A) Use primary axis (left)
-B) Auto-assign to next available axis
-C) Error if multi-axis mode is forced
-
-**Current Preference**: Option A (backward compatible)
-
-### OQ-003: Axis Spacing
-How much horizontal space per axis?
-- Fixed width (e.g., 60px)
-- Dynamic based on label width
-- Configurable
-
-**Current Preference**: Dynamic with configurable min/max
-
-### OQ-004: Legend Enhancement
-Should legend show per-series Y-range info?
-- Just color + name (current)
-- Color + name + range (e.g., "Power (60-240W)")
-- Color + name + current value
-
-**Current Preference**: Color + name (keep simple for now)
-
----
-
-## 9. Clarifications Received
-
-| Question | Answer | Date |
-|----------|--------|------|
-| Max number of Y-axes | 4 (leftOuter, left, right, rightOuter) | 2025-11-27 |
-| Can multiple series share axis? | Yes, if apparent to user | 2025-11-27 |
-| Threshold annotation handling | Same color as series, OR show all values | 2025-11-27 |
-| Grid lines in multi-axis mode | Disable (avoid confusion) | 2025-11-27 |
-| Display values | ALWAYS original Y-values everywhere | 2025-11-27 |
-| Auto-detection | Yes, when ranges differ significantly | 2025-11-27 |
-
----
-
-## 10. Reference Materials
-
-### VO2master Screenshot Analysis
-![VO2master Multi-Axis Chart](../../docs/design/vo2master-reference.png)
-
-Key observations:
-1. Left side: "Ventilation" (0-40) in gray, "Tv" (0-4) in orange
-2. Right side: Multiple scales (0-300, 0-120) for different metrics
-3. Top header: Per-series stats (Min/Max/Avg) with units
-4. Legend: Color-coded series identification
-5. All lines use full vertical space despite 100x+ range differences
-
-### Similar Implementations
-- TradingView: Dual Y-axis for price + volume
-- Excel: Secondary axis for combo charts
-- Matplotlib: `twinx()` for secondary Y-axis
-- Highcharts: Multiple Y-axes with series binding
-
----
-
-## 11. Appendix: Proposed Data Model (Draft)
-
-```dart
-/// Y-axis configuration for multi-axis charts
-class YAxisConfig {
-  /// Unique identifier for axis binding
-  final String id;
-  
-  /// Position of axis relative to plot area
-  final YAxisPosition position;
-  
-  /// Axis color (defaults to first bound series color)
-  final Color? color;
-  
-  /// Axis label (e.g., "Power", "Heart Rate")
-  final String? label;
-  
-  /// Unit suffix for tick labels (e.g., "W", "bpm")
-  final String? unit;
-  
-  /// Explicit min value (null = auto from data)
-  final double? min;
-  
-  /// Explicit max value (null = auto from data)
-  final double? max;
-  
-  /// Whether to show tick marks
-  final bool showTicks;
-  
-  /// Whether to show axis line
-  final bool showAxisLine;
-}
-
-/// Updated series with axis binding
-class LineChartSeries extends ChartSeries {
-  /// ID of Y-axis to use (null = primary/default axis)
-  final String? yAxisId;
-  
-  /// Unit for this series (displayed in tooltips)
-  final String? unit;
-  
-  // ... existing fields
-}
-
-/// Widget configuration update
-class BravenChartPlus {
-  /// Multiple Y-axis configurations (null = single axis mode)
-  final List<YAxisConfig>? yAxes;
-  
-  /// Normalization behavior
-  final NormalizationMode normalizationMode;
-  
-  // ... existing fields
-}
-
-/// Normalization mode options
-enum NormalizationMode {
-  /// No normalization, use global Y bounds (current behavior)
-  none,
-  
-  /// Auto-detect when series ranges differ significantly
-  auto,
-  
-  /// Always normalize each series to its own range
-  perSeries,
-}
-```
-
----
-
-## Next Steps
-
-1. **Run SpecKit Process**: `/speckit.plan` to generate research and design phases
-2. **Technical Research**: Investigate integration points with ChartTransform
-3. **Prototype**: Create minimal multi-axis rendering proof-of-concept
-4. **Design Review**: Validate axis layout and spacing algorithms
-5. **Implementation**: Phase-by-phase development with TDD
-
----
-
-*Document Version: 1.0 DRAFT*
-*Last Updated: 2025-11-27*

@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-10-04
 
 ## Active Technologies
+- Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:ui) - NO external packages (011-multi-axis-normalization)
 
 - Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:collection) - NO external packages (001-foundation)
 - [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION] (001-foundation)
@@ -29,10 +30,10 @@ tests/
 Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard conventions
 
 ## Recent Changes
+- 011-multi-axis-normalization: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:ui) - NO external packages
 
 - 009-dual-mode-streaming: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:async for Timer, dart:ui for rendering)
 - 006-chart-widgets: Added Dart 3.10.0-227.0.dev + Flutter SDK 3.37.0-1.0.pre-216, Standard Dart libraries (dart:ui for widgets, dart:async for streams)
-- 005-chart-types: Added Dart 3.10.0-227.0.dev + Flutter SDK 3.37.0-1.0.pre-216, Standard Dart libraries (dart:ui, dart:math for bezier/interpolation)
 
 <!-- MANUAL ADDITIONS START -->
 
