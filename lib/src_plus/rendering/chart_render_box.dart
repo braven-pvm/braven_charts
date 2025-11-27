@@ -19,6 +19,7 @@ import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../interaction/core/crosshair_tracker.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
@@ -2560,6 +2561,10 @@ class ChartRenderBox extends RenderBox {
 
     // Search all series elements for nearest marker
     for (final element in _elements.whereType<SeriesElement>()) {
+      // Skip series that don't show data point markers - no tooltip if markers hidden
+      final series = element.series;
+      if (series is LineChartSeries && !series.showDataPointMarkers) continue;
+
       for (int i = 0; i < element.series.points.length; i++) {
         final point = element.series.points[i];
         final markerPlotPos = _transform!.dataToPlot(point.x, point.y);
@@ -2975,33 +2980,50 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _cursorPosition;
-    final crosshairEnabled = _interactionConfig?.crosshair.enabled ?? true;
+    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final crosshairEnabled = crosshairConfig.enabled;
     if (crosshairEnabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
       // Only draw crosshair if cursor is inside plot area AND not dragging
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
-      // [DEBUG OUTPUT REMOVED] Crosshair drawing - was firing at 60fps on mouse move
 
-      // Use theme colors with mode-aware behavior: blue for range creation, theme default otherwise
-      final isRangeCreationMode = coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
-      final interactionTheme = _theme?.interactionTheme;
-      final crosshairColor = isRangeCreationMode
-          ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF)) // Theme color or default blue for range creation
-          : (interactionTheme?.crosshairColor ?? const Color(0x80666666)); // Theme color or default gray for normal mode
-      final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
+      // Check if tracking mode should be used based on data point count
+      final totalDataPoints = _getTotalDataPoints();
+      final useTrackingMode = crosshairConfig.shouldUseTrackingMode(totalDataPoints);
 
-      final crosshairPaint = Paint()
-        ..color = crosshairColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = crosshairWidth;
+      if (useTrackingMode) {
+        // Tracking mode: vertical line only + intersection markers + persistent tooltip
+        _drawTrackingModeOverlay(canvas, size, cursorPos);
+      } else {
+        // Standard mode: both crosshair lines + coordinate labels
+        // Use theme colors with mode-aware behavior: blue for range creation, theme default otherwise
+        final isRangeCreationMode = coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
+        final interactionTheme = _theme?.interactionTheme;
+        final crosshairColor = isRangeCreationMode
+            ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF)) // Theme color or default blue for range creation
+            : (interactionTheme?.crosshairColor ?? const Color(0x80666666)); // Theme color or default gray for normal mode
+        final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
 
-      // Horizontal line across plot area
-      canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
+        final crosshairPaint = Paint()
+          ..color = crosshairColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = crosshairWidth;
 
-      // Vertical line across plot area
-      canvas.drawLine(Offset(cursorPos.dx, _plotArea.top), Offset(cursorPos.dx, _plotArea.bottom), crosshairPaint);
+        // Draw lines based on crosshair mode configuration
+        final mode = crosshairConfig.mode;
 
-      // Draw coordinate labels (showing both screen and data coordinates)
-      _drawCrosshairLabels(canvas, size, cursorPos);
+        // Horizontal line across plot area (if mode allows)
+        if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+          canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
+        }
+
+        // Vertical line across plot area (if mode allows)
+        if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+          canvas.drawLine(Offset(cursorPos.dx, _plotArea.top), Offset(cursorPos.dx, _plotArea.bottom), crosshairPaint);
+        }
+
+        // Draw coordinate labels (showing both screen and data coordinates)
+        _drawCrosshairLabels(canvas, size, cursorPos);
+      }
     }
 
     // Draw tooltip for hovered/tapped marker (if any)
@@ -4099,6 +4121,300 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Draw text
+    yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
+  }
+
+  // ============================================================================
+  // Tracking Mode Helpers
+  // ============================================================================
+
+  /// Gets the total number of data points across all series.
+  int _getTotalDataPoints() {
+    final seriesList = _elements.whereType<SeriesElement>().map((e) => e.series).toList();
+    return CrosshairTracker.getTotalPointCount(seriesList);
+  }
+
+  /// Draws tracking mode overlay (vertical line only + intersection markers + tooltip).
+  void _drawTrackingModeOverlay(Canvas canvas, Size size, Offset cursorPos) {
+    if (_transform == null) return;
+
+    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final interactionTheme = _theme?.interactionTheme;
+    final crosshairColor = interactionTheme?.crosshairColor ?? const Color(0x80666666);
+    final crosshairWidth = interactionTheme?.crosshairWidth ?? 1.0;
+
+    // Draw crosshair lines based on mode configuration
+    final crosshairPaint = Paint()
+      ..color = crosshairColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = crosshairWidth;
+
+    final mode = crosshairConfig.mode;
+
+    // Vertical line (primary line for tracking mode)
+    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+      canvas.drawLine(
+        Offset(cursorPos.dx, _plotArea.top),
+        Offset(cursorPos.dx, _plotArea.bottom),
+        crosshairPaint,
+      );
+    }
+
+    // Horizontal line (optional in tracking mode based on config)
+    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+      canvas.drawLine(
+        Offset(_plotArea.left, cursorPos.dy),
+        Offset(_plotArea.right, cursorPos.dy),
+        crosshairPaint,
+      );
+    }
+
+    // Get series list and data bounds from transform
+    final seriesList = _elements.whereType<SeriesElement>().map((e) => e.series).toList();
+    final xMin = _transform!.dataXMin;
+    final xMax = _transform!.dataXMax;
+    final yMin = _transform!.dataYMin;
+    final yMax = _transform!.dataYMax;
+
+    final trackingState = CrosshairTracker.calculateTrackingState(
+      screenX: cursorPos.dx,
+      chartBounds: _plotArea,
+      xMin: xMin,
+      xMax: xMax,
+      seriesList: seriesList,
+      interpolate: crosshairConfig.interpolateValues,
+    );
+
+    if (trackingState == null) return;
+
+    // Draw intersection markers on each series line
+    if (crosshairConfig.showIntersectionMarkers) {
+      for (final value in trackingState.seriesValues) {
+        // Convert data Y to screen Y
+        final screenY = CrosshairTracker.dataToScreenY(
+          dataY: value.y,
+          chartBounds: _plotArea,
+          yMin: yMin,
+          yMax: yMax,
+        );
+
+        // Draw filled circle marker
+        final markerPaint = Paint()
+          ..color = value.seriesColor
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(
+          Offset(cursorPos.dx, screenY),
+          crosshairConfig.intersectionMarkerRadius,
+          markerPaint,
+        );
+
+        // Draw border for visibility
+        final borderPaint = Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+        canvas.drawCircle(
+          Offset(cursorPos.dx, screenY),
+          crosshairConfig.intersectionMarkerRadius,
+          borderPaint,
+        );
+      }
+    }
+
+    // Draw tracking tooltip (follows cursor)
+    if (crosshairConfig.showTrackingTooltip && trackingState.seriesValues.isNotEmpty) {
+      _drawTrackingTooltip(canvas, cursorPos, trackingState);
+    }
+
+    // Draw X label at bottom (if vertical line is shown)
+    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
+      _drawTrackingXLabel(canvas, cursorPos, trackingState.dataX);
+    }
+
+    // Draw Y label on left (if horizontal line is shown)
+    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+      // Convert cursor Y to data Y
+      final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
+      _drawTrackingYLabel(canvas, cursorPos, dataY);
+    }
+  }
+
+  /// Draws the tracking tooltip that follows the cursor.
+  void _drawTrackingTooltip(Canvas canvas, Offset cursorPos, CrosshairTrackingState state) {
+    final interactionTheme = _theme?.interactionTheme;
+    final tooltipTheme = interactionTheme?.tooltipStyle;
+
+    final backgroundColor = tooltipTheme?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final textColor = tooltipTheme?.textStyle.color ?? const Color(0xFF333333);
+    final fontSize = tooltipTheme?.textStyle.fontSize ?? 12.0;
+    final borderColor = tooltipTheme?.borderColor ?? const Color(0xFFBDBDBD);
+    final borderWidth = tooltipTheme?.borderWidth ?? 1.0;
+    final borderRadius = tooltipTheme?.borderRadius ?? 4.0;
+    final padding = tooltipTheme?.padding.left ?? 8.0;
+
+    // Build tooltip content
+    final textPainters = <(TextPainter, Color)>[];
+    double maxWidth = 0;
+    double totalHeight = 0;
+    const lineSpacing = 4.0;
+    const markerSize = 8.0;
+
+    for (final value in state.seriesValues) {
+      final displayY = _formatDataValue(value.y);
+      final label = '${value.seriesName}: $displayY';
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(color: textColor, fontSize: fontSize),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainters.add((tp, value.seriesColor));
+      maxWidth = math.max(maxWidth, tp.width + markerSize + 6);
+      totalHeight += tp.height + (textPainters.length > 1 ? lineSpacing : 0);
+    }
+
+    // Calculate tooltip position (follow cursor, offset to right)
+    const cursorOffset = 12.0;
+    var tooltipX = cursorPos.dx + cursorOffset;
+    var tooltipY = cursorPos.dy - totalHeight / 2 - padding;
+
+    final tooltipWidth = maxWidth + padding * 2;
+    final tooltipHeight = totalHeight + padding * 2;
+
+    // Keep tooltip within plot area bounds
+    if (tooltipX + tooltipWidth > _plotArea.right) {
+      tooltipX = cursorPos.dx - tooltipWidth - cursorOffset;
+    }
+    tooltipY = tooltipY.clamp(_plotArea.top, _plotArea.bottom - tooltipHeight);
+
+    // Draw background
+    final bgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
+      Radius.circular(borderRadius),
+    );
+
+    // Shadow
+    final shadowPaint = Paint()
+      ..color = const Color(0x20000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawRRect(bgRect.shift(const Offset(2, 2)), shadowPaint);
+
+    // Background and border
+    canvas.drawRRect(bgRect, Paint()..color = backgroundColor);
+    if (borderWidth > 0) {
+      canvas.drawRRect(
+        bgRect,
+        Paint()
+          ..color = borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = borderWidth,
+      );
+    }
+
+    // Draw text lines with colored markers
+    var currentY = tooltipY + padding;
+    for (final (tp, color) in textPainters) {
+      canvas.drawCircle(
+        Offset(tooltipX + padding + markerSize / 2, currentY + tp.height / 2),
+        markerSize / 2 - 1,
+        Paint()..color = color,
+      );
+      tp.paint(canvas, Offset(tooltipX + padding + markerSize + 6, currentY));
+      currentY += tp.height + lineSpacing;
+    }
+  }
+
+  /// Draws the X-axis label for tracking mode.
+  void _drawTrackingXLabel(Canvas canvas, Offset cursorPos, double dataX) {
+    final interactionTheme = _theme?.interactionTheme;
+    final labelStyle = interactionTheme?.crosshairLabelStyle;
+    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
+    final borderWidth = labelStyle?.borderWidth ?? 1.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
+    final labelPadding = labelStyle?.padding.left ?? 4.0;
+
+    final xDisplayValue = _formatDataValue(dataX);
+    final xTextPainter = TextPainter(
+      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    var xLabelX = cursorPos.dx - xTextPainter.width / 2;
+    final xLabelY = _plotArea.bottom - xTextPainter.height - 8;
+
+    xLabelX = xLabelX.clamp(_plotArea.left + labelPadding, _plotArea.right - xTextPainter.width - labelPadding);
+
+    final xBgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        xLabelX - labelPadding,
+        xLabelY - labelPadding,
+        xTextPainter.width + labelPadding * 2,
+        xTextPainter.height + labelPadding * 2,
+      ),
+      Radius.circular(borderRadius),
+    );
+    canvas.drawRRect(xBgRect, Paint()..color = backgroundColor);
+    if (borderWidth > 0) {
+      canvas.drawRRect(
+        xBgRect,
+        Paint()
+          ..color = borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = borderWidth,
+      );
+    }
+    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
+  }
+
+  /// Draws the Y-axis label for tracking mode (when horizontal line is shown).
+  void _drawTrackingYLabel(Canvas canvas, Offset cursorPos, double dataY) {
+    final interactionTheme = _theme?.interactionTheme;
+    final labelStyle = interactionTheme?.crosshairLabelStyle;
+    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
+    final borderWidth = labelStyle?.borderWidth ?? 1.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
+    final labelPadding = labelStyle?.padding.left ?? 4.0;
+
+    final yDisplayValue = _formatDataValue(dataY);
+    final yTextPainter = TextPainter(
+      text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Position Y label on the left side of the plot area
+    final yLabelX = _plotArea.left + 8;
+    var yLabelY = cursorPos.dy - yTextPainter.height / 2;
+
+    // Clamp to stay within plot area
+    yLabelY = yLabelY.clamp(
+      _plotArea.top + labelPadding,
+      _plotArea.bottom - yTextPainter.height - labelPadding,
+    );
+
+    final yBgRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        yLabelX - labelPadding,
+        yLabelY - labelPadding,
+        yTextPainter.width + labelPadding * 2,
+        yTextPainter.height + labelPadding * 2,
+      ),
+      Radius.circular(borderRadius),
+    );
+    canvas.drawRRect(yBgRect, Paint()..color = backgroundColor);
+    if (borderWidth > 0) {
+      canvas.drawRRect(
+        yBgRect,
+        Paint()
+          ..color = borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = borderWidth,
+      );
+    }
     yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
   }
 
