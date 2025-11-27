@@ -141,9 +141,9 @@
 - [X] T043 [US4] **[FR-014]** Update crosshair to use per-axis Y bounds lookup in `lib/src_plus/interaction/crosshair_handler.dart` - screen Y position → per-axis data value conversion
 - [X] T044 [US4] Update tracking mode to display all series values in `lib/src_plus/interaction/tracking_overlay.dart`
 - [X] T045 [US4] Format decimal values appropriately (no over-precision) in `lib/src_plus/formatting/multi_axis_value_formatter.dart`
-- [ ] T046 [US4] Add crosshair example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
+- [X] T046 [US4] Add crosshair example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
-**Checkpoint**: User Story 4 complete - crosshair with original values working
+**Checkpoint**: User Story 4 complete - crosshair with original values working ✅
 
 ---
 

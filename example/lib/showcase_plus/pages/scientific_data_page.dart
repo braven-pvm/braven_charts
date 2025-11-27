@@ -726,15 +726,41 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
     final maxHR = hr.map((p) => p.y).reduce(math.max);
     final maxCadence = cadence.map((p) => p.y).reduce(math.max);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _buildColoredStatItem('Avg Power', '${avgPower.toInt()}W', Colors.blue[600]!, isDark),
-        _buildColoredStatItem('Max Power', '${maxPower.toInt()}W', Colors.blue[400]!, isDark),
-        _buildColoredStatItem('Avg HR', '${avgHR.toInt()} bpm', Colors.red[600]!, isDark),
-        _buildColoredStatItem('Max HR', '${maxHR.toInt()} bpm', Colors.red[400]!, isDark),
-        _buildColoredStatItem('Avg Cadence', '${avgCadence.toInt()} rpm', Colors.green[600]!, isDark),
-        _buildColoredStatItem('Max Cadence', '${maxCadence.toInt()} rpm', Colors.green[400]!, isDark),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildColoredStatItem('Avg Power', '${avgPower.toInt()}W', Colors.blue[600]!, isDark),
+            _buildColoredStatItem('Max Power', '${maxPower.toInt()}W', Colors.blue[400]!, isDark),
+            _buildColoredStatItem('Avg HR', '${avgHR.toInt()} bpm', Colors.red[600]!, isDark),
+            _buildColoredStatItem('Max HR', '${maxHR.toInt()} bpm', Colors.red[400]!, isDark),
+            _buildColoredStatItem('Avg Cadence', '${avgCadence.toInt()} rpm', Colors.green[600]!, isDark),
+            _buildColoredStatItem('Max Cadence', '${maxCadence.toInt()} rpm', Colors.green[400]!, isDark),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // T046: Crosshair info hint for multi-axis mode
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.touch_app,
+              size: 14,
+              color: isDark ? Colors.grey[500] : Colors.grey[600],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Hover over the chart to see values with units for each series',
+              style: TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
