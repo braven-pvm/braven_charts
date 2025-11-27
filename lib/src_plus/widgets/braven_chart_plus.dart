@@ -102,6 +102,7 @@ class BravenChartPlus extends StatefulWidget {
     this.onAnnotationTap,
     this.onAnnotationDragged,
   });
+  // Note: T047/T048 validation moved to runtime in _validateYAxesConfiguration()
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
@@ -743,6 +744,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void initState() {
     super.initState();
 
+    // T048: Validate unique axis positions and IDs at runtime
+    _validateYAxesConfiguration();
+
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChanged);
     _coordinator = ChartInteractionCoordinator();
@@ -778,6 +782,47 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Set up streaming if dataStream is provided
     if (widget.dataStream != null) {
       _setupStreamSubscription();
+    }
+  }
+
+  /// T047/T048: Validates that yAxes configuration is valid.
+  ///
+  /// Throws [ArgumentError] if:
+  /// - More than 4 axes are provided (T047)
+  /// - Two or more axes share the same position (T048)
+  /// - Two or more axes share the same ID (T048)
+  void _validateYAxesConfiguration() {
+    final yAxes = widget.yAxes;
+    if (yAxes == null || yAxes.isEmpty) return;
+
+    // T047: Max 4 axes validation
+    if (yAxes.length > 4) {
+      throw ArgumentError(
+        'Maximum of 4 Y-axes supported (left, right, leftOuter, rightOuter). '
+        'Provided: ${yAxes.length}',
+      );
+    }
+
+    // T048: Check for duplicate positions
+    final positions = <YAxisPosition>{};
+    for (final axis in yAxes) {
+      if (!positions.add(axis.position)) {
+        throw ArgumentError(
+          'Duplicate Y-axis position: ${axis.position}. '
+          'Each Y-axis must have a unique position.',
+        );
+      }
+    }
+
+    // T048: Check for duplicate IDs
+    final ids = <String>{};
+    for (final axis in yAxes) {
+      if (!ids.add(axis.id)) {
+        throw ArgumentError(
+          'Duplicate Y-axis ID: "${axis.id}". '
+          'Each Y-axis must have a unique id.',
+        );
+      }
     }
   }
 

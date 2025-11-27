@@ -4620,9 +4620,7 @@ class ChartRenderBox extends RenderBox {
 
     // Build tooltip text with optional unit suffix
     final seriesName = seriesElement.series.name ?? seriesElement.id;
-    final unitSuffix = seriesElement.series.unit != null && seriesElement.series.unit!.isNotEmpty 
-        ? ' ${seriesElement.series.unit}' 
-        : '';
+    final unitSuffix = seriesElement.series.unit != null && seriesElement.series.unit!.isNotEmpty ? ' ${seriesElement.series.unit}' : '';
     final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}$unitSuffix';
 
     // Create text painter with configured style
