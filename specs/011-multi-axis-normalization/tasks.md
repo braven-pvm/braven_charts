@@ -154,7 +154,7 @@
 - [X] T047 [P] Add validation for max 4 axes in `lib/src_plus/axis/y_axis_config.dart`
 - [X] T048 [P] Add validation for unique axis positions in `lib/src_plus/widgets/braven_chart_plus.dart`
 - [X] T049 [P] Add API documentation to all public classes in `lib/src_plus/axis/`
-- [ ] T050 Run performance benchmark (60 FPS with 4 series × 1000 points) in `test/benchmarks/multi_axis_benchmark.dart`
+- [X] T050 Run performance benchmark (60 FPS with 4 series × 1000 points) in `test/benchmarks/multi_axis_benchmark.dart`
 - [ ] T051 Validate backward compatibility (single-axis mode unchanged) in `test/widget/multi_axis/backward_compat_test.dart`
 - [ ] T052 Run quickstart.md validation - test all code examples compile
 - [ ] T053 Update CHANGELOG.md with multi-axis normalization feature
