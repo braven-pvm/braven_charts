@@ -3,11 +3,11 @@
 
 import 'dart:ui' show Offset;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src_plus/axis/y_axis_config.dart';
-import 'package:braven_charts/src_plus/models/y_axis_position.dart';
 import 'package:braven_charts/src_plus/models/normalization_mode.dart';
+import 'package:braven_charts/src_plus/models/y_axis_position.dart';
 import 'package:braven_charts/src_plus/rendering/multi_axis_normalizer.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Tests for per-axis normalization functionality (FR-001, FR-002, FR-003, FR-008).
 ///
@@ -294,7 +294,7 @@ void main() {
       test('should use explicit min/max from config when provided', () {
         final normalizer = MultiAxisNormalizer();
 
-        final config = YAxisConfig(
+        final config = const YAxisConfig(
           id: 'temp',
           position: YAxisPosition.left,
           min: 0,
@@ -309,7 +309,7 @@ void main() {
         final normalizer = MultiAxisNormalizer();
 
         // When config has no explicit bounds, bounds come from data
-        final config = YAxisConfig(
+        final config = const YAxisConfig(
           id: 'auto',
           position: YAxisPosition.right,
           // No min/max - will be computed from data

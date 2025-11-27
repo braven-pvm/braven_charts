@@ -53,10 +53,8 @@ class MultiAxisZoomController {
   MultiAxisZoomController({
     this.frictionCoefficient = 0.95,
     this.velocityThreshold = 50.0,
-  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1,
-            'frictionCoefficient must be between 0 and 1'),
-        assert(
-            velocityThreshold >= 0, 'velocityThreshold must be non-negative');
+  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1, 'frictionCoefficient must be between 0 and 1'),
+        assert(velocityThreshold >= 0, 'velocityThreshold must be non-negative');
 
   /// Friction coefficient for inertial scrolling (0-1).
   final double frictionCoefficient;

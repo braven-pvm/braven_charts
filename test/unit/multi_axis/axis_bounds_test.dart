@@ -82,8 +82,8 @@ void main() {
     group('computeAllBounds', () {
       test('should compute bounds for multiple axes from config', () {
         final configs = [
-          YAxisConfig(id: 'temp', position: YAxisPosition.left),
-          YAxisConfig(id: 'ph', position: YAxisPosition.right),
+          const YAxisConfig(id: 'temp', position: YAxisPosition.left),
+          const YAxisConfig(id: 'ph', position: YAxisPosition.right),
         ];
 
         final seriesData = {
@@ -112,7 +112,7 @@ void main() {
 
       test('should use explicit config bounds when provided', () {
         final configs = [
-          YAxisConfig(
+          const YAxisConfig(
             id: 'temp',
             position: YAxisPosition.left,
             min: 0.0,
@@ -140,8 +140,8 @@ void main() {
 
       test('should handle missing series data for config', () {
         final configs = [
-          YAxisConfig(id: 'temp', position: YAxisPosition.left),
-          YAxisConfig(id: 'missing', position: YAxisPosition.right),
+          const YAxisConfig(id: 'temp', position: YAxisPosition.left),
+          const YAxisConfig(id: 'missing', position: YAxisPosition.right),
         ];
 
         final seriesData = {
@@ -167,10 +167,10 @@ void main() {
 
     group('resolveSeriesAxisBinding', () {
       test('should bind series to axis by explicit yAxisId', () {
-        final series = MockChartSeries(
+        final series = const MockChartSeries(
           id: 'temp-series',
           yAxisId: 'temp',
-          data: [const Offset(1, 20.0)],
+          data: [Offset(1, 20.0)],
         );
 
         final binding = AxisBoundsCalculator.resolveSeriesAxisBinding(
@@ -182,10 +182,10 @@ void main() {
       });
 
       test('should return null for unbound series', () {
-        final series = MockChartSeries(
+        final series = const MockChartSeries(
           id: 'orphan-series',
           yAxisId: null,
-          data: [const Offset(1, 20.0)],
+          data: [Offset(1, 20.0)],
         );
 
         final binding = AxisBoundsCalculator.resolveSeriesAxisBinding(
@@ -197,10 +197,10 @@ void main() {
       });
 
       test('should validate axis exists in available list', () {
-        final series = MockChartSeries(
+        final series = const MockChartSeries(
           id: 'series',
           yAxisId: 'nonexistent',
-          data: [const Offset(1, 20.0)],
+          data: [Offset(1, 20.0)],
         );
 
         final binding = AxisBoundsCalculator.resolveSeriesAxisBinding(
@@ -216,15 +216,15 @@ void main() {
     group('computeAutoAxisAssignments', () {
       test('should auto-assign series to first axis when no yAxisId', () {
         final series = [
-          MockChartSeries(
+          const MockChartSeries(
             id: 'series1',
             yAxisId: null,
-            data: [const Offset(1, 20.0)],
+            data: [Offset(1, 20.0)],
           ),
         ];
 
         final configs = [
-          YAxisConfig(id: 'primary', position: YAxisPosition.left),
+          const YAxisConfig(id: 'primary', position: YAxisPosition.left),
         ];
 
         final assignments = AxisBoundsCalculator.computeAutoAxisAssignments(
@@ -237,16 +237,16 @@ void main() {
 
       test('should respect explicit yAxisId over auto-assignment', () {
         final series = [
-          MockChartSeries(
+          const MockChartSeries(
             id: 'series1',
             yAxisId: 'secondary',
-            data: [const Offset(1, 20.0)],
+            data: [Offset(1, 20.0)],
           ),
         ];
 
         final configs = [
-          YAxisConfig(id: 'primary', position: YAxisPosition.left),
-          YAxisConfig(id: 'secondary', position: YAxisPosition.right),
+          const YAxisConfig(id: 'primary', position: YAxisPosition.left),
+          const YAxisConfig(id: 'secondary', position: YAxisPosition.right),
         ];
 
         final assignments = AxisBoundsCalculator.computeAutoAxisAssignments(
@@ -259,29 +259,29 @@ void main() {
 
       test('should distribute unbound series across axes by unit matching', () {
         final series = [
-          MockChartSeries(
+          const MockChartSeries(
             id: 'temp1',
             yAxisId: null,
             unit: '°C',
-            data: [const Offset(1, 20.0)],
+            data: [Offset(1, 20.0)],
           ),
-          MockChartSeries(
+          const MockChartSeries(
             id: 'temp2',
             yAxisId: null,
             unit: '°C',
-            data: [const Offset(1, 30.0)],
+            data: [Offset(1, 30.0)],
           ),
-          MockChartSeries(
+          const MockChartSeries(
             id: 'ph1',
             yAxisId: null,
             unit: 'pH',
-            data: [const Offset(1, 7.0)],
+            data: [Offset(1, 7.0)],
           ),
         ];
 
         final configs = [
-          YAxisConfig(id: 'temp-axis', position: YAxisPosition.left, unit: '°C'),
-          YAxisConfig(id: 'ph-axis', position: YAxisPosition.right, unit: 'pH'),
+          const YAxisConfig(id: 'temp-axis', position: YAxisPosition.left, unit: '°C'),
+          const YAxisConfig(id: 'ph-axis', position: YAxisPosition.right, unit: 'pH'),
         ];
 
         final assignments = AxisBoundsCalculator.computeAutoAxisAssignments(

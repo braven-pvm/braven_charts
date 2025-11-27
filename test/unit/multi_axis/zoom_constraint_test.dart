@@ -3,9 +3,9 @@
 
 import 'dart:ui' show Offset, Rect;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
 import 'package:braven_charts/src_plus/interaction/multi_axis_zoom_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Test for FR-013: Y-axis zoom must be disabled when multi-axis mode is active.
 ///
