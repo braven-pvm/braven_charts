@@ -132,8 +132,8 @@
 
 ### Tests for User Story 4
 
-- [ ] T040 [P] [US4] Unit test for value formatting with units in `test/unit/multi_axis/value_formatter_test.dart`
-- [ ] T041 [P] [US4] Widget test for crosshair values in `test/widget/multi_axis/crosshair_values_test.dart`
+- [X] T040 [P] [US4] Unit test for value formatting with units in `test/unit/multi_axis/value_formatter_test.dart`
+- [X] T041 [P] [US4] Widget test for crosshair values in `test/widget/multi_axis/crosshair_values_test.dart`
 
 ### Implementation for User Story 4
 
