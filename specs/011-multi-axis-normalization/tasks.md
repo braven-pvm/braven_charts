@@ -108,7 +108,7 @@
 ### Tests for User Story 3
 
 - [X] T031 [P] [US3] Unit test for axis color resolution in `test/unit/multi_axis/axis_color_test.dart`
-- [ ] T032 [P] [US3] Widget test for color-coded axes in `test/widget/multi_axis/axis_color_widget_test.dart`
+- [X] T032 [P] [US3] Widget test for color-coded axes in `test/widget/multi_axis/axis_color_widget_test.dart`
 - [ ] T033 [P] [US3] Golden test for colored axes in `test/golden/multi_axis/colored_axes_test.dart`
 
 ### Implementation for User Story 3
