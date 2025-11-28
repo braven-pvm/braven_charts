@@ -3,6 +3,9 @@
 
 library;
 
+// Axis - Auto-detection
+export 'src/axis/normalization_detector.dart';
+export 'src/axis/range_ratio_calculator.dart';
 // Core chart widget
 export 'src/braven_chart_plus.dart';
 // Controllers

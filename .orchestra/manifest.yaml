@@ -78,10 +78,11 @@ phases:
         
       - id: 7
         title: "Implement Auto-Detection Logic"
-        status: "in-progress"
+        status: "completed"
+        commit: "792024c"
         speckit_tasks: ["T027", "T028", "T025"]
         consolidation_rationale: "Auto-detection logic + its unit tests (US2)"
-        notes: "TDD required - tests first (T025), then implementation (T027, T028)"
+        notes: "TDD verified - 29 new tests, default 10x threshold per FR-008"
         
       - id: 8
         title: "Integrate Normalizer with Chart Data Pipeline"

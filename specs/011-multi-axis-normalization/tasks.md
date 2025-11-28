@@ -107,13 +107,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Unit test for auto-detection algorithm in `test/unit/multi_axis/auto_detection_test.dart`
+- [x] T025 [P] [US2] Unit test for auto-detection algorithm in `test/unit/multi_axis/auto_detection_test.dart`
+  - ✅ Completed: Orchestrator Task 7, 29 tests
 - [ ] T026 [P] [US2] Widget test for auto-mode triggering in `test/widget/multi_axis/auto_detection_widget_test.dart`
 
 ### Implementation for User Story 2
 
- - [ ] T027 [US2] Implement range ratio calculator in `lib/src/axis/range_ratio_calculator.dart`
- - [ ] T028 [US2] Implement auto-detection logic in `lib/src/axis/normalization_detector.dart`
+ - [x] T027 [US2] Implement range ratio calculator in `lib/src/axis/range_ratio_calculator.dart`
+   - ✅ Completed: Orchestrator Task 7
+ - [x] T028 [US2] Implement auto-detection logic in `lib/src/axis/normalization_detector.dart`
+   - ✅ Completed: Orchestrator Task 7, default threshold = 10.0
  - [ ] T029 [US2] Integrate auto-detection with chart initialization in `lib/src/widgets/braven_chart_plus.dart`
 - [ ] T030 [US2] Add auto-detection example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
