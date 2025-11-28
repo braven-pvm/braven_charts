@@ -35,6 +35,19 @@ flutter pub get
 
 ##  Quick Start
 
+### BravenChartPlus (New!)
+
+The new BravenChartPlus widget is available in the `/example` folder with a simple showcase app:
+
+```bash
+cd example
+flutter run -d chrome
+```
+
+See [example/README.md](example/README.md) for more details on the showcase app features.
+
+### Legacy API
+
 ```dart
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
