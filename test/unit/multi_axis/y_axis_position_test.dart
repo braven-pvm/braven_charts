@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('YAxisPosition', () {
@@ -53,12 +53,14 @@ void main() {
       });
 
       test('values are in correct layout order', () {
-        expect(YAxisPosition.values, equals([
-          YAxisPosition.outerLeft,
-          YAxisPosition.left,
-          YAxisPosition.right,
-          YAxisPosition.outerRight,
-        ]));
+        expect(
+            YAxisPosition.values,
+            equals([
+              YAxisPosition.outerLeft,
+              YAxisPosition.left,
+              YAxisPosition.right,
+              YAxisPosition.outerRight,
+            ]));
       });
     });
 
