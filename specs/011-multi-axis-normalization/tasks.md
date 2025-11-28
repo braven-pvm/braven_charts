@@ -20,8 +20,16 @@
 
  - [x] T001 [P] Create YAxisPosition enum in `lib/src/models/y_axis_position.dart`
    - ✅ Completed: Orchestrator Task 1, commit 49e9542
+   - ⚠️ **CONTRACT DEVIATION**: Enum values differ from contract!
+     - Contract: `leftOuter`, `left`, `right`, `rightOuter`
+     - Implemented: `outerLeft`, `left`, `right`, `outerRight`
+     - **NEEDS REVIEW**: Align with contract or update contract?
  - [x] T002 [P] Create NormalizationMode enum in `lib/src/models/normalization_mode.dart`
    - ✅ Completed: Orchestrator Task 4, commit 3ff2e0f
+   - ⚠️ **CONTRACT DEVIATION**: Enum values differ from contract!
+     - Contract: `none`, `auto`, `perSeries`
+     - Implemented: `disabled`, `auto`, `always`
+     - **NEEDS REVIEW**: Align with contract or update contract?
  - [x] T003 [P] Create YAxisConfig class in `lib/src/axis/y_axis_config.dart`
    - ✅ Completed: Orchestrator Task 2, commit ffd6d0d
    - ⚠️ Path changed: placed in `lib/src/models/` not `lib/src/axis/`
