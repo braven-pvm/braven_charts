@@ -1,0 +1,36 @@
+# Verification Criteria - Task 1
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+task_id: 1
+title: "Create Y-Axis Position Enum"
+
+verification_criteria:
+  structural:
+    - file_exists: "lib/src/axis/y_axis_position.dart"
+    - exports_from: "lib/braven_charts.dart"
+    
+  functional:
+    - enum_values: ["leftOuter", "left", "right", "rightOuter"]
+    - compile_check: "dart analyze lib/src/axis/y_axis_position.dart"
+    
+  integration:
+    - can_import: "import 'package:braven_charts/braven_charts.dart'; YAxisPosition.left;"
+
+verification_commands:
+  - description: "File exists"
+    command: "Test-Path lib/src/axis/y_axis_position.dart"
+    expected: "True"
+    
+  - description: "Contains all positions"
+    command: "Select-String -Path lib/src/axis/y_axis_position.dart -Pattern 'leftOuter|left|right|rightOuter' | Measure-Object | Select-Object -ExpandProperty Count"
+    expected: "4"
+    
+  - description: "Compiles without error"
+    command: "dart analyze lib/src/axis/y_axis_position.dart --fatal-infos"
+    expected: "exit code 0"
+
+failure_indicators:
+  - "File not created"
+  - "Missing enum values"
+  - "Not exported from main barrel"
+  - "Compilation errors"

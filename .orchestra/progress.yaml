@@ -1,0 +1,27 @@
+# Orchestra Progress Tracker
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+current_task_id: 1
+current_phase: "foundation"
+
+task_history: []
+# Format when populated:
+# - task_id: 1
+#   started: "2025-11-28T10:00:00Z"
+#   completed: "2025-11-28T10:30:00Z"
+#   verification_status: "passed"
+#   verification_notes: "..."
+#   commit: "abc123"
+
+verification_stats:
+  tasks_attempted: 0
+  tasks_passed: 0
+  tasks_failed: 0
+  tasks_reworked: 0
+
+notes: |
+  This sprint is a re-attempt of 011-multi-axis-normalization using
+  the orchestrator pattern to prevent implementation theater.
+  
+  Previous attempt: 56 tasks "completed", zero functionality.
+  This attempt: 16 focused tasks with verification between each.

@@ -1,0 +1,96 @@
+# Sprint 011: Multi-Axis Normalization - Task Manifest
+# ⚠️ THIS FILE IS HIDDEN FROM IMPLEMENTOR AGENT
+# Only orchestrator (human) and verifier agent should access this folder
+
+sprint: "011-multi-axis-normalization"
+spec: "specs/011-multi-axis-normalization/spec.md"
+created: "2025-11-28"
+status: "ready"
+
+# Task feeding strategy:
+# - Feed ONE task at a time to implementor
+# - No task counts visible to implementor
+# - Verification happens between tasks
+# - Next task only after verification passes
+
+phases:
+  - id: "foundation"
+    description: "Core data models and configuration"
+    tasks:
+      - id: 1
+        title: "Create Y-Axis Position Enum"
+        status: "pending"
+        
+      - id: 2
+        title: "Create Y-Axis Configuration Model"
+        status: "pending"
+        
+      - id: 3
+        title: "Create Series-Axis Binding Model"
+        status: "pending"
+        
+      - id: 4
+        title: "Create Normalization Mode Enum"
+        status: "pending"
+        
+      - id: 5
+        title: "Create Multi-Axis Configuration Container"
+        status: "pending"
+
+  - id: "normalization"
+    description: "Core normalization logic"
+    tasks:
+      - id: 6
+        title: "Implement Data Normalizer"
+        status: "pending"
+        
+      - id: 7
+        title: "Implement Auto-Detection Logic"
+        status: "pending"
+        
+      - id: 8
+        title: "Integrate Normalizer with Chart Data Pipeline"
+        status: "pending"
+
+  - id: "rendering"
+    description: "Visual rendering of axes and normalized data"
+    tasks:
+      - id: 9
+        title: "Create Multi-Axis Painter"
+        status: "pending"
+        
+      - id: 10
+        title: "Implement Color-Coded Axis Rendering"
+        status: "pending"
+        
+      - id: 11
+        title: "Integrate Multi-Axis Painter with Chart Widget"
+        status: "pending"
+
+  - id: "interaction"
+    description: "Tooltips, crosshair, and user interaction"
+    tasks:
+      - id: 12
+        title: "Update Tooltip to Show Original Values"
+        status: "pending"
+        
+      - id: 13
+        title: "Update Crosshair to Use Per-Axis Bounds"
+        status: "pending"
+        
+      - id: 14
+        title: "Disable Y-Zoom in Multi-Axis Mode"
+        status: "pending"
+
+  - id: "integration"
+    description: "Final integration and API exposure"
+    tasks:
+      - id: 15
+        title: "Expose Multi-Axis API on BravenChartPlus"
+        status: "pending"
+        
+      - id: 16
+        title: "Create Working Demo Example"
+        status: "pending"
+
+current_task: 1
