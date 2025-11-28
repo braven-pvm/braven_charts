@@ -893,7 +893,54 @@ This is logged as the **Orchestrator Translation Protocol** for reference.
 
 ---
 
-## Appendix B: Verification Commands Reference
+## Per-Task Retrospectives
+
+> **Process**: After each task verification, analyze what worked, what didn't, and document improvements.
+
+### Tasks 1-4 Retrospective (Foundation Phase - Batch Review)
+
+**Date**: 2025-01-08  
+**Tasks**: YAxisPosition, YAxisConfig, SeriesAxisBinding, NormalizationMode  
+**Pass Rate**: 4/4 first attempt (100%)  
+**Total Tests**: 64 (14+25+14+11)
+
+#### What Worked Well
+
+1. **Explicit file paths in instructions** - Zero confusion about where to create files
+2. **Reference to existing patterns** - "Follow pattern in enums.dart" - implementor found and followed
+3. **TDD mention** - Even without enforcement, implementor created tests first
+4. **Simple, focused tasks** - Each task had one clear deliverable
+5. **Hidden verification** - Implementor couldn't optimize for verification criteria
+
+#### What Could Be Improved
+
+| Issue | Impact | Proposed Fix |
+|-------|--------|--------------|
+| Verification is manual | Time-consuming, error-prone | Create `orchestra verify` CLI command |
+| Progress update is manual | Easy to forget, verbose | Automate in commit hook or CLI |
+| No test count validation | Could pass with 1 shallow test | Add `minimum_tests: N` check to verification |
+| Export location varies | Task 1-4 all exported to enums.dart | Standardize: models go to models.dart barrel |
+| No cross-file validation | Can't verify Task 5 uses Task 2-4 types | Add import verification to criteria |
+
+#### Patterns Emerging
+
+1. **Enum tasks are trivial** - Consider batching or skipping for lower-tier models
+2. **Model tasks follow consistent pattern** - Template opportunity:
+   - File + test file
+   - Export to barrel
+   - Properties, constructor, copyWith, equality
+3. **Implementor exceeds requirements** - Tests exceeded minimums (good quality signal)
+
+#### Action Items
+
+- [ ] Add `minimum_tests` field to verification YAML (done in task-005.yaml)
+- [ ] Add "imports previous task outputs" check for container tasks
+- [ ] Consider template for "simple enum" vs "model class" task types
+- [ ] Track test count per task for quality metrics
+
+---
+
+## Appendix A: Sprint 011 Failure Post-Mortem
 
 ```powershell
 # Check file exists
