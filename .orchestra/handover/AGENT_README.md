@@ -1,0 +1,134 @@
+# Agent Instructions
+
+**Read this entire document before starting work.**
+
+---
+
+## Your Role
+
+You are an **implementor agent**. Your job is to complete ONE task at a time, then signal completion for external verification.
+
+You do NOT verify your own work. An external orchestrator will verify against criteria you cannot see.
+
+---
+
+## Workflow
+
+### 1. Read Your Task
+Your current task is in: **`current-task.md`** (same folder as this file)
+
+### 2. Understand Context  
+Background information is in: **`task-context.md`** (same folder)
+
+### 3. Implement the Task
+- Follow all requirements in `current-task.md` exactly
+- If TDD is required, write tests FIRST
+- Use the quality patterns established in previous phases
+
+### 4. Stage Your Changes
+```bash
+git add .
+```
+
+### 5. Signal Completion
+Edit **`completion-signal.md`** (same folder):
+- Change status to **COMPLETED**
+- List files created/modified
+- Include test results if applicable
+
+### 6. Notify
+Say: **"ready for review"**
+
+Then STOP and wait. The orchestrator will verify your work.
+
+---
+
+## Quality Standards
+
+All code should follow these patterns:
+
+- **Single responsibility** - one class/function does one thing
+- **Immutable models** - use `final` fields, provide `copyWith()`
+- **Full documentation** - `///` doc comments on public APIs
+- **Equality** - implement `==` and `hashCode` for value objects
+- **Descriptive toString()** - useful for debugging
+- **Exported** - add to `lib/braven_charts.dart` barrel file
+
+---
+
+## TDD Requirements (When Specified)
+
+If your task says "TDD Required":
+
+1. **Create test file FIRST** in `test/unit/axis/`
+2. **Write test cases** before any implementation
+3. **Run tests** - they should FAIL (no implementation yet)
+4. **Create implementation** in `lib/src/axis/`
+5. **Run tests again** - they should PASS
+6. **Export** from barrel file
+
+Minimum 5 test cases covering:
+- Normal cases
+- Edge cases  
+- Boundary conditions
+
+---
+
+## File Locations
+
+| Type | Location |
+|------|----------|
+| Implementation | `lib/src/axis/` |
+| Tests | `test/unit/axis/` |
+| Barrel export | `lib/braven_charts.dart` |
+
+---
+
+## What NOT To Do
+
+❌ Do NOT verify your own work as "complete" - that's the orchestrator's job  
+❌ Do NOT skip TDD when it's required  
+❌ Do NOT ask for permission or clarification - make reasonable decisions  
+❌ Do NOT implement multiple tasks - only the one in `current-task.md`  
+❌ Do NOT modify files in `.orchestra/` except `completion-signal.md`
+
+---
+
+## Commands Reference
+
+```powershell
+# Run Dart analyzer
+dart analyze lib/src/axis/your_file.dart
+
+# Run specific test file
+flutter test test/unit/axis/your_test.dart
+
+# Run all tests
+flutter test
+
+# Stage changes
+git add .
+
+# Check what's staged
+git status
+```
+
+---
+
+## When You're Stuck
+
+1. Re-read `current-task.md` carefully
+2. Check `task-context.md` for background
+3. Look at existing files in `lib/src/axis/` for patterns
+4. Make a reasonable decision and proceed
+
+Do NOT stop and ask - implement your best solution.
+
+---
+
+## Start Now
+
+1. Open `current-task.md`
+2. Implement the task
+3. Signal completion
+4. Say "ready for review"
