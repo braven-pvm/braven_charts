@@ -78,9 +78,10 @@ phases:
         
       - id: 7
         title: "Implement Auto-Detection Logic"
-        status: "pending"
+        status: "in-progress"
         speckit_tasks: ["T027", "T028", "T025"]
         consolidation_rationale: "Auto-detection logic + its unit tests (US2)"
+        notes: "TDD required - tests first (T025), then implementation (T027, T028)"
         
       - id: 8
         title: "Integrate Normalizer with Chart Data Pipeline"

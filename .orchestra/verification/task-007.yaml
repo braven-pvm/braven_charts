@@ -1,0 +1,153 @@
+# Verification Criteria: Task 7 - Implement Auto-Detection Logic
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+
+task_id: 7
+title: "Implement Auto-Detection Logic"
+phase: "core"
+speckit_tasks: ["T027", "T028", "T025"]
+consolidation_rationale: "Auto-detection logic + its unit tests (US2)"
+
+# =============================================================================
+# STANDARD VERIFICATION CHECKS (MANDATORY - DO NOT REMOVE)
+# =============================================================================
+
+standard_checks:
+  # --- Linting (BLOCKING) ---
+  - id: "static_analysis_implementation"
+    description: "No static analysis issues in auto-detection implementation"
+    command: "flutter analyze lib/src/axis/range_ratio_calculator.dart lib/src/axis/normalization_detector.dart"
+    expected: "No issues found"
+    blocking: true
+    
+  - id: "static_analysis_tests"
+    description: "No static analysis issues in tests"
+    command: "flutter analyze test/unit/multi_axis/auto_detection_test.dart"
+    expected: "No issues found"
+    blocking: true
+
+  # --- Task Tests (BLOCKING) ---
+  - id: "auto_detection_tests_pass"
+    description: "Auto-detection tests pass"
+    command: "flutter test test/unit/multi_axis/auto_detection_test.dart"
+    expected: "All tests passed"
+    blocking: true
+
+  # --- Sprint Regression Tests (BLOCKING) ---
+  - id: "sprint_unit_tests_pass"
+    description: "All sprint unit tests still pass (current: 134+)"
+    command: "flutter test test/unit/multi_axis/"
+    expected: "All tests passed"
+    blocking: true
+    
+  - id: "sprint_integration_tests_pass"
+    description: "All sprint integration tests pass"
+    command: "flutter test test/integration/multi_axis_*.dart"
+    expected: "All tests passed"
+    blocking: true
+
+# =============================================================================
+# TASK-SPECIFIC VERIFICATION CHECKS
+# =============================================================================
+
+verification_checks:
+  # --- File Existence ---
+  - id: "range_ratio_calculator_exists"
+    description: "RangeRatioCalculator class exists"
+    command: "Test-Path 'lib/src/axis/range_ratio_calculator.dart'"
+    expected: "True"
+    
+  - id: "normalization_detector_exists"
+    description: "NormalizationDetector class exists"
+    command: "Test-Path 'lib/src/axis/normalization_detector.dart'"
+    expected: "True"
+    
+  - id: "auto_detection_test_exists"
+    description: "Auto-detection test file exists"
+    command: "Test-Path 'test/unit/multi_axis/auto_detection_test.dart'"
+    expected: "True"
+
+  # --- Core Functionality ---
+  - id: "calculate_ratio_method"
+    description: "Can calculate range ratio between two series"
+    check: "RangeRatioCalculator.calculateRatio(range1, range2) returns ratio"
+    
+  - id: "should_normalize_method"
+    description: "Detector has shouldNormalize method"
+    check: "NormalizationDetector.shouldNormalize(seriesRanges, threshold) returns bool"
+    
+  - id: "default_threshold"
+    description: "Default threshold is 10x as per spec"
+    check: "Default threshold constant equals 10.0"
+
+# =============================================================================
+# ADVERSARIAL CHECKS
+# =============================================================================
+
+adversarial_checks:
+  - id: "edge_case_identical_ranges"
+    description: "Returns false for identical ranges"
+    check: "Series with same min/max do not trigger auto-detection"
+    
+  - id: "edge_case_single_series"
+    description: "Handles single series gracefully"
+    check: "Single series returns false (no comparison possible)"
+    
+  - id: "edge_case_zero_range"
+    description: "Handles series with zero range"
+    check: "Series with min==max handled without errors"
+    
+  - id: "edge_case_exactly_10x"
+    description: "Boundary condition at exactly 10x threshold"
+    check: "10x exactly triggers detection (>=10x, not >10x)"
+    
+  - id: "edge_case_negative_ranges"
+    description: "Works with negative value ranges"
+    check: "Range [-100, 0] vs [0, 10] calculates correctly"
+
+  - id: "multiple_series"
+    description: "Checks all pairwise comparisons"
+    check: "With 3+ series, detects if ANY pair exceeds threshold"
+
+# =============================================================================
+# CONTRACT COMPLIANCE
+# =============================================================================
+
+contract_compliance:
+  - id: "fr_008_auto_detection"
+    spec_requirement: "FR-008"
+    description: "System MUST support automatic multi-axis detection when series Y-ranges differ by more than a configurable threshold (default: 10x)"
+    check: "Threshold is configurable, default is 10x"
+    
+  - id: "us2_scenario_1"
+    spec_requirement: "US2 Scenario 1"
+    description: "Given series A (0-10) and B (0-1000), auto-detects need for multi-axis"
+    check: "Test case with 100x difference triggers detection"
+    
+  - id: "us2_scenario_2"
+    spec_requirement: "US2 Scenario 2"
+    description: "Series with similar ranges (within 10x) use single-axis mode"
+    check: "Test case with 5x difference does NOT trigger detection"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+minimum_tests: 15  # Range ratio tests + detection logic tests
+
+notes: |
+  This is a TDD TASK:
+  1. Tests MUST be written FIRST
+  2. Tests MUST fail initially
+  3. Implementation makes tests pass
+  
+  Key files:
+  - lib/src/axis/range_ratio_calculator.dart (T027 - ratio calculation)
+  - lib/src/axis/normalization_detector.dart (T028 - detection logic)
+  - test/unit/multi_axis/auto_detection_test.dart (T025 - tests)
+  
+  The 10x threshold is from the spec:
+  "When the developer adds series with significantly different Y-ranges 
+  (e.g., 10x or more difference), the chart should automatically enable 
+  multi-axis mode."
+  
+  Integration with chart widget (T029) is handled in Task 8.
