@@ -8,6 +8,8 @@
 /// - Universal coordinate transformation
 library;
 
+// Axis Layer - Multi-axis configuration
+export 'src/axis/y_axis_position.dart';
 // Chart Configuration - Line chart styles and configs
 export 'src/charts/line/line_chart_config.dart' show LineStyle;
 // Coordinate System Layer - Universal transformation system

@@ -97,7 +97,7 @@ A user analyzing data with the crosshair/tracking feature wants to see the actua
 
 ### Functional Requirements
 
-- **FR-001**: System MUST support up to 4 Y-axes positioned as: leftOuter, left, right, rightOuter
+- **FR-001**: System MUST support up to 4 Y-axes positioned as: outerLeft, left, right, outerRight
 - **FR-002**: Each data series MUST be bindable to a specific Y-axis by identifier
 - **FR-003**: Each Y-axis MUST maintain its own data bounds (min/max), either auto-computed from bound series or explicitly configured
 - **FR-004**: System MUST internally normalize each series to the full plot height while preserving original values for all display purposes
