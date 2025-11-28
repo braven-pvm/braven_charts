@@ -1,6 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:braven_charts/src/axis/data_normalizer.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DataNormalizer', () {
