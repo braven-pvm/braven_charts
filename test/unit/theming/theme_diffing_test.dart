@@ -1,8 +1,8 @@
 /// Tests for theme diffing and change detection.
 library;
 
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/utilities/theme_change_set.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/theme_change_set.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 

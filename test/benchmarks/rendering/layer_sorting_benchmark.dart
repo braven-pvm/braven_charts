@@ -27,9 +27,9 @@ library;
 
 import 'dart:math' show Random;
 
-import 'package:braven_charts/src/rendering/render_context.dart'
+import 'package:braven_charts/legacy/src/rendering/render_context.dart'
     show RenderContext;
-import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
+import 'package:braven_charts/legacy/src/rendering/render_layer.dart' show RenderLayer;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

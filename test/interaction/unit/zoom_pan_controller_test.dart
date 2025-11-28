@@ -5,9 +5,9 @@
 
 import 'dart:ui' show Offset, Rect;
 
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
-import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
-import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/models/zoom_pan_state.dart';
+import 'package:braven_charts/legacy/src/interaction/zoom_pan_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

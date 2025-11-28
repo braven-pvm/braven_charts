@@ -8,8 +8,8 @@
 /// fast enough to maintain 60 FPS performance (<0.1ms per calculation).
 library;
 
-import 'package:braven_charts/src/foundation/foundation.dart' as braven;
-import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart' as braven;
+import 'package:braven_charts/legacy/src/widgets/scrollbar/scrollbar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:braven_charts/src/foundation/foundation.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart';
 
 /// Integration test for Foundation Layer Complete Workflow
 ///

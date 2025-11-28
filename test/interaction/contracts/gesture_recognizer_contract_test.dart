@@ -5,8 +5,8 @@
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/interaction/gesture_recognizer.dart' as bc;
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/gesture_recognizer.dart' as bc;
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
 
 void main() {
   group('IGestureRecognizer Contract Tests', () {

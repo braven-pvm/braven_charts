@@ -2,7 +2,7 @@
 // Feature: 004-theming-system
 // Phase 2: Predefined Themes & Validation (T027)
 
-import 'package:braven_charts/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

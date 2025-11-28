@@ -9,10 +9,10 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 
 // TODO: Import actual implementations when available
-// import 'package:braven_charts/src/charts/line/line_chart_layer.dart';
-// import 'package:braven_charts/src/charts/area/area_chart_layer.dart';
-// import 'package:braven_charts/src/charts/bar/bar_chart_layer.dart';
-// import 'package:braven_charts/src/charts/scatter/scatter_chart_layer.dart';
+// import 'package:braven_charts/legacy/src/charts/line/line_chart_layer.dart';
+// import 'package:braven_charts/legacy/src/charts/area/area_chart_layer.dart';
+// import 'package:braven_charts/legacy/src/charts/bar/bar_chart_layer.dart';
+// import 'package:braven_charts/legacy/src/charts/scatter/scatter_chart_layer.dart';
 
 void main() {
   group('ChartLayer Interface Contract Tests', () {

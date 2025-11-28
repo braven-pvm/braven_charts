@@ -4,9 +4,9 @@
 /// and stacked (cumulative) modes with proper spacing and negative value handling.
 library;
 
-import 'package:braven_charts/src/charts/bar/bar_chart_config.dart'
+import 'package:braven_charts/legacy/src/charts/bar/bar_chart_config.dart'
     show BarOrientation, BarGroupingMode;
-import 'package:braven_charts/src/charts/bar/bar_positioner.dart';
+import 'package:braven_charts/legacy/src/charts/bar/bar_positioner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

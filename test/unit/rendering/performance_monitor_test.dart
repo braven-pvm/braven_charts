@@ -3,7 +3,7 @@
 // Task: T018
 // Purpose: Validate frame timing, jank detection, history management, metrics calculation
 
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

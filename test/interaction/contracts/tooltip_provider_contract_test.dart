@@ -3,9 +3,9 @@
 // Task: T005
 // Status: Tests should now PASS with implementation
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
-import 'package:braven_charts/src/interaction/tooltip_provider.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/interaction/models/tooltip_config.dart';
+import 'package:braven_charts/legacy/src/interaction/tooltip_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

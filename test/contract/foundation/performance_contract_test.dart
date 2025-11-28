@@ -1,11 +1,11 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
-import 'package:braven_charts/src/foundation/performance/batch_processor.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/data_range.dart' as dr;
+import 'package:braven_charts/legacy/src/foundation/performance/batch_processor.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/viewport_culler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

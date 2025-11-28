@@ -6,7 +6,7 @@
 /// - Lookup time: <0.1ms (FR-008)
 library;
 
-import 'package:braven_charts/src/theming/utilities/style_cache.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/style_cache.dart';
 
 void main() {
   print('=== Style Cache Benchmark ===\n');

@@ -1,7 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/utils/buffer_manager.dart';
+import 'package:braven_charts/legacy/src/utils/buffer_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Unit tests for T026: Buffer Management (User Story 2).

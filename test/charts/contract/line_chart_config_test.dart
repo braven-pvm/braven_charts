@@ -4,8 +4,8 @@
 /// the contract defined in specs/005-chart-types/contracts/line_chart_config.dart
 library;
 
-import 'package:braven_charts/src/charts/base/chart_config.dart';
-import 'package:braven_charts/src/charts/line/line_chart_config.dart';
+import 'package:braven_charts/legacy/src/charts/base/chart_config.dart';
+import 'package:braven_charts/legacy/src/charts/line/line_chart_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

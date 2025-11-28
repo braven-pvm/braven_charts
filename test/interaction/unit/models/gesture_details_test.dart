@@ -3,7 +3,7 @@
 // Task: T010
 // Status: Implementation complete, tests aligned
 
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

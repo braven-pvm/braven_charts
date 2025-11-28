@@ -6,7 +6,7 @@
 // Constitutional Requirement: Performance benchmarks must pass before merge
 // Performance First principle: Object pooling must achieve >90% hit rate
 
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/object_pool.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 

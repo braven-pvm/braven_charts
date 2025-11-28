@@ -1,11 +1,11 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/math/curve_fitting.dart';
-import 'package:braven_charts/src/foundation/math/interpolation.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/math/curve_fitting.dart';
+import 'package:braven_charts/legacy/src/foundation/math/interpolation.dart';
 // These imports will fail until implementation exists - that's expected for TDD
-import 'package:braven_charts/src/foundation/math/statistics.dart';
+import 'package:braven_charts/legacy/src/foundation/math/statistics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

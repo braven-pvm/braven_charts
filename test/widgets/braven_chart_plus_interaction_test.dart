@@ -1,8 +1,8 @@
-import 'package:braven_charts/src_plus/models/auto_scroll_config.dart';
-import 'package:braven_charts/src_plus/models/chart_data_point.dart';
-import 'package:braven_charts/src_plus/models/chart_series.dart';
-import 'package:braven_charts/src_plus/models/chart_type.dart';
-import 'package:braven_charts/src_plus/widgets/braven_chart_plus.dart';
+import 'package:braven_charts/src/models/auto_scroll_config.dart';
+import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:braven_charts/src/models/chart_series.dart';
+import 'package:braven_charts/src/models/chart_type.dart';
+import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

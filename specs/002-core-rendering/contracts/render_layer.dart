@@ -7,7 +7,7 @@
 // - Performance: Implementations must meet <8ms frame time budget
 // - SOLID: Single Responsibility (render only), Open-Closed (extend via subclass)
 
-import 'package:braven_charts/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
 import 'package:flutter/widgets.dart';
 
 /// Abstract base class for all rendering layers in the chart visualization.

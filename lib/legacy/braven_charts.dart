@@ -1,0 +1,66 @@
+/// Braven Charts - A comprehensive Flutter charting library
+///
+/// This library provides advanced charting capabilities with support for:
+/// - Multiple chart types (line, bar, pie, scatter, etc.)
+/// - Interactive annotations and markers
+/// - Custom theming and styling
+/// - Performance optimized rendering
+/// - Universal coordinate transformation
+library;
+
+// Axis Layer - Multi-axis configuration
+export 'src/axis/data_normalizer.dart';
+export 'src/axis/multi_axis_config.dart';
+export 'src/axis/normalization_detector.dart';
+export 'src/axis/normalization_mode.dart';
+export 'src/axis/series_axis_binding.dart';
+export 'src/axis/y_axis_config.dart';
+export 'src/axis/y_axis_position.dart';
+// Chart Configuration - Line chart styles and configs
+export 'src/charts/line/line_chart_config.dart' show LineStyle;
+// Coordinate System Layer - Universal transformation system
+export 'src/coordinates/coordinate_system.dart';
+export 'src/coordinates/transform_context.dart';
+export 'src/coordinates/universal_coordinate_transformer.dart';
+export 'src/coordinates/viewport_state.dart';
+// Foundation Layer - Core data structures and utilities
+export 'src/foundation/foundation.dart';
+// Interaction Layer - User interaction system (Layer 7)
+export 'src/interaction/interaction_callbacks.dart';
+export 'src/interaction/models/crosshair_config.dart';
+export 'src/interaction/models/gesture_details.dart';
+export 'src/interaction/models/interaction_config.dart';
+export 'src/interaction/models/interaction_state.dart';
+export 'src/interaction/models/tooltip_config.dart';
+export 'src/interaction/models/zoom_pan_state.dart';
+// Models Layer - Chart configuration and state models
+export 'src/models/chart_mode.dart';
+export 'src/models/streaming_config.dart';
+// Painters Layer - Custom painters for chart elements
+export 'src/painters/multi_axis_painter.dart';
+// Theming Layer - Chart themes and styling
+export 'src/theming/chart_theme.dart';
+// Scrollbar Layer - Dual-purpose scrollbars (Layer 10)
+export 'src/widgets/chart_scrollbar.dart';
+// Controllers - Programmatic control
+export 'src/widgets/controller/streaming_controller.dart';
+export 'src/widgets/scrollbar/scrollbar_controller.dart';
+export 'src/widgets/scrollbar/scrollbar_painter.dart';
+// Widgets Layer - User-facing chart widgets (Layer 5)
+export 'src/widgets/widgets.dart';
+
+// TODO: Uncomment as layers are implemented
+// Annotation system exports
+// export 'src/annotations/annotation_system.dart';
+// export 'src/annotations/marker_system.dart';
+// export 'src/charts/bar_chart.dart';
+// Core exports
+// export 'src/charts/chart_base.dart';
+// export 'src/charts/line_chart.dart';
+// export 'src/charts/pie_chart.dart';
+// Theming exports
+// export 'src/theming/chart_theme.dart';
+// export 'src/theming/theme_data.dart';
+// Utilities exports
+// export 'src/utils/coordinate_transformer.dart';
+// export 'src/utils/performance_utils.dart';

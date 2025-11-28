@@ -7,7 +7,7 @@
 // - Performance: Monitoring overhead MUST be <1ms per frame (NFR-001)
 // - Accuracy: Frame time measurement MUST be ±0.5ms accurate (FR-004)
 
-import 'package:braven_charts/src/rendering/performance_metrics.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_metrics.dart';
 
 /// Contract for frame-level performance monitoring and jank detection.
 ///

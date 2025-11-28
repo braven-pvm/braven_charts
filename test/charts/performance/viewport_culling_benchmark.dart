@@ -6,9 +6,9 @@
 // Constitutional Requirement: Performance benchmarks must pass before merge
 // FR-034: Viewport culling must complete in <1ms for 10,000 points
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/data_range.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/data_range.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/viewport_culler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

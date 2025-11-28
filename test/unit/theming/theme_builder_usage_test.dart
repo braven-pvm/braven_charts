@@ -2,10 +2,10 @@
 // Feature: 004-theming-system
 // Phase 3: Theme Builder (T030)
 
-import 'package:braven_charts/src/theming/builder/chart_theme_builder.dart';
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/components/grid_style.dart';
-import 'package:braven_charts/src/theming/components/series_theme.dart';
+import 'package:braven_charts/legacy/src/theming/builder/chart_theme_builder.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/grid_style.dart';
+import 'package:braven_charts/legacy/src/theming/components/series_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

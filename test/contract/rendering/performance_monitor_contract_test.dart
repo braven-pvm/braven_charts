@@ -9,8 +9,8 @@
 // - PerformanceMetrics not defined yet (will be created in T010)
 // - This is intentional per TDD workflow
 
-import 'package:braven_charts/src/rendering/performance_metrics.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_metrics.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

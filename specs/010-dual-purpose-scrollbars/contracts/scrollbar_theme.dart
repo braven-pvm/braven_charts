@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license.
 
 import 'package:flutter/foundation.dart';
-import 'package:braven_charts/src/theming/scrollbar_config.dart';
+import 'package:braven_charts/legacy/src/theming/scrollbar_config.dart';
 
 /// Theme for both X and Y axis scrollbars (7th component of ChartTheme).
 ///

@@ -9,8 +9,8 @@ import 'package:flutter/services.dart'
     show LogicalKeyboardKey, KeyEvent, KeyDownEvent, PhysicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/interaction/keyboard_handler.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/legacy/src/interaction/keyboard_handler.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_state.dart';
 
 void main() {
   group('KeyboardHandler Component Tests', () {

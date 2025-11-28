@@ -4,10 +4,10 @@
 /// Validates that interaction features work correctly in a real widget context.
 library;
 
-import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
-import 'package:braven_charts/src/interaction/models/interaction_config.dart';
-import 'package:braven_charts/src/interaction/models/tooltip_config.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
+import 'package:braven_charts/legacy/src/interaction/models/crosshair_config.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_config.dart';
+import 'package:braven_charts/legacy/src/interaction/models/tooltip_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,7 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/foundation/foundation.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

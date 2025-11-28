@@ -1,4 +1,4 @@
-import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
+import 'package:braven_charts/legacy/src/widgets/scrollbar/scrollbar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Contract test for ScrollbarController.calculateHandleSize()

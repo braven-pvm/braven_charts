@@ -15,18 +15,18 @@
 
 import 'dart:ui' as ui;
 
-import 'package:braven_charts/src/charts/base/chart_config.dart'
+import 'package:braven_charts/legacy/src/charts/base/chart_config.dart'
     show MarkerShape;
-import 'package:braven_charts/src/charts/base/chart_layer.dart';
-import 'package:braven_charts/src/charts/scatter/scatter_chart_config.dart';
-import 'package:braven_charts/src/charts/scatter/scatter_chart_layer.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/charts/base/chart_layer.dart';
+import 'package:braven_charts/legacy/src/charts/scatter/scatter_chart_config.dart';
+import 'package:braven_charts/legacy/src/charts/scatter/scatter_chart_layer.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_series.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 

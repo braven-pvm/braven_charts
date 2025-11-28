@@ -3,7 +3,7 @@
 // Task: T009
 // Status: Implementation complete, tests aligned
 
-import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
+import 'package:braven_charts/legacy/src/interaction/models/zoom_pan_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
