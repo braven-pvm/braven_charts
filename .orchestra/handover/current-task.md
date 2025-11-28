@@ -1,77 +1,50 @@
-# Current Task: Create Series-Axis Binding Model
+# Current Task: Create Normalization Mode Enum
 
 ## Objective
 
-Create a simple `SeriesAxisBinding` class that associates a data series with a Y-axis by their IDs.
+Create a `NormalizationMode` enum that controls when Y-axis normalization is applied.
 
 ## Context
 
-In a multi-axis chart, each data series needs to be bound to a specific Y-axis. This binding is by **ID strings**, not object references - keeping the model lightweight and flexible.
+Multi-axis charts can normalize data to display series with vastly different ranges on the same chart. This enum controls WHEN normalization happens:
 
-Example: A "power" series binds to the "power-axis", a "heartrate" series binds to the "hr-axis".
+- **disabled** - Never normalize (chart behaves as before)
+- **auto** - Automatically detect when normalization is needed (e.g., when ranges differ by >10x)
+- **always** - Always normalize, regardless of data ranges
 
 ## What to Create
 
-### 1. Binding Model File
+### 1. Enum File
 
-**Path**: `lib/src/models/series_axis_binding.dart`
+**Path**: `lib/src/models/normalization_mode.dart`
 
-#### Properties
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `seriesId` | `String` | Yes | ID of the data series (matches `ChartSeries.id`) |
-| `yAxisId` | `String` | Yes | ID of the Y-axis (matches `YAxisConfig.id`) |
-
-#### Requirements
-
-1. **const constructor** - This is an immutable value object
-2. **Validation assertions**:
-   - `seriesId.isNotEmpty`
-   - `yAxisId.isNotEmpty`
-3. **Equality** - Two bindings are equal if both IDs match
-4. **hashCode** - Consistent with equality
-5. **toString** - For debugging
-
-#### Example Implementation Pattern
+#### Enum Values (exactly these 3, in this order)
 
 ```dart
-class SeriesAxisBinding {
-  const SeriesAxisBinding({
-    required this.seriesId,
-    required this.yAxisId,
-  }) : assert(seriesId.isNotEmpty, 'seriesId must be non-empty'),
-       assert(yAxisId.isNotEmpty, 'yAxisId must be non-empty');
-
-  final String seriesId;
-  final String yAxisId;
-
-  // ... equality, hashCode, toString
+enum NormalizationMode {
+  disabled,  // Never normalize
+  auto,      // Auto-detect based on range differences
+  always,    // Always normalize
 }
 ```
 
+#### Requirements
+
+1. Add `///` doc comment on the enum explaining its purpose
+2. Add `///` doc comment on each value explaining when to use it
+3. Follow pattern from `lib/src/models/enums.dart`
+4. **Keep it simple** - no methods, no extensions
+
 ### 2. Test File (TDD - Create First!)
 
-**Path**: `test/unit/multi_axis/series_axis_binding_test.dart`
+**Path**: `test/unit/multi_axis/normalization_mode_test.dart`
 
-#### Required Test Groups
+#### Required Tests
 
-1. **Construction**
-   - Creates with valid IDs
-   - Is const-constructible
-
-2. **Validation**
-   - Empty seriesId throws
-   - Empty yAxisId throws
-
-3. **Equality**
-   - Same IDs = equal
-   - Different seriesId = not equal
-   - Different yAxisId = not equal
-   - hashCode consistent
-
-4. **toString**
-   - Contains both IDs
+1. Enum has exactly 3 values
+2. All expected values exist (disabled, auto, always)
+3. Values are in correct order
+4. Value names match strings exactly
 
 ### 3. Export
 
@@ -79,34 +52,26 @@ class SeriesAxisBinding {
 
 Add export:
 ```dart
-export 'series_axis_binding.dart';
+export 'normalization_mode.dart';
 ```
-
-## Key Constraints
-
-- **DO NOT** import `ChartSeries` or `YAxisConfig`
-- **DO NOT** add complex logic - this is just a data association
-- **KEEP IT SIMPLE** - two string IDs, that's it
 
 ## Example Usage (for context only)
 
 ```dart
-// Bind power series to left axis
-final powerBinding = SeriesAxisBinding(
-  seriesId: 'power',
-  yAxisId: 'power-axis',
+// Default: let the system decide
+final config = MultiAxisConfig(
+  mode: NormalizationMode.auto,
+  // ...
 );
 
-// Bind heart rate to right axis
-final hrBinding = SeriesAxisBinding(
-  seriesId: 'heartrate',
-  yAxisId: 'hr-axis',
+// Force normalization off
+final traditionalChart = MultiAxisConfig(
+  mode: NormalizationMode.disabled,
 );
 
-// Multiple series can share an axis
-final cadenceBinding = SeriesAxisBinding(
-  seriesId: 'cadence',
-  yAxisId: 'hr-axis',  // Same axis as heartrate
+// Always normalize even if ranges are similar
+final alwaysNormalized = MultiAxisConfig(
+  mode: NormalizationMode.always,
 );
 ```
 
@@ -116,5 +81,4 @@ final cadenceBinding = SeriesAxisBinding(
 2. Write to `.orchestra/handover/completion-signal.md`:
    - List files created/modified
    - Confirm all tests pass
-   - Note: "Kept model simple - no heavy imports"
 3. Say "Task complete - ready for review"
