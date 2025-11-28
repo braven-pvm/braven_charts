@@ -36,6 +36,8 @@ export 'src/interaction/models/zoom_pan_state.dart';
 // Models Layer - Chart configuration and state models
 export 'src/models/chart_mode.dart';
 export 'src/models/streaming_config.dart';
+// Painters Layer - Custom painters for chart elements
+export 'src/painters/multi_axis_painter.dart';
 // Theming Layer - Chart themes and styling
 export 'src/theming/chart_theme.dart';
 // Scrollbar Layer - Dual-purpose scrollbars (Layer 10)
