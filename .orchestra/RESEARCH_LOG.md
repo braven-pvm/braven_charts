@@ -406,6 +406,51 @@ The orchestrator/implementor pattern with hidden verification **does prevent imp
 
 **Future**: Test with truly separate agent sessions.
 
+### 4. Task/Verification Scope Mismatch (CRITICAL - Task 9)
+
+**Issue**: Task 9 verification criteria included `screenshot_required: true` but the task only created a `CustomPainter` class - which cannot be screenshotted until integrated into a widget.
+
+**What happened**:
+- Task 9: "Create Multi-Axis Painter" - creates a standalone `CustomPainter`
+- Verification: "screenshot_shows: Multiple colored axes visible on chart"
+- **Gap**: You can't screenshot a class. Integration happens in a later task.
+
+**Why this is CRITICAL**:
+
+This mismatch is **exactly where implementation theater begins**. When verification criteria ask for something the task can't deliver, agents have three options:
+
+1. **Defer** - "I'll do the screenshot in the next task" (starts the excuse chain)
+2. **Fabricate** - Create a fake screenshot or claim it's done (dishonest)
+3. **Scope creep** - Do extra work not in the task (muddies boundaries)
+
+All three lead to problems:
+- Deferral accumulates "debt" that never gets paid
+- Fabrication is undetectable without external verification
+- Scope creep creates unclear task boundaries
+
+**Pattern observed**: Agents say "ok but I can't test this as xxxx happens in another phase/task" - this is the **exact moment** where bullshit and fabrication begin.
+
+**Root cause**: Task design and verification criteria were created without strict scope alignment.
+
+**Correct design principle**:
+
+> **TASK-VERIFICATION ALIGNMENT RULE**:
+> Every verification criterion MUST be satisfiable by the task's explicit deliverables alone.
+> If a criterion requires output from a future task, it belongs on that future task.
+> 
+> **Test**: Can an implementor pass this verification using ONLY what this task asks them to create?
+> - YES → Criterion is valid
+> - NO → Criterion is misplaced, move it to the appropriate task
+
+**Resolution for Task 9**:
+- Accept Task 9 as PASS (structural and functional criteria met)
+- Document that screenshot criterion was misplaced
+- Move visual verification to integration task (Task 10 or 11)
+
+**Future prevention**:
+- During task design, apply the Task-Verification Alignment Rule to every criterion
+- Automated check: Does each verification reference only files/outputs listed in task deliverables?
+
 ---
 
 ## Open Questions

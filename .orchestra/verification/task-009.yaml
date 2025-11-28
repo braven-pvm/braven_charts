@@ -7,9 +7,25 @@ title: "Create Multi-Axis Painter"
 phase: "rendering"
 depends_on: [6, 7, 8]
 
-# TDD REQUIRED + VISUAL VERIFICATION
+# TDD REQUIRED
+# NOTE: Visual verification was INCORRECTLY placed here - moved to Task 10
 tdd_required: true
-visual_required: true
+visual_required: false  # CORRECTED - was true, see design_error below
+
+# DESIGN ERROR DOCUMENTATION
+design_error:
+  issue: "Screenshot requirement misplaced on capability-building task"
+  original_criteria: "screenshot_shows: Multiple colored axes visible on chart"
+  problem: |
+    Task 9 creates a CustomPainter class - you cannot screenshot a class.
+    The painter must be integrated into a widget (Task 10) before visual verification is possible.
+    This mismatch creates a loophole for implementation theater.
+  resolution: "Screenshot verification moved to Task 10 (integration task)"
+  lesson: |
+    TASK-VERIFICATION ALIGNMENT RULE: Every verification criterion MUST be 
+    satisfiable by the task's explicit deliverables alone. If a criterion 
+    requires output from a future task, it belongs on that future task.
+  logged_in: "RESEARCH_LOG.md - Challenges Encountered - Section 4"
 
 verification_criteria:
   structural:
@@ -31,9 +47,10 @@ verification_criteria:
       - "applies axis colors"
       - "renders tick marks and labels"
 
-  visual_requirements:
-    - screenshot_required: true
-    - screenshot_shows: "Multiple colored axes visible on chart"
+  # REMOVED - was incorrectly placed here
+  # visual_requirements:
+  #   - screenshot_required: true
+  #   - screenshot_shows: "Multiple colored axes visible on chart"
 
 verification_commands:
   - description: "Tests pass"
