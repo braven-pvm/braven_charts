@@ -4,41 +4,60 @@
 
 ## Status
 
-**NOT STARTED**
+**COMPLETED**
 
 ---
 
-*When complete, fill in:*
-
 ## Completed Task
 
-[Task description]
+Created SeriesAxisBinding - a simple model that associates a data series with a Y-axis configuration by mapping series ID to axis ID.
 
 ## Files Created/Modified
 
-- `path/to/file.dart` - [description]
+- `lib/src/axis/series_axis_binding.dart` - New binding class with seriesId and axisId properties
+- `lib/braven_charts.dart` - Added export for SeriesAxisBinding
 
 ## Demonstration
 
 ```dart
-// Code showing the feature works
+import 'package:braven_charts/braven_charts.dart';
+
+// Basic binding: connect a series to an axis by ID
+final binding = SeriesAxisBinding(
+  seriesId: 'power-series',
+  axisId: 'power-axis',
+);
+
+// Multiple series can share the same axis
+final bindings = [
+  SeriesAxisBinding(seriesId: 'power-series', axisId: 'left-axis'),
+  SeriesAxisBinding(seriesId: 'cadence-series', axisId: 'left-axis'),
+  SeriesAxisBinding(seriesId: 'heart-rate-series', axisId: 'right-axis'),
+];
+
+// Access properties
+print(binding.seriesId); // 'power-series'
+print(binding.axisId);   // 'power-axis'
 ```
 
 ## Verification Run
 
 ```
-# Command run and output
-$ dart analyze lib/src/...
-Analyzing...
+$ dart analyze lib/src/axis/series_axis_binding.dart
+Analyzing series_axis_binding.dart...
+No issues found!
+
+$ dart analyze lib/braven_charts.dart
+Analyzing braven_charts.dart...
 No issues found!
 ```
 
 ## Ready for Review
 
-- [ ] Changes staged
-- [ ] Demonstration provided above
-- [ ] Analyze passes
+- [x] Changes staged (`git add .`)
+- [x] Demonstration provided above
+- [x] Analyze passes
 
 ---
 
-**Signal**: Task complete - ready for review
+**Signal**: "Task complete - ready for review"

@@ -9,6 +9,7 @@
 library;
 
 // Axis Layer - Multi-axis configuration
+export 'src/axis/series_axis_binding.dart';
 export 'src/axis/y_axis_config.dart';
 export 'src/axis/y_axis_position.dart';
 // Chart Configuration - Line chart styles and configs
