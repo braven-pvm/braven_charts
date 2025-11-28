@@ -52,7 +52,53 @@ All code should follow these patterns:
 - **Full documentation** - `///` doc comments on public APIs
 - **Equality** - implement `==` and `hashCode` for value objects
 - **Descriptive toString()** - useful for debugging
-- **Exported** - add to `lib/braven_charts.dart` barrel file
+- **Exported** - add to barrel file (e.g., `lib/src/models/enums.dart`)
+
+---
+
+## Quality Gates (MANDATORY)
+
+### Before Signaling Completion, You MUST:
+
+1. ✅ **Task tests pass**: 
+   ```powershell
+   flutter test <your_test_file>
+   ```
+
+2. ✅ **Sprint tests pass** (catches regressions from your changes):
+   ```powershell
+   flutter test test/unit/multi_axis/
+   ```
+
+3. ✅ **Integration tests pass**:
+   ```powershell
+   flutter test test/integration/multi_axis_*.dart
+   ```
+
+4. ✅ **Linting clean** (zero issues allowed):
+   ```powershell
+   flutter analyze <affected_directories>
+   # Must return "No issues found!"
+   ```
+
+5. ✅ **Stage changes**:
+   ```powershell
+   git add -A
+   ```
+
+### Test Failures Are YOUR Responsibility
+
+- Your changes break a test? **You fix it.**
+- Test was already broken? **You fix it anyway** (you touched the area)
+- Tests you didn't write fail after your changes? **Still your responsibility**
+
+### Linter Issues Are YOUR Responsibility
+
+- Pre-existing issues in files you modify? **Fix them.**
+- New issues from your code? **Fix them.**
+- "Info" level issues? **Fix them too.** Zero tolerance.
+
+**Verification will FAIL if any tests fail or linter issues exist.**
 
 ---
 

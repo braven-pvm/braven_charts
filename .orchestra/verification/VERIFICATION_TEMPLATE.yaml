@@ -1,0 +1,89 @@
+# Verification Template
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+# 
+# Copy this template for each new task and fill in task-specific checks.
+# All standard checks are MANDATORY and BLOCKING.
+
+task_id: <NUMBER>
+title: "<TASK TITLE>"
+phase: "<PHASE>"
+speckit_tasks: ["T0XX", "T0YY"]  # SpecKit tasks this covers
+
+# =============================================================================
+# STANDARD VERIFICATION CHECKS (MANDATORY - DO NOT REMOVE)
+# =============================================================================
+
+standard_checks:
+  # --- Linting (BLOCKING) ---
+  - id: "static_analysis_implementation"
+    description: "No static analysis issues in implementation"
+    command: "flutter analyze <implementation_path>"
+    expected: "No issues found"
+    blocking: true
+    
+  - id: "static_analysis_tests"
+    description: "No static analysis issues in tests"
+    command: "flutter analyze <test_path>"
+    expected: "No issues found"
+    blocking: true
+
+  # --- Task Tests (BLOCKING) ---
+  - id: "task_tests_pass"
+    description: "Task-specific tests pass"
+    command: "flutter test <task_test_file>"
+    expected: "All tests passed"
+    blocking: true
+
+  # --- Sprint Regression Tests (BLOCKING) ---
+  - id: "sprint_unit_tests_pass"
+    description: "All sprint unit tests still pass"
+    command: "flutter test test/unit/multi_axis/"
+    expected: "All tests passed"
+    blocking: true
+    
+  - id: "sprint_integration_tests_pass"
+    description: "All sprint integration tests pass"
+    command: "flutter test test/integration/multi_axis_*.dart"
+    expected: "All tests passed"
+    blocking: true
+
+# =============================================================================
+# TASK-SPECIFIC CHECKS (ADD YOUR CHECKS HERE)
+# =============================================================================
+
+verification_checks:
+  - id: "file_exists"
+    description: "<Description>"
+    command: '<Command>'
+    expected: "<Expected output>"
+    
+  # Add more task-specific checks...
+
+# =============================================================================
+# ADVERSARIAL CHECKS (OPTIONAL BUT RECOMMENDED)
+# =============================================================================
+
+adversarial_checks:
+  - id: "<check_id>"
+    description: "<What to check>"
+    check: "<How to verify>"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+minimum_tests: <NUMBER>  # Minimum test count expected
+
+notes: |
+  <Any notes about this task's verification>
+
+# =============================================================================
+# VERIFICATION EXECUTION ORDER
+# =============================================================================
+# 
+# 1. Run standard_checks FIRST (these are mandatory gates)
+# 2. If any standard check fails, STOP and return task for rework
+# 3. Run verification_checks (task-specific)
+# 4. Run adversarial_checks if applicable
+# 5. Check test count meets minimum_tests
+# 6. Only if ALL pass, mark task as verified
