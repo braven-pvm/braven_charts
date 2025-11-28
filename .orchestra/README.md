@@ -241,3 +241,29 @@ Use the Flutter Agent Controller to capture screenshots:
 
 **Full documentation**: `tools/flutter_agent/README.md` and `tools/flutter_agent/FLUTTER_AGENT_GUIDE.md`
 
+---
+
+## Design Decisions & Lessons Learned
+
+This section captures iterative discoveries while developing the orchestrator pattern.
+
+### Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2025-01-08 | `current-task.md` is completely replaced each task | Clean slate for implementor - no confusion from previous task remnants |
+| 2025-01-08 | Implementor starts at `AGENT_README.md`, not `current-task.md` | Ensures consistent onboarding whether same agent or handover to new agent |
+| 2025-01-08 | Translation Layer approach (ADR-001) | Orchestrator translates specs to explicit instructions; implementor doesn't interpret specs |
+| 2025-01-08 | Hidden verification with fail_count | Prevents gaming; max 3 attempts before escalation |
+
+### Open Questions
+
+- Should `task-context.md` persist across tasks or be reset too?
+- How to handle visual task verification when Flutter Agent isn't available?
+- What metadata should be captured in verification artifacts?
+
+### Process Improvements to Consider
+
+- [ ] Automated verification script that reads task-XXX.yaml
+- [ ] Template generation for common task types (enum, model, widget)
+- [ ] Integration with git hooks for pre-commit verification
