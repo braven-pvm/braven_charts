@@ -15,11 +15,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 1. **Setup**: Run `.specify/scripts/powershell/check-prerequisites.ps1 -Json` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Load design documents**: Read from FEATURE_DIR:
+
    - **Required**: plan.md (tech stack, libraries, structure), spec.md (user stories with priorities)
    - **Optional**: data-model.md (entities), contracts/ (API endpoints), research.md (decisions), quickstart.md (test scenarios)
    - Note: Not all projects have all documents. Generate tasks based on what's available.
 
 3. **Execute task generation workflow**:
+
    - Load plan.md and extract tech stack, libraries, project structure
    - Load spec.md and extract user stories with their priorities (P1, P2, P3, etc.)
    - If data-model.md exists: Extract entities and map to user stories
@@ -31,6 +33,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Validate task completeness (each user story has all needed tasks, independently testable)
 
 4. **Generate tasks.md**: Use `.specify.specify/templates/tasks-template.md` as structure, fill with:
+
    - Correct feature name from plan.md
    - Phase 1: Setup tasks (project initialization)
    - Phase 2: Foundational tasks (blocking prerequisites for all user stories)
@@ -50,6 +53,10 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Independent test criteria for each story
    - Suggested MVP scope (typically just User Story 1)
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
+   <!-- VERIFICATION FRAMEWORK PATCH START - Report Addition -->
+   - Type classification validation: Confirm ALL tasks have type markers ([NEW], [MOD], [INT], [CFG], [TST], [DOC])
+   - Integration task audit: List all [INT] tasks and confirm they will modify 2+ files
+   <!-- VERIFICATION FRAMEWORK PATCH END -->
 
 Context for task generation: $ARGUMENTS
 
@@ -69,6 +76,25 @@ Every task MUST strictly follow this format:
 - [ ] [TaskID] [P?] [Story?] Description with file path
 ```
 
+<!-- VERIFICATION FRAMEWORK PATCH START - Task Type Classification -->
+
+**Task Type Classification (REQUIRED)**:
+
+Every task MUST also include a type marker after Story label:
+
+| Marker  | When to Use             | Verification Requirement              |
+| ------- | ----------------------- | ------------------------------------- |
+| `[NEW]` | Creating a new file     | File exists, compiles, exports used   |
+| `[MOD]` | Modifying existing code | Git diff shows file changed           |
+| `[INT]` | Connecting components   | Git diff shows 2+ files, usage proven |
+| `[CFG]` | Configuration only      | Config applied                        |
+| `[TST]` | Test file               | Tests fail when impl removed          |
+| `[DOC]` | Documentation           | Docs updated                          |
+
+**Extended Format**: `- [ ] [TaskID] [P?] [Story?] [TYPE] Description with file path`
+
+<!-- VERIFICATION FRAMEWORK PATCH END -->
+
 **Format Components**:
 
 1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)
@@ -77,7 +103,7 @@ Every task MUST strictly follow this format:
 4. **[Story] label**: REQUIRED for user story phase tasks only
    - Format: [US1], [US2], [US3], etc. (maps to user stories from spec.md)
    - Setup phase: NO story label
-   - Foundational phase: NO story label  
+   - Foundational phase: NO story label
    - User Story phases: MUST have story label
    - Polish phase: NO story label
 5. **Description**: Clear action with exact file path
@@ -93,6 +119,16 @@ Every task MUST strictly follow this format:
 - ❌ WRONG: `- [ ] [US1] Create User model` (missing Task ID)
 - ❌ WRONG: `- [ ] T001 [US1] Create model` (missing file path)
 
+<!-- VERIFICATION FRAMEWORK PATCH START - Type Examples -->
+
+**Examples with Type Classification** (when verification framework is used):
+
+- ✅ CORRECT: `- [ ] T012 [P] [US1] [NEW] Create User model in src/models/user.py`
+- ✅ CORRECT: `- [ ] T015 [US1] [INT] Wire UserService into AuthController in src/controllers/auth.py`
+- ✅ CORRECT: `- [ ] T018 [US1] [MOD] Add validation to existing User model in src/models/user.py`
+- ❌ WRONG: `- [ ] T015 [US1] [INT] Create UserIntegration in src/integration/user.py` (INT but only creates new file)
+<!-- VERIFICATION FRAMEWORK PATCH END -->
+
 ### Task Organization
 
 1. **From User Stories (spec.md)** - PRIMARY ORGANIZATION:
@@ -103,16 +139,13 @@ Every task MUST strictly follow this format:
      - Endpoints/UI needed for that story
      - If tests requested: Tests specific to that story
    - Mark story dependencies (most stories should be independent)
-   
 2. **From Contracts**:
    - Map each contract/endpoint → to the user story it serves
    - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
-   
 3. **From Data Model**:
    - Map each entity to the user story(ies) that need it
    - If entity serves multiple stories: Put in earliest story or Setup phase
    - Relationships → service layer tasks in appropriate story phase
-   
 4. **From Setup/Infrastructure**:
    - Shared infrastructure → Setup phase (Phase 1)
    - Foundational/blocking tasks → Foundational phase (Phase 2)
