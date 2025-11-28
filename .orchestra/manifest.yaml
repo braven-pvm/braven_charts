@@ -4,93 +4,220 @@
 
 sprint: "011-multi-axis-normalization"
 spec: "specs/011-multi-axis-normalization/spec.md"
+speckit_tasks: "specs/011-multi-axis-normalization/tasks.md"
 created: "2025-11-28"
-status: "ready"
+status: "in_progress"
+
+# TRACEABILITY: Each orchestrator task maps to one or more SpecKit tasks (T001-T053)
+# This allows us to:
+#   1. Consolidate simple tasks for efficiency
+#   2. Maintain full traceability to original task list
+#   3. Audit coverage after sprint completion
 
 # Task feeding strategy:
 # - Feed ONE task at a time to implementor
 # - No task counts visible to implementor
 # - Verification happens between tasks
 # - Next task only after verification passes
+# - After completion, mark SpecKit tasks as done in tasks.md
 
 phases:
   - id: "foundation"
     description: "Core data models and configuration"
+    speckit_phase: "Phase 1: Setup"
     tasks:
       - id: 1
         title: "Create Y-Axis Position Enum"
         status: "completed"
+        commit: "49e9542"
+        speckit_tasks: ["T001"]
+        consolidation_rationale: "1:1 mapping - simple enum"
         
       - id: 2
         title: "Create Y-Axis Configuration Model"
         status: "completed"
+        commit: "ffd6d0d"
+        speckit_tasks: ["T003"]
+        consolidation_rationale: "Model class - note: placed in models/ not axis/"
+        notes: "Path differs from SpecKit spec (models/ vs axis/)"
         
       - id: 3
         title: "Create Series-Axis Binding Model"
         status: "completed"
+        commit: "717de2a"
+        speckit_tasks: []
+        consolidation_rationale: "NEW - not in original SpecKit tasks, identified during design"
+        notes: "Gap in original task list - binding model was needed"
         
       - id: 4
         title: "Create Normalization Mode Enum"
         status: "completed"
+        commit: "3ff2e0f"
+        speckit_tasks: ["T002"]
+        consolidation_rationale: "1:1 mapping - simple enum"
         
       - id: 5
         title: "Create Multi-Axis Configuration Container"
         status: "completed"
+        commit: "a288686"
+        speckit_tasks: ["T004", "T005"]
+        consolidation_rationale: "Container class + barrel export - natural unit"
+        notes: "Renamed from MultiAxisState to MultiAxisConfig for clarity"
 
-  - id: "normalization"
+  - id: "core"
     description: "Core normalization logic"
+    speckit_phase: "Phase 2: Foundational + Phase 3: US1 (partial)"
     tasks:
       - id: 6
         title: "Implement Data Normalizer"
         status: "pending"
+        speckit_tasks: ["T019", "T013", "T014"]
+        consolidation_rationale: "Normalizer implementation + its unit tests"
         
       - id: 7
         title: "Implement Auto-Detection Logic"
         status: "pending"
+        speckit_tasks: ["T027", "T028", "T025"]
+        consolidation_rationale: "Auto-detection logic + its unit tests (US2)"
         
       - id: 8
         title: "Integrate Normalizer with Chart Data Pipeline"
         status: "pending"
+        speckit_tasks: ["T022", "T029"]
+        consolidation_rationale: "Integration into chart painter and widget"
+        is_integration_task: true
+        notes: "⚠️ INTEGRATION TASK - requires extra scrutiny"
 
   - id: "rendering"
     description: "Visual rendering of axes and normalized data"
+    speckit_phase: "Phase 3: US1 (rendering) + Phase 5: US3"
     tasks:
       - id: 9
         title: "Create Multi-Axis Painter"
         status: "pending"
+        speckit_tasks: ["T020", "T021", "T011"]
+        consolidation_rationale: "Y-axis renderer + layout positioning"
         
       - id: 10
         title: "Implement Color-Coded Axis Rendering"
         status: "pending"
+        speckit_tasks: ["T034", "T035", "T036", "T037", "T038", "T031"]
+        consolidation_rationale: "All color-related tasks for axes (US3)"
         
       - id: 11
         title: "Integrate Multi-Axis Painter with Chart Widget"
         status: "pending"
+        speckit_tasks: ["T010", "T015"]
+        consolidation_rationale: "Widget integration for multi-axis rendering"
+        is_integration_task: true
+        notes: "⚠️ INTEGRATION TASK - modifies existing widget"
 
   - id: "interaction"
     description: "Tooltips, crosshair, and user interaction"
+    speckit_phase: "Phase 6: US4 + Phase 2 (zoom)"
     tasks:
       - id: 12
         title: "Update Tooltip to Show Original Values"
         status: "pending"
+        speckit_tasks: ["T023", "T042", "T045", "T040"]
+        consolidation_rationale: "Tooltip + value formatter (US1/US4 overlap)"
         
       - id: 13
         title: "Update Crosshair to Use Per-Axis Bounds"
         status: "pending"
+        speckit_tasks: ["T043", "T044", "T041"]
+        consolidation_rationale: "Crosshair handler + tracking overlay (US4)"
         
       - id: 14
         title: "Disable Y-Zoom in Multi-Axis Mode"
         status: "pending"
+        speckit_tasks: ["T012b", "T012c"]
+        consolidation_rationale: "Zoom constraint test + implementation"
 
   - id: "integration"
     description: "Final integration and API exposure"
+    speckit_phase: "Phase 2 (API) + Phase 7: Polish"
     tasks:
       - id: 15
         title: "Expose Multi-Axis API on BravenChartPlus"
         status: "pending"
+        speckit_tasks: ["T006", "T047", "T048", "T049"]
+        consolidation_rationale: "API exposure + validations + documentation"
+        is_integration_task: true
+        notes: "⚠️ INTEGRATION TASK - modifies public API"
         
       - id: 16
         title: "Create Working Demo Example"
         status: "pending"
+        speckit_tasks: ["T024", "T030", "T039", "T046", "T050", "T051", "T052", "T053"]
+        consolidation_rationale: "All showcase/demo + polish tasks"
+        notes: "Final validation - all features working together"
 
-current_task: 5
+# SpecKit tasks not yet mapped (gaps/deferred):
+unmapped_speckit_tasks:
+  - id: "T007"
+    description: "Create test directory structure at test/unit/multi_axis/"
+    status: "auto_completed"
+    notes: "Directories created automatically with first test file"
+    
+  - id: "T008"
+    description: "Create test directory structure at test/widget/multi_axis/"
+    status: "pending"
+    notes: "Will be created when widget tests added"
+    
+  - id: "T009"
+    description: "Create test directory structure at test/golden/multi_axis/"
+    status: "pending"
+    notes: "Will be created when golden tests added"
+    
+  - id: "T012"
+    description: "Create axis bounds computation utility"
+    status: "pending"
+    notes: "May be folded into Task 6 or Task 9"
+    
+  - id: "T012a"
+    description: "Disable grid lines when multi-axis active"
+    status: "pending"
+    notes: "Needs own task or fold into Task 11"
+    
+  - id: "T016"
+    description: "Golden test for 2-axis chart"
+    status: "pending"
+    notes: "Fold into Task 16 (demo/validation)"
+    
+  - id: "T017"
+    description: "Golden test for 4-axis chart"
+    status: "pending"
+    notes: "Fold into Task 16 (demo/validation)"
+    
+  - id: "T018"
+    description: "Implement series-to-axis binding resolution"
+    status: "pending"
+    notes: "May be folded into Task 6 or Task 8"
+    
+  - id: "T026"
+    description: "Widget test for auto-mode triggering"
+    status: "pending"
+    notes: "Fold into Task 7"
+    
+  - id: "T032"
+    description: "Widget test for color-coded axes"
+    status: "pending"
+    notes: "Fold into Task 10"
+    
+  - id: "T033"
+    description: "Golden test for colored axes"
+    status: "pending"
+    notes: "Fold into Task 16"
+
+current_task: 6
+current_phase: "core"
+
+# Coverage summary (update after each task)
+speckit_coverage:
+  total_tasks: 56
+  completed: 5  # T001, T002, T003, T004, T005
+  in_progress: 0
+  pending: 51
+  auto_completed: 1  # T007
+  gaps_identified: 1  # SeriesAxisBinding not in original
