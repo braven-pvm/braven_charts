@@ -70,9 +70,10 @@ phases:
     tasks:
       - id: 6
         title: "Implement Data Normalizer"
-        status: "pending"
+        status: "in-progress"
         speckit_tasks: ["T019", "T013", "T014"]
         consolidation_rationale: "Normalizer implementation + its unit tests"
+        notes: "TDD required - tests first (T013, T014), then implementation (T019)"
         
       - id: 7
         title: "Implement Auto-Detection Logic"
