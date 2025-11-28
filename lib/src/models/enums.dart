@@ -1,6 +1,7 @@
 /// Shared enums for BravenChartPlus
 library;
 
+export 'series_axis_binding.dart';
 export 'y_axis_config.dart';
 export 'y_axis_position.dart';
 
