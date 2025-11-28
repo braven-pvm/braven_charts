@@ -9,6 +9,7 @@
 library;
 
 // Axis Layer - Multi-axis configuration
+export 'src/axis/data_normalizer.dart';
 export 'src/axis/multi_axis_config.dart';
 export 'src/axis/normalization_mode.dart';
 export 'src/axis/series_axis_binding.dart';
