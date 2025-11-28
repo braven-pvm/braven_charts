@@ -7,9 +7,9 @@ void main() {
       expect(YAxisPosition.values.length, equals(4));
     });
 
-    test('contains outerLeft value', () {
+    test('contains leftOuter value', () {
       expect(
-        YAxisPosition.values.contains(YAxisPosition.outerLeft),
+        YAxisPosition.values.contains(YAxisPosition.leftOuter),
         isTrue,
       );
     });
@@ -28,16 +28,16 @@ void main() {
       );
     });
 
-    test('contains outerRight value', () {
+    test('contains rightOuter value', () {
       expect(
-        YAxisPosition.values.contains(YAxisPosition.outerRight),
+        YAxisPosition.values.contains(YAxisPosition.rightOuter),
         isTrue,
       );
     });
 
     group('layout order (left to right)', () {
-      test('outerLeft is first (index 0)', () {
-        expect(YAxisPosition.outerLeft.index, equals(0));
+      test('leftOuter is first (index 0)', () {
+        expect(YAxisPosition.leftOuter.index, equals(0));
       });
 
       test('left is second (index 1)', () {
@@ -48,25 +48,25 @@ void main() {
         expect(YAxisPosition.right.index, equals(2));
       });
 
-      test('outerRight is fourth (index 3)', () {
-        expect(YAxisPosition.outerRight.index, equals(3));
+      test('rightOuter is fourth (index 3)', () {
+        expect(YAxisPosition.rightOuter.index, equals(3));
       });
 
       test('values are in correct layout order', () {
         expect(
             YAxisPosition.values,
             equals([
-              YAxisPosition.outerLeft,
+              YAxisPosition.leftOuter,
               YAxisPosition.left,
               YAxisPosition.right,
-              YAxisPosition.outerRight,
+              YAxisPosition.rightOuter,
             ]));
       });
     });
 
     group('enum names', () {
-      test('outerLeft has correct name', () {
-        expect(YAxisPosition.outerLeft.name, equals('outerLeft'));
+      test('leftOuter has correct name', () {
+        expect(YAxisPosition.leftOuter.name, equals('leftOuter'));
       });
 
       test('left has correct name', () {
@@ -77,8 +77,8 @@ void main() {
         expect(YAxisPosition.right.name, equals('right'));
       });
 
-      test('outerRight has correct name', () {
-        expect(YAxisPosition.outerRight.name, equals('outerRight'));
+      test('rightOuter has correct name', () {
+        expect(YAxisPosition.rightOuter.name, equals('rightOuter'));
       });
     });
   });

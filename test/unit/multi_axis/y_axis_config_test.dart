@@ -236,7 +236,7 @@ void main() {
       test('preserves unchanged values', () {
         final original = YAxisConfig(
           id: 'power',
-          position: YAxisPosition.outerLeft,
+          position: YAxisPosition.leftOuter,
           color: const Color(0xFFFF0000),
           label: 'Power',
           unit: 'W',
@@ -253,7 +253,7 @@ void main() {
         final copy = original.copyWith(label: 'New Label');
 
         expect(copy.id, equals('power'));
-        expect(copy.position, equals(YAxisPosition.outerLeft));
+        expect(copy.position, equals(YAxisPosition.leftOuter));
         expect(copy.color, equals(const Color(0xFFFF0000)));
         expect(copy.unit, equals('W'));
         expect(copy.min, equals(0));
@@ -384,12 +384,12 @@ void main() {
     });
 
     group('all positions work', () {
-      test('outerLeft position', () {
+      test('leftOuter position', () {
         final config = YAxisConfig(
           id: 'test',
-          position: YAxisPosition.outerLeft,
+          position: YAxisPosition.leftOuter,
         );
-        expect(config.position, equals(YAxisPosition.outerLeft));
+        expect(config.position, equals(YAxisPosition.leftOuter));
       });
 
       test('left position', () {
@@ -408,12 +408,12 @@ void main() {
         expect(config.position, equals(YAxisPosition.right));
       });
 
-      test('outerRight position', () {
+      test('rightOuter position', () {
         final config = YAxisConfig(
           id: 'test',
-          position: YAxisPosition.outerRight,
+          position: YAxisPosition.rightOuter,
         );
-        expect(config.position, equals(YAxisPosition.outerRight));
+        expect(config.position, equals(YAxisPosition.rightOuter));
       });
     });
   });

@@ -5038,7 +5038,7 @@ class _BravenChartPainter extends CustomPainter {
     switch (multiAxisConfig!.mode) {
       case NormalizationMode.none:
         return false;
-      case NormalizationMode.always:
+      case NormalizationMode.perSeries:
         return true;
       case NormalizationMode.auto:
         // Use NormalizationDetector to determine if normalization is needed

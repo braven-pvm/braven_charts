@@ -24,7 +24,7 @@ void main() {
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
           SeriesAxisBinding(seriesId: 'volume-series', axisId: 'volume'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
@@ -211,7 +211,7 @@ void main() {
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
           SeriesAxisBinding(seriesId: 'volume-series', axisId: 'volume'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
@@ -258,7 +258,7 @@ void main() {
           SeriesAxisBinding(seriesId: 'revenue', axisId: 'sales'),
           SeriesAxisBinding(seriesId: 'units', axisId: 'count'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
@@ -305,7 +305,7 @@ void main() {
           SeriesAxisBinding(seriesId: 'temp-data', axisId: 'temp'),
           SeriesAxisBinding(seriesId: 'pressure-data', axisId: 'pressure'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
@@ -352,7 +352,7 @@ void main() {
           SeriesAxisBinding(seriesId: 'cpu-usage', axisId: 'cpu'),
           SeriesAxisBinding(seriesId: 'mem-usage', axisId: 'memory'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
@@ -398,7 +398,7 @@ void main() {
           // Only power-series has a binding
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
         ],
-        mode: NormalizationMode.always,
+        mode: NormalizationMode.perSeries,
       );
 
       await tester.pumpWidget(
