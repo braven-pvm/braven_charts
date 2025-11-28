@@ -28,7 +28,7 @@
 3. Backward compatible - `yAxisId: null` uses default axis
 4. Clear separation of concerns (series data vs. axis presentation)
 
-**Integration Point**: Add optional `yAxisId` field to `ChartSeries` base class in `lib/src_plus/models/chart_series.dart`
+**Integration Point**: Add optional `yAxisId` field to `ChartSeries` base class in `lib/src/models/chart_series.dart`
 
 ---
 
@@ -242,13 +242,13 @@ When zooming occurs, `ViewportState.yRange` is updated as a single global range.
 
 | Component | File | Change Type |
 |-----------|------|-------------|
-| ChartSeries | `lib/src_plus/models/chart_series.dart` | Add `yAxisId`, `unit` fields |
-| YAxisConfig | `lib/src_plus/axis/y_axis_config.dart` | NEW - Y-axis configuration class |
-| YAxisPosition | `lib/src_plus/models/enums.dart` | NEW - leftOuter/left/right/rightOuter enum |
-| NormalizationMode | `lib/src_plus/models/enums.dart` | NEW - none/auto/perSeries enum |
-| AxisRenderer | `lib/src_plus/rendering/axis_renderer.dart` | Modify for multi-axis layout |
-| SeriesRenderer | `lib/src_plus/rendering/series_renderer.dart` | Add per-axis normalization |
-| BravenChartPlus | `lib/src_plus/widgets/braven_chart_plus.dart` | Add `yAxes` configuration |
+| ChartSeries | `lib/src/models/chart_series.dart` | Add `yAxisId`, `unit` fields |
+| YAxisConfig | `lib/src/axis/y_axis_config.dart` | NEW - Y-axis configuration class |
+| YAxisPosition | `lib/src/models/enums.dart` | NEW - leftOuter/left/right/rightOuter enum |
+| NormalizationMode | `lib/src/models/enums.dart` | NEW - none/auto/perSeries enum |
+| AxisRenderer | `lib/src/rendering/axis_renderer.dart` | Modify for multi-axis layout |
+| SeriesRenderer | `lib/src/rendering/series_renderer.dart` | Add per-axis normalization |
+| BravenChartPlus | `lib/src/widgets/braven_chart_plus.dart` | Add `yAxes` configuration |
 
 ---
 
