@@ -1393,4 +1393,59 @@ Select-String -Path lib/src/widgets/braven_chart.dart -Pattern "import.*normaliz
 1. **SpecKit Traceability**: Added formal mapping between 56 SpecKit tasks and 16 orchestrator tasks
 2. **Contract Compliance**: Fixed enum values to match `specs/*/contracts/*.dart`
 3. **Quality Gates**: Zero tolerance for linting issues + ALL tests must pass
+4. **Commit After Handover**: Always commit after preparing task handover (added to standard process)
 
+---
+
+## Orchestrator Standard Process (Updated)
+
+### Task Handover Checklist
+
+When preparing a task for implementor:
+
+1. ✅ Read manifest to identify next task and SpecKit mappings
+2. ✅ Read tasks.md for detailed SpecKit task descriptions
+3. ✅ Read spec.md for user story acceptance scenarios
+4. ✅ Create `.orchestra/verification/task-NNN.yaml` (hidden criteria)
+5. ✅ Create/update `.orchestra/handover/current-task.md`
+6. ✅ Update manifest: task status → "in-progress"
+7. ✅ Reset `.orchestra/handover/completion-signal.md`
+8. ✅ **COMMIT AND PUSH** handover preparation
+9. ✅ Update RESEARCH_LOG with session notes
+
+### Task Verification Checklist
+
+When verifying completed task:
+
+1. ✅ Run standard checks (linting, task tests)
+2. ✅ Run sprint regression tests
+3. ✅ Run adversarial checks
+4. ✅ Update manifest: status → "completed", add commit hash
+5. ✅ Update tasks.md with completion status
+6. ✅ **COMMIT AND PUSH** verified implementation
+7. ✅ Prepare next task handover (loop to above)
+
+---
+
+## Session Log: 2025-11-28 (Continued)
+
+### Task 6 Verified ✅
+
+**Implementation**: MultiAxisNormalizer
+**Commit**: `d6b2857`
+**Tests Added**: 47 (26 normalization + 21 axis bounds)
+**Sprint Total**: 134 tests
+
+### Task 7 Handover Prepared
+
+**Task**: Implement Auto-Detection Logic
+**Phase**: Core Normalization
+**SpecKit Tasks**: T025, T027, T028
+**Commit**: `4ac4cc7`
+
+**Files to Create**:
+- `test/unit/multi_axis/auto_detection_test.dart` (T025)
+- `lib/src/axis/range_ratio_calculator.dart` (T027)
+- `lib/src/axis/normalization_detector.dart` (T028)
+
+**Key Requirement**: Default 10x threshold per FR-008
