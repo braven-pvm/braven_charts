@@ -1150,6 +1150,171 @@ However, feeding 56 tasks one-by-one creates overhead:
 
 ---
 
+## Quality Gates: Linting and Test Suite Integrity
+
+> **CRITICAL PROCESS ADDITION**  
+> Added: 2025-01-08  
+> These requirements prevent quality debt accumulation that kills projects.
+
+### Problem 1: Linter Issues Accumulate
+
+**Observed pattern**: Linter warnings are ignored because "they're not blocking". Over time:
+- Warnings become errors in newer tooling versions
+- Developers become blind to warnings (noise)
+- New real issues get lost in old warnings
+- Code quality degrades silently
+
+**Solution: Zero Tolerance for Linter Issues**
+
+| Rule | Enforcement |
+|------|-------------|
+| Static analysis must pass | **BLOCKING** - Verification fails if any issues |
+| Pre-existing issues | Must be fixed before task completion |
+| New issues | Not allowed - verification fails |
+
+**Verification Command**:
+```powershell
+flutter analyze lib/src/models/  # Must return "No issues found!"
+```
+
+**Implementor Responsibility**:
+- Run `flutter analyze` on affected directories before signaling completion
+- Fix ALL issues (info, warning, error) in modified files
+- If pre-existing issues exist in files you touch, fix them
+
+**Orchestrator Verification**:
+```yaml
+linting:
+  - id: "static_analysis"
+    command: "flutter analyze <affected_paths>"
+    expected: "No issues found"
+    blocking: true  # Task FAILS if issues found
+```
+
+### Problem 2: Test Suite Entropy
+
+**Observed pattern**: Tests fail due to upstream changes, but are dismissed:
+- "Those tests aren't related to my changes"
+- "That test was already flaky"
+- "I'll fix it later"
+
+**Result**: Test suite becomes useless. By sprint end:
+- 50% of tests fail for unrelated reasons
+- Nobody trusts test results
+- Real regressions hide in the noise
+- "All tests passing" means nothing
+
+**Solution: ALL Tests Must Pass, Always**
+
+| Rule | Enforcement |
+|------|-------------|
+| New task tests must pass | **BLOCKING** |
+| ALL previous sprint tests must pass | **BLOCKING** |
+| ALL codebase tests must pass | **RECOMMENDED** (time permitting) |
+
+**Verification Commands**:
+```powershell
+# 1. Task-specific tests (REQUIRED)
+flutter test test/unit/multi_axis/<task_tests>.dart
+
+# 2. Sprint tests (REQUIRED - catches regressions from your changes)
+flutter test test/unit/multi_axis/
+flutter test test/integration/multi_axis_*.dart
+
+# 3. Full suite (RECOMMENDED - weekly or before merge)
+flutter test
+```
+
+**Implementor Responsibility**:
+- Your changes break a test? **You fix it.**
+- Test was already broken? **You fix it anyway** (you touched the area)
+- Tests you didn't write fail? **Still your responsibility** if your changes caused it
+
+**Test Organization Best Practice**:
+```
+test/
+├── unit/
+│   ├── multi_axis/          # Sprint 011 - isolated, run together
+│   │   ├── y_axis_position_test.dart
+│   │   ├── y_axis_config_test.dart
+│   │   └── ...
+│   ├── other_feature/        # Other sprint - isolated
+│   └── ...
+├── integration/
+│   ├── multi_axis_*.dart     # Sprint 011 integration tests
+│   └── ...
+└── widget/
+    └── ...
+```
+
+**Rationale for Sprint Isolation**:
+- Can run sprint tests quickly (2-5 seconds)
+- Clear ownership: sprint tests = sprint responsibility
+- Regression detection: if sprint tests fail, recent changes caused it
+- Merge gate: sprint tests must pass before merge to main
+
+### Verification Checklist Update
+
+Every task verification now includes:
+
+```yaml
+verification_checks:
+  # ... existing checks ...
+  
+  - id: "linting_clean"
+    description: "No static analysis issues"
+    command: "flutter analyze <affected_paths>"
+    expected: "No issues found"
+    blocking: true
+    
+  - id: "task_tests_pass"
+    description: "Task-specific tests pass"
+    command: "flutter test <task_test_file>"
+    expected: "All tests passed"
+    blocking: true
+    
+  - id: "sprint_tests_pass"
+    description: "All sprint tests still pass"
+    command: "flutter test test/unit/multi_axis/"
+    expected: "All tests passed"
+    blocking: true
+    
+  - id: "integration_tests_pass"
+    description: "Integration tests pass"
+    command: "flutter test test/integration/multi_axis_*.dart"
+    expected: "All tests passed"
+    blocking: true
+```
+
+### Implementor SOP Update
+
+Add to `AGENT_README.md` workflow:
+
+```markdown
+## Before Signaling Completion
+
+1. ✅ Implementation complete
+2. ✅ Task tests pass: `flutter test <your_test_file>`
+3. ✅ Sprint tests pass: `flutter test test/unit/multi_axis/`
+4. ✅ Integration tests pass: `flutter test test/integration/multi_axis_*.dart`
+5. ✅ Linting clean: `flutter analyze <affected_directories>`
+6. ✅ Stage changes: `git add -A`
+7. ✅ Write completion signal
+8. ✅ Say "ready for review"
+```
+
+### Quality Metrics to Track
+
+| Metric | Target | Action if Violated |
+|--------|--------|-------------------|
+| Linter issues per task | 0 | Block verification |
+| Test failures per task | 0 | Block verification |
+| Pre-existing issues fixed | All in touched files | Block verification |
+| Sprint test pass rate | 100% | Block verification |
+| Full suite pass rate | 100% | Block merge to main |
+
+---
+
 ## Appendix A: Sprint 011 Failure Post-Mortem
 
 ```powershell

@@ -68,6 +68,26 @@ After each task completion:
 4. **Integration tasks get extra scrutiny** - Must modify existing files
 5. **Visual tasks require screenshots** - Can't fake images
 6. **SpecKit tasks are source of truth** - Orchestrator consolidates but traces back
+7. **Zero linter issues** - Static analysis must pass (BLOCKING)
+8. **All tests must pass** - Sprint tests + task tests (BLOCKING)
+
+---
+
+## Quality Gates (MANDATORY)
+
+Every task verification includes these **blocking** checks:
+
+| Check | Command | Blocks Verification? |
+|-------|---------|---------------------|
+| Task tests pass | `flutter test <task_test>` | ✅ YES |
+| Sprint unit tests pass | `flutter test test/unit/multi_axis/` | ✅ YES |
+| Sprint integration tests pass | `flutter test test/integration/multi_axis_*.dart` | ✅ YES |
+| Static analysis (impl) | `flutter analyze <impl_path>` | ✅ YES |
+| Static analysis (test) | `flutter analyze <test_path>` | ✅ YES |
+
+**If ANY check fails, task is returned for rework.**
+
+See `verification/VERIFICATION_TEMPLATE.yaml` for standard checks.
 
 ---
 
