@@ -1,89 +1,91 @@
-# Current Task: #8 - Integrate Normalizer with Chart Data Pipeline
+# Current Task: #9 - Create Multi-Axis Painter
 
 ## Objective
 
-Wire up the `DataNormalizer` and `NormalizationDetector` so that multi-axis normalization actually works when rendering charts.
+Create a CustomPainter that can render multiple Y-axes on a chart, each positioned and styled according to its `YAxisConfig`.
 
-## ⚠️ THIS IS AN INTEGRATION TASK
+## ⚠️ TDD REQUIRED + VISUAL VERIFICATION
 
-**You MUST modify EXISTING files.** Creating only new files is NOT acceptable.
+**You MUST write tests FIRST before implementing.** The tests will guide your implementation.
 
-The goal is: when a chart has series with vastly different Y-ranges (e.g., Power 0-300W and Tidal Volume 0.5-4.0L), both series should render using the full chart height.
+Visual verification is required - the axes must be visibly rendered with correct positioning and colors.
 
-## Current State
+## Context
 
-We have built:
-- `DataNormalizer` - normalizes values to 0.0-1.0 range
-- `NormalizationDetector` - detects when ranges differ enough to need normalization
-- `MultiAxisConfig` - configuration container with axes, bindings, mode
+We now have:
+- `YAxisPosition` - Defines where axes go (outerLeft, left, right, outerRight)
+- `YAxisConfig` - Configuration for each axis (color, labels, bounds)
+- `DataNormalizer` - Normalizes values to 0.0-1.0 range
+- `NormalizationDetector` - Detects when normalization is needed
+- Integration in `BravenChart` - Normalization is wired into the rendering pipeline
 
-But they're not connected to anything yet.
+Now we need to actually PAINT multiple Y-axes on the canvas.
 
-## What Needs to Happen
+## What Needs to Be Created
 
-1. **Accept multi-axis config** - The chart widget/painter needs to accept `MultiAxisConfig`
-2. **Detect when to normalize** - Use `NormalizationDetector` with the series ranges
-3. **Normalize during rendering** - When drawing series, normalize Y values to 0.0-1.0
-4. **Preserve original values** - Original Y values must still be available for tooltips/labels
+### 1. Test File (FIRST!)
+`test/unit/painters/multi_axis_painter_test.dart`
 
-## Key Files to Modify
+Write tests for:
+- Paints single axis correctly
+- Paints multiple axes at correct positions
+- Applies axis colors from config
+- Renders tick marks and labels
 
-Look at these existing files (modify them, don't just create new ones):
-- `lib/src/widgets/braven_chart.dart` - Main chart widget, contains `_BravenChartPainter`
-- `lib/src/foundation/data_models/chart_series.dart` - Has `yRange` property
+### 2. Implementation
+`lib/src/painters/multi_axis_painter.dart`
 
-## Integration Points
+Create a `MultiAxisPainter` class that:
+- Extends `CustomPainter` (or integrates with existing pattern)
+- Takes a list of `YAxisConfig` and positions them correctly
+- Uses the axis color from config
+- Renders tick marks (based on normalized 0.0-1.0 scale)
+- Renders labels with actual values (denormalized)
 
-The painter has methods like `_drawLineSeries`, `_drawAreaSeries`, etc. that convert data points to pixel positions. The normalization should happen during this conversion.
+### 3. Export
+Add to `lib/braven_charts.dart`
 
-**Before normalization:**
-```dart
-final yPixel = chartRect.bottom - (point.y - minY) / (maxY - minY) * chartRect.height;
+## Positioning Guide
+
+```
+|outerLeft|left|     CHART AREA     |right|outerRight|
+|   axis  |axis|                    | axis|   axis   |
 ```
 
-**After normalization (conceptual):**
-```dart
-final normalizedY = DataNormalizer.normalize(point.y, seriesMinY, seriesMaxY);
-final yPixel = chartRect.bottom - normalizedY * chartRect.height;
-```
+- `outerLeft`: Farthest left position
+- `left`: Standard left position (closer to chart)
+- `right`: Standard right position (closer to chart)
+- `outerRight`: Farthest right position
+
+## Implementation Notes
+
+1. Consider how this painter will integrate with `BravenChart`'s existing painters
+2. The chart has `ChartPainter` pattern - review existing painters for consistency
+3. Axis painting happens in the "frame" area around the chart content
 
 ## Success Criteria
 
-When complete, the following should work:
-
-```dart
-BravenChart(
-  series: [
-    ChartSeries(id: 'power', points: [...]),     // Y range: 0-300
-    ChartSeries(id: 'tidal', points: [...]),     // Y range: 0.5-4.0
-  ],
-  multiAxisConfig: MultiAxisConfig(
-    axes: [
-      YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-      YAxisConfig(id: 'tidal-axis', position: YAxisPosition.right),
-    ],
-    bindings: [
-      SeriesAxisBinding(seriesId: 'power', axisId: 'power-axis'),
-      SeriesAxisBinding(seriesId: 'tidal', axisId: 'tidal-axis'),
-    ],
-    mode: NormalizationMode.always,
-  ),
-)
-```
-
-Both series should use the full chart height, not just power dominating while tidal is a flat line.
+- [ ] Tests written FIRST (at least 4 test cases)
+- [ ] All tests passing
+- [ ] Painter correctly positions 2-4 Y-axes
+- [ ] Each axis uses its configured color
+- [ ] Tick marks and labels are visible
+- [ ] Export added to `lib/braven_charts.dart`
 
 ## Verification
 
 The orchestrator will check:
-1. Existing files are modified (git diff shows changes to existing lib/src files)
-2. `DataNormalizer` is imported and called in the rendering pipeline
-3. Static analysis passes
+1. Test file exists and was created before implementation
+2. Minimum 4 test cases covering required scenarios
+3. Implementation file exists with CustomPainter
+4. Axes actually render at correct positions with correct colors
+5. Static analysis passes
 
 ## When Done
 
 1. Stage changes: `git add .`
 2. Write to `completion-signal.md` with:
-   - List of files modified
-   - Brief description of changes
+   - List of files created
+   - Brief description of implementation
+   - Test count and coverage
 3. Say "ready for review"
