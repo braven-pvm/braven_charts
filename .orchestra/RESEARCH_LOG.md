@@ -987,6 +987,75 @@ This is logged as the **Orchestrator Translation Protocol** for reference.
 > Added: 2025-01-08  
 > This section defines how orchestrator tasks relate to SpecKit's original task list.
 
+### SpecKit Artifacts (Source of Truth)
+
+SpecKit generates reviewed and approved artifacts that **MUST be followed**:
+
+| Artifact | Purpose | Authority |
+|----------|---------|-----------|
+| `spec.md` | User requirements, FR-xxx | **BINDING** |
+| `data-model.md` | Entity definitions, fields, validations | **BINDING** |
+| `contracts/*.dart` | Reviewed code templates | **BINDING** |
+| `tasks.md` | Granular implementation tasks | **BINDING** (can consolidate) |
+| `plan.md` | Implementation approach | Guidance |
+| `research.md` | Technical decisions | Guidance |
+| `checklists/` | Quality checks | Optional |
+
+### Critical Rule: Follow the Contracts!
+
+The `specs/*/contracts/` folder contains **pre-reviewed Dart code** that defines:
+- Class structures
+- Field names and types  
+- Validation rules (assertions)
+- Method signatures
+
+**Implementor MUST match these contracts**, not invent their own structure.
+
+Example - YAxisConfig contract defines:
+```dart
+enum YAxisPosition { leftOuter, left, right, rightOuter }  // NOT outerLeft!
+```
+
+### Current Contract Compliance (Foundation Phase)
+
+| Implementation | Contract | Status | Notes |
+|----------------|----------|--------|-------|
+| YAxisPosition enum | `contracts/y_axis_config.dart` | ⚠️ DEVIATION | Values differ: `outerLeft` vs `leftOuter` |
+| YAxisConfig class | `contracts/y_axis_config.dart` | ✅ Match | All 14 fields match |
+| NormalizationMode enum | `contracts/normalization_mode.dart` | ⚠️ DEVIATION | Values differ: `disabled`/`always` vs `none`/`perSeries` |
+| MultiAxisConfig class | `contracts/multi_axis_state.dart` | ⚠️ DEVIATION | Named `MultiAxisConfig` not `MultiAxisState`, simpler structure |
+| SeriesAxisBinding | (none) | N/A | Not in contracts - gap identified |
+
+### Deviation Protocol
+
+When implementation differs from contract:
+
+1. **Document the deviation** in tasks.md and manifest.yaml
+2. **Justify the deviation** (e.g., "renamed for clarity")  
+3. **Flag for review** - Human must approve deviation
+4. **Update contract** if deviation is accepted
+
+### Handover Must Reference Contracts
+
+When preparing `current-task.md`, orchestrator MUST:
+
+1. Reference the relevant contract file path
+2. Quote key structures (field names, enum values)
+3. Include validation rules (assertions)
+4. Note any approved deviations
+
+Example handover section:
+```markdown
+## Contract Reference
+
+See: `specs/011-multi-axis-normalization/contracts/y_axis_config.dart`
+
+Key requirements from contract:
+- Enum values: `leftOuter`, `left`, `right`, `rightOuter`
+- 14 fields with specified types and defaults
+- 5 assertions for validation
+```
+
 ### The Pipeline
 
 ```

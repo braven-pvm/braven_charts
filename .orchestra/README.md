@@ -73,6 +73,28 @@ After each task completion:
 
 ## SpecKit Traceability
 
+### SpecKit Artifacts (Authority Level)
+
+| Artifact | Authority | Orchestrator Must |
+|----------|-----------|-------------------|
+| `spec.md` | **BINDING** | Follow all FR-xxx requirements |
+| `data-model.md` | **BINDING** | Match entity definitions exactly |
+| `contracts/*.dart` | **BINDING** | Implementor must match code structure |
+| `tasks.md` | **BINDING** | Cover all tasks (can consolidate) |
+| `plan.md` | Guidance | Reference for approach |
+| `research.md` | Guidance | Reference for decisions |
+| `checklists/` | Optional | Use for quality gates |
+
+### Critical: Contracts Are Pre-Reviewed Code
+
+The `specs/*/contracts/` folder contains **reviewed Dart code templates**:
+- Class structures and field names
+- Enum values (exact spelling!)
+- Validation assertions
+- Method signatures
+
+**Handover MUST reference the contract** so implementor follows it exactly.
+
 ### The Flow
 
 ```
