@@ -75,8 +75,10 @@
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] Unit test for per-axis normalization in `test/unit/multi_axis/normalization_test.dart`
-- [ ] T014 [P] [US1] Unit test for axis bounds computation in `test/unit/multi_axis/axis_bounds_test.dart`
+- [x] T013 [P] [US1] Unit test for per-axis normalization in `test/unit/multi_axis/normalization_test.dart`
+  - ✅ Completed: Orchestrator Task 6, 26 tests
+- [x] T014 [P] [US1] Unit test for axis bounds computation in `test/unit/multi_axis/axis_bounds_test.dart`
+  - ✅ Completed: Orchestrator Task 6, 21 tests
 - [ ] T015 [P] [US1] Widget test for multi-axis rendering in `test/widget/multi_axis/multi_axis_chart_test.dart`
 - [ ] T016 [P] [US1] Golden test for 2-axis chart in `test/golden/multi_axis/two_axis_chart_test.dart`
 - [ ] T017 [P] [US1] Golden test for 4-axis chart in `test/golden/multi_axis/four_axis_chart_test.dart`
@@ -84,7 +86,9 @@
 ### Implementation for User Story 1
 
  - [ ] T018 [US1] Implement series-to-axis binding resolution in `lib/src/axis/series_axis_resolver.dart`
- - [ ] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
+ - [x] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
+   - ✅ Completed: Orchestrator Task 6
+   - Methods: `normalize()`, `denormalize()`, `computeAxisBounds()`
  - [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/y_axis_renderer.dart`
  - [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src/layout/axis_layout_manager.dart`
  - [ ] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src/rendering/chart_painter.dart`
