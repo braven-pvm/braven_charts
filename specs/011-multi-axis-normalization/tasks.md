@@ -18,12 +18,12 @@
 
 **Purpose**: Create core types and foundational structure for multi-axis support
 
-- [ ] T001 [P] Create YAxisPosition enum in `lib/src_plus/models/y_axis_position.dart`
-- [ ] T002 [P] Create NormalizationMode enum in `lib/src_plus/models/normalization_mode.dart`
-- [ ] T003 [P] Create YAxisConfig class in `lib/src_plus/axis/y_axis_config.dart`
-- [ ] T004 [P] Create MultiAxisState class in `lib/src_plus/axis/multi_axis_state.dart`
-- [ ] T005 Create barrel export for new types in `lib/src_plus/axis/axis.dart`
-- [ ] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src_plus/models/chart_series.dart`
+ - [ ] T001 [P] Create YAxisPosition enum in `lib/src/models/y_axis_position.dart`
+ - [ ] T002 [P] Create NormalizationMode enum in `lib/src/models/normalization_mode.dart`
+ - [ ] T003 [P] Create YAxisConfig class in `lib/src/axis/y_axis_config.dart`
+ - [ ] T004 [P] Create MultiAxisState class in `lib/src/axis/multi_axis_state.dart`
+ - [ ] T005 Create barrel export for new types in `lib/src/axis/axis.dart`
+ - [ ] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src/models/chart_series.dart`
 
 **Checkpoint**: Core types available for user story implementation
 
@@ -38,12 +38,12 @@
 - [ ] T007 Create test directory structure at `test/unit/multi_axis/`
 - [ ] T008 Create test directory structure at `test/widget/multi_axis/`
 - [ ] T009 Create test directory structure at `test/golden/multi_axis/`
-- [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src_plus/widgets/braven_chart_plus.dart`
-- [ ] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src_plus/layout/multi_axis_layout.dart`
-- [ ] T012 Create axis bounds computation utility in `lib/src_plus/axis/axis_bounds_calculator.dart`
-- [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src_plus/rendering/grid_renderer.dart`
-- [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
-- [ ] T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active in `lib/src_plus/interaction/zoom_controller.dart` - X-axis zoom remains functional
+ - [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/widgets/braven_chart_plus.dart`
+ - [ ] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
+ - [ ] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
+ - [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/grid_renderer.dart`
+ - [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
+ - [ ] T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active in `lib/src/interaction/zoom_controller.dart` - X-axis zoom remains functional
 
 **Checkpoint**: Foundation ready - user story implementation can begin
 
@@ -65,13 +65,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement series-to-axis binding resolution in `lib/src_plus/axis/series_axis_resolver.dart`
-- [ ] T019 [US1] Implement per-axis Y normalization in `lib/src_plus/rendering/multi_axis_normalizer.dart`
-- [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src_plus/rendering/y_axis_renderer.dart`
-- [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src_plus/layout/axis_layout_manager.dart`
-- [ ] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src_plus/rendering/chart_painter.dart`
-- [ ] T023 [US1] Update tooltip to display original Y-values with units in `lib/src_plus/interaction/tooltip_builder.dart`
-- [ ] T024 [US1] Add example multi-axis chart to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
+ - [ ] T018 [US1] Implement series-to-axis binding resolution in `lib/src/axis/series_axis_resolver.dart`
+ - [ ] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
+ - [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/y_axis_renderer.dart`
+ - [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src/layout/axis_layout_manager.dart`
+ - [ ] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src/rendering/chart_painter.dart`
+ - [ ] T023 [US1] Update tooltip to display original Y-values with units in `lib/src/interaction/tooltip_builder.dart`
+ - [ ] T024 [US1] Add example multi-axis chart to showcase in `example/lib/showcase/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 1 complete - multi-scale visualization working independently
 
@@ -90,9 +90,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement range ratio calculator in `lib/src_plus/axis/range_ratio_calculator.dart`
-- [ ] T028 [US2] Implement auto-detection logic in `lib/src_plus/axis/normalization_detector.dart`
-- [ ] T029 [US2] Integrate auto-detection with chart initialization in `lib/src_plus/widgets/braven_chart_plus.dart`
+ - [ ] T027 [US2] Implement range ratio calculator in `lib/src/axis/range_ratio_calculator.dart`
+ - [ ] T028 [US2] Implement auto-detection logic in `lib/src/axis/normalization_detector.dart`
+ - [ ] T029 [US2] Integrate auto-detection with chart initialization in `lib/src/widgets/braven_chart_plus.dart`
 - [ ] T030 [US2] Add auto-detection example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 2 complete - auto-detection working independently
@@ -113,11 +113,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Implement axis color resolver (from config or series) in `lib/src_plus/axis/axis_color_resolver.dart`
-- [ ] T035 [US3] Apply color to axis labels in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
-- [ ] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
-- [ ] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src_plus/rendering/y_axis_renderer.dart`
-- [ ] T038 [US3] Handle shared axis color (neutral or first series) in `lib/src_plus/axis/axis_color_resolver.dart`
+ - [ ] T034 [US3] Implement axis color resolver (from config or series) in `lib/src/axis/axis_color_resolver.dart`
+ - [ ] T035 [US3] Apply color to axis labels in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+ - [ ] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+ - [ ] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+ - [ ] T038 [US3] Handle shared axis color (neutral or first series) in `lib/src/axis/axis_color_resolver.dart`
 - [ ] T039 [US3] Add themed axis color example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 3 complete - color-coded axes working independently
@@ -137,10 +137,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T042 [US4] Create multi-axis value formatter in `lib/src_plus/formatting/multi_axis_value_formatter.dart`
-- [ ] T043 [US4] **[FR-014]** Update crosshair to use per-axis Y bounds lookup in `lib/src_plus/interaction/crosshair_handler.dart` - screen Y position → per-axis data value conversion
-- [ ] T044 [US4] Update tracking mode to display all series values in `lib/src_plus/interaction/tracking_overlay.dart`
-- [ ] T045 [US4] Format decimal values appropriately (no over-precision) in `lib/src_plus/formatting/multi_axis_value_formatter.dart`
+ - [ ] T042 [US4] Create multi-axis value formatter in `lib/src/formatting/multi_axis_value_formatter.dart`
+ - [ ] T043 [US4] **[FR-014]** Update crosshair to use per-axis Y bounds lookup in `lib/src/interaction/crosshair_handler.dart` - screen Y position → per-axis data value conversion
+ - [ ] T044 [US4] Update tracking mode to display all series values in `lib/src/interaction/tracking_overlay.dart`
+ - [ ] T045 [US4] Format decimal values appropriately (no over-precision) in `lib/src/formatting/multi_axis_value_formatter.dart`
 - [ ] T046 [US4] Add crosshair example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 4 complete - crosshair with original values working
@@ -151,9 +151,9 @@
 
 **Purpose**: Final validation, documentation, and cleanup
 
-- [ ] T047 [P] Add validation for max 4 axes in `lib/src_plus/axis/y_axis_config.dart`
-- [ ] T048 [P] Add validation for unique axis positions in `lib/src_plus/widgets/braven_chart_plus.dart`
-- [ ] T049 [P] Add API documentation to all public classes in `lib/src_plus/axis/`
+ - [ ] T047 [P] Add validation for max 4 axes in `lib/src/axis/y_axis_config.dart`
+ - [ ] T048 [P] Add validation for unique axis positions in `lib/src/widgets/braven_chart_plus.dart`
+ - [ ] T049 [P] Add API documentation to all public classes in `lib/src/axis/`
 - [ ] T050 Run performance benchmark (60 FPS with 4 series × 1000 points) in `test/benchmarks/multi_axis_benchmark.dart`
 - [ ] T051 Validate backward compatibility (single-axis mode unchanged) in `test/widget/multi_axis/backward_compat_test.dart`
 - [ ] T052 Run quickstart.md validation - test all code examples compile

@@ -59,7 +59,7 @@ specs/011-multi-axis-normalization/
 
 ```
 lib/
-└── src_plus/
+└── src/
     ├── models/
     │   ├── y_axis_position.dart      # NEW: YAxisPosition enum
     │   ├── normalization_mode.dart   # NEW: NormalizationMode enum
@@ -90,7 +90,7 @@ lib/
     │   └── multi_axis_value_formatter.dart # NEW: Value formatting
     └── widgets/
         └── braven_chart_plus.dart    # MODIFY: yAxes configuration
-
+```
 test/
 ├── unit/
 │   └── multi_axis/                   # NEW: Unit tests for normalization
