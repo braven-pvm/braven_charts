@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/models/normalization_mode.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('NormalizationMode', () {
@@ -42,11 +42,13 @@ void main() {
       });
 
       test('values are in correct order', () {
-        expect(NormalizationMode.values, equals([
-          NormalizationMode.disabled,
-          NormalizationMode.auto,
-          NormalizationMode.always,
-        ]));
+        expect(
+            NormalizationMode.values,
+            equals([
+              NormalizationMode.disabled,
+              NormalizationMode.auto,
+              NormalizationMode.always,
+            ]));
       });
     });
 
