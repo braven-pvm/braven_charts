@@ -5,6 +5,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show cos, sin, sqrt, log, pow, ln10;
 
+// Multi-Axis Normalization (Layer 11)
+import 'package:braven_charts/src/axis/data_normalizer.dart';
+import 'package:braven_charts/src/axis/multi_axis_config.dart';
+import 'package:braven_charts/src/axis/normalization_detector.dart';
+import 'package:braven_charts/src/axis/normalization_mode.dart';
 // Layer 5: Chart Configuration
 import 'package:braven_charts/src/charts/line/line_chart_config.dart' show LineStyle;
 import 'package:braven_charts/src/charts/line/line_interpolator.dart';
@@ -124,6 +129,7 @@ class BravenChart extends StatefulWidget {
     this.onAnnotationTap,
     this.onAnnotationDragged,
     this.interactionConfig,
+    this.multiAxisConfig,
   })  : assert(series.isNotEmpty || dataStream != null, 'At least one series or dataStream is required'),
         assert(width == null || width > 0, 'Width must be positive'),
         assert(height == null || height > 0, 'Height must be positive');
@@ -635,6 +641,31 @@ class BravenChart extends StatefulWidget {
   /// )
   /// ```
   final InteractionConfig? interactionConfig;
+
+  /// Configuration for multi-axis normalization (Layer 11).
+  ///
+  /// When provided, enables multiple Y-axes with different scales to be
+  /// displayed on the same chart. The normalization system ensures all
+  /// series are scaled appropriately based on their individual bounds.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChart(
+  ///   multiAxisConfig: MultiAxisConfig(
+  ///     axes: [
+  ///       YAxisConfig(id: 'power', label: 'Power (W)', min: 0, max: 300),
+  ///       YAxisConfig(id: 'volume', label: 'Volume (L)', min: 0.5, max: 4.0),
+  ///     ],
+  ///     bindings: [
+  ///       SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
+  ///       SeriesAxisBinding(seriesId: 'volume-series', axisId: 'volume'),
+  ///     ],
+  ///     normalizationMode: NormalizationMode.auto,
+  ///   ),
+  ///   // ... other parameters
+  /// )
+  /// ```
+  final MultiAxisConfig? multiAxisConfig;
 
   // ==================== STATE ====================
 
@@ -1844,6 +1875,7 @@ class _BravenChartState extends State<BravenChart> with TickerProviderStateMixin
               yAxis: effectiveYAxis,
               annotations: [], // Chart painter doesn't render annotations
               zoomPanState: interactionState.zoomPanState,
+              multiAxisConfig: widget.multiAxisConfig,
               // CRITICAL FIX: Don't use cached originalDataBounds when controller series exist
               // because new points added via controller.addPoint() won't be in the cached bounds.
               // This causes buffered streaming points to fall outside viewport after zoom/pan.
@@ -4265,6 +4297,7 @@ class _BravenChartPainter extends CustomPainter {
     this.zoomPanState,
     this.originalDataBounds,
     this.onChartRectCalculated,
+    this.multiAxisConfig,
   });
   // Toggle this at runtime to enable simple paint-stage profiling logs.
   // Keep false by default; set to true in a debug session to get timing output.
@@ -4282,6 +4315,8 @@ class _BravenChartPainter extends CustomPainter {
   final _DataBounds? originalDataBounds;
   // Callback to notify State of the calculated chartRect with actual render size
   final void Function(Rect chartRect, Size size)? onChartRectCalculated;
+  // Multi-axis configuration for normalization (Layer 11)
+  final MultiAxisConfig? multiAxisConfig;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -4652,7 +4687,7 @@ class _BravenChartPainter extends CustomPainter {
       // CRITICAL FIX: Render ALL points to maintain line continuity
       // Canvas clipping will automatically crop the visible region
       // This ensures line segments entering/exiting the viewport are drawn correctly
-      final points = s.points.map((point) => _dataToPixel(point, chartRect, bounds)).toList();
+      final points = s.points.map((point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id)).toList();
 
       // Use LineInterpolator to generate path with the specified line style
       // (straight, smooth bezier, or stepped)
@@ -4676,7 +4711,7 @@ class _BravenChartPainter extends CustomPainter {
 
       for (var j = 0; j < s.points.length; j++) {
         final point = s.points[j];
-        final offset = _dataToPixel(point, chartRect, bounds);
+        final offset = _dataToPixel(point, chartRect, bounds, seriesId: s.id);
         canvas.drawCircle(offset, 4, markerPaint);
       }
     }
@@ -4701,7 +4736,7 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       // Convert data points to screen coordinates
-      final screenPoints = s.points.map((point) => _dataToPixel(point, chartRect, bounds)).toList();
+      final screenPoints = s.points.map((point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id)).toList();
 
       // Create the area fill path
       final path = Path();
@@ -4798,7 +4833,7 @@ class _BravenChartPainter extends CustomPainter {
         final baseX = chartRect.left + (barGroupWidth * pointIndex);
         final barX = baseX + (barWidth * seriesIndex) + (barWidth / 2);
 
-        final topY = _dataToPixel(point, chartRect, bounds).dy;
+        final topY = _dataToPixel(point, chartRect, bounds, seriesId: s.id).dy;
         final bottomY = chartRect.bottom;
         final barHeight = bottomY - topY;
 
@@ -4824,7 +4859,7 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       for (final point in s.points) {
-        final offset = _dataToPixel(point, chartRect, bounds);
+        final offset = _dataToPixel(point, chartRect, bounds, seriesId: s.id);
         canvas.drawCircle(offset, 5, paint);
       }
     }
@@ -4938,14 +4973,82 @@ class _BravenChartPainter extends CustomPainter {
     }
   }
 
-  Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
+  /// Gets the Y bounds for a specific series based on multiAxisConfig.
+  ///
+  /// If multiAxisConfig is provided and the series is bound to an axis,
+  /// returns the axis-specific bounds. Otherwise, returns the global bounds.
+  ({double minY, double maxY}) _getSeriesYBounds(String seriesId, _DataBounds globalBounds) {
+    if (multiAxisConfig == null) {
+      return (minY: globalBounds.minY, maxY: globalBounds.maxY);
+    }
+
+    // Find the binding for this series
+    final binding = multiAxisConfig!.bindings.where((b) => b.seriesId == seriesId).firstOrNull;
+    if (binding == null) {
+      return (minY: globalBounds.minY, maxY: globalBounds.maxY);
+    }
+
+    // Find the axis for this binding
+    final axis = multiAxisConfig!.axes.where((a) => a.id == binding.axisId).firstOrNull;
+    if (axis == null) {
+      return (minY: globalBounds.minY, maxY: globalBounds.maxY);
+    }
+
+    // Use axis minValue/maxValue if specified, otherwise compute from series data
+    final targetSeries = series.where((s) => s.id == seriesId).firstOrNull;
+    if (targetSeries == null || targetSeries.points.isEmpty) {
+      return (minY: globalBounds.minY, maxY: globalBounds.maxY);
+    }
+
+    // Compute series range if axis doesn't specify explicit bounds
+    final minY = axis.minValue ?? targetSeries.points.map((p) => p.y).reduce((a, b) => a < b ? a : b);
+    final maxY = axis.maxValue ?? targetSeries.points.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+
+    return (minY: minY, maxY: maxY);
+  }
+
+  /// Checks if normalization should be applied based on multiAxisConfig mode.
+  bool _shouldNormalize() {
+    if (multiAxisConfig == null) return false;
+
+    switch (multiAxisConfig!.mode) {
+      case NormalizationMode.none:
+        return false;
+      case NormalizationMode.always:
+        return true;
+      case NormalizationMode.auto:
+        // Use NormalizationDetector to determine if normalization is needed
+        final ranges = <SeriesRange>[];
+        for (final s in series) {
+          if (s.points.isEmpty) continue;
+          final seriesYBounds = _getSeriesYBounds(s.id, _DataBounds(minX: 0, maxX: 1, minY: 0, maxY: 1));
+          ranges.add(SeriesRange(seriesId: s.id, min: seriesYBounds.minY, max: seriesYBounds.maxY));
+        }
+        return NormalizationDetector.shouldNormalize(ranges);
+    }
+  }
+
+  /// Converts a data point to pixel coordinates.
+  ///
+  /// When multiAxisConfig is provided with normalization enabled, uses
+  /// series-specific Y bounds for the conversion. Otherwise uses global bounds.
+  Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds, {String? seriesId}) {
     final xRange = bounds.maxX - bounds.minX;
-    final yRange = bounds.maxY - bounds.minY;
 
     final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
-    final yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
-
     final pixelX = chartRect.left + (xPercent * chartRect.width);
+
+    // Determine Y bounds based on normalization config
+    double yPercent;
+    if (seriesId != null && _shouldNormalize()) {
+      final seriesYBounds = _getSeriesYBounds(seriesId, bounds);
+      // Use DataNormalizer for consistent normalization
+      yPercent = DataNormalizer.normalize(point.y, seriesYBounds.minY, seriesYBounds.maxY);
+    } else {
+      final yRange = bounds.maxY - bounds.minY;
+      yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
+    }
+
     final pixelY = chartRect.bottom - (yPercent * chartRect.height);
 
     return Offset(pixelX, pixelY);
@@ -4957,6 +5060,7 @@ class _BravenChartPainter extends CustomPainter {
     if (chartType != oldDelegate.chartType) return true;
     if (theme != oldDelegate.theme) return true;
     if (xAxis != oldDelegate.xAxis || yAxis != oldDelegate.yAxis) return true;
+    if (multiAxisConfig != oldDelegate.multiAxisConfig) return true;
 
     // Series: if list length differs or any series object identity changed, repaint
     if (series.length != oldDelegate.series.length) return true;
