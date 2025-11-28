@@ -22,5 +22,7 @@ export 'src/models/enums.dart';
 export 'src/models/interaction_callbacks.dart';
 export 'src/models/interaction_config.dart';
 export 'src/models/streaming_config.dart';
+// Rendering
+export 'src/rendering/multi_axis_normalizer.dart';
 // Streaming
 export 'src/streaming/streaming_controller.dart';
