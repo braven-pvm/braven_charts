@@ -1,234 +1,211 @@
-# Current Task: Implement Data Normalizer
+# Current Task: Implement Auto-Detection Logic
 
 ## Objective
 
-Implement `MultiAxisNormalizer` - the core normalization engine that converts series data values to/from normalized [0,1] range for rendering while preserving original values for display.
+Implement automatic detection of when multi-axis normalization should be enabled based on series range differences. When series have vastly different Y-ranges (≥10x difference), the system should automatically recommend multi-axis mode.
 
 ## Context
 
-This is the first task in the **Normalization Phase**. The foundation is complete:
-- ✅ `YAxisPosition` - 4 axis positions
-- ✅ `YAxisConfig` - Individual axis configuration
-- ✅ `SeriesAxisBinding` - Links series to axes  
-- ✅ `NormalizationMode` - Controls when normalization applies
-- ✅ `MultiAxisConfig` - Container holding all configuration
+Task 6 (Data Normalizer) is complete. We now have:
+- ✅ `MultiAxisNormalizer` - Core normalization engine
+- ✅ `DataRange` - Min/max bounds container
 
-Now we need the **core algorithm** that actually performs normalization.
+This task adds the **intelligence layer** that decides WHEN to normalize.
+
+## User Story 2 Reference
+
+> A developer integrating the chart library wants the system to automatically detect when multiple series need separate axes without manual configuration. When the developer adds series with significantly different Y-ranges (e.g., 10x or more difference), the chart should automatically enable multi-axis mode.
+
+**Acceptance Scenarios**:
+1. Series A (0-10) + Series B (0-1000) → Auto-detect: **YES** (100x difference)
+2. Series with similar ranges (within 10x) → Auto-detect: **NO**
+3. Explicit config provided → Explicit config takes precedence
 
 ## ⚠️ TDD REQUIREMENT
 
 This is a **Test-Driven Development** task:
 1. **Write tests FIRST** (they should fail initially)
 2. **Then implement** to make tests pass
-3. **Verify tests were actually testing something** (not false positives)
 
 ## What to Create
 
-### 1. Test File: Normalization Tests (Create FIRST!)
+### 1. Test File (Create FIRST!)
 
-**Path**: `test/unit/multi_axis/normalization_test.dart`
-
-This tests the core normalize/denormalize operations (SpecKit T013).
+**Path**: `test/unit/multi_axis/auto_detection_test.dart`
 
 #### Required Test Groups
 
 ```dart
-group('MultiAxisNormalizer', () {
-  group('normalize', () {
-    // Convert data value to [0,1] range based on axis bounds
-    test('normalizes minimum value to 0.0');
-    test('normalizes maximum value to 1.0');
-    test('normalizes midpoint value to 0.5');
-    test('normalizes values outside bounds correctly');
-    test('handles negative ranges (min=-100, max=100)');
-    test('handles decimal precision');
-  });
-
-  group('denormalize', () {
-    // Convert normalized [0,1] back to original data value
-    test('denormalizes 0.0 to minimum value');
-    test('denormalizes 1.0 to maximum value');
-    test('denormalizes 0.5 to midpoint value');
-    test('round-trip preserves original value');
-  });
-
-  group('edge cases', () {
-    test('handles zero range (min == max) without division by zero');
-    test('handles very small range (e.g., 0.001 difference)');
-    test('handles very large values without overflow');
-    test('handles single data point series');
+group('RangeRatioCalculator', () {
+  group('calculateRatio', () {
+    test('returns 1.0 for identical ranges');
+    test('returns ratio for different ranges');
+    test('calculates ratio as larger/smaller (always >= 1)');
+    test('handles zero-width range without error');
+    test('handles negative value ranges');
+    test('handles ranges crossing zero');
   });
 });
-```
 
-### 2. Test File: Axis Bounds Tests (Create FIRST!)
-
-**Path**: `test/unit/multi_axis/axis_bounds_test.dart`
-
-This tests computing bounds per Y-axis from series data (SpecKit T014).
-
-#### Required Test Groups
-
-```dart
-group('Axis Bounds Computation', () {
-  group('computeAxisBounds', () {
-    // Compute min/max bounds for each Y-axis from series data
-    test('computes bounds from single series');
-    test('computes bounds from multiple series on same axis');
-    test('computes separate bounds for different axes');
-    test('respects explicit min/max from YAxisConfig');
-    test('uses data-derived bounds when config min/max are null');
-    test('handles mixed explicit and auto bounds');
+group('NormalizationDetector', () {
+  group('shouldNormalize', () {
+    test('returns false for single series');
+    test('returns false for series within threshold');
+    test('returns true when any pair exceeds threshold');
+    test('uses default threshold of 10x');
+    test('respects custom threshold');
+    test('checks all pairwise combinations');
   });
-
-  group('series to axis mapping', () {
-    test('maps series with yAxisId to correct axis');
-    test('maps series without yAxisId to default axis');
-    test('handles unmapped series (no matching axis)');
-  });
-
+  
   group('edge cases', () {
     test('handles empty series list');
-    test('handles series with no data points');
-    test('handles series with identical Y values');
+    test('handles series with identical values');
+    test('handles exactly 10x threshold (boundary)');
+  });
+  
+  group('acceptance scenarios', () {
+    // From spec
+    test('US2-1: detects 0-10 vs 0-1000 (100x difference)');
+    test('US2-2: does not detect 0-50 vs 0-100 (2x difference)');
   });
 });
 ```
 
-### 3. Implementation File
+### 2. Range Ratio Calculator
 
-**Path**: `lib/src/rendering/multi_axis_normalizer.dart`
-
-#### Class Structure
+**Path**: `lib/src/axis/range_ratio_calculator.dart`
 
 ```dart
-/// Normalizes series data values to [0,1] range for rendering while
-/// preserving ability to recover original values for display.
-///
-/// See: specs/011-multi-axis-normalization/data-model.md
-class MultiAxisNormalizer {
-  const MultiAxisNormalizer._();
+import '../models/data_range.dart';
 
-  /// Normalizes [value] to [0,1] range based on axis [min] and [max].
+/// Calculates the ratio between data ranges to determine
+/// if normalization is needed.
+class RangeRatioCalculator {
+  const RangeRatioCalculator._();
+  
+  /// Calculates the ratio between two data ranges.
   ///
-  /// Returns 0.0 for min, 1.0 for max, proportional values between.
-  /// Values outside range return values outside [0,1].
-  static double normalize(double value, double min, double max) {
-    // TODO: Implement
-    // Handle edge case: min == max
-  }
-
-  /// Converts normalized [value] back to original data value.
+  /// Returns a value >= 1.0 representing how many times larger
+  /// the bigger range is compared to the smaller range.
   ///
-  /// Inverse of [normalize]. Used for tooltip/crosshair display.
-  static double denormalize(double normalizedValue, double min, double max) {
+  /// Examples:
+  /// - Range(0,10) vs Range(0,100) → 10.0
+  /// - Range(0,100) vs Range(0,10) → 10.0 (order doesn't matter)
+  /// - Range(0,10) vs Range(0,10) → 1.0
+  static double calculateRatio(DataRange range1, DataRange range2) {
     // TODO: Implement
-  }
-
-  /// Computes data bounds (min/max) for each Y-axis from series data.
-  ///
-  /// Returns Map from axis ID to DataRange.
-  /// Uses explicit bounds from [axisConfigs] when specified,
-  /// otherwise computes from [seriesData].
-  static Map<String, DataRange> computeAxisBounds({
-    required List<YAxisConfig> axisConfigs,
-    required List<SeriesAxisBinding> bindings,
-    required Map<String, List<double>> seriesYValues, // seriesId -> Y values
-    String defaultAxisId = 'primary',
-  }) {
-    // TODO: Implement
-    // Algorithm from data-model.md:
-    // For each YAxisConfig:
-    //   1. Find all series bound to this axis
-    //   2. If axis.min specified → use it, else min of all bound series
-    //   3. If axis.max specified → use it, else max of all bound series
+    // Handle edge cases: zero span, etc.
   }
 }
+```
 
-/// Simple data range container.
-class DataRange {
-  final double min;
-  final double max;
+### 3. Normalization Detector
+
+**Path**: `lib/src/axis/normalization_detector.dart`
+
+```dart
+import '../models/data_range.dart';
+import 'range_ratio_calculator.dart';
+
+/// Detects when automatic multi-axis normalization should be enabled.
+///
+/// According to spec FR-008:
+/// "System MUST support automatic multi-axis detection when series 
+/// Y-ranges differ by more than a configurable threshold (default: 10x)"
+class NormalizationDetector {
+  const NormalizationDetector._();
   
-  const DataRange(this.min, this.max);
+  /// Default threshold ratio for auto-detection (10x difference).
+  static const double defaultThreshold = 10.0;
   
-  // TODO: Add equality, copyWith, etc.
+  /// Determines if normalization should be automatically enabled.
+  ///
+  /// Returns true if ANY pair of series has a range ratio >= [threshold].
+  ///
+  /// Parameters:
+  /// - [seriesRanges]: Map of series ID to their data ranges
+  /// - [threshold]: Minimum ratio to trigger detection (default: 10.0)
+  static bool shouldNormalize(
+    Map<String, DataRange> seriesRanges, {
+    double threshold = defaultThreshold,
+  }) {
+    // TODO: Implement
+    // Check all pairwise combinations
+  }
+  
+  /// Gets the maximum range ratio among all series pairs.
+  ///
+  /// Useful for diagnostics and UI feedback.
+  static double getMaxRatio(Map<String, DataRange> seriesRanges) {
+    // TODO: Implement
+  }
 }
 ```
 
 ### 4. Export
 
-**File to modify**: `lib/src/rendering/rendering.dart` (or create if needed)
-
-Add export:
-```dart
-export 'multi_axis_normalizer.dart';
-```
-
-Also ensure the main barrel file exports rendering.
-
-## Algorithm Reference
-
-From `specs/011-multi-axis-normalization/data-model.md`:
-
-```
-Axis Bounds Computation:
-
-For each YAxisConfig:
-  1. Find all series where series.yAxisId == axis.id
-  2. If axis.min specified → use axis.min
-     Else → min(series.points.y) for all bound series
-  3. If axis.max specified → use axis.max
-     Else → max(series.points.y) for all bound series
-  4. Store in axisBounds[axis.id]
-```
-
-## Normalization Formula
-
-Standard linear normalization:
+**File to modify**: `lib/src/axis/axis.dart` (create if needed as barrel)
 
 ```dart
-// Normalize: data value -> [0,1]
-normalized = (value - min) / (max - min)
+export 'range_ratio_calculator.dart';
+export 'normalization_detector.dart';
+```
 
-// Denormalize: [0,1] -> data value  
-original = normalizedValue * (max - min) + min
+Also add to main barrel file if needed.
 
-// Edge case: when min == max, return 0.5 (or configurable default)
+## Algorithm
+
+### Range Ratio Calculation
+
+```dart
+// Calculate span of each range
+span1 = range1.max - range1.min
+span2 = range2.max - range2.min
+
+// Handle zero spans
+if (span1 == 0 && span2 == 0) return 1.0
+if (span1 == 0 || span2 == 0) return double.infinity // or handle specially
+
+// Ratio is always >= 1.0 (larger / smaller)
+ratio = max(span1, span2) / min(span1, span2)
+```
+
+### Auto-Detection Logic
+
+```dart
+// For N series, check all pairs
+for i in 0..n-1:
+  for j in i+1..n-1:
+    ratio = calculateRatio(ranges[i], ranges[j])
+    if (ratio >= threshold):
+      return true  // Should normalize
+return false  // All pairs within threshold
 ```
 
 ## Dependencies
 
-Import from completed foundation:
+Import from completed tasks:
 ```dart
-import 'package:braven_charts/src/models/y_axis_config.dart';
-import 'package:braven_charts/src/models/series_axis_binding.dart';
+import 'package:braven_charts/src/models/data_range.dart';
 ```
 
 ## Test Execution
 
-Run your new tests:
 ```bash
-# Normalization tests (T013)
-flutter test test/unit/multi_axis/normalization_test.dart
+# Run auto-detection tests
+flutter test test/unit/multi_axis/auto_detection_test.dart
 
-# Axis bounds tests (T014)
-flutter test test/unit/multi_axis/axis_bounds_test.dart
-```
-
-Before completing, ensure ALL sprint tests still pass:
-```bash
+# Ensure all sprint tests pass
 flutter test test/unit/multi_axis/
-flutter test test/integration/multi_axis_*.dart
 ```
 
 ## Quality Gates (MANDATORY)
 
-### 1. Linting - Zero Issues Required
+### 1. Linting - Zero Issues
 ```bash
-flutter analyze lib/src/rendering/multi_axis_normalizer.dart
-flutter analyze test/unit/multi_axis/normalization_test.dart
-flutter analyze test/unit/multi_axis/axis_bounds_test.dart
+flutter analyze lib/src/axis/range_ratio_calculator.dart
+flutter analyze lib/src/axis/normalization_detector.dart
+flutter analyze test/unit/multi_axis/auto_detection_test.dart
 ```
 
 ### 2. All Sprint Tests Must Pass
@@ -237,16 +214,16 @@ flutter test test/unit/multi_axis/
 flutter test test/integration/multi_axis_*.dart
 ```
 
-Current baseline: **113 tests passing**. Your tests will ADD to this.
+Current baseline: **134 tests passing**
 
 ## When Done
 
 1. **Verify linting is clean** (BLOCKING)
-2. **Verify ALL tests pass** (BLOCKING - both old and new)
+2. **Verify ALL tests pass** (BLOCKING)
 3. Stage your changes: `git add .`
 4. Write to `.orchestra/handover/completion-signal.md`:
-   - List files created
+   - Files created
    - Number of tests added
-   - Confirm linting clean (exact command output)
-   - Confirm all sprint tests pass (exact test count)
+   - Confirm linting clean
+   - Confirm all sprint tests pass
 5. Say "Task complete - ready for review"

@@ -1,8 +1,15 @@
 # Completion Signal
 
-## Task: Implement Data Normalizer (MultiAxisNormalizer)
+**Status**: AWAITING IMPLEMENTATION
 
-**Status**: ✅ COMPLETED
+---
+
+Write your completion notes here when the task is done.
+
+Include:
+- Files created/modified
+- Test results
+- Any decisions made
 
 **Date**: 2025-11-28
 
