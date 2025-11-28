@@ -1,0 +1,287 @@
+Analyzing lib...                                                
+
+   info - Library names are not necessary - lib\braven_charts.dart:4:9 - unnecessary_library_name
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\coordinates\viewport_state.dart:160:51 - unintended_html_in_doc_comment
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\chart_data_point.dart:43:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\data_range.dart:42:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\data_range.dart:52:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\data_range.dart:79:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\data_range.dart:95:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\data_models\time_series_data.dart:47:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\math\curve_fitting.dart:51:9 - sort_constructors_first
+   info - The variable name 'AtA' isn't a lowerCamelCase identifier - lib\legacy\src\foundation\math\curve_fitting.dart:203:11 - non_constant_identifier_names
+   info - The variable name 'Atb' isn't a lowerCamelCase identifier - lib\legacy\src\foundation\math\curve_fitting.dart:204:11 - non_constant_identifier_names
+   info - Statements in an if should be enclosed in a block - lib\legacy\src\foundation\math\statistics.dart:64:9 - curly_braces_in_flow_control_structures
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\math\statistics.dart:403:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\math\statistics.dart:436:9 - sort_constructors_first
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\foundation\performance\batch_processor.dart:6:19 - unintended_html_in_doc_comment
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\performance\batch_processor.dart:34:3 - sort_constructors_first
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\foundation\performance\object_pool.dart:6:15 - unintended_html_in_doc_comment
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\performance\object_pool.dart:45:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\performance\object_pool.dart:159:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\performance\viewport_culler.dart:37:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\performance\viewport_culler.dart:177:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:66:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:78:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:96:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:114:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:132:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_error.dart:150:11 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_result.dart:103:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\foundation\type_system\chart_result.dart:124:9 - sort_constructors_first
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\foundation\type_system\validation_utils.dart:9:35 - unintended_html_in_doc_comment
+   info - 'announce' is deprecated and shouldn't be used. Use sendAnnouncement instead. This API is incompatible with multiple windows. This feature was deprecated after v3.35.0-0.1.pre - lib\legacy\src\interaction\keyboard_handler.dart:289:24 - deprecated_member_use
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\interaction\models\interaction_state.dart:115:20 - unintended_html_in_doc_comment
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\interaction\models\interaction_state.dart:130:20 - unintended_html_in_doc_comment
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\interaction\models\interaction_state.dart:145:31 - unintended_html_in_doc_comment
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\layers\annotation_layer.dart:75:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\layers\data_series_layer.dart:58:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\layers\data_series_layer.dart:116:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\layers\grid_layer.dart:66:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\performance_metrics.dart:114:9 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\performance_monitor.dart:39:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\render_layer.dart:123:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\legacy\src\rendering\text_layout_cache.dart:94:3 - sort_constructors_first
+  error - The named parameter 'scrollbarTheme' is required, but there's no corresponding argument - lib\legacy\src\theming\builder\chart_theme_builder.dart:240:12 - missing_required_argument
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\chart_theme.dart:244:46 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\chart_theme.dart:245:38 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\axis_style.dart:213:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\axis_style.dart:219:37 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\axis_style.dart:227:37 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\axis_style.dart:233:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\grid_style.dart:137:36 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\grid_style.dart:141:29 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\interaction_theme.dart:194:30 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\interaction_theme.dart:198:33 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\interaction_theme.dart:201:30 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\interaction_theme.dart:244:35 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:278:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:279:36 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:280:46 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:281:42 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:282:48 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:283:52 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:284:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\scrollbar_config.dart:288:50 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\components\series_theme.dart:198:29 - deprecated_member_use
+   info - 'red' is deprecated and shouldn't be used. Use (*.r * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:27:21 - deprecated_member_use
+   info - 'green' is deprecated and shouldn't be used. Use (*.g * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:28:21 - deprecated_member_use
+   info - 'blue' is deprecated and shouldn't be used. Use (*.b * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:29:21 - deprecated_member_use
+   info - The variable name 'meetsWCAG_AA' isn't a lowerCamelCase identifier - lib\legacy\src\theming\utilities\color_utils.dart:59:15 - non_constant_identifier_names
+   info - The variable name 'meetsWCAG_AAA' isn't a lowerCamelCase identifier - lib\legacy\src\theming\utilities\color_utils.dart:69:15 - non_constant_identifier_names
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\legacy\src\theming\utilities\color_utils.dart:137:22 - deprecated_member_use
+   info - 'red' is deprecated and shouldn't be used. Use (*.r * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:180:21 - deprecated_member_use
+   info - 'green' is deprecated and shouldn't be used. Use (*.g * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:181:21 - deprecated_member_use
+   info - 'blue' is deprecated and shouldn't be used. Use (*.b * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:182:21 - deprecated_member_use
+   info - 'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255) - lib\legacy\src\theming\utilities\color_utils.dart:192:13 - deprecated_member_use
+warning - The declaration '_updateInteractionStateThrottled' isn't referenced - lib\legacy\src\widgets\braven_chart.dart:1152:8 - unused_element
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\widgets\braven_chart.dart:2825:21 - unintended_html_in_doc_comment
+warning - The value of the local variable 'viewportSize' isn't used - lib\legacy\src\widgets\braven_chart.dart:3983:15 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:5327:81 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:5581:79 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5839:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5840:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5841:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5842:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5843:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5844:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5845:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5888:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5894:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5903:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5907:21 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5911:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5920:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5959:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5968:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5990:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5993:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:5997:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6000:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6011:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6020:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6042:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6045:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6049:17 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6052:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6063:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6072:19 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6086:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6101:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6106:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6111:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6116:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6151:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6156:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6161:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6199:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6206:5 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:6272:69 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6315:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\legacy\src\widgets\braven_chart.dart:6316:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:6769:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:6865:122 - deprecated_member_use
+warning - The declaration '_CrosshairPainter' isn't referenced - lib\legacy\src\widgets\braven_chart.dart:6993:7 - unused_element
+warning - A value for optional parameter 'nearestPoint' isn't ever given - lib\legacy\src\widgets\braven_chart.dart:6994:73 - unused_element_parameter
+warning - A value for optional parameter 'dataBounds' isn't ever given - lib\legacy\src\widgets\braven_chart.dart:6994:117 - unused_element_parameter
+warning - A value for optional parameter 'chartRect' isn't ever given - lib\legacy\src\widgets\braven_chart.dart:6994:134 - unused_element_parameter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:7036:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:7112:122 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\braven_chart.dart:7399:36 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\legacy\src\widgets\braven_chart.dart:7399:61 - deprecated_member_use
+   info - Angle brackets will be interpreted as HTML - lib\legacy\src\widgets\chart_scrollbar.dart:159:25 - unintended_html_in_doc_comment
+warning - The value of the local variable 'trackLength' isn't used - lib\legacy\src\widgets\chart_scrollbar.dart:513:11 - unused_local_variable
+warning - The declaration '_onJumpAnimationComplete' isn't referenced - lib\legacy\src\widgets\chart_scrollbar.dart:533:8 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:36:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:54:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:324:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:325:20 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:326:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:327:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:328:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:329:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:330:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:331:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:332:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\interactions\range_annotation_dialog.dart:333:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:149:39 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:150:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:178:40 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:179:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:249:54 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:250:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:294:54 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\legacy\src\widgets\scrollbar\scrollbar_painter.dart:295:33 - deprecated_member_use
+   info - Constructor declarations should be before non-constructor declarations - lib\src\axis\linear_scale.dart:34:3 - sort_constructors_first
+   info - Constructor declarations should be before non-constructor declarations - lib\src\axis\tick.dart:19:9 - sort_constructors_first
+   info - 'seriesColors' is deprecated and shouldn't be used. Use seriesTheme.colors instead - lib\src\braven_chart_plus.dart:886:34 - deprecated_member_use_from_same_package
+   info - 'seriesColors' is deprecated and shouldn't be used. Use seriesTheme.colors instead - lib\src\braven_chart_plus.dart:887:33 - deprecated_member_use_from_same_package
+   info - 'seriesColors' is deprecated and shouldn't be used. Use seriesTheme.colors instead - lib\src\braven_chart_plus.dart:887:86 - deprecated_member_use_from_same_package
+   info - 'axisColor' is deprecated and shouldn't be used. Use axisStyle.lineColor instead - lib\src\braven_chart_plus.dart:1053:34 - deprecated_member_use_from_same_package
+   info - 'gridColor' is deprecated and shouldn't be used. Use gridStyle.majorColor instead - lib\src\braven_chart_plus.dart:1054:34 - deprecated_member_use_from_same_package
+   info - 'textColor' is deprecated and shouldn't be used. Use typographyTheme or axisStyle.labelStyle.color instead - lib\src\braven_chart_plus.dart:1055:66 - deprecated_member_use_from_same_package
+   info - 'textColor' is deprecated and shouldn't be used. Use typographyTheme or axisStyle.labelStyle.color instead - lib\src\braven_chart_plus.dart:1056:70 - deprecated_member_use_from_same_package
+   info - 'axisColor' is deprecated and shouldn't be used. Use axisStyle.lineColor instead - lib\src\braven_chart_plus.dart:1072:34 - deprecated_member_use_from_same_package
+   info - 'gridColor' is deprecated and shouldn't be used. Use gridStyle.majorColor instead - lib\src\braven_chart_plus.dart:1073:34 - deprecated_member_use_from_same_package
+   info - 'textColor' is deprecated and shouldn't be used. Use typographyTheme or axisStyle.labelStyle.color instead - lib\src\braven_chart_plus.dart:1074:66 - deprecated_member_use_from_same_package
+   info - 'textColor' is deprecated and shouldn't be used. Use typographyTheme or axisStyle.labelStyle.color instead - lib\src\braven_chart_plus.dart:1075:70 - deprecated_member_use_from_same_package
+   info - 'strokeWidth' is deprecated and shouldn't be used. Use theme.seriesTheme instead - lib\src\braven_chart_plus.dart:1096:9 - deprecated_member_use_from_same_package
+   info - Empty catch block - lib\src\braven_chart_plus.dart:1144:21 - empty_catches
+warning - The value of the local variable 'timestamp' isn't used - lib\src\braven_chart_plus.dart:1157:11 - unused_local_variable
+warning - The value of the local variable 'startTime' isn't used - lib\src\braven_chart_plus.dart:1191:11 - unused_local_variable
+warning - The value of the local variable 'errorTime' isn't used - lib\src\braven_chart_plus.dart:1200:13 - unused_local_variable
+warning - The value of the local variable 'errorTime' isn't used - lib\src\braven_chart_plus.dart:1209:13 - unused_local_variable
+warning - The value of the local variable 'convertTime' isn't used - lib\src\braven_chart_plus.dart:1215:11 - unused_local_variable
+warning - The value of the local variable 'buildMenuTime' isn't used - lib\src\braven_chart_plus.dart:1218:11 - unused_local_variable
+warning - The value of the local variable 'isEmptyArea' isn't used - lib\src\braven_chart_plus.dart:1223:16 - unused_local_variable
+warning - The value of the local variable 'showMenuTime' isn't used - lib\src\braven_chart_plus.dart:1291:11 - unused_local_variable
+warning - The value of the local variable 'menuClosedTime' isn't used - lib\src\braven_chart_plus.dart:1300:11 - unused_local_variable
+warning - The value of the local variable 'releaseTime' isn't used - lib\src\braven_chart_plus.dart:1307:11 - unused_local_variable
+warning - The value of the local variable 'endTime' isn't used - lib\src\braven_chart_plus.dart:1315:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\braven_chart_plus.dart:2220:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\braven_chart_plus.dart:2390:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\annotation_elements.dart:140:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\annotation_elements.dart:146:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\annotation_elements.dart:167:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\annotation_elements.dart:477:43 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\elements\annotation_elements.dart:477:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\annotation_elements.dart:1024:39 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\elements\annotation_elements.dart:1024:66 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\series_element.dart:209:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\series_element.dart:272:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\series_element.dart:319:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\series_element.dart:334:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\series_element.dart:379:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_annotation.dart:232:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_annotation.dart:238:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_annotation.dart:246:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_datapoint.dart:78:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_series.dart:111:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_series.dart:112:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\elements\simulated_series.dart:134:25 - deprecated_member_use
+warning - The value of the local variable 'timestamp' isn't used - lib\src\interaction\core\coordinator.dart:163:11 - unused_local_variable
+warning - The value of the local variable 'timestamp' isn't used - lib\src\interaction\core\coordinator.dart:182:11 - unused_local_variable
+warning - The value of the local variable 'oldMode' isn't used - lib\src\interaction\core\coordinator.dart:188:11 - unused_local_variable
+warning - The value of the local variable 'notifyTime' isn't used - lib\src\interaction\core\coordinator.dart:200:11 - unused_local_variable
+warning - The value of the local variable 'endTime' isn't used - lib\src\interaction\core\coordinator.dart:203:11 - unused_local_variable
+warning - The value of the local variable 'timestamp' isn't used - lib\src\interaction\core\coordinator.dart:210:11 - unused_local_variable
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:156:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:157:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:167:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:168:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:179:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:180:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field - lib\src\interaction\core\element_data.dart:181:9 - prefer_initializing_formals
+   info - Constructor declarations should be before non-constructor declarations - lib\src\models\interaction_config.dart:371:11 - sort_constructors_first
+warning - The value of the local variable 'timestamp' isn't used - lib\src\rendering\chart_render_box.dart:1622:13 - unused_local_variable
+warning - The value of the local variable 'claimSuccess' isn't used - lib\src\rendering\chart_render_box.dart:1784:15 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:2884:85 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:2901:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:2924:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:4710:39 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\rendering\chart_render_box.dart:4710:69 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:4719:41 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\rendering\chart_render_box.dart:4719:75 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:4728:39 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\rendering\chart_render_box.dart:4728:69 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\rendering\chart_render_box.dart:4738:58 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\axis_style.dart:169:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\axis_style.dart:174:67 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\axis_style.dart:180:67 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\axis_style.dart:185:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\grid_style.dart:135:36 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\grid_style.dart:138:58 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\interaction_theme.dart:257:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\interaction_theme.dart:262:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:288:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:289:36 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:290:46 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:291:40 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:292:42 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:293:48 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:294:52 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:295:44 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\scrollbar_config.dart:299:50 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\components\series_theme.dart:189:41 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\styles\label_style.dart:103:46 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\styles\label_style.dart:104:38 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\styles\label_style.dart:108:64 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\src\theming\styles\label_style.dart:157:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\chart_legend.dart:164:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\point_annotation_dialog.dart:94:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:57:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:84:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:410:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:411:20 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:412:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:413:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:414:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:415:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:416:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:417:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:418:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\range_annotation_dialog.dart:419:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\threshold_annotation_dialog.dart:190:67 - deprecated_member_use
+warning - The value of the local variable 'result' isn't used - lib\src\widgets\dialogs\threshold_annotation_dialog.dart:444:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\dialogs\trend_annotation_dialog.dart:182:67 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\src\widgets\dialogs\trend_annotation_dialog.dart:246:25 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\src\widgets\dialogs\trend_annotation_dialog.dart:247:25 - deprecated_member_use
+   info - Angle brackets will be interpreted as HTML - lib\src\widgets\scrollbar\chart_scrollbar.dart:130:25 - unintended_html_in_doc_comment
+warning - The value of the local variable 'trackLength' isn't used - lib\src\widgets\scrollbar\chart_scrollbar.dart:484:11 - unused_local_variable
+warning - The declaration '_onJumpAnimationComplete' isn't referenced - lib\src\widgets\scrollbar\chart_scrollbar.dart:504:8 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:155:39 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:156:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:184:40 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:185:19 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:222:50 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:223:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:226:49 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:227:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:333:54 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:334:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:378:54 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\src\widgets\scrollbar\scrollbar_painter.dart:379:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:442:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\widgets\scrollbar\scrollbar_painter.dart:442:113 - deprecated_member_use
+
+283 issues found. (ran in 0.9s)
