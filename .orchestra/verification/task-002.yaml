@@ -1,0 +1,77 @@
+# Task 2 Verification Criteria
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+
+task_id: 2
+title: "Create Y-Axis Configuration Model"
+phase: "foundation"
+
+verification_checks:
+  - id: "file_exists"
+    description: "YAxisConfig class exists in correct location"
+    command: 'Test-Path "lib/src/models/y_axis_config.dart"'
+    expected: "True"
+    
+  - id: "test_file_exists"
+    description: "Test file exists"
+    command: 'Test-Path "test/unit/multi_axis/y_axis_config_test.dart"'
+    expected: "True"
+    
+  - id: "export_added"
+    description: "YAxisConfig exported from models barrel file"
+    command: 'Select-String -Path "lib/src/models/enums.dart" -Pattern "y_axis_config"'
+    expected: "Contains export statement"
+    
+  - id: "required_properties"
+    description: "All required properties present"
+    command: 'Select-String -Path "lib/src/models/y_axis_config.dart" -Pattern "(final String id|required this.id|final YAxisPosition position|required this.position|final Color\? color|final String\? label|final String\? unit|final double\? min|final double\? max)"'
+    expected: "All 9 properties found (id, position, color, label, unit, min, max, and assertions)"
+    
+  - id: "imports_y_axis_position"
+    description: "Imports YAxisPosition enum from Task 1"
+    command: 'Select-String -Path "lib/src/models/y_axis_config.dart" -Pattern "import.*y_axis_position|YAxisPosition"'
+    expected: "Uses YAxisPosition from Task 1"
+    
+  - id: "copy_with_method"
+    description: "copyWith method implemented"
+    command: 'Select-String -Path "lib/src/models/y_axis_config.dart" -Pattern "copyWith"'
+    expected: "copyWith method present"
+    
+  - id: "assertions"
+    description: "Input validation with assertions"
+    command: 'Select-String -Path "lib/src/models/y_axis_config.dart" -Pattern "assert\("'
+    expected: "Multiple assertions for validation"
+    
+  - id: "tests_pass"
+    description: "All tests pass"
+    command: "flutter test test/unit/multi_axis/y_axis_config_test.dart"
+    expected: "All tests pass"
+    
+  - id: "static_analysis"
+    description: "No static analysis issues"
+    command: "flutter analyze lib/src/models/y_axis_config.dart"
+    expected: "No issues found"
+
+adversarial_checks:
+  - id: "not_empty_copy"
+    description: "copyWith returns new instance, not self"
+    check: "Verify copyWith creates a new YAxisConfig, not 'return this'"
+    
+  - id: "equality_implemented"
+    description: "Equality operator overridden"
+    check: "Look for '==' operator override and hashCode"
+    
+  - id: "test_coverage"
+    description: "Tests cover edge cases"
+    check: "Tests include null handling, boundary values, and error cases"
+    
+  - id: "follows_existing_patterns"
+    description: "Follows AxisConfig patterns"
+    check: "Constructor style, const, assertions match lib/src/models/axis_config.dart"
+
+minimum_tests: 10
+
+notes: |
+  Task 2 builds on Task 1 (YAxisPosition enum).
+  YAxisConfig should import and use YAxisPosition, not redefine it.
+  Must follow existing patterns from lib/src/models/axis_config.dart.
+  Export should be added to enums.dart, following Task 1 pattern.
