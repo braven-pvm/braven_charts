@@ -1,61 +1,71 @@
-# Current Task: #6 - Implement Data Normalizer
+# Current Task: #7 - Implement Auto-Detection Logic
 
 ## Objective
 
-Create a utility class that normalizes data values to a 0.0-1.0 range based on axis configuration.
+Create a detector class that analyzes data series ranges and determines if normalization is needed based on configurable thresholds.
 
 ## ⚠️ TDD REQUIRED
 
 **You must write tests FIRST, then implementation.**
 
-1. Create test file: `test/unit/axis/data_normalizer_test.dart`
-2. Write at least 5 test cases covering different scenarios
+1. Create test file: `test/unit/axis/normalization_detector_test.dart`
+2. Write at least 5 test cases
 3. Run tests (they should fail initially)
-4. Create implementation: `lib/src/axis/data_normalizer.dart`
+4. Create implementation: `lib/src/axis/normalization_detector.dart`
 5. Run tests again (they should pass)
 6. Export from `lib/braven_charts.dart`
 
 ## Requirements
 
-Create `DataNormalizer` class with methods:
+Create `NormalizationDetector` class with method:
 
-### 1. `normalize(double value, double min, double max) → double`
-- Normalizes a raw value to 0.0-1.0 range
-- When value equals min, returns 0.0
-- When value equals max, returns 1.0
-- Values in between scale proportionally
+### `shouldNormalize(List<SeriesRange> ranges, {double threshold = 10.0}) → bool`
 
-### 2. `denormalize(double normalized, double min, double max) → double`
-- Converts a normalized value (0.0-1.0) back to original range
-- Inverse of normalize()
+**SeriesRange** is a simple helper class you'll also create:
+```dart
+class SeriesRange {
+  final String seriesId;
+  final double min;
+  final double max;
+  
+  double get span => max - min;
+}
+```
+
+**Detection Logic:**
+- Compare the largest range span to the smallest range span
+- If `largestSpan / smallestSpan >= threshold`, return `true` (needs normalization)
+- Otherwise return `false`
 
 ### Edge Cases to Handle
-- **Zero range**: When min equals max, all values should normalize to 0.5
-- **Values outside range**: Values below min should normalize to < 0.0, above max to > 1.0
+- **Single series**: Return `false` (nothing to compare)
+- **Empty list**: Return `false`
+- **Zero span series**: Handle gracefully (don't divide by zero)
+- **Identical ranges**: Return `false`
 
 ## Test Cases Required
 
 Your tests must cover:
-1. Value at min → 0.0
-2. Value at max → 1.0
-3. Mid-range value → 0.5 (or proportional)
-4. Zero range (min == max) → 0.5
-5. Denormalize returns original value (roundtrip)
+1. Similar ranges (within threshold) → `false`
+2. Different ranges (exceed threshold) → `true`
+3. Custom threshold is respected
+4. Single series → `false`
+5. Empty list → `false`
 
 ## File Locations
 
 ```
-lib/src/axis/data_normalizer.dart       ← implementation
-test/unit/axis/data_normalizer_test.dart ← tests (WRITE FIRST)
-lib/braven_charts.dart                   ← add export
+lib/src/axis/normalization_detector.dart  ← implementation (includes SeriesRange)
+test/unit/axis/normalization_detector_test.dart ← tests (WRITE FIRST)
+lib/braven_charts.dart                     ← add export
 ```
 
 ## Context
 
-See `task-context.md` for Phase 1 models you can use (YAxisConfig has minValue/maxValue).
+This detector will be used by the chart to automatically decide whether to apply normalization based on the `NormalizationMode.auto` setting from `MultiAxisConfig`.
 
 ## When Done
 
 1. Stage changes: `git add .`
-2. Write to `completion-signal.md`: "Task 6 complete - DataNormalizer with TDD"
+2. Write to `completion-signal.md`: "Task 7 complete - NormalizationDetector with TDD"
 3. Say "ready for review"
