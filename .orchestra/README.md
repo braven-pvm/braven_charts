@@ -53,6 +53,13 @@ except for the `handover/` subfolder.
 - **PASS**: Commit changes, update `progress.yaml`, feed next task
 - **FAIL**: Clear `completion-signal.md`, provide feedback, implementor retries
 
+### 5. Retrospective (After Each Task)
+After each task completion:
+1. Analyze what worked well and what could be improved
+2. Document findings in `RESEARCH_LOG.md` → "Per-Task Retrospectives"
+3. Add action items for process improvements
+4. Track patterns emerging across tasks
+
 ## Key Principles
 
 1. **Implementor never sees task count** - No "task 3 of 16"
@@ -177,6 +184,13 @@ When the implementor signals completion, the orchestrator follows this exact flo
 └────┬─────┘  │ Escalate    │
      │        └─────────────┘
      ▼
+┌──────────────┐
+│ Retrospective│
+│ (Document    │
+│  learnings)  │
+└──────┬───────┘
+       │
+       ▼
 ┌──────────┐
 │ Invoke   │
 │Implementor│
