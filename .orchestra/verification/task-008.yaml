@@ -1,0 +1,183 @@
+# Task 8 Verification Criteria
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+# ⚠️ INTEGRATION TASK - Extra scrutiny required
+
+task_id: 8
+title: "Integrate Normalizer with Chart Data Pipeline"
+phase: "core_normalization"
+speckit_tasks: ["T022", "T029"]
+is_integration_task: true
+
+# =============================================================================
+# INTEGRATION TASK CRITICAL WARNINGS
+# =============================================================================
+#
+# ⚠️ THIS IS AN INTEGRATION TASK - EXTRA VERIFICATION REQUIRED
+#
+# FAILURE MODE TO PREVENT: Implementor creates NEW files instead of
+# modifying EXISTING files. This causes "parallel implementation" where
+# the new code is never actually called.
+#
+# MUST VERIFY:
+# 1. Existing files are MODIFIED, not just new files created
+# 2. New code is actually CALLED from existing code paths
+# 3. Tests prove integration by testing through existing entry points
+#
+# =============================================================================
+
+# =============================================================================
+# STANDARD VERIFICATION CHECKS (MANDATORY - DO NOT REMOVE)
+# =============================================================================
+
+standard_checks:
+  # --- Linting (BLOCKING) ---
+  - id: "static_analysis_implementation"
+    description: "No static analysis issues in implementation"
+    command: "flutter analyze lib/src/rendering/chart_render_box.dart lib/src/braven_chart_plus.dart"
+    expected: "No issues found"
+    blocking: true
+    
+  - id: "static_analysis_tests"
+    description: "No static analysis issues in tests"
+    command: "flutter analyze test/unit/multi_axis/ test/integration/multi_axis_*.dart"
+    expected: "No issues found"
+    blocking: true
+
+  # --- Task Tests (BLOCKING) ---
+  - id: "task_integration_tests_pass"
+    description: "Pipeline integration tests pass"
+    command: "flutter test test/integration/multi_axis_pipeline_integration_test.dart"
+    expected: "All tests passed"
+    blocking: true
+
+  # --- Sprint Regression Tests (BLOCKING) ---
+  - id: "sprint_unit_tests_pass"
+    description: "All sprint unit tests still pass"
+    command: "flutter test test/unit/multi_axis/"
+    expected: "All tests passed"
+    blocking: true
+    
+  - id: "sprint_integration_tests_pass"
+    description: "All sprint integration tests pass"
+    command: "flutter test test/integration/multi_axis_*.dart"
+    expected: "All tests passed"
+    blocking: true
+
+# =============================================================================
+# INTEGRATION-SPECIFIC VERIFICATION (CRITICAL FOR THIS TASK)
+# =============================================================================
+
+integration_checks:
+  - id: "chart_render_box_modified"
+    description: "chart_render_box.dart has been modified (not just new file created)"
+    check: "Git diff shows changes to lib/src/rendering/chart_render_box.dart"
+    blocking: true
+    
+  - id: "braven_chart_plus_modified"
+    description: "braven_chart_plus.dart has been modified (not just new file created)"
+    check: "Git diff shows changes to lib/src/braven_chart_plus.dart"
+    blocking: true
+    
+  - id: "normalizer_import_added"
+    description: "MultiAxisNormalizer is imported in chart_render_box.dart"
+    check: "grep 'import.*multi_axis_normalizer' lib/src/rendering/chart_render_box.dart"
+    blocking: true
+    
+  - id: "detector_import_added"
+    description: "NormalizationDetector is imported in braven_chart_plus.dart"
+    check: "grep 'import.*normalization_detector' lib/src/braven_chart_plus.dart"
+    blocking: true
+    
+  - id: "normalizer_called"
+    description: "MultiAxisNormalizer methods are actually called in render flow"
+    check: "grep -E 'MultiAxisNormalizer\\.(normalize|computeAxisBounds)' lib/src/rendering/chart_render_box.dart"
+    blocking: true
+    
+  - id: "detector_called"
+    description: "NormalizationDetector methods are actually called in widget initialization"
+    check: "grep -E 'NormalizationDetector\\.(shouldNormalize|getMaxRatio)' lib/src/braven_chart_plus.dart"
+    blocking: true
+
+# =============================================================================
+# TASK-SPECIFIC VERIFICATION CHECKS
+# =============================================================================
+
+verification_checks:
+  - id: "test_file_exists"
+    description: "Integration test file created"
+    command: "test -f test/integration/multi_axis_pipeline_integration_test.dart"
+    expected: "File exists"
+    
+  - id: "tests_use_braven_chart_plus"
+    description: "Tests exercise integration through BravenChartPlus widget"
+    check: "Tests create BravenChartPlus instances with multi-series data"
+    
+  - id: "tests_verify_normalization_applied"
+    description: "Tests verify normalization is actually applied to rendered output"
+    check: "Tests check that series with 10x+ range difference are normalized"
+    
+  - id: "tests_verify_auto_detection"
+    description: "Tests verify auto-detection triggers normalization mode"
+    check: "Tests verify shouldNormalize() result affects chart behavior"
+
+# =============================================================================
+# ADVERSARIAL CHECKS - PREVENTING COMMON FAILURES
+# =============================================================================
+
+adversarial_checks:
+  - id: "no_unused_imports"
+    description: "New imports are not just added but actually used"
+    check: "Static analysis shows no unused imports"
+    
+  - id: "no_dead_code"
+    description: "New code paths are reachable from existing entry points"
+    check: "Integration tests exercise the new code paths"
+    
+  - id: "backward_compatibility"
+    description: "Single-series charts still work without normalization"
+    check: "Existing chart tests still pass unchanged"
+    
+  - id: "no_parallel_implementation"
+    description: "New code is wired into existing flow, not parallel"
+    check: "Removing new code would cause tests to fail"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+minimum_tests: 10  # Pipeline integration tests
+
+notes: |
+  ⚠️ CRITICAL INTEGRATION TASK
+  
+  This task connects Tasks 6 & 7 work (normalizer + detector) into the 
+  actual chart rendering pipeline. Common failure mode is creating isolated
+  code that is never called.
+  
+  MUST MODIFY EXISTING FILES:
+  - lib/src/rendering/chart_render_box.dart (NOT a new chart_painter.dart!)
+  - lib/src/braven_chart_plus.dart (path is lib/src/ not lib/src/widgets/)
+  
+  Note: SpecKit T022 references chart_painter.dart which doesn't exist.
+  The actual rendering happens in chart_render_box.dart (4879 lines).
+  
+  Key integration points in chart_render_box.dart:
+  - Series Y-value processing before rendering
+  - Tooltip value display (denormalization needed)
+  - Crosshair coordinate calculations
+  
+  Key integration points in braven_chart_plus.dart:
+  - Chart initialization with series data
+  - Auto-detection to decide normalization mode
+  - Configuration propagation to render box
+
+# =============================================================================
+# VERIFICATION EXECUTION ORDER
+# =============================================================================
+# 
+# 1. FIRST: Verify files were actually modified (integration_checks)
+# 2. Run standard_checks (linting + tests)
+# 3. Run verification_checks (task-specific)
+# 4. Run adversarial_checks (prevent common failures)
+# 5. Check test count meets minimum_tests (10+)
+# 6. Only if ALL pass, mark task as verified
