@@ -1,7 +1,7 @@
 # Orchestra Progress Tracker
 # ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
 
-current_task_id: 9
+current_task_id: 10
 current_phase: "rendering"
 
 phase_completions:
@@ -93,11 +93,28 @@ task_history:
     verification_notes: "CRITICAL SUCCESS! Modified existing 7000+ line file. DataNormalizer called in _dataToPixel(). 9 integration tests. Backward compatible."
     commit: "80784cb"
 
+  - task_id: 9
+    title: "Create Multi-Axis Painter"
+    started: "2025-11-28"
+    completed: "2025-11-28"
+    verification_attempts: 1
+    verification_status: "passed"
+    verification_notes: "First attempt pass. 17 tests (required: 4). RESEARCH FINDING: Screenshot requirement was misplaced - can't screenshot a class. Task-Verification Alignment Rule documented."
+    commit: "8c696f6"
+    design_error_logged: true
+
 verification_stats:
-  tasks_attempted: 8
-  tasks_passed: 8
+  tasks_attempted: 9
+  tasks_passed: 9
   tasks_failed: 0
   tasks_reworked: 1
+
+design_errors_found:
+  - task_id: 9
+    error_type: "task_verification_scope_mismatch"
+    description: "Screenshot requirement on capability-building task (can't screenshot a class)"
+    resolution: "Moved visual verification to Task 10 (integration task)"
+    lesson: "Every verification criterion MUST be satisfiable by the task's explicit deliverables alone"
 
 notes: |
   This sprint is a re-attempt of 011-multi-axis-normalization using
@@ -105,3 +122,6 @@ notes: |
   
   Previous attempt: 56 tasks "completed", zero functionality.
   This attempt: 16 focused tasks with verification between each.
+  
+  CRITICAL FINDING (Task 9): Task-Verification Alignment Rule identified.
+  Mismatched verification criteria create loopholes for implementation theater.
