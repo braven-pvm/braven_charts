@@ -1,0 +1,72 @@
+# Task 5 Verification Criteria
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+
+task_id: 5
+title: "Create Multi-Axis Configuration Container"
+phase: "foundation"
+
+verification_checks:
+  - id: "file_exists"
+    description: "MultiAxisConfig class exists in correct location"
+    command: 'Test-Path "lib/src/models/multi_axis_config.dart"'
+    expected: "True"
+    
+  - id: "test_file_exists"
+    description: "Test file exists"
+    command: 'Test-Path "test/unit/multi_axis/multi_axis_config_test.dart"'
+    expected: "True"
+    
+  - id: "export_added"
+    description: "MultiAxisConfig exported from models barrel file"
+    command: 'Select-String -Path "lib/src/models/enums.dart" -Pattern "multi_axis_config"'
+    expected: "Contains export statement"
+    
+  - id: "imports_previous_tasks"
+    description: "Imports all previous task outputs"
+    command: 'Select-String -Path "lib/src/models/multi_axis_config.dart" -Pattern "(y_axis_config|series_axis_binding|normalization_mode)"'
+    expected: "All 3 imports found"
+    
+  - id: "required_properties"
+    description: "Required properties present"
+    command: 'Select-String -Path "lib/src/models/multi_axis_config.dart" -Pattern "(final List<YAxisConfig> axes|final List<SeriesAxisBinding> bindings|final NormalizationMode mode)"'
+    expected: "All 3 properties found"
+    
+  - id: "helper_methods"
+    description: "Helper methods present"
+    command: 'Select-String -Path "lib/src/models/multi_axis_config.dart" -Pattern "(getAxisById|getAxisForSeries|getBindingsForAxis)"'
+    expected: "Helper methods found"
+    
+  - id: "const_constructor"
+    description: "Has const constructor"
+    command: 'Select-String -Path "lib/src/models/multi_axis_config.dart" -Pattern "const MultiAxisConfig"'
+    expected: "const constructor present"
+    
+  - id: "tests_pass"
+    description: "All tests pass"
+    command: "flutter test test/unit/multi_axis/multi_axis_config_test.dart"
+    expected: "All tests pass"
+    
+  - id: "static_analysis"
+    description: "No static analysis issues"
+    command: "flutter analyze lib/src/models/multi_axis_config.dart"
+    expected: "No issues found"
+
+adversarial_checks:
+  - id: "uses_previous_types"
+    description: "Uses YAxisConfig, SeriesAxisBinding, NormalizationMode from Tasks 1-4"
+    check: "Does NOT redefine these types"
+    
+  - id: "helper_methods_work"
+    description: "Helper methods return correct results"
+    check: "Tests cover getAxisById, getAxisForSeries edge cases"
+
+minimum_tests: 15
+
+notes: |
+  Task 5 brings together all foundation pieces:
+  - YAxisConfig (Task 2) - List of axis configurations
+  - SeriesAxisBinding (Task 3) - List of series-axis bindings
+  - NormalizationMode (Task 4) - Mode controlling when to normalize
+  
+  This is the container that will be passed to the chart widget.
+  Helper methods make it easy to look up axes and bindings.
