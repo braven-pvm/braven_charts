@@ -16,6 +16,7 @@ except for the `handover/` subfolder.
 │   ├── task-002.yaml
 │   └── ...
 ├── handover/               # Communication channel (VISIBLE to implementor)
+│   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
 │   ├── current-task.md     # Current task for implementor
 │   ├── task-context.md     # Background context
 │   └── completion-signal.md # Implementor signals done here
@@ -28,14 +29,19 @@ except for the `handover/` subfolder.
 ### 1. Feed Task (Human/Orchestrator)
 - Copy task details from `manifest.yaml` to `handover/current-task.md`
 - Update `progress.yaml` with start time
-- Tell implementor: "Read `.orchestra/handover/current-task.md` and complete it"
+- Tell implementor: **"Read `.orchestra/handover/AGENT_README.md` and complete your task"**
+
+> **IMPORTANT**: Always direct implementor to `AGENT_README.md` first, not `current-task.md`.
+> This ensures consistent onboarding whether it's the same agent continuing or a new agent after handover.
 
 ### 2. Implementor Works
-- Reads `current-task.md` and `task-context.md`
+- Reads `AGENT_README.md` (workflow instructions)
+- Reads `current-task.md` (specific task)
+- Reads `task-context.md` (background)
 - Implements the task
 - Stages changes
 - Writes to `completion-signal.md`
-- Says "Task complete - ready for review"
+- Says "ready for review"
 
 ### 3. Verify (Human or Verifier Agent)
 - Read `verification/task-XXX.yaml` for this task
@@ -55,6 +61,130 @@ except for the `handover/` subfolder.
 4. **Integration tasks get extra scrutiny** - Must modify existing files
 5. **Visual tasks require screenshots** - Can't fake images
 
+---
+
+## Orchestrator Verification Flow (Detailed)
+
+When the implementor signals completion, the orchestrator follows this exact flow:
+
+### Step 1: Verify Task
+```
+1. Read `.orchestra/verification/task-XXX.yaml`
+2. Execute each verification command from the yaml
+3. Check all adversarial conditions
+4. Capture screenshots if required
+5. Record results (PASS/FAIL for each check)
+```
+
+### Step 2: Handle Result
+
+**If ALL checks PASS:**
+```
+1. Stage and commit all changes:
+   git add -A
+   git commit -m "feat(multi-axis): <descriptive message> (Task N)"
+   
+2. Push to remote:
+   git push
+
+3. Update `.orchestra/progress.yaml`:
+   - Set task status to 'completed'
+   - Record commit hash
+   - Record completion timestamp
+   - Add verification notes
+
+4. Proceed to Step 3 (Prepare Next Task)
+```
+
+**If ANY check FAILS:**
+```
+1. Clear `.orchestra/handover/completion-signal.md`
+
+2. Create failure report in `completion-signal.md`:
+   ## Verification Failed
+   
+   **Failed Checks:**
+   - [Check name]: [Reason]
+   
+   **Attempt:** N of 3
+   
+   **Required Actions:**
+   - [Specific fix needed]
+
+3. Update `.orchestra/progress.yaml`:
+   - Increment fail_count
+   - Record failure timestamp
+   - Add failure notes
+
+4. Tell implementor: "Verification failed. Read completion-signal.md for feedback."
+
+5. If fail_count >= 3:
+   - Escalate to human
+   - Do NOT proceed with task
+```
+
+### Step 3: Prepare Next Task
+```
+1. Read `.orchestra/manifest.yaml` for next task details
+2. Analyze codebase for relevant context
+3. Create `.orchestra/verification/task-XXX.yaml` with hidden criteria
+4. Update `.orchestra/handover/current-task.md` with:
+   - Task requirements (translated from spec)
+   - Technical context (discovered from codebase)
+   - TDD requirements (test file location, what to test)
+   - Acceptance criteria (what "done" looks like)
+5. Clear `.orchestra/handover/completion-signal.md`
+6. Invoke implementor: "Read `.orchestra/handover/AGENT_README.md` and complete your task"
+```
+
+### Flow Diagram
+```
+┌─────────────────┐
+│  Implementor    │
+│  Signals Done   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Run Hidden     │
+│  Verification   │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐  ┌───────┐
+│ PASS  │  │ FAIL  │
+└───┬───┘  └───┬───┘
+    │          │
+    ▼          ▼
+┌─────────┐ ┌─────────────┐
+│ Commit  │ │ Fail Report │
+│ & Push  │ │ fail_count++│
+└────┬────┘ └──────┬──────┘
+     │             │
+     ▼             │
+┌──────────┐       │
+│ Update   │       │
+│ Progress │       │
+└────┬─────┘       │
+     │             │
+     ▼             │
+┌──────────┐       │
+│ Prepare  │       ▼
+│ Next     │  ┌─────────────┐
+│ Task     │  │ Retry or    │
+└────┬─────┘  │ Escalate    │
+     │        └─────────────┘
+     ▼
+┌──────────┐
+│ Invoke   │
+│Implementor│
+└──────────┘
+```
+
+---
+
 ## Anti-Patterns to Watch For
 
 - [ ] Tests that only check `findsOneWidget`
@@ -62,3 +192,52 @@ except for the `handover/` subfolder.
 - [ ] Config classes that aren't used anywhere
 - [ ] "Verification passed" without running commands
 - [ ] Same commit message as task title (lazy completion)
+
+---
+
+## Visual/Integration Tasks
+
+For tasks requiring screenshots or running Flutter app interaction:
+
+### Flutter Agent Controller
+
+Located at `tools/flutter_agent/flutter_agent.py` - enables running Flutter in a separate process with file-based IPC.
+
+**When to include in task instructions**:
+- Task requires screenshot verification
+- Task requires visual confirmation of rendering
+- Task requires hot reload testing
+- Task involves integration testing with running app
+
+**Orchestrator must add to `current-task.md`** for visual tasks:
+
+```markdown
+## Screenshot Required
+
+Use the Flutter Agent Controller to capture screenshots:
+
+1. Start Flutter in separate window:
+   ```powershell
+   Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+     "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/main.dart -d chrome"
+   ```
+
+2. Wait for app ready:
+   ```powershell
+   cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'
+   python ..\tools\flutter_agent\flutter_agent.py wait --timeout 60
+   ```
+
+3. Take screenshot:
+   ```powershell
+   python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-XXX.png
+   ```
+
+4. Stop when done:
+   ```powershell
+   python ..\tools\flutter_agent\flutter_agent.py stop
+   ```
+```
+
+**Full documentation**: `tools/flutter_agent/README.md` and `tools/flutter_agent/FLUTTER_AGENT_GUIDE.md`
+

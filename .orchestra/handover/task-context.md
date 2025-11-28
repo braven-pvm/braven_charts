@@ -1,104 +1,72 @@
-# Phase 2 Context - Normalization Phase
+# Task Context: Multi-Axis Normalization Sprint
 
-## What Phase 1 Built
+## What We're Building
 
-Phase 1 (Foundation) created all the data models you'll need. All exports are in `lib/braven_charts.dart`.
+A multi-axis normalization feature for BravenChartPlus that allows displaying multiple data series with vastly different Y-ranges on the same chart. Each series gets its own Y-axis showing original values.
 
-### Available Models
+**Example use case**: Display Power (0-300W) and Tidal Volume (0.5-4L) on the same chart, each using full vertical space.
 
-**1. YAxisPosition enum** (`lib/src/axis/y_axis_position.dart`)
-- Values: `outerLeft`, `left`, `right`, `outerRight`
-- Used to specify where a Y-axis renders
+## Current Codebase Structure
 
-**2. YAxisConfig class** (`lib/src/axis/y_axis_config.dart`)
-- Properties: `id`, `position`, `color`, `label`, `unitSuffix`, `minValue`, `maxValue`
-- Has `copyWith()`, equality operators, `toString()`
+```
+lib/src/
+├── models/
+│   ├── enums.dart          ← Barrel exports, add new exports here
+│   ├── chart_series.dart   ← Will be modified later
+│   └── ...
+├── axis/
+│   ├── axis.dart           ← Axis barrel file
+│   └── ...
+├── widgets/
+│   └── braven_chart_plus.dart  ← Main chart widget
+└── ...
 
-**3. SeriesAxisBinding class** (`lib/src/axis/series_axis_binding.dart`)  
-- Properties: `seriesId`, `axisId`
-- Links a data series to a specific Y-axis
+test/unit/
+├── models/
+├── axis/
+└── multi_axis/             ← Create this for new tests
+```
 
-**4. NormalizationMode enum** (`lib/src/axis/normalization_mode.dart`)
-- Values: `none`, `auto`, `always`
-- Controls when normalization should be applied
+## Existing Patterns to Follow
 
-**5. MultiAxisConfig class** (`lib/src/axis/multi_axis_config.dart`)
-- Container that holds: `axes` list, `bindings` list, `mode`, `autoDetectionThreshold`
-- Has helper methods: `getAxisById(String id)`, `getAxisForSeries(String seriesId)`
-
-### Import Pattern
+### Enum Style (from `lib/src/models/enums.dart`)
 
 ```dart
-import 'package:braven_charts/braven_charts.dart';
+/// Description of what the enum represents.
+///
+/// More details about usage.
+enum ExampleEnum {
+  /// Description of this value.
+  valueOne,
+
+  /// Description of this value.
+  valueTwo,
+}
 ```
 
-All models are exported from the barrel file.
+### Test Style
 
----
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:braven_charts/src/models/example.dart';
 
-## Feature Being Built
-
-Multi-axis normalization for charts - allowing multiple data series with vastly different Y-ranges to be displayed together, each using the full chart height.
-
-**Example use case**: A sports scientist displaying Power (0-300W), Heart Rate (60-200bpm), and Tidal Volume (0.5-4.0L) on the same chart. Without normalization, smaller ranges appear as flat lines.
-
----
-
-## Phase 2 Requirements
-
-Phase 2 implements the actual normalization logic. Your tasks will require:
-
-1. **Test-Driven Development (TDD)** - Write tests first
-2. Using the models from Phase 1
-3. Creating new files in `lib/src/axis/` and `test/unit/axis/`
-
-### Directory Structure
-
-```
-lib/src/axis/
-├── y_axis_position.dart      ✅ exists
-├── y_axis_config.dart        ✅ exists  
-├── series_axis_binding.dart  ✅ exists
-├── normalization_mode.dart   ✅ exists
-├── multi_axis_config.dart    ✅ exists
-└── data_normalizer.dart      ← Phase 2 creates
-
-test/unit/axis/
-└── data_normalizer_test.dart ← Phase 2 creates
+void main() {
+  group('ExampleEnum', () {
+    test('has expected values', () {
+      expect(ExampleEnum.values.length, equals(2));
+    });
+  });
+}
 ```
 
----
+## Sprint Goal
 
-## Workflow
+Enable charts to:
+1. Display multiple Y-axes (up to 4)
+2. Normalize each series independently
+3. Show original values on each axis
+4. Auto-detect when normalization is needed
 
-1. Read your current task in `.orchestra/handover/current-task.md`
-2. Implement the task (TDD: write tests first, then implementation)
-3. Stage your changes with `git add`
-4. Write to `completion-signal.md` that you're ready for review
-5. Say "ready for review"
+## Your Role
 
-I'll verify and either approve (commit) or provide feedback.
-
----
-
-## Quality Pattern Established in Phase 1
-
-All Phase 1 models followed this pattern:
-- Single responsibility
-- Immutable where appropriate  
-- Full documentation with `///` comments
-- `copyWith()` method
-- Equality operators (`==` and `hashCode`)
-- Descriptive `toString()`
-- Exported from barrel file
-
-Please maintain this quality standard.
-
----
-
-## Related Files (for reference)
-
-- `lib/src/charts/` - chart data models
-- `lib/src/painters/` - rendering logic  
-- `lib/src/widgets/` - chart widgets
-- `lib/braven_charts.dart` - main export barrel
+You're implementing one task at a time. Focus only on the current task in `current-task.md`. Don't look ahead or try to anticipate future tasks.

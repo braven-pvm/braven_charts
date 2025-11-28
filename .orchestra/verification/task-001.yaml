@@ -2,35 +2,55 @@
 # ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
 
 task_id: 1
-title: "Create Y-Axis Position Enum"
+title: "Create YAxisPosition Enum"
+phase: "foundation"
 
 verification_criteria:
   structural:
-    - file_exists: "lib/src/axis/y_axis_position.dart"
-    - exports_from: "lib/braven_charts.dart"
+    - file_exists: "lib/src/models/y_axis_position.dart"
+    - test_exists: "test/unit/multi_axis/y_axis_position_test.dart"
+    - export_added: "lib/src/models/enums.dart contains export"
     
   functional:
-    - enum_values: ["leftOuter", "left", "right", "rightOuter"]
-    - compile_check: "dart analyze lib/src/axis/y_axis_position.dart"
-    
-  integration:
-    - can_import: "import 'package:braven_charts/braven_charts.dart'; YAxisPosition.left;"
+    - has_values: ["outerLeft", "left", "right", "outerRight"]
+    - value_order: "outerLeft, left, right, outerRight (screen layout order)"
+    - doc_comments: "Enum and each value has /// documentation"
+
+  test_requirements:
+    - min_test_count: 5
+    - must_test:
+      - "enum has exactly 4 values"
+      - "values exist (outerLeft, left, right, outerRight)"
+      - "values are in correct order"
 
 verification_commands:
   - description: "File exists"
-    command: "Test-Path lib/src/axis/y_axis_position.dart"
+    command: "Test-Path 'lib/src/models/y_axis_position.dart'"
     expected: "True"
     
-  - description: "Contains all positions"
-    command: "Select-String -Path lib/src/axis/y_axis_position.dart -Pattern 'leftOuter|left|right|rightOuter' | Measure-Object | Select-Object -ExpandProperty Count"
+  - description: "Test file exists"
+    command: "Test-Path 'test/unit/multi_axis/y_axis_position_test.dart'"
+    expected: "True"
+    
+  - description: "Export added to enums.dart"
+    command: "Select-String -Path 'lib/src/models/enums.dart' -Pattern 'y_axis_position'"
+    expected: "match found"
+    
+  - description: "Has all 4 enum values"
+    command: "Select-String -Path 'lib/src/models/y_axis_position.dart' -Pattern 'outerLeft|left|right|outerRight' | Measure-Object | Select-Object -ExpandProperty Count"
     expected: "4"
     
-  - description: "Compiles without error"
-    command: "dart analyze lib/src/axis/y_axis_position.dart --fatal-infos"
-    expected: "exit code 0"
+  - description: "Tests pass"
+    command: "flutter test test/unit/multi_axis/y_axis_position_test.dart"
+    expected: "All tests passed"
+    
+  - description: "Static analysis clean"
+    command: "flutter analyze lib/src/models/y_axis_position.dart"
+    expected: "No issues found"
 
 failure_indicators:
-  - "File not created"
-  - "Missing enum values"
-  - "Not exported from main barrel"
-  - "Compilation errors"
+  - "Missing export from barrel file"
+  - "Wrong enum value names (e.g., leftOuter instead of outerLeft)"
+  - "Missing documentation comments"
+  - "Tests don't actually assert enum values"
+  - "Test file created but empty or trivial"

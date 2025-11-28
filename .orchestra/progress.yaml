@@ -1,127 +1,25 @@
 # Orchestra Progress Tracker
 # ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
 
-current_task_id: 10
-current_phase: "rendering"
+sprint: "011-multi-axis-normalization"
+started: "2025-11-28"
+status: "in_progress"
+note: "Reset after repository restructure (lib/src_plus → lib/src)"
 
-phase_completions:
-  foundation:
-    completed: "2025-11-28"
-    tasks_completed: 5
-    first_attempt_passes: 4
-    reworks: 1
-    agent: "Agent A"
-    notes: "Clean foundation. All models created with consistent quality pattern."
-  normalization:
-    completed: "2025-11-28"
-    tasks_completed: 3
-    first_attempt_passes: 3
-    reworks: 0
-    agent: "Agent B"
-    notes: "TDD followed with excellent test coverage. Critical integration (Task 8) passed first attempt!"
+current_task_id: 1
+current_phase: "foundation"
 
-task_history:
-  - task_id: 1
-    title: "Create Y-Axis Position Enum"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 2
-    verification_status: "passed"
-    verification_notes: "First attempt: missing export, naming deviation. Second attempt: fixed both, updated spec."
-    commit: "1ddfd81"
-    
-  - task_id: 2
-    title: "Create Y-Axis Configuration Model"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. Exceeded requirements with copyWith, equality, toString."
-    commit: "02ae190"
-    
-  - task_id: 3
-    title: "Create Series-Axis Binding Model"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. Consistent quality pattern with previous tasks."
-    commit: "437300b"
-    
-  - task_id: 4
-    title: "Create Normalization Mode Enum"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. Clear documentation for each mode."
-    commit: "6c7b3b9"
-    
-  - task_id: 5
-    title: "Create Multi-Axis Configuration Container"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. Excellent helper methods and documentation."
-    commit: "1452947"
+phase_completions: {}
 
-  - task_id: 6
-    title: "Implement Data Normalizer"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. TDD followed with 18 tests (required: 5). Excellent coverage."
-    commit: "66ef570"
-
-  - task_id: 7
-    title: "Implement Auto-Detection Logic"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. TDD with 17 tests. SeriesRange helper + shouldNormalize detection."
-    commit: "e701697"
-
-  - task_id: 8
-    title: "Integrate Normalizer with Chart Pipeline"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "CRITICAL SUCCESS! Modified existing 7000+ line file. DataNormalizer called in _dataToPixel(). 9 integration tests. Backward compatible."
-    commit: "80784cb"
-
-  - task_id: 9
-    title: "Create Multi-Axis Painter"
-    started: "2025-11-28"
-    completed: "2025-11-28"
-    verification_attempts: 1
-    verification_status: "passed"
-    verification_notes: "First attempt pass. 17 tests (required: 4). RESEARCH FINDING: Screenshot requirement was misplaced - can't screenshot a class. Task-Verification Alignment Rule documented."
-    commit: "8c696f6"
-    design_error_logged: true
+task_history: []
 
 verification_stats:
-  tasks_attempted: 9
-  tasks_passed: 9
+  tasks_attempted: 0
+  tasks_passed: 0
   tasks_failed: 0
-  tasks_reworked: 1
-
-design_errors_found:
-  - task_id: 9
-    error_type: "task_verification_scope_mismatch"
-    description: "Screenshot requirement on capability-building task (can't screenshot a class)"
-    resolution: "Moved visual verification to Task 10 (integration task)"
-    lesson: "Every verification criterion MUST be satisfiable by the task's explicit deliverables alone"
+  tasks_reworked: 0
 
 notes: |
-  This sprint is a re-attempt of 011-multi-axis-normalization using
-  the orchestrator pattern to prevent implementation theater.
-  
-  Previous attempt: 56 tasks "completed", zero functionality.
-  This attempt: 16 focused tasks with verification between each.
-  
-  CRITICAL FINDING (Task 9): Task-Verification Alignment Rule identified.
-  Mismatched verification criteria create loopholes for implementation theater.
+  Sprint reset after codebase restructure.
+  Previous sprint work was against lib/src_plus/ which no longer exists.
+  Starting fresh with correct lib/src/ paths.
