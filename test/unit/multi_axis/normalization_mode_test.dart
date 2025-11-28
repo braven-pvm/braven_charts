@@ -7,9 +7,9 @@ void main() {
       expect(NormalizationMode.values.length, equals(3));
     });
 
-    test('contains disabled value', () {
+    test('contains none value', () {
       expect(
-        NormalizationMode.values.contains(NormalizationMode.disabled),
+        NormalizationMode.values.contains(NormalizationMode.none),
         isTrue,
       );
     });
@@ -21,48 +21,48 @@ void main() {
       );
     });
 
-    test('contains always value', () {
+    test('contains perSeries value', () {
       expect(
-        NormalizationMode.values.contains(NormalizationMode.always),
+        NormalizationMode.values.contains(NormalizationMode.perSeries),
         isTrue,
       );
     });
 
     group('order', () {
-      test('disabled is first (index 0)', () {
-        expect(NormalizationMode.disabled.index, equals(0));
+      test('none is first (index 0)', () {
+        expect(NormalizationMode.none.index, equals(0));
       });
 
       test('auto is second (index 1)', () {
         expect(NormalizationMode.auto.index, equals(1));
       });
 
-      test('always is third (index 2)', () {
-        expect(NormalizationMode.always.index, equals(2));
+      test('perSeries is third (index 2)', () {
+        expect(NormalizationMode.perSeries.index, equals(2));
       });
 
       test('values are in correct order', () {
         expect(
             NormalizationMode.values,
             equals([
-              NormalizationMode.disabled,
+              NormalizationMode.none,
               NormalizationMode.auto,
-              NormalizationMode.always,
+              NormalizationMode.perSeries,
             ]));
       });
     });
 
     group('names', () {
-      test('disabled has correct name', () {
-        expect(NormalizationMode.disabled.name, equals('disabled'));
+      test('none has correct name', () {
+        expect(NormalizationMode.none.name, equals('none'));
       });
 
       test('auto has correct name', () {
         expect(NormalizationMode.auto.name, equals('auto'));
       });
 
-      test('always has correct name', () {
-        expect(NormalizationMode.always.name, equals('always'));
+      test('perSeries has correct name', () {
+        expect(NormalizationMode.perSeries.name, equals('perSeries'));
       });
     });
   });

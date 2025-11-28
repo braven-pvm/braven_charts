@@ -4,7 +4,7 @@
 /// CustomPainter for rendering multiple Y-axes on a chart.
 ///
 /// Renders Y-axes at positions defined by [YAxisConfig], with support for:
-/// - Four axis positions (outerLeft, left, right, outerRight)
+/// - Four axis positions (leftOuter, left, right, rightOuter)
 /// - Per-axis colors for visual identification
 /// - Tick marks with formatted labels
 /// - Optional axis labels and unit suffixes
@@ -98,7 +98,7 @@ class MultiAxisPainter extends CustomPainter {
 
     // Draw ticks and labels
     final ticks = getTickValues(axis);
-    final isLeftSide = axis.position == YAxisPosition.left || axis.position == YAxisPosition.outerLeft;
+    final isLeftSide = axis.position == YAxisPosition.left || axis.position == YAxisPosition.leftOuter;
 
     for (final tickValue in ticks) {
       final normalizedY = _normalizeValue(tickValue, axis);
@@ -183,13 +183,13 @@ class MultiAxisPainter extends CustomPainter {
   /// Returns the X coordinate for an axis at the given position.
   double getAxisX(YAxisPosition position) {
     switch (position) {
-      case YAxisPosition.outerLeft:
+      case YAxisPosition.leftOuter:
         return chartRect.left - axisWidth - axisWidth / 2;
       case YAxisPosition.left:
         return chartRect.left - axisWidth / 2;
       case YAxisPosition.right:
         return chartRect.right + axisWidth / 2;
-      case YAxisPosition.outerRight:
+      case YAxisPosition.rightOuter:
         return chartRect.right + axisWidth + axisWidth / 2;
     }
   }

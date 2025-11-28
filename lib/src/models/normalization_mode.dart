@@ -7,24 +7,24 @@
 /// Example use case: Display Power (0-300W) and Heart Rate (60-180bpm) on
 /// the same chart, each using the full height of the chart area.
 enum NormalizationMode {
-  /// Never normalize data.
+  /// No normalization - use global Y bounds.
   ///
-  /// The chart behaves as a traditional single-axis chart. All series
-  /// share the same Y-axis scale, which may cause series with smaller
-  /// ranges to appear flat.
-  disabled,
+  /// All series share a single Y-axis with min/max computed from
+  /// all series combined. This is the current/legacy behavior.
+  none,
 
-  /// Automatically detect when normalization is needed.
+  /// Automatic detection based on range ratios.
   ///
-  /// Normalization is applied when data ranges differ significantly
-  /// (e.g., when one series range is more than 10x larger than another).
+  /// System analyzes series Y-ranges and enables multi-axis normalization
+  /// when ranges differ by more than the threshold (default: 10x).
   /// This is the recommended default for most use cases.
   auto,
 
-  /// Always normalize, regardless of data ranges.
+  /// Always normalize each series independently.
   ///
-  /// Each series is independently normalized to use the full vertical
-  /// space, even if the data ranges are similar. Use this when you
-  /// always want consistent visual treatment across series.
-  always,
+  /// Each series is normalized to use the full vertical plot height,
+  /// regardless of how similar the ranges are. Use this when you want
+  /// separate Y-axes for conceptually different metrics even if they
+  /// happen to have similar numeric ranges.
+  perSeries,
 }

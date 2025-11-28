@@ -51,12 +51,12 @@ void main() {
           ),
           const YAxisConfig(
             id: 'cadence',
-            position: YAxisPosition.outerLeft,
+            position: YAxisPosition.leftOuter,
             color: Color(0xFF4CAF50),
           ),
           const YAxisConfig(
             id: 'speed',
-            position: YAxisPosition.outerRight,
+            position: YAxisPosition.rightOuter,
             color: Color(0xFFFF9800),
           ),
         ];
@@ -116,11 +116,11 @@ void main() {
         expect(position, greaterThanOrEqualTo(350));
       });
 
-      test('calculates outerLeft axis position correctly', () {
+      test('calculates LeftOuter axis position correctly', () {
         final axes = [
           const YAxisConfig(
             id: 'cadence',
-            position: YAxisPosition.outerLeft,
+            position: YAxisPosition.leftOuter,
           ),
         ];
 
@@ -130,16 +130,16 @@ void main() {
         );
 
         final leftPosition = painter.getAxisX(YAxisPosition.left);
-        final outerLeftPosition = painter.getAxisX(YAxisPosition.outerLeft);
-        // OuterLeft should be further left than left
-        expect(outerLeftPosition, lessThan(leftPosition));
+        final leftOuterPosition = painter.getAxisX(YAxisPosition.leftOuter);
+        // LeftOuter should be further left than left
+        expect(leftOuterPosition, lessThan(leftPosition));
       });
 
-      test('calculates outerRight axis position correctly', () {
+      test('calculates RightOuter axis position correctly', () {
         final axes = [
           const YAxisConfig(
             id: 'speed',
-            position: YAxisPosition.outerRight,
+            position: YAxisPosition.rightOuter,
           ),
         ];
 
@@ -149,9 +149,9 @@ void main() {
         );
 
         final rightPosition = painter.getAxisX(YAxisPosition.right);
-        final outerRightPosition = painter.getAxisX(YAxisPosition.outerRight);
-        // OuterRight should be further right than right
-        expect(outerRightPosition, greaterThan(rightPosition));
+        final rightOuterPosition = painter.getAxisX(YAxisPosition.rightOuter);
+        // RightOuter should be further right than right
+        expect(rightOuterPosition, greaterThan(rightPosition));
       });
     });
 

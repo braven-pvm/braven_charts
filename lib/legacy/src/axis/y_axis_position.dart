@@ -4,10 +4,10 @@
 /// sides of the chart. This enum specifies where each axis should be rendered.
 ///
 /// Axis ordering from left to right:
-/// - [outerLeft] - Furthest left position (outside the left axis)
+/// - [leftOuter] - Furthest left position (outside the left axis)
 /// - [left] - Standard left position (primary left axis)
 /// - [right] - Standard right position (primary right axis)
-/// - [outerRight] - Furthest right position (outside the right axis)
+/// - [rightOuter] - Furthest right position (outside the right axis)
 ///
 /// Example:
 /// ```dart
@@ -18,7 +18,7 @@ enum YAxisPosition {
   ///
   /// Use this for secondary data that should be visually separated
   /// from the primary left axis.
-  outerLeft,
+  leftOuter,
 
   /// Standard left position for the primary left Y-axis.
   ///
@@ -34,5 +34,5 @@ enum YAxisPosition {
   ///
   /// Use this for secondary data that should be visually separated
   /// from the primary right axis.
-  outerRight,
+  rightOuter,
 }

@@ -31,5 +31,5 @@ enum NormalizationMode {
   /// regardless of whether their ranges are similar. Use this when you
   /// always want separate Y-axes for visual comparison of trends rather
   /// than absolute values.
-  always,
+  perSeries,
 }

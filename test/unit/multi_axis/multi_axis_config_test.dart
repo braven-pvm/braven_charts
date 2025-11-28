@@ -29,23 +29,23 @@ void main() {
         final config = MultiAxisConfig(
           axes: axes,
           bindings: bindings,
-          mode: NormalizationMode.always,
+          mode: NormalizationMode.perSeries,
         );
 
         expect(config.axes.length, equals(2));
         expect(config.bindings.length, equals(2));
-        expect(config.mode, equals(NormalizationMode.always));
+        expect(config.mode, equals(NormalizationMode.perSeries));
       });
 
       test('is const-constructible with empty lists', () {
         const config = MultiAxisConfig(
           axes: [],
           bindings: [],
-          mode: NormalizationMode.disabled,
+          mode: NormalizationMode.none,
         );
 
         expect(config.axes, isEmpty);
-        expect(config.mode, equals(NormalizationMode.disabled));
+        expect(config.mode, equals(NormalizationMode.none));
       });
     });
 
@@ -75,7 +75,7 @@ void main() {
           axes: [
             YAxisConfig(id: 'power', position: YAxisPosition.left),
             YAxisConfig(id: 'hr', position: YAxisPosition.right),
-            YAxisConfig(id: 'cadence', position: YAxisPosition.outerRight),
+            YAxisConfig(id: 'cadence', position: YAxisPosition.rightOuter),
           ],
         );
 
@@ -217,10 +217,10 @@ void main() {
         );
 
         final modified = original.copyWith(
-          mode: NormalizationMode.always,
+          mode: NormalizationMode.perSeries,
         );
 
-        expect(modified.mode, equals(NormalizationMode.always));
+        expect(modified.mode, equals(NormalizationMode.perSeries));
         expect(modified.axes.length, equals(1)); // Unchanged
         expect(modified.bindings.length, equals(1)); // Unchanged
       });
@@ -234,17 +234,17 @@ void main() {
           bindings: [
             const SeriesAxisBinding(seriesId: 'p', yAxisId: 'power'),
           ],
-          mode: NormalizationMode.disabled,
+          mode: NormalizationMode.none,
         );
 
         final modified = original.copyWith(
-          axes: [YAxisConfig(id: 'new-axis', position: YAxisPosition.outerLeft)],
+          axes: [YAxisConfig(id: 'new-axis', position: YAxisPosition.leftOuter)],
         );
 
         expect(modified.axes.length, equals(1));
         expect(modified.axes.first.id, equals('new-axis'));
         expect(modified.bindings.length, equals(1)); // Preserved
-        expect(modified.mode, equals(NormalizationMode.disabled)); // Preserved
+        expect(modified.mode, equals(NormalizationMode.none)); // Preserved
       });
 
       test('returns new instance', () {
@@ -277,7 +277,7 @@ void main() {
 
       test('different mode is not equal', () {
         const config1 = MultiAxisConfig(mode: NormalizationMode.auto);
-        const config2 = MultiAxisConfig(mode: NormalizationMode.always);
+        const config2 = MultiAxisConfig(mode: NormalizationMode.perSeries);
 
         expect(config1, isNot(equals(config2)));
       });
