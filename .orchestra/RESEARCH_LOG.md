@@ -451,6 +451,102 @@ All three lead to problems:
 - During task design, apply the Task-Verification Alignment Rule to every criterion
 - Automated check: Does each verification reference only files/outputs listed in task deliverables?
 
+### 5. Visual Verification Gap (CRITICAL - Task 10)
+
+**Issue**: Agent cannot autonomously verify screenshot contents from file paths.
+
+**What happened**:
+- Task 10 required screenshot verification
+- Agent verified file EXISTS: `Test-Path "screenshots/task-010-multi-axis-integration.png"` → True
+- Agent did NOT verify file CONTENTS match criteria
+- Human had to attach image for actual visual verification
+
+**Technical constraints discovered**:
+
+| Method | Result |
+|--------|--------|
+| `read_file` on PNG | ❌ FAILS - "File seems to be binary" |
+| `open_simple_browser` with file:// | ❌ FAILS - "Only HTTP/HTTPS supported" |
+| Image attached by user | ✅ WORKS - Can analyze image content |
+| Image served via HTTP/HTTPS | ✅ WORKS (theoretically) |
+
+**Why this matters**:
+
+"Screenshot exists" ≠ "Screenshot is correct"
+
+An implementor could:
+1. Create an empty/wrong image file
+2. Pass file existence check
+3. Claim visual verification complete
+4. Orchestrator accepts without seeing actual content
+
+This is another loophole for implementation theater.
+
+**Potential solutions** (MUST FIND ONE):
+
+1. **Human-in-loop** (current)
+   - User attaches screenshot to chat
+   - Agent analyzes attached image
+   - Pros: Works now, reliable
+   - Cons: Not autonomous, requires human availability
+
+2. **Local HTTP server**
+   - Start simple HTTP server: `python -m http.server 8000`
+   - Serve screenshots folder
+   - Agent fetches via `http://localhost:8000/screenshot.png`
+   - Pros: Could be automated
+   - Cons: Requires server setup, port management
+
+3. **Flutter Golden Tests**
+   - Use `flutter test --update-goldens` for reference images
+   - Compare rendered output against known-good baseline
+   - Pros: Fully automated, no AI vision needed
+   - Cons: Requires golden file management, brittle to minor changes
+
+4. **Base64 encoding**
+   - Convert image to base64 text: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("image.png"))`
+   - Agent could potentially process base64 (untested)
+   - Cons: May not work, large output
+
+5. **Upload to temporary hosting**
+   - Push to GitHub, use raw URL
+   - Or use image hosting service
+   - Pros: Works with current tools
+   - Cons: Adds external dependency, latency
+
+6. **Chrome DevTools MCP**
+   - Already have browser tools available
+   - Could navigate to file:// URL in browser, take snapshot
+   - Need to test if this works for local files
+
+**Action required**: Test solutions 2, 4, and 6 to find autonomous visual verification path.
+
+**SOLUTION FOUND - Chrome DevTools MCP** ✅
+
+Tested and working workflow:
+```powershell
+# 1. Open local file in browser via MCP
+mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
+
+# 2. Take screenshot through DevTools (returns image to agent)
+mcp_chrome-devtoo_take_screenshot()
+
+# 3. Agent receives image and can analyze content!
+```
+
+**Verified**: Agent successfully loaded `task-010-multi-axis-integration.png` via file:// URL,
+took a screenshot through DevTools, and received the image for analysis. Full visual content
+was visible and analyzable (axes, colors, labels, data series all verifiable).
+
+**Status**: ✅ SOLVED - Autonomous visual verification is possible via Chrome DevTools MCP.
+
+**Implementation for future tasks**:
+1. Implementor saves screenshot to known path
+2. Orchestrator uses `mcp_chrome-devtoo_new_page` with file:// URL
+3. Orchestrator uses `mcp_chrome-devtoo_take_screenshot` to capture
+4. Orchestrator analyzes returned image against verification criteria
+5. No human-in-loop required for visual verification!
+
 ---
 
 ## Open Questions
