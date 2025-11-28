@@ -1,71 +1,89 @@
-# Current Task: #7 - Implement Auto-Detection Logic
+# Current Task: #8 - Integrate Normalizer with Chart Data Pipeline
 
 ## Objective
 
-Create a detector class that analyzes data series ranges and determines if normalization is needed based on configurable thresholds.
+Wire up the `DataNormalizer` and `NormalizationDetector` so that multi-axis normalization actually works when rendering charts.
 
-## ⚠️ TDD REQUIRED
+## ⚠️ THIS IS AN INTEGRATION TASK
 
-**You must write tests FIRST, then implementation.**
+**You MUST modify EXISTING files.** Creating only new files is NOT acceptable.
 
-1. Create test file: `test/unit/axis/normalization_detector_test.dart`
-2. Write at least 5 test cases
-3. Run tests (they should fail initially)
-4. Create implementation: `lib/src/axis/normalization_detector.dart`
-5. Run tests again (they should pass)
-6. Export from `lib/braven_charts.dart`
+The goal is: when a chart has series with vastly different Y-ranges (e.g., Power 0-300W and Tidal Volume 0.5-4.0L), both series should render using the full chart height.
 
-## Requirements
+## Current State
 
-Create `NormalizationDetector` class with method:
+We have built:
+- `DataNormalizer` - normalizes values to 0.0-1.0 range
+- `NormalizationDetector` - detects when ranges differ enough to need normalization
+- `MultiAxisConfig` - configuration container with axes, bindings, mode
 
-### `shouldNormalize(List<SeriesRange> ranges, {double threshold = 10.0}) → bool`
+But they're not connected to anything yet.
 
-**SeriesRange** is a simple helper class you'll also create:
+## What Needs to Happen
+
+1. **Accept multi-axis config** - The chart widget/painter needs to accept `MultiAxisConfig`
+2. **Detect when to normalize** - Use `NormalizationDetector` with the series ranges
+3. **Normalize during rendering** - When drawing series, normalize Y values to 0.0-1.0
+4. **Preserve original values** - Original Y values must still be available for tooltips/labels
+
+## Key Files to Modify
+
+Look at these existing files (modify them, don't just create new ones):
+- `lib/src/widgets/braven_chart.dart` - Main chart widget, contains `_BravenChartPainter`
+- `lib/src/foundation/data_models/chart_series.dart` - Has `yRange` property
+
+## Integration Points
+
+The painter has methods like `_drawLineSeries`, `_drawAreaSeries`, etc. that convert data points to pixel positions. The normalization should happen during this conversion.
+
+**Before normalization:**
 ```dart
-class SeriesRange {
-  final String seriesId;
-  final double min;
-  final double max;
-  
-  double get span => max - min;
-}
+final yPixel = chartRect.bottom - (point.y - minY) / (maxY - minY) * chartRect.height;
 ```
 
-**Detection Logic:**
-- Compare the largest range span to the smallest range span
-- If `largestSpan / smallestSpan >= threshold`, return `true` (needs normalization)
-- Otherwise return `false`
-
-### Edge Cases to Handle
-- **Single series**: Return `false` (nothing to compare)
-- **Empty list**: Return `false`
-- **Zero span series**: Handle gracefully (don't divide by zero)
-- **Identical ranges**: Return `false`
-
-## Test Cases Required
-
-Your tests must cover:
-1. Similar ranges (within threshold) → `false`
-2. Different ranges (exceed threshold) → `true`
-3. Custom threshold is respected
-4. Single series → `false`
-5. Empty list → `false`
-
-## File Locations
-
-```
-lib/src/axis/normalization_detector.dart  ← implementation (includes SeriesRange)
-test/unit/axis/normalization_detector_test.dart ← tests (WRITE FIRST)
-lib/braven_charts.dart                     ← add export
+**After normalization (conceptual):**
+```dart
+final normalizedY = DataNormalizer.normalize(point.y, seriesMinY, seriesMaxY);
+final yPixel = chartRect.bottom - normalizedY * chartRect.height;
 ```
 
-## Context
+## Success Criteria
 
-This detector will be used by the chart to automatically decide whether to apply normalization based on the `NormalizationMode.auto` setting from `MultiAxisConfig`.
+When complete, the following should work:
+
+```dart
+BravenChart(
+  series: [
+    ChartSeries(id: 'power', points: [...]),     // Y range: 0-300
+    ChartSeries(id: 'tidal', points: [...]),     // Y range: 0.5-4.0
+  ],
+  multiAxisConfig: MultiAxisConfig(
+    axes: [
+      YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
+      YAxisConfig(id: 'tidal-axis', position: YAxisPosition.right),
+    ],
+    bindings: [
+      SeriesAxisBinding(seriesId: 'power', axisId: 'power-axis'),
+      SeriesAxisBinding(seriesId: 'tidal', axisId: 'tidal-axis'),
+    ],
+    mode: NormalizationMode.always,
+  ),
+)
+```
+
+Both series should use the full chart height, not just power dominating while tidal is a flat line.
+
+## Verification
+
+The orchestrator will check:
+1. Existing files are modified (git diff shows changes to existing lib/src files)
+2. `DataNormalizer` is imported and called in the rendering pipeline
+3. Static analysis passes
 
 ## When Done
 
 1. Stage changes: `git add .`
-2. Write to `completion-signal.md`: "Task 7 complete - NormalizationDetector with TDD"
+2. Write to `completion-signal.md` with:
+   - List of files modified
+   - Brief description of changes
 3. Say "ready for review"
