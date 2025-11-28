@@ -1,63 +1,61 @@
-# Current Task
+# Current Task: #6 - Implement Data Normalizer
 
 ## Objective
 
-Create the container class that holds all multi-axis configuration together.
+Create a utility class that normalizes data values to a 0.0-1.0 range based on axis configuration.
 
-This is the "master config" that users will pass to the chart. It combines all the pieces we've built: axis configs, series bindings, and normalization mode.
+## ⚠️ TDD REQUIRED
+
+**You must write tests FIRST, then implementation.**
+
+1. Create test file: `test/unit/axis/data_normalizer_test.dart`
+2. Write at least 5 test cases covering different scenarios
+3. Run tests (they should fail initially)
+4. Create implementation: `lib/src/axis/data_normalizer.dart`
+5. Run tests again (they should pass)
+6. Export from `lib/braven_charts.dart`
+
+## Requirements
+
+Create `DataNormalizer` class with methods:
+
+### 1. `normalize(double value, double min, double max) → double`
+- Normalizes a raw value to 0.0-1.0 range
+- When value equals min, returns 0.0
+- When value equals max, returns 1.0
+- Values in between scale proportionally
+
+### 2. `denormalize(double normalized, double min, double max) → double`
+- Converts a normalized value (0.0-1.0) back to original range
+- Inverse of normalize()
+
+### Edge Cases to Handle
+- **Zero range**: When min equals max, all values should normalize to 0.5
+- **Values outside range**: Values below min should normalize to < 0.0, above max to > 1.0
+
+## Test Cases Required
+
+Your tests must cover:
+1. Value at min → 0.0
+2. Value at max → 1.0
+3. Mid-range value → 0.5 (or proportional)
+4. Zero range (min == max) → 0.5
+5. Denormalize returns original value (roundtrip)
+
+## File Locations
+
+```
+lib/src/axis/data_normalizer.dart       ← implementation
+test/unit/axis/data_normalizer_test.dart ← tests (WRITE FIRST)
+lib/braven_charts.dart                   ← add export
+```
 
 ## Context
 
-We have built:
-- `YAxisPosition` - where axes render (outerLeft, left, right, outerRight)
-- `YAxisConfig` - individual axis configuration (id, position, color, label, etc.)
-- `SeriesAxisBinding` - maps series to axes
-- `NormalizationMode` - when to normalize (none, auto, always)
-
-Now we need a container that holds:
-- List of axis configurations
-- List of series-to-axis bindings  
-- The normalization mode
-- Auto-detection threshold (for `auto` mode)
-
-## Required Properties
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| axes | List<YAxisConfig> | Yes | All Y-axis configurations |
-| bindings | List<SeriesAxisBinding> | Yes | Series-to-axis mappings |
-| mode | NormalizationMode | No | Defaults to `auto` |
-| autoDetectionThreshold | double | No | Range ratio to trigger auto (default: 10.0) |
-
-## Success Demonstration
-
-When complete, provide:
-
-1. The file path where the class was created
-2. Code snippet showing full usage:
-   ```dart
-   final config = MultiAxisConfig(
-     axes: [
-       YAxisConfig(id: 'power', position: YAxisPosition.left, color: Colors.blue),
-       YAxisConfig(id: 'hr', position: YAxisPosition.right, color: Colors.red),
-     ],
-     bindings: [
-       SeriesAxisBinding(seriesId: 'power-data', axisId: 'power'),
-       SeriesAxisBinding(seriesId: 'hr-data', axisId: 'hr'),
-     ],
-     mode: NormalizationMode.auto,
-   );
-   ```
-3. Confirmation that it imports and uses all previous models
-4. Confirmation that `dart analyze` passes
-
-## Location
-
-Create in: `lib/src/axis/multi_axis_config.dart`
-Export from: `lib/braven_charts.dart`
+See `task-context.md` for Phase 1 models you can use (YAxisConfig has minValue/maxValue).
 
 ## When Done
 
-1. Stage your changes: `git add .`
-2. Update `completion-signal.md` with your demonstration
-3. Say "Task complete - ready for review"
+1. Stage changes: `git add .`
+2. Write to `completion-signal.md`: "Task 6 complete - DataNormalizer with TDD"
+3. Say "ready for review"
