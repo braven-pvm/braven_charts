@@ -1,71 +1,148 @@
-# Current Task: Create YAxisPosition Enum
+# Current Task: Create YAxisConfig Model
 
 ## Objective
 
-Create a `YAxisPosition` enum that defines the four positions where Y-axes can appear in a multi-axis chart.
+Create the `YAxisConfig` class - a configuration model for individual Y-axes in multi-axis charts.
 
 ## Context
 
-Multi-axis charts can display up to 4 Y-axes simultaneously. Each axis needs a position:
-- Two on the left side of the chart (outer and inner)
-- Two on the right side of the chart (inner and outer)
-
-Layout order from left to right:
-```
-[outerLeft] [left] | Chart Area | [right] [outerRight]
-```
+Each Y-axis in a multi-axis chart needs configuration for:
+- **Identity**: Unique ID for series binding
+- **Position**: Where it appears (using `YAxisPosition` from Task 1)
+- **Appearance**: Color, labels, visibility
+- **Bounds**: Optional explicit min/max values
+- **Formatting**: Unit suffix, custom label formatter
 
 ## What to Create
 
-### 1. Enum File
+### 1. Config Class File
 
-**Path**: `lib/src/models/y_axis_position.dart`
+**Path**: `lib/src/models/y_axis_config.dart`
 
-Create an enum with these values (in this exact order):
-- `outerLeft` - Leftmost position
-- `left` - Inner left (primary/default position)
-- `right` - Inner right
-- `outerRight` - Rightmost position
+#### Required Properties (in constructor)
 
-**Requirements**:
-- Add `///` documentation comment on the enum explaining its purpose
-- Add `///` documentation comment on each value explaining when to use it
-- Follow the pattern in `lib/src/models/enums.dart` for style reference
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `id` | `String` | Yes | - | Unique identifier for axis binding |
+| `position` | `YAxisPosition` | Yes | - | Physical position (from Task 1) |
+| `color` | `Color?` | No | `null` | Axis color; null = use first bound series color |
+| `label` | `String?` | No | `null` | Axis label (e.g., "Power", "Heart Rate") |
+| `unit` | `String?` | No | `null` | Unit suffix for labels (e.g., "W", "bpm") |
+| `min` | `double?` | No | `null` | Explicit minimum; null = compute from data |
+| `max` | `double?` | No | `null` | Explicit maximum; null = compute from data |
+| `showTicks` | `bool` | No | `true` | Whether to show tick marks |
+| `showAxisLine` | `bool` | No | `true` | Whether to show the axis line |
+| `showLabels` | `bool` | No | `true` | Whether to show tick labels |
+| `minWidth` | `double` | No | `40.0` | Minimum axis width in pixels |
+| `maxWidth` | `double` | No | `80.0` | Maximum axis width in pixels |
+| `tickCount` | `int?` | No | `null` | Preferred tick count; null = auto-compute |
+| `labelFormatter` | `String Function(double)?` | No | `null` | Custom label formatting |
+
+#### Validation Rules (as assertions)
+
+```dart
+assert(id.isNotEmpty, 'id must be non-empty');
+assert(minWidth > 0, 'minWidth must be positive');
+assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth');
+assert(min == null || max == null || min < max, 'min must be less than max');
+assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
+```
+
+#### Required Methods
+
+1. **copyWith**: Create modified copy with any properties changed
+2. **== operator**: Value equality based on all properties
+3. **hashCode**: Consistent with equality
+
+#### Import Requirements
+
+```dart
+import 'dart:ui' show Color;
+import 'y_axis_position.dart';  // From Task 1 - DO NOT REDEFINE
+```
 
 ### 2. Test File (TDD - Create First!)
 
-**Path**: `test/unit/multi_axis/y_axis_position_test.dart`
+**Path**: `test/unit/multi_axis/y_axis_config_test.dart`
 
-Write tests BEFORE implementing the enum. Tests should verify:
-- Enum has exactly 4 values
-- All expected values exist
-- Values are in correct order (matches layout order)
-- Enum names are correct strings
+Write tests BEFORE implementing. Test groups should cover:
+
+1. **Construction**
+   - Creates with required parameters only
+   - Creates with all parameters
+   - Default values are correct
+
+2. **Validation**
+   - Empty id throws assertion error
+   - minWidth <= 0 throws
+   - maxWidth < minWidth throws
+   - min >= max throws
+   - tickCount == 1 throws
+
+3. **copyWith**
+   - Returns new instance (not same reference)
+   - Changes specified values
+   - Preserves unchanged values
+   - Works with null values
+
+4. **Equality**
+   - Same values = equal
+   - Different values = not equal
+   - hashCode consistent with equality
 
 ### 3. Export
 
 **File to modify**: `lib/src/models/enums.dart`
 
-Add an export at the end of the file:
+Add export after the existing y_axis_position export:
 ```dart
-export 'y_axis_position.dart';
+export 'y_axis_config.dart';
 ```
+
+## Reference Pattern
+
+Study `lib/src/models/axis_config.dart` for:
+- Constructor style (`const`, `required`, defaults)
+- Documentation comment format
+- copyWith implementation pattern
+- Equality implementation pattern
 
 ## Execution Order (TDD)
 
-1. Create test directory: `test/unit/multi_axis/`
-2. Create test file with failing tests
-3. Run tests → should fail (enum doesn't exist)
-4. Create enum implementation
-5. Run tests → should pass
-6. Add export to `enums.dart`
-7. Run `flutter analyze` on the new file
+1. Create test file with failing tests
+2. Run tests → should fail (class doesn't exist)
+3. Create class implementation
+4. Run tests → should pass
+5. Add export to `enums.dart`
+6. Run `flutter analyze lib/src/models/y_axis_config.dart`
+
+## Example Usage (for context only)
+
+```dart
+final powerAxis = YAxisConfig(
+  id: 'power',
+  position: YAxisPosition.left,
+  color: Colors.blue,
+  label: 'Power',
+  unit: 'W',
+  min: 0,
+  max: 400,
+);
+
+final hrAxis = YAxisConfig(
+  id: 'heartrate',
+  position: YAxisPosition.right,
+  color: Colors.red,
+  label: 'Heart Rate',
+  unit: 'bpm',
+);
+```
 
 ## When Done
 
 1. Stage your changes: `git add .`
 2. Write to `.orchestra/handover/completion-signal.md`:
    - List files created/modified
-   - Confirm tests pass
-   - Note any decisions made
+   - Confirm all tests pass
+   - Note any implementation decisions
 3. Say "Task complete - ready for review"
