@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
 
 /// Benchmark for ChartDataPoint creation performance.
 ///

@@ -2,7 +2,7 @@
 // Feature: 004-theming-system
 // Phase 3: Theme Builder (T029)
 
-import 'package:braven_charts/src/theming/builder/chart_theme_builder.dart';
+import 'package:braven_charts/legacy/src/theming/builder/chart_theme_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

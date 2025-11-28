@@ -13,7 +13,7 @@
 /// All rendering is stateless - state is passed via constructor.
 library;
 
-import 'package:flutter/rendering.dart';
+import 'package:flutter/material.dart';
 
 import '../../theming/components/scrollbar_config.dart';
 import 'hit_test_zone.dart';
@@ -81,9 +81,15 @@ class ScrollbarPainter extends CustomPainter {
     _paintTrack(canvas, trackRect);
     _paintHandle(canvas, handleRect);
 
+    // Always paint edge zones to make them visible (not just on hover)
+    _paintEdgeZones(canvas, handleRect);
+
     if (config.showGripIndicator) {
       _paintGripIndicator(canvas, handleRect);
     }
+
+    // Always paint edge grips for zoom affordance
+    _paintEdgeGrips(canvas, handleRect);
   }
 
   /// Calculates track bounding rectangle based on orientation.
@@ -199,6 +205,84 @@ class ScrollbarPainter extends CustomPainter {
         state.hoverZone == HitTestZone.bottomEdge) {
       _paintEdgeHighlight(canvas, handleRect);
     }
+  }
+
+  /// Paints edge zones with default distinct color (always visible).
+  ///
+  /// Renders both left/right (or top/bottom) edge zones with edgeZoneColor
+  /// to provide permanent visual indication of zoom affordance.
+  void _paintEdgeZones(Canvas canvas, Rect handleRect) {
+    final Color effectiveEdgeColor;
+
+    // Use hover color if hovering over edge, otherwise use default edge zone color
+    if (state.hoverZone == HitTestZone.leftEdge ||
+        state.hoverZone == HitTestZone.rightEdge ||
+        state.hoverZone == HitTestZone.topEdge ||
+        state.hoverZone == HitTestZone.bottomEdge) {
+      effectiveEdgeColor = config.edgeHoverColor.withOpacity(
+        config.edgeHoverColor.opacity * opacity,
+      );
+    } else {
+      effectiveEdgeColor = config.edgeZoneColor.withOpacity(
+        config.edgeZoneColor.opacity * opacity,
+      );
+    }
+
+    final edgePaint = Paint()
+      ..color = effectiveEdgeColor
+      ..style = PaintingStyle.fill;
+
+    // Paint left/top edge zone
+    final Rect leftTopEdgeRect;
+    if (isHorizontal) {
+      leftTopEdgeRect = Rect.fromLTWH(
+        handleRect.left,
+        handleRect.top,
+        config.edgeGripWidth,
+        handleRect.height,
+      );
+    } else {
+      leftTopEdgeRect = Rect.fromLTWH(
+        handleRect.left,
+        handleRect.top,
+        handleRect.width,
+        config.edgeGripWidth,
+      );
+    }
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        leftTopEdgeRect,
+        Radius.circular(config.borderRadius),
+      ),
+      edgePaint,
+    );
+
+    // Paint right/bottom edge zone
+    final Rect rightBottomEdgeRect;
+    if (isHorizontal) {
+      rightBottomEdgeRect = Rect.fromLTWH(
+        handleRect.right - config.edgeGripWidth,
+        handleRect.top,
+        config.edgeGripWidth,
+        handleRect.height,
+      );
+    } else {
+      rightBottomEdgeRect = Rect.fromLTWH(
+        handleRect.left,
+        handleRect.bottom - config.edgeGripWidth,
+        handleRect.width,
+        config.edgeGripWidth,
+      );
+    }
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        rightBottomEdgeRect,
+        Radius.circular(config.borderRadius),
+      ),
+      edgePaint,
+    );
   }
 
   /// Paints edge zone highlight overlay when hovering over resize edges.
@@ -335,6 +419,88 @@ class ScrollbarPainter extends CustomPainter {
 
       for (int i = 0; i < lineCount; i++) {
         final offsetY = centerY - totalGripSize / 2.0 + i * lineSpacing;
+        canvas.drawLine(
+          Offset(lineLeft, offsetY),
+          Offset(lineRight, offsetY),
+          gripPaint,
+        );
+      }
+    }
+  }
+
+  /// Renders grip indicators on edge zones for zoom affordance.
+  ///
+  /// Paints 2 lines on each edge zone to indicate they are draggable for zoom.
+  /// Always visible to provide permanent affordance.
+  void _paintEdgeGrips(Canvas canvas, Rect handleRect) {
+    // Use appropriate color: white when hovering (over blue), darker grey when not hovering
+    final bool isHoveringEdge = state.hoverZone == HitTestZone.leftEdge ||
+        state.hoverZone == HitTestZone.rightEdge ||
+        state.hoverZone == HitTestZone.topEdge ||
+        state.hoverZone == HitTestZone.bottomEdge;
+
+    final effectiveColor = isHoveringEdge ? Colors.white.withOpacity(0.8 * opacity) : config.gripIndicatorColor.withOpacity(0.5 * opacity);
+
+    final gripPaint = Paint()
+      ..color = effectiveColor
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const lineCount = 2; // Fewer lines for edges to fit in edgeGripWidth zone
+    const lineSpacing = 2.0;
+    final lineLength = isHorizontal
+        ? config.thickness * 0.4 // Slightly shorter for edges
+        : config.thickness * 0.4;
+
+    if (isHorizontal) {
+      // Horizontal scrollbar: vertical lines on left and right edges
+      final centerY = handleRect.top + handleRect.height / 2.0;
+      final lineTop = centerY - lineLength / 2.0;
+      final lineBottom = centerY + lineLength / 2.0;
+
+      // Always draw left edge grips
+      final leftEdgeCenter = handleRect.left + config.edgeGripWidth / 2.0;
+      for (int i = 0; i < lineCount; i++) {
+        final offsetX = leftEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        canvas.drawLine(
+          Offset(offsetX, lineTop),
+          Offset(offsetX, lineBottom),
+          gripPaint,
+        );
+      }
+
+      // Always draw right edge grips
+      final rightEdgeCenter = handleRect.right - config.edgeGripWidth / 2.0;
+      for (int i = 0; i < lineCount; i++) {
+        final offsetX = rightEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        canvas.drawLine(
+          Offset(offsetX, lineTop),
+          Offset(offsetX, lineBottom),
+          gripPaint,
+        );
+      }
+    } else {
+      // Vertical scrollbar: horizontal lines on top and bottom edges
+      final centerX = handleRect.left + handleRect.width / 2.0;
+      final lineLeft = centerX - lineLength / 2.0;
+      final lineRight = centerX + lineLength / 2.0;
+
+      // Always draw top edge grips
+      final topEdgeCenter = handleRect.top + config.edgeGripWidth / 2.0;
+      for (int i = 0; i < lineCount; i++) {
+        final offsetY = topEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        canvas.drawLine(
+          Offset(lineLeft, offsetY),
+          Offset(lineRight, offsetY),
+          gripPaint,
+        );
+      }
+
+      // Always draw bottom edge grips
+      final bottomEdgeCenter = handleRect.bottom - config.edgeGripWidth / 2.0;
+      for (int i = 0; i < lineCount; i++) {
+        final offsetY = bottomEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
         canvas.drawLine(
           Offset(lineLeft, offsetY),
           Offset(lineRight, offsetY),

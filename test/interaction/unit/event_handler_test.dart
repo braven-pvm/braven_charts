@@ -3,8 +3,8 @@
 // Task: T018
 // Status: Tests should now PASS with implementation
 
-import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
-import 'package:braven_charts/src/interaction/event_handler.dart';
+import 'package:braven_charts/legacy/src/coordinates/coordinate_transformer.dart';
+import 'package:braven_charts/legacy/src/interaction/event_handler.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

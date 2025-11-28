@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-// import 'package:braven_charts/src/widgets/scrollbar/scrollbar_controller.dart';
+// import 'package:braven_charts/legacy/src/widgets/scrollbar/scrollbar_controller.dart';
 
 /// Contract test for ScrollbarController.dataRangeToHandle() forward transform
 ///

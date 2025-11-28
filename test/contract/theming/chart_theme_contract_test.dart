@@ -7,13 +7,13 @@
 
 // Import will fail initially - this is expected for TDD
 // ignore: unused_import
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/components/animation_theme.dart';
-import 'package:braven_charts/src/theming/components/axis_style.dart';
-import 'package:braven_charts/src/theming/components/grid_style.dart';
-import 'package:braven_charts/src/theming/components/interaction_theme.dart';
-import 'package:braven_charts/src/theming/components/series_theme.dart';
-import 'package:braven_charts/src/theming/components/typography_theme.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/animation_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/axis_style.dart';
+import 'package:braven_charts/legacy/src/theming/components/grid_style.dart';
+import 'package:braven_charts/legacy/src/theming/components/interaction_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/series_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/typography_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

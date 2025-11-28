@@ -1,7 +1,7 @@
 /// Tests for theme versioning.
 library;
 
-import 'package:braven_charts/src/theming/utilities/theme_version.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/theme_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

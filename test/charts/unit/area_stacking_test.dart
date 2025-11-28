@@ -6,8 +6,8 @@ library;
 
 import 'dart:ui' show Offset;
 
-import 'package:braven_charts/src/charts/area/area_chart_config.dart';
-import 'package:braven_charts/src/charts/area/area_stacking.dart';
+import 'package:braven_charts/legacy/src/charts/area/area_chart_config.dart';
+import 'package:braven_charts/legacy/src/charts/area/area_stacking.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

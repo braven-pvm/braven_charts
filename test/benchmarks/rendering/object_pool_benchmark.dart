@@ -29,7 +29,7 @@ library;
 import 'dart:collection' show Queue;
 import 'dart:ui' show Paint, Path, Color, PaintingStyle;
 
-import 'package:braven_charts/src/foundation/foundation.dart' show ObjectPool;
+import 'package:braven_charts/legacy/src/foundation/foundation.dart' show ObjectPool;
 import 'package:flutter/rendering.dart'
     show TextPainter, TextSpan, TextDirection;
 import 'package:flutter_test/flutter_test.dart';

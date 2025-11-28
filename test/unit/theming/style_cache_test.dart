@@ -2,7 +2,7 @@
 // Feature: 004-theming-system
 // Phase 4: Utilities (T032)
 
-import 'package:braven_charts/src/theming/utilities/style_cache.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/style_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

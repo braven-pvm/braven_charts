@@ -26,9 +26,9 @@ library;
 
 import 'dart:ui' show Rect;
 
-import 'package:braven_charts/src/foundation/foundation.dart'
+import 'package:braven_charts/legacy/src/foundation/foundation.dart'
     show ViewportCuller;
-import 'package:braven_charts/src/rendering/layers/data_series_layer.dart'
+import 'package:braven_charts/legacy/src/rendering/layers/data_series_layer.dart'
     show ChartDataPoint;
 import 'package:flutter_test/flutter_test.dart';
 

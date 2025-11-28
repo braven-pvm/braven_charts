@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // Import from package root to validate public API
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Validates the public API surface of the Foundation layer

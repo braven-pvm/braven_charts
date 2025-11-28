@@ -7,13 +7,13 @@
 // - Performance: <1ms monitoring overhead, ±0.5ms timing accuracy (NFR-001, FR-004)
 // - Accuracy: 100% jank detection (>16ms threshold), pool statistics tracking
 
-import 'package:braven_charts/src/foundation/foundation.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/performance_metrics.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
-import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_metrics.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/render_layer.dart';
+import 'package:braven_charts/legacy/src/rendering/render_pipeline.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

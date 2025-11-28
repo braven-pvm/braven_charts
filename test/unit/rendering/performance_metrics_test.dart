@@ -6,7 +6,7 @@
 // - TDD: Tests written after implementation (unit tests validate correctness)
 // - Coverage: All validation rules and computed getters tested
 
-import 'package:braven_charts/src/rendering/performance_metrics.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_metrics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

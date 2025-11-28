@@ -3,13 +3,13 @@ library;
 
 import 'dart:ui';
 
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
-import 'package:braven_charts/src/foundation/performance/viewport_culler.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/components/typography_theme.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/viewport_culler.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/typography_theme.dart';
 import 'package:flutter/material.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 

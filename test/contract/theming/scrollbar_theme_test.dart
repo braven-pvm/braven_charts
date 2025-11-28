@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-// import 'package:braven_charts/src/theming/chart_theme.dart';
-// import 'package:braven_charts/src/theming/components/scrollbar_theme.dart';
-// import 'package:braven_charts/src/theming/components/scrollbar_config.dart';
+// import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+// import 'package:braven_charts/legacy/src/theming/components/scrollbar_theme.dart';
+// import 'package:braven_charts/legacy/src/theming/components/scrollbar_config.dart';
 
 /// Contract test for ScrollbarTheme integration with ChartTheme
 ///

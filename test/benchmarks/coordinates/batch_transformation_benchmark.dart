@@ -9,7 +9,7 @@
 import 'dart:math' show Point, sin;
 import 'dart:ui' show Size, Rect;
 
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
 
 void main() {
   print('====== Batch Transformation Performance Benchmark ======\n');

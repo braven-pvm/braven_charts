@@ -4,8 +4,8 @@
 //
 // Validates WCAG AA compliance for the vibrant theme.
 
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/utilities/color_utils.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/color_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

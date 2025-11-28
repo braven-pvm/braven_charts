@@ -1,13 +1,13 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
-import 'package:braven_charts/src/interaction/models/interaction_config.dart';
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/widgets/braven_chart.dart';
-import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
-import 'package:braven_charts/src/widgets/enums/chart_type.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_series.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_config.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/widgets/braven_chart.dart';
+import 'package:braven_charts/legacy/src/widgets/chart_scrollbar.dart';
+import 'package:braven_charts/legacy/src/widgets/enums/chart_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

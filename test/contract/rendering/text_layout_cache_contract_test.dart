@@ -8,7 +8,7 @@
 // - TextLayoutCache not fully implemented yet (will be created in T011)
 // - This is intentional per TDD workflow
 
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

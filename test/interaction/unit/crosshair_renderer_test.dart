@@ -5,11 +5,11 @@
 
 import 'dart:ui' show Canvas, PictureRecorder, Size, Offset, Rect, Color;
 
-import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/interaction/crosshair_renderer.dart';
-import 'package:braven_charts/src/interaction/models/crosshair_config.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/legacy/src/coordinates/coordinate_transformer.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/interaction/crosshair_renderer.dart';
+import 'package:braven_charts/legacy/src/interaction/models/crosshair_config.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -3,10 +3,13 @@
 
 import 'package:flutter/material.dart';
 
+import '../styles/label_style.dart';
+
 /// Defines the visual styling for interactive elements in charts.
 ///
 /// This theme controls the appearance of:
 /// - Crosshair lines that follow the cursor
+/// - Crosshair coordinate labels (X/Y values)
 /// - Tooltips that display data point information
 /// - Selection highlights for data points and regions
 ///
@@ -16,254 +19,277 @@ import 'package:flutter/material.dart';
 ///   crosshairColor: Colors.grey,
 ///   crosshairWidth: 1.0,
 ///   crosshairDashPattern: [5.0, 3.0],
-///   tooltipBackground: Colors.black87,
-///   tooltipTextStyle: TextStyle(color: Colors.white, fontSize: 12.0),
+///   crosshairLabelStyle: LabelStyle(...),
+///   tooltipStyle: LabelStyle(...),
 ///   selectionColor: Colors.blue.withOpacity(0.3),
 /// );
 /// ```
 class InteractionTheme {
-  // ========== Constructor ==========
-
-  /// Creates an interaction theme with the specified styling.
-  ///
-  /// Validates that:
-  /// - [crosshairWidth] >= 0
-  InteractionTheme({
-    required this.crosshairColor,
-    required this.crosshairWidth,
-    required this.crosshairDashPattern,
-    required this.tooltipBackground,
-    required this.tooltipTextStyle,
-    required this.selectionColor,
-  }) : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0');
-
-  /// Creates a theme from a JSON map.
   factory InteractionTheme.fromJson(Map<String, dynamic> json) {
     return InteractionTheme(
       crosshairColor: _parseColor(json['crosshairColor'] as String),
       crosshairWidth: (json['crosshairWidth'] as num).toDouble(),
-      crosshairDashPattern: (json['crosshairDashPattern'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      tooltipBackground: _parseColor(json['tooltipBackground'] as String),
-      tooltipTextStyle:
-          _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
+      crosshairDashPattern: (json['crosshairDashPattern'] as List).map((e) => (e as num).toDouble()).toList(),
+      crosshairLabelStyle: LabelStyle.fromJson(json['crosshairLabelStyle'] as Map<String, dynamic>),
+      tooltipStyle: LabelStyle.fromJson(json['tooltipStyle'] as Map<String, dynamic>),
       selectionColor: _parseColor(json['selectionColor'] as String),
     );
   }
-  // ========== Properties ==========
+  const InteractionTheme({
+    required this.crosshairColor,
+    required this.crosshairWidth,
+    required this.crosshairDashPattern,
+    required this.crosshairLabelStyle,
+    required this.tooltipStyle,
+    required this.selectionColor,
+  }) : assert(crosshairWidth >= 0, 'crosshairWidth must be >= 0');
 
   /// Color of the crosshair lines.
   final Color crosshairColor;
 
-  /// Width of the crosshair lines.
-  /// Must be >= 0. A value of 0 hides the crosshair.
+  /// Width of the crosshair lines. Must be >= 0.
   final double crosshairWidth;
 
   /// Dash pattern for crosshair lines.
   /// Empty list means solid line. Non-empty list defines dash/gap pattern.
   final List<double> crosshairDashPattern;
 
-  /// Background color for tooltips.
-  final Color tooltipBackground;
+  /// Style for crosshair coordinate labels (X/Y values at chart edges).
+  final LabelStyle crosshairLabelStyle;
 
-  /// Text style for tooltip content.
-  final TextStyle tooltipTextStyle;
+  /// Style for data point tooltips (shown on marker hover).
+  final LabelStyle tooltipStyle;
 
   /// Color used for selection highlights.
   final Color selectionColor;
 
   // ========== Predefined Themes ==========
 
-  static final InteractionTheme defaultLight = InteractionTheme(
-    crosshairColor: const Color(0xFF757575), // Medium grey
+  static const InteractionTheme defaultLight = InteractionTheme(
+    crosshairColor: Color(0xFF757575),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    tooltipBackground: const Color(0xE6FFFFFF), // 90% white
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFF212121),
-      fontSize: 12.0,
-      fontWeight: FontWeight.normal,
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF212121), fontSize: 10.0),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFBDBDBD),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    selectionColor: const Color(0x4D2196F3), // 30% blue
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF212121), fontSize: 12.0),
+      backgroundColor: Color(0xE6FFFFFF),
+      borderColor: Color(0xFFBDBDBD),
+      borderWidth: 1.0,
+      borderRadius: 4.0,
+      padding: EdgeInsets.all(8.0),
+      shadowColor: Color(0x33000000),
+      shadowBlurRadius: 4.0,
+    ),
+    selectionColor: Color(0x4D2196F3),
   );
 
-  static final InteractionTheme defaultDark = InteractionTheme(
-    crosshairColor: const Color(0xFFBDBDBD), // Light grey
+  static const InteractionTheme defaultDark = InteractionTheme(
+    crosshairColor: Color(0xFFBDBDBD),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    tooltipBackground: const Color(0xE6212121), // 90% dark grey
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFFFFFFFF),
-      fontSize: 12.0,
-      fontWeight: FontWeight.normal,
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 10.0),
+      backgroundColor: Color(0xE6212121),
+      borderColor: Color(0xFF616161),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    selectionColor: const Color(0x4D64B5F6), // 30% light blue
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 12.0),
+      backgroundColor: Color(0xE6212121),
+      borderColor: Color(0xFF616161),
+      borderWidth: 1.0,
+      borderRadius: 4.0,
+      padding: EdgeInsets.all(8.0),
+      shadowColor: Color(0x33000000),
+      shadowBlurRadius: 4.0,
+    ),
+    selectionColor: Color(0x4D64B5F6),
   );
 
-  static final InteractionTheme corporateBlue = InteractionTheme(
-    crosshairColor: const Color(0xFF1976D2), // Corporate blue
+  static const InteractionTheme corporateBlue = InteractionTheme(
+    crosshairColor: Color(0xFF1976D2),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [4.0, 2.0],
-    tooltipBackground: const Color(0xF0FFFFFF), // 94% white
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFF1565C0),
-      fontSize: 12.0,
-      fontWeight: FontWeight.w500,
+    crosshairDashPattern: [4.0, 2.0],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF1976D2), fontSize: 10.0, fontWeight: FontWeight.w500),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF1976D2),
+      borderWidth: 0.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    selectionColor: const Color(0x4D1976D2), // 30% blue
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF1565C0), fontSize: 12.0, fontWeight: FontWeight.w500),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF1976D2),
+      borderWidth: 1.5,
+      borderRadius: 2.0,
+      padding: EdgeInsets.all(8.0),
+    ),
+    selectionColor: Color(0x4D1976D2),
   );
 
-  static final InteractionTheme vibrant = InteractionTheme(
-    crosshairColor: const Color(0xFFE91E63), // Pink
+  static const InteractionTheme vibrant = InteractionTheme(
+    crosshairColor: Color(0xFFE91E63),
     crosshairWidth: 1.5,
-    crosshairDashPattern: const [6.0, 3.0],
-    tooltipBackground: const Color(0xF0FFFFFF), // 94% white
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFF880E4F),
-      fontSize: 12.0,
-      fontWeight: FontWeight.w600,
+    crosshairDashPattern: [6.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFFE91E63), fontSize: 10.0, fontWeight: FontWeight.w600),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFE91E63),
+      borderWidth: 0.5,
+      borderRadius: 6.0,
+      padding: EdgeInsets.symmetric(horizontal: 5.0, vertical: 3.0),
     ),
-    selectionColor: const Color(0x4DE91E63), // 30% pink
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF880E4F), fontSize: 12.0, fontWeight: FontWeight.w600),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFFE91E63),
+      borderWidth: 2.0,
+      borderRadius: 6.0,
+      padding: EdgeInsets.all(10.0),
+      shadowColor: Color(0x44E91E63),
+      shadowBlurRadius: 6.0,
+    ),
+    selectionColor: Color(0x4DE91E63),
   );
 
-  static final InteractionTheme minimal = InteractionTheme(
-    crosshairColor: const Color(0xFF9E9E9E), // Grey
+  static const InteractionTheme minimal = InteractionTheme(
+    crosshairColor: Color(0xFF9E9E9E),
     crosshairWidth: 0.5,
-    crosshairDashPattern: const [],
-    tooltipBackground: const Color(0xF5F5F5F5), // 96% grey
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFF424242),
-      fontSize: 11.0,
-      fontWeight: FontWeight.normal,
+    crosshairDashPattern: [],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF616161), fontSize: 9.0),
+      backgroundColor: Color(0xF5F5F5F5),
+      borderColor: Color(0xFFE0E0E0),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.5),
     ),
-    selectionColor: const Color(0x33757575), // 20% grey
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF424242), fontSize: 11.0),
+      backgroundColor: Color(0xF5F5F5F5),
+      borderColor: Color(0xFFE0E0E0),
+      borderWidth: 0.5,
+      borderRadius: 3.0,
+      padding: EdgeInsets.all(6.0),
+    ),
+    selectionColor: Color(0x33757575),
   );
 
-  static final InteractionTheme highContrast = InteractionTheme(
-    crosshairColor: const Color(0xFFFF0000), // Red
+  static const InteractionTheme highContrast = InteractionTheme(
+    crosshairColor: Color(0xFFFF0000),
     crosshairWidth: 2.0,
-    crosshairDashPattern: const [],
-    tooltipBackground: const Color(0xFF000000), // Black
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFFFFFFFF),
-      fontSize: 14.0,
-      fontWeight: FontWeight.bold,
+    crosshairDashPattern: [],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFFFFFF00), fontSize: 12.0, fontWeight: FontWeight.bold),
+      backgroundColor: Color(0xFF000000),
+      borderColor: Color(0xFFFFFFFF),
+      borderWidth: 2.0,
+      borderRadius: 0.0,
+      padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
     ),
-    selectionColor: const Color(0x80FFFF00), // 50% yellow
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFFFFFFFF), fontSize: 14.0, fontWeight: FontWeight.bold),
+      backgroundColor: Color(0xFF000000),
+      borderColor: Color(0xFFFFFFFF),
+      borderWidth: 2.0,
+      borderRadius: 0.0,
+      padding: EdgeInsets.all(10.0),
+    ),
+    selectionColor: Color(0x80FFFF00),
   );
 
-  static final InteractionTheme colorblindFriendly = InteractionTheme(
-    crosshairColor: const Color(0xFF0173B2), // Blue (Okabe-Ito)
+  static const InteractionTheme colorblindFriendly = InteractionTheme(
+    crosshairColor: Color(0xFF0173B2),
     crosshairWidth: 1.0,
-    crosshairDashPattern: const [5.0, 3.0],
-    tooltipBackground: const Color(0xF0FFFFFF), // 94% white
-    tooltipTextStyle: const TextStyle(
-      color: Color(0xFF000000),
-      fontSize: 12.0,
-      fontWeight: FontWeight.normal,
+    crosshairDashPattern: [5.0, 3.0],
+    crosshairLabelStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF0173B2), fontSize: 10.0),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF0173B2),
+      borderWidth: 0.5,
+      borderRadius: 4.0,
+      padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
     ),
-    selectionColor: const Color(0x4DDE8F05), // 30% orange (Okabe-Ito)
+    tooltipStyle: LabelStyle(
+      textStyle: TextStyle(color: Color(0xFF000000), fontSize: 12.0),
+      backgroundColor: Color(0xF0FFFFFF),
+      borderColor: Color(0xFF0173B2),
+      borderWidth: 1.0,
+      borderRadius: 4.0,
+      padding: EdgeInsets.all(8.0),
+    ),
+    selectionColor: Color(0x4DDE8F05),
   );
 
   // ========== Methods ==========
 
-  /// Creates a copy of this theme with the given fields replaced.
   InteractionTheme copyWith({
     Color? crosshairColor,
     double? crosshairWidth,
     List<double>? crosshairDashPattern,
-    Color? tooltipBackground,
-    TextStyle? tooltipTextStyle,
+    LabelStyle? crosshairLabelStyle,
+    LabelStyle? tooltipStyle,
     Color? selectionColor,
   }) {
     return InteractionTheme(
       crosshairColor: crosshairColor ?? this.crosshairColor,
       crosshairWidth: crosshairWidth ?? this.crosshairWidth,
       crosshairDashPattern: crosshairDashPattern ?? this.crosshairDashPattern,
-      tooltipBackground: tooltipBackground ?? this.tooltipBackground,
-      tooltipTextStyle: tooltipTextStyle ?? this.tooltipTextStyle,
+      crosshairLabelStyle: crosshairLabelStyle ?? this.crosshairLabelStyle,
+      tooltipStyle: tooltipStyle ?? this.tooltipStyle,
       selectionColor: selectionColor ?? this.selectionColor,
     );
   }
 
-  /// Converts this theme to a JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'crosshairColor':
-          '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
+      'crosshairColor': '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
       'crosshairWidth': crosshairWidth,
       'crosshairDashPattern': crosshairDashPattern,
-      'tooltipBackground':
-          '#${tooltipBackground.value.toRadixString(16).padLeft(8, '0')}',
-      'tooltipTextStyle': _textStyleToJson(tooltipTextStyle),
-      'selectionColor':
-          '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
+      'crosshairLabelStyle': crosshairLabelStyle.toJson(),
+      'tooltipStyle': tooltipStyle.toJson(),
+      'selectionColor': '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
     };
   }
-
-  // ========== Equality ==========
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    if (other is! InteractionTheme) return false;
-
-    return crosshairColor == other.crosshairColor &&
+    return other is InteractionTheme &&
+        crosshairColor == other.crosshairColor &&
         crosshairWidth == other.crosshairWidth &&
         _listEquals(crosshairDashPattern, other.crosshairDashPattern) &&
-        tooltipBackground == other.tooltipBackground &&
-        tooltipTextStyle == other.tooltipTextStyle &&
+        crosshairLabelStyle == other.crosshairLabelStyle &&
+        tooltipStyle == other.tooltipStyle &&
         selectionColor == other.selectionColor;
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      crosshairColor,
-      crosshairWidth,
-      Object.hashAll(crosshairDashPattern),
-      tooltipBackground,
-      tooltipTextStyle,
-      selectionColor,
-    );
-  }
+  int get hashCode => Object.hash(
+        crosshairColor,
+        crosshairWidth,
+        Object.hashAll(crosshairDashPattern),
+        crosshairLabelStyle,
+        tooltipStyle,
+        selectionColor,
+      );
 
-  // ========== Helper Methods ==========
-
-  /// Parses a color from hex string format.
   static Color _parseColor(String hex) {
     final hexValue = hex.replaceFirst('#', '');
     return Color(int.parse(hexValue, radix: 16));
   }
 
-  /// Converts a TextStyle to JSON.
-  static Map<String, dynamic> _textStyleToJson(TextStyle style) {
-    return {
-      if (style.color != null)
-        'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
-      if (style.fontSize != null) 'fontSize': style.fontSize,
-      if (style.fontWeight != null) 'fontWeight': style.fontWeight!.index,
-      if (style.fontFamily != null) 'fontFamily': style.fontFamily,
-    };
-  }
-
-  /// Parses a TextStyle from JSON.
-  static TextStyle _parseTextStyle(Map<String, dynamic> json) {
-    return TextStyle(
-      color:
-          json['color'] != null ? _parseColor(json['color'] as String) : null,
-      fontSize: json['fontSize'] != null
-          ? (json['fontSize'] as num).toDouble()
-          : null,
-      fontWeight: json['fontWeight'] != null
-          ? FontWeight.values[json['fontWeight'] as int]
-          : null,
-      fontFamily: json['fontFamily'] as String?,
-    );
-  }
-
-  /// Compares two lists for equality.
   static bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {

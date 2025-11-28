@@ -1,4 +1,4 @@
-import 'package:braven_charts/src/axis/normalization_detector.dart';
+import 'package:braven_charts/legacy/src/axis/normalization_detector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

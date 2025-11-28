@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license.
 
 import 'package:flutter/widgets.dart';
-import 'package:braven_charts/src/coordinate_system/data_range.dart';
-import 'package:braven_charts/src/theming/scrollbar_theme.dart';
+import 'package:braven_charts/legacy/src/coordinate_system/data_range.dart';
+import 'package:braven_charts/legacy/src/theming/scrollbar_theme.dart';
 
 /// Dual-purpose scrollbar for chart navigation (pan + zoom).
 ///

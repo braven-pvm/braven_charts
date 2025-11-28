@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:braven_charts/src/foundation/performance/object_pool.dart';
+import 'package:braven_charts/legacy/src/foundation/performance/object_pool.dart';
 
 /// Benchmark for ObjectPool acquire/release performance.
 ///

@@ -3,10 +3,10 @@
 
 import 'dart:math' as math;
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/math/curve_fitting.dart';
-import 'package:braven_charts/src/foundation/math/interpolation.dart';
-import 'package:braven_charts/src/foundation/math/statistics.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/math/curve_fitting.dart';
+import 'package:braven_charts/legacy/src/foundation/math/interpolation.dart';
+import 'package:braven_charts/legacy/src/foundation/math/statistics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

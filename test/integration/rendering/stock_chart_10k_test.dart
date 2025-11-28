@@ -7,12 +7,12 @@
 // - Performance: <16ms initial render, <8ms average over 60 frames (NFR-001)
 // - Accuracy: Pool hit rate >90%, culling reduces visible points (FR-002, FR-003)
 
-import 'package:braven_charts/src/foundation/foundation.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
-import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/render_layer.dart';
+import 'package:braven_charts/legacy/src/rendering/render_pipeline.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

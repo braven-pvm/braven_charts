@@ -7,9 +7,9 @@
 /// by ensuring frame rendering time stays below 16.67ms threshold.
 library;
 
-import 'package:braven_charts/src/foundation/foundation.dart' as braven;
-import 'package:braven_charts/src/theming/components/scrollbar_config.dart';
-import 'package:braven_charts/src/widgets/chart_scrollbar.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart' as braven;
+import 'package:braven_charts/legacy/src/theming/components/scrollbar_config.dart';
+import 'package:braven_charts/legacy/src/widgets/chart_scrollbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -4,9 +4,9 @@
 /// and stepped (horizontal-vertical segments).
 library;
 
-import 'package:braven_charts/src/charts/line/line_chart_config.dart'
+import 'package:braven_charts/legacy/src/charts/line/line_chart_config.dart'
     show LineStyle;
-import 'package:braven_charts/src/charts/line/line_interpolator.dart';
+import 'package:braven_charts/legacy/src/charts/line/line_interpolator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

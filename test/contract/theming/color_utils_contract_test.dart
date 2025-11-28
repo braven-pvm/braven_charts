@@ -7,7 +7,7 @@
 
 // Import will fail initially - this is expected for TDD
 // ignore: unused_import
-import 'package:braven_charts/src/theming/utilities/color_utils.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

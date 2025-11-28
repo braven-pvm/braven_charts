@@ -6,8 +6,8 @@ library;
 
 import 'dart:ui' show Canvas, Paint, Path, Rect, Shader, Offset, Size, Color;
 
-import 'package:braven_charts/src/charts/base/chart_config.dart';
-import 'package:braven_charts/src/charts/base/chart_renderer.dart';
+import 'package:braven_charts/legacy/src/charts/base/chart_config.dart';
+import 'package:braven_charts/legacy/src/charts/base/chart_renderer.dart';
 import 'package:flutter/material.dart' hide Paint;
 import 'package:flutter_test/flutter_test.dart';
 

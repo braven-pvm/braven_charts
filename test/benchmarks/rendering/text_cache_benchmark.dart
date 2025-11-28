@@ -30,7 +30,7 @@ library;
 import 'package:flutter/rendering.dart' show TextStyle, TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart'
     show LinkedHashMapTextLayoutCache;
 
 void main() {

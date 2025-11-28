@@ -2,7 +2,7 @@
 /// TDD red phase - tests written before implementation
 library;
 
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

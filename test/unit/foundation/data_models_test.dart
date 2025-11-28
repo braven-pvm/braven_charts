@@ -3,10 +3,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
-import 'package:braven_charts/src/foundation/data_models/data_range.dart' as dr;
-import 'package:braven_charts/src/foundation/data_models/time_series_data.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_series.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/data_range.dart' as dr;
+import 'package:braven_charts/legacy/src/foundation/data_models/time_series_data.dart';
 
 void main() {
   group('ChartDataPoint Unit Tests', () {

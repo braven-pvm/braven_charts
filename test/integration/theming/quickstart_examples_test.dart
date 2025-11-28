@@ -10,11 +10,11 @@ library;
 
 import 'dart:convert' show jsonDecode, jsonEncode;
 
-import 'package:braven_charts/src/theming/builder/chart_theme_builder.dart';
-import 'package:braven_charts/src/theming/chart_theme.dart';
-import 'package:braven_charts/src/theming/components/grid_style.dart';
-import 'package:braven_charts/src/theming/components/series_theme.dart';
-import 'package:braven_charts/src/theming/utilities/color_utils.dart';
+import 'package:braven_charts/legacy/src/theming/builder/chart_theme_builder.dart';
+import 'package:braven_charts/legacy/src/theming/chart_theme.dart';
+import 'package:braven_charts/legacy/src/theming/components/grid_style.dart';
+import 'package:braven_charts/legacy/src/theming/components/series_theme.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -14,16 +14,16 @@ import 'dart:ui' show Paint, Path, Color, Rect, Size, Canvas;
 import 'package:flutter/rendering.dart' show TextPainter;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/foundation.dart'
+import 'package:braven_charts/legacy/src/foundation/foundation.dart'
     show ObjectPool, ViewportCuller;
-import 'package:braven_charts/src/rendering/render_pipeline.dart'
+import 'package:braven_charts/legacy/src/rendering/render_pipeline.dart'
     show RenderPipeline;
-import 'package:braven_charts/src/rendering/render_layer.dart' show RenderLayer;
-import 'package:braven_charts/src/rendering/render_context.dart'
+import 'package:braven_charts/legacy/src/rendering/render_layer.dart' show RenderLayer;
+import 'package:braven_charts/legacy/src/rendering/render_context.dart'
     show RenderContext;
-import 'package:braven_charts/src/rendering/performance_monitor.dart'
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart'
     show StopwatchPerformanceMonitor;
-import 'package:braven_charts/src/rendering/text_layout_cache.dart'
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart'
     show LinkedHashMapTextLayoutCache;
 
 void main() {

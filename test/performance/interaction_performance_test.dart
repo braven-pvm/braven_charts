@@ -1,7 +1,7 @@
 // Test coverage for User Story 2: Zero Performance Degradation During Interactions
 // Tests verify SC-002 through SC-005 (frame times, widget rebuilds, repaint isolation, high-frequency handling)
 
-import 'package:braven_charts/braven_charts.dart' as bc;
+import 'package:braven_charts/legacy/braven_charts.dart' as bc;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

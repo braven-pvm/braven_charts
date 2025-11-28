@@ -34,7 +34,7 @@
 /// See: docs/architecture/SCROLLBAR_ARCHITECTURE_ANALYSIS.md
 library;
 
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

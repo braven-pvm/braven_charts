@@ -3,13 +3,13 @@
 
 import 'dart:async';
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/foundation/data_models/chart_series.dart';
-import 'package:braven_charts/src/models/chart_mode.dart';
-import 'package:braven_charts/src/models/streaming_config.dart';
-import 'package:braven_charts/src/widgets/auto_scroll_config.dart';
-import 'package:braven_charts/src/widgets/braven_chart.dart';
-import 'package:braven_charts/src/widgets/enums/chart_type.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_series.dart';
+import 'package:braven_charts/legacy/src/models/chart_mode.dart';
+import 'package:braven_charts/legacy/src/models/streaming_config.dart';
+import 'package:braven_charts/legacy/src/widgets/auto_scroll_config.dart';
+import 'package:braven_charts/legacy/src/widgets/braven_chart.dart';
+import 'package:braven_charts/legacy/src/widgets/enums/chart_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

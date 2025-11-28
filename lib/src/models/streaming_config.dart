@@ -1,260 +1,196 @@
-// Copyright 2025 Braven Charts
-// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 braven_charts. All rights reserved.
+// Streaming Configuration for BravenChartPlus
 
-import 'package:braven_charts/src/models/chart_mode.dart';
-import 'package:flutter/foundation.dart' show VoidCallback;
-
-/// Configuration for dual-mode streaming behavior in BravenChart.
+/// Configuration for real-time data streaming in BravenChartPlus.
 ///
-/// Controls automatic mode transitions, buffer limits, and developer callbacks.
-/// Use this class when creating charts with real-time data streams that need
-/// to support both live monitoring and historical analysis.
+/// Controls buffer limits, auto-scroll behavior, window size, and provides
+/// callbacks for stream events. This is a simplified version focused on the
+/// core streaming use case (no dual-mode complexity).
 ///
-/// **Basic Example** (minimal configuration):
+/// **Basic Example**:
 /// ```dart
-/// BravenChart(
+/// BravenChartPlus(
+///   chartType: ChartType.line,
+///   series: [...],
 ///   dataStream: sensorDataStream,
-///   streamingConfig: StreamingConfig(),  // Uses all defaults
+///   streamingConfig: StreamingConfig(),  // Uses defaults
 /// )
 /// ```
 ///
-/// **Advanced Example** (custom timeout and callbacks):
+/// **Advanced Example**:
 /// ```dart
-/// BravenChart(
+/// BravenChartPlus(
+///   chartType: ChartType.line,
+///   series: [...],
 ///   dataStream: sensorDataStream,
 ///   streamingConfig: StreamingConfig(
-///     autoResumeTimeout: Duration(seconds: 15),  // Longer timeout
-///     maxBufferSize: 5000,  // Smaller buffer
-///     onModeChanged: (mode) {
-///       // Update UI indicator
-///       setState(() {
-///         isLive = (mode == ChartMode.streaming);
-///       });
-///     },
+///     maxBufferSize: 5000,           // Smaller buffer
+///     autoScroll: true,              // Follow latest data
+///     autoScrollWindowSize: 100,     // Show last 100 points
+///     resumeAnimationDuration: Duration(milliseconds: 500),  // Slower animation
 ///     onBufferUpdated: (count) {
-///       // Show buffered point count
-///       setState(() {
-///         bufferedCount = count;
-///       });
-///     },
-///     onReturnToLive: () {
-///       // Show "Return to Live" button
-///       setState(() {
-///         showResumeButton = true;
-///       });
+///       print('Buffered: $count points');
 ///     },
 ///   ),
 /// )
 /// ```
-///
-/// Related: T002 (StreamingConfig class implementation), T006 (class implementation with validation)
 class StreamingConfig {
   /// Creates a streaming configuration.
   ///
-  /// All parameters are optional with sensible defaults:
-  /// - [autoResumeTimeout]: 10 seconds
+  /// All parameters optional with sensible defaults:
   /// - [maxBufferSize]: 10,000 points
-  /// - [pauseOnFirstInteraction]: true
+  /// - [autoScroll]: true (viewport follows latest data)
+  /// - [autoScrollWindowSize]: 150 points (sliding window size)
+  /// - [resumeAnimationDuration]: 300ms (smooth jump to latest)
   /// - All callbacks: null (optional)
   ///
   /// Validation:
-  /// - [autoResumeTimeout] must be positive (> Duration.zero)
   /// - [maxBufferSize] must be positive (> 0)
-  ///
-  /// Throws [AssertionError] if validation fails (fail-fast per FR-006a).
-  StreamingConfig({
-    this.autoResumeTimeout = const Duration(seconds: 10),
+  /// - [autoScrollWindowSize] must be positive (> 0)
+  const StreamingConfig({
     this.maxBufferSize = 10000,
-    this.pauseOnFirstInteraction = true,
-    this.onModeChanged,
+    this.autoScroll = true,
+    this.autoScrollWindowSize = 150,
+    this.resumeAnimationDuration = const Duration(milliseconds: 300),
     this.onBufferUpdated,
-    this.onReturnToLive,
     this.onStreamError,
   })  : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
-        assert(
-          autoResumeTimeout > Duration.zero,
-          'autoResumeTimeout must be positive',
-        );
+        assert(autoScrollWindowSize > 0, 'autoScrollWindowSize must be positive');
 
-  /// Duration of inactivity before automatically resuming streaming mode (FR-007).
+  /// Maximum number of data points to buffer.
   ///
-  /// When the chart is in interactive mode (paused), this timer counts down.
-  /// If no user interactions occur before the timeout expires, the chart
-  /// automatically resumes streaming mode, applying all buffered data.
-  ///
-  /// **Timer reset**: The countdown resets to the full duration on ANY user
-  /// interaction: hover, click, zoom, pan, scroll, keyboard navigation (FR-008).
-  ///
-  /// **Default**: 10 seconds
-  /// **Range**: 1-60 seconds recommended (must be positive)
-  ///
-  /// Example use cases:
-  /// - Short timeout (5s): Fast-paced monitoring, quick return to live
-  /// - Medium timeout (10s): Balanced - default for most use cases
-  /// - Long timeout (30s): Detailed analysis, longer investigation periods
-  ///
-  /// See also:
-  /// - [pauseOnFirstInteraction] to control auto-pause behavior
-  /// - [onModeChanged] to track when auto-resume occurs
-  final Duration autoResumeTimeout;
-
-  /// Maximum number of data points to buffer during interactive mode (FR-013).
-  ///
-  /// While the chart is in interactive mode (paused), incoming data points
-  /// are buffered instead of rendered. This parameter limits the buffer size
-  /// to prevent unbounded memory growth.
-  ///
-  /// **Overflow behavior**: When the buffer reaches this limit, the chart
-  /// IMMEDIATELY force-resumes to streaming mode and applies all buffered
-  /// data (FR-014). This ensures no data loss.
+  /// When the buffer reaches this limit, oldest points are discarded
+  /// (FIFO overflow). This prevents unbounded memory growth.
   ///
   /// **Default**: 10,000 points
-  /// **Performance**: Tested up to 10K points with <500ms application time (SC-007)
   ///
   /// Example sizing:
-  /// - Low-frequency (1 Hz): 10,000 points = 2.7 hours buffer
-  /// - Medium-frequency (10 Hz): 10,000 points = 16 minutes buffer
-  /// - High-frequency (100 Hz): 10,000 points = 100 seconds buffer
-  ///
-  /// See also:
-  /// - [onBufferUpdated] to monitor buffer growth
-  /// - [onModeChanged] to detect forced auto-resume
+  /// - Low-frequency (1 Hz): 10,000 points = 2.7 hours
+  /// - Medium-frequency (10 Hz): 10,000 points = 16 minutes
+  /// - High-frequency (100 Hz): 10,000 points = 100 seconds
   final int maxBufferSize;
 
-  /// Whether to pause streaming automatically on first user interaction (FR-004).
+  /// Whether to automatically scroll viewport to show latest data.
   ///
-  /// Controls the chart's behavior when a user interacts with a streaming chart:
+  /// When true, the chart viewport automatically pans to keep the
+  /// most recent data points visible as new data arrives.
   ///
-  /// **If true (default)**:
-  /// - Chart starts in streaming mode (live data updates)
-  /// - On first interaction (hover, click, zoom, pan): automatically pauses
-  /// - Subsequent data is buffered silently
-  /// - User can analyze historical data without new data interfering
-  /// - Chart auto-resumes after [autoResumeTimeout] of inactivity
+  /// When false, the viewport stays fixed and user must manually
+  /// pan to see new data.
   ///
-  /// **If false**:
-  /// - Chart starts in interactive mode
-  /// - Streaming never auto-pauses
-  /// - User interactions always enabled
-  /// - Data continues streaming even during interactions (may cause visual conflicts)
-  ///
-  /// **Default**: true (recommended for most streaming scenarios)
-  ///
-  /// Example use cases:
-  /// - true: Real-time monitoring with pause-for-analysis capability
-  /// - false: Always-interactive chart with streaming data feed
-  final bool pauseOnFirstInteraction;
+  /// **Default**: true
+  final bool autoScroll;
 
-  /// Callback invoked when chart mode changes (FR-015).
+  /// Number of data points to display in the auto-scroll window.
   ///
-  /// Called during mode transitions:
-  /// - streaming → interactive: User interacted, chart paused
-  /// - interactive → streaming: Auto-resume or manual resume triggered
+  /// When [autoScroll] is enabled, this determines how many of the
+  /// most recent data points are visible in the viewport at once.
+  /// Older data scrolls off the left edge as new data arrives.
   ///
-  /// Use this callback to update your UI to reflect the current chart state:
-  /// - Show "LIVE" indicator when streaming
-  /// - Show "PAUSED" indicator when interactive
-  /// - Enable/disable controls based on mode
+  /// This creates a "sliding window" effect where you always see
+  /// the last N points.
   ///
-  /// **Example**:
-  /// ```dart
-  /// onModeChanged: (mode) {
-  ///   setState(() {
-  ///     isLive = (mode == ChartMode.streaming);
-  ///   });
-  /// }
-  /// ```
+  /// **Default**: 150 points
   ///
-  /// **Optional**: If null, mode changes occur silently.
+  /// **Examples**:
+  /// - Small window (50): Good for high-frequency data (10+ Hz)
+  /// - Medium window (150): Default, balanced for most use cases
+  /// - Large window (500): Good for low-frequency data with long trends
   ///
-  /// See also:
-  /// - [ChartMode] enum for mode values
-  /// - [onReturnToLive] for interactive→streaming transition specifically
-  final void Function(ChartMode newMode)? onModeChanged;
+  /// **Use Cases**:
+  /// - High-frequency monitoring: 50-100 points (30 sec @ 10 Hz)
+  /// - Medium-frequency: 150-300 points (5 min @ 1 Hz)
+  /// - Low-frequency analysis: 500+ points (longer time spans)
+  final int autoScrollWindowSize;
 
-  /// Callback invoked when data is buffered in interactive mode (FR-016).
+  /// Duration of animation when resuming streaming.
   ///
-  /// Called each time a new data point arrives and is added to the buffer
-  /// (not rendered). Provides the current buffer count.
+  /// When user resumes streaming after pause, the viewport smoothly
+  /// animates back to show the latest data. This duration controls
+  /// how long that animation takes.
   ///
-  /// Use this callback to show users how much data has accumulated during
-  /// their analysis, helping them decide when to return to live mode.
+  /// **Default**: 300ms
+  ///
+  /// **Guidelines**:
+  /// - Fast (100-200ms): Snappy, responsive feel
+  /// - Medium (300-400ms): Smooth, balanced (default)
+  /// - Slow (500-1000ms): Very smooth, deliberate
+  ///
+  /// **Zero duration**: Set to Duration.zero for instant jump (no animation)
+  final Duration resumeAnimationDuration;
+
+  /// Callback invoked when data is added to the buffer.
+  ///
+  /// Provides the current buffer count. Useful for showing users
+  /// how much data has accumulated.
   ///
   /// **Example**:
   /// ```dart
   /// onBufferUpdated: (count) {
   ///   setState(() {
-  ///     bufferedPointsText = '$count new points';
+  ///     bufferedPoints = count;
   ///   });
   /// }
   /// ```
   ///
-  /// **Frequency**: Called on every buffered data point arrival.
-  /// For high-frequency streams (100+ Hz), consider throttling your UI updates.
+  /// **Frequency**: Called on every new data point.
+  /// For high-frequency streams, consider throttling UI updates.
   ///
   /// **Optional**: If null, buffer updates occur silently.
-  ///
-  /// See also:
-  /// - [maxBufferSize] for buffer limit configuration
-  /// - [onModeChanged] to detect forced resume when buffer fills
   final void Function(int bufferCount)? onBufferUpdated;
 
-  /// Callback invoked when chart enters interactive mode (FR-017).
+  /// Callback invoked when the data stream throws an error.
   ///
-  /// Called when the chart transitions from streaming to interactive mode,
-  /// signaling that a "Return to Live" button or similar UI control should
-  /// be shown to the user.
-  ///
-  /// This callback helps you provide explicit user control over mode transitions:
-  /// - Chart pauses automatically on interaction
-  /// - You show a "Return to Live" button
-  /// - User clicks button → call `chartState.resumeStreaming()`
-  /// - Chart resumes streaming mode
-  ///
-  /// **Example**:
-  /// ```dart
-  /// onReturnToLive: () {
-  ///   setState(() {
-  ///     showResumeButton = true;
-  ///   });
-  /// }
-  /// ```
-  ///
-  /// **Optional**: If null, mode transitions are fully automatic without
-  /// explicit user controls.
-  ///
-  /// See also:
-  /// - [BravenChart.resumeStreaming()] to manually resume
-  /// - [onModeChanged] to track both transition directions
-  final VoidCallback? onReturnToLive;
-
-  /// Callback invoked when the data stream throws an error (FR-017a).
-  ///
-  /// Called immediately when an error is caught from the data stream.
-  /// The chart does NOT automatically retry or reconnect - error handling
-  /// is the responsibility of the developer.
-  ///
-  /// Use this callback to:
-  /// - Display error messages to the user
-  /// - Log errors to monitoring services
-  /// - Attempt reconnection logic
-  /// - Switch to fallback data source
+  /// Use this to display error messages, log errors, or attempt
+  /// reconnection.
   ///
   /// **Example**:
   /// ```dart
   /// onStreamError: (error) {
-  ///   print('Stream error: $error');
-  ///   showSnackBar('Lost connection to sensor');
-  ///   // Attempt reconnection after delay
-  ///   Future.delayed(Duration(seconds: 5), () {
-  ///     reconnectToSensor();
-  ///   });
+  ///   showSnackBar('Stream error: $error');
+  ///   attemptReconnection();
   /// }
   /// ```
   ///
-  /// **Optional**: If null, stream errors are silently ignored (NOT recommended).
-  ///
-  /// **Note**: The chart does NOT include built-in logging per FR-017b.
-  /// All error handling must be implemented in this callback.
+  /// **Optional**: If null, stream errors are silently ignored.
   final void Function(Object error)? onStreamError;
+
+  /// Creates a copy with modified properties.
+  StreamingConfig copyWith({
+    int? maxBufferSize,
+    bool? autoScroll,
+    int? autoScrollWindowSize,
+    Duration? resumeAnimationDuration,
+    void Function(int bufferCount)? onBufferUpdated,
+    void Function(Object error)? onStreamError,
+  }) {
+    return StreamingConfig(
+      maxBufferSize: maxBufferSize ?? this.maxBufferSize,
+      autoScroll: autoScroll ?? this.autoScroll,
+      autoScrollWindowSize: autoScrollWindowSize ?? this.autoScrollWindowSize,
+      resumeAnimationDuration: resumeAnimationDuration ?? this.resumeAnimationDuration,
+      onBufferUpdated: onBufferUpdated ?? this.onBufferUpdated,
+      onStreamError: onStreamError ?? this.onStreamError,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StreamingConfig &&
+        other.maxBufferSize == maxBufferSize &&
+        other.autoScroll == autoScroll &&
+        other.autoScrollWindowSize == autoScrollWindowSize &&
+        other.resumeAnimationDuration == resumeAnimationDuration;
+    // Callbacks intentionally excluded from equality
+  }
+
+  @override
+  int get hashCode => Object.hash(maxBufferSize, autoScroll, autoScrollWindowSize, resumeAnimationDuration);
+
+  @override
+  String toString() {
+    return 'StreamingConfig(maxBufferSize: $maxBufferSize, autoScroll: $autoScroll, '
+        'autoScrollWindowSize: $autoScrollWindowSize, resumeAnimationDuration: $resumeAnimationDuration)';
+  }
 }

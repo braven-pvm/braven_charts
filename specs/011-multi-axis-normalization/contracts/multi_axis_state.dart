@@ -6,7 +6,7 @@ library;
 
 import 'dart:ui' show Rect;
 
-import 'package:braven_charts/braven_charts.dart' show DataRange;
+import 'package:braven_charts/legacy/braven_charts.dart' show DataRange;
 
 import 'y_axis_config.dart';
 

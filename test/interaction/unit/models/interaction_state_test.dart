@@ -3,9 +3,9 @@
 // Task: T008
 // Status: Implementation complete, tests aligned
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Helper function to convert ChartDataPoint to Map<String, dynamic>

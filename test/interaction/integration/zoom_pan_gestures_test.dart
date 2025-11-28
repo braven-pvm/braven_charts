@@ -8,12 +8,12 @@ import 'dart:ui' show Offset, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/interaction/event_handler.dart';
-import 'package:braven_charts/src/interaction/gesture_recognizer.dart';
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
-import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
-import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/interaction/event_handler.dart';
+import 'package:braven_charts/legacy/src/interaction/gesture_recognizer.dart';
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/models/zoom_pan_state.dart';
+import 'package:braven_charts/legacy/src/interaction/zoom_pan_controller.dart';
 
 void main() {
   group('Zoom and Pan Gestures Integration Tests', () {

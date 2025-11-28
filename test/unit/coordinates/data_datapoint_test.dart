@@ -10,7 +10,7 @@ library;
 import 'dart:math' show Point;
 import 'dart:ui' show Size, Rect;
 
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/legacy/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

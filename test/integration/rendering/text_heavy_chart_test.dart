@@ -7,12 +7,12 @@
 // - Performance: <50ms initial layout, >70% cache hit rate (NFR-003, FR-003)
 // - Memory: Bounded cache eviction, no unbounded growth
 
-import 'package:braven_charts/src/foundation/foundation.dart';
-import 'package:braven_charts/src/rendering/performance_monitor.dart';
-import 'package:braven_charts/src/rendering/render_context.dart';
-import 'package:braven_charts/src/rendering/render_layer.dart';
-import 'package:braven_charts/src/rendering/render_pipeline.dart';
-import 'package:braven_charts/src/rendering/text_layout_cache.dart';
+import 'package:braven_charts/legacy/src/foundation/foundation.dart';
+import 'package:braven_charts/legacy/src/rendering/performance_monitor.dart';
+import 'package:braven_charts/legacy/src/rendering/render_context.dart';
+import 'package:braven_charts/legacy/src/rendering/render_layer.dart';
+import 'package:braven_charts/legacy/src/rendering/render_pipeline.dart';
+import 'package:braven_charts/legacy/src/rendering/text_layout_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

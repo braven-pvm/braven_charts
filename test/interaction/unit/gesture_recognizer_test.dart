@@ -5,8 +5,8 @@
 
 import 'dart:ui' show Offset, PointerDeviceKind;
 
-import 'package:braven_charts/src/interaction/gesture_recognizer.dart';
-import 'package:braven_charts/src/interaction/models/gesture_details.dart';
+import 'package:braven_charts/legacy/src/interaction/gesture_recognizer.dart';
+import 'package:braven_charts/legacy/src/interaction/models/gesture_details.dart';
 import 'package:flutter/gestures.dart'
     show PointerDownEvent, PointerMoveEvent, PointerUpEvent, PointerScrollEvent;
 import 'package:flutter_test/flutter_test.dart';

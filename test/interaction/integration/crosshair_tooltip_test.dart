@@ -8,10 +8,10 @@ import 'dart:ui' show Offset;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/src/interaction/crosshair_renderer.dart';
-import 'package:braven_charts/src/interaction/event_handler.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
+import 'package:braven_charts/legacy/src/interaction/crosshair_renderer.dart';
+import 'package:braven_charts/legacy/src/interaction/event_handler.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_state.dart';
 
 void main() {
   group('Crosshair + Tooltip Integration Tests', () {

@@ -5,8 +5,8 @@
 
 import 'dart:ui' show Rect, Offset;
 
-import 'package:braven_charts/src/coordinates/coordinate_transformer.dart';
-import 'package:braven_charts/src/interaction/event_handler.dart';
+import 'package:braven_charts/legacy/src/coordinates/coordinate_transformer.dart';
+import 'package:braven_charts/legacy/src/interaction/event_handler.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart'
     show PhysicalKeyboardKey, LogicalKeyboardKey, KeyDownEvent;

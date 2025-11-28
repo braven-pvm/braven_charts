@@ -1,7 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Unit tests for ThresholdAnnotation and TrendAnnotation
 
-import 'package:braven_charts/src_plus/models/chart_annotation.dart';
+import 'package:braven_charts/src/models/chart_annotation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

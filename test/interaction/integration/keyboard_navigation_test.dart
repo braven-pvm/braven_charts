@@ -6,10 +6,10 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:braven_charts/src/interaction/event_handler.dart';
-import 'package:braven_charts/src/interaction/keyboard_handler.dart';
-import 'package:braven_charts/src/interaction/models/interaction_state.dart';
-import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
+import 'package:braven_charts/legacy/src/interaction/event_handler.dart';
+import 'package:braven_charts/legacy/src/interaction/keyboard_handler.dart';
+import 'package:braven_charts/legacy/src/interaction/models/interaction_state.dart';
+import 'package:braven_charts/legacy/src/interaction/models/zoom_pan_state.dart';
 
 void main() {
   group('Keyboard Navigation Integration Tests', () {

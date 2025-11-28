@@ -1,7 +1,7 @@
 /// Tests for serialization helpers.
 library;
 
-import 'package:braven_charts/src/theming/utilities/serialization_helpers.dart';
+import 'package:braven_charts/legacy/src/theming/utilities/serialization_helpers.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
