@@ -981,6 +981,106 @@ This is logged as the **Orchestrator Translation Protocol** for reference.
 
 ---
 
+## Task Consolidation & Traceability
+
+> **CRITICAL PROCESS DOCUMENTATION**  
+> Added: 2025-01-08  
+> This section defines how orchestrator tasks relate to SpecKit's original task list.
+
+### The Pipeline
+
+```
+SpecKit Process (DO NOT MODIFY)
+┌─────────────────────────────────────────────────────────────┐
+│ User Story → spec.md → plan.md → research.md → contracts/  │
+│                                       ↓                     │
+│                                  tasks.md                   │
+│                              (56 granular tasks)            │
+└─────────────────────────────────────────────────────────────┘
+                                    ↓
+                    Orchestrator Consolidation Layer
+┌─────────────────────────────────────────────────────────────┐
+│              manifest.yaml (16 consolidated tasks)          │
+│                                                             │
+│  Each task includes:                                        │
+│    - speckit_tasks: [T001, T002, ...]  ← TRACEABILITY       │
+│    - consolidation_rationale: "..."                         │
+└─────────────────────────────────────────────────────────────┘
+                                    ↓
+                    Implementor Receives Single Task
+┌─────────────────────────────────────────────────────────────┐
+│                    current-task.md                          │
+│  (Orchestrator translates consolidated task to explicit     │
+│   instructions - implementor never sees task IDs)           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Consolidation?
+
+SpecKit produces **granular, traceable tasks** (56 for this sprint). This is valuable for:
+- Thorough coverage
+- Research-backed decisions
+- Contract verification
+- Checklist matching
+
+However, feeding 56 tasks one-by-one creates overhead:
+- 56 handovers = 56 context switches
+- Simple tasks (create enum) have same overhead as complex tasks
+- Related work (model + tests + export) artificially split
+
+### Consolidation Guidelines
+
+| Scenario | Consolidate? | Rationale |
+|----------|--------------|-----------|
+| Same file/module | ✅ Yes | Single logical unit |
+| Enum + its tests | ✅ Yes | Trivial, always together |
+| Model + copyWith + equality + tests | ✅ Yes | Standard pattern |
+| Create + export to barrel | ✅ Yes | Always done together |
+| Different concerns/files | ❌ No | Keep separate for clarity |
+| Integration tasks | ❌ NEVER | High risk, need scrutiny |
+| Tasks with different phases | ❌ No | Respect SpecKit phases |
+
+### Traceability Requirements
+
+1. **manifest.yaml**: Every consolidated task MUST list `speckit_tasks`
+2. **tasks.md**: Mark tasks as completed when done (checkbox)
+3. **progress.yaml**: Track which SpecKit tasks each commit covers
+4. **Audit trail**: After sprint, verify all 56 SpecKit tasks covered
+
+### Current Mapping: Foundation Phase
+
+| Orchestrator Task | SpecKit Tasks | Consolidation Rationale |
+|-------------------|---------------|-------------------------|
+| Task 1: YAxisPosition enum | T001 | 1:1 (simple enum) |
+| Task 2: YAxisConfig model | T003, T005 (partial) | Model + barrel export |
+| Task 3: SeriesAxisBinding | (new, not in original) | Identified during implementation |
+| Task 4: NormalizationMode enum | T002 | 1:1 (simple enum) |
+| Task 5: MultiAxisConfig container | T004, T005 (partial) | Container + barrel export |
+
+### Gap Analysis
+
+| SpecKit Task | Status | Notes |
+|--------------|--------|-------|
+| T001 YAxisPosition enum | ✅ Covered by Task 1 | |
+| T002 NormalizationMode enum | ✅ Covered by Task 4 | |
+| T003 YAxisConfig class | ✅ Covered by Task 2 | Different path than spec |
+| T004 MultiAxisState class | ✅ Covered by Task 5 | Renamed to MultiAxisConfig |
+| T005 Barrel export | ✅ Folded into Tasks 2,5 | Used enums.dart not axis.dart |
+| T006 Add yAxisId to ChartSeries | ⏳ Pending | Needs own task |
+| T007-T009 Test directories | ✅ Auto-created | Created with first tests |
+
+### Process: Completing a Consolidated Task
+
+1. **Before starting**: Document which SpecKit tasks will be covered
+2. **During implementation**: Verify all SpecKit task requirements met
+3. **After verification**: 
+   - Update manifest.yaml with commit hash
+   - Update tasks.md checkboxes for covered SpecKit tasks
+   - Update progress.yaml with speckit_tasks covered
+4. **Audit**: Can trace any SpecKit task → orchestrator task → commit
+
+---
+
 ## Appendix A: Sprint 011 Failure Post-Mortem
 
 ```powershell

@@ -67,6 +67,50 @@ After each task completion:
 3. **Each task verified before next** - No bulk completion
 4. **Integration tasks get extra scrutiny** - Must modify existing files
 5. **Visual tasks require screenshots** - Can't fake images
+6. **SpecKit tasks are source of truth** - Orchestrator consolidates but traces back
+
+---
+
+## SpecKit Traceability
+
+### The Flow
+
+```
+SpecKit Process (DO NOT MODIFY)
+├── spec.md → plan.md → research.md → contracts/
+│                              ↓
+│                         tasks.md (56 granular tasks)
+│                              ↓
+└── Orchestrator Consolidation Layer
+         ├── manifest.yaml (16 consolidated tasks)
+         │     └── speckit_tasks: [T001, T002, ...]  ← TRACEABILITY
+         │
+         └── After each task completion:
+               1. Update manifest.yaml (status, commit)
+               2. Update tasks.md checkboxes
+               3. Update progress.yaml
+```
+
+### Consolidation Guidelines
+
+| Scenario | Consolidate? | Rationale |
+|----------|--------------|-----------|
+| Same file/module | ✅ Yes | Single logical unit |
+| Enum + its tests | ✅ Yes | Trivial, always together |
+| Model + copyWith + equality + tests | ✅ Yes | Standard pattern |
+| Create + export to barrel | ✅ Yes | Always done together |
+| Different concerns/files | ❌ No | Keep separate |
+| Integration tasks | ❌ NEVER | High risk |
+
+### After Each Task Completion
+
+1. **manifest.yaml**: Update status, commit hash, verify speckit_tasks list
+2. **tasks.md**: Check off completed SpecKit tasks with:
+   - `[x]` checkbox
+   - Orchestrator task reference
+   - Commit hash
+   - Any path/name deviations noted
+3. **progress.yaml**: Update verification notes with SpecKit coverage
 
 ---
 
