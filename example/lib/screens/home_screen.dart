@@ -15,6 +15,7 @@ import 'interaction_showcase_screen.dart';
 import 'line_chart_screen.dart';
 import 'line_style_comparison_screen.dart';
 import 'line_styles_streaming_screen.dart';
+import 'multi_axis_demo_screen.dart';
 import 'quickstart_screen.dart';
 import 'regression_test_screen.dart';
 import 'scatter_chart_screen.dart';
@@ -249,6 +250,18 @@ class HomeScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const UltimateShowcaseScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildChartCard(
+          context,
+          title: '📈 Multi-Axis Demo',
+          subtitle: 'NEW: Multiple Y-axes with colors (Power, Heart Rate, Speed)',
+          icon: Icons.stacked_line_chart,
+          color: Colors.cyan,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MultiAxisDemoScreen()),
           ),
         ),
         const SizedBox(height: 12),

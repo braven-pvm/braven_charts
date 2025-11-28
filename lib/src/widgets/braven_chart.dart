@@ -28,6 +28,7 @@ import 'package:braven_charts/src/interaction/models/zoom_pan_state.dart';
 import 'package:braven_charts/src/interaction/zoom_pan_controller.dart';
 import 'package:braven_charts/src/models/chart_mode.dart';
 import 'package:braven_charts/src/models/streaming_config.dart';
+import 'package:braven_charts/src/painters/multi_axis_painter.dart';
 // Layer 3: Theming
 import 'package:braven_charts/src/theming/chart_theme.dart';
 import 'package:braven_charts/src/utils/buffer_manager.dart';
@@ -4414,6 +4415,10 @@ class _BravenChartPainter extends CustomPainter {
 
     // Draw axes
     _drawAxes(canvas, size, chartRect, bounds);
+
+    // Draw additional Y-axes from multiAxisConfig (Layer 11)
+    _drawMultiAxes(canvas, size, chartRect);
+
     if (enablePaintProfiling) {
       stageStopwatch!.stop();
 
@@ -4952,6 +4957,25 @@ class _BravenChartPainter extends CustomPainter {
         }
       }
     }
+  }
+
+  /// Renders additional Y-axes from multiAxisConfig using MultiAxisPainter.
+  ///
+  /// This method instantiates [MultiAxisPainter] with the axes defined in
+  /// [multiAxisConfig] and renders them at their configured positions.
+  void _drawMultiAxes(Canvas canvas, Size size, Rect chartRect) {
+    // Only render if multiAxisConfig is provided with axes
+    if (multiAxisConfig == null || multiAxisConfig!.axes.isEmpty) {
+      return;
+    }
+
+    // Create and invoke MultiAxisPainter
+    final axisPainter = MultiAxisPainter(
+      axes: multiAxisConfig!.axes,
+      chartRect: chartRect,
+    );
+
+    axisPainter.paint(canvas, size);
   }
 
   /// Formats axis labels to remove unnecessary decimal places.
