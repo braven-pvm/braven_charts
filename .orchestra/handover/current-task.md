@@ -1,91 +1,86 @@
-# Current Task: #9 - Create Multi-Axis Painter
+# Current Task: #10 - Integrate Multi-Axis Painter with BravenChart
 
 ## Objective
 
-Create a CustomPainter that can render multiple Y-axes on a chart, each positioned and styled according to its `YAxisConfig`.
+Wire up the `MultiAxisPainter` from Task 9 into the actual `BravenChart` widget so that multiple Y-axes render visually on the chart.
 
-## ⚠️ TDD REQUIRED + VISUAL VERIFICATION
+## ⚠️ THIS IS AN INTEGRATION TASK + VISUAL VERIFICATION REQUIRED
 
-**You MUST write tests FIRST before implementing.** The tests will guide your implementation.
+**You MUST modify EXISTING files.** Creating only new files is NOT acceptable.
 
-Visual verification is required - the axes must be visibly rendered with correct positioning and colors.
+**You MUST provide a screenshot** showing the multi-axis rendering working.
 
 ## Context
 
-We now have:
-- `YAxisPosition` - Defines where axes go (outerLeft, left, right, outerRight)
-- `YAxisConfig` - Configuration for each axis (color, labels, bounds)
-- `DataNormalizer` - Normalizes values to 0.0-1.0 range
-- `NormalizationDetector` - Detects when normalization is needed
-- Integration in `BravenChart` - Normalization is wired into the rendering pipeline
+We have built:
+- `MultiAxisPainter` - A CustomPainter that renders Y-axes with colors, ticks, labels
+- `YAxisConfig` - Configuration for each axis (position, color, bounds)
+- `MultiAxisConfig` - Container for axes, bindings, normalization mode
+- Integration in `BravenChart` - Data normalization is wired up
 
-Now we need to actually PAINT multiple Y-axes on the canvas.
+**What's missing**: The `MultiAxisPainter` exists but is never instantiated in the chart. The axes don't render yet.
 
-## What Needs to Be Created
+## What Needs to Happen
 
-### 1. Test File (FIRST!)
-`test/unit/painters/multi_axis_painter_test.dart`
+1. **Modify BravenChart** (`lib/src/widgets/braven_chart.dart`)
+   - Import `MultiAxisPainter`
+   - Instantiate and use the painter during chart painting
+   - Pass the axis configurations from `multiAxisConfig`
+   - Ensure axes render at correct positions (left/right of chart content)
 
-Write tests for:
-- Paints single axis correctly
-- Paints multiple axes at correct positions
-- Applies axis colors from config
-- Renders tick marks and labels
+2. **Visual Verification**
+   - Run the example app or create a test widget
+   - Configure a chart with at least 2 axes (different positions, different colors)
+   - Take a screenshot showing both axes rendering correctly
+   - Save screenshot as `screenshots/task-010-multi-axis-integration.png`
 
-### 2. Implementation
-`lib/src/painters/multi_axis_painter.dart`
+## Integration Points
 
-Create a `MultiAxisPainter` class that:
-- Extends `CustomPainter` (or integrates with existing pattern)
-- Takes a list of `YAxisConfig` and positions them correctly
-- Uses the axis color from config
-- Renders tick marks (based on normalized 0.0-1.0 scale)
-- Renders labels with actual values (denormalized)
+Look at `_BravenChartPainter` in `braven_chart.dart`. The painter has a `paint()` method that draws various chart elements. The `MultiAxisPainter` should be used here.
 
-### 3. Export
-Add to `lib/braven_charts.dart`
+**Conceptual approach**:
+```dart
+// In _BravenChartPainter.paint() or similar
+if (multiAxisConfig != null && multiAxisConfig!.axes.isNotEmpty) {
+  final axisPainter = MultiAxisPainter(
+    axes: multiAxisConfig!.axes,
+    chartRect: chartRect,  // The area where chart content renders
+  );
+  axisPainter.paint(canvas, size);
+}
+```
 
 ## Positioning Guide
 
-```
-|outerLeft|left|     CHART AREA     |right|outerRight|
-|   axis  |axis|                    | axis|   axis   |
-```
+The `MultiAxisPainter` positions axes relative to `chartRect`:
+- `left` and `outerLeft` axes render to the LEFT of `chartRect.left`
+- `right` and `outerRight` axes render to the RIGHT of `chartRect.right`
 
-- `outerLeft`: Farthest left position
-- `left`: Standard left position (closer to chart)
-- `right`: Standard right position (closer to chart)
-- `outerRight`: Farthest right position
-
-## Implementation Notes
-
-1. Consider how this painter will integrate with `BravenChart`'s existing painters
-2. The chart has `ChartPainter` pattern - review existing painters for consistency
-3. Axis painting happens in the "frame" area around the chart content
+Ensure `chartRect` has enough margin for the axes to be visible.
 
 ## Success Criteria
 
-- [ ] Tests written FIRST (at least 4 test cases)
-- [ ] All tests passing
-- [ ] Painter correctly positions 2-4 Y-axes
-- [ ] Each axis uses its configured color
+- [ ] `lib/src/widgets/braven_chart.dart` is MODIFIED (not just new files created)
+- [ ] `MultiAxisPainter` is imported and instantiated
+- [ ] Chart renders with at least 2 Y-axes visible
+- [ ] Axes have different colors (from YAxisConfig)
 - [ ] Tick marks and labels are visible
-- [ ] Export added to `lib/braven_charts.dart`
+- [ ] Screenshot provided showing working multi-axis chart
 
 ## Verification
 
 The orchestrator will check:
-1. Test file exists and was created before implementation
-2. Minimum 4 test cases covering required scenarios
-3. Implementation file exists with CustomPainter
-4. Axes actually render at correct positions with correct colors
-5. Static analysis passes
+1. Git diff shows `braven_chart.dart` modified
+2. `MultiAxisPainter` is imported and used
+3. Screenshot shows multiple colored axes
+4. Static analysis passes
 
 ## When Done
 
 1. Stage changes: `git add .`
-2. Write to `completion-signal.md` with:
-   - List of files created
-   - Brief description of implementation
-   - Test count and coverage
-3. Say "ready for review"
+2. Take screenshot and save to `screenshots/task-010-multi-axis-integration.png`
+3. Write to `completion-signal.md` with:
+   - Files modified
+   - Brief description of integration approach
+   - Screenshot location
+4. Say "ready for review"
