@@ -547,6 +547,261 @@ was visible and analyzable (axes, colors, labels, data series all verifiable).
 4. Orchestrator analyzes returned image against verification criteria
 5. No human-in-loop required for visual verification!
 
+### 6. Terminal Interaction for Flutter Apps (SOLVED - BREAKTHROUGH!)
+
+**Issue**: Agents couldn't interact with running Flutter apps.
+
+**What happened**:
+- Agent runs `flutter run` in terminal → App starts
+- Agent tries to send commands (screenshot, hot reload) → Uses `run_in_terminal`
+- Command goes to SAME terminal → Kills the Flutter process!
+- No way to specify which terminal to use
+
+**Root cause**: `run_in_terminal` tool has no terminal targeting capability.
+
+**Failed approaches**:
+- `run_vscode_command` with `workbench.action.terminal.sendSequence` - Reports success but doesn't work
+- Python subprocess in same terminal - Still kills Flutter
+- Named terminals via `terminal-tools_createTerminal` - Missing `sendCommand` capability
+
+**SOLUTION: Start-Process + File-Based IPC** ✅
+
+```powershell
+# 1. Launch Flutter in COMPLETELY SEPARATE PowerShell window
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+  "cd '<dir>'; python tools/flutter_agent/flutter_agent.py run lib/main.dart -d chrome"
+
+# 2. Wait for ready (from agent's terminal - doesn't kill Flutter!)
+python tools/flutter_agent/flutter_agent.py wait --timeout 30
+
+# 3. Send commands via file-based IPC
+python tools/flutter_agent/flutter_agent.py screenshot  # Takes screenshot!
+python tools/flutter_agent/flutter_agent.py reload      # Hot reload!
+python tools/flutter_agent/flutter_agent.py stop        # Graceful quit
+```
+
+**Architecture**:
+```
+Agent's Terminal                    Separate Window
+      │                                  │
+      │ writes to                        │ monitors
+      ▼                                  ▼
+  .flutter_control/               flutter_agent.py
+  ├── command.json  ────────────► reads & executes
+  ├── response.json ◄──────────── writes result
+  ├── status.json   ◄──────────── writes state
+  └── output.log    ◄──────────── captures stdout
+```
+
+**Created**:
+- `tools/flutter_agent/flutter_agent.py` - Main controller (590 lines)
+- `tools/flutter_agent/README.md` - Quick reference
+- `tools/flutter_agent/FLUTTER_AGENT_GUIDE.md` - Detailed guide
+
+**Commit**: `41d3bc4`
+
+**Impact**: Agents can now:
+- Run Flutter apps in Chrome
+- Take screenshots for visual verification
+- Hot reload after code changes
+- Interact with running apps without killing them
+- Enable fully autonomous visual verification workflow!
+
+---
+
+## Lower-Tier Model Strategy (BREAKTHROUGH)
+
+### The Insight
+
+With the orchestrator/implementor pattern, **lower-tier models can handle implementation** because:
+1. All complex reasoning happens during orchestration/specification
+2. Implementation becomes "follow explicit instructions"
+3. Verification is objective (tests pass/fail, screenshots match)
+4. Escalation path exists for edge cases
+
+### Cost Model
+
+```
+Traditional (single high-tier agent):
+  20 tasks × $0.50/task = $10.00
+
+Orchestrator/Implementor split:
+  Orchestrator: 1 spec session × $2.00 = $2.00
+  Implementor:  20 tasks × $0.10/task = $2.00
+  Total: $4.00 (60% savings!)
+```
+
+### Real-World SDLC Parallel
+
+```
+Traditional SDLC:                    Orchestrator/Implementor:
+─────────────────                    ─────────────────────────
+Senior Architect                     Orchestrator (High-tier)
+  ├─ Deep analysis                     ├─ Analyze codebase thoroughly
+  ├─ Design decisions                  ├─ Understand patterns & conventions
+  ├─ Detailed specs                    ├─ Write EXPLICIT instructions
+  └─ Review junior's work              └─ Verify via hidden criteria
+        │                                    │
+        ▼                                    ▼
+Junior Developer                     Implementor (Lower-tier)
+  ├─ Follow spec exactly               ├─ Follow instructions exactly
+  ├─ Don't reinvent                    ├─ Don't overthink
+  └─ Execute, don't design             └─ Execute, don't design
+```
+
+### The 80/20 Split
+
+| Activity | Orchestrator | Implementor |
+|----------|-------------|-------------|
+| Analyze codebase | 80% | 0% |
+| Design solution | 80% | 0% |
+| Write explicit spec | 80% | 0% |
+| Anticipate edge cases | 80% | 0% |
+| **Execute code changes** | 0% | **100%** |
+| Run tests | 0% | 100% |
+| Verify results | 20% | 0% |
+
+### Ideal Lower-Tier Model Traits
+
+- ✅ Strong code generation (Sonnet, GPT-3.5 are fine)
+- ✅ Good at following structured instructions
+- ✅ Fast iteration speed
+- ✅ Low cost per token
+- ⚠️ May need more explicit specs than high-tier
+
+### Escalation Protocol
+
+```yaml
+implementor_workflow:
+  on_failure:
+    attempt: 1-3
+      action: retry_with_different_approach
+    attempt: 4+
+      action: escalate_to_orchestrator
+      include:
+        - error_logs
+        - attempted_approaches
+        - specific_blocker
+```
+
+---
+
+## Strengthened Orchestrator Output (KEY DECISION)
+
+### The Problem with Current Specs
+
+Current SpecKit output provides task descriptions but leaves implementation decisions to the agent:
+
+```
+Task: "Implement YAxisPosition enum with left/right positions"
+
+Implementor thinks: "Hmm, should I add outerLeft? What about naming conventions? 
+                    Should it be in axis/ or enums/? Let me analyze the codebase..."
+
+Result: Overthinking, wrong decisions, wasted tokens, potential errors
+```
+
+### The Solution: Front-Load Intelligence
+
+Orchestrator invests time upfront analyzing codebase and writing EXPLICIT instructions:
+
+```yaml
+task:
+  id: 1
+  title: "Create YAxisPosition enum"
+  
+context:
+  # Orchestrator does the analysis ONCE, implementor doesn't repeat it
+  existing_patterns:
+    - "Enums use lowercase values (see ChartType in lib/src/models/enums.dart)"
+    - "Doc comments use /// not //"
+    - "Export via barrel files (axis.dart exports all axis/*.dart)"
+  related_files:
+    - lib/src/models/enums.dart  # Pattern reference
+    - lib/src/axis/axis.dart     # Barrel file to update
+  
+implementation:
+  create_file:
+    path: "lib/src/axis/y_axis_position.dart"
+    content: |
+      /// Position of Y-axis relative to chart area.
+      enum YAxisPosition {
+        left,
+        right,
+        outerLeft,
+        outerRight,
+      }
+  
+  modify_file:
+    path: "lib/src/axis/axis.dart"
+    action: "Add export"
+    line: "export 'y_axis_position.dart';"
+    after: "// Axis exports"
+
+constraints:
+  - "Do NOT add additional enum values beyond those specified"
+  - "Do NOT create test files (already exist)"
+  - "Do NOT modify any other files"
+
+verification:
+  # Hidden from implementor
+  tests_must_pass: ["test/unit/axis/y_axis_position_test.dart"]
+  static_analysis: "flutter analyze must pass with 0 errors"
+```
+
+### Architectural Decision: Two Approaches
+
+**Option A: Patch SpecKit (.specify) Process**
+- Modify SpecKit to generate enhanced task artifacts directly
+- Pro: Single source of truth, consistent output
+- Con: Requires changes to external tooling, may not fit all projects
+
+**Option B: Orchestrator Translation Layer**
+- SpecKit generates standard specs
+- Orchestrator has instruction set to translate each task into expanded format
+- Orchestrator analyzes codebase + spec and outputs implementor-ready instructions
+- Pro: Works with existing SpecKit, project-specific adaptation
+- Con: Extra processing step, potential for inconsistency
+
+**Recommendation**: **Option B (Translation Layer)**
+
+Rationale:
+1. SpecKit is designed for human-readable specs, not agent instructions
+2. Translation allows project-specific codebase analysis
+3. Orchestrator can adapt to each task's complexity
+4. No dependency on external tool modifications
+5. Matches real-world pattern: architects translate requirements into developer tickets
+
+### Translation Process
+
+```
+SpecKit Sprint YAML          Orchestrator Translation         Implementor Task
+──────────────────           ──────────────────────           ────────────────
+tasks:                       For each task:                   
+  - id: 1                    1. Read task description         task_001.yaml:
+    title: YAxisPosition     2. Analyze current codebase        - exact file paths
+    description: ...         3. Find patterns/conventions       - exact code to write
+                            4. Generate explicit spec           - constraints
+                            5. Add verification criteria        - no decisions needed
+```
+
+### Process for Sprint Review
+
+Before starting implementation:
+
+1. **Load SpecKit sprint artifacts** - Read feature plan YAML
+2. **Verify file paths are correct** - After restructure, ensure paths reference correct locations
+3. **Analyze current codebase state** - Understand existing patterns, conventions
+4. **For each task**:
+   - Translate to expanded format
+   - Add codebase context
+   - Include exact code snippets where possible
+   - Define explicit constraints
+   - Hide verification criteria
+5. **Output to `.orchestra/tasks/`** - Ready for implementor
+
+This is logged as the **Orchestrator Translation Protocol** for reference.
+
 ---
 
 ## Open Questions
@@ -560,6 +815,8 @@ was visible and analyzable (axes, colors, labels, data series all verifiable).
 4. **Tooling**: Could this be automated with a wrapper that enforces the pattern?
 
 5. **Human-in-loop**: Is human orchestrator better than AI orchestrator for critical tasks?
+
+6. **Model selection**: What is the minimum viable model tier for implementor role? (Test with Sonnet, Haiku, GPT-3.5)
 
 ---
 
