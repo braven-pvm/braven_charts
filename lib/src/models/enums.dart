@@ -1,6 +1,8 @@
 /// Shared enums for BravenChartPlus
 library;
 
+export 'y_axis_position.dart';
+
 /// Style of line rendering
 ///
 /// Determines how the line connects data points:

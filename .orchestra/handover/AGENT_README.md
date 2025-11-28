@@ -115,6 +115,37 @@ git status
 
 ---
 
+## Visual Tasks (Screenshots Required)
+
+If your task requires a screenshot, use the Flutter Agent Controller.
+
+**Location**: `tools/flutter_agent/flutter_agent.py`
+
+### Quick Reference
+
+```powershell
+# 1. Start Flutter in separate window (from example/ folder)
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/main.dart -d chrome"
+
+# 2. Wait for app to be ready (run from your terminal)
+cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'
+python ..\tools\flutter_agent\flutter_agent.py wait --timeout 60
+
+# 3. Take screenshot
+python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/your-screenshot.png
+
+# 4. Hot reload after code changes
+python ..\tools\flutter_agent\flutter_agent.py reload
+
+# 5. Stop when done
+python ..\tools\flutter_agent\flutter_agent.py stop
+```
+
+**Full documentation**: See `tools/flutter_agent/README.md`
+
+---
+
 ## When You're Stuck
 
 1. Re-read `current-task.md` carefully
