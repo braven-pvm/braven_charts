@@ -1,0 +1,68 @@
+# Task 3 Verification Criteria
+# ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+
+task_id: 3
+title: "Create Series-Axis Binding Model"
+phase: "foundation"
+
+verification_checks:
+  - id: "file_exists"
+    description: "SeriesAxisBinding class exists in correct location"
+    command: 'Test-Path "lib/src/models/series_axis_binding.dart"'
+    expected: "True"
+    
+  - id: "test_file_exists"
+    description: "Test file exists"
+    command: 'Test-Path "test/unit/multi_axis/series_axis_binding_test.dart"'
+    expected: "True"
+    
+  - id: "export_added"
+    description: "SeriesAxisBinding exported from models barrel file"
+    command: 'Select-String -Path "lib/src/models/enums.dart" -Pattern "series_axis_binding"'
+    expected: "Contains export statement"
+    
+  - id: "required_properties"
+    description: "Required properties present (seriesId, yAxisId)"
+    command: 'Select-String -Path "lib/src/models/series_axis_binding.dart" -Pattern "(final String seriesId|required this.seriesId|final String yAxisId|required this.yAxisId)"'
+    expected: "Both seriesId and yAxisId found"
+    
+  - id: "const_constructor"
+    description: "Has const constructor"
+    command: 'Select-String -Path "lib/src/models/series_axis_binding.dart" -Pattern "const SeriesAxisBinding"'
+    expected: "const constructor present"
+    
+  - id: "assertions"
+    description: "Validation assertions present"
+    command: 'Select-String -Path "lib/src/models/series_axis_binding.dart" -Pattern "assert\("'
+    expected: "Assertions for non-empty ids"
+    
+  - id: "tests_pass"
+    description: "All tests pass"
+    command: "flutter test test/unit/multi_axis/series_axis_binding_test.dart"
+    expected: "All tests pass"
+    
+  - id: "static_analysis"
+    description: "No static analysis issues"
+    command: "flutter analyze lib/src/models/series_axis_binding.dart"
+    expected: "No issues found"
+
+adversarial_checks:
+  - id: "simple_model"
+    description: "Model is simple - just binds seriesId to yAxisId"
+    check: "Should NOT have complex logic, just data association"
+    
+  - id: "equality_implemented"
+    description: "Equality based on both ids"
+    check: "Two bindings with same seriesId and yAxisId should be equal"
+    
+  - id: "no_circular_imports"
+    description: "Does not import ChartSeries or YAxisConfig"
+    check: "SeriesAxisBinding should be lightweight, no heavy dependencies"
+
+minimum_tests: 8
+
+notes: |
+  Task 3 creates a simple binding model that associates a series ID with an axis ID.
+  This is a lightweight value object - it should NOT import ChartSeries or YAxisConfig.
+  The binding is by ID strings, not object references, for flexibility.
+  Later code will resolve these IDs to actual objects.
