@@ -1,0 +1,39 @@
+# Verification Criteria - Task 10
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+task_id: 10
+title: "Implement Color-Coded Axis Rendering"
+
+phase: "rendering"
+depends_on: [9]
+
+# VISUAL VERIFICATION CRITICAL
+visual_required: true
+
+verification_criteria:
+  structural:
+    - modifies_existing: "lib/src/painters/multi_axis_painter.dart"
+    
+  functional:
+    - axis_color_from_config: "Each axis uses color from YAxisConfig"
+    - fallback_color: "Uses theme default if no color specified"
+    - all_elements_colored: "Ticks, labels, and axis line all match"
+    
+  visual_requirements:
+    - screenshot_required: true
+    - screenshot_filename: "task-010-colored-axes.png"
+    - screenshot_shows:
+      - "At least 2 axes with different colors"
+      - "Axis labels match axis line color"
+      - "Tick marks match axis color"
+
+verification_commands:
+  - description: "Git diff shows multi_axis_painter modified"
+    command: "git diff --name-only HEAD | Select-String 'multi_axis_painter'"
+    expected: "match found"
+    critical: true
+
+failure_indicators:
+  - "Colors defined but not applied to rendering"
+  - "Only axis line colored, labels still default"
+  - "Screenshot shows monochrome axes"

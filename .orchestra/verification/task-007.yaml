@@ -1,0 +1,47 @@
+# Verification Criteria - Task 7
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+task_id: 7
+title: "Implement Auto-Detection Logic"
+
+phase: "normalization"
+depends_on: [6]
+
+# TDD REQUIRED
+tdd_required: true
+
+verification_criteria:
+  structural:
+    - file_exists: "lib/src/axis/normalization_detector.dart"
+    - test_file_exists: "test/unit/axis/normalization_detector_test.dart"
+    - exports_from: "lib/braven_charts.dart"
+    
+  functional:
+    - detects_range_difference: "Identifies when series ranges differ by threshold"
+    - configurable_threshold: "Threshold is configurable (default 10x)"
+    - returns_mode: "Returns appropriate NormalizationMode"
+    
+  test_requirements:
+    - min_test_count: 5
+    - required_cases:
+      - "returns none when ranges similar"
+      - "returns auto/always when ranges differ >10x"
+      - "respects custom threshold"
+      - "handles single series (no normalization needed)"
+      - "handles empty series list"
+
+verification_commands:
+  - description: "Test file exists"
+    command: "Test-Path test/unit/axis/normalization_detector_test.dart"
+    expected: "True"
+    critical: true
+    
+  - description: "Tests pass"
+    command: "flutter test test/unit/axis/normalization_detector_test.dart"
+    expected: "All tests passed"
+    critical: true
+
+failure_indicators:
+  - "No test file"
+  - "Detection logic doesn't use threshold"
+  - "Hardcoded behavior instead of configurable"

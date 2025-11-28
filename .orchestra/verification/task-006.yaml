@@ -1,0 +1,64 @@
+# Verification Criteria - Task 6
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+task_id: 6
+title: "Implement Data Normalizer"
+
+phase: "normalization"
+depends_on: [1, 2, 3, 4, 5]
+
+# TDD REQUIRED FOR THIS TASK
+tdd_required: true
+
+verification_criteria:
+  structural:
+    - file_exists: "lib/src/axis/data_normalizer.dart"
+    - test_file_exists: "test/unit/axis/data_normalizer_test.dart"
+    - exports_from: "lib/braven_charts.dart"
+    
+  functional:
+    - normalizes_to_0_1: "Values normalized to 0.0-1.0 range"
+    - handles_min_max: "Uses axis min/max for normalization"
+    - denormalizes: "Can convert normalized back to original"
+    
+  test_requirements:
+    - min_test_count: 5
+    - required_cases:
+      - "normalizes value at min to 0.0"
+      - "normalizes value at max to 1.0"
+      - "normalizes mid-range correctly"
+      - "handles zero range (all same values)"
+      - "denormalizes back to original value"
+
+verification_commands:
+  - description: "Implementation file exists"
+    command: "Test-Path lib/src/axis/data_normalizer.dart"
+    expected: "True"
+    
+  - description: "Test file exists"
+    command: "Test-Path test/unit/axis/data_normalizer_test.dart"
+    expected: "True"
+    critical: true
+    
+  - description: "Tests pass"
+    command: "flutter test test/unit/axis/data_normalizer_test.dart"
+    expected: "All tests passed"
+    critical: true
+    
+  - description: "At least 5 test cases"
+    command: "Select-String -Path test/unit/axis/data_normalizer_test.dart -Pattern 'test\\(' | Measure-Object | Select-Object -ExpandProperty Count"
+    expected: ">= 5"
+
+# ADVERSARIAL TDD CHECK
+adversarial_checks:
+  - description: "Delete implementation body - do tests fail?"
+    action: "If tests still pass with empty implementation, tests are fake"
+    
+  - description: "Change normalization formula - do tests catch it?"
+    action: "Mutate: return value * 2 instead of normalized. Tests must fail."
+
+failure_indicators:
+  - "No test file created"
+  - "Tests pass with empty/wrong implementation"
+  - "Less than 5 test cases"
+  - "Edge cases not covered (zero range, boundaries)"
