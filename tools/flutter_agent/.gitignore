@@ -1,0 +1,8 @@
+# Runtime control files - do not commit
+.flutter_control/
+*.log
+*.pid
+
+# Python cache
+__pycache__/
+*.pyc
