@@ -1,0 +1,54 @@
+# Verification Criteria - Task 8 (Critical Integration Task)
+# ⚠️ HIDDEN FROM IMPLEMENTOR AGENT
+
+task_id: 8
+title: "Integrate Normalizer with Chart Data Pipeline"
+
+depends_on: [6, 7]
+
+# THIS IS AN INTEGRATION TASK - SPECIAL VERIFICATION REQUIRED
+
+verification_criteria:
+  structural:
+    - modifies_existing: "lib/src/charts/braven_chart_data.dart"  # or wherever data flows
+    - modifies_existing: "lib/src/painters/chart_painter.dart"    # or equivalent
+    
+  functional:
+    - normalizer_called: "DataNormalizer is invoked in data pipeline"
+    - normalized_values_used: "Painter receives normalized Y values"
+    - original_values_preserved: "Original values still accessible for display"
+    
+  integration:
+    # THE CRITICAL CHECK: Does data actually flow through normalizer to painter?
+    - end_to_end: "Create chart with 2 series (range 0-10 and 0-1000), both render using full height"
+
+verification_commands:
+  - description: "Git diff shows EXISTING files modified (not just new files)"
+    command: "git diff --name-only HEAD"
+    expected: "At least 2 existing files in lib/src/"
+    critical: true
+    
+  - description: "Normalizer is imported in data pipeline"
+    command: "Select-String -Path lib/src/charts/*.dart -Pattern 'import.*normalizer'"
+    expected: "match found"
+    
+  - description: "Normalizer is instantiated/called"
+    command: "Select-String -Path lib/src/charts/*.dart -Pattern 'DataNormalizer|normalize\\('"
+    expected: "match found"
+
+# ADVERSARIAL VERIFICATION (run by verifier agent)
+adversarial_checks:
+  - description: "Comment out normalizer call - does chart still work identically?"
+    action: "If yes, integration is fake"
+    
+  - description: "Pass extreme range data - do both series use full height?"
+    action: "If no, normalization not actually applied"
+    
+  - description: "Check painter receives normalized values"
+    action: "Add print statement in painter, verify values are 0-1 range"
+
+failure_indicators:
+  - "Only new files in git diff (no existing file modifications)"
+  - "Normalizer exists but is never called"
+  - "Normalizer called but result not passed to painter"
+  - "Chart renders identically with normalizer commented out"
