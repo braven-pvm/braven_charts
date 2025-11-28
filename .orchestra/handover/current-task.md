@@ -2,48 +2,47 @@
 
 ## Objective
 
-Create a configuration model for Y-axis settings in multi-axis charts.
+Create a model to bind a data series to a specific Y-axis.
 
-Each Y-axis needs configuration for its position, appearance, and data bounds. Create an immutable configuration class that holds these settings.
+When a chart has multiple Y-axes, each data series needs to know which axis it belongs to. Create a simple binding model that associates a series with an axis by ID.
 
 ## Context
 
-- We just created `YAxisPosition` enum (outerLeft, left, right, outerRight)
-- Now we need a config class that USES this enum
-- This config will be used when setting up multi-axis charts
+- We have `YAxisPosition` enum (outerLeft, left, right, outerRight)
+- We have `YAxisConfig` model (id, position, color, label, unitSuffix, minValue, maxValue)
+- Now we need to connect data series to these axis configurations
+- The chart's data series already have identifiers - we just need to map series ID → axis ID
 
 ## Required Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| id | String | Yes | Unique identifier for this axis |
-| position | YAxisPosition | Yes | Where to render (uses enum from Task 1) |
-| color | Color? | No | Color for axis line, ticks, labels |
-| label | String? | No | Axis title text |
-| unitSuffix | String? | No | Unit to append to values (e.g., "W", "bpm") |
-| minValue | double? | No | Explicit minimum bound |
-| maxValue | double? | No | Explicit maximum bound |
+| seriesId | String | Yes | ID of the data series |
+| axisId | String | Yes | ID of the YAxisConfig this series binds to |
+
+## Design Notes
+
+- Keep it simple - just a mapping between two IDs
+- The chart will use this to look up which axis config applies to each series
+- Multiple series can bind to the same axis (if they have compatible ranges)
 
 ## Success Demonstration
 
 When complete, provide:
 
 1. The file path where the class was created
-2. Code snippet showing instantiation:
+2. Code snippet showing usage:
    ```dart
-   final config = YAxisConfig(
-     id: 'power',
-     position: YAxisPosition.left,
-     color: Colors.blue,
-     unitSuffix: 'W',
+   final binding = SeriesAxisBinding(
+     seriesId: 'power-series',
+     axisId: 'power-axis',
    );
    ```
-3. Confirmation that it imports and uses `YAxisPosition` from Task 1
-4. Confirmation that `dart analyze` passes
+3. Confirmation that `dart analyze` passes
 
 ## Location
 
-Create in: `lib/src/axis/y_axis_config.dart`
+Create in: `lib/src/axis/series_axis_binding.dart`
 Export from: `lib/braven_charts.dart`
 
 ## When Done
