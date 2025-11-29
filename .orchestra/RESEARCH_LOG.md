@@ -547,6 +547,53 @@ was visible and analyzable (axes, colors, labels, data series all verifiable).
 4. Orchestrator analyzes returned image against verification criteria
 5. No human-in-loop required for visual verification!
 
+---
+
+### 🚨 MANDATORY: Screenshot Content Verification Protocol (Established 2025-11-29)
+
+**STATUS**: MANDATORY PROCESS - NOT OPTIONAL
+
+**The Gap Discovered**:
+During Task 10 verification, orchestrator verified screenshot EXISTS but did NOT verify CONTENT.
+Human caught this: "Ok so look through either the research log or the chat history, we discussed 
+and found a way for you to view the screenshots"
+
+**The Rule**: "Screenshot exists" ≠ "Screenshot is correct"
+
+**MANDATORY VERIFICATION STEPS** (for ALL visual tasks):
+
+```
+# Step 1: Existence check (necessary but NOT sufficient)
+Test-Path ".orchestra/screenshots/task-NNN-*.png"
+
+# Step 2: MANDATORY CONTENT VERIFICATION (the actual verification!)
+mcp_chrome-devtoo_new_page(url: "file:///E:/full/path/to/screenshot.png")
+mcp_chrome-devtoo_take_screenshot()
+
+# Step 3: Analyze returned image
+# - Describe what is actually visible
+# - Compare against verification criteria
+# - Confirm it's NOT empty/fake/wrong
+```
+
+**What to Check in Returned Image**:
+- Are expected visual elements present? (axes, labels, data)
+- Do colors match what the task specified?
+- Is it clearly a real screenshot (not blank/placeholder)?
+- Does it demonstrate the feature being verified?
+
+**Enforcement**: 
+- This is now documented in `.orchestra/readme.md` under "Screenshot Content Verification"
+- Added to `VERIFICATION_TEMPLATE.yaml` visual_verification section
+- Any visual verification that skips content check = INCOMPLETE VERIFICATION
+
+**Why This Was Missed**:
+The orchestrator had the CAPABILITY (Chrome DevTools MCP) but not the HABIT.
+Process documentation existed but wasn't integrated into verification workflow.
+Now it's MANDATORY in the template and readme.
+
+---
+
 ### 6. Terminal Interaction for Flutter Apps (SOLVED - BREAKTHROUGH!)
 
 **Issue**: Agents couldn't interact with running Flutter apps.

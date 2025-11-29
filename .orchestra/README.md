@@ -394,6 +394,99 @@ When the implementor signals completion, the orchestrator follows this exact flo
 
 ---
 
+## 🖼️ Screenshot Content Verification (MANDATORY)
+
+**CRITICAL**: "Screenshot exists" ≠ "Screenshot is correct"
+
+An implementor could create an empty/wrong image file, pass existence checks, and claim visual verification complete. The orchestrator MUST verify actual screenshot CONTENT.
+
+### The Problem
+
+| Check | Prevents Cheating? |
+|-------|-------------------|
+| `Test-Path "screenshot.png"` | ❌ NO - File could be empty/wrong |
+| `read_file` on PNG | ❌ FAILS - "File seems to be binary" |
+| `open_simple_browser` with file:// | ❌ FAILS - "Only HTTP/HTTPS supported" |
+| **Chrome DevTools MCP** | ✅ YES - Returns actual image to agent |
+
+### The Solution: Chrome DevTools MCP
+
+**Verified working workflow** (tested 2025-11-29):
+
+```
+# Step 1: Open screenshot in browser via Chrome DevTools MCP
+mcp_chrome-devtoo_new_page(url: "file:///E:/full/path/to/screenshot.png")
+
+# Step 2: Capture image through DevTools (returns image to agent)
+mcp_chrome-devtoo_take_screenshot()
+
+# Step 3: Agent receives and analyzes the actual image content!
+# - Verify colors match expectations
+# - Verify axes/labels are present
+# - Verify data series render correctly
+# - Compare against verification criteria
+```
+
+### Mandatory Verification Protocol
+
+For ANY task with visual verification requirements:
+
+1. **Existence check** (necessary but NOT sufficient)
+   ```powershell
+   Test-Path ".orchestra/screenshots/task-NNN-description.png"
+   ```
+
+2. **Content verification** (MANDATORY - must do this!)
+   ```
+   mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
+   mcp_chrome-devtoo_take_screenshot()
+   ```
+
+3. **Analyze returned image against criteria**
+   - Does it show what the verification yaml specifies?
+   - Are the correct elements visible (axes, colors, data)?
+   - Is it clearly NOT an empty/placeholder image?
+
+4. **Document findings** in verification results
+   - What was visible in the screenshot
+   - How it matches/doesn't match expectations
+   - Any anomalies noted
+
+### Example Verification Entry
+
+```yaml
+visual:
+  - check: "Screenshot captured"
+    severity: MAJOR
+    command: 'Test-Path ".orchestra/screenshots/task-010-color-demo.png"'
+    expected: "True"
+    
+  - check: "Screenshot content verified"
+    severity: BLOCKING  # This is the real verification!
+    manual_check: true
+    procedure: |
+      1. mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
+      2. mcp_chrome-devtoo_take_screenshot()
+      3. Verify: Left axis is BLUE, Right axis is RED
+      4. Verify: Two data series visible with correct colors
+    expected: "Visual elements match spec requirements"
+```
+
+### Why This Matters
+
+Without content verification, visual verification is theater. The orchestrator could:
+- ✅ Pass "file exists" check
+- ❌ Never actually see what's in the file
+- 🎭 Claim verification complete
+
+With Chrome DevTools MCP, the orchestrator:
+- ✅ Actually loads the image
+- ✅ Receives it in the response
+- ✅ Can analyze and describe what's shown
+- ✅ True visual verification
+
+---
+
 ## Anti-Patterns to Watch For
 
 - [ ] Tests that only check `findsOneWidget`
@@ -401,6 +494,7 @@ When the implementor signals completion, the orchestrator follows this exact flo
 - [ ] Config classes that aren't used anywhere
 - [ ] "Verification passed" without running commands
 - [ ] Same commit message as task title (lazy completion)
+- [ ] **Screenshot "verified" without Chrome DevTools content check**
 
 ---
 
