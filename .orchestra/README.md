@@ -5,6 +5,13 @@
 The implementor agent should NEVER be directed to read files in `.orchestra/` 
 except for the `handover/` subfolder.
 
+🚫 **ORCHESTRATOR: DO NOT READ `.orchestra/handover/.implementor/`** 🚫
+
+The `.implementor/` folder contains the implementor's self-verification rules.
+Reading it would defeat the purpose of mutual verification. The implementor
+uses these rules to validate YOUR work - if you know what they check, you
+might (consciously or not) optimize for passing checks rather than quality.
+
 ## Folder Structure
 
 ```
@@ -14,15 +21,69 @@ except for the `handover/` subfolder.
 ├── verification/           # Per-task verification criteria (HIDDEN)
 │   ├── task-001.yaml
 │   ├── task-002.yaml
+│   ├── orchestrator-preflight-001.md  # Orchestrator audit trail
 │   └── ...
+├── templates/              # Templates for orchestrator use (HIDDEN)
+│   ├── current-task-template.md       # ⭐ MUST use for every task
+│   └── orchestrator-preflight-template.md
 ├── handover/               # Communication channel (VISIBLE to implementor)
 │   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
 │   ├── current-task.md     # Current task for implementor
 │   ├── task-context.md     # Background context
-│   └── completion-signal.md # Implementor signals done here
+│   ├── completion-signal.md # Implementor signals done here
+│   └── .implementor/       # 🚫 ORCHESTRATOR DO NOT READ 🚫
+│       └── task-validator.md  # Implementor's validation rules
 └── artifacts/              # Outputs from verification
     └── screenshots/
 ```
+
+---
+
+## 🚨 CRITICAL: Orchestrator Pre-Flight Protocol 🚨
+
+**WHY THIS EXISTS**: Orchestrators can drift from documented process, operating from memory 
+instead of following instructions. This protocol FORCES structural compliance.
+
+**BEFORE preparing ANY task, the orchestrator MUST:**
+
+### Step 0: Read This File
+```
+READ `.orchestra/readme.md` ← You are here. Do NOT rely on memory!
+```
+
+### Step 1: Delete Old Task
+```
+DELETE `.orchestra/handover/current-task.md`
+```
+This prevents contamination from previous task content.
+
+### Step 2: Copy Template
+```
+COPY `.orchestra/templates/current-task-template.md` 
+  TO `.orchestra/handover/current-task.md`
+```
+
+### Step 3: Fill Template
+Fill EVERY section with either:
+- **Actual content**, OR
+- **`[N/A - Reason: explanation]`**
+
+No `[TODO]` markers may remain in the final version.
+
+### Step 4: Complete Pre-Flight Checklist
+The template contains a checklist. Complete it honestly.
+
+### Step 5: Save Audit Trail
+```
+COPY the completed checklist section
+  TO `.orchestra/verification/orchestrator-preflight-NNN.md`
+```
+Then DELETE the checklist from current-task.md before implementor sees it.
+
+### Step 6: Invoke Implementor
+Tell implementor: **"Read `.orchestra/handover/AGENT_README.md` and complete your task"**
+
+---
 
 ## Workflow
 
@@ -217,18 +278,34 @@ When the implementor signals completion, the orchestrator follows this exact flo
 ```
 
 ### Step 3: Prepare Next Task
+
+⚠️ **CRITICAL: Follow the Pre-Flight Protocol at the top of this file!**
+
 ```
-1. Read `.orchestra/manifest.yaml` for next task details
-2. Analyze codebase for relevant context
-3. Create `.orchestra/verification/task-XXX.yaml` with hidden criteria
-4. Update `.orchestra/handover/current-task.md` with:
-   - Task requirements (translated from spec)
-   - Technical context (discovered from codebase)
-   - TDD requirements (test file location, what to test)
-   - Acceptance criteria (what "done" looks like)
-5. Clear `.orchestra/handover/completion-signal.md`
-6. Invoke implementor: "Read `.orchestra/handover/AGENT_README.md` and complete your task"
+1. READ this file (`.orchestra/readme.md`) - NOT from memory!
+2. DELETE old `.orchestra/handover/current-task.md`
+3. COPY template from `.orchestra/templates/current-task-template.md`
+4. READ `.orchestra/manifest.yaml` for next task details
+5. READ SpecKit `tasks.md` for detailed requirements
+6. FILL every section in template (content or N/A with reason)
+7. CREATE `.orchestra/verification/task-XXX.yaml` with hidden criteria
+8. COMPLETE pre-flight checklist in template
+9. SAVE checklist to `.orchestra/verification/orchestrator-preflight-XXX.md`
+10. DELETE checklist section from current-task.md
+11. CLEAR `.orchestra/handover/completion-signal.md`
+12. Invoke implementor: "Read `.orchestra/handover/AGENT_README.md` and complete your task"
 ```
+
+**Template sections that MUST be addressed:**
+- [ ] Task Overview
+- [ ] SpecKit Traceability  
+- [ ] Deliverables (files to create AND modify)
+- [ ] Technical Context
+- [ ] TDD Requirements
+- [ ] Code Scaffolds
+- [ ] Visual Verification (REQUIRED if rendering task)
+- [ ] Quality Gates
+- [ ] Completion Protocol
 
 ### Flow Diagram
 ```
@@ -295,31 +372,68 @@ When the implementor signals completion, the orchestrator follows this exact flo
 
 ---
 
-## Visual/Integration Tasks
+## Visual/Integration Task Categories
 
-For tasks requiring screenshots or running Flutter app interaction:
+Tasks fall into three categories that determine visual verification requirements:
+
+| Category       | Description                              | Visual Verification |
+|----------------|------------------------------------------|---------------------|
+| **INFRASTRUCTURE** | Creates classes/logic NOT yet integrated | ❌ N/A (premature) |
+| **INTEGRATION**    | Wires components INTO BravenChartPlus    | ✅ Required         |
+| **VISUAL**         | Modifies existing rendering output       | ✅ Required         |
+
+### INFRASTRUCTURE Tasks
+
+These create building blocks (painters, layout managers, data models) but do NOT 
+wire them into the main widget. Visual verification is **premature** because 
+there's nothing to see yet.
+
+**In Section 7 of current-task.md, use:**
+```markdown
+**[N/A - Reason: Infrastructure task]**
+
+This task creates [component] but does NOT integrate it into BravenChartPlus.
+Visual verification will occur in [future integration task].
+```
+
+### INTEGRATION / VISUAL Tasks
+
+These wire components into BravenChartPlus or modify rendering. Require a 
+**standalone demo file** (NOT modifications to main.dart).
+
+**Demo location:** `example/lib/demos/task_NNN_name_demo.dart`
+
+**Why standalone demos?**
+- Self-contained (no navigation required)
+- Can be run directly with flutter_agent
+- Doesn't pollute main example app
+- Clear what's being tested
 
 ### Flutter Agent Controller
 
 Located at `tools/flutter_agent/flutter_agent.py` - enables running Flutter in a separate process with file-based IPC.
 
 **When to include in task instructions**:
+- Task is INTEGRATION or VISUAL category
 - Task requires screenshot verification
-- Task requires visual confirmation of rendering
 - Task requires hot reload testing
-- Task involves integration testing with running app
 
 **Orchestrator must add to `current-task.md`** for visual tasks:
 
 ```markdown
-## Screenshot Required
+## Visual Verification (INTEGRATION/VISUAL Task)
 
-Use the Flutter Agent Controller to capture screenshots:
+### Step 1: Create Standalone Demo
+Path: `example/lib/demos/task_NNN_demo.dart`
 
-1. Start Flutter in separate window:
+[Provide minimal self-contained demo code]
+
+### Step 2: Flutter Agent Workflow
+
+1. Start Flutter with the standalone demo:
    ```powershell
    Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
-     "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/main.dart -d chrome"
+     "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_NNN_demo.dart -d chrome"
    ```
 
 2. Wait for app ready:
@@ -330,13 +444,16 @@ Use the Flutter Agent Controller to capture screenshots:
 
 3. Take screenshot:
    ```powershell
-   python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-XXX.png
+   python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-NNN.png
    ```
 
 4. Stop when done:
    ```powershell
    python ..\tools\flutter_agent\flutter_agent.py stop
    ```
+
+### Expected Visual Output:
+[Describe EXACTLY what should be visible]
 ```
 
 **Full documentation**: `tools/flutter_agent/README.md` and `tools/flutter_agent/FLUTTER_AGENT_GUIDE.md`
@@ -351,6 +468,12 @@ This section captures iterative discoveries while developing the orchestrator pa
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2025-11-29 | **Three-category visual verification** | INFRASTRUCTURE/INTEGRATION/VISUAL categories. Infrastructure tasks (new classes not yet wired in) don't need screenshots - that's premature. Only INTEGRATION/VISUAL tasks require visual proof. |
+| 2025-11-29 | **Standalone demo files for visual tasks** | Visual verification uses `example/lib/demos/task_NNN_demo.dart` not modifications to main.dart. Isolates testing, avoids polluting main app. |
+| 2025-11-29 | **Mutual verification with hidden implementor validator** | Implementor validates orchestrator's task structure using `.implementor/task-validator.md` which orchestrator cannot read. Catches orchestrator mistakes BEFORE implementation starts. |
+| 2025-11-29 | **Template-enforced handover with pre-flight checklist** | Orchestrator drifted from process (operated from memory). Templates FORCE structural compliance. See RESEARCH_LOG.md "Who Watches the Orchestrator?" |
+| 2025-11-29 | Delete-first protocol for current-task.md | Prevents contamination from previous task; forces fresh template copy |
+| 2025-11-29 | Orchestrator audit trail (preflight records) | Creates accountability; human can verify orchestrator followed process |
 | 2025-01-08 | `current-task.md` is completely replaced each task | Clean slate for implementor - no confusion from previous task remnants |
 | 2025-01-08 | Implementor starts at `AGENT_README.md`, not `current-task.md` | Ensures consistent onboarding whether same agent or handover to new agent |
 | 2025-01-08 | Translation Layer approach (ADR-001) | Orchestrator translates specs to explicit instructions; implementor doesn't interpret specs |

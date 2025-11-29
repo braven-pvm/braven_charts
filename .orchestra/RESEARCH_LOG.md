@@ -1399,6 +1399,50 @@ Select-String -Path lib/src/widgets/braven_chart.dart -Pattern "import.*normaliz
 
 ## Orchestrator Standard Process (Updated)
 
+### Visual Verification Workflow (Screenshots)
+
+For tasks requiring visual evidence (golden tests, UI rendering, chart appearance):
+
+**Available Tools**:
+1. **`activate_snapshot_and_screenshot_tools`** - Activate screenshot capabilities
+2. **`take_screenshot`** - Capture page/element screenshots
+3. **Chrome DevTools MCP integration for browser-based testing
+
+**Workflow for Flutter Web Visual Testing**:
+
+```bash
+# 1. Start Flutter app in Chrome
+flutter run -d chrome --web-port=8080
+
+# 2. Use browser tools to navigate and capture
+# - activate_snapshot_and_screenshot_tools
+# - take_screenshot of specific elements or full page
+
+# 3. Save screenshots to .orchestra/artifacts/screenshots/
+# - task-009-multi-axis-render.png
+# - task-010-colored-axes.png
+```
+
+**When to Require Visual Evidence**:
+- Golden tests (chart appearance)
+- Multi-axis rendering (4-axis layout)
+- Color-coded axis verification
+- Tooltip/crosshair position verification
+- Any FR that affects visual output
+
+**Artifact Storage**: `.orchestra/artifacts/screenshots/`
+
+**Task Handover Note**: For visual tasks, include:
+```markdown
+## Visual Verification Required
+
+This task requires screenshot evidence. After implementation:
+1. Run the app: `flutter run -d chrome`
+2. Navigate to the relevant chart
+3. Use screenshot tools to capture evidence
+4. Save to `.orchestra/artifacts/screenshots/task-NNN-description.png`
+```
+
 ### Task Handover Checklist
 
 When preparing a task for implementor:
@@ -1449,3 +1493,472 @@ When verifying completed task:
 - `lib/src/axis/normalization_detector.dart` (T028)
 
 **Key Requirement**: Default 10x threshold per FR-008
+
+---
+
+## Session Log: 2025-11-29
+
+### Tool Clarification: Visual Verification
+
+**Issue Encountered**: Confusion about which screenshot tool to use.
+
+**What Happened**:
+- Research log documented Chrome DevTools MCP as a possible visual verification solution (lines 517-546)
+- This was RESEARCH exploration, not the final solution
+- The ACTUAL tool is `tools/flutter_agent/flutter_agent.py` (file-based IPC, Start-Process pattern)
+- There's also `tools/flutter_runner.py` (simpler, direct stdin) but `flutter_agent.py` is canonical
+- `.orchestra/readme.md` already documents `flutter_agent.py` as the standard tool
+
+**CANONICAL TOOL**: `tools/flutter_agent/flutter_agent.py`
+
+**Workflow for Visual Tasks**:
+```powershell
+# 1. Start Flutter in separate window
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+  "cd '<example_dir>'; python ..\tools\flutter_agent\flutter_agent.py run lib/main.dart -d chrome"
+
+# 2. Wait for ready
+python ..\tools\flutter_agent\flutter_agent.py wait --timeout 30
+
+# 3. Take screenshot
+python ..\tools\flutter_agent\flutter_agent.py screenshot
+
+# 4. Stop when done
+python ..\tools\flutter_agent\flutter_agent.py stop
+```
+
+**Chrome DevTools MCP Status**: Research exploration only. Not the canonical solution.
+
+**Lesson**: When documenting research, clearly mark what is "exploration" vs "decided solution".
+The `.orchestra/readme.md` is the authoritative source for orchestrator processes.
+
+### Task 8 Verified ✅
+
+**Implementation**: Pipeline Integration (Integration Task)
+**Commit**: `eb472bd`
+**Tests Added**: 20 integration tests
+**Sprint Total**: 192 tests
+
+**Integration Verification** (critical for integration tasks):
+- `chart_render_box.dart` modified: 7 usages of MultiAxisNormalizer
+- `braven_chart_plus.dart` modified: 5 usages of NormalizationDetector
+
+### Task 9 Handover Prepared
+
+**Task**: Create Multi-Axis Painter
+**Phase**: Rendering (visual task - requires screenshot verification)
+**SpecKit Tasks**: T011, T020, T021
+**Commit**: `d398a5c` (initial), updated with visual workflow
+
+**Files to Create**:
+- `lib/src/layout/multi_axis_layout.dart` (MultiAxisLayoutDelegate)
+- `lib/src/layout/axis_layout_manager.dart`
+- `lib/src/rendering/multi_axis_painter.dart`
+- `test/unit/multi_axis/multi_axis_painter_test.dart`
+
+**Visual Verification Required**: This is a rendering task. Handover includes flutter_agent.py workflow.
+
+---
+
+## 🚨 CRITICAL DISCOVERY: Who Watches the Orchestrator? 🚨
+
+**Date**: 2025-11-29
+**Severity**: CRITICAL - Process could fail silently without this fix
+**Status**: IMPLEMENTING SOLUTION
+
+### The Failure Mode Observed
+
+During Task 9 handover preparation, the orchestrator (me) demonstrated a critical failure:
+
+1. **What Happened**: Created `current-task.md` for Task 9 from MEMORY instead of following documented process
+2. **What Was Missed**: Visual verification workflow using `flutter_agent.py` - even though it was ALREADY DOCUMENTED in `.orchestra/readme.md`
+3. **How Discovered**: Human pointed to `flutter_runner.py`, then `flutter_agent.py`, asking "what can you see about this?"
+4. **Root Cause**: Orchestrator operated from cached context instead of re-reading authoritative instructions
+
+### Why This Is Critical
+
+The entire orchestrator/implementor pattern relies on the orchestrator following established process. If the orchestrator drifts:
+- Implementor receives incomplete instructions
+- Visual tasks don't get visual verification workflow
+- Process improvements documented in readme.md are ignored
+- The human becomes the only safety net (defeats automation goal)
+
+**The Meta-Problem**: We designed verification for the IMPLEMENTOR but not for the ORCHESTRATOR.
+
+> "Quis custodiet ipsos custodes?" - Who watches the watchmen?
+
+### Analysis: Why Did Orchestrator Drift?
+
+| Factor | Impact |
+|--------|--------|
+| Context window contained "gist" of process | Agent felt it "knew" what to do |
+| Reading files feels like "extra work" | Skipped when memory seems sufficient |
+| No structural barrier | Nothing FORCED reading the readme |
+| Instructions are text-based | Text can be ignored; structure cannot |
+
+### Key Insight: Agents Are Good at Templates, Bad at Remembering
+
+**Observed Behavior**:
+- ✅ Agents reliably FILL templates when given structure
+- ❌ Agents unreliably REMEMBER to include sections from memory
+- ✅ Agents follow explicit N/A requirements when forced
+- ❌ Agents skip sections when structure doesn't demand them
+
+**Implication**: Shift burden from MEMORY to STRUCTURE.
+
+### The Solution: Template-Enforced Handover
+
+#### Part 1: Delete-First Protocol
+Before creating a new `current-task.md`, orchestrator MUST delete the old one.
+- Prevents contamination from previous task
+- Forces fresh start (can't "edit" old content)
+- Creates clear break point
+
+#### Part 2: Template with ALL Sections
+Create `.orchestra/templates/current-task-template.md` containing:
+- ALL possible sections a task might need
+- Each section MUST be either:
+  - FILLED with actual content, OR
+  - Marked `[N/A]` with explicit reason
+- No `[TODO]` markers allowed in final version
+
+#### Part 3: Pre-Flight Checklist (Auditable)
+Template includes orchestrator checklist AT THE TOP:
+```markdown
+## Orchestrator Pre-Flight Checklist
+- [ ] I have READ `.orchestra/readme.md` (not from memory)
+- [ ] I have READ `.orchestra/manifest.yaml` for this task
+- [ ] I have identified if this is a visual/rendering task
+- [ ] If visual: I have included flutter_agent.py workflow
+- [ ] I have filled ALL sections (content or N/A with reason)
+- [ ] No [TODO] markers remain in this document
+```
+
+This checklist is DELETED before giving to implementor, but creates accountability.
+
+#### Part 4: Paper Trail
+Save completed checklist to `.orchestra/verification/orchestrator-preflight-NNN.md`
+- Human can audit orchestrator's claims
+- Creates record of what was checked
+- Enables retrospective analysis
+
+### Why This Will Work
+
+| Before | After |
+|--------|-------|
+| Orchestrator decides what to include | Template dictates what MUST be addressed |
+| Missing sections = silent failure | Missing sections = visible `[TODO]` |
+| "I forgot" is possible | "I skipped it" requires explicit `[N/A]` |
+| Memory-based process | Document-based process |
+| No audit trail for orchestrator | Pre-flight checklist creates record |
+
+### The Process Flow (New)
+
+```
+Orchestrator Prepares Next Task
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 0: READ `.orchestra/readme.md`         │ ← MANDATORY, refresh on process
+│         (not from memory!)                  │
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 1: DELETE old `current-task.md`        │ ← Forces fresh start
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 2: COPY template to `current-task.md`  │ ← Structure now enforced
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 3: FILL every section                  │ ← Content or N/A + reason
+│         (check pre-flight boxes as you go)  │
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 4: VERIFY no [TODO] markers remain     │ ← Can't submit incomplete
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 5: SAVE pre-flight to verification/    │ ← Audit trail
+│         DELETE pre-flight from current-task │
+└─────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────┐
+│ STEP 6: Invoke implementor                  │
+└─────────────────────────────────────────────┘
+```
+
+### Template Sections (Minimum Required)
+
+```markdown
+## Orchestrator Pre-Flight Checklist
+[Checkboxes - deleted before implementor sees]
+
+# Task: [TITLE]
+
+## 1. Task Overview
+[REQUIRED]
+
+## 2. SpecKit Traceability
+[REQUIRED - T0XX references]
+
+## 3. Deliverables
+[REQUIRED - files to create/modify]
+
+## 4. Technical Context
+[REQUIRED - dependencies, existing code]
+
+## 5. TDD Requirements
+[REQUIRED or N/A with reason]
+
+## 6. Code Scaffolds
+[OPTIONAL - N/A is acceptable]
+
+## 7. Visual Verification
+[REQUIRED for visual tasks, N/A with reason for others]
+- This section contains flutter_agent.py workflow if applicable
+
+## 8. Quality Gates
+[REQUIRED - standard gates]
+
+## 9. Completion Protocol
+[REQUIRED - how to signal done]
+```
+
+### Files to Create/Modify
+
+1. **CREATE** `.orchestra/templates/current-task-template.md`
+2. **CREATE** `.orchestra/templates/orchestrator-preflight-template.md`
+3. **MODIFY** `.orchestra/readme.md` - Update Step 3 with new protocol
+4. **MODIFY** `.orchestra/readme.md` - Update folder structure to include templates/
+
+### Lessons for Future
+
+1. **Structure > Instructions**: Templates that must be filled beat instructions that can be ignored
+2. **Audit Trails Matter**: If there's no record, there's no accountability
+3. **Assume Drift**: Design processes assuming the agent WILL take shortcuts
+4. **Delete-First Patterns**: Prevent contamination by forcing fresh starts
+5. **N/A is Not Ignoring**: Requiring explicit N/A forces conscious decision
+
+### Action Items
+
+- [x] Document this discovery (this section)
+- [x] Create templates folder and templates
+- [x] Update readme.md with new protocol
+- [x] Implement mutual verification (see below)
+
+---
+
+## 🔄 CRITICAL ENHANCEMENT: Mutual Verification Pattern
+
+**Date**: 2025-11-29
+**Extends**: "Who Watches the Orchestrator?" solution
+**Status**: IMPLEMENTED
+
+### The Problem (Continued)
+
+The template-enforced handover catches orchestrator drift, but relies on:
+- Orchestrator following the template honestly
+- Human spotting issues during review
+
+What if the **implementor** could also validate the orchestrator's work?
+
+### The Solution: Implementor Self-Verification
+
+Create a hidden validation checklist that the IMPLEMENTOR uses to verify the 
+ORCHESTRATOR created a properly-formed task.
+
+**Key Insight**: Mutual verification where neither party sees the other's criteria.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MUTUAL VERIFICATION                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Orchestrator                         Implementor           │
+│       │                                    │                 │
+│       │ Has: readme.md, templates/         │ Has: .implementor/task-validator.md
+│       │      verification/task-XXX.yaml    │      (hidden from orchestrator)
+│       │      (hidden from implementor)     │                 │
+│       │                                    │                 │
+│       ▼                                    │                 │
+│   Creates current-task.md ─────────────►   │                 │
+│   (using template)                         │                 │
+│                                            ▼                 │
+│                                   Step 0: Validate structure │
+│                                            │                 │
+│                               ┌────────────┴────────────┐    │
+│                               │                         │    │
+│                               ▼                         ▼    │
+│                           VALID                     DEFECT   │
+│                           (proceed)             (STOP, report)│
+│                               │                         │    │
+│                               ▼                         │    │
+│                           Implement                     │    │
+│                               │                         │    │
+│                               ▼                         │    │
+│                        completion-signal.md ◄───────────┘    │
+│                               │                              │
+│   ◄───────────────────────────┤                              │
+│                               │                              │
+│   Verifies against            │                              │
+│   hidden criteria             │                              │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Separation of Concerns
+
+| Party | Can Read | Cannot Read |
+|-------|----------|-------------|
+| Orchestrator | `.orchestra/readme.md`, `manifest.yaml`, `verification/`, `templates/` | `.implementor/` |
+| Implementor | `handover/AGENT_README.md`, `current-task.md`, `.implementor/` | `verification/`, `templates/`, `manifest.yaml` |
+| Human | Everything | - |
+
+### What Implementor Validates
+
+The implementor checks current-task.md for:
+
+1. **Required sections exist** (9 sections, each filled or N/A with reason)
+2. **No [TODO] markers remain**
+3. **SpecKit traceability present** (T0XX references)
+4. **Quality gates section complete** (test commands, baseline count)
+5. **Visual task detection** → Visual verification section must be filled
+6. **File paths specified** (not ambiguous)
+
+### Failure Handling
+
+If validation fails, implementor:
+1. Writes detailed failure report to `completion-signal.md`
+2. Says "Task validation failed - see completion-signal.md for required fixes"
+3. STOPS - does not proceed with implementation
+
+Orchestrator must fix and re-issue the task.
+
+### Why This Works
+
+1. **Neither party games the other's checks** - criteria are hidden
+2. **Errors caught early** - before implementation starts, not after
+3. **Clear responsibility** - defect in task spec = orchestrator's fault
+4. **Structural enforcement** - implementor MUST validate as Step 0
+
+### Files Created
+
+1. **`.orchestra/handover/.implementor/task-validator.md`** - Implementor's validation rules
+2. **Updated `AGENT_README.md`** - Added Step 0 (validation)
+3. **Updated `.orchestra/readme.md`** - Warning not to read `.implementor/`
+
+### The Trust Model
+
+```
+                 Human
+                   │
+                   │ (watches both)
+                   ▼
+    ┌──────────────┴──────────────┐
+    │                             │
+    ▼                             ▼
+Orchestrator ◄─────────────► Implementor
+    │    (mutual verification)    │
+    │                             │
+    │ Cannot see:                 │ Cannot see:
+    │ - .implementor/             │ - verification/
+    │                             │ - manifest.yaml
+    │                             │ - templates/
+    └─────────────────────────────┘
+```
+
+Human remains the ultimate arbiter, but now has TWO automated checks:
+- Orchestrator's pre-flight checklist (audit trail)
+- Implementor's validation (catches orchestrator mistakes)
+- [ ] Test the process on Task 10 preparation
+
+---
+
+## 📸 Visual Verification Refinement: Three-Category System
+
+**Date**: 2025-01-XX (Session continuation)  
+**Trigger**: Task 9 implementor struggling with screenshot requirement
+
+### The Problem Discovered
+
+Task 9 (MultiAxisPainter) was given detailed screenshot instructions, but:
+1. MultiAxisPainter is **infrastructure** - creates the painter class
+2. The painter is NOT YET WIRED into BravenChartPlus
+3. Implementor correctly identified: "can't easily visualize without manual integration"
+4. Screenshot requirement was **PREMATURE** for this task type
+
+### Root Cause
+
+The visual verification template assumed binary: "YES visual" or "NO visual"
+
+Reality is **three categories**:
+
+| Category       | What It Does                              | Visual Verification |
+|----------------|-------------------------------------------|---------------------|
+| INFRASTRUCTURE | Creates classes/logic, NOT integrated     | ❌ N/A (premature)  |
+| INTEGRATION    | Wires components INTO BravenChartPlus     | ✅ Required         |
+| VISUAL         | Modifies existing rendering output        | ✅ Required         |
+
+### The Fix
+
+#### 1. Template Updated (Section 7)
+
+Now requires explicit category selection:
+- `INFRASTRUCTURE` → Must use `[N/A - Reason: Infrastructure task...]`
+- `INTEGRATION` / `VISUAL` → Must include standalone demo + screenshot workflow
+
+#### 2. Standalone Demo Requirement
+
+For visual tasks, DON'T modify `example/lib/main.dart` directly.
+Create **isolated demo files**:
+```
+example/lib/demos/task_NNN_demo.dart
+```
+
+Benefits:
+- Self-contained, no navigation required
+- Can be run directly: `flutter_agent.py run lib/demos/task_NNN_demo.dart`
+- Doesn't pollute main example app
+- Clear what's being tested visually
+
+#### 3. Task 9 Fixed
+
+Removed extensive screenshot section, replaced with:
+```markdown
+## Visual Verification
+
+**[N/A - Reason: Infrastructure task]**
+
+This task creates the **painter infrastructure** but does NOT integrate it
+into BravenChartPlus. Visual verification will occur in a future integration task.
+```
+
+#### 4. Implementor Validator Updated
+
+Now checks:
+- Task category is specified
+- INFRASTRUCTURE tasks have proper N/A justification
+- INTEGRATION/VISUAL tasks have standalone demo paths
+- RED FLAG if task asks to modify `main.dart` for screenshots
+
+### Lesson Learned
+
+**Infrastructure → Integration → Visual** is a natural progression.
+
+Don't ask for visual proof until the component is actually wired in!
+
+Sprint task mapping:
+- Tasks 1-9: Mostly INFRASTRUCTURE (creating classes/APIs)
+- Tasks 10-13: Mix of INTEGRATION (wiring into widgets)
+- Tasks 14-16: VISUAL verification makes sense
+
+---

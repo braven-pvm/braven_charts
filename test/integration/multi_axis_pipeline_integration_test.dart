@@ -13,23 +13,18 @@
 library;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/braven_chart_plus.dart';
-import 'package:braven_charts/src/models/chart_data_point.dart';
-import 'package:braven_charts/src/models/chart_series.dart';
-import 'package:braven_charts/src/models/chart_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Multi-Axis Pipeline Integration', () {
     group('BravenChartPlus with multi-scale data', () {
-      testWidgets('renders chart with 100x range difference without error',
-          (tester) async {
+      testWidgets('renders chart with 100x range difference without error', (tester) async {
         // Create chart with series having 100x range difference
         // Series A: 0-10
         // Series B: 0-1000
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -42,9 +37,9 @@ void main() {
                       name: 'Small Range',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 5),
-                        const ChartDataPoint(x: 2, y: 10),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 5),
+                        ChartDataPoint(x: 2, y: 10),
                       ],
                     ),
                     LineChartSeries(
@@ -52,9 +47,9 @@ void main() {
                       name: 'Large Range',
                       color: Colors.red,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 500),
-                        const ChartDataPoint(x: 2, y: 1000),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 500),
+                        ChartDataPoint(x: 2, y: 1000),
                       ],
                     ),
                   ],
@@ -68,13 +63,12 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders chart with similar ranges without error',
-          (tester) async {
+      testWidgets('renders chart with similar ranges without error', (tester) async {
         // Create chart with series having 2x range difference (below 10x threshold)
         // Series A: 0-50
         // Series B: 0-100
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -87,9 +81,9 @@ void main() {
                       name: 'Range 50',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 25),
-                        const ChartDataPoint(x: 2, y: 50),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 25),
+                        ChartDataPoint(x: 2, y: 50),
                       ],
                     ),
                     LineChartSeries(
@@ -97,9 +91,9 @@ void main() {
                       name: 'Range 100',
                       color: Colors.red,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 50),
-                        const ChartDataPoint(x: 2, y: 100),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 50),
+                        ChartDataPoint(x: 2, y: 100),
                       ],
                     ),
                   ],
@@ -117,7 +111,7 @@ void main() {
       testWidgets('single series chart works unchanged', (tester) async {
         // Existing single-series charts must continue working
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -130,9 +124,9 @@ void main() {
                       name: 'Single Series',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 100),
-                        const ChartDataPoint(x: 1, y: 200),
-                        const ChartDataPoint(x: 2, y: 150),
+                        ChartDataPoint(x: 0, y: 100),
+                        ChartDataPoint(x: 1, y: 200),
+                        ChartDataPoint(x: 2, y: 150),
                       ],
                     ),
                   ],
@@ -147,14 +141,14 @@ void main() {
 
       testWidgets('empty series list works', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
                   chartType: ChartType.line,
-                  series: const [],
+                  series: [],
                 ),
               ),
             ),
@@ -164,11 +158,10 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('multi-series with similar ranges works unchanged',
-          (tester) async {
+      testWidgets('multi-series with similar ranges works unchanged', (tester) async {
         // Series with similar ranges should render normally
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -181,9 +174,9 @@ void main() {
                       name: 'Series A',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 10),
-                        const ChartDataPoint(x: 1, y: 15),
-                        const ChartDataPoint(x: 2, y: 12),
+                        ChartDataPoint(x: 0, y: 10),
+                        ChartDataPoint(x: 1, y: 15),
+                        ChartDataPoint(x: 2, y: 12),
                       ],
                     ),
                     LineChartSeries(
@@ -191,9 +184,9 @@ void main() {
                       name: 'Series B',
                       color: Colors.red,
                       points: [
-                        const ChartDataPoint(x: 0, y: 8),
-                        const ChartDataPoint(x: 1, y: 18),
-                        const ChartDataPoint(x: 2, y: 14),
+                        ChartDataPoint(x: 0, y: 8),
+                        ChartDataPoint(x: 1, y: 18),
+                        ChartDataPoint(x: 2, y: 14),
                       ],
                     ),
                   ],
@@ -285,7 +278,7 @@ void main() {
     group('Chart types with multi-scale data', () {
       testWidgets('scatter chart with multi-scale data', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -299,9 +292,9 @@ void main() {
                       color: Colors.orange,
                       markerRadius: 4.0,
                       points: [
-                        const ChartDataPoint(x: 0, y: 20),
-                        const ChartDataPoint(x: 1, y: 25),
-                        const ChartDataPoint(x: 2, y: 30),
+                        ChartDataPoint(x: 0, y: 20),
+                        ChartDataPoint(x: 1, y: 25),
+                        ChartDataPoint(x: 2, y: 30),
                       ],
                     ),
                     ScatterChartSeries(
@@ -310,9 +303,9 @@ void main() {
                       color: Colors.purple,
                       markerRadius: 4.0,
                       points: [
-                        const ChartDataPoint(x: 0, y: 1000),
-                        const ChartDataPoint(x: 1, y: 1050),
-                        const ChartDataPoint(x: 2, y: 1020),
+                        ChartDataPoint(x: 0, y: 1000),
+                        ChartDataPoint(x: 1, y: 1050),
+                        ChartDataPoint(x: 2, y: 1020),
                       ],
                     ),
                   ],
@@ -327,7 +320,7 @@ void main() {
 
       testWidgets('bar chart with multi-scale data', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -341,9 +334,9 @@ void main() {
                       color: Colors.green,
                       barWidthPercent: 0.8,
                       points: [
-                        const ChartDataPoint(x: 0, y: 50000),
-                        const ChartDataPoint(x: 1, y: 75000),
-                        const ChartDataPoint(x: 2, y: 60000),
+                        ChartDataPoint(x: 0, y: 50000),
+                        ChartDataPoint(x: 1, y: 75000),
+                        ChartDataPoint(x: 2, y: 60000),
                       ],
                     ),
                     BarChartSeries(
@@ -352,9 +345,9 @@ void main() {
                       color: Colors.blue,
                       barWidthPercent: 0.8,
                       points: [
-                        const ChartDataPoint(x: 0, y: 100),
-                        const ChartDataPoint(x: 1, y: 150),
-                        const ChartDataPoint(x: 2, y: 120),
+                        ChartDataPoint(x: 0, y: 100),
+                        ChartDataPoint(x: 1, y: 150),
+                        ChartDataPoint(x: 2, y: 120),
                       ],
                     ),
                   ],
@@ -369,7 +362,7 @@ void main() {
 
       testWidgets('area chart with multi-scale data', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -383,9 +376,9 @@ void main() {
                       color: Colors.teal,
                       fillOpacity: 0.3,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 50),
-                        const ChartDataPoint(x: 2, y: 100),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 50),
+                        ChartDataPoint(x: 2, y: 100),
                       ],
                     ),
                     AreaChartSeries(
@@ -394,9 +387,9 @@ void main() {
                       color: Colors.indigo,
                       fillOpacity: 0.3,
                       points: [
-                        const ChartDataPoint(x: 0, y: 2000),
-                        const ChartDataPoint(x: 1, y: 4000),
-                        const ChartDataPoint(x: 2, y: 8000),
+                        ChartDataPoint(x: 0, y: 2000),
+                        ChartDataPoint(x: 1, y: 4000),
+                        ChartDataPoint(x: 2, y: 8000),
                       ],
                     ),
                   ],
@@ -413,7 +406,7 @@ void main() {
     group('Edge cases', () {
       testWidgets('handles series with single point', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -426,7 +419,7 @@ void main() {
                       name: 'Single Point',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 100),
+                        ChartDataPoint(x: 0, y: 100),
                       ],
                     ),
                   ],
@@ -441,7 +434,7 @@ void main() {
 
       testWidgets('handles series with zero Y range', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -454,9 +447,9 @@ void main() {
                       name: 'Flat Line',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 50),
-                        const ChartDataPoint(x: 1, y: 50),
-                        const ChartDataPoint(x: 2, y: 50),
+                        ChartDataPoint(x: 0, y: 50),
+                        ChartDataPoint(x: 1, y: 50),
+                        ChartDataPoint(x: 2, y: 50),
                       ],
                     ),
                   ],
@@ -471,7 +464,7 @@ void main() {
 
       testWidgets('handles negative Y values', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -484,9 +477,9 @@ void main() {
                       name: 'Positive',
                       color: Colors.green,
                       points: [
-                        const ChartDataPoint(x: 0, y: 0),
-                        const ChartDataPoint(x: 1, y: 50),
-                        const ChartDataPoint(x: 2, y: 100),
+                        ChartDataPoint(x: 0, y: 0),
+                        ChartDataPoint(x: 1, y: 50),
+                        ChartDataPoint(x: 2, y: 100),
                       ],
                     ),
                     LineChartSeries(
@@ -494,9 +487,9 @@ void main() {
                       name: 'Negative',
                       color: Colors.red,
                       points: [
-                        const ChartDataPoint(x: 0, y: -100),
-                        const ChartDataPoint(x: 1, y: -50),
-                        const ChartDataPoint(x: 2, y: 0),
+                        ChartDataPoint(x: 0, y: -100),
+                        ChartDataPoint(x: 1, y: -50),
+                        ChartDataPoint(x: 2, y: 0),
                       ],
                     ),
                   ],
@@ -511,7 +504,7 @@ void main() {
 
       testWidgets('handles very large Y values', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 800,
@@ -524,9 +517,9 @@ void main() {
                       name: 'Small',
                       color: Colors.blue,
                       points: [
-                        const ChartDataPoint(x: 0, y: 1),
-                        const ChartDataPoint(x: 1, y: 2),
-                        const ChartDataPoint(x: 2, y: 3),
+                        ChartDataPoint(x: 0, y: 1),
+                        ChartDataPoint(x: 1, y: 2),
+                        ChartDataPoint(x: 2, y: 3),
                       ],
                     ),
                     LineChartSeries(
@@ -534,9 +527,9 @@ void main() {
                       name: 'Huge',
                       color: Colors.red,
                       points: [
-                        const ChartDataPoint(x: 0, y: 1000000),
-                        const ChartDataPoint(x: 1, y: 2000000),
-                        const ChartDataPoint(x: 2, y: 3000000),
+                        ChartDataPoint(x: 0, y: 1000000),
+                        ChartDataPoint(x: 1, y: 2000000),
+                        ChartDataPoint(x: 2, y: 3000000),
                       ],
                     ),
                   ],

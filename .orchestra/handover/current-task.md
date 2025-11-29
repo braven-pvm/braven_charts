@@ -382,6 +382,18 @@ flutter test test/integration/multi_axis_pipeline_integration_test.dart
 
 Current baseline: **192 tests passing** (MUST NOT decrease!)
 
+## Visual Verification
+
+**[N/A - Reason: Infrastructure task]**
+
+This task creates the **painter infrastructure** (classes, methods, layout logic) but does NOT integrate it into BravenChartPlus. Visual verification will occur in a future integration task when MultiAxisPainter is wired into the chart widget.
+
+The correctness of this task is verified through **unit tests** that validate:
+- Layout calculations produce correct rectangles
+- Tick generation uses nice numbers
+- Label formatting includes units
+- Axis positioning follows FR-001 rules
+
 ## When Done
 
 1. **Verify linting is clean** (BLOCKING)

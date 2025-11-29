@@ -11,6 +11,9 @@ export 'src/braven_chart_plus.dart';
 // Controllers
 export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
+// Layout
+export 'src/layout/axis_layout_manager.dart';
+export 'src/layout/multi_axis_layout.dart';
 // Models
 export 'src/models/annotation_style.dart';
 export 'src/models/auto_scroll_config.dart';
@@ -27,5 +30,6 @@ export 'src/models/interaction_config.dart';
 export 'src/models/streaming_config.dart';
 // Rendering
 export 'src/rendering/multi_axis_normalizer.dart';
+export 'src/rendering/multi_axis_painter.dart';
 // Streaming
 export 'src/streaming/streaming_controller.dart';
