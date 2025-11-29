@@ -594,6 +594,85 @@ Now it's MANDATORY in the template and readme.
 
 ---
 
+### 7. Pre-Task Administrative Check (Established 2025-11-29)
+
+**STATUS**: MANDATORY PROCESS - SCRIPT ENFORCED
+
+**The Gap Discovered**:
+After Task 10 verification, orchestrator proceeded to discuss next steps without:
+- Updating progress.yaml to mark Task 10 complete
+- Updating SpecKit tasks.md with checkmarks
+- Recording proper verification results
+
+Human caught this: "ok so task 10 is marked as verified and complete? Are you still updating 
+the original speckit tasks.md??"
+
+**The Problem**:
+Admin/structural/documentation tasks get skipped when orchestrator moves too quickly to 
+the next interesting task. These "boring" tasks are critical for:
+- Traceability (which SpecKit tasks are done?)
+- Progress tracking (what's the real sprint status?)
+- Audit trail (when was what completed?)
+- Handover (can a new agent understand the state?)
+
+**The Solution**: Pre-Task Check Script
+
+Created `.orchestra/scripts/pre-task-check.ps1` that MUST run before preparing any new task.
+
+**What it checks**:
+```
+📋 Git Status
+  ✅ No uncommitted changes
+  ✅ On correct branch
+
+📋 Progress Tracking (progress.yaml)
+  ✅ Previous task marked completed
+  ✅ Previous task has commit hash
+  ✅ Note reflects completion
+
+📋 SpecKit Traceability (tasks.md)
+  ✅ SpecKit tasks checked for previous task
+
+📋 Verification Records
+  ✅ Verification results recorded
+  ✅ Screenshot exists (if visual task)
+  ✅ Screenshot has content (not empty)
+
+📋 Test Suite Status
+  ✅ Sprint tests still pass
+
+📋 Handover State
+  ✅ completion-signal.md is clear
+  ✅ current-task.md ready for new task
+```
+
+**Enforcement**:
+- Script returns exit code 1 if ANY check fails
+- Orchestrator CANNOT proceed until all checks pass
+- `-Fix` flag auto-fixes some issues (e.g., clearing completion-signal.md)
+
+**Usage**:
+```powershell
+# Check status
+.\.orchestra\scripts\pre-task-check.ps1
+
+# Check and auto-fix where possible
+.\.orchestra\scripts\pre-task-check.ps1 -Fix
+```
+
+**Integration**:
+- Added as Step 0 in orchestrator readme (before "Read This File")
+- Script is MANDATORY, not optional
+- Creates structural enforcement of admin tasks
+
+**Why Scripts Beat Documentation**:
+Documentation says "do X" → Orchestrator forgets/skips
+Script checks "is X done?" → Orchestrator cannot proceed without X
+
+This is the same pattern as the "handover completeness checklist" but automated.
+
+---
+
 ### 6. Terminal Interaction for Flutter Apps (SOLVED - BREAKTHROUGH!)
 
 **Issue**: Agents couldn't interact with running Flutter apps.

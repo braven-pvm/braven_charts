@@ -21,11 +21,16 @@ might (consciously or not) optimize for passing checks rather than quality.
 ├── verification/           # Per-task verification criteria (HIDDEN)
 │   ├── task-001.yaml
 │   ├── task-002.yaml
-│   ├── orchestrator-preflight-001.md  # Orchestrator audit trail
+│   ├── task-010-results.md        # Verification results record
+│   ├── orchestrator-preflight-010.md  # Orchestrator audit trail
 │   └── ...
 ├── templates/              # Templates for orchestrator use (HIDDEN)
 │   ├── current-task-template.md       # ⭐ MUST use for every task
 │   └── orchestrator-preflight-template.md
+├── scripts/                # Automation scripts (HIDDEN)
+│   └── pre-task-check.ps1  # ⭐ RUN before EVERY new task prep
+├── screenshots/            # Visual verification artifacts
+│   └── task-010-color-coded-axes.png
 ├── handover/               # Communication channel (VISIBLE to implementor)
 │   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
 │   ├── current-task.md     # Current task for implementor
@@ -46,7 +51,29 @@ instead of following instructions. This protocol FORCES structural compliance.
 
 **BEFORE preparing ANY task, the orchestrator MUST:**
 
-### Step 0: Read This File
+### Step 0: Run Pre-Task Check Script (MANDATORY)
+```powershell
+.\.orchestra\scripts\pre-task-check.ps1
+```
+
+This script verifies:
+- ✅ No uncommitted changes
+- ✅ Previous task marked COMPLETED in progress.yaml
+- ✅ Previous task has commit hash
+- ✅ SpecKit tasks.md updated with checkmarks
+- ✅ Verification results recorded
+- ✅ Screenshot exists and has content (if visual task)
+- ✅ Sprint tests still pass
+- ✅ completion-signal.md is clear
+
+**IF ANY CHECK FAILS**: Fix the issues BEFORE proceeding. Do NOT skip this step.
+
+Use `-Fix` flag to auto-fix some issues:
+```powershell
+.\.orchestra\scripts\pre-task-check.ps1 -Fix
+```
+
+### Step 1: Read This File
 ```
 READ `.orchestra/readme.md` ← You are here. Do NOT rely on memory!
 ```
