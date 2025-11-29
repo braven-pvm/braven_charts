@@ -142,17 +142,29 @@
 
 ### Tests for User Story 3
 
-- [ ] T031 [P] [US3] Unit test for axis color resolution in `test/unit/multi_axis/axis_color_test.dart`
+- [x] T031 [P] [US3] Unit test for axis color resolution in `test/unit/multi_axis/axis_color_test.dart`
+  - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+  - ⚠️ Path changed: `test/unit/multi_axis/axis_color_resolver_test.dart` (13 tests)
 - [ ] T032 [P] [US3] Widget test for color-coded axes in `test/widget/multi_axis/axis_color_widget_test.dart`
 - [ ] T033 [P] [US3] Golden test for colored axes in `test/golden/multi_axis/colored_axes_test.dart`
 
 ### Implementation for User Story 3
 
- - [ ] T034 [US3] Implement axis color resolver (from config or series) in `lib/src/axis/axis_color_resolver.dart`
- - [ ] T035 [US3] Apply color to axis labels in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
- - [ ] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
- - [ ] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
- - [ ] T038 [US3] Handle shared axis color (neutral or first series) in `lib/src/axis/axis_color_resolver.dart`
+ - [x] T034 [US3] Implement axis color resolver (from config or series) in `lib/src/axis/axis_color_resolver.dart`
+   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+   - ⚠️ Path changed: `lib/src/rendering/axis_color_resolver.dart`
+ - [x] T035 [US3] Apply color to axis labels in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+   - ⚠️ Integrated into MultiAxisPainter (line 220)
+ - [x] T036 [US3] Apply color to axis ticks in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+   - ⚠️ Integrated into MultiAxisPainter (line 135)
+ - [x] T037 [US3] Apply color to axis line in Y-axis renderer in `lib/src/rendering/y_axis_renderer.dart`
+   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+   - ⚠️ Integrated into MultiAxisPainter (line 135)
+ - [x] T038 [US3] Handle shared axis color (neutral or first series) in `lib/src/axis/axis_color_resolver.dart`
+   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
+   - Uses first bound series color for shared axes
 - [ ] T039 [US3] Add themed axis color example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 3 complete - color-coded axes working independently
