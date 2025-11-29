@@ -86,11 +86,12 @@ phases:
         
       - id: 8
         title: "Integrate Normalizer with Chart Data Pipeline"
-        status: "in-progress"
+        status: "completed"
+        commit: "pending"
         speckit_tasks: ["T022", "T029"]
         consolidation_rationale: "Integration into chart painter and widget"
         is_integration_task: true
-        notes: "⚠️ INTEGRATION TASK - Modify chart_render_box.dart + braven_chart_plus.dart"
+        notes: "INTEGRATION VERIFIED - Modified chart_render_box.dart (+81) and braven_chart_plus.dart (+69), 20 integration tests"
 
   - id: "rendering"
     description: "Visual rendering of axes and normalized data"

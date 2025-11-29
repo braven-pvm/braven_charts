@@ -34,6 +34,7 @@ import '../widgets/scrollbar/scrollbar_controller.dart';
 import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
+import 'multi_axis_normalizer.dart';
 import 'spatial_index.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -4437,6 +4438,40 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
+  /// Normalizes a Y value for multi-axis rendering (FR-008).
+  ///
+  /// When charts have series with vastly different Y-ranges (e.g., 0-10 vs 0-1000),
+  /// normalization maps all values to 0.0-1.0 range for consistent visual display.
+  ///
+  /// This method is used by the rendering pipeline when multi-axis normalization
+  /// is active. Each series gets its own normalized space while sharing the X-axis.
+  ///
+  /// Parameters:
+  /// - [value]: The original Y data value to normalize
+  /// - [seriesMin]: The minimum Y value in this series
+  /// - [seriesMax]: The maximum Y value in this series
+  ///
+  /// Returns: Normalized value in 0.0-1.0 range
+  double normalizeYValue(double value, double seriesMin, double seriesMax) {
+    return MultiAxisNormalizer.normalize(value, seriesMin, seriesMax);
+  }
+
+  /// Denormalizes a Y value back to original data coordinates (FR-008).
+  ///
+  /// This is used for tooltip display and crosshair value labels when
+  /// multi-axis normalization is active. Users see original values, not
+  /// normalized 0.0-1.0 values.
+  ///
+  /// Parameters:
+  /// - [normalizedValue]: The normalized value (0.0-1.0)
+  /// - [seriesMin]: The minimum Y value in this series
+  /// - [seriesMax]: The maximum Y value in this series
+  ///
+  /// Returns: Original data value in series range
+  double denormalizeYValue(double normalizedValue, double seriesMin, double seriesMax) {
+    return MultiAxisNormalizer.denormalize(normalizedValue, seriesMin, seriesMax);
+  }
+
   /// Draws a tooltip for the hovered element.
   ///
   /// Implements FR-003: Tooltip System from spec 007-interaction-system
@@ -4874,5 +4909,51 @@ class ChartRenderBox extends RenderBox {
     properties.add(IntProperty('elementCount', _elements.length));
     properties.add(DiagnosticsProperty<QuadTreeStats>('spatialIndexStats', _spatialIndex?.stats));
     properties.add(StringProperty('coordinatorState', coordinator.debugState()));
+  }
+
+  // ============================================================================
+  // Multi-Axis Normalization Helpers (FR-008)
+  // ============================================================================
+
+  /// Normalizes a Y-axis value from data space to normalized [0, 1] space.
+  ///
+  /// This method wraps [MultiAxisNormalizer.normalize] for use in rendering
+  /// logic when multiple series with different Y-ranges need to share the
+  /// same visual axis.
+  ///
+  /// Parameters:
+  /// - [value]: The raw data value to normalize
+  /// - [min]: The minimum value of the data range
+  /// - [max]: The maximum value of the data range
+  ///
+  /// Returns a value in the range [0, 1] where:
+  /// - 0 represents the minimum of the data range
+  /// - 1 represents the maximum of the data range
+  ///
+  /// Edge cases:
+  /// - If min == max, returns 0.5 (value is at center of degenerate range)
+  /// - Handles values outside the min/max range (clamps to [0, 1])
+  double normalizeValue(double value, double min, double max) {
+    return MultiAxisNormalizer.normalize(value, min, max);
+  }
+
+  /// Denormalizes a value from normalized [0, 1] space back to data space.
+  ///
+  /// This method wraps [MultiAxisNormalizer.denormalize] for use in
+  /// interaction logic (e.g., tooltips, crosshairs) when converting
+  /// visual positions back to original data values.
+  ///
+  /// Parameters:
+  /// - [normalizedValue]: A value in [0, 1] range
+  /// - [min]: The minimum value of the target data range
+  /// - [max]: The maximum value of the target data range
+  ///
+  /// Returns the original data value corresponding to the normalized position.
+  ///
+  /// Edge cases:
+  /// - If min == max, returns min (degenerate range)
+  /// - Handles normalized values outside [0, 1] (extrapolates linearly)
+  double denormalizeValue(double normalizedValue, double min, double max) {
+    return MultiAxisNormalizer.denormalize(normalizedValue, min, max);
   }
 }
