@@ -1,0 +1,158 @@
+# Task 10 Verification Criteria
+# Color-Coded Axis Rendering
+# 
+# SEVERITY LEVELS:
+# - BLOCKING: Task cannot pass, must fix before proceeding
+# - MAJOR: Significant issue, must fix before task completion
+# - MINOR: Log as tech debt, can proceed with documented issue
+# - INFO: Observation only, no action required
+#
+# These criteria are HIDDEN from the implementor.
+# Orchestrator reads this file during verification phase.
+
+task_id: 10
+task_title: "Implement Color-Coded Axis Rendering"
+speckit_tasks: [T034, T035, T036, T037, T038, T031]
+category: INTEGRATION
+
+verification_criteria:
+
+  # ===== EXISTENCE CHECKS =====
+  existence:
+    - check: "AxisColorResolver file exists"
+      severity: BLOCKING
+      command: 'Test-Path "lib/src/rendering/axis_color_resolver.dart"'
+      expected: "True"
+      
+    - check: "AxisColorResolver test file exists"
+      severity: BLOCKING
+      command: 'Test-Path "test/unit/rendering/axis_color_resolver_test.dart"'
+      expected: "True"
+
+  # ===== STRUCTURAL CHECKS =====
+  structure:
+    - check: "AxisColorResolver class defined"
+      severity: BLOCKING
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "class AxisColorResolver"'
+      expected: "Class definition found"
+      
+    - check: "resolveAxisColor static method exists"
+      severity: BLOCKING
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "static Color resolveAxisColor"'
+      expected: "Method signature found"
+      
+    - check: "Method accepts YAxisConfig, bindings, series parameters"
+      severity: MAJOR
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "YAxisConfig.*bindings.*series|YAxisConfig axis.*List<SeriesAxisBinding>.*List<ChartSeries>"'
+      expected: "Correct parameter types"
+
+  # ===== INTEGRATION CHECKS =====
+  integration:
+    - check: "MultiAxisPainter imports AxisColorResolver"
+      severity: MAJOR
+      command: 'Select-String -Path "lib/src/rendering/multi_axis_painter.dart" -Pattern "import.*axis_color_resolver"'
+      expected: "Import found"
+      
+    - check: "MultiAxisPainter uses AxisColorResolver for colors"
+      severity: MAJOR
+      command: 'Select-String -Path "lib/src/rendering/multi_axis_painter.dart" -Pattern "AxisColorResolver\.resolveAxisColor|resolveAxisColor\("'
+      expected: "Resolver usage found"
+
+  # ===== TEST COVERAGE CHECKS =====
+  tests:
+    - check: "Test for explicit axis.color priority"
+      severity: MAJOR
+      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "axis.color.*explicit|explicitly set|returns axis.color"'
+      expected: "Test case found"
+      
+    - check: "Test for series color fallback"
+      severity: MAJOR
+      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "series color|bound series|fallback"'
+      expected: "Test case found"
+      
+    - check: "Test for default color fallback"
+      severity: MAJOR
+      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "default color|no series|defaultColor"'
+      expected: "Test case found"
+      
+    - check: "Test for shared axis (T038)"
+      severity: MAJOR
+      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "shared axis|first.*series|multiple series"'
+      expected: "Test case found"
+
+  # ===== ADVERSARIAL CHECKS =====
+  adversarial:
+    - check: "uses_existing_models"
+      severity: MAJOR
+      description: "Must use existing SeriesAxisBinding, not create new binding logic"
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "import.*series_axis_binding"'
+      expected: "Uses existing SeriesAxisBinding model"
+      
+    - check: "no_duplicate_fallback_colors"
+      severity: MAJOR
+      description: "DefaultColor should be defined once, not scattered"
+      command: '(Get-Content "lib/src/rendering/axis_color_resolver.dart" | Select-String -Pattern "Color\(0xFF" | Measure-Object).Count'
+      expected: "1 or 2 at most (default definition and maybe one usage)"
+      
+    - check: "resolution_priority_correct"
+      severity: BLOCKING
+      description: "Must check axis.color first, then series, then default"
+      manual_check: true
+      expected: "Code shows correct priority: axis.color → series.color → default"
+
+  # ===== VISUAL VERIFICATION =====
+  visual:
+    - check: "Demo file exists"
+      severity: MAJOR
+      command: 'Test-Path "example/lib/demos/task_010_demo.dart"'
+      expected: "True"
+      
+    - check: "Screenshot captured"
+      severity: MAJOR
+      command: 'Test-Path ".orchestra/screenshots/task-010-color-coded-axes.png"'
+      expected: "True"
+      
+    - check: "Demo shows color derivation from series"
+      severity: MAJOR
+      manual_check: true
+      expected: "Axes with null color visually match their bound series colors"
+
+  # ===== DOCUMENTATION CHECKS =====
+  documentation:
+    - check: "AxisColorResolver has dartdoc"
+      severity: MINOR
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "^/// "'
+      expected: "Dartdoc comments found"
+      
+    - check: "resolveAxisColor method documented"
+      severity: MINOR
+      command: 'Select-String -Path "lib/src/rendering/axis_color_resolver.dart" -Pattern "/// Resolves|/// Returns"'
+      expected: "Method documentation found"
+
+  # ===== TEST EXECUTION =====
+  test_execution:
+    - check: "All new tests pass"
+      severity: BLOCKING
+      command: 'flutter test test/unit/rendering/axis_color_resolver_test.dart'
+      expected: "All tests passed"
+      
+    - check: "No regressions in existing tests"
+      severity: BLOCKING
+      command: 'flutter test'
+      expected: "All tests passed"
+      
+    - check: "Analyzer clean"
+      severity: MAJOR
+      command: 'flutter analyze lib/src/rendering/axis_color_resolver.dart'
+      expected: "No issues found"
+
+pass_criteria:
+  - All BLOCKING checks must pass
+  - All MAJOR checks must pass (or documented as known issues)
+  - MINOR issues logged as tech debt
+  - Visual verification confirms color derivation works
+
+failure_actions:
+  blocking_failure: "Return to implementor with specific fix requirements"
+  major_failure: "Document issue and request fix before commit"
+  minor_failure: "Log in tech debt, allow proceed"
