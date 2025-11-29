@@ -1,242 +1,395 @@
-# Current Task: Integrate Normalizer with Chart Data Pipeline
-
-## ⚠️ CRITICAL: THIS IS AN INTEGRATION TASK
-
-**DO NOT** create new isolated files that aren't called. You MUST modify the **EXISTING** files below to wire in the normalization logic.
+# Current Task: Create Multi-Axis Painter
 
 ## Objective
 
-Connect the completed normalizer (Task 6) and auto-detection logic (Task 7) into the actual chart rendering pipeline. When complete, charts should actually USE normalization for multi-scale data.
+Create the visual rendering infrastructure for multiple Y-axes. This includes a painter for drawing axes, a layout delegate for computing widths, and a layout manager for positioning axes at their configured positions.
 
 ## Context
 
 We now have:
-- ✅ `MultiAxisNormalizer` - Core normalization engine (`lib/src/rendering/multi_axis_normalizer.dart`)
-- ✅ `NormalizationDetector` - Auto-detection logic (`lib/src/axis/normalization_detector.dart`)
-- ✅ `RangeRatioCalculator` - Range comparison (`lib/src/axis/range_ratio_calculator.dart`)
-- ✅ `DataRange` - Min/max bounds container (`lib/src/models/data_range.dart`)
+- ✅ `MultiAxisNormalizer` - Core normalization engine (Task 6)
+- ✅ `NormalizationDetector` - Auto-detection logic (Task 7)
+- ✅ Pipeline integration (Task 8) - Normalization wired into chart
+- ✅ `YAxisConfig` - Axis configuration model (Task 2)
+- ✅ `YAxisPosition` - Position enum (outerLeft, left, right, outerRight)
+- ✅ `DataRange` - Min/max bounds container
 
-**NONE of these are actually CALLED yet!** This task wires them in.
+**This task adds the VISUAL rendering** - painting the actual Y-axes on screen.
 
 ## User Story Reference
 
 **US1 (P1)**: Multi-scale data visualization
 > "Each series uses the full vertical height of the chart while displaying its own properly-scaled Y-axis."
 
-**US2 (P2)**: Automatic normalization detection
-> "When the developer adds series with significantly different Y-ranges (e.g., 10x or more difference), the chart should automatically enable multi-axis mode."
-
-## ⚠️ INTEGRATION REQUIREMENTS
-
-### Files You MUST MODIFY (NOT create new!)
-
-1. **`lib/src/rendering/chart_render_box.dart`** (4879 lines)
-   - This is where chart rendering happens
-   - Add import for `multi_axis_normalizer.dart`
-   - Use `MultiAxisNormalizer.normalize()` when rendering series Y values
-   - Use `MultiAxisNormalizer.denormalize()` when displaying tooltips
-   
-2. **`lib/src/braven_chart_plus.dart`** (2406 lines)
-   - This is the main chart widget (at `lib/src/` NOT `lib/src/widgets/`)
-   - Add import for `normalization_detector.dart`
-   - Call `NormalizationDetector.shouldNormalize()` during initialization
-   - Propagate normalization mode to render box
-
-### File You MUST CREATE
-
-3. **`test/integration/multi_axis_pipeline_integration_test.dart`**
-   - Tests that prove the integration is working end-to-end
+**FR-001**: System MUST support up to 4 Y-axes positioned as: outerLeft, left, right, outerRight
+**FR-005**: All Y-axis labels and ticks MUST display original data values (not normalized values)
+**FR-007**: Each Y-axis MUST support color-coding to match its bound series
 
 ## ⚠️ TDD REQUIREMENT
 
-1. **Write integration tests FIRST** (they should fail initially)
-2. **Then modify existing files** to make tests pass
-3. **Tests must exercise the full pipeline**, not just the isolated components
+1. **Write tests FIRST** (they should fail initially)
+2. **Then implement** to make tests pass
 
 ## What to Create
 
-### 1. Integration Test File (Create FIRST!)
+### 1. Test File (Create FIRST!)
 
-**Path**: `test/integration/multi_axis_pipeline_integration_test.dart`
+**Path**: `test/unit/multi_axis/multi_axis_painter_test.dart`
 
 ```dart
-// Integration tests proving normalizer is wired into chart pipeline
-
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:braven_charts/braven_charts.dart';
 
 void main() {
-  group('Multi-Axis Pipeline Integration', () {
-    group('BravenChartPlus with multi-scale data', () {
-      testWidgets('auto-detects need for normalization with 10x+ range difference', 
-        (tester) async {
-        // Create chart with series having 100x range difference
-        // Series A: 0-10
-        // Series B: 0-1000
-        // Verify auto-detection triggered
-      });
-      
-      testWidgets('does not normalize when ranges are similar', 
-        (tester) async {
-        // Create chart with series having 2x range difference
-        // Series A: 0-50
-        // Series B: 0-100  
-        // Verify single-axis mode used
-      });
-      
-      testWidgets('both series span full vertical height after normalization',
-        (tester) async {
-        // Create chart with vastly different ranges
-        // Verify both series use full vertical space
-        // (no "flat line at bottom" effect)
-      });
+  group('MultiAxisLayoutDelegate', () {
+    group('computeAxisWidths', () {
+      test('returns empty map for empty axis list');
+      test('computes width based on label text measurement');
+      test('respects YAxisConfig.minWidth');
+      test('respects YAxisConfig.maxWidth');
+      test('includes space for unit suffix');
+      test('accounts for tick marks width');
     });
     
-    group('Tooltip value display', () {
-      testWidgets('shows original values not normalized values',
-        (tester) async {
-        // Create chart with normalized series
-        // Trigger tooltip
-        // Verify displayed value is original (e.g., "240 W" not "0.8")
-      });
+    group('getTotalLeftWidth', () {
+      test('returns 0 for no left axes');
+      test('sums widths of left and outerLeft axes');
     });
     
-    group('Crosshair integration', () {
-      testWidgets('crosshair Y calculation uses per-axis denormalization',
-        (tester) async {
-        // FR-014: Crosshair Y-coordinate calculations MUST use 
-        // per-axis bounds to convert screen position to original data values
-      });
+    group('getTotalRightWidth', () {
+      test('returns 0 for no right axes');
+      test('sums widths of right and outerRight axes');
+    });
+  });
+  
+  group('AxisLayoutManager', () {
+    group('getAxisRect', () {
+      test('positions outerLeft axis at far left');
+      test('positions left axis inside outerLeft');
+      test('positions right axis at right edge of plot area');
+      test('positions outerRight axis outside right');
+      test('handles single axis at each position');
+      test('handles all 4 axes simultaneously');
     });
     
-    group('Backward compatibility', () {
-      testWidgets('single series chart works unchanged',
-        (tester) async {
-        // Existing single-series charts must continue working
-      });
-      
-      testWidgets('similar-range multi-series works unchanged',
-        (tester) async {
-        // Series with similar ranges should not be normalized
-      });
+    group('computePlotArea', () {
+      test('reduces chart area by axis widths');
+      test('preserves plot area when no axes');
     });
+  });
+  
+  group('MultiAxisPainter', () {
+    group('paint', () {
+      test('paints axis line at correct position');
+      test('paints tick marks at computed locations');
+      test('paints tick labels with original values');
+      test('uses axis color from YAxisConfig');
+      test('includes unit suffix in labels');
+      test('handles empty axis configuration gracefully');
+    });
+    
+    group('tick value computation', () {
+      test('generates appropriate tick count for axis height');
+      test('uses nice numbers for tick values');
+      test('respects explicit min/max from YAxisConfig');
+      test('uses denormalized values from DataRange');
+    });
+  });
+  
+  group('acceptance scenarios', () {
+    test('renders 2 axes - one left, one right');
+    test('renders 4 axes at all positions');
+    test('each axis shows original scale values');
   });
 }
 ```
 
-## Integration Points
+### 2. Layout Directory
 
-### In `chart_render_box.dart`:
+**Create**: `lib/src/layout/` directory
 
-Find where Y values are converted to screen coordinates and:
+### 3. MultiAxisLayoutDelegate
 
-```dart
-// BEFORE (pseudo-code):
-// screenY = plotArea.bottom - ((value - minY) / (maxY - minY)) * plotArea.height
-
-// AFTER (pseudo-code):
-import '../rendering/multi_axis_normalizer.dart';
-
-// When normalization is active:
-final normalizedValue = MultiAxisNormalizer.normalize(value, axisMin, axisMax);
-final screenY = plotArea.bottom - normalizedValue * plotArea.height;
-```
-
-For tooltips:
-```dart
-// Convert screen Y back to original value
-final originalValue = MultiAxisNormalizer.denormalize(normalizedValue, axisMin, axisMax);
-// Display originalValue in tooltip
-```
-
-### In `braven_chart_plus.dart`:
-
-Find widget initialization and:
+**Path**: `lib/src/layout/multi_axis_layout.dart`
 
 ```dart
-import 'axis/normalization_detector.dart';
-import 'models/data_range.dart';
+import 'dart:ui';
 
-// During build or init:
-if (normalizationMode == NormalizationMode.auto) {
-  final seriesRanges = _computeSeriesRanges(series);
-  if (NormalizationDetector.shouldNormalize(seriesRanges)) {
-    // Enable multi-axis normalization
+import 'package:flutter/painting.dart';
+
+import '../models/data_range.dart';
+import '../models/y_axis_config.dart';
+import '../models/y_axis_position.dart';
+
+/// Computes axis widths based on content requirements.
+///
+/// This delegate measures the text width needed for tick labels
+/// and determines appropriate axis widths within the configured bounds.
+class MultiAxisLayoutDelegate {
+  const MultiAxisLayoutDelegate();
+  
+  /// Computes the required width for each axis.
+  ///
+  /// Returns a map from axis ID to computed width.
+  ///
+  /// Width is determined by:
+  /// - Maximum tick label width (based on [DataRange] values)
+  /// - Unit suffix width if specified
+  /// - Tick mark width
+  /// - Constrained by [YAxisConfig.minWidth] and [YAxisConfig.maxWidth]
+  Map<String, double> computeAxisWidths({
+    required List<YAxisConfig> axes,
+    required Map<String, DataRange> axisBounds,
+    required TextStyle labelStyle,
+  }) {
+    // TODO: Implement
+    // 1. For each axis, compute max label width from bounds
+    // 2. Add unit suffix width if present
+    // 3. Add padding for tick marks
+    // 4. Clamp to minWidth/maxWidth
+  }
+  
+  /// Gets total width of left-side axes (outerLeft + left).
+  double getTotalLeftWidth(
+    List<YAxisConfig> axes,
+    Map<String, double> widths,
+  ) {
+    // TODO: Implement
+  }
+  
+  /// Gets total width of right-side axes (right + outerRight).
+  double getTotalRightWidth(
+    List<YAxisConfig> axes,
+    Map<String, double> widths,
+  ) {
+    // TODO: Implement
   }
 }
 ```
 
-## Key Classes/Methods to Understand
+### 4. AxisLayoutManager
 
-Before modifying, read these existing code sections:
+**Path**: `lib/src/layout/axis_layout_manager.dart`
 
-1. **`chart_render_box.dart`**:
-   - `paint()` method - where rendering happens
-   - Series iteration and Y coordinate calculation
-   - Tooltip display logic
-   
-2. **`braven_chart_plus.dart`**:
-   - `build()` method
-   - How it creates/configures `ChartRenderBox`
-   - How series data is passed through
+```dart
+import 'dart:ui';
+
+import '../models/y_axis_config.dart';
+import '../models/y_axis_position.dart';
+
+/// Manages positioning of multiple Y-axes around the chart area.
+///
+/// Positions axes according to FR-001:
+/// - outerLeft: Leftmost position
+/// - left: Inside outerLeft, adjacent to plot area
+/// - right: Right edge of plot area
+/// - outerRight: Rightmost position
+class AxisLayoutManager {
+  const AxisLayoutManager();
+  
+  /// Gets the rectangle for rendering a specific axis.
+  ///
+  /// [chartArea] is the total available chart area.
+  /// [axis] is the axis configuration.
+  /// [axisWidths] contains computed widths for all axes.
+  /// [allAxes] is the complete list of axis configurations.
+  Rect getAxisRect({
+    required Rect chartArea,
+    required YAxisConfig axis,
+    required Map<String, double> axisWidths,
+    required List<YAxisConfig> allAxes,
+  }) {
+    // TODO: Implement
+    // Calculate X offset based on position and other axes
+    // Width comes from axisWidths[axis.id]
+    // Height matches plot area height
+  }
+  
+  /// Computes the plot area after reserving space for axes.
+  ///
+  /// Returns the rectangle available for chart data rendering
+  /// after accounting for all axis widths.
+  Rect computePlotArea({
+    required Rect chartArea,
+    required List<YAxisConfig> axes,
+    required Map<String, double> axisWidths,
+  }) {
+    // TODO: Implement
+    // Subtract left widths from left edge
+    // Subtract right widths from right edge
+  }
+}
+```
+
+### 5. MultiAxisPainter
+
+**Path**: `lib/src/rendering/multi_axis_painter.dart`
+
+```dart
+import 'dart:ui';
+
+import 'package:flutter/painting.dart';
+
+import '../layout/axis_layout_manager.dart';
+import '../layout/multi_axis_layout.dart';
+import '../models/data_range.dart';
+import '../models/y_axis_config.dart';
+import 'multi_axis_normalizer.dart';
+
+/// Paints multiple Y-axes with their tick marks and labels.
+///
+/// Uses [MultiAxisNormalizer.denormalize] to convert normalized
+/// tick positions back to original data values for display.
+class MultiAxisPainter {
+  MultiAxisPainter({
+    required this.axes,
+    required this.axisBounds,
+    this.labelStyle,
+  });
+  
+  final List<YAxisConfig> axes;
+  final Map<String, DataRange> axisBounds;
+  final TextStyle? labelStyle;
+  
+  final _layoutDelegate = const MultiAxisLayoutDelegate();
+  final _layoutManager = const AxisLayoutManager();
+  
+  /// Paints all configured axes on the canvas.
+  ///
+  /// [canvas] is the canvas to draw on.
+  /// [chartArea] is the total chart area (axes will be painted outside plot area).
+  /// [plotArea] is the data rendering area (axes align to this).
+  void paint(Canvas canvas, Rect chartArea, Rect plotArea) {
+    // TODO: Implement
+    // 1. Compute axis widths
+    // 2. For each axis:
+    //    a. Get axis rect from layout manager
+    //    b. Paint axis line
+    //    c. Generate tick values from bounds
+    //    d. Paint tick marks
+    //    e. Paint tick labels (denormalized values)
+  }
+  
+  /// Paints a single axis.
+  void _paintAxis(
+    Canvas canvas,
+    YAxisConfig axis,
+    Rect axisRect,
+    Rect plotArea,
+    DataRange bounds,
+  ) {
+    // TODO: Implement
+    // Draw axis line
+    // Draw ticks and labels
+  }
+  
+  /// Generates nice tick values for an axis.
+  List<double> _generateTicks(DataRange bounds, int maxTicks) {
+    // TODO: Implement
+    // Use nice number algorithm
+  }
+  
+  /// Formats a tick value with optional unit suffix.
+  String _formatTickLabel(double value, YAxisConfig axis) {
+    // TODO: Implement
+    // Format number + add unit suffix
+  }
+}
+```
+
+### 6. Barrel Export
+
+**Path**: `lib/src/layout/layout.dart`
+
+```dart
+export 'axis_layout_manager.dart';
+export 'multi_axis_layout.dart';
+```
+
+Update main barrel file if needed.
 
 ## Dependencies
 
 ```dart
-// Import from completed tasks:
+// Use from completed tasks:
 import 'package:braven_charts/src/rendering/multi_axis_normalizer.dart';
-import 'package:braven_charts/src/axis/normalization_detector.dart';
 import 'package:braven_charts/src/models/data_range.dart';
+import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/models/y_axis_position.dart';
+```
+
+## Algorithm Notes
+
+### Nice Number Algorithm for Ticks
+
+```dart
+// Generate "nice" tick values that are easy to read
+double niceNum(double range, bool round) {
+  final exponent = (log(range) / ln10).floor();
+  final fraction = range / pow(10, exponent);
+  
+  double niceFraction;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else {
+    if (fraction <= 1) niceFraction = 1;
+    else if (fraction <= 2) niceFraction = 2;
+    else if (fraction <= 5) niceFraction = 5;
+    else niceFraction = 10;
+  }
+  
+  return niceFraction * pow(10, exponent);
+}
+```
+
+### Axis Position Layout
+
+```
++------------------+---+---+--------+---+---+
+| outerLeft | left |   PLOT AREA   | right | outerRight |
++------------------+---+---+--------+---+---+
 ```
 
 ## Test Execution
 
 ```bash
-# Run integration tests (these should FAIL initially, then pass)
-flutter test test/integration/multi_axis_pipeline_integration_test.dart
+# Run multi-axis painter tests (should FAIL initially)
+flutter test test/unit/multi_axis/multi_axis_painter_test.dart
 
-# Ensure ALL sprint tests still pass
+# Ensure all sprint tests still pass
 flutter test test/unit/multi_axis/
-flutter test test/integration/multi_axis_*.dart
 ```
 
 ## Quality Gates (MANDATORY)
 
 ### 1. Linting - Zero Issues
 ```bash
-flutter analyze lib/src/rendering/chart_render_box.dart
-flutter analyze lib/src/braven_chart_plus.dart
-flutter analyze test/integration/multi_axis_pipeline_integration_test.dart
+flutter analyze lib/src/rendering/multi_axis_painter.dart
+flutter analyze lib/src/layout/
+flutter analyze test/unit/multi_axis/multi_axis_painter_test.dart
 ```
 
 ### 2. All Sprint Tests Must Pass
 ```bash
 flutter test test/unit/multi_axis/
-flutter test test/integration/multi_axis_*.dart
+flutter test test/integration/multi_axis_normalization_integration_test.dart
+flutter test test/integration/multi_axis_pipeline_integration_test.dart
 ```
 
-Current baseline: **163 tests passing** (MUST NOT decrease!)
-
-### 3. Integration Verification
-
-After completing, verify these are TRUE:
-- [ ] `chart_render_box.dart` has been modified (git diff shows changes)
-- [ ] `braven_chart_plus.dart` has been modified (git diff shows changes)
-- [ ] `MultiAxisNormalizer` methods are imported AND called
-- [ ] `NormalizationDetector` methods are imported AND called
-- [ ] Integration tests pass through actual BravenChartPlus widget
+Current baseline: **192 tests passing** (MUST NOT decrease!)
 
 ## When Done
 
-1. **Verify git diff shows MODIFICATIONS to existing files** (not just new files)
-2. **Verify linting is clean** (BLOCKING)
-3. **Verify ALL tests pass** (BLOCKING)
-4. Stage your changes: `git add .`
-5. Write to `.orchestra/handover/completion-signal.md`:
-   - Files modified (confirm chart_render_box.dart and braven_chart_plus.dart)
-   - Files created (integration test)
+1. **Verify linting is clean** (BLOCKING)
+2. **Verify ALL tests pass** (BLOCKING)
+3. Stage your changes: `git add .`
+4. Write to `.orchestra/handover/completion-signal.md`:
+   - Files created
    - Number of tests added
    - Confirm linting clean
    - Confirm all sprint tests pass
-6. Say "Task complete - ready for review"
+5. Say "Task complete - ready for review"

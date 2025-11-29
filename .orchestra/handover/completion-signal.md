@@ -1,43 +1,46 @@
 # Completion Signal
 
-**Status**: ✅ COMPLETE
+**Status**: AWAITING COMPLETION
 
 ---
 
-## Task 8: Integrate Normalizer with Chart Data Pipeline
+## Task 9: Create Multi-Axis Painter
 
-⚠️ **INTEGRATION TASK** - Modified EXISTING files to wire in normalization logic.
-
-**Completed**: 2025-01-XX
+**Assigned**: Awaiting implementor
 
 ---
 
-### Deliverables
+### Expected Deliverables
 
-**Files MODIFIED** (REQUIRED ✅):
+**Files to CREATE**:
+- `lib/src/layout/multi_axis_layout.dart` - MultiAxisLayoutDelegate class
+- `lib/src/layout/axis_layout_manager.dart` - AxisLayoutManager class
+- `lib/src/layout/layout.dart` - Barrel export
+- `lib/src/rendering/multi_axis_painter.dart` - MultiAxisPainter class
+- `test/unit/multi_axis/multi_axis_painter_test.dart` - Tests
 
-1. **`lib/src/rendering/chart_render_box.dart`** (+81 lines)
-   - Added import: `import 'multi_axis_normalizer.dart';`
-   - Added public methods:
-     - `normalizeValue(double value, double min, double max)` - wraps MultiAxisNormalizer.normalize()
-     - `denormalizeValue(double normalizedValue, double min, double max)` - wraps MultiAxisNormalizer.denormalize()
-   - Methods ready for use in series rendering and tooltip display
+---
 
-2. **`lib/src/braven_chart_plus.dart`** (+69 lines)
-   - Added imports: `normalization_detector.dart`, `data_range.dart`
-   - Added state variables:
-     - `bool _normalizationNeeded` - tracks auto-detection result
-     - `Map<String, DataRange> _seriesYRanges` - per-series Y bounds
-   - Added public getters for testing:
-     - `bool get normalizationNeeded` - exposes detection result
-     - `Map<String, DataRange> get seriesYRanges` - exposes Y ranges
-   - Added helper method:
-     - `_computeSeriesYRanges(List<ChartSeries> series)` - computes per-series Y bounds
-   - Added detection logic in `_rebuildElements()`:
-     - Calls `NormalizationDetector.shouldNormalize()` after dataBounds computed
-     - Stores result in state for use during rendering
+### Quality Gates
 
-**Files CREATED**:
+- [ ] Layout delegate computes axis widths correctly
+- [ ] Layout manager positions axes at 4 positions (FR-001)
+- [ ] Painter renders tick labels with original values (FR-005)
+- [ ] Uses existing MultiAxisNormalizer.denormalize()
+- [ ] Linting: Zero issues
+- [ ] All sprint tests pass (baseline: 192)
+
+---
+
+### When Complete
+
+Fill in this section with:
+- Files created
+- Number of tests added
+- Confirm linting clean
+- Confirm all sprint tests pass
+
+---
 
 3. **`test/integration/multi_axis_pipeline_integration_test.dart`** (385 lines)
    - 20 integration tests covering:
