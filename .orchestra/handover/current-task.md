@@ -1,29 +1,5 @@
 # Current Task: Task 10 - Implement Color-Coded Axis Rendering
 
-## Pre-Flight Checklist (Orchestrator Audit Trail)
-
-**Date**: [TO BE FILLED BY ORCHESTRATOR]
-**Orchestrator**: GitHub Copilot (Claude Opus 4.5)
-**Task Source**: `.orchestra/manifest.yaml` lines 75-81
-
-### Verification
-- [x] Read `.orchestra/readme.md` (Step 0)
-- [x] Read `.orchestra/manifest.yaml` to identify this task
-- [x] Read SpecKit tasks (T034, T035, T036, T037, T038, T031)
-- [x] Identified dependencies: Task 9 (MultiAxisPainter) - COMPLETED
-- [x] Created verification criteria in `.orchestra/verification/task-010.yaml`
-- [x] Deleted previous `current-task.md` before creating this one
-
-### Files Consulted
-- `specs/011-multi-axis-normalization/tasks.md` - SpecKit task definitions
-- `specs/011-multi-axis-normalization/spec.md` - FR-007 color-coding requirement
-- `lib/src/models/y_axis_config.dart` - Existing color field
-- `lib/src/models/series_axis_binding.dart` - Binding model
-- `lib/src/models/chart_series.dart` - Series color source
-- `lib/src/rendering/multi_axis_painter.dart` - Where color is applied
-
----
-
 ## Task Overview
 
 **Objective**: Implement color resolution for Y-axes that derives color from bound series when not explicitly set on the axis config.
@@ -62,18 +38,59 @@
 
 ## Deliverables
 
-### Required Files
+### Files to CREATE
 
-| # | File Path | Purpose | SpecKit |
-|---|-----------|---------|---------|
-| 1 | `lib/src/rendering/axis_color_resolver.dart` | NEW: Color resolution logic | T034, T038 |
-| 2 | `lib/src/rendering/multi_axis_painter.dart` | UPDATE: Use resolved colors | T035, T036, T037 |
-| 3 | `test/unit/rendering/axis_color_resolver_test.dart` | NEW: Unit tests | T031 |
+| File | Purpose | Export To |
+|------|---------|-----------|
+| `lib/src/rendering/axis_color_resolver.dart` | Color resolution logic | `lib/braven_charts.dart` |
+| `test/unit/multi_axis/axis_color_resolver_test.dart` | Unit tests | N/A |
+| `example/lib/demos/task_010_color_demo.dart` | Visual verification demo | N/A |
 
-### Expected Outputs
-- `AxisColorResolver` class with `resolveAxisColor()` method
-- `MultiAxisPainter` integration with color resolver
-- 8+ unit tests covering resolution scenarios
+### Files to MODIFY
+
+| File | Changes |
+|------|---------|
+| `lib/src/rendering/multi_axis_painter.dart` | Add bindings/series params, use AxisColorResolver |
+
+### Integration Changes (for MultiAxisPainter)
+
+The `MultiAxisPainter` needs these specific modifications:
+
+```dart
+// 1. Add import at top of file:
+import 'axis_color_resolver.dart';
+
+// 2. Add new constructor parameters:
+MultiAxisPainter({
+  required this.axes,
+  required this.axisBounds,
+  required this.bindings,    // NEW
+  required this.series,      // NEW
+  TextStyle? labelStyle,
+})
+
+// 3. Add fields:
+final List<SeriesAxisBinding> bindings;
+final List<ChartSeries> series;
+
+// 4. In _paintAxis(), replace hardcoded color resolution:
+// BEFORE (around line 117):
+final axisColor = axis.color ?? const Color(0xFF333333);
+
+// AFTER:
+final axisColor = AxisColorResolver.resolveAxisColor(
+  axis,
+  bindings,
+  series,
+);
+
+// 5. In _paintTickLabel(), use resolved color:
+// BEFORE (around line 193):
+final labelColor = axis.color ?? labelStyle.color ?? const Color(0xFF666666);
+
+// AFTER:
+final labelColor = AxisColorResolver.resolveAxisColor(axis, bindings, series);
+```
 
 ---
 
@@ -122,7 +139,9 @@
 
 ## TDD Requirements
 
-### Test File: `test/unit/rendering/axis_color_resolver_test.dart`
+### Test File: `test/unit/multi_axis/axis_color_resolver_test.dart`
+
+**Note**: Tests go in `test/unit/multi_axis/` (sprint folder), NOT `test/unit/rendering/`.
 
 ```dart
 // Required test cases (minimum):
@@ -143,12 +162,97 @@ group('AxisColorResolver', () {
 });
 ```
 
+### Sample Test Data
+
+Copy-paste these into your test file:
+
+```dart
+import 'dart:ui';
+
+import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+// Test colors
+const blueColor = Color(0xFF0000FF);
+const redColor = Color(0xFFFF0000);
+const greenColor = Color(0xFF00FF00);
+const defaultGray = Color(0xFF333333);
+
+// Axis with explicit color
+final axisWithColor = YAxisConfig(
+  id: 'power',
+  position: YAxisPosition.left,
+  color: blueColor,
+);
+
+// Axis without color (should resolve from series)
+final axisWithoutColor = YAxisConfig(
+  id: 'heartrate',
+  position: YAxisPosition.right,
+  color: null,
+);
+
+// Bindings
+final powerBinding = SeriesAxisBinding(
+  seriesId: 'power-series',
+  yAxisId: 'power',
+);
+
+final hrBinding = SeriesAxisBinding(
+  seriesId: 'hr-series',
+  yAxisId: 'heartrate',
+);
+
+// Shared axis bindings (two series → one axis)
+final sharedBinding1 = SeriesAxisBinding(
+  seriesId: 'cpu-series',
+  yAxisId: 'percentage',
+);
+
+final sharedBinding2 = SeriesAxisBinding(
+  seriesId: 'memory-series',
+  yAxisId: 'percentage',
+);
+
+// Series with colors
+final powerSeries = ChartSeries(
+  id: 'power-series',
+  points: [],
+  color: blueColor,
+);
+
+final hrSeries = ChartSeries(
+  id: 'hr-series',
+  points: [],
+  color: redColor,
+);
+
+final cpuSeries = ChartSeries(
+  id: 'cpu-series',
+  points: [],
+  color: greenColor,  // First series → this color should win
+);
+
+final memorySeries = ChartSeries(
+  id: 'memory-series',
+  points: [],
+  color: redColor,  // Second series → should be ignored
+);
+
+// Series without color
+final noColorSeries = ChartSeries(
+  id: 'no-color-series',
+  points: [],
+  color: null,
+);
+```
+
 ### TDD Workflow
 1. Create test file with failing tests FIRST
-2. Run tests to confirm they fail
+2. Run tests to confirm they fail: `flutter test test/unit/multi_axis/axis_color_resolver_test.dart`
 3. Implement `AxisColorResolver` to make tests pass
 4. Update `MultiAxisPainter` to use resolver
-5. Run all tests to confirm integration
+5. Run all sprint tests: `flutter test test/unit/multi_axis/`
 
 ---
 
@@ -223,40 +327,173 @@ class AxisColorResolver {
 
 **Requirement**: Standalone demo with screenshot verification
 
-### Demo Location
-`example/lib/demos/task_010_demo.dart`
+### Demo File: `example/lib/demos/task_010_color_demo.dart`
 
-### Demo Requirements
-1. Create multi-axis chart with:
-   - Power axis (left) - NO explicit color (should derive from blue series)
-   - HR axis (right) - NO explicit color (should derive from red series)
-   - Shared axis with two series (verify uses first series color)
-   
-2. Verify visually:
-   - Power axis labels, ticks, line are all BLUE
-   - HR axis labels, ticks, line are all RED
-   - Shared axis uses first bound series color consistently
+Create this standalone demo:
 
-### Screenshot Command
-```powershell
-python tools/flutter_agent/flutter_agent.py --project-root "example" --screenshot ".orchestra/screenshots/task-010-color-coded-axes.png" --run-timeout 30
+```dart
+import 'package:flutter/material.dart';
+import 'package:braven_charts/braven_charts.dart';
+
+/// Task 10 Demo: Color-Coded Axis Rendering
+///
+/// Demonstrates:
+/// - Power axis (left) derives BLUE from power series
+/// - HR axis (right) derives RED from heartrate series
+/// - Both axes have NO explicit color - color comes from bound series
+void main() => runApp(const Task010ColorDemo());
+
+class Task010ColorDemo extends StatelessWidget {
+  const Task010ColorDemo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Task 10: Color-Coded Axes',
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Task 10: Color-Coded Axes')),
+        body: Center(
+          child: Container(
+            width: 800,
+            height: 500,
+            padding: const EdgeInsets.all(16),
+            child: _buildChart(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChart() {
+    // Sample data
+    final powerData = List.generate(
+      20,
+      (i) => ChartDataPoint(x: i.toDouble(), y: 100 + (i * 15) % 300),
+    );
+    final hrData = List.generate(
+      20,
+      (i) => ChartDataPoint(x: i.toDouble(), y: 60 + (i * 5) % 120),
+    );
+
+    // Series with explicit colors
+    final powerSeries = LineChartSeries(
+      id: 'power',
+      name: 'Power',
+      points: powerData,
+      color: Colors.blue,  // BLUE - should appear on left axis
+    );
+
+    final hrSeries = LineChartSeries(
+      id: 'heartrate',
+      name: 'Heart Rate',
+      points: hrData,
+      color: Colors.red,  // RED - should appear on right axis
+    );
+
+    // Axes WITHOUT explicit colors - should derive from series
+    final powerAxis = YAxisConfig(
+      id: 'power-axis',
+      position: YAxisPosition.left,
+      color: null,  // Should resolve to BLUE from powerSeries
+      label: 'Power',
+      unit: 'W',
+    );
+
+    final hrAxis = YAxisConfig(
+      id: 'hr-axis',
+      position: YAxisPosition.right,
+      color: null,  // Should resolve to RED from hrSeries
+      label: 'Heart Rate',
+      unit: 'bpm',
+    );
+
+    // Bindings connect series to axes
+    final bindings = [
+      SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
+      SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'hr-axis'),
+    ];
+
+    // Multi-axis configuration
+    final multiAxisConfig = MultiAxisConfig(
+      axes: [powerAxis, hrAxis],
+      bindings: bindings,
+    );
+
+    return BravenChartPlus(
+      series: [powerSeries, hrSeries],
+      multiAxisConfig: multiAxisConfig,
+    );
+  }
+}
 ```
+
+### Flutter Agent Workflow
+
+1. **Start Flutter with the standalone demo** (from repo root):
+
+```powershell
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_010_color_demo.dart -d chrome"
+```
+
+2. **Wait for app to be ready**:
+
+```powershell
+cd "e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example"
+python ..\tools\flutter_agent\flutter_agent.py wait --timeout 60
+```
+
+3. **Take screenshot**:
+
+```powershell
+python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../.orchestra/screenshots/task-010-color-coded-axes.png
+```
+
+4. **Stop when done**:
+
+```powershell
+python ..\tools\flutter_agent\flutter_agent.py stop
+```
+
+### Expected Visual Output
+
+In the screenshot, verify:
+- **Left axis (Power)**: Labels, ticks, and axis line are **BLUE**
+- **Right axis (Heart Rate)**: Labels, ticks, and axis line are **RED**
+- **Both data series** visible: blue line for power, red line for heart rate
+- **No gray axes**: All axes should have color derived from their bound series
 
 ---
 
-## Quality Gates
+## Quality Gates (MANDATORY)
 
-### Automated Checks
-- [ ] All new tests pass
-- [ ] No regressions in existing tests (`flutter test`)
-- [ ] No analyzer warnings (`flutter analyze`)
-- [ ] Test coverage for new code ≥80%
+### Linting - Zero Issues
 
-### Manual Verification
-- [ ] Axis colors match bound series when axis.color is null
-- [ ] Explicit axis.color overrides series color
-- [ ] Shared axis uses first bound series color
-- [ ] Labels, ticks, and line all use same resolved color
+```powershell
+flutter analyze lib/src/rendering/axis_color_resolver.dart
+flutter analyze lib/src/rendering/multi_axis_painter.dart
+flutter analyze test/unit/multi_axis/axis_color_resolver_test.dart
+```
+
+### All Sprint Tests Must Pass
+
+```powershell
+# Task tests
+flutter test test/unit/multi_axis/axis_color_resolver_test.dart
+
+# All sprint unit tests (catches regressions)
+flutter test test/unit/multi_axis/
+
+# Integration tests
+flutter test test/integration/multi_axis_*.dart
+```
+
+**Current Test Baseline**: 217 tests (197 unit + 20 integration) - MUST NOT decrease!
+
+### Expected New Tests: 8+
+
+The `axis_color_resolver_test.dart` should add at least 8 new tests.
 
 ---
 
