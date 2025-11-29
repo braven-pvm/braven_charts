@@ -99,13 +99,13 @@ phases:
     tasks:
       - id: 9
         title: "Create Multi-Axis Painter"
-        status: "in-progress"
+        status: "completed"
         speckit_tasks: ["T020", "T021", "T011"]
         consolidation_rationale: "Y-axis renderer + layout positioning"
         
       - id: 10
         title: "Implement Color-Coded Axis Rendering"
-        status: "pending"
+        status: "completed"
         speckit_tasks: ["T034", "T035", "T036", "T037", "T038", "T031"]
         consolidation_rationale: "All color-related tasks for axes (US3)"
         

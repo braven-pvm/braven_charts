@@ -55,8 +55,9 @@
  - [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/braven_chart_plus.dart`
    - 🔄 Mapped to: Orchestrator Task 11
    - ⚠️ Path changed: widget is at `lib/src/braven_chart_plus.dart` not `lib/src/widgets/`
- - [ ] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
+ - [x] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
    - 🔄 Mapped to: Orchestrator Task 9
+   - ✅ Completed: Orchestrator Task 9
  - [ ] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
  - [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/grid_renderer.dart`
  - [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
@@ -90,11 +91,13 @@
  - [x] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
    - ✅ Completed: Orchestrator Task 6
    - Methods: `normalize()`, `denormalize()`, `computeAxisBounds()`
- - [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/multi_axis_painter.dart`
+ - [x] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/multi_axis_painter.dart`
    - 🔄 Mapped to: Orchestrator Task 9
+   - ✅ Completed: Orchestrator Task 9
    - ⚠️ Path changed: `y_axis_renderer.dart` doesn't exist, creating new `multi_axis_painter.dart`
- - [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src/layout/axis_layout_manager.dart`
+ - [x] T021 [US1] Implement axis layout positioning (left/right) in `lib/src/layout/axis_layout_manager.dart`
    - 🔄 Mapped to: Orchestrator Task 9
+   - ✅ Completed: Orchestrator Task 9
  - [x] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src/rendering/chart_render_box.dart`
    - ✅ Completed: Orchestrator Task 8, commit eb472bd
    - ⚠️ Path changed: `chart_painter.dart` doesn't exist - rendering is in `chart_render_box.dart`
