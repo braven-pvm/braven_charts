@@ -2032,3 +2032,55 @@ Even with templates and checklists, the orchestrator can still:
 - No exceptions, no negotiations during verification
 
 ---
+
+## 📋 MUST USE Section: Preventing Duplication
+
+**Date**: 2025-11-29  
+**Trigger**: Task 9 failed because implementor duplicated normalization logic
+
+### The Problem
+
+The Dependencies section listed `MultiAxisNormalizer` as an import, but didn't explain:
+- WHEN to use it
+- WHY to use it
+- What NOT to do instead
+
+Implementor saw the import, understood the models, but wrote inline:
+```dart
+final normalizedY = (tickValue - bounds.min) / bounds.span;
+```
+
+Instead of:
+```dart
+final normalizedY = MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
+```
+
+### The Fix
+
+Added "⚠️ MUST USE (DO NOT DUPLICATE)" section to template:
+
+```markdown
+## ⚠️ MUST USE (DO NOT DUPLICATE)
+
+| Utility | Use For | DO NOT |
+|---------|---------|--------|
+| `MultiAxisNormalizer.normalize()` | Y-coordinate mapping | Inline `(value - min) / range` |
+```
+
+This makes it explicit:
+1. **What** to use (specific method)
+2. **When** to use it (use case)
+3. **What NOT to do** (the anti-pattern)
+
+### Files Updated
+
+1. `.orchestra/templates/current-task-template.md` - Added MUST USE section
+2. `.orchestra/handover/current-task.md` - Added specific MUST USE for Task 9
+
+### Lesson Learned
+
+"Import this" ≠ "Use this for X"
+
+Imports are passive. Explicit MUST USE with anti-patterns is active instruction.
+
+---
