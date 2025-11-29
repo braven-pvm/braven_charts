@@ -2257,3 +2257,159 @@ Before invoking implementor, verify handover is complete for a NEW agent:
 **85% complete is not complete.** A handover must be **100% autonomous** - the new agent should never need to ask "where does this go?" or "what does this look like?"
 
 ---
+
+## 📋 Comprehensive Script System Implementation
+
+**Date**: 2025-11-29  
+**Trigger**: User requested standardized, transportable script system for orchestrator/implementor validation
+
+### The Requirement
+
+Build a script system that:
+1. Uses environment variables (sprint-level with task override)
+2. Provides bidirectional SpecKit ↔ Orchestrator verification
+3. Separates scripts by role (orchestrator vs implementor)
+4. Uses ALL HARD failures (no soft warnings)
+5. Is transportable to other projects (self-contained in `.orchestra/`)
+
+### Script Architecture
+
+```
+.orchestra/scripts/
+├── set-env.ps1                    # Environment setup (run first!)
+├── README.md                      # Documentation
+├── common/
+│   └── check-utils.ps1            # Shared utilities
+└── orchestrator/
+    ├── pre-task-check.ps1         # Before preparing new task
+    ├── task-coverage.ps1          # SpecKit ↔ Orchestrator sync
+    ├── verification-audit.ps1     # Audit verification records
+    └── handover-validate.ps1      # Validate current-task.md
+
+.orchestra/handover/.implementor/scripts/
+├── validate-handover.ps1          # Implementor validates task
+└── pre-signal-check.ps1           # Before signaling completion
+```
+
+### Environment Variables
+
+The `set-env.ps1` script sets sprint-level variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `ORCHESTRA_ROOT` | Path to .orchestra folder |
+| `SPECKIT_ROOT` | Path to specs/xxx folder |
+| `SPRINT_NAME` | Current sprint name |
+| `CURRENT_TASK` | Current task ID (from progress.yaml) |
+| `PREVIOUS_TASK` | Previous task ID |
+| `SPRINT_TEST_PATH` | Path to sprint unit tests |
+| `MANIFEST_PATH` | Path to manifest.yaml |
+| `PROGRESS_PATH` | Path to progress.yaml |
+| `HANDOVER_PATH` | Path to handover folder |
+| `VERIFICATION_PATH` | Path to verification folder |
+
+### Orchestrator Scripts
+
+1. **pre-task-check.ps1**: MANDATORY before preparing ANY new task
+   - Checks git is clean
+   - Verifies previous task completed
+   - Confirms SpecKit tasks.md updated
+   - Ensures verification records exist
+   - Validates tests still pass
+
+2. **task-coverage.ps1**: Bidirectional sync check
+   - All SpecKit tasks mapped to orchestrator tasks
+   - All orchestrator task refs exist in SpecKit
+   - Completion status synchronized
+
+3. **verification-audit.ps1**: Audit verification records
+   - All completed tasks have verification YAMLs
+   - YAMLs have required sections
+   - Screenshot content verified (not just existence)
+   - Commit hashes recorded and valid
+
+4. **handover-validate.ps1**: Before implementor handoff
+   - Has objective, file ops, TDD section
+   - No TODO/TBD placeholders
+   - Matches progress.yaml current task
+
+### Implementor Scripts
+
+1. **validate-handover.ps1**: When implementor receives task
+   - Objective is clear and specific
+   - File paths are unambiguous
+   - TDD section has test expectations
+   - No TODOs or incomplete content
+
+2. **pre-signal-check.ps1**: Before signaling completion
+   - All CREATE files exist with content
+   - All UPDATE files were modified
+   - Tests pass
+   - No TODOs in code
+   - Demo exists (if visual task)
+   - Git changes detected
+
+### Design Decisions
+
+1. **All Hard Failures**: Exit code 1 for any failure
+   - Prevents "it's just a warning" rationalization
+   - Clear actionable fix instructions for each failure
+
+2. **Role Separation**: Orchestrator vs implementor scripts in different folders
+   - Implementor scripts in `.implementor/` which orchestrator shouldn't read
+   - Maintains mutual verification integrity
+
+3. **Transportability**: Self-contained in `.orchestra/`
+   - Only need to edit `set-env.ps1` for new project
+   - No external dependencies
+
+4. **Check Utilities**: Shared functions in `common/check-utils.ps1`
+   - Consistent output formatting
+   - Reusable YAML parsing
+   - Git helpers
+   - Result collection and summary
+
+### Usage Example
+
+```powershell
+# Start of orchestrator session
+. .\.orchestra\scripts\set-env.ps1
+
+# Before preparing Task 11
+.\.orchestra\scripts\orchestrator\pre-task-check.ps1
+
+# Check SpecKit coverage
+.\.orchestra\scripts\orchestrator\task-coverage.ps1
+
+# After creating current-task.md
+.\.orchestra\scripts\orchestrator\handover-validate.ps1
+
+# Implementor validates handover
+.\.orchestra\handover\.implementor\scripts\validate-handover.ps1
+
+# Implementor pre-completion
+.\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+
+# After verification
+.\.orchestra\scripts\orchestrator\verification-audit.ps1 -TaskId 10
+```
+
+### Files Created
+
+- `.orchestra/scripts/set-env.ps1` (77 lines)
+- `.orchestra/scripts/common/check-utils.ps1` (160+ lines)
+- `.orchestra/scripts/orchestrator/pre-task-check.ps1` (refactored, 200+ lines)
+- `.orchestra/scripts/orchestrator/task-coverage.ps1` (200+ lines)
+- `.orchestra/scripts/orchestrator/verification-audit.ps1` (290+ lines)
+- `.orchestra/scripts/orchestrator/handover-validate.ps1` (220+ lines)
+- `.orchestra/handover/.implementor/scripts/validate-handover.ps1` (170+ lines)
+- `.orchestra/handover/.implementor/scripts/pre-signal-check.ps1` (220+ lines)
+- `.orchestra/scripts/README.md` (documentation)
+
+**Commit**: `159227e` (2025-11-29)
+
+### Lesson Learned
+
+Pre-task checks should be **mandatory and automated**, not optional and manual. When humans (or agents) can skip checks, they eventually will.
+
+---
