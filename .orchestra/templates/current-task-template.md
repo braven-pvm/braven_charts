@@ -49,8 +49,8 @@ AFTER completing checklist:
 
 ### Files to CREATE:
 
-| File         | Purpose         | Export To |
-| ------------ | --------------- | --------- |
+| File         | Purpose         | Export To                  |
+| ------------ | --------------- | -------------------------- |
 | [TODO: path] | [TODO: purpose] | [TODO: barrel file or N/A] |
 
 ### Files to MODIFY:

@@ -26,7 +26,7 @@ verification_criteria:
       
     - check: "AxisColorResolver test file exists"
       severity: BLOCKING
-      command: 'Test-Path "test/unit/rendering/axis_color_resolver_test.dart"'
+      command: 'Test-Path "test/unit/multi_axis/axis_color_resolver_test.dart"'
       expected: "True"
 
   # ===== STRUCTURAL CHECKS =====
@@ -62,22 +62,22 @@ verification_criteria:
   tests:
     - check: "Test for explicit axis.color priority"
       severity: MAJOR
-      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "axis.color.*explicit|explicitly set|returns axis.color"'
+      command: 'Select-String -Path "test/unit/multi_axis/axis_color_resolver_test.dart" -Pattern "axis.color.*explicit|explicitly set|returns axis.color"'
       expected: "Test case found"
       
     - check: "Test for series color fallback"
       severity: MAJOR
-      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "series color|bound series|fallback"'
+      command: 'Select-String -Path "test/unit/multi_axis/axis_color_resolver_test.dart" -Pattern "series color|bound series|fallback"'
       expected: "Test case found"
       
     - check: "Test for default color fallback"
       severity: MAJOR
-      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "default color|no series|defaultColor"'
+      command: 'Select-String -Path "test/unit/multi_axis/axis_color_resolver_test.dart" -Pattern "default color|no series|defaultColor"'
       expected: "Test case found"
       
     - check: "Test for shared axis (T038)"
       severity: MAJOR
-      command: 'Select-String -Path "test/unit/rendering/axis_color_resolver_test.dart" -Pattern "shared axis|first.*series|multiple series"'
+      command: 'Select-String -Path "test/unit/multi_axis/axis_color_resolver_test.dart" -Pattern "shared axis|first.*series|multiple series"'
       expected: "Test case found"
 
   # ===== ADVERSARIAL CHECKS =====
@@ -104,7 +104,7 @@ verification_criteria:
   visual:
     - check: "Demo file exists"
       severity: MAJOR
-      command: 'Test-Path "example/lib/demos/task_010_demo.dart"'
+      command: 'Test-Path "example/lib/demos/task_010_color_demo.dart"'
       expected: "True"
       
     - check: "Screenshot captured"
@@ -133,7 +133,7 @@ verification_criteria:
   test_execution:
     - check: "All new tests pass"
       severity: BLOCKING
-      command: 'flutter test test/unit/rendering/axis_color_resolver_test.dart'
+      command: 'flutter test test/unit/multi_axis/axis_color_resolver_test.dart'
       expected: "All tests passed"
       
     - check: "No regressions in existing tests"

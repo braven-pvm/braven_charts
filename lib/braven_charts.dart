@@ -27,8 +27,14 @@ export 'src/models/data_range.dart';
 export 'src/models/enums.dart';
 export 'src/models/interaction_callbacks.dart';
 export 'src/models/interaction_config.dart';
+export 'src/models/multi_axis_config.dart';
+export 'src/models/normalization_mode.dart';
+export 'src/models/series_axis_binding.dart';
 export 'src/models/streaming_config.dart';
+export 'src/models/y_axis_config.dart';
+export 'src/models/y_axis_position.dart';
 // Rendering
+export 'src/rendering/axis_color_resolver.dart';
 export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
 // Streaming
