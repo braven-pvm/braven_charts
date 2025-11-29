@@ -74,8 +74,8 @@ import 'package:braven_charts/src/...';
 
 These existing utilities MUST be used. Do NOT reimplement their logic inline.
 
-| Utility | Use For | DO NOT |
-|---------|---------|--------|
+| Utility                                       | Use For                                           | DO NOT                                           |
+| --------------------------------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | [TODO: e.g., MultiAxisNormalizer.normalize()] | [TODO: e.g., Converting data values to 0-1 range] | [TODO: e.g., Inline (value - min) / (max - min)] |
 
 [N/A - Reason: No existing utilities apply to this task]

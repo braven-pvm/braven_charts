@@ -1,418 +1,287 @@
-# Current Task: Create Multi-Axis Painter
+# Current Task: Task 10 - Implement Color-Coded Axis Rendering
 
-## Objective
+## Pre-Flight Checklist (Orchestrator Audit Trail)
 
-Create the visual rendering infrastructure for multiple Y-axes. This includes a painter for drawing axes, a layout delegate for computing widths, and a layout manager for positioning axes at their configured positions.
+**Date**: [TO BE FILLED BY ORCHESTRATOR]
+**Orchestrator**: GitHub Copilot (Claude Opus 4.5)
+**Task Source**: `.orchestra/manifest.yaml` lines 75-81
 
-## Context
+### Verification
+- [x] Read `.orchestra/readme.md` (Step 0)
+- [x] Read `.orchestra/manifest.yaml` to identify this task
+- [x] Read SpecKit tasks (T034, T035, T036, T037, T038, T031)
+- [x] Identified dependencies: Task 9 (MultiAxisPainter) - COMPLETED
+- [x] Created verification criteria in `.orchestra/verification/task-010.yaml`
+- [x] Deleted previous `current-task.md` before creating this one
 
-We now have:
-- ✅ `MultiAxisNormalizer` - Core normalization engine (Task 6)
-- ✅ `NormalizationDetector` - Auto-detection logic (Task 7)
-- ✅ Pipeline integration (Task 8) - Normalization wired into chart
-- ✅ `YAxisConfig` - Axis configuration model (Task 2)
-- ✅ `YAxisPosition` - Position enum (outerLeft, left, right, outerRight)
-- ✅ `DataRange` - Min/max bounds container
+### Files Consulted
+- `specs/011-multi-axis-normalization/tasks.md` - SpecKit task definitions
+- `specs/011-multi-axis-normalization/spec.md` - FR-007 color-coding requirement
+- `lib/src/models/y_axis_config.dart` - Existing color field
+- `lib/src/models/series_axis_binding.dart` - Binding model
+- `lib/src/models/chart_series.dart` - Series color source
+- `lib/src/rendering/multi_axis_painter.dart` - Where color is applied
 
-**This task adds the VISUAL rendering** - painting the actual Y-axes on screen.
+---
 
-## User Story Reference
+## Task Overview
 
-**US1 (P1)**: Multi-scale data visualization
-> "Each series uses the full vertical height of the chart while displaying its own properly-scaled Y-axis."
+**Objective**: Implement color resolution for Y-axes that derives color from bound series when not explicitly set on the axis config.
 
-**FR-001**: System MUST support up to 4 Y-axes positioned as: outerLeft, left, right, outerRight
-**FR-005**: All Y-axis labels and ticks MUST display original data values (not normalized values)
-**FR-007**: Each Y-axis MUST support color-coding to match its bound series
+**Category**: INTEGRATION (connects axis config to series data via bindings)
 
-## ⚠️ TDD REQUIREMENT
+**FR-007**: "Each Y-axis MUST support color-coding to match its bound series"
 
-1. **Write tests FIRST** (they should fail initially)
-2. **Then implement** to make tests pass
+**Current State**:
+- `YAxisConfig.color` is nullable with doc "If null, uses the color of the first bound series"
+- `MultiAxisPainter` currently falls back to hardcoded gray (`Color(0xFF333333)`) when axis.color is null
+- `SeriesAxisBinding` exists to connect series → axis by ID
+- `ChartSeries.color` contains the series color
 
-## What to Create
+**Required State**:
+- `AxisColorResolver` class that resolves effective axis color from config or bound series
+- `MultiAxisPainter` uses resolved color for axis line, ticks, and labels
+- Shared axes (multiple series) use first bound series color
 
-### 1. Test File (Create FIRST!)
+---
 
-**Path**: `test/unit/multi_axis/multi_axis_painter_test.dart`
+## SpecKit Traceability
 
-```dart
-import 'dart:ui';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
+| SpecKit ID | Description | Status |
+|------------|-------------|--------|
+| T034 | Implement axis color resolver (from config or series) | ⏳ Pending |
+| T035 | Apply color to axis labels | ⏳ Pending |
+| T036 | Apply color to axis ticks | ⏳ Pending |
+| T037 | Apply color to axis line | ⏳ Pending |
+| T038 | Handle shared axis color (multiple series bound) | ⏳ Pending |
+| T031 | Unit test for axis colors | ⏳ Pending |
 
-void main() {
-  group('MultiAxisLayoutDelegate', () {
-    group('computeAxisWidths', () {
-      test('returns empty map for empty axis list');
-      test('computes width based on label text measurement');
-      test('respects YAxisConfig.minWidth');
-      test('respects YAxisConfig.maxWidth');
-      test('includes space for unit suffix');
-      test('accounts for tick marks width');
-    });
-    
-    group('getTotalLeftWidth', () {
-      test('returns 0 for no left axes');
-      test('sums widths of left and outerLeft axes');
-    });
-    
-    group('getTotalRightWidth', () {
-      test('returns 0 for no right axes');
-      test('sums widths of right and outerRight axes');
-    });
-  });
-  
-  group('AxisLayoutManager', () {
-    group('getAxisRect', () {
-      test('positions outerLeft axis at far left');
-      test('positions left axis inside outerLeft');
-      test('positions right axis at right edge of plot area');
-      test('positions outerRight axis outside right');
-      test('handles single axis at each position');
-      test('handles all 4 axes simultaneously');
-    });
-    
-    group('computePlotArea', () {
-      test('reduces chart area by axis widths');
-      test('preserves plot area when no axes');
-    });
-  });
-  
-  group('MultiAxisPainter', () {
-    group('paint', () {
-      test('paints axis line at correct position');
-      test('paints tick marks at computed locations');
-      test('paints tick labels with original values');
-      test('uses axis color from YAxisConfig');
-      test('includes unit suffix in labels');
-      test('handles empty axis configuration gracefully');
-    });
-    
-    group('tick value computation', () {
-      test('generates appropriate tick count for axis height');
-      test('uses nice numbers for tick values');
-      test('respects explicit min/max from YAxisConfig');
-      test('uses denormalized values from DataRange');
-    });
-  });
-  
-  group('acceptance scenarios', () {
-    test('renders 2 axes - one left, one right');
-    test('renders 4 axes at all positions');
-    test('each axis shows original scale values');
-  });
-}
+**Total SpecKit Tasks**: 6
+
+---
+
+## Deliverables
+
+### Required Files
+
+| # | File Path | Purpose | SpecKit |
+|---|-----------|---------|---------|
+| 1 | `lib/src/rendering/axis_color_resolver.dart` | NEW: Color resolution logic | T034, T038 |
+| 2 | `lib/src/rendering/multi_axis_painter.dart` | UPDATE: Use resolved colors | T035, T036, T037 |
+| 3 | `test/unit/rendering/axis_color_resolver_test.dart` | NEW: Unit tests | T031 |
+
+### Expected Outputs
+- `AxisColorResolver` class with `resolveAxisColor()` method
+- `MultiAxisPainter` integration with color resolver
+- 8+ unit tests covering resolution scenarios
+
+---
+
+## Technical Context
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      AxisColorResolver                          │
+├─────────────────────────────────────────────────────────────────┤
+│ static Color resolveAxisColor(                                  │
+│   YAxisConfig axis,                                             │
+│   List<SeriesAxisBinding> bindings,                             │
+│   List<ChartSeries> series,                                     │
+│   {Color defaultColor = const Color(0xFF333333)}                │
+│ )                                                               │
+│                                                                 │
+│ Resolution Priority:                                            │
+│ 1. axis.color if non-null → return it                          │
+│ 2. Find bindings where binding.yAxisId == axis.id              │
+│ 3. Find first matching series by seriesId                      │
+│ 4. Return series.color if non-null                             │
+│ 5. Return defaultColor                                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Layout Directory
+### MUST USE (DO NOT DUPLICATE)
 
-**Create**: `lib/src/layout/` directory
+| Component | Location | Why Use It |
+|-----------|----------|------------|
+| `SeriesAxisBinding` | `lib/src/models/series_axis_binding.dart` | Binding lookup by yAxisId |
+| `YAxisConfig.color` | `lib/src/models/y_axis_config.dart` | Primary color source |
+| `ChartSeries.color` | `lib/src/models/chart_series.dart` | Fallback color source |
+| `MultiAxisPainter` | `lib/src/rendering/multi_axis_painter.dart` | Integrate color resolution |
 
-### 3. MultiAxisLayoutDelegate
+**ANTI-PATTERNS TO AVOID**:
+- ❌ Hardcoding fallback colors in multiple places
+- ❌ Creating new binding lookup logic (use existing model)
+- ❌ Duplicating color resolution in labels/ticks/line separately
 
-**Path**: `lib/src/layout/multi_axis_layout.dart`
+### Key Dependencies
+- Task 9 `MultiAxisPainter` (COMPLETED) - will be updated to use color resolver
+
+---
+
+## TDD Requirements
+
+### Test File: `test/unit/rendering/axis_color_resolver_test.dart`
 
 ```dart
-import 'dart:ui';
-
-import 'package:flutter/painting.dart';
-
-import '../models/data_range.dart';
-import '../models/y_axis_config.dart';
-import '../models/y_axis_position.dart';
-
-/// Computes axis widths based on content requirements.
-///
-/// This delegate measures the text width needed for tick labels
-/// and determines appropriate axis widths within the configured bounds.
-class MultiAxisLayoutDelegate {
-  const MultiAxisLayoutDelegate();
+// Required test cases (minimum):
+group('AxisColorResolver', () {
+  // T034: Axis color resolver
+  test('returns axis.color when explicitly set');
+  test('returns first bound series color when axis.color is null');
+  test('returns default color when no series bound');
+  test('returns default color when bound series has null color');
   
-  /// Computes the required width for each axis.
-  ///
-  /// Returns a map from axis ID to computed width.
-  ///
-  /// Width is determined by:
-  /// - Maximum tick label width (based on [DataRange] values)
-  /// - Unit suffix width if specified
-  /// - Tick mark width
-  /// - Constrained by [YAxisConfig.minWidth] and [YAxisConfig.maxWidth]
-  Map<String, double> computeAxisWidths({
-    required List<YAxisConfig> axes,
-    required Map<String, DataRange> axisBounds,
-    required TextStyle labelStyle,
-  }) {
-    // TODO: Implement
-    // 1. For each axis, compute max label width from bounds
-    // 2. Add unit suffix width if present
-    // 3. Add padding for tick marks
-    // 4. Clamp to minWidth/maxWidth
-  }
+  // T038: Shared axis
+  test('uses first bound series color for shared axis');
+  test('ignores subsequent series colors for shared axis');
   
-  /// Gets total width of left-side axes (outerLeft + left).
-  double getTotalLeftWidth(
-    List<YAxisConfig> axes,
-    Map<String, double> widths,
-  ) {
-    // TODO: Implement
-  }
-  
-  /// Gets total width of right-side axes (right + outerRight).
-  double getTotalRightWidth(
-    List<YAxisConfig> axes,
-    Map<String, double> widths,
-  ) {
-    // TODO: Implement
-  }
-}
+  // Edge cases
+  test('handles empty bindings list');
+  test('handles empty series list');
+});
 ```
 
-### 4. AxisLayoutManager
+### TDD Workflow
+1. Create test file with failing tests FIRST
+2. Run tests to confirm they fail
+3. Implement `AxisColorResolver` to make tests pass
+4. Update `MultiAxisPainter` to use resolver
+5. Run all tests to confirm integration
 
-**Path**: `lib/src/layout/axis_layout_manager.dart`
+---
 
-```dart
-import 'dart:ui';
+## Code Scaffolds
 
-import '../models/y_axis_config.dart';
-import '../models/y_axis_position.dart';
-
-/// Manages positioning of multiple Y-axes around the chart area.
-///
-/// Positions axes according to FR-001:
-/// - outerLeft: Leftmost position
-/// - left: Inside outerLeft, adjacent to plot area
-/// - right: Right edge of plot area
-/// - outerRight: Rightmost position
-class AxisLayoutManager {
-  const AxisLayoutManager();
-  
-  /// Gets the rectangle for rendering a specific axis.
-  ///
-  /// [chartArea] is the total available chart area.
-  /// [axis] is the axis configuration.
-  /// [axisWidths] contains computed widths for all axes.
-  /// [allAxes] is the complete list of axis configurations.
-  Rect getAxisRect({
-    required Rect chartArea,
-    required YAxisConfig axis,
-    required Map<String, double> axisWidths,
-    required List<YAxisConfig> allAxes,
-  }) {
-    // TODO: Implement
-    // Calculate X offset based on position and other axes
-    // Width comes from axisWidths[axis.id]
-    // Height matches plot area height
-  }
-  
-  /// Computes the plot area after reserving space for axes.
-  ///
-  /// Returns the rectangle available for chart data rendering
-  /// after accounting for all axis widths.
-  Rect computePlotArea({
-    required Rect chartArea,
-    required List<YAxisConfig> axes,
-    required Map<String, double> axisWidths,
-  }) {
-    // TODO: Implement
-    // Subtract left widths from left edge
-    // Subtract right widths from right edge
-  }
-}
-```
-
-### 5. MultiAxisPainter
-
-**Path**: `lib/src/rendering/multi_axis_painter.dart`
+### `lib/src/rendering/axis_color_resolver.dart`
 
 ```dart
-import 'dart:ui';
-
-import 'package:flutter/painting.dart';
-
-import '../layout/axis_layout_manager.dart';
-import '../layout/multi_axis_layout.dart';
-import '../models/data_range.dart';
-import '../models/y_axis_config.dart';
-import 'multi_axis_normalizer.dart';
-
-/// Paints multiple Y-axes with their tick marks and labels.
+/// Resolves axis colors from configuration or bound series.
 ///
-/// Uses [MultiAxisNormalizer.denormalize] to convert normalized
-/// tick positions back to original data values for display.
-class MultiAxisPainter {
-  MultiAxisPainter({
-    required this.axes,
-    required this.axisBounds,
-    this.labelStyle,
-  });
-  
-  final List<YAxisConfig> axes;
-  final Map<String, DataRange> axisBounds;
-  final TextStyle? labelStyle;
-  
-  final _layoutDelegate = const MultiAxisLayoutDelegate();
-  final _layoutManager = const AxisLayoutManager();
-  
-  /// Paints all configured axes on the canvas.
+/// This library provides the [AxisColorResolver] class for determining
+/// the effective color of a Y-axis in multi-axis charts.
+library;
+
+import 'dart:ui' show Color;
+
+import '../models/chart_series.dart';
+import '../models/series_axis_binding.dart';
+import '../models/y_axis_config.dart';
+
+/// Resolves the effective color for a Y-axis.
+///
+/// Color resolution priority:
+/// 1. Explicit [YAxisConfig.color] if set
+/// 2. Color of first bound [ChartSeries]
+/// 3. Default color (configurable)
+///
+/// Example:
+/// ```dart
+/// final color = AxisColorResolver.resolveAxisColor(
+///   powerAxis,
+///   bindings,
+///   series,
+/// );
+/// ```
+class AxisColorResolver {
+  const AxisColorResolver._();
+
+  /// Default color when no other color source is available.
+  static const Color defaultAxisColor = Color(0xFF333333);
+
+  /// Resolves the effective color for a Y-axis.
   ///
-  /// [canvas] is the canvas to draw on.
-  /// [chartArea] is the total chart area (axes will be painted outside plot area).
-  /// [plotArea] is the data rendering area (axes align to this).
-  void paint(Canvas canvas, Rect chartArea, Rect plotArea) {
-    // TODO: Implement
-    // 1. Compute axis widths
-    // 2. For each axis:
-    //    a. Get axis rect from layout manager
-    //    b. Paint axis line
-    //    c. Generate tick values from bounds
-    //    d. Paint tick marks
-    //    e. Paint tick labels (denormalized values)
-  }
-  
-  /// Paints a single axis.
-  void _paintAxis(
-    Canvas canvas,
+  /// [axis] is the Y-axis configuration.
+  /// [bindings] is the list of series-to-axis bindings.
+  /// [series] is the list of data series.
+  /// [defaultColor] is the fallback color (defaults to [defaultAxisColor]).
+  ///
+  /// Returns the resolved color for the axis.
+  static Color resolveAxisColor(
     YAxisConfig axis,
-    Rect axisRect,
-    Rect plotArea,
-    DataRange bounds,
-  ) {
-    // TODO: Implement
-    // Draw axis line
-    // Draw ticks and labels
-  }
-  
-  /// Generates nice tick values for an axis.
-  List<double> _generateTicks(DataRange bounds, int maxTicks) {
-    // TODO: Implement
-    // Use nice number algorithm
-  }
-  
-  /// Formats a tick value with optional unit suffix.
-  String _formatTickLabel(double value, YAxisConfig axis) {
-    // TODO: Implement
-    // Format number + add unit suffix
+    List<SeriesAxisBinding> bindings,
+    List<ChartSeries> series, {
+    Color defaultColor = defaultAxisColor,
+  }) {
+    // TODO: Implement color resolution
+    // 1. Return axis.color if non-null
+    // 2. Find bindings matching axis.id
+    // 3. Find first series by seriesId
+    // 4. Return series.color if non-null
+    // 5. Return defaultColor
+    throw UnimplementedError();
   }
 }
 ```
 
-### 6. Barrel Export
-
-**Path**: `lib/src/layout/layout.dart`
-
-```dart
-export 'axis_layout_manager.dart';
-export 'multi_axis_layout.dart';
-```
-
-Update main barrel file if needed.
-
-## Dependencies
-
-```dart
-// Use from completed tasks:
-import 'package:braven_charts/src/rendering/multi_axis_normalizer.dart';
-import 'package:braven_charts/src/models/data_range.dart';
-import 'package:braven_charts/src/models/y_axis_config.dart';
-import 'package:braven_charts/src/models/y_axis_position.dart';
-```
-
-## ⚠️ MUST USE (DO NOT DUPLICATE)
-
-These existing utilities MUST be used. Do NOT reimplement their logic inline.
-
-| Utility | Use For | DO NOT |
-|---------|---------|--------|
-| `MultiAxisNormalizer.normalize(value, min, max)` | Converting data/tick values to normalized 0-1 range for Y-coordinate mapping | Inline `(value - min) / (max - min)` or `(value - bounds.min) / bounds.span` |
-| `MultiAxisNormalizer.denormalize(normalized, min, max)` | Converting normalized values back to original data values | Inline `normalized * (max - min) + min` |
-
-**Rationale**: Single source of truth for normalization formula. If we ever change the normalization approach, we change it in ONE place.
-
-## Algorithm Notes
-
-### Nice Number Algorithm for Ticks
-
-```dart
-// Generate "nice" tick values that are easy to read
-double niceNum(double range, bool round) {
-  final exponent = (log(range) / ln10).floor();
-  final fraction = range / pow(10, exponent);
-  
-  double niceFraction;
-  if (round) {
-    if (fraction < 1.5) niceFraction = 1;
-    else if (fraction < 3) niceFraction = 2;
-    else if (fraction < 7) niceFraction = 5;
-    else niceFraction = 10;
-  } else {
-    if (fraction <= 1) niceFraction = 1;
-    else if (fraction <= 2) niceFraction = 2;
-    else if (fraction <= 5) niceFraction = 5;
-    else niceFraction = 10;
-  }
-  
-  return niceFraction * pow(10, exponent);
-}
-```
-
-### Axis Position Layout
-
-```
-+------------------+---+---+--------+---+---+
-| outerLeft | left |   PLOT AREA   | right | outerRight |
-+------------------+---+---+--------+---+---+
-```
-
-## Test Execution
-
-```bash
-# Run multi-axis painter tests (should FAIL initially)
-flutter test test/unit/multi_axis/multi_axis_painter_test.dart
-
-# Ensure all sprint tests still pass
-flutter test test/unit/multi_axis/
-```
-
-## Quality Gates (MANDATORY)
-
-### 1. Linting - Zero Issues
-```bash
-flutter analyze lib/src/rendering/multi_axis_painter.dart
-flutter analyze lib/src/layout/
-flutter analyze test/unit/multi_axis/multi_axis_painter_test.dart
-```
-
-### 2. All Sprint Tests Must Pass
-```bash
-flutter test test/unit/multi_axis/
-flutter test test/integration/multi_axis_normalization_integration_test.dart
-flutter test test/integration/multi_axis_pipeline_integration_test.dart
-```
-
-Current baseline: **192 tests passing** (MUST NOT decrease!)
+---
 
 ## Visual Verification
 
-**[N/A - Reason: Infrastructure task]**
+**Category**: INTEGRATION
 
-This task creates the **painter infrastructure** (classes, methods, layout logic) but does NOT integrate it into BravenChartPlus. Visual verification will occur in a future integration task when MultiAxisPainter is wired into the chart widget.
+**Requirement**: Standalone demo with screenshot verification
 
-The correctness of this task is verified through **unit tests** that validate:
-- Layout calculations produce correct rectangles
-- Tick generation uses nice numbers
-- Label formatting includes units
-- Axis positioning follows FR-001 rules
+### Demo Location
+`example/lib/demos/task_010_demo.dart`
 
-## When Done
+### Demo Requirements
+1. Create multi-axis chart with:
+   - Power axis (left) - NO explicit color (should derive from blue series)
+   - HR axis (right) - NO explicit color (should derive from red series)
+   - Shared axis with two series (verify uses first series color)
+   
+2. Verify visually:
+   - Power axis labels, ticks, line are all BLUE
+   - HR axis labels, ticks, line are all RED
+   - Shared axis uses first bound series color consistently
 
-1. **Verify linting is clean** (BLOCKING)
-2. **Verify ALL tests pass** (BLOCKING)
-3. Stage your changes: `git add .`
-4. Write to `.orchestra/handover/completion-signal.md`:
-   - Files created
-   - Number of tests added
-   - Confirm linting clean
-   - Confirm all sprint tests pass
-5. Say "Task complete - ready for review"
+### Screenshot Command
+```powershell
+python tools/flutter_agent/flutter_agent.py --project-root "example" --screenshot ".orchestra/screenshots/task-010-color-coded-axes.png" --run-timeout 30
+```
+
+---
+
+## Quality Gates
+
+### Automated Checks
+- [ ] All new tests pass
+- [ ] No regressions in existing tests (`flutter test`)
+- [ ] No analyzer warnings (`flutter analyze`)
+- [ ] Test coverage for new code ≥80%
+
+### Manual Verification
+- [ ] Axis colors match bound series when axis.color is null
+- [ ] Explicit axis.color overrides series color
+- [ ] Shared axis uses first bound series color
+- [ ] Labels, ticks, and line all use same resolved color
+
+---
+
+## Completion Protocol
+
+When all deliverables are complete:
+
+1. Run full test suite: `flutter test`
+2. Run analyzer: `flutter analyze`
+3. Capture demo screenshot
+4. Update `.orchestra/handover/completion-signal.md`:
+   ```yaml
+   task: 10
+   status: ready-for-verification
+   tests_added: [count]
+   tests_passing: [count]
+   screenshot: .orchestra/screenshots/task-010-color-coded-axes.png
+   ```
+5. Signal completion: "Task 10 ready for orchestrator verification"
+
+---
+
+## Notes
+
+- The color resolver should be a pure function (static method) for easy testing
+- `MultiAxisPainter` will need to accept bindings and series as new parameters
+- Consider whether the painter should receive already-resolved colors vs. doing resolution internally
+- FR-007 explicitly requires color-coding capability; this task implements the core mechanism
