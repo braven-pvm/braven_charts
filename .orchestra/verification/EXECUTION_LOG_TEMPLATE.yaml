@@ -1,0 +1,51 @@
+# Verification Execution Log Template
+# 
+# The orchestrator MUST create a copy of this file for each task verification:
+#   verification/task-XXX-execution.yaml
+#
+# This log is APPEND-ONLY during verification. Each check must be recorded.
+# The validation script will compare this against task-XXX.yaml criteria.
+
+task_id: [TASK_NUMBER]
+verification_started: "[ISO_TIMESTAMP]"
+verification_completed: "[ISO_TIMESTAMP]"
+yaml_file_read: "[MUST be 'verification/task-XXX.yaml' - proves file was read]"
+
+checks_executed:
+  # For EACH check in the verification yaml, add an entry:
+  #
+  # - check_id: "unique_id_from_yaml"
+  #   severity: "BLOCKING|MAJOR|MINOR|INFO"
+  #   command_executed: "exact command that was run"
+  #   raw_output: |
+  #     [paste actual command output here]
+  #   result: "PASS|FAIL"
+  #   timestamp: "[ISO_TIMESTAMP]"
+  #   notes: "[optional notes]"
+
+  - check_id: "[EXAMPLE]"
+    severity: "BLOCKING"
+    command_executed: 'Test-Path "lib/src/rendering/axis_color_resolver.dart"'
+    raw_output: |
+      True
+    result: "PASS"
+    timestamp: "2025-11-29T14:30:05Z"
+    notes: ""
+
+# After all checks are executed, summarize:
+summary:
+  total_checks: 0
+  blocking_passed: 0
+  blocking_failed: 0
+  major_passed: 0
+  major_failed: 0
+  minor_passed: 0
+  minor_failed: 0
+  
+  # Decision rules:
+  # - ANY BLOCKING fail → TASK FAILED
+  # - ANY MAJOR fail → TASK FAILED
+  # - MINOR fails only → TASK PASSED with notes
+  
+  final_decision: "PASS|FAIL"
+  failure_reasons: []
