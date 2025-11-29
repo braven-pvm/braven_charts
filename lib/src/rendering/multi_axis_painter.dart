@@ -7,8 +7,11 @@ import 'package:flutter/painting.dart';
 
 import '../layout/axis_layout_manager.dart';
 import '../layout/multi_axis_layout.dart';
+import '../models/chart_series.dart';
+import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
+import 'axis_color_resolver.dart';
 import 'multi_axis_normalizer.dart';
 
 /// Paints multiple Y-axes with their tick marks and labels.
@@ -36,10 +39,14 @@ class MultiAxisPainter {
   ///
   /// [axes] is the list of Y-axis configurations to render.
   /// [axisBounds] maps axis IDs to their data ranges.
+  /// [bindings] is the list of series-to-axis bindings for color resolution.
+  /// [series] is the list of data series for color resolution.
   /// [labelStyle] is optional; uses default style if not provided.
   MultiAxisPainter({
     required this.axes,
     required this.axisBounds,
+    this.bindings = const [],
+    this.series = const [],
     TextStyle? labelStyle,
   }) : labelStyle = labelStyle ?? _defaultLabelStyle;
 
@@ -48,6 +55,16 @@ class MultiAxisPainter {
 
   /// Map from axis ID to data range for tick value computation.
   final Map<String, DataRange> axisBounds;
+
+  /// List of series-to-axis bindings for color resolution.
+  ///
+  /// Used to determine axis colors when [YAxisConfig.color] is null.
+  final List<SeriesAxisBinding> bindings;
+
+  /// List of data series for color resolution.
+  ///
+  /// Used to determine axis colors when [YAxisConfig.color] is null.
+  final List<ChartSeries> series;
 
   /// Text style for tick labels.
   final TextStyle labelStyle;
@@ -115,7 +132,11 @@ class MultiAxisPainter {
     Rect plotArea,
     DataRange bounds,
   ) {
-    final axisColor = axis.color ?? const Color(0xFF333333);
+    final axisColor = AxisColorResolver.resolveAxisColor(
+      axis,
+      bindings,
+      series,
+    );
     final paint = Paint()
       ..color = axisColor
       ..strokeWidth = _axisLineWidth
@@ -196,7 +217,11 @@ class MultiAxisPainter {
     bool isLeftSide,
   ) {
     final label = formatTickLabel(value, axis);
-    final labelColor = axis.color ?? labelStyle.color ?? const Color(0xFF666666);
+    final labelColor = AxisColorResolver.resolveAxisColor(
+      axis,
+      bindings,
+      series,
+    );
 
     final textPainter = TextPainter(
       text: TextSpan(
