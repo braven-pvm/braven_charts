@@ -2084,3 +2084,50 @@ This makes it explicit:
 Imports are passive. Explicit MUST USE with anti-patterns is active instruction.
 
 ---
+
+## 📋 Handover Completeness Gap Analysis
+
+**Date**: 2025-11-29  
+**Trigger**: User asked "does the current instructions include enough context so that I can handover to a new implementor agent?"
+
+### The Problem
+
+Task 10 handover was ~85% complete. A skilled agent could figure out the gaps, but there was risk of:
+- Creating demo files incorrectly (no scaffold provided)
+- Putting tests in wrong folder (inconsistent paths)
+- Not knowing how to wire MultiAxisPainter integration
+
+### Gaps Identified
+
+| Gap | Impact | Fix |
+|-----|--------|-----|
+| **Demo code scaffold missing** | New agent wouldn't know how to wire demo | Add to Section 7 template |
+| **MultiAxisPainter update details vague** | "UPDATE: Use resolved colors" but no specifics | Add integration scaffold |
+| **Test file location inconsistent** | AGENT_README says `test/unit/axis/`, task says `test/unit/rendering/` | Standardize paths |
+| **No concrete test data** | TDD section lists signatures but no examples | Add sample data |
+| **Barrel file export not specified** | Where to export new class? | Add explicit export location |
+
+### Solution: Permanent Improvements
+
+1. **Template enhancement**: Section 7 now REQUIRES demo scaffold code for INTEGRATION/VISUAL tasks
+2. **Template enhancement**: Added "Integration Changes" subsection for UPDATE files
+3. **Readme enhancement**: Added "Handover Completeness Checklist" for orchestrator
+4. **Template enhancement**: Added "Sample Test Data" to TDD section
+5. **Template enhancement**: Added "Export Location" to deliverables
+
+### New Checklist for Orchestrator (Added to Readme)
+
+Before invoking implementor, verify handover is complete for a NEW agent:
+
+- [ ] Can a fresh agent create all deliverables without asking questions?
+- [ ] Are file paths unambiguous (full relative paths from repo root)?
+- [ ] For UPDATE files: are specific changes listed (methods to add/modify)?
+- [ ] For TDD: is sample test data provided (not just test names)?
+- [ ] For INTEGRATION/VISUAL: is demo scaffold code provided?
+- [ ] Is export/barrel file location specified?
+
+### Lesson Learned
+
+**85% complete is not complete.** A handover must be **100% autonomous** - the new agent should never need to ask "where does this go?" or "what does this look like?"
+
+---

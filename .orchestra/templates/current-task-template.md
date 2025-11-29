@@ -49,15 +49,31 @@ AFTER completing checklist:
 
 ### Files to CREATE:
 
-| File         | Purpose         |
-| ------------ | --------------- |
-| [TODO: path] | [TODO: purpose] |
+| File         | Purpose         | Export To |
+| ------------ | --------------- | --------- |
+| [TODO: path] | [TODO: purpose] | [TODO: barrel file or N/A] |
 
 ### Files to MODIFY:
 
 | File                | Changes              |
 | ------------------- | -------------------- |
 | [TODO: path or N/A] | [TODO: what changes] |
+
+### Integration Changes (for UPDATE files):
+
+For each file being MODIFIED, specify exactly what changes are needed:
+
+```dart
+// [TODO: Show specific method additions or modifications]
+// Example:
+// In MyClass, add parameter:
+//   final List<SeriesAxisBinding> bindings;
+//
+// In paint() method, call:
+//   final color = AxisColorResolver.resolveAxisColor(axis, bindings, series);
+```
+
+[N/A - Reason: No files being modified, only new files created]
 
 ---
 
@@ -95,6 +111,31 @@ These existing utilities MUST be used. Do NOT reimplement their logic inline.
 1. [TODO: Test case 1]
 2. [TODO: Test case 2]
 3. [TODO: Test case 3]
+
+### Sample Test Data
+
+Provide concrete examples for test setup:
+
+```dart
+// [TODO: Sample objects implementor can copy-paste into tests]
+// Example:
+// final testAxis = YAxisConfig(
+//   id: 'power',
+//   position: YAxisPosition.left,
+//   color: null,  // Testing color resolution
+// );
+//
+// final testBinding = SeriesAxisBinding(
+//   seriesId: 'power-series',
+//   yAxisId: 'power',
+// );
+//
+// final testSeries = ChartSeries(
+//   id: 'power-series',
+//   points: [],
+//   color: const Color(0xFF0000FF),  // Blue
+// );
+```
 
 [N/A - Reason: _____________] ← Use this format if TDD not applicable
 

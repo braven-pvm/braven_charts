@@ -517,6 +517,44 @@ This section captures iterative discoveries while developing the orchestrator pa
 - How to handle visual task verification when Flutter Agent isn't available?
 - What metadata should be captured in verification artifacts?
 
+---
+
+## 📋 Handover Completeness Checklist
+
+**CRITICAL**: Before invoking implementor, verify the handover is complete for a **NEW agent** (one with zero prior context).
+
+### Completeness Verification
+
+Ask yourself: "Could a fresh agent complete this task without asking ANY questions?"
+
+| Check | Question |
+|-------|----------|
+| **File paths unambiguous** | Are ALL file paths relative to repo root? No ambiguity? |
+| **CREATE files clear** | For each new file: path, purpose, AND export location specified? |
+| **UPDATE files specific** | For each modified file: exact methods/changes listed? Code scaffold? |
+| **TDD has sample data** | Are concrete test objects provided (not just test names)? |
+| **INTEGRATION/VISUAL has demo** | Is runnable demo scaffold code included (not just file path)? |
+| **MUST USE clear** | Are anti-patterns explicit (what to do AND what NOT to do)? |
+| **Test location consistent** | Does test path match our structure (`test/unit/multi_axis/` for this sprint)? |
+
+### Common Gaps to Watch For
+
+| Gap | Symptom | Fix |
+|-----|---------|-----|
+| "UPDATE: Use X" | Vague, no specifics | Add integration scaffold showing exact changes |
+| Test path mismatch | AGENT_README says one place, task says another | Use sprint-specific path |
+| No demo code | Just says "create demo" | Add full runnable demo scaffold |
+| No sample test data | TDD section lists test names only | Add concrete objects to copy-paste |
+| Missing export | New class created but barrel file not specified | Add "Export To" column |
+
+### The 100% Rule
+
+**85% complete is NOT complete.** A handover must enable 100% autonomous completion.
+
+If the implementor might need to ask "where does this go?" or "what should this look like?" → the handover is incomplete.
+
+---
+
 ### Process Improvements to Consider
 
 - [ ] Automated verification script that reads task-XXX.yaml
