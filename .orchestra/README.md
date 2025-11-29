@@ -28,7 +28,15 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   ├── current-task-template.md       # ⭐ MUST use for every task
 │   └── orchestrator-preflight-template.md
 ├── scripts/                # Automation scripts (HIDDEN)
-│   └── pre-task-check.ps1  # ⭐ RUN before EVERY new task prep
+│   ├── set-env.ps1         # ⭐ Source first: . .\.orchestra\scripts\set-env.ps1
+│   ├── README.md           # Script documentation
+│   ├── common/
+│   │   └── check-utils.ps1 # Shared utilities
+│   └── orchestrator/
+│       ├── pre-task-check.ps1     # ⭐ RUN before EVERY new task prep
+│       ├── task-coverage.ps1      # SpecKit ↔ Orchestrator sync check
+│       ├── verification-audit.ps1 # Audit verification records
+│       └── handover-validate.ps1  # Validate current-task.md
 ├── screenshots/            # Visual verification artifacts
 │   └── task-010-color-coded-axes.png
 ├── handover/               # Communication channel (VISIBLE to implementor)
@@ -37,7 +45,10 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   ├── task-context.md     # Background context
 │   ├── completion-signal.md # Implementor signals done here
 │   └── .implementor/       # 🚫 ORCHESTRATOR DO NOT READ 🚫
-│       └── task-validator.md  # Implementor's validation rules
+│       ├── task-validator.md  # Implementor's validation rules
+│       └── scripts/           # Implementor automation scripts
+│           ├── validate-handover.ps1  # Validate task is actionable
+│           └── pre-signal-check.ps1   # Check before signaling done
 └── artifacts/              # Outputs from verification
     └── screenshots/
 ```
@@ -51,9 +62,14 @@ instead of following instructions. This protocol FORCES structural compliance.
 
 **BEFORE preparing ANY task, the orchestrator MUST:**
 
-### Step 0: Run Pre-Task Check Script (MANDATORY)
+### Step 0: Initialize Environment & Run Pre-Task Check (MANDATORY)
+
 ```powershell
-.\.orchestra\scripts\pre-task-check.ps1
+# Source the environment (ALWAYS DO THIS FIRST)
+. .\.orchestra\scripts\set-env.ps1
+
+# Run the pre-task check script
+.\.orchestra\scripts\orchestrator\pre-task-check.ps1
 ```
 
 This script verifies:
@@ -70,8 +86,18 @@ This script verifies:
 
 Use `-Fix` flag to auto-fix some issues:
 ```powershell
-.\.orchestra\scripts\pre-task-check.ps1 -Fix
+.\.orchestra\scripts\orchestrator\pre-task-check.ps1 -Fix
 ```
+
+### Additional Orchestrator Scripts
+
+| Script | When to Run | Purpose |
+|--------|-------------|---------|
+| `task-coverage.ps1` | Sprint planning, task prep | Verify SpecKit ↔ Orchestrator bidirectional sync |
+| `verification-audit.ps1` | After verification | Audit verification records for completeness |
+| `handover-validate.ps1` | Before handoff | Validate current-task.md is complete |
+
+See `.orchestra/scripts/README.md` for full documentation.
 
 ### Step 1: Read This File
 ```
