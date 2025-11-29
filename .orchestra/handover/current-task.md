@@ -319,6 +319,17 @@ import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
 ```
 
+## ⚠️ MUST USE (DO NOT DUPLICATE)
+
+These existing utilities MUST be used. Do NOT reimplement their logic inline.
+
+| Utility | Use For | DO NOT |
+|---------|---------|--------|
+| `MultiAxisNormalizer.normalize(value, min, max)` | Converting data/tick values to normalized 0-1 range for Y-coordinate mapping | Inline `(value - min) / (max - min)` or `(value - bounds.min) / bounds.span` |
+| `MultiAxisNormalizer.denormalize(normalized, min, max)` | Converting normalized values back to original data values | Inline `normalized * (max - min) + min` |
+
+**Rationale**: Single source of truth for normalization formula. If we ever change the normalization approach, we change it in ONE place.
+
 ## Algorithm Notes
 
 ### Nice Number Algorithm for Ticks

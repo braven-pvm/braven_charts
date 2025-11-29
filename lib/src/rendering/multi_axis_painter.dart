@@ -10,6 +10,7 @@ import '../layout/multi_axis_layout.dart';
 import '../models/data_range.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
+import 'multi_axis_normalizer.dart';
 
 /// Paints multiple Y-axes with their tick marks and labels.
 ///
@@ -140,8 +141,8 @@ class MultiAxisPainter {
       final ticks = generateTicks(bounds, maxTicks: maxTicks);
 
       for (final tickValue in ticks) {
-        // Convert tick value to Y position
-        final normalizedY = (tickValue - bounds.min) / bounds.span;
+        // Convert tick value to Y position using shared normalizer
+        final normalizedY = MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
         // Invert Y because screen coordinates go down
         final screenY = plotArea.bottom - (normalizedY * plotArea.height);
 
