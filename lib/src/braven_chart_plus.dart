@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 // All dependencies are in src - the main source folder
 import 'axis/axis.dart' as chart_axis;
 import 'axis/axis_config.dart';
+import 'axis/normalization_detector.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
 import 'coordinates/chart_transform.dart';
@@ -28,6 +29,7 @@ import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
 import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
+import 'models/data_range.dart';
 import 'models/enums.dart';
 import 'models/interaction_config.dart';
 import 'models/streaming_config.dart';
@@ -624,6 +626,29 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Track range creation mode to trigger UI updates
   bool _wasInRangeCreationMode = false;
 
+  // Multi-axis normalization state (FR-008, US2)
+  // Tracks whether auto-normalization is needed based on series Y-range ratios
+  bool _normalizationNeeded = false;
+  Map<String, DataRange> _seriesYRanges = {};
+
+  /// Whether multi-axis normalization is currently needed.
+  ///
+  /// This is automatically determined by [NormalizationDetector] based on
+  /// the Y-range ratios between series. When series have ranges that differ
+  /// by 10x or more, normalization is recommended.
+  ///
+  /// See also:
+  /// - [NormalizationDetector.shouldNormalize] for the detection logic
+  /// - [seriesYRanges] for the individual series Y bounds
+  bool get normalizationNeeded => _normalizationNeeded;
+
+  /// The Y-range bounds for each series.
+  ///
+  /// This map contains [DataRange] objects keyed by series ID, representing
+  /// the min/max Y values for each series. Used for multi-axis normalization
+  /// and tooltip value display.
+  Map<String, DataRange> get seriesYRanges => Map.unmodifiable(_seriesYRanges);
+
   @override
   void initState() {
     super.initState();
@@ -1028,6 +1053,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         yMax: 1,
       );
     }
+
+    // Multi-axis normalization detection (FR-008, US2)
+    // Check if series have vastly different Y-ranges that would benefit from normalization
+    final seriesRanges = _computeSeriesYRanges(effectiveSeries);
+    final needsNormalization = NormalizationDetector.shouldNormalize(seriesRanges);
+    // Store normalization state for potential future use
+    // (Full rendering integration will use this in subsequent task phases)
+    _normalizationNeeded = needsNormalization;
+    _seriesYRanges = seriesRanges;
 
     // Create axes from data bounds with theme colors
     // Use user's axis config if provided, otherwise create default
@@ -2070,6 +2104,41 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     for (final point in allPoints.skip(1)) {
       _updateCachedDataBounds(point.x, point.y);
     }
+  }
+
+  /// Computes the Y-range (min/max) for each series in the chart.
+  ///
+  /// This is used by [NormalizationDetector] to determine if multi-axis
+  /// normalization should be applied automatically (FR-008, US2).
+  ///
+  /// Returns a map of series ID to [DataRange] containing that series' Y bounds.
+  /// Series with no points are excluded from the result.
+  Map<String, DataRange> _computeSeriesYRanges(List<ChartSeries> seriesList) {
+    final result = <String, DataRange>{};
+
+    for (final series in seriesList) {
+      if (series.points.isEmpty) continue;
+
+      double minY = double.infinity;
+      double maxY = double.negativeInfinity;
+
+      for (final point in series.points) {
+        if (point.y < minY) minY = point.y;
+        if (point.y > maxY) maxY = point.y;
+      }
+
+      // Handle edge case where all Y values are identical (zero span)
+      if (minY == maxY) {
+        // Create a small range around the value to avoid division by zero
+        final value = minY;
+        minY = value - 0.5;
+        maxY = value + 0.5;
+      }
+
+      result[series.id] = DataRange(min: minY, max: maxY);
+    }
+
+    return result;
   }
 
   /// Auto-scrolls the viewport to show the latest data.
