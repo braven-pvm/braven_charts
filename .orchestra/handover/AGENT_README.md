@@ -14,6 +14,23 @@ You do NOT verify your own work. An external orchestrator will verify against cr
 
 ## Workflow
 
+### 0. Validate Task Structure (MANDATORY FIRST STEP)
+
+**Before ANY implementation**, validate that `current-task.md` is properly formed.
+
+Read the validation checklist in: **`.implementor/task-validator.md`** (same folder)
+
+This catches orchestrator mistakes BEFORE you waste time on incomplete specs.
+
+**If validation fails**: 
+- Write failure details to `completion-signal.md`
+- Say: "Task validation failed - see completion-signal.md for required fixes"
+- STOP and wait for orchestrator to fix
+
+**If validation passes**: Proceed to Step 1.
+
+---
+
 ### 1. Read Your Task
 Your current task is in: **`current-task.md`** (same folder as this file)
 

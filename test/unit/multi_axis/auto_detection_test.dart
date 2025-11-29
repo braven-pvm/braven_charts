@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/models/data_range.dart';
-import 'package:braven_charts/src/axis/range_ratio_calculator.dart';
 import 'package:braven_charts/src/axis/normalization_detector.dart';
+import 'package:braven_charts/src/axis/range_ratio_calculator.dart';
+import 'package:braven_charts/src/models/data_range.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('RangeRatioCalculator', () {
