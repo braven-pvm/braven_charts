@@ -104,37 +104,40 @@ task_history:
 
   - task_id: 9
     title: "MultiAxisPainter (Layout + Rendering)"
-    status: "completed"
+    status: "failed"
     started: "2025-11-29"
-    completed: "2025-11-29"
-    commit: "b1a6f4a"
+    completed: null
+    commit: null
     attempts: 1
     verification_notes: |
-      INFRASTRUCTURE task (no visual verification needed)
-      Linting: Clean (impl + tests)
-      Task tests: 34 passing
-      Sprint unit tests: 197 passing
-      Sprint integration tests: 20 passing
-      Total: 217 tests
+      VERIFICATION FAILED
       
-      Process improvements also committed:
-      - Three-category visual verification
-      - Mutual orchestrator/implementor validation
-      - Template-based task preparation
+      Standard checks: ALL PASSED
+      - Linting: Clean
+      - Task tests: 34 passing
+      - Sprint tests: 217 passing
+      
+      Adversarial check FAILED:
+      - uses_existing_normalizer (MAJOR): FAILED
+        Code uses inline: (tickValue - bounds.min) / bounds.span
+        Should use: MultiAxisNormalizer.normalize()
+        
+      Decision: Task FAILED (MAJOR severity = must fix)
+      
+      Previous commit b1a6f4a was premature (verification not complete)
+      Awaiting rework before re-verification
 
 verification_stats:
   tasks_attempted: 9
-  tasks_passed: 9
-  tasks_failed: 0
+  tasks_passed: 8
+  tasks_failed: 1
   tasks_reworked: 0
 
 notes: |
-  Tasks 1-9 COMPLETE: 9/16 tasks
-  Current test count: 217 (197 unit + 20 integration)
-  All tasks passing on first attempt!
+  Tasks 1-8 COMPLETE, Task 9 FAILED verification
   
-  Major process improvements committed with Task 9:
-  - Three-category system (INFRASTRUCTURE/INTEGRATION/VISUAL)
-  - Standalone demo files for visual tasks
-  - Mutual verification pattern
-  - Template-enforced handovers
+  Task 9 failure: Duplicated normalization logic instead of using
+  MultiAxisNormalizer from Task 6. Simple fix required.
+  
+  Process improvement: Added severity system to verification.
+  Orchestrator cannot downgrade severity during execution.
