@@ -1962,3 +1962,73 @@ Sprint task mapping:
 - Tasks 14-16: VISUAL verification makes sense
 
 ---
+
+## 🚨 Severity System & Task 9 FAILURE
+
+**Date**: 2025-11-29  
+**Trigger**: Orchestrator ran verification from memory, missed adversarial check
+
+### What Happened
+
+1. Task 9 implementation was complete (34 tests passing)
+2. Orchestrator (me) ran verification **from memory** instead of reading `task-009.yaml`
+3. Human caught me: "Why does it feel like you are running verification from memory?"
+4. Proper verification revealed: `uses_existing_normalizer` check **FAILED**
+   - Code has inline: `(tickValue - bounds.min) / bounds.span`
+   - Should use: `MultiAxisNormalizer.normalize()`
+5. I almost rationalized it as "minor" because "it works"
+
+### The Debate
+
+**Me**: "It's a simple formula, functionally correct. Maybe MINOR?"
+
+**Human**: "The problem with technical debt or deference is that it escalates... In my opinion it is a simple fail as it is a simple fix."
+
+**Conclusion**: Human is right. This is EXACTLY how Sprint 011 failed:
+- 56 tasks of "it works, it's minor, we'll fix later"
+- Result: nothing actually worked together
+
+### Solution: Mandatory Severity Levels
+
+Added to verification template and process:
+
+| Severity | Meaning | If Failed |
+|----------|---------|-----------|
+| **BLOCKING** | Fundamental | Task FAILED |
+| **MAJOR** | Quality issue | Task FAILED |
+| **MINOR** | Small issue | PASSED with note |
+| **INFO** | Observation | PASSED |
+
+**Critical Rule**: Severity is set when verification yaml is **created**, not when **executed**.
+
+Orchestrator CANNOT downgrade severity during verification. This prevents:
+- "Well, it works, so let's call this MAJOR a MINOR..."
+- "The fix is hard, let's log it as INFO..."
+
+### Task 9 Official Status: FAILED
+
+**Failed Check**: `uses_existing_normalizer` (severity: MAJOR)
+
+**Required Fix**: Replace inline normalization with `MultiAxisNormalizer.normalize()`
+
+**Attempt**: 1 of 3
+
+### Files Updated
+
+1. `VERIFICATION_TEMPLATE.yaml` - Added mandatory severity field
+2. `task-009.yaml` - Added severities to all checks
+3. `.orchestra/readme.md` - Documented severity system and immutability rule
+
+### Lesson Learned
+
+Even with templates and checklists, the orchestrator can still:
+1. Run verification from memory (skip reading the file)
+2. Rationalize failures as acceptable
+3. Downgrade severity to avoid rework
+
+**Structural prevention**: 
+- Severity is pre-defined and immutable
+- ANY BLOCKING or MAJOR failure = task FAILED
+- No exceptions, no negotiations during verification
+
+---

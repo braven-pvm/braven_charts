@@ -131,6 +131,38 @@ After each task completion:
 6. **SpecKit tasks are source of truth** - Orchestrator consolidates but traces back
 7. **Zero linter issues** - Static analysis must pass (BLOCKING)
 8. **All tests must pass** - Sprint tests + task tests (BLOCKING)
+9. **Severity is immutable** - Set when verification file created, NOT during execution
+
+---
+
+## Verification Severity Levels
+
+Every check in verification files MUST have a severity. Orchestrator CANNOT change severity during verification.
+
+| Severity | Meaning | If Failed |
+|----------|---------|-----------|
+| **BLOCKING** | Fundamental requirement | Task FAILED - must fix |
+| **MAJOR** | Significant quality issue | Task FAILED - must fix |
+| **MINOR** | Small issue, functional | Task PASSED with note (log tech debt) |
+| **INFO** | Observation only | Task PASSED (logged for reference) |
+
+### Decision Rules
+
+```
+ANY BLOCKING fail  → Task FAILED (return for rework)
+ANY MAJOR fail     → Task FAILED (return for rework)
+MINOR fails only   → Task PASSED with notes
+INFO only          → Task PASSED
+```
+
+### Why Severity is Immutable
+
+If orchestrator can downgrade severity during verification:
+- "This MAJOR is really just a MINOR..." 
+- "It works, so let's call it INFO..."
+- → Sprint 011 failure mode (56 tasks of accumulated "minor" issues)
+
+Severity is set when the verification yaml is **created**, not when it's **executed**.
 
 ---
 

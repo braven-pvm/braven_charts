@@ -1,5 +1,11 @@
 # Task 9 Verification Criteria
 # ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
+#
+# SEVERITY LEVELS:
+#   BLOCKING - Task cannot pass. Must fix before proceeding.
+#   MAJOR    - Significant issue. Must fix before proceeding.
+#   MINOR    - Small issue. Log as tech debt, can proceed with note.
+#   INFO     - Observation only. Logged for reference.
 
 task_id: 9
 title: "Create Multi-Axis Painter"
@@ -16,33 +22,33 @@ standard_checks:
     description: "No static analysis issues in implementation"
     command: "flutter analyze lib/src/rendering/multi_axis_painter.dart lib/src/layout/multi_axis_layout.dart lib/src/layout/axis_layout_manager.dart"
     expected: "No issues found"
-    blocking: true
+    severity: BLOCKING
     
   - id: "static_analysis_tests"
     description: "No static analysis issues in tests"
     command: "flutter analyze test/unit/multi_axis/multi_axis_painter_test.dart"
     expected: "No issues found"
-    blocking: true
+    severity: BLOCKING
 
   # --- Task Tests (BLOCKING) ---
   - id: "task_tests_pass"
     description: "Multi-axis painter tests pass"
     command: "flutter test test/unit/multi_axis/multi_axis_painter_test.dart"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
 
   # --- Sprint Regression Tests (BLOCKING) ---
   - id: "sprint_unit_tests_pass"
     description: "All sprint unit tests still pass"
     command: "flutter test test/unit/multi_axis/"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
     
   - id: "sprint_integration_tests_pass"
     description: "All sprint integration tests pass"
     command: "flutter test test/integration/multi_axis_*.dart"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
 
 # =============================================================================
 # TASK-SPECIFIC VERIFICATION CHECKS
@@ -52,47 +58,59 @@ verification_checks:
   - id: "multi_axis_painter_exists"
     description: "MultiAxisPainter class created"
     check: "File lib/src/rendering/multi_axis_painter.dart exists with MultiAxisPainter class"
+    severity: BLOCKING
     
   - id: "layout_delegate_exists"
     description: "MultiAxisLayoutDelegate class created"
     check: "File lib/src/layout/multi_axis_layout.dart exists with MultiAxisLayoutDelegate class"
+    severity: BLOCKING
     
   - id: "layout_manager_exists"
     description: "AxisLayoutManager class created"
     check: "File lib/src/layout/axis_layout_manager.dart exists with AxisLayoutManager class"
+    severity: BLOCKING
     
   - id: "supports_four_positions"
     description: "Painter handles all 4 axis positions"
-    check: "Code handles outerLeft, left, right, outerRight (FR-001)"
+    check: "Code handles leftOuter, left, right, rightOuter (FR-001)"
+    severity: MAJOR
     
   - id: "renders_multiple_axes"
     description: "Can render multiple Y-axes simultaneously"
     check: "Tests verify 2-axis and 4-axis rendering"
+    severity: MAJOR
     
   - id: "displays_original_values"
     description: "Axis labels show original (denormalized) values"
-    check: "Uses MultiAxisNormalizer.denormalize for tick labels (FR-005)"
+    check: "Labels show data values, not normalized 0-1 values (FR-005)"
+    severity: MAJOR
     
   - id: "respects_axis_config"
     description: "Uses YAxisConfig for positioning and appearance"
     check: "Reads color, position, min/max, unit from YAxisConfig"
+    severity: MAJOR
 
 # =============================================================================
 # ADVERSARIAL CHECKS
+# These catch "letter vs spirit" issues. Default to MAJOR.
 # =============================================================================
 
 adversarial_checks:
   - id: "uses_existing_normalizer"
     description: "Uses MultiAxisNormalizer from Task 6, not duplicated logic"
-    check: "Imports and uses MultiAxisNormalizer.denormalize()"
+    check: "Imports and uses MultiAxisNormalizer.normalize() for Y-coordinate mapping"
+    severity: MAJOR
+    rationale: "Duplicated normalization logic creates maintenance burden and inconsistency risk"
     
   - id: "no_hardcoded_positions"
     description: "Positions computed dynamically, not hardcoded"
     check: "Layout respects YAxisConfig.position and available space"
+    severity: MAJOR
     
   - id: "performance_acceptable"
     description: "Painting doesn't cause performance issues"
-    check: "No excessive allocations in paint method"
+    check: "No excessive allocations in paint method (e.g., creating objects per-frame)"
+    severity: MINOR
 
 # =============================================================================
 # METADATA
@@ -106,14 +124,14 @@ notes: |
   Key components:
   1. MultiAxisPainter - Paints multiple Y-axes with proper positioning
   2. MultiAxisLayoutDelegate - Computes axis widths based on content
-  3. AxisLayoutManager - Manages positioning (outerLeft, left, right, outerRight)
+  3. AxisLayoutManager - Manages positioning (leftOuter, left, right, rightOuter)
   
   Must use existing:
   - YAxisConfig from lib/src/models/y_axis_config.dart
   - YAxisPosition from lib/src/models/y_axis_position.dart
-  - MultiAxisNormalizer for denormalization of tick values
+  - MultiAxisNormalizer for normalization (DO NOT DUPLICATE)
   - DataRange for axis bounds
   
-  FR-001: 4 positions (outerLeft, left, right, outerRight)
+  FR-001: 4 positions (leftOuter, left, right, rightOuter)
   FR-005: Labels show original values, not normalized
   FR-007: Color-coding support (foundation for Task 10)

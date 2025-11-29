@@ -2,7 +2,16 @@
 # ⚠️ HIDDEN FROM IMPLEMENTOR - For orchestrator/verifier only
 # 
 # Copy this template for each new task and fill in task-specific checks.
-# All standard checks are MANDATORY and BLOCKING.
+# DELETE this instruction block after copying.
+#
+# SEVERITY LEVELS (MANDATORY for all checks):
+#   BLOCKING - Task cannot pass. Must fix before proceeding.
+#   MAJOR    - Significant issue. Must fix before proceeding.
+#   MINOR    - Small issue. Log as tech debt, can proceed with note.
+#   INFO     - Observation only. Logged for reference.
+#
+# RULE: BLOCKING and MAJOR checks that fail = Task FAILED
+#       Orchestrator CANNOT downgrade severity after template is created.
 
 task_id: <NUMBER>
 title: "<TASK TITLE>"
@@ -11,6 +20,7 @@ speckit_tasks: ["T0XX", "T0YY"]  # SpecKit tasks this covers
 
 # =============================================================================
 # STANDARD VERIFICATION CHECKS (MANDATORY - DO NOT REMOVE)
+# All standard checks are BLOCKING by definition.
 # =============================================================================
 
 standard_checks:
@@ -19,54 +29,60 @@ standard_checks:
     description: "No static analysis issues in implementation"
     command: "flutter analyze <implementation_path>"
     expected: "No issues found"
-    blocking: true
+    severity: BLOCKING
     
   - id: "static_analysis_tests"
     description: "No static analysis issues in tests"
     command: "flutter analyze <test_path>"
     expected: "No issues found"
-    blocking: true
+    severity: BLOCKING
 
   # --- Task Tests (BLOCKING) ---
   - id: "task_tests_pass"
     description: "Task-specific tests pass"
     command: "flutter test <task_test_file>"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
 
   # --- Sprint Regression Tests (BLOCKING) ---
   - id: "sprint_unit_tests_pass"
     description: "All sprint unit tests still pass"
     command: "flutter test test/unit/multi_axis/"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
     
   - id: "sprint_integration_tests_pass"
     description: "All sprint integration tests pass"
     command: "flutter test test/integration/multi_axis_*.dart"
     expected: "All tests passed"
-    blocking: true
+    severity: BLOCKING
 
 # =============================================================================
-# TASK-SPECIFIC CHECKS (ADD YOUR CHECKS HERE)
+# TASK-SPECIFIC CHECKS
+# Each check MUST have a severity. No check without severity allowed.
 # =============================================================================
 
 verification_checks:
-  - id: "file_exists"
+  - id: "<check_id>"
     description: "<Description>"
-    command: '<Command>'
-    expected: "<Expected output>"
+    check: "<How to verify - command or manual inspection>"
+    expected: "<Expected result>"
+    severity: <BLOCKING|MAJOR|MINOR|INFO>  # REQUIRED - cannot be omitted
     
   # Add more task-specific checks...
+  # EVERY check needs severity!
 
 # =============================================================================
-# ADVERSARIAL CHECKS (OPTIONAL BUT RECOMMENDED)
+# ADVERSARIAL CHECKS
+# These catch "letter of the law" compliance that misses the spirit.
+# Default to MAJOR severity - these are quality gates.
 # =============================================================================
 
 adversarial_checks:
   - id: "<check_id>"
     description: "<What to check>"
     check: "<How to verify>"
+    severity: <BLOCKING|MAJOR|MINOR|INFO>  # REQUIRED - default MAJOR for adversarial
 
 # =============================================================================
 # METADATA
@@ -78,12 +94,23 @@ notes: |
   <Any notes about this task's verification>
 
 # =============================================================================
-# VERIFICATION EXECUTION ORDER
+# VERIFICATION EXECUTION PROTOCOL
 # =============================================================================
 # 
-# 1. Run standard_checks FIRST (these are mandatory gates)
-# 2. If any standard check fails, STOP and return task for rework
-# 3. Run verification_checks (task-specific)
-# 4. Run adversarial_checks if applicable
+# 1. READ this file completely before starting verification
+# 2. Execute standard_checks FIRST (all BLOCKING)
+#    - If ANY fails: STOP, task FAILED, return for rework
+# 3. Execute verification_checks in order
+#    - Record PASS/FAIL for each with evidence
+# 4. Execute adversarial_checks
+#    - Record PASS/FAIL for each with evidence
 # 5. Check test count meets minimum_tests
-# 6. Only if ALL pass, mark task as verified
+# 6. DECISION:
+#    - ANY BLOCKING fail = Task FAILED
+#    - ANY MAJOR fail = Task FAILED  
+#    - MINOR fails only = Task PASSED with notes (log tech debt)
+#    - INFO only = Task PASSED
+# 7. Document ALL results in verification record
+#
+# CRITICAL: Orchestrator CANNOT change severity during verification.
+# Severity is set when verification file is created, not when executed.
