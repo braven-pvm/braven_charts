@@ -52,8 +52,9 @@
   - ✅ Auto-completed: Created with first test file
 - [ ] T008 Create test directory structure at `test/widget/multi_axis/`
 - [ ] T009 Create test directory structure at `test/golden/multi_axis/`
- - [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/widgets/braven_chart_plus.dart`
+ - [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/braven_chart_plus.dart`
    - 🔄 Mapped to: Orchestrator Task 11
+   - ⚠️ Path changed: widget is at `lib/src/braven_chart_plus.dart` not `lib/src/widgets/`
  - [ ] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
    - 🔄 Mapped to: Orchestrator Task 9
  - [ ] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
@@ -89,9 +90,15 @@
  - [x] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
    - ✅ Completed: Orchestrator Task 6
    - Methods: `normalize()`, `denormalize()`, `computeAxisBounds()`
- - [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/y_axis_renderer.dart`
+ - [ ] T020 [US1] Modify axis renderer for multiple Y-axes in `lib/src/rendering/multi_axis_painter.dart`
+   - 🔄 Mapped to: Orchestrator Task 9
+   - ⚠️ Path changed: `y_axis_renderer.dart` doesn't exist, creating new `multi_axis_painter.dart`
  - [ ] T021 [US1] Implement axis layout positioning (left/right) in `lib/src/layout/axis_layout_manager.dart`
- - [ ] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src/rendering/chart_painter.dart`
+   - 🔄 Mapped to: Orchestrator Task 9
+ - [x] T022 [US1] Integrate multi-axis rendering into chart paint in `lib/src/rendering/chart_render_box.dart`
+   - ✅ Completed: Orchestrator Task 8, commit eb472bd
+   - ⚠️ Path changed: `chart_painter.dart` doesn't exist - rendering is in `chart_render_box.dart`
+   - Added `normalizeValue()` and `denormalizeValue()` wrapper methods
  - [ ] T023 [US1] Update tooltip to display original Y-values with units in `lib/src/interaction/tooltip_builder.dart`
  - [ ] T024 [US1] Add example multi-axis chart to showcase in `example/lib/showcase/pages/scientific_data_page.dart`
 
@@ -117,8 +124,11 @@
    - ✅ Completed: Orchestrator Task 7
  - [x] T028 [US2] Implement auto-detection logic in `lib/src/axis/normalization_detector.dart`
    - ✅ Completed: Orchestrator Task 7, default threshold = 10.0
- - [ ] T029 [US2] Integrate auto-detection with chart initialization in `lib/src/widgets/braven_chart_plus.dart`
-- [ ] T030 [US2] Add auto-detection example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
+ - [x] T029 [US2] Integrate auto-detection with chart initialization in `lib/src/braven_chart_plus.dart`
+   - ✅ Completed: Orchestrator Task 8, commit eb472bd
+   - ⚠️ Path changed: widget is at `lib/src/braven_chart_plus.dart` not `lib/src/widgets/`
+   - Added `_normalizationNeeded` flag, `_seriesYRanges` map, `NormalizationDetector.shouldNormalize()` call
+ - [ ] T030 [US2] Add auto-detection example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 2 complete - auto-detection working independently
 
