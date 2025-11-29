@@ -85,6 +85,42 @@ adversarial_checks:
     severity: <BLOCKING|MAJOR|MINOR|INFO>  # REQUIRED - default MAJOR for adversarial
 
 # =============================================================================
+# VISUAL VERIFICATION (For INTEGRATION/VISUAL tasks only)
+# =============================================================================
+# 
+# If this task requires visual verification (screenshots):
+#
+# CRITICAL: "File exists" is NOT sufficient. You MUST verify CONTENT.
+#
+# visual_verification:
+#   screenshot_path: ".orchestra/screenshots/task-NNN-description.png"
+#   
+#   content_verification:  # MANDATORY for visual tasks
+#     procedure: |
+#       1. mcp_chrome-devtoo_new_page(url: "file:///full/path/to/screenshot.png")
+#       2. mcp_chrome-devtoo_take_screenshot()
+#       3. Analyze returned image against criteria below
+#     
+#     expected_elements:
+#       - "Left axis visible in BLUE"
+#       - "Right axis visible in RED"
+#       - "Two data series rendered with correct colors"
+#       - "Labels and units shown correctly"
+#     
+#     reject_if:
+#       - "Image is blank/empty"
+#       - "Colors don't match expected"
+#       - "Missing expected visual elements"
+#
+# Severity for content verification should be BLOCKING.
+# An unverified screenshot is equivalent to no screenshot.
+
+visual_verification:
+  required: <true|false>
+  screenshot_path: "<path if required>"
+  content_checks: []  # Fill in expected visual elements if required
+
+# =============================================================================
 # METADATA
 # =============================================================================
 
