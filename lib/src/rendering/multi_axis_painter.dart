@@ -7,7 +7,6 @@ import 'package:flutter/painting.dart';
 
 import '../layout/axis_layout_manager.dart';
 import '../layout/multi_axis_layout.dart';
-import '../models/data_range.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
 import 'multi_axis_normalizer.dart';
