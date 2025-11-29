@@ -99,7 +99,7 @@ phases:
     tasks:
       - id: 9
         title: "Create Multi-Axis Painter"
-        status: "pending"
+        status: "in-progress"
         speckit_tasks: ["T020", "T021", "T011"]
         consolidation_rationale: "Y-axis renderer + layout positioning"
         
