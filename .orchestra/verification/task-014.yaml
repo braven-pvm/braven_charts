@@ -1,0 +1,78 @@
+# Task 14 Verification Criteria
+# Title: Disable Y-Zoom and Grid Lines in Multi-Axis Mode
+# Category: VISUAL
+# SpecKit Tasks: T012a, T012b, T012c
+
+verification:
+  # BLOCKING - Must pass for task approval
+  blocking:
+    - id: analyzer_clean
+      description: "All touched files pass flutter analyze with no issues"
+      command: "flutter analyze lib/src/rendering/chart_render_box.dart"
+      expected: "No issues found"
+      severity: BLOCKING
+      
+    - id: zoom_constraint_test_exists
+      description: "Unit test for Y-axis zoom constraint exists"
+      check: "Test file test/unit/multi_axis/zoom_constraint_test.dart exists"
+      severity: BLOCKING
+      
+    - id: zoom_constraint_tests_pass
+      description: "All zoom constraint tests pass"
+      command: "flutter test test/unit/multi_axis/zoom_constraint_test.dart"
+      expected: "All tests passed"
+      severity: BLOCKING
+      
+    - id: sprint_tests_pass
+      description: "All sprint tests still pass (baseline: 237)"
+      command: "flutter test test/unit/multi_axis/"
+      expected: "237+ tests pass, 0 failures"
+      severity: BLOCKING
+      
+    - id: demo_file_exists
+      description: "Standalone demo file created"
+      check: "File example/lib/demos/task_014_zoom_grid_demo.dart exists"
+      severity: BLOCKING
+      
+    - id: screenshot_captured
+      description: "Visual verification screenshot captured"
+      check: "Screenshot at .orchestra/verification/screenshots/task-014-*.png exists"
+      severity: BLOCKING
+
+  # MAJOR - Important but functional
+  major:
+    - id: y_zoom_disabled
+      description: "Y-axis zoom/pan is disabled in multi-axis mode"
+      check: "Mouse wheel vertical scroll does NOT affect Y viewport when multi-axis active"
+      severity: MAJOR
+      
+    - id: x_zoom_works
+      description: "X-axis zoom still works in multi-axis mode"
+      check: "Mouse wheel horizontal scroll still affects X viewport"
+      severity: MAJOR
+      
+    - id: grid_lines_disabled
+      description: "Horizontal grid lines are disabled in multi-axis mode"
+      check: "No horizontal grid lines visible when multi-axis mode active"
+      severity: MAJOR
+      
+    - id: single_axis_unaffected
+      description: "Single-axis mode is unchanged"
+      check: "Grid lines and Y-zoom work normally when only 1 Y-axis configured"
+      severity: MAJOR
+
+  # MINOR - Nice to have
+  minor:
+    - id: code_documentation
+      description: "Public methods have doc comments"
+      severity: MINOR
+
+adversarial:
+  - scenario: "Switch from single to multi-axis mode dynamically"
+    check: "Grid lines disappear, Y-zoom becomes disabled"
+    
+  - scenario: "Switch from multi to single-axis mode dynamically"
+    check: "Grid lines reappear, Y-zoom becomes enabled"
+    
+  - scenario: "Attempt Y-zoom via scrollbar edge drag in multi-axis mode"
+    check: "Y-scrollbar edge drag is prevented or has no effect"
