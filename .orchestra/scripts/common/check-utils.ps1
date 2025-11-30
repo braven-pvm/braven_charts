@@ -191,8 +191,9 @@ function Get-SpeckitTasks {
     
     foreach ($line in $content) {
         $lineNum++
-        # Match patterns like: - [x] T001, - [ ] T002, [x] T003
-        if ($line -match '\[(x| )\]\s*(T\d+)') {
+        # Match patterns like: - [x] T001, - [ ] T002, [x] T003, [x] T012a
+        # T\d+[a-z]? captures task IDs with optional letter suffix (T001, T012, T012a, T012b, etc.)
+        if ($line -match '\[(x| )\]\s*(T\d+[a-z]?)') {
             $checked = $Matches[1] -eq 'x'
             $taskId = $Matches[2]
             $tasks[$taskId] = @{
@@ -234,7 +235,7 @@ function Get-OrchestratorTasks {
             if ($block -match 'speckit_tasks:\s*\[([^\]]+)\]') {
                 $speckitTasks = $Matches[1] -split '\s*,\s*' | 
                 ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
-                Where-Object { $_ -match '^T\d+$' }
+                Where-Object { $_ -match '^T\d+[a-z]?$' }
             }
             
             # Get status

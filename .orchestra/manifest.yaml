@@ -72,9 +72,9 @@ phases:
         title: "Implement Data Normalizer"
         status: "completed"
         commit: "d41bf55"
-        speckit_tasks: ["T019", "T013", "T014"]
-        consolidation_rationale: "Normalizer implementation + its unit tests"
-        notes: "TDD verified - 47 new tests (26 normalization + 21 axis bounds)"
+        speckit_tasks: ["T019", "T013", "T014", "T007", "T012"]
+        consolidation_rationale: "Normalizer implementation + its unit tests + test dir creation + axis bounds computation"
+        notes: "TDD verified - 47 new tests (26 normalization + 21 axis bounds). T007 auto-completed when creating first test file. T012 axis bounds computation is in MultiAxisNormalizer.computeAxisBounds()"
         
       - id: 7
         title: "Implement Auto-Detection Logic"
@@ -112,10 +112,10 @@ phases:
       - id: 11
         title: "Integrate Multi-Axis Painter with Chart Widget"
         status: "pending"
-        speckit_tasks: ["T010", "T015"]
-        consolidation_rationale: "Widget integration for multi-axis rendering"
+        speckit_tasks: ["T010", "T015", "T008", "T018", "T026", "T032"]
+        consolidation_rationale: "Widget integration + widget test dir + series-axis binding + widget tests (US2 and US3)"
         is_integration_task: true
-        notes: "⚠️ INTEGRATION TASK - modifies existing widget"
+        notes: "⚠️ INTEGRATION TASK - modifies existing widget. Creates test/widget/multi_axis/. T026 (auto-detection widget test), T032 (color axes widget test)"
 
   - id: "interaction"
     description: "Tooltips, crosshair, and user interaction"
@@ -134,10 +134,11 @@ phases:
         consolidation_rationale: "Crosshair handler + tracking overlay (US4)"
         
       - id: 14
-        title: "Disable Y-Zoom in Multi-Axis Mode"
+        title: "Disable Y-Zoom and Grid Lines in Multi-Axis Mode"
         status: "pending"
-        speckit_tasks: ["T012b", "T012c"]
-        consolidation_rationale: "Zoom constraint test + implementation"
+        speckit_tasks: ["T012a", "T012b", "T012c"]
+        consolidation_rationale: "FR-009 (grid lines) + FR-013 (zoom) + zoom constraint test"
+        notes: "All multi-axis mode constraints: disable grid lines, disable Y-zoom/pan"
 
   - id: "integration"
     description: "Final integration and API exposure"
@@ -154,75 +155,29 @@ phases:
       - id: 16
         title: "Create Working Demo Example"
         status: "pending"
-        speckit_tasks: ["T024", "T030", "T039", "T046", "T050", "T051", "T052", "T053"]
-        consolidation_rationale: "All showcase/demo + polish tasks"
-        notes: "Final validation - all features working together"
+        speckit_tasks: ["T024", "T030", "T039", "T046", "T050", "T051", "T052", "T053", "T009", "T016", "T017", "T033"]
+        consolidation_rationale: "All showcase/demo + polish tasks + golden test directory + golden tests"
+        notes: "Final validation - all features working together. T009 creates test/golden/multi_axis/, T016/T017/T033 are golden tests"
 
-# SpecKit tasks not yet mapped (gaps/deferred):
-unmapped_speckit_tasks:
-  - id: "T007"
-    description: "Create test directory structure at test/unit/multi_axis/"
-    status: "auto_completed"
-    notes: "Directories created automatically with first test file"
-    
-  - id: "T008"
-    description: "Create test directory structure at test/widget/multi_axis/"
-    status: "pending"
-    notes: "Will be created when widget tests added"
-    
-  - id: "T009"
-    description: "Create test directory structure at test/golden/multi_axis/"
-    status: "pending"
-    notes: "Will be created when golden tests added"
-    
-  - id: "T012"
-    description: "Create axis bounds computation utility"
-    status: "pending"
-    notes: "May be folded into Task 6 or Task 9"
-    
-  - id: "T012a"
-    description: "Disable grid lines when multi-axis active"
-    status: "pending"
-    notes: "Needs own task or fold into Task 11"
-    
-  - id: "T016"
-    description: "Golden test for 2-axis chart"
-    status: "pending"
-    notes: "Fold into Task 16 (demo/validation)"
-    
-  - id: "T017"
-    description: "Golden test for 4-axis chart"
-    status: "pending"
-    notes: "Fold into Task 16 (demo/validation)"
-    
-  - id: "T018"
-    description: "Implement series-to-axis binding resolution"
-    status: "pending"
-    notes: "May be folded into Task 6 or Task 8"
-    
-  - id: "T026"
-    description: "Widget test for auto-mode triggering"
-    status: "pending"
-    notes: "Fold into Task 7"
-    
-  - id: "T032"
-    description: "Widget test for color-coded axes"
-    status: "pending"
-    notes: "Fold into Task 10"
-    
-  - id: "T033"
-    description: "Golden test for colored axes"
-    status: "pending"
-    notes: "Fold into Task 16"
-
-current_task: 6
-current_phase: "core"
+current_task: 11
+current_phase: "rendering"
 
 # Coverage summary (update after each task)
+# All SpecKit tasks are now mapped to orchestrator tasks.
+# See consolidation_rationale for each task for details.
 speckit_coverage:
-  total_tasks: 56
-  completed: 5  # T001, T002, T003, T004, T005
-  in_progress: 0
-  pending: 51
-  auto_completed: 1  # T007
-  gaps_identified: 1  # SeriesAxisBinding not in original
+  total_tasks: 53
+  mapped_tasks: 53
+  completed_tasks: 23
+  remaining_tasks: 30
+  coverage_percent: 100
+  notes: |
+    All SpecKit tasks are now mapped to orchestrator tasks:
+    - T007: Mapped to Task 6 (auto-completed with first test file)
+    - T008: Mapped to Task 11 (widget test directory)
+    - T009: Mapped to Task 16 (golden test directory)
+    - T012: Mapped to Task 6 (axis bounds in MultiAxisNormalizer)
+    - T016, T017, T033: Mapped to Task 16 (golden tests)
+    - T018: Mapped to Task 11 (series-axis binding resolution)
+    - T026: Mapped to Task 7 (widget test for auto-detection)
+    - T032: Mapped to Task 10 (widget test for color-coded axes)
