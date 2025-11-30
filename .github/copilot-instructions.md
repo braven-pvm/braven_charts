@@ -46,6 +46,7 @@ Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard co
 When user says "prepare next task", "task handover", or similar:
 
 **DO NOT:**
+
 - ❌ Read manifest.yaml
 - ❌ Read templates
 - ❌ Read SpecKit tasks.md
@@ -53,6 +54,7 @@ When user says "prepare next task", "task handover", or similar:
 - ❌ Create todo lists
 
 **MUST DO FIRST:**
+
 ```powershell
 # Step 1: Source environment
 . .\.orchestra\scripts\set-env.ps1
@@ -62,6 +64,7 @@ When user says "prepare next task", "task handover", or similar:
 ```
 
 **ONLY AFTER SCRIPT PASSES** can you proceed to:
+
 1. Read readme.md
 2. Read manifest.yaml for next task
 3. Create handover document

@@ -365,7 +365,10 @@ if (Test-Path $env:MANIFEST_PATH) {
     $manifestContent = Get-Content $env:MANIFEST_PATH -Raw
     
     # Check task has category defined
-    $hasCategory = $manifestContent -match "(?s)-\s*id:\s*$taskNumber\b[^-]*?category:\s*[`"']?(\w+)[`"']?"
+    # Use a multi-line approach: look for "id: N" followed by category within same task block
+    # The pattern finds "- id: N" then looks ahead for category before the next "- id:"
+    $pattern = "(?s)-\s*id:\s*$taskNumber\b.*?category:\s*[`"']?(\w+)[`"']?(?=.*?(?:-\s*id:|\z))"
+    $hasCategory = $manifestContent -match $pattern
     $category = if ($hasCategory) { $Matches[1] } else { "missing" }
     
     Add-CheckResult $checks "Task $taskNumber has category in manifest" $hasCategory `
