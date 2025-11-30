@@ -472,96 +472,92 @@ When the implementor signals completion, the orchestrator follows this exact flo
 
 ---
 
-## 🖼️ Screenshot Content Verification (MANDATORY)
+## 🖼️ Screenshot & Visual Verification (MANDATORY)
 
-**CRITICAL**: "Screenshot exists" ≠ "Screenshot is correct"
+**CRITICAL**: Visual verification requires the correct tooling.
 
-An implementor could create an empty/wrong image file, pass existence checks, and claim visual verification complete. The orchestrator MUST verify actual screenshot CONTENT.
+### ⛔ PROHIBITED TOOLS - DO NOT USE ⛔
 
-### The Problem
+| Tool | Why It's Wrong |
+|------|----------------|
+| `flutter run` directly | Kills app when terminal is reused |
+| `run_in_terminal` with Flutter | Same problem - stdin interference |
+| Chrome DevTools MCP (`mcp_chrome-devtoo_*`) | Wrong tool - designed for browser automation, not Flutter |
+| `tools/flutter_runner.py` | Deprecated - use flutter_agent.py instead |
+| `open_simple_browser` with file:// | Fails - only HTTP/HTTPS supported |
 
-| Check | Prevents Cheating? |
-|-------|-------------------|
-| `Test-Path "screenshot.png"` | ❌ NO - File could be empty/wrong |
-| `read_file` on PNG | ❌ FAILS - "File seems to be binary" |
-| `open_simple_browser` with file:// | ❌ FAILS - "Only HTTP/HTTPS supported" |
-| **Chrome DevTools MCP** | ✅ YES - Returns actual image to agent |
+### ✅ REQUIRED TOOL: flutter_agent.py
 
-### The Solution: Chrome DevTools MCP
+**Location**: `tools/flutter_agent/flutter_agent.py`
 
-**Verified working workflow** (tested 2025-11-29):
+This tool was specifically designed for AI agents to:
+- Run Flutter in a **separate PowerShell window**
+- Communicate via **file-based IPC** (not stdin)
+- Take screenshots without killing the app
+- Support hot reload during development
 
+### Visual Verification Workflow
+
+#### Step 1: Implementor Creates Screenshot
+
+The implementor runs the Flutter demo using `flutter_agent.py` and captures a screenshot.
+Screenshots are saved to the working directory (typically `example/flutter_01.png`).
+
+#### Step 2: Orchestrator Verifies Screenshot EXISTS
+
+```powershell
+# Check screenshot was created
+Get-ChildItem 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example\flutter_*.png' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 ```
-# Step 1: Open screenshot in browser via Chrome DevTools MCP
-mcp_chrome-devtoo_new_page(url: "file:///E:/full/path/to/screenshot.png")
 
-# Step 2: Capture image through DevTools (returns image to agent)
-mcp_chrome-devtoo_take_screenshot()
+#### Step 3: Orchestrator Verifies Screenshot CONTENT
 
-# Step 3: Agent receives and analyzes the actual image content!
-# - Verify colors match expectations
-# - Verify axes/labels are present
-# - Verify data series render correctly
-# - Compare against verification criteria
-```
+**Option A: Human-in-the-loop verification**
+- Orchestrator asks human to view the screenshot file
+- Human confirms visual elements match requirements
+- Human provides pass/fail decision
 
-### Mandatory Verification Protocol
+**Option B: Describe requirements for future automation**
+- Document exactly what should be visible
+- Create checklist for visual elements
+- Mark as "pending automated visual verification tooling"
 
-For ANY task with visual verification requirements:
+### Current Limitation (Acknowledged)
 
-1. **Existence check** (necessary but NOT sufficient)
-   ```powershell
-   Test-Path ".orchestra/screenshots/task-NNN-description.png"
-   ```
+We do not currently have a reliable way for the AI agent to "see" screenshot content.
+- Chrome DevTools MCP is for browser automation, not viewing local files
+- PNG files cannot be read as text
+- `open_simple_browser` doesn't support file:// URLs
 
-2. **Content verification** (MANDATORY - must do this!)
-   ```
-   mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
-   mcp_chrome-devtoo_take_screenshot()
-   ```
-
-3. **Analyze returned image against criteria**
-   - Does it show what the verification yaml specifies?
-   - Are the correct elements visible (axes, colors, data)?
-   - Is it clearly NOT an empty/placeholder image?
-
-4. **Document findings** in verification results
-   - What was visible in the screenshot
-   - How it matches/doesn't match expectations
-   - Any anomalies noted
+**For now**: Visual verification requires either:
+1. Human confirmation of screenshot content, OR
+2. Trust that the implementor's screenshot + passing tests = correct visual output
 
 ### Example Verification Entry
 
 ```yaml
 visual:
-  - check: "Screenshot captured"
+  - check: "Screenshot captured via flutter_agent.py"
     severity: MAJOR
-    command: 'Test-Path ".orchestra/screenshots/task-010-color-demo.png"'
-    expected: "True"
+    command: 'Get-ChildItem "example/flutter_*.png" | Sort-Object LastWriteTime -Descending | Select-Object -First 1'
+    expected: "File exists with recent timestamp"
     
-  - check: "Screenshot content verified"
-    severity: BLOCKING  # This is the real verification!
-    manual_check: true
+  - check: "Visual elements verified"
+    severity: MAJOR
+    manual_check: true  # Requires human verification
     procedure: |
-      1. mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
-      2. mcp_chrome-devtoo_take_screenshot()
-      3. Verify: Left axis is BLUE, Right axis is RED
-      4. Verify: Two data series visible with correct colors
+      1. Open screenshot file in image viewer
+      2. Verify: Left axis is BLUE, Right axis is RED
+      3. Verify: Two data series visible with correct colors
     expected: "Visual elements match spec requirements"
 ```
 
-### Why This Matters
+### Future Improvement
 
-Without content verification, visual verification is theater. The orchestrator could:
-- ✅ Pass "file exists" check
-- ❌ Never actually see what's in the file
-- 🎭 Claim verification complete
-
-With Chrome DevTools MCP, the orchestrator:
-- ✅ Actually loads the image
-- ✅ Receives it in the response
-- ✅ Can analyze and describe what's shown
-- ✅ True visual verification
+Consider adding:
+- Image comparison tooling (golden tests)
+- LLM vision API integration for automated screenshot analysis
+- Structured screenshot metadata logging
 
 ---
 
@@ -572,7 +568,9 @@ With Chrome DevTools MCP, the orchestrator:
 - [ ] Config classes that aren't used anywhere
 - [ ] "Verification passed" without running commands
 - [ ] Same commit message as task title (lazy completion)
-- [ ] **Screenshot "verified" without Chrome DevTools content check**
+- [ ] **Using `flutter run` directly instead of flutter_agent.py**
+- [ ] **Using Chrome DevTools MCP for Flutter screenshots**
+- [ ] **Screenshot "verified" without actually viewing the image content**
 
 ---
 
@@ -613,16 +611,35 @@ These wire components into BravenChartPlus or modify rendering. Require a
 - Doesn't pollute main example app
 - Clear what's being tested
 
-### Flutter Agent Controller
+### Flutter Agent Controller (MANDATORY for Visual Tasks)
 
-Located at `tools/flutter_agent/flutter_agent.py` - enables running Flutter in a separate process with file-based IPC.
+**Location**: `tools/flutter_agent/flutter_agent.py`
 
-**When to include in task instructions**:
-- Task is INTEGRATION or VISUAL category
-- Task requires screenshot verification
-- Task requires hot reload testing
+### ⛔ CRITICAL: Only Use flutter_agent.py ⛔
 
-**Orchestrator must add to `current-task.md`** for visual tasks:
+**PROHIBITED - Never use these for Flutter:**
+| Prohibited Tool | Why It Fails |
+|-----------------|-------------|
+| `flutter run` directly | Killed when terminal is reused |
+| `run_in_terminal` with Flutter | Same stdin interference problem |
+| Chrome DevTools MCP | Wrong tool - for browser, not Flutter |
+| `tools/flutter_runner.py` | Deprecated - replaced by flutter_agent |
+
+**REQUIRED**: Always use `flutter_agent.py` for running Flutter apps and taking screenshots.
+
+### Why flutter_agent.py?
+
+Flutter runs as an interactive process. When an AI agent uses `run_in_terminal`:
+1. Flutter starts in Terminal A
+2. Agent sends another command → goes to Terminal A
+3. **Command kills Flutter** (stdin interference)
+
+`flutter_agent.py` solves this:
+1. Flutter runs in **separate PowerShell window** via `Start-Process`
+2. Commands go via **file-based IPC** (JSON files)
+3. Agent's terminal **never touches Flutter's stdin**
+
+### Orchestrator: Add to `current-task.md` for Visual Tasks
 
 ```markdown
 ## Visual Verification (INTEGRATION/VISUAL Task)
@@ -634,13 +651,16 @@ Path: `example/lib/demos/task_NNN_demo.dart`
 
 ### Step 2: Flutter Agent Workflow
 
-1. Start Flutter with the standalone demo:
+⛔ DO NOT use `flutter run` directly or Chrome DevTools MCP!
+✅ ONLY use flutter_agent.py as shown below:
+
+1. Start Flutter in SEPARATE window:
    ```powershell
    Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
      "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_NNN_demo.dart -d chrome"
    ```
 
-2. Wait for app ready:
+2. Wait for app ready (in your terminal - this is safe):
    ```powershell
    cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'
    python ..\tools\flutter_agent\flutter_agent.py wait --timeout 60
@@ -648,10 +668,16 @@ Path: `example/lib/demos/task_NNN_demo.dart`
 
 3. Take screenshot:
    ```powershell
-   python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-NNN.png
+   python ..\tools\flutter_agent\flutter_agent.py screenshot
+   # Screenshot saved to example/flutter_XX.png
    ```
 
-4. Stop when done:
+4. Verify screenshot exists:
+   ```powershell
+   Get-ChildItem flutter_*.png | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+   ```
+
+5. Stop when done:
    ```powershell
    python ..\tools\flutter_agent\flutter_agent.py stop
    ```

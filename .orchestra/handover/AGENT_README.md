@@ -237,32 +237,83 @@ git status
 
 ## Visual Tasks (Screenshots Required)
 
-If your task requires a screenshot, use the Flutter Agent Controller.
+### ⛔ CRITICAL: ONLY USE flutter_agent.py ⛔
+
+**PROHIBITED - Do NOT use these:**
+- ❌ `flutter run` directly in terminal - **WILL BREAK** when you send other commands
+- ❌ `run_in_terminal` with flutter commands - **KILLS THE APP** when terminal is reused
+- ❌ Chrome DevTools MCP (`mcp_chrome-devtoo_*`) - **WRONG TOOL** for Flutter screenshots
+- ❌ `tools/flutter_runner.py` - **DEPRECATED**, use flutter_agent.py instead
+
+**REQUIRED - Use ONLY this:**
+- ✅ `tools/flutter_agent/flutter_agent.py` - **Designed specifically for AI agents**
+
+### Why flutter_agent.py?
+
+Flutter runs as an interactive process that accepts single-key commands (r=reload, s=screenshot, q=quit).
+When you use `run_in_terminal` or direct flutter commands:
+1. Flutter starts in a terminal
+2. You send another command to that terminal
+3. **That command KILLS Flutter** because it interrupts stdin
+
+The `flutter_agent.py` solves this by:
+1. Running Flutter in a **separate PowerShell window**
+2. Communicating via **file-based IPC** (JSON files)
+3. Your terminal commands **never touch Flutter's stdin**
+
+### flutter_agent.py Workflow
 
 **Location**: `tools/flutter_agent/flutter_agent.py`
 
-### Quick Reference
-
 ```powershell
-# 1. Start Flutter in separate window (from example/ folder)
+# 1. Start Flutter in SEPARATE window (this is critical!)
 Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
-  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/main.dart -d chrome"
+  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/your_demo.dart -d chrome"
 
-# 2. Wait for app to be ready (run from your terminal)
+# 2. Wait for app to be ready (safe to run in your terminal)
 cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'
 python ..\tools\flutter_agent\flutter_agent.py wait --timeout 60
 
-# 3. Take screenshot
-python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/your-screenshot.png
+# 3. Take screenshot (goes to example/flutter_XX.png by default)
+python ..\tools\flutter_agent\flutter_agent.py screenshot
 
 # 4. Hot reload after code changes
 python ..\tools\flutter_agent\flutter_agent.py reload
 
-# 5. Stop when done
+# 5. Check status/output if needed
+python ..\tools\flutter_agent\flutter_agent.py status
+python ..\tools\flutter_agent\flutter_agent.py output --tail 20
+
+# 6. Stop when done
 python ..\tools\flutter_agent\flutter_agent.py stop
 ```
 
-**Full documentation**: See `tools/flutter_agent/README.md`
+### Screenshot Output Location
+
+Flutter's `s` command saves screenshots to the **working directory** where Flutter is running.
+Typically: `example/flutter_01.png`, `example/flutter_02.png`, etc.
+
+To verify screenshot was created:
+```powershell
+Get-ChildItem 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example\flutter_*.png'
+```
+
+### Troubleshooting
+
+```powershell
+# Check if Flutter is running
+python ..\tools\flutter_agent\flutter_agent.py status
+
+# View Flutter output for errors
+python ..\tools\flutter_agent\flutter_agent.py output --tail 50
+
+# Clean up and restart
+python ..\tools\flutter_agent\flutter_agent.py stop
+python ..\tools\flutter_agent\flutter_agent.py clean
+# Then start again with Start-Process
+```
+
+**Full documentation**: See `tools/flutter_agent/README.md` and `tools/flutter_agent/FLUTTER_AGENT_GUIDE.md`
 
 ---
 
