@@ -111,11 +111,12 @@ phases:
         
       - id: 11
         title: "Integrate Multi-Axis Painter with Chart Widget"
-        status: "pending"
+        status: "completed"
+        commit: "1901dac"
         speckit_tasks: ["T010", "T015", "T008", "T018", "T026", "T032"]
         consolidation_rationale: "Widget integration + widget test dir + series-axis binding + widget tests (US2 and US3)"
         is_integration_task: true
-        notes: "⚠️ INTEGRATION TASK - modifies existing widget. Creates test/widget/multi_axis/. T026 (auto-detection widget test), T032 (color axes widget test)"
+        notes: "INTEGRATION VERIFIED - yAxes/normalizationMode/axisBindings params, SeriesAxisResolver, 13 widget tests"
 
   - id: "interaction"
     description: "Tooltips, crosshair, and user interaction"
