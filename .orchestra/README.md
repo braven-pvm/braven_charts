@@ -28,6 +28,7 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   └── ...
 ├── templates/              # Templates for orchestrator use (HIDDEN)
 │   ├── current-task-template.md       # ⭐ MUST use for every task
+│   ├── task-results-template.md       # ⭐ MUST use for verification results
 │   └── orchestrator-preflight-template.md
 ├── scripts/                # Automation scripts (HIDDEN)
 │   ├── set-env.ps1         # ⭐ Source first: . .\.orchestra\scripts\set-env.ps1
@@ -189,8 +190,45 @@ This script verifies the implementor actually ran the pre-signal check:
 - Capture screenshots if required
 
 ### 5. Decision
-- **PASS**: Commit changes, update `progress.yaml`, feed next task
+- **PASS**: Proceed to Step 5a (Post-Verification)
 - **FAIL**: Clear `completion-signal.md`, provide feedback, implementor retries
+
+### 5a. Post-Verification Closeout (MANDATORY)
+
+**After task PASSES verification, you MUST complete ALL of these steps:**
+
+```
+✅ 1. Create verification results file
+   CREATE `.orchestra/verification/task-XXX-results.md`
+   USE template: `.orchestra/templates/task-results-template.md`
+   
+✅ 2. Capture screenshot (if visual/integration task)
+   SAVE to `.orchestra/verification/screenshots/task-XXX-description.png`
+   
+✅ 3. Update progress.yaml
+   - Add task to history with commit hash
+   - Update stats (completed count)
+   - Set note to reflect completion
+   
+✅ 4. Update SpecKit tasks.md
+   - Mark associated SpecKit tasks with [x]
+   
+✅ 5. Update manifest.yaml
+   - Add commit hash to completed task
+   - Increment current_task
+   
+✅ 6. Clear completion-signal.md
+   SET content to empty string (truly empty, no template)
+   
+✅ 7. Commit closeout
+   git add -A && git commit -m "Task XXX closeout"
+   
+✅ 8. Run task-closeout-check.ps1
+   ..\.orchestra\scripts\orchestrator\task-closeout-check.ps1
+   MUST PASS before preparing next task
+```
+
+**⛔ DO NOT prepare the next task until `task-closeout-check.ps1` PASSES.**
 
 ### 6. Retrospective (After Each Task)
 After each task completion:
