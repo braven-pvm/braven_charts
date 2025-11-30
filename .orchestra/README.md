@@ -578,11 +578,32 @@ Consider adding:
 
 Tasks fall into three categories that determine visual verification requirements:
 
-| Category       | Description                              | Visual Verification |
-|----------------|------------------------------------------|---------------------|
-| **INFRASTRUCTURE** | Creates classes/logic NOT yet integrated | ❌ N/A (premature) |
-| **INTEGRATION**    | Wires components INTO BravenChartPlus    | ✅ Required         |
-| **VISUAL**         | Modifies existing rendering output       | ✅ Required         |
+| Category       | Description                              | Visual Verification | Screenshot Required |
+|----------------|------------------------------------------|---------------------|---------------------|
+| **INFRASTRUCTURE** | Creates classes/logic NOT yet integrated | ❌ N/A (premature)  | ❌ No               |
+| **INTEGRATION**    | Wires components INTO BravenChartPlus    | ✅ Required         | ✅ BLOCKING         |
+| **VISUAL**         | Modifies existing rendering output       | ✅ Required         | ✅ BLOCKING         |
+
+### ⚠️ CRITICAL: Category MUST Be Set in manifest.yaml
+
+Every task in `manifest.yaml` MUST have a `category:` field:
+
+```yaml
+- id: 13
+  title: "Update Crosshair to Use Per-Axis Bounds"
+  status: "pending"
+  speckit_tasks: ["T043", "T044", "T041"]
+  category: "integration"  # REQUIRED: infrastructure | integration | visual
+```
+
+**handover-validate.ps1** enforces:
+- manifest.yaml has category for task
+- INTEGRATION/VISUAL tasks have Section 7 in handover
+- Verification YAML exists before handover
+
+**task-closeout-check.ps1** enforces:
+- INFRASTRUCTURE tasks: screenshot optional
+- INTEGRATION/VISUAL tasks: screenshot BLOCKING (task fails without it)
 
 ### INFRASTRUCTURE Tasks
 

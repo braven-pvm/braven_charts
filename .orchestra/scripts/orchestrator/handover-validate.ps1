@@ -330,6 +330,64 @@ if (Test-Path $completionPath) {
 }
 
 # ============================================================================
+# 11. VERIFICATION YAML MUST EXIST
+# ============================================================================
+
+Write-Section "Verification Criteria"
+
+$taskIdPadded = ([int]$taskNumber).ToString().PadLeft(3, '0')
+$verificationYamlPath = "$env:VERIFICATION_PATH/task-$taskIdPadded.yaml"
+
+$verificationExists = Test-Path $verificationYamlPath
+Add-CheckResult $checks "Verification YAML exists (task-$taskIdPadded.yaml)" $verificationExists `
+    "Verification criteria not defined for Task $taskNumber" `
+    "Create $verificationYamlPath with hidden verification criteria BEFORE handover" `
+    $verificationYamlPath
+
+if ($verificationExists) {
+    $yamlContent = Get-Content $verificationYamlPath -Raw
+    
+    # Check for required sections
+    $hasSeverity = $yamlContent -match "severity:\s*(BLOCKING|MAJOR|MINOR|INFO)"
+    Add-CheckResult $checks "Verification has severity levels" $hasSeverity `
+        "No severity levels defined" `
+        "Add severity: BLOCKING/MAJOR/MINOR/INFO to each check" `
+        $verificationYamlPath
+}
+
+# ============================================================================
+# 12. TASK CATEGORY IN MANIFEST
+# ============================================================================
+
+Write-Section "Manifest Completeness"
+
+if (Test-Path $env:MANIFEST_PATH) {
+    $manifestContent = Get-Content $env:MANIFEST_PATH -Raw
+    
+    # Check task has category defined
+    $hasCategory = $manifestContent -match "(?s)-\s*id:\s*$taskNumber\b[^-]*?category:\s*[`"']?(\w+)[`"']?"
+    $category = if ($hasCategory) { $Matches[1] } else { "missing" }
+    
+    Add-CheckResult $checks "Task $taskNumber has category in manifest" $hasCategory `
+        "No category field for Task $taskNumber" `
+        "Add 'category: infrastructure|integration|visual' to manifest.yaml task entry" `
+        $env:MANIFEST_PATH
+    
+    if ($hasCategory) {
+        Write-Host "     Category: $category" -ForegroundColor Gray
+        
+        # If visual/integration, verify Section 7 is present in handover
+        if ($category -eq "visual" -or $category -eq "integration") {
+            $hasVisualSection = $content -match "(?i)##\s*(7\.|Visual|Flutter Agent)"
+            Add-CheckResult $checks "Visual verification section for $category task" $hasVisualSection `
+                "$category task requires Section 7 (Visual Verification) with flutter_agent.py workflow" `
+                "Add Section 7 with standalone demo and flutter_agent.py commands" `
+                $currentTaskPath
+        }
+    }
+}
+
+# ============================================================================
 # SUMMARY
 # ============================================================================
 

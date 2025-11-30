@@ -10,9 +10,11 @@ then DELETED before implementor sees this file.
 - [ ] I have READ `.orchestra/readme.md` (not from memory!)
 - [ ] I have READ `.orchestra/manifest.yaml` for this task's details
 - [ ] I have READ the SpecKit `tasks.md` for detailed requirements
+- [ ] I have VERIFIED manifest.yaml has `category:` field for this task
 - [ ] I have identified task type: [ ] Logic [ ] Visual/Rendering [ ] Integration
-- [ ] If VISUAL: I have included Section 7 (flutter_agent.py workflow)
+- [ ] If VISUAL/INTEGRATION: I have included Section 7 (flutter_agent.py workflow)
 - [ ] If INTEGRATION: I have listed files that MUST be modified (not just created)
+- [ ] I have CREATED `.orchestra/verification/task-NNN.yaml` with hidden criteria
 - [ ] I have filled ALL sections below (content or [N/A] with reason)
 - [ ] No [TODO] markers remain in this document (except title which gets filled)
 - [ ] I have saved this checklist to `.orchestra/verification/orchestrator-preflight-NNN.md`
@@ -29,6 +31,11 @@ AFTER completing checklist:
 [TODO: Brief description of what this task accomplishes]
 
 **Phase**: [TODO: Foundation / Core Normalization / Rendering / Widget Integration]
+
+**Category**: [TODO: INFRASTRUCTURE / INTEGRATION / VISUAL]
+- INFRASTRUCTURE: Creates classes/logic NOT yet wired into main widget (no screenshot)
+- INTEGRATION: Wires components INTO BravenChartPlus (REQUIRES screenshot)
+- VISUAL: Modifies rendering output (REQUIRES screenshot)
 
 ---
 

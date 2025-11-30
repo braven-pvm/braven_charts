@@ -174,9 +174,22 @@ Add-CheckResult $checks "Verification results recorded" $resultsExist `
     "Create verification results after task verification" `
     $verificationResultsPath
 
-# Check screenshot for visual tasks
+# Get task category from manifest to determine if screenshot is required
+$taskCategory = "unknown"
+if (Test-Path $env:MANIFEST_PATH) {
+    $manifestContent = Get-Content $env:MANIFEST_PATH -Raw
+    # Match: id: N ... category: "xyz" (within same task block)
+    # Use a simpler approach: find the task section and look for category
+    if ($manifestContent -match "(?s)-\s*id:\s*$env:PREVIOUS_TASK\b[^-]*?category:\s*[`"']?(\w+)[`"']?") {
+        $taskCategory = $Matches[1].ToLower()
+    }
+}
+
+# Check screenshot for visual/integration tasks only
 $screenshotPattern = "$env:SCREENSHOT_PATH/task-0$env:PREVIOUS_TASK*.png"
 $screenshots = Get-ChildItem -Path $env:SCREENSHOT_PATH -Filter "task-0$env:PREVIOUS_TASK*.png" -ErrorAction SilentlyContinue
+
+$requiresScreenshot = $taskCategory -eq "visual" -or $taskCategory -eq "integration"
 
 if ($screenshots) {
     Add-CheckResult $checks "Screenshot exists for Task $env:PREVIOUS_TASK" $true `
@@ -189,10 +202,16 @@ if ($screenshots) {
         "Recapture screenshot using Chrome DevTools MCP" `
         $screenshots[0].FullName
 }
+elseif ($requiresScreenshot) {
+    # Category is visual/integration but no screenshot - this is a FAILURE
+    Add-CheckResult $checks "Screenshot exists for $taskCategory task" $false `
+        "Task category '$taskCategory' REQUIRES visual verification" `
+        "Create screenshot using flutter_agent.py workflow (see readme.md)" `
+        $env:SCREENSHOT_PATH
+}
 else {
-    # This is a warning, not a failure (not all tasks are visual)
-    Write-CheckWarning "No screenshot found for Task $env:PREVIOUS_TASK" `
-        "OK if not a visual/integration task"
+    # Infrastructure task or unknown category - screenshot is optional
+    Write-CheckPass "No screenshot needed (category: $taskCategory)"
 }
 
 # ============================================================================
@@ -202,10 +221,31 @@ else {
 Write-Section "Test Suite Status"
 
 Write-Host "  Running sprint tests..." -ForegroundColor Gray
+
+# Ensure we run tests from repo root
+$repoRoot = (Get-Location).Path
 try {
     $testOutput = flutter test $env:SPRINT_TEST_PATH --no-pub 2>&1 | Out-String
     $allPassed = $testOutput -match "All tests passed"
-    $testCount = if ($testOutput -match '\+(\d+)') { $Matches[1] } else { "?" }
+    
+    # Parse test count from output like "00:08 +237: All tests passed!"
+    $testCount = "0"
+    # Match the final line with the count, e.g., "00:01 +237: All tests passed!"
+    if ($testOutput -match '\+(\d+):\s*All tests passed') { 
+        $testCount = $Matches[1] 
+    }
+    elseif ($testOutput -match '(\d+) tests? passed') {
+        $testCount = $Matches[1]
+    }
+    elseif ($testOutput -match '\+(\d+)') {
+        # Fallback to any +N pattern (may get intermediate counts)
+        $allMatches = [regex]::Matches($testOutput, '\+(\d+)')
+        if ($allMatches.Count -gt 0) {
+            # Take the last (highest) count
+            $testCount = $allMatches[$allMatches.Count - 1].Groups[1].Value
+        }
+    }
+    
     Add-CheckResult $checks "Sprint tests pass" $allPassed `
         "Tests failed - fix before proceeding" `
         "Run: flutter test $env:SPRINT_TEST_PATH" `
@@ -213,6 +253,12 @@ try {
     
     if ($allPassed) {
         Write-Host "     $testCount tests passed" -ForegroundColor Gray
+    }
+    else {
+        # Show first few lines of error output
+        $lines = ($testOutput -split "`n")[0..5]
+        Write-Host "     Output:" -ForegroundColor Yellow
+        $lines | ForEach-Object { Write-Host "       $_" -ForegroundColor Yellow }
     }
 }
 catch {
