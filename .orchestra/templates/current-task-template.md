@@ -250,6 +250,17 @@ python ..\tools\flutter_agent\flutter_agent.py stop
 
 ## 8. Quality Gates (MANDATORY)
 
+### 🚫 YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE
+
+**If you CREATE or MODIFY a file, ALL analyzer issues in that file are YOUR responsibility.**
+
+- ❌ "Pre-existing issues" - **NOT AN EXCUSE**
+- ❌ "The warning was already there" - **NOT AN EXCUSE**
+- ❌ "I only changed a few lines" - **NOT AN EXCUSE**
+
+You MUST fix ALL issues (errors, warnings, AND infos) before signaling completion.
+Your completion signal WILL BE REJECTED if any issues remain.
+
 ### Linting - Zero Issues
 
 ```bash

@@ -185,6 +185,17 @@ else {
 
 Write-Section "Code Quality"
 
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║  YOU TOUCH IT, YOU OWN IT - NO "PRE-EXISTING" EXCUSES                      ║
+# ║                                                                            ║
+# ║  Any file you CREATE or MODIFY must have ZERO analyzer issues.             ║
+# ║  If a file has "pre-existing" issues, they are now YOUR issues to fix.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+Write-Host "  ⚠️  YOU TOUCH IT, YOU OWN IT: All analyzer issues in files you" -ForegroundColor Yellow
+Write-Host "     touched are YOUR responsibility. No 'pre-existing' excuses." -ForegroundColor Yellow
+Write-Host ""
+
 # Run analyzer on new/modified files
 $filesToAnalyze = ($createPaths + $updatePaths) | Where-Object { 
     $_ -and (Test-Path $_) -and $_ -match "\.dart$"
@@ -196,12 +207,22 @@ if ($filesToAnalyze.Count -gt 0) {
     foreach ($file in $filesToAnalyze) {
         try {
             $analyzeOutput = flutter analyze $file 2>&1 | Out-String
-            $hasIssues = $analyzeOutput -match "error|warning" -and -not ($analyzeOutput -match "No issues found")
+            $hasIssues = $analyzeOutput -match "error|warning|info" -and -not ($analyzeOutput -match "No issues found")
             
-            Add-CheckResult $checks "No analyzer issues: $($file.Split('/')[-1])" (-not $hasIssues) `
-                "Analyzer found issues" `
-                "Run: flutter analyze $file" `
+            # Count issues for detailed message
+            $issueCount = 0
+            if ($analyzeOutput -match "(\d+)\s+issue") {
+                $issueCount = [int]$Matches[1]
+            }
+            
+            Add-CheckResult $checks "Zero analyzer issues: $($file.Split('/')[-1])" (-not $hasIssues) `
+                "Analyzer found $issueCount issue(s) - YOU MUST FIX ALL OF THEM" `
+                "Run: flutter analyze $file - then fix EVERY issue (warnings, infos, ALL of them)" `
                 $file
+            
+            if ($hasIssues) {
+                Write-Host "     └─ $issueCount issue(s) found - these are YOUR responsibility to fix" -ForegroundColor Red
+            }
         }
         catch {
             Write-CheckWarning "Could not analyze $file" $_

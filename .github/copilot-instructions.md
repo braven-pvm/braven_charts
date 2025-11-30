@@ -73,6 +73,34 @@ When user says "prepare next task", "task handover", or similar:
 
 ---
 
+## 🚫 YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE POLICY 🚫
+
+### ⛔ NO "PRE-EXISTING" EXCUSES - EVER
+
+When you CREATE or MODIFY any file, **ALL** issues in that file become YOUR responsibility:
+
+- ❌ "These are pre-existing issues" - **REJECTED**
+- ❌ "This warning was already there" - **REJECTED**
+- ❌ "I only changed lines 100-150, the issue is on line 200" - **REJECTED**
+- ❌ "It's just a deprecation warning" - **REJECTED**
+
+### ✅ WHAT YOU MUST DO
+
+1. Run `flutter analyze` on EVERY file you touched
+2. Fix **ALL** issues: errors, warnings, AND infos
+3. Analyzer must show **"No issues found!"** for each file
+4. Only then can you signal completion
+
+### WHY THIS EXISTS
+
+"Pre-existing" is just passing the buck. If technical debt exists in a file and you touch that file, you inherit that debt. Clean it up or don't touch the file.
+
+### CONSEQUENCE OF VIOLATION
+
+Your completion signal will be **REJECTED** and you will be required to fix ALL issues before re-submission.
+
+---
+
 ## Terminal Management Protocol (CRITICAL - MANDATORY ENFORCEMENT)
 
 ### 🎯 ABSOLUTE RULES - ZERO TOLERANCE
