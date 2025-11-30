@@ -28,6 +28,9 @@ import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
+import '../models/normalization_mode.dart';
+import '../models/series_axis_binding.dart';
+import '../models/y_axis_config.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../widgets/scrollbar/hit_test_zone.dart';
 import '../widgets/scrollbar/scrollbar_controller.dart';
@@ -35,6 +38,7 @@ import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
 import 'multi_axis_normalizer.dart';
+import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -69,6 +73,10 @@ class ChartRenderBox extends RenderBox {
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
     InteractionConfig? interactionConfig,
+    List<YAxisConfig>? yAxes,
+    NormalizationMode? normalizationMode,
+    List<SeriesAxisBinding>? axisBindings,
+    List<ChartSeries>? series,
     this.onElementClick,
     this.onElementHover,
     this.onEmptyAreaClick,
@@ -82,6 +90,10 @@ class ChartRenderBox extends RenderBox {
         _showYScrollbar = showYScrollbar,
         _scrollbarTheme = scrollbarTheme,
         _interactionConfig = interactionConfig,
+        _yAxes = yAxes,
+        _normalizationMode = normalizationMode,
+        _axisBindings = axisBindings ?? const [],
+        _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
   }
@@ -106,6 +118,20 @@ class ChartRenderBox extends RenderBox {
 
   /// Current theme for the chart (colors, styles, etc.)
   ChartTheme? _theme;
+
+  // ==================== MULTI-AXIS STATE ====================
+
+  /// Y-axis configurations for multi-axis mode.
+  List<YAxisConfig>? _yAxes;
+
+  /// Controls how normalization is applied to multi-axis data.
+  NormalizationMode? _normalizationMode;
+
+  /// Bindings that connect series to specific Y-axes.
+  List<SeriesAxisBinding> _axisBindings;
+
+  /// Data series for multi-axis color resolution.
+  List<ChartSeries> _series;
 
   /// Interaction coordinator for conflict resolution.
   final ChartInteractionCoordinator coordinator;
@@ -570,6 +596,113 @@ class ChartRenderBox extends RenderBox {
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
+  }
+
+  // ==================== MULTI-AXIS SETTERS ====================
+
+  /// Sets the Y-axis configurations for multi-axis mode.
+  void setYAxes(List<YAxisConfig>? yAxes) {
+    if (_yAxes == yAxes) return;
+    _yAxes = yAxes;
+    markNeedsPaint();
+  }
+
+  /// Sets the normalization mode for multi-axis charts.
+  void setNormalizationMode(NormalizationMode? mode) {
+    if (_normalizationMode == mode) return;
+    _normalizationMode = mode;
+    markNeedsPaint();
+  }
+
+  /// Sets the series-to-axis bindings.
+  void setAxisBindings(List<SeriesAxisBinding>? bindings) {
+    final newBindings = bindings ?? const [];
+    if (_axisBindings == newBindings) return;
+    _axisBindings = newBindings;
+    markNeedsPaint();
+  }
+
+  /// Sets the data series for multi-axis color resolution.
+  void setSeries(List<ChartSeries>? series) {
+    final newSeries = series ?? const [];
+    if (_series == newSeries) return;
+    _series = newSeries;
+    markNeedsPaint();
+  }
+
+  // ==================== MULTI-AXIS HELPERS ====================
+
+  /// Checks if multi-axis mode is active.
+  ///
+  /// Multi-axis mode is active when there are two or more Y-axes configured.
+  bool _hasMultipleYAxes() {
+    return _yAxes != null && _yAxes!.length > 1;
+  }
+
+  /// Paints multiple Y-axes using [MultiAxisPainter].
+  ///
+  /// This method is called during paint when multi-axis mode is active.
+  /// It computes axis bounds from series data and renders each axis
+  /// with appropriate colors and labels.
+  void _paintMultipleYAxes(Canvas canvas) {
+    if (_yAxes == null || _yAxes!.isEmpty) return;
+
+    // Compute axis bounds from series data
+    final axisBounds = _computeAxisBounds();
+
+    // Create and invoke painter
+    final painter = MultiAxisPainter(
+      axes: _yAxes!,
+      axisBounds: axisBounds,
+      bindings: _axisBindings,
+      series: _series,
+    );
+
+    // Paint axes - chartArea is full size, plotArea is content area
+    painter.paint(canvas, Offset.zero & size, _plotArea);
+  }
+
+  /// Computes axis bounds from series data for multi-axis rendering.
+  ///
+  /// Returns a map of axis ID to [DataRange] for each axis.
+  Map<String, DataRange> _computeAxisBounds() {
+    final bounds = <String, DataRange>{};
+
+    if (_yAxes == null) return bounds;
+
+    for (final axis in _yAxes!) {
+      // Use explicit bounds if provided
+      if (axis.min != null && axis.max != null) {
+        bounds[axis.id] = DataRange(min: axis.min!, max: axis.max!);
+        continue;
+      }
+
+      // Find series bound to this axis and compute bounds from data
+      double? minY;
+      double? maxY;
+
+      for (final binding in _axisBindings) {
+        if (binding.yAxisId == axis.id) {
+          // Find matching series
+          for (final series in _series) {
+            if (series.id == binding.seriesId) {
+              for (final point in series.points) {
+                if (minY == null || point.y < minY) minY = point.y;
+                if (maxY == null || point.y > maxY) maxY = point.y;
+              }
+            }
+          }
+        }
+      }
+
+      // Use computed bounds, or fallback to 0-100 if no data
+      bounds[axis.id] = DataRange(
+        min: axis.min ?? minY ?? 0.0,
+        max: axis.max ?? maxY ?? 100.0,
+      );
+    }
+
+    return bounds;
   }
 
   /// Sets pan constraint bounds for paused streaming mode.
@@ -3096,11 +3229,23 @@ class ChartRenderBox extends RenderBox {
     // This avoids unnecessary tick regeneration during crosshair hover.
 
     // Paint axes (behind all chart elements)
-    if (_xAxis != null) {
-      AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
-    }
-    if (_yAxis != null) {
-      AxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
+    // Check for multi-axis mode first - if active, use MultiAxisPainter
+    if (_hasMultipleYAxes()) {
+      // Multi-axis mode: paint using MultiAxisPainter for color-coded Y-axes
+      _paintMultipleYAxes(canvas);
+
+      // Still paint X-axis using standard renderer
+      if (_xAxis != null) {
+        AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      }
+    } else {
+      // Single-axis mode: use standard axis renderers
+      if (_xAxis != null) {
+        AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      }
+      if (_yAxis != null) {
+        AxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      }
     }
 
     // ==========================================================================

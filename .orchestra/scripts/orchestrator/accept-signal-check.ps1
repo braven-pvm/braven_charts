@@ -70,7 +70,8 @@ if (Test-Path $completionPath) {
         $hasFiles = $signalContent -match "(?i)(files|created|modified|changed):"
         if ($hasFiles) {
             Write-Host "  ✅ Signal lists file changes" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-CheckWarning "Signal may not list file changes" `
                 "Consider requiring file list in completion signal"
         }
@@ -94,7 +95,7 @@ $artifactPattern = "task-$TaskId-*.txt"
 
 if (Test-Path $artifactDir) {
     $artifacts = Get-ChildItem -Path $artifactDir -Filter $artifactPattern -ErrorAction SilentlyContinue | 
-                 Sort-Object LastWriteTime -Descending
+    Sort-Object LastWriteTime -Descending
     
     if ($artifacts) {
         $latestArtifact = $artifacts[0]
