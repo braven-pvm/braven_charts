@@ -110,7 +110,7 @@ These existing utilities MUST be used. Do NOT reimplement their logic inline.
 
 ---
 
-## 5. TDD Requirements
+## 5. Testing
 
 **Test File**: `[TODO: test/unit/multi_axis/xxx_test.dart]`
 
