@@ -12,11 +12,13 @@ import 'package:flutter/services.dart';
 
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
+import '../axis/series_axis_resolver.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
+import '../formatting/multi_axis_value_formatter.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/crosshair_tracker.dart';
@@ -4778,9 +4780,27 @@ class ChartRenderBox extends RenderBox {
     // If followCursor is enabled, use current cursor position instead of marker position
     final tooltipAnchor = config.followCursor && _cursorPosition != null ? _cursorPosition! : plotToWidget(markerInfo.plotPosition);
 
-    // Build tooltip text
+    // Build tooltip text with Y-value formatting including units (T023)
     final seriesName = seriesElement.series.name ?? seriesElement.id;
-    final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: ${_formatDataValue(dataPoint.y)}';
+    
+    // Get the axis config for this series to retrieve unit (T023, T042)
+    String? yUnit;
+    if (_yAxes != null && _yAxes!.isNotEmpty) {
+      final axisConfig = SeriesAxisResolver.resolveAxis(
+        markerInfo.seriesId,
+        _axisBindings,
+        _yAxes!,
+      );
+      yUnit = axisConfig?.unit;
+    }
+    
+    // Format Y value with unit using MultiAxisValueFormatter (T042, T045)
+    final formattedY = MultiAxisValueFormatter.format(
+      value: dataPoint.y,
+      unit: yUnit,
+    );
+    
+    final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: $formattedY';
 
     // Create text painter with configured style
     final textStyle = TextStyle(
