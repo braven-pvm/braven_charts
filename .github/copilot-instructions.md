@@ -39,6 +39,37 @@ Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard co
 
 <!-- MANUAL ADDITIONS START -->
 
+## 🚨 ORCHESTRATOR SCRIPT-FIRST PROTOCOL (ABSOLUTE PRIORITY) 🚨
+
+### ⛔ BEFORE ANY TASK PREPARATION - MANDATORY FIRST ACTION
+
+When user says "prepare next task", "task handover", or similar:
+
+**DO NOT:**
+- ❌ Read manifest.yaml
+- ❌ Read templates
+- ❌ Read SpecKit tasks.md
+- ❌ Start planning or analysis
+- ❌ Create todo lists
+
+**MUST DO FIRST:**
+```powershell
+# Step 1: Source environment
+. .\.orchestra\scripts\set-env.ps1
+
+# Step 2: Run closeout check (BLOCKING)
+.\.orchestra\scripts\orchestrator\task-closeout-check.ps1
+```
+
+**ONLY AFTER SCRIPT PASSES** can you proceed to:
+1. Read readme.md
+2. Read manifest.yaml for next task
+3. Create handover document
+
+**WHY THIS EXISTS**: Agents repeatedly skip to reading files instead of running validation scripts. This causes missed verification steps and process drift. The script MUST be the entry point.
+
+---
+
 ## Terminal Management Protocol (CRITICAL - MANDATORY ENFORCEMENT)
 
 ### 🎯 ABSOLUTE RULES - ZERO TOLERANCE

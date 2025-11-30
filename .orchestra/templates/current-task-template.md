@@ -33,6 +33,7 @@ AFTER completing checklist:
 **Phase**: [TODO: Foundation / Core Normalization / Rendering / Widget Integration]
 
 **Category**: [TODO: INFRASTRUCTURE / INTEGRATION / VISUAL]
+
 - INFRASTRUCTURE: Creates classes/logic NOT yet wired into main widget (no screenshot)
 - INTEGRATION: Wires components INTO BravenChartPlus (REQUIRES screenshot)
 - VISUAL: Modifies rendering output (REQUIRES screenshot)
