@@ -72,7 +72,7 @@ Add-CheckResult $checks "Has objective/overview section" $hasObjective `
     $currentTaskPath
 
 # Has deliverables section
-$hasDeliverables = $content -match "(?i)(deliverables|files to create|files to modify)\s*[:\n]|## Files|### Files"
+$hasDeliverables = $content -match "(?i)(deliverables|file operations|files to create|files to modify)\s*[:\n]|## File|### File"
 Add-CheckResult $checks "Has deliverables section" $hasDeliverables `
     "No deliverables section - what files to create/modify?" `
     "Orchestrator should add Deliverables section" `
@@ -93,16 +93,13 @@ Write-Section "File Paths"
 
 # Extract CREATE file paths
 $createPaths = @()
-if ($content -match "(?i)CREATE[:\s]+[`]?([^\n`]+)[`]?") {
-    $createPaths += $Matches[1]
-}
-# Also match table format: | CREATE | path |
-$tableCreateMatches = [regex]::Matches($content, "(?i)\|\s*CREATE\s*\|\s*[`]?([^|`\n]+)[`]?\s*\|")
+# Match table format: | CREATE | path |
+$tableCreateMatches = [regex]::Matches($content, '(?im)^\|\s*CREATE\s*\|\s*`?([^|`\n]+)`?\s*\|')
 foreach ($match in $tableCreateMatches) {
     $createPaths += $match.Groups[1].Value.Trim()
 }
 # Also match list format: - CREATE: path
-$listCreateMatches = [regex]::Matches($content, "(?i)-\s*CREATE[:\s]+[`]?([^\n`]+)[`]?")
+$listCreateMatches = [regex]::Matches($content, '(?im)^-\s*CREATE[:\s]+`?([^\n`]+)`?')
 foreach ($match in $listCreateMatches) {
     $createPaths += $match.Groups[1].Value.Trim()
 }
@@ -130,11 +127,11 @@ else {
 
 # Extract UPDATE file paths
 $updatePaths = @()
-$tableUpdateMatches = [regex]::Matches($content, "(?i)\|\s*UPDATE\s*\|\s*[`]?([^|`\n]+)[`]?\s*\|")
+$tableUpdateMatches = [regex]::Matches($content, '(?im)^\|\s*UPDATE\s*\|\s*`?([^|`\n]+)`?\s*\|')
 foreach ($match in $tableUpdateMatches) {
     $updatePaths += $match.Groups[1].Value.Trim()
 }
-$listUpdateMatches = [regex]::Matches($content, "(?i)-\s*UPDATE[:\s]+[`]?([^\n`]+)[`]?")
+$listUpdateMatches = [regex]::Matches($content, '(?im)^-\s*UPDATE[:\s]+`?([^\n`]+)`?')
 foreach ($match in $listUpdateMatches) {
     $updatePaths += $match.Groups[1].Value.Trim()
 }
@@ -169,7 +166,7 @@ Add-CheckResult $checks "No TODO/TBD markers" (-not $hasTodos) `
     $currentTaskPath
 
 # Has code scaffold (for non-trivial tasks)
-$hasCodeScaffold = $content -match '```dart|```'
+$hasCodeScaffold = $content -match '```dart|```powershell|```' -or $content -match '(?i)##\s*Code\s*Scaffold'
 if ($hasDeliverables -and $createPaths.Count -gt 0) {
     Add-CheckResult $checks "Has code scaffold" $hasCodeScaffold `
         "No code scaffold provided for new files" `

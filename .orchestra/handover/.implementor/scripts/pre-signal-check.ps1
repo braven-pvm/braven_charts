@@ -51,24 +51,32 @@ Write-Host "`n  Checking deliverables for Task $taskNumber" -ForegroundColor Gra
 
 # Extract CREATE files
 $createPaths = @()
-$tableCreateMatches = [regex]::Matches($content, "(?i)\|\s*CREATE\s*\|\s*[`]?([^|`\n]+)[`]?\s*\|")
+$tableCreateMatches = [regex]::Matches($content, '(?im)^\|\s*CREATE\s*\|\s*`?([^|`\n]+)`?\s*\|')
 foreach ($match in $tableCreateMatches) {
-    $createPaths += $match.Groups[1].Value.Trim().TrimStart('`').TrimEnd('`')
+    $path = $match.Groups[1].Value.Trim()
+    $path = $path -replace '^`|`$', ''
+    $createPaths += $path
 }
-$listCreateMatches = [regex]::Matches($content, "(?i)-\s*CREATE[:\s]+[`]?([^\n`]+)[`]?")
+$listCreateMatches = [regex]::Matches($content, '(?im)^-\s*CREATE[:\s]+`?([^\n`]+)`?')
 foreach ($match in $listCreateMatches) {
-    $createPaths += $match.Groups[1].Value.Trim().TrimStart('`').TrimEnd('`')
+    $path = $match.Groups[1].Value.Trim()
+    $path = $path -replace '^`|`$', ''
+    $createPaths += $path
 }
 
 # Extract UPDATE files
 $updatePaths = @()
-$tableUpdateMatches = [regex]::Matches($content, "(?i)\|\s*UPDATE\s*\|\s*[`]?([^|`\n]+)[`]?\s*\|")
+$tableUpdateMatches = [regex]::Matches($content, '(?im)^\|\s*UPDATE\s*\|\s*`?([^|`\n]+)`?\s*\|')
 foreach ($match in $tableUpdateMatches) {
-    $updatePaths += $match.Groups[1].Value.Trim().TrimStart('`').TrimEnd('`')
+    $path = $match.Groups[1].Value.Trim()
+    $path = $path -replace '^`|`$', ''
+    $updatePaths += $path
 }
-$listUpdateMatches = [regex]::Matches($content, "(?i)-\s*UPDATE[:\s]+[`]?([^\n`]+)[`]?")
+$listUpdateMatches = [regex]::Matches($content, '(?im)^-\s*UPDATE[:\s]+`?([^\n`]+)`?')
 foreach ($match in $listUpdateMatches) {
-    $updatePaths += $match.Groups[1].Value.Trim().TrimStart('`').TrimEnd('`')
+    $path = $match.Groups[1].Value.Trim()
+    $path = $path -replace '^`|`$', ''
+    $updatePaths += $path
 }
 
 # ============================================================================
