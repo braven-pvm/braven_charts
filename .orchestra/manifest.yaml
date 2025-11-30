@@ -125,7 +125,7 @@ phases:
       - id: 12
         title: "Update Tooltip to Show Original Values"
         status: "completed"
-        commit: "pending"
+        commit: "287d734"
         speckit_tasks: ["T023", "T042", "T045", "T040"]
         consolidation_rationale: "Tooltip + value formatter (US1/US4 overlap)"
         
