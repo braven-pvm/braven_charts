@@ -4,6 +4,30 @@
 
 ---
 
+## ⛔ CRITICAL: MANDATORY SCRIPT EXECUTION ⛔
+
+> **YOU CANNOT SKIP THE PRE-SIGNAL CHECK SCRIPT**
+> 
+> Before signaling completion, you **MUST** run:
+> ```powershell
+> .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+> ```
+> 
+> **WHY THIS IS MANDATORY:**
+> - This script creates a **verification artifact** that the orchestrator MUST see
+> - If no artifact exists, the orchestrator **WILL BLOCK** your completion
+> - If the artifact shows FAILED, the orchestrator **WILL BLOCK** your completion
+> - There is **NO WAY TO BYPASS THIS** - the orchestrator runs `accept-signal-check.ps1` which verifies the artifact exists
+> 
+> **CONSEQUENCES OF SKIPPING:**
+> - Your completion signal will be **REJECTED**
+> - You will be asked to run the script and fix all issues
+> - Time wasted for everyone
+> 
+> This is not optional. This is not a suggestion. This is a **STRUCTURAL GATE**.
+
+---
+
 ## Your Role
 
 You are an **implementor agent**. Your job is to complete ONE task at a time, then signal completion for external verification.
@@ -47,13 +71,39 @@ Background information is in: **`task-context.md`** (same folder)
 git add .
 ```
 
-### 5. Signal Completion
+### 5. Run Pre-Signal Check (MANDATORY - CREATES VERIFICATION ARTIFACT)
+
+**⛔ YOU MUST RUN THIS SCRIPT BEFORE SIGNALING COMPLETION ⛔**
+
+```powershell
+.\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+```
+
+**What this script does:**
+- Verifies all tests pass
+- Checks linting is clean
+- Validates documentation exists
+- Confirms TDD compliance (if required)
+- **Creates a verification artifact** that the orchestrator checks
+
+**If the script FAILS:**
+- Fix ALL issues it reports
+- Run it again until it PASSES
+- Only then proceed to step 6
+
+**Why you cannot skip this:**
+- The orchestrator runs `accept-signal-check.ps1` which looks for the artifact
+- No artifact = automatic rejection of your completion signal
+- FAILED artifact = automatic rejection of your completion signal
+- This is a structural gate, not a suggestion
+
+### 6. Signal Completion
 Edit **`completion-signal.md`** (same folder):
 - Change status to **COMPLETED**
 - List files created/modified
 - Include test results if applicable
 
-### 6. Notify
+### 7. Notify
 Say: **"ready for review"**
 
 Then STOP and wait. The orchestrator will verify your work.
@@ -74,6 +124,11 @@ All code should follow these patterns:
 ---
 
 ## Quality Gates (MANDATORY)
+
+### The Pre-Signal Check Script Enforces These Automatically
+
+All quality gates below are checked by the **pre-signal-check.ps1** script.
+You MUST run this script before signaling completion - see Step 5 above.
 
 ### Before Signaling Completion, You MUST:
 
@@ -149,6 +204,8 @@ Minimum 5 test cases covering:
 
 ## What NOT To Do
 
+❌ Do NOT skip the pre-signal-check.ps1 script - **IT CREATES A REQUIRED ARTIFACT**
+❌ Do NOT signal completion without the script showing PASSED
 ❌ Do NOT verify your own work as "complete" - that's the orchestrator's job  
 ❌ Do NOT skip TDD when it's required  
 ❌ Do NOT ask for permission or clarification - make reasonable decisions  
@@ -224,5 +281,10 @@ Do NOT stop and ask - implement your best solution.
 
 1. Open `current-task.md`
 2. Implement the task
-3. Signal completion
-4. Say "ready for review"
+3. Stage changes: `git add .`
+4. **Run pre-signal-check.ps1** (MANDATORY - creates verification artifact)
+5. If script FAILS → fix issues → run again
+6. If script PASSES → signal completion
+7. Say "ready for review"
+
+**Remember: The orchestrator WILL check for the verification artifact. No artifact = rejection.**

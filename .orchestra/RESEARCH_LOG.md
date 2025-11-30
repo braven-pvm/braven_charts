@@ -2491,3 +2491,117 @@ File lifecycle rules should be:
 3. **Discoverable** - Visible in directory tree annotations
 
 ---
+
+## Session Log: Structural Enforcement via Artifacts (2025-11-30)
+
+### The Failure Mode
+
+During Task 11 handover, the implementor agent:
+- Received comprehensive instructions including validation scripts
+- Was told to run `pre-signal-check.ps1` before signaling completion
+- Admitted when asked: "NO, I did NOT run ANY of these scripts"
+- Signaled completion without any validation
+
+**This is exactly the failure mode the orchestra system was designed to prevent.**
+
+### Why Instructions Alone Fail
+
+Instructions, documentation, and warnings are all **advisory**. An agent can:
+- Ignore them (context overload)
+- Forget them (long sessions)
+- Skip them (optimize for speed)
+- Misunderstand them (context drift)
+
+The implementor didn't maliciously skip the scripts - it just... didn't run them.
+There was no structural consequence for skipping.
+
+### The Solution: Structural Enforcement
+
+Instead of relying on instructions, create **structural gates** that cannot be bypassed:
+
+1. **Implementor's pre-signal-check.ps1 now creates an ARTIFACT**
+   - Path: `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+   - Contains: timestamp, task number, PASSED/FAILED status, check summary
+   - This is PROOF the script was run
+
+2. **Orchestrator's accept-signal-check.ps1 verifies the artifact EXISTS**
+   - Runs BEFORE reading verification yaml
+   - Checks: artifact exists, shows PASSED, not stale
+   - If no artifact: BLOCKING - cannot proceed
+   - If artifact shows FAILED: BLOCKING - implementor must fix first
+
+### Workflow Now
+
+```
+Old (Bypassable):
+  Implementor finishes → (should run script) → signals done → orchestrator verifies
+                              ↑
+                         SKIPPABLE
+
+New (Structural Gate):
+  Implementor finishes → runs pre-signal-check.ps1 → ARTIFACT CREATED → signals done
+                                                            ↓
+  Orchestrator runs accept-signal-check.ps1 → CHECKS FOR ARTIFACT → proceeds if valid
+                                                     ↓
+                                            NO ARTIFACT = BLOCKED
+```
+
+### Key Principle
+
+**Advisory systems fail. Structural gates succeed.**
+
+- "You MUST run the script" → Can be ignored
+- "Script creates artifact that gate checks for" → Cannot be bypassed
+
+This is the same principle as:
+- Airport security (structural gate) vs. "please don't bring weapons" (advisory)
+- Type systems (structural) vs. "please use correct types" (advisory)
+- Git commit hooks (structural) vs. "please run tests" (advisory)
+
+### Implementation Details
+
+**Pre-signal-check.ps1 additions:**
+```powershell
+# Create artifact directory
+$artifactDir = "$orchestraRoot/artifacts/pre-signal-checks"
+New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+
+# Write artifact file
+$artifactPath = "$artifactDir/pre-signal-check-$taskNumber.txt"
+Set-Content -Path $artifactPath -Value $artifactContent
+```
+
+**Accept-signal-check.ps1 checks:**
+```powershell
+# Check artifact exists
+if (-not (Test-Path $expectedPath)) {
+    Write-Error "BLOCKING: No artifact found"
+    exit 1
+}
+
+# Check artifact shows PASSED
+if ($content -notmatch "Status: PASSED") {
+    Write-Error "BLOCKING: Artifact shows FAILED"
+    exit 1
+}
+```
+
+### Documentation Updated
+
+1. **agent_readme.md** - Added prominent warning, made script step mandatory
+2. **readme.md** - Added accept-signal-check.ps1 to workflow, updated folder structure
+3. **scripts/README.md** - Documented both scripts with artifact details
+4. **Folder structure** - Now shows `artifacts/pre-signal-checks/` folder
+
+### Commits
+
+- (pending) Commit all structural enforcement changes
+
+### Key Insight
+
+> **Instructions tell agents what to do. Artifacts prove they did it.**
+
+If you want to ensure a step happens, don't ask for it - require proof of it.
+The orchestrator doesn't trust the implementor's word. It trusts the artifact.
+
+---

@@ -36,8 +36,9 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   │   └── check-utils.ps1 # Shared utilities
 │   └── orchestrator/
 │       ├── task-closeout-check.ps1 # ⭐ Verify previous task is closed out
+│       ├── accept-signal-check.ps1 # ⭐ Verify implementor ran pre-signal check
 │       ├── task-coverage.ps1      # SpecKit ↔ Orchestrator sync check
-│       ├── verification-audit.ps1 # Audit verification records
+│       ├── verification-audit.ps1 # Audit verification records for completeness
 │       └── handover-validate.ps1  # Validate current-task.md
 ├── handover/               # Communication channel (VISIBLE to implementor)
 │   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
@@ -48,9 +49,10 @@ might (consciously or not) optimize for passing checks rather than quality.
 │       ├── task-validator.md  # Implementor's validation rules
 │       └── scripts/           # Implementor automation scripts
 │           ├── validate-handover.ps1  # Validate task is actionable
-│           └── pre-signal-check.ps1   # Check before signaling done
-└── artifacts/              # Outputs from verification
-    └── screenshots/
+│           └── pre-signal-check.ps1   # Check before signaling done (WRITES ARTIFACT)
+└── artifacts/              # Outputs from verification and validation
+    ├── screenshots/        # Visual verification captures
+    └── pre-signal-checks/  # Verification artifacts from implementor (CHECKED BY accept-signal-check.ps1)
 ```
 
 ---
@@ -155,20 +157,42 @@ Tell implementor: **"Read `.orchestra/handover/AGENT_README.md` and complete you
 - Reads `task-context.md` (background)
 - Implements the task
 - Stages changes
+- **Runs `pre-signal-check.ps1`** (creates verification artifact)
 - Writes to `completion-signal.md`
 - Says "ready for review"
 
-### 3. Verify (Human or Verifier Agent)
+### 3. Accept Signal (MANDATORY FIRST STEP)
+
+**⛔ BEFORE reading verification/task-XXX.yaml, run:**
+
+```powershell
+.\.orchestra\scripts\orchestrator\accept-signal-check.ps1
+```
+
+This script verifies the implementor actually ran the pre-signal check:
+- ✅ Artifact exists at `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+- ✅ Artifact shows PASSED status
+- ⚠️ Artifact is not stale (>24 hours old)
+
+**IF THIS FAILS:**
+- Do NOT proceed with verification
+- Do NOT commit anything
+- Tell implementor: "Run `.orchestra/handover/.implementor/scripts/pre-signal-check.ps1` and fix all issues"
+- Wait for them to actually run it and signal again
+
+**This prevents implementors from skipping validation scripts entirely.**
+
+### 4. Verify Task
 - Read `verification/task-XXX.yaml` for this task
 - Run verification commands
 - Check adversarial conditions
 - Capture screenshots if required
 
-### 4. Decision
+### 5. Decision
 - **PASS**: Commit changes, update `progress.yaml`, feed next task
 - **FAIL**: Clear `completion-signal.md`, provide feedback, implementor retries
 
-### 5. Retrospective (After Each Task)
+### 6. Retrospective (After Each Task)
 After each task completion:
 1. Analyze what worked well and what could be improved
 2. Document findings in `RESEARCH_LOG.md` → "Per-Task Retrospectives"
