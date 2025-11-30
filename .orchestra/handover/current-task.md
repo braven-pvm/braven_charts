@@ -1,12 +1,16 @@
-# Task 13: Update Crosshair to Use Per-Axis Bounds
+# Task 14: Disable Y-Zoom and Grid Lines in Multi-Axis Mode
 
 ## Objective
 
-Update the crosshair/tracking mode to correctly convert screen Y positions to original data values using per-axis bounds instead of global Y bounds. Currently, crosshair uses global yMin/yMax for all series, which produces incorrect values when multi-axis normalization is active.
+Disable Y-axis zoom/pan and horizontal grid lines when multi-axis mode is active, while preserving X-axis zoom functionality.
 
-**Sprint**: 011-multi-axis-normalization  
-**Phase**: Interaction (Phase 6: US4)  
-**Category**: INTEGRATION - REQUIRES visual verification with screenshot
+## Context
+
+Multi-axis mode uses per-axis normalization where all series are displayed in 0-1 normalized space - zooming the Y-axis would break this normalization and grid lines become meaningless since each axis has different scales. This task builds on Task 13 (crosshair per-axis bounds) by adding zoom/pan constraints.
+
+**Phase**: Interaction
+
+**Category**: VISUAL (requires screenshot)
 
 ---
 
@@ -14,64 +18,43 @@ Update the crosshair/tracking mode to correctly convert screen Y positions to or
 
 **SpecKit Tasks Covered**:
 
-- T043 [US4] **[FR-014]** Update crosshair to use per-axis Y bounds lookup - screen Y position → per-axis data value conversion
-- T044 [US4] Update tracking mode to display all series values in tracking overlay
-- T041 [P] [US4] Widget test for crosshair values in `test/widget/multi_axis/crosshair_values_test.dart`
+- T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/chart_render_box.dart`
+- T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
+- T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active - X-axis zoom remains functional
 
-**Contract References**: N/A - no explicit contracts for crosshair
+**Contract References**:
+
+- [N/A - Feature requirements from spec, not contract-based]
 
 ---
 
-## File Operations
+## Deliverables
 
-### Files to CREATE:
-
-| Op | File | Purpose |
-|----|------|---------|
-| CREATE | `test/widget/multi_axis/crosshair_values_test.dart` | Widget tests for per-axis crosshair values |
-| CREATE | `example/lib/demos/task_013_crosshair_demo.dart` | Visual demo for crosshair verification |
-
-### Files to UPDATE:
-
-| Op | File | Changes |
-|----|------|---------|
-| UPDATE | `lib/src/rendering/chart_render_box.dart` | Update crosshair rendering to use per-axis bounds |
-| UPDATE | `lib/src/interaction/core/crosshair_tracker.dart` | Add per-axis Y conversion method |
+| Operation | File | Purpose |
+|-----------|------|---------|
+| CREATE | `test/unit/multi_axis/zoom_constraint_test.dart` | Unit tests for zoom constraint behavior |
+| CREATE | `example/lib/demos/task_014_zoom_grid_demo.dart` | Standalone demo showing disabled Y-zoom and no grid |
+| UPDATE | `lib/src/rendering/chart_render_box.dart` | Disable Y-zoom and skip horizontal grid lines in multi-axis mode |
 
 ### Integration Changes (for UPDATE files):
 
 ```dart
-// In CrosshairTracker, add a new method:
-/// Converts a data Y coordinate to screen Y coordinate for a SPECIFIC axis.
-static double dataToScreenYForAxis({
-  required double dataY,
-  required Rect chartBounds,
-  required double axisMin,  // Per-axis min, not global
-  required double axisMax,  // Per-axis max, not global
-}) {
-  // Same formula but uses axis-specific bounds
+// In ChartRenderBox, where horizontal grid lines are painted:
+// Add check: if (_hasMultipleYAxes()) skip horizontal grid lines
+
+// In wheel/scroll event handling for Y-axis:
+// Add check: if (_hasMultipleYAxes()) ignore Y-axis zoom/pan events
+// X-axis zoom/pan should REMAIN functional
+
+// Example pattern:
+void _handleWheelEvent(...) {
+  // ... existing X-axis handling ...
+  
+  // Y-axis handling - skip if multi-axis mode
+  if (!_hasMultipleYAxes()) {
+    // existing Y-axis zoom/pan logic
+  }
 }
-
-// In ChartRenderBox._paintCrosshairAndTracking, around line 4342:
-// CURRENT (WRONG):
-// final screenY = CrosshairTracker.dataToScreenY(
-//   dataY: value.y,
-//   chartBounds: _plotArea,
-//   yMin: yMin,   // <-- Global bounds (WRONG for multi-axis)
-//   yMax: yMax,
-// );
-
-// REQUIRED (CORRECT):
-// 1. Look up the axis for this series
-// 2. Get the per-axis bounds from _yAxes and normalization
-// 3. Use axis-specific bounds for conversion:
-// final axisBounds = _getAxisBoundsForSeries(value.seriesId);
-// final screenY = CrosshairTracker.dataToScreenYForAxis(
-//   dataY: value.y,
-//   chartBounds: _plotArea,
-//   axisMin: axisBounds.min,
-//   axisMax: axisBounds.max,
-// );
 ```
 
 ---
@@ -81,87 +64,61 @@ static double dataToScreenYForAxis({
 ### Dependencies (imports from completed tasks):
 
 ```dart
-// From Task 12:
-import 'package:braven_charts/src/formatting/multi_axis_value_formatter.dart';
-
-// From Task 11:
-import 'package:braven_charts/src/axis/series_axis_resolver.dart';
-
-// From Task 6:
-import 'package:braven_charts/src/rendering/multi_axis_normalizer.dart';
-
-// Existing:
-import 'package:braven_charts/src/interaction/core/crosshair_tracker.dart';
+// Already available in chart_render_box.dart:
+import 'multi_axis_normalizer.dart';
+import 'multi_axis_painter.dart';
+// Already has: _hasMultipleYAxes() method
 ```
 
 ### ⚠️ MUST USE (DO NOT DUPLICATE):
 
 | Utility | Use For | DO NOT |
 |---------|---------|--------|
-| `MultiAxisNormalizer.computeAxisBounds()` | Get per-axis min/max from series data | Recompute bounds inline |
-| `SeriesAxisResolver.resolveAxisId()` | Get axis ID for a series | Manually match series to axis |
-| `MultiAxisValueFormatter.formatWithDenormalization()` | Format values with unit | Build format strings manually |
+| `_hasMultipleYAxes()` | Check if multi-axis mode is active | Create another flag or check |
 
 ### Relevant Existing Code:
 
-- `lib/src/rendering/chart_render_box.dart` lines 4300-4380: Current crosshair rendering
-- `lib/src/interaction/core/crosshair_tracker.dart`: `dataToScreenY()` method (line ~318)
-- `test/widget/multi_axis/multi_axis_chart_test.dart`: Existing widget test patterns
+- `lib/src/rendering/chart_render_box.dart` - Main rendering logic, already has `_hasMultipleYAxes()` at line 640
+- Wheel/scroll handling is in this file
+- Grid line painting location needs to be identified (search for horizontal line drawing)
 
 ---
 
 ## TDD Requirements
 
-**Test File**: `test/widget/multi_axis/crosshair_values_test.dart`
+**Test File**: `test/unit/multi_axis/zoom_constraint_test.dart`
 
-**Test Cases to Implement FIRST** (write tests before implementation):
+**Test Cases to Implement FIRST**:
 
-1. **Crosshair shows correct value for left axis series** - Power at 250W should show "250 W" not a scaled value
-2. **Crosshair shows correct value for right axis series** - Heartrate at 150bpm should show "150 bpm" not a scaled value
-3. **Tracking mode displays all series with correct per-axis values** - Both values shown correctly
-4. **Screen Y conversion uses per-axis bounds** - Verify marker positions are correct
+1. `Y-axis zoom is disabled when multiple Y-axes configured`
+2. `X-axis zoom remains functional when multiple Y-axes configured`
+3. `Y-axis pan is disabled when multiple Y-axes configured`
+4. `X-axis pan remains functional when multiple Y-axes configured`
+5. `Single Y-axis mode allows Y-zoom and Y-pan normally`
+6. `Switching from single to multi-axis disables Y-zoom`
+7. `Grid lines are disabled in multi-axis mode`
+8. `Grid lines are enabled in single-axis mode`
 
 ### Sample Test Data
 
 ```dart
-// Two-axis test data with different scales
-final testAxes = [
+// Sample multi-axis configuration (2 axes = multi-axis mode)
+final multiAxisConfig = [
   YAxisConfig(id: 'power', position: YAxisPosition.left),
-  YAxisConfig(id: 'hr', position: YAxisPosition.right),
+  YAxisConfig(id: 'heart-rate', position: YAxisPosition.right),
 ];
 
-final testBindings = [
-  SeriesAxisBinding(seriesId: 'power-series', yAxisId: 'power'),
-  SeriesAxisBinding(seriesId: 'hr-series', yAxisId: 'hr'),
+// Sample single-axis configuration (1 axis = normal mode)
+final singleAxisConfig = [
+  YAxisConfig(id: 'default', position: YAxisPosition.left),
 ];
 
-final powerSeries = LineChartSeries(
-  id: 'power-series',
-  points: [
-    ChartDataPoint(x: 0, y: 0),
-    ChartDataPoint(x: 50, y: 250),  // 250 Watts
-    ChartDataPoint(x: 100, y: 500),
-  ],
-  color: const Color(0xFF2196F3),
-);
+// Or null for legacy mode
+final noAxesConfig = null;
 
-final hrSeries = LineChartSeries(
-  id: 'hr-series', 
-  points: [
-    ChartDataPoint(x: 0, y: 60),
-    ChartDataPoint(x: 50, y: 150),  // 150 bpm
-    ChartDataPoint(x: 100, y: 180),
-  ],
-  color: const Color(0xFFF44336),
-);
-
-// At x=50:
-// - Power series Y value = 250 (should display as "250 W" or "250")
-// - HR series Y value = 150 (should display as "150 bpm" or "150")
-// 
-// Bug scenario (current behavior):
-// If using global bounds (0-500), HR value 150 gets converted incorrectly
-// because the normalized position doesn't match HR's actual range (60-180)
+// Test that hasMultipleYAxes() returns true/false appropriately:
+expect(renderBox.hasMultipleYAxes, isTrue); // with multiAxisConfig
+expect(renderBox.hasMultipleYAxes, isFalse); // with singleAxisConfig or null
 ```
 
 ---
@@ -169,62 +126,49 @@ final hrSeries = LineChartSeries(
 ## Code Scaffolds
 
 ```dart
-// crosshair_values_test.dart scaffold
-import 'package:flutter/material.dart';
+// test/unit/multi_axis/zoom_constraint_test.dart
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/models/y_axis_position.dart';
 
 void main() {
-  group('Crosshair Per-Axis Values', () {
-    late List<YAxisConfig> testAxes;
-    late List<SeriesAxisBinding> testBindings;
-    late List<ChartSeries> testSeries;
+  group('Multi-Axis Zoom Constraints', () {
+    group('Y-axis zoom behavior', () {
+      test('Y-axis zoom is disabled when multiple Y-axes configured', () {
+        // IMPLEMENT:
+        // Setup chart with 2+ Y-axes
+        // Attempt Y-axis zoom (wheel event)
+        // Verify Y viewport unchanged
+      });
 
-    setUp(() {
-      testAxes = [
-        YAxisConfig(id: 'power', position: YAxisPosition.left),
-        YAxisConfig(id: 'hr', position: YAxisPosition.right),
-      ];
-      
-      testBindings = [
-        SeriesAxisBinding(seriesId: 'power-series', yAxisId: 'power'),
-        SeriesAxisBinding(seriesId: 'hr-series', yAxisId: 'hr'),
-      ];
-      
-      testSeries = [
-        LineChartSeries(
-          id: 'power-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 50, y: 250),
-            ChartDataPoint(x: 100, y: 500),
-          ],
-          color: const Color(0xFF2196F3),
-        ),
-        LineChartSeries(
-          id: 'hr-series',
-          points: [
-            ChartDataPoint(x: 0, y: 60),
-            ChartDataPoint(x: 50, y: 150),
-            ChartDataPoint(x: 100, y: 180),
-          ],
-          color: const Color(0xFFF44336),
-        ),
-      ];
+      test('X-axis zoom remains functional in multi-axis mode', () {
+        // IMPLEMENT:
+        // Setup chart with 2+ Y-axes
+        // Perform X-axis zoom
+        // Verify X viewport changed
+      });
+
+      test('Single Y-axis mode allows Y-zoom normally', () {
+        // IMPLEMENT:
+        // Setup chart with 1 Y-axis
+        // Perform Y-axis zoom
+        // Verify Y viewport changed
+      });
     });
 
-    testWidgets('crosshair shows correct value for left axis series', (tester) async {
-      // Implement: Create chart with multi-axis config, enable crosshair,
-      // simulate pointer at x=50, verify power value shown is 250 (not scaled)
-    });
+    group('Grid line behavior', () {
+      test('Grid lines disabled in multi-axis mode', () {
+        // IMPLEMENT:
+        // Setup chart with 2+ Y-axes
+        // Verify horizontal grid lines not painted
+      });
 
-    testWidgets('crosshair shows correct value for right axis series', (tester) async {
-      // Implement: Create chart with multi-axis config, enable crosshair,
-      // simulate pointer at x=50, verify HR value shown is 150 (not incorrectly scaled)
-    });
-
-    testWidgets('tracking mode displays all series with per-axis values', (tester) async {
-      // Implement: Verify tracking overlay shows all series with per-axis values
+      test('Grid lines enabled in single-axis mode', () {
+        // IMPLEMENT:
+        // Setup chart with 1 Y-axis
+        // Verify horizontal grid lines painted
+      });
     });
   });
 }
@@ -232,86 +176,99 @@ void main() {
 
 ---
 
-## Visual Verification (Flutter Agent)
+## Visual Verification
 
-**Task Category**: INTEGRATION
+**Task Category**: VISUAL
 
-### INTEGRATION Tasks (REQUIRE visual verification):
+### INTEGRATION / VISUAL Tasks (REQUIRE visual verification):
 
-This task modifies crosshair rendering to use per-axis bounds. Visual verification
-confirms the crosshair markers and values display correctly for multi-axis charts.
+These tasks wire components into BravenChartPlus or modify rendering. A
+STANDALONE demo is required to isolate the visual behavior being tested.
 
 #### Step 1: Create Standalone Demo File
 
-**Demo Path**: `example/lib/demos/task_013_crosshair_demo.dart`
+**Demo Path**: `example/lib/demos/task_014_zoom_grid_demo.dart`
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:braven_charts/braven_charts.dart';
 
-void main() => runApp(const Task013CrosshairDemo());
+void main() => runApp(const Task014Demo());
 
-class Task013CrosshairDemo extends StatelessWidget {
-  const Task013CrosshairDemo({super.key});
+class Task014Demo extends StatefulWidget {
+  const Task014Demo({super.key});
+
+  @override
+  State<Task014Demo> createState() => _Task014DemoState();
+}
+
+class _Task014DemoState extends State<Task014Demo> {
+  bool _multiAxisMode = true;
 
   @override
   Widget build(BuildContext context) {
-    // Two-axis data: Power (0-500W) and Heart Rate (60-180bpm)
-    final powerSeries = LineChartSeries(
-      id: 'power',
-      displayName: 'Power',
-      points: [
-        ChartDataPoint(x: 0, y: 100),
-        ChartDataPoint(x: 25, y: 200),
-        ChartDataPoint(x: 50, y: 350),
-        ChartDataPoint(x: 75, y: 250),
-        ChartDataPoint(x: 100, y: 400),
-      ],
-      color: const Color(0xFF2196F3),
-    );
-
-    final hrSeries = LineChartSeries(
-      id: 'heartrate',
-      displayName: 'Heart Rate',
-      points: [
-        ChartDataPoint(x: 0, y: 80),
-        ChartDataPoint(x: 25, y: 110),
-        ChartDataPoint(x: 50, y: 150),
-        ChartDataPoint(x: 75, y: 140),
-        ChartDataPoint(x: 100, y: 165),
-      ],
-      color: const Color(0xFFF44336),
-    );
-
     return MaterialApp(
-      title: 'Task 13: Crosshair Per-Axis Demo',
       home: Scaffold(
-        appBar: AppBar(title: const Text('Crosshair Per-Axis Values')),
-        body: Center(
-          child: Container(
-            width: 800,
-            height: 600,
-            padding: const EdgeInsets.all(20),
-            child: BravenChartPlus(
-              series: [powerSeries, hrSeries],
-              yAxes: [
-                YAxisConfig(id: 'power', position: YAxisPosition.left),
-                YAxisConfig(id: 'heartrate', position: YAxisPosition.right),
-              ],
-              axisBindings: [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
-                SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'heartrate'),
-              ],
-              normalizationMode: NormalizationMode.perSeries,
-              interactionConfig: InteractionConfig(
-                crosshairConfig: CrosshairConfig(
-                  enabled: true,
-                  mode: CrosshairMode.both,
-                  showTrackingTooltip: true,
-                  showIntersectionMarkers: true,
-                ),
+        appBar: AppBar(
+          title: const Text('Task 014: Y-Zoom & Grid Constraints'),
+          actions: [
+            Switch(
+              value: _multiAxisMode,
+              onChanged: (v) => setState(() => _multiAxisMode = v),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(_multiAxisMode ? 'Multi-Axis' : 'Single-Axis'),
               ),
             ),
+          ],
+        ),
+        body: Center(
+          child: SizedBox(
+            width: 800,
+            height: 600,
+            child: BravenChartPlus(
+              series: [
+                ChartSeries(
+                  id: 'power',
+                  points: List.generate(50, (i) => 
+                    ChartDataPoint(x: i.toDouble(), y: 200 + 50 * (i % 10).toDouble())),
+                  color: Colors.blue,
+                ),
+                ChartSeries(
+                  id: 'heart-rate',
+                  points: List.generate(50, (i) => 
+                    ChartDataPoint(x: i.toDouble(), y: 120 + 30 * ((i + 5) % 10).toDouble())),
+                  color: Colors.red,
+                ),
+              ],
+              yAxes: _multiAxisMode
+                  ? [
+                      YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power (W)'),
+                      YAxisConfig(id: 'heart-rate', position: YAxisPosition.right, label: 'HR (bpm)'),
+                    ]
+                  : [
+                      YAxisConfig(id: 'default', position: YAxisPosition.left),
+                    ],
+              axisBindings: _multiAxisMode
+                  ? [
+                      SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
+                      SeriesAxisBinding(seriesId: 'heart-rate', yAxisId: 'heart-rate'),
+                    ]
+                  : [],
+              // Add interaction config if needed to test zoom behavior
+            ),
+          ),
+        ),
+        bottomSheet: Container(
+          color: Colors.grey[200],
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            _multiAxisMode
+                ? '✓ Multi-axis mode: No horizontal grid lines, Y-zoom disabled, X-zoom works'
+                : '✓ Single-axis mode: Grid lines visible, both X and Y zoom work',
+            style: const TextStyle(fontSize: 14),
           ),
         ),
       ),
@@ -326,7 +283,7 @@ class Task013CrosshairDemo extends StatelessWidget {
 
 ```powershell
 Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
-  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_013_crosshair_demo.dart -d chrome"
+  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_014_zoom_grid_demo.dart -d chrome"
 ```
 
 2. **Wait for app to be ready**:
@@ -336,10 +293,10 @@ cd "e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example"
 python ..\tools\flutter_agent\flutter_agent.py wait --timeout 30
 ```
 
-3. **Take screenshot** (move mouse to ~center of chart first):
+3. **Take screenshot**:
 
 ```powershell
-python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-013-crosshair.png
+python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-014-multi-axis-constraints.png
 ```
 
 4. **Stop when done**:
@@ -350,48 +307,59 @@ python ..\tools\flutter_agent\flutter_agent.py stop
 
 **Expected Visual Output**:
 
-- Two data series visible (blue Power, red Heart Rate)
-- Left Y-axis: Power scale (0-500 range, BLUE)
-- Right Y-axis: Heart Rate scale (60-180 range, RED)
-- Crosshair tooltip shows ORIGINAL values:
-  - Power: ~350 W (not a normalized/scaled value)
-  - Heart Rate: ~150 bpm (not a normalized/scaled value)
-- Intersection markers on BOTH lines at their correct Y positions
+- **Multi-axis mode ON**:
+  - Two Y-axes visible (left: Power, right: HR)
+  - NO horizontal grid lines
+  - Mouse wheel Y-scroll has no effect
+  - Mouse wheel X-scroll (with Shift or horizontal scroll) still works
+  
+- **Multi-axis mode OFF** (toggle switch):
+  - Single Y-axis visible
+  - Horizontal grid lines VISIBLE
+  - Both X and Y zoom work normally
 
 ---
 
-## Acceptance Criteria
+## Quality Gates
 
-- [ ] Widget test `test/widget/multi_axis/crosshair_values_test.dart` created and passes
-- [ ] Crosshair uses per-axis bounds via SeriesAxisResolver (not global yMin/yMax)
-- [ ] Power values display correctly (e.g., "250 W" not scaled)
-- [ ] Heart rate values display correctly (e.g., "150 bpm" not scaled)
-- [ ] Intersection markers positioned at correct per-axis Y positions
-- [ ] Demo `example/lib/demos/task_013_crosshair_demo.dart` works visually
-- [ ] Screenshot captured via flutter_agent.py shows correct crosshair behavior
-- [ ] Zero lint issues on modified files
-- [ ] All sprint tests continue to pass (baseline: 237 unit + 13 widget)
+### 🚫 YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE
 
----
+**If you CREATE or MODIFY a file, ALL analyzer issues in that file are YOUR responsibility.**
 
-## Quality Gates (MANDATORY)
+- ❌ "Pre-existing issues" - **NOT AN EXCUSE**
+- ❌ "The warning was already there" - **NOT AN EXCUSE**
+- ❌ "I only changed a few lines" - **NOT AN EXCUSE**
+
+You MUST fix ALL issues (errors, warnings, AND infos) before signaling completion.
+Your completion signal WILL BE REJECTED if any issues remain.
 
 ### Linting - Zero Issues
 
 ```bash
 flutter analyze lib/src/rendering/chart_render_box.dart
-flutter analyze lib/src/interaction/core/crosshair_tracker.dart
-flutter analyze test/widget/multi_axis/crosshair_values_test.dart
+flutter analyze test/unit/multi_axis/zoom_constraint_test.dart
+flutter analyze example/lib/demos/task_014_zoom_grid_demo.dart
 ```
 
 ### All Sprint Tests Must Pass
 
 ```bash
 flutter test test/unit/multi_axis/
-flutter test test/widget/multi_axis/
 ```
 
-**Current Test Baseline**: 237 unit tests + 13 widget tests (MUST NOT decrease!)
+**Current Test Baseline**: 237 tests (MUST NOT decrease!)
+
+---
+
+## Acceptance Criteria
+
+- [ ] Y-axis zoom/pan is disabled when multi-axis mode active (2+ Y-axes)
+- [ ] X-axis zoom/pan remains functional in multi-axis mode
+- [ ] Horizontal grid lines are not drawn when multi-axis mode active
+- [ ] Single-axis mode (1 Y-axis) works exactly as before (grid + Y-zoom)
+- [ ] All tests pass (baseline: 237 + new tests)
+- [ ] All touched files pass `flutter analyze` with zero issues
+- [ ] Screenshot captured showing both modes
 
 ---
 
@@ -401,9 +369,9 @@ When done:
 
 1. **Verify linting is clean** (BLOCKING)
 2. **Verify ALL tests pass** (BLOCKING)
-3. **Visual verification completed via flutter_agent.py** (BLOCKING for integration task)
+3. **Visual verification completed** (screenshot captured)
 4. Stage your changes: `git add .`
-5. Run pre-signal check: `.\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1`
+5. Run: `.orchestra/handover/.implementor/scripts/pre-signal-check.ps1`
 6. Write to `.orchestra/handover/completion-signal.md`:
    - Files created/modified
    - Number of tests added
