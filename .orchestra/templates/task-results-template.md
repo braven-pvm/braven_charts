@@ -7,17 +7,17 @@
 
 ## Verification Checks
 
-| Check | Result | Notes |
-|-------|--------|-------|
-| Analyzer: [file1] | ✅/❌ | [No issues / X issues] |
-| Analyzer: [file2] | ✅/❌ | [No issues / X issues] |
-| Sprint unit tests | ✅/❌ | [X/Y passed] |
-| Widget tests | ✅/❌ | [X/Y passed] |
-| Total tests | ✅/❌ | [X passed] |
-| Test file created | ✅/❌/N/A | [filename or N/A] |
-| Demo file created | ✅/❌/N/A | [filename or N/A] |
-| Screenshot captured | ✅/❌/N/A | [filename or N/A] |
-| [Custom check] | ✅/❌ | [Notes] |
+| Check               | Result    | Notes                  |
+| ------------------- | --------- | ---------------------- |
+| Analyzer: [file1]   | ✅/❌     | [No issues / X issues] |
+| Analyzer: [file2]   | ✅/❌     | [No issues / X issues] |
+| Sprint unit tests   | ✅/❌     | [X/Y passed]           |
+| Widget tests        | ✅/❌     | [X/Y passed]           |
+| Total tests         | ✅/❌     | [X passed]             |
+| Test file created   | ✅/❌/N/A | [filename or N/A]      |
+| Demo file created   | ✅/❌/N/A | [filename or N/A]      |
+| Screenshot captured | ✅/❌/N/A | [filename or N/A]      |
+| [Custom check]      | ✅/❌     | [Notes]                |
 
 ## Rejection History (if any)
 
@@ -34,9 +34,11 @@
 ## Files Delivered
 
 ### Created
+
 - `path/to/new/file.dart` ([description])
 
-### Modified  
+### Modified
+
 - `path/to/modified/file.dart` - [what changed]
 
 ## Verification Outcome
