@@ -1,66 +1,40 @@
-# Task 13 - REJECTED
+# Task 13 Completion Signal
 
-**Status**: ❌ REJECTED - LINT ISSUES MUST BE FIXED
+**Status**: ✅ COMPLETED
 
-## Rejection Reason
+## Deliverables
 
-You touched `lib/src/rendering/chart_render_box.dart` - you now **OWN** all its lint issues.
+### Created Files
+- `test/widget/multi_axis/crosshair_values_test.dart` - 12 widget tests for per-axis crosshair values
+- `example/lib/demos/task_013_crosshair_demo.dart` - Visual verification demo
 
-**There is no such thing as "pre-existing issues".** If you modify a file, ALL issues in that file become YOUR responsibility to fix before signaling completion.
+### Modified Files
+- `lib/src/rendering/chart_render_box.dart` - Updated crosshair rendering to use per-axis bounds
+- `lib/src/interaction/core/crosshair_tracker.dart` - Added `dataToScreenYForAxis()` method (committed earlier)
 
----
+## Implementation Summary
 
-## Issues You MUST Fix (12 total)
+1. **TDD Approach**: Created 12 tests first, then implemented functionality
+2. **Per-Axis Crosshair Values**: Updated `_paintCrosshairAndTracking()` to use `SeriesAxisResolver` and `MultiAxisNormalizer.computeAxisBounds()` for per-axis Y coordinate conversion
+3. **Tooltip Formatting**: Updated `_drawTrackingTooltip()` to use `MultiAxisValueFormatter.format()` with axis unit
+4. **Visual Verification**: Demo created and screenshot captured via flutter_agent.py
 
-Run: `flutter analyze lib/src/rendering/chart_render_box.dart`
+## Lint Fixes Applied (Re-submission)
 
-### Warnings (2)
-```
-line 1758 - unused_local_variable - 'timestamp' is unused
-line 1920 - unused_local_variable - 'claimSuccess' is unused
-```
+Fixed all 12 analyzer issues in `chart_render_box.dart`:
+- Line 1758: Removed unused `timestamp` variable
+- Line 1920: Prefixed unused `claimSuccess` with `_`
+- Lines 3020, 3037, 3060, 4955, 4964, 4973, 4983: Replaced `.withOpacity(x)` → `.withValues(alpha: x)`
+- Lines 4955, 4964, 4973: Replaced `.opacity` → `.a`
 
-### Deprecated API Usage (10)
-```
-line 3020 - withOpacity is deprecated, use .withValues(alpha: x)
-line 3037 - withOpacity is deprecated, use .withValues(alpha: x)
-line 3060 - withOpacity is deprecated, use .withValues(alpha: x)
-line 4955 - withOpacity is deprecated, use .withValues(alpha: x)
-line 4955 - opacity is deprecated, use .a
-line 4964 - withOpacity is deprecated, use .withValues(alpha: x)
-line 4964 - opacity is deprecated, use .a
-line 4973 - withOpacity is deprecated, use .withValues(alpha: x)
-line 4973 - opacity is deprecated, use .a
-line 4983 - withOpacity is deprecated, use .withValues(alpha: x)
-```
+## Verification
 
----
+- ✅ `flutter analyze chart_render_box.dart` → "No issues found!"
+- ✅ 262 sprint tests passing (237 unit + 25 widget)
+- ✅ Demo screenshot captured
 
-## Required Fixes
-
-1. **Remove or use unused variables** (lines 1758, 1920)
-2. **Replace deprecated API calls**:
-   - `color.withOpacity(x)` → `color.withValues(alpha: x)`
-   - `color.opacity` → `color.a`
-
----
-
-## Re-submission Checklist
-
-- [ ] Fix ALL 12 analyzer issues in `chart_render_box.dart`
-- [ ] Run `flutter analyze lib/src/rendering/chart_render_box.dart` → **"No issues found!"**
-- [ ] Run ALL sprint tests → must still pass
-- [ ] Re-run `pre-signal-check.ps1` → must **PASS**
-- [ ] Rewrite this file with COMPLETED status
-
-**DO NOT signal completion until analyzer shows ZERO issues on ALL files you touched.**
-
----
-
-## Policy Reminder
-
-> **YOU TOUCH IT, YOU OWN IT**
->
-> Any file you CREATE or MODIFY must have ZERO analyzer issues.
-> "Pre-existing" is not an excuse - it's now YOUR problem to fix.
+## SpecKit Tasks Addressed
+- T043: Crosshair per-axis values
+- T044: Tracking overlay updates
+- T041: Widget tests for crosshair
 

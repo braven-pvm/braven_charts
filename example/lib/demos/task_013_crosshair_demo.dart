@@ -11,8 +11,8 @@
 // - Tooltip shows original values (e.g., "Power: 350 W", "Heart Rate: 150 bpm")
 // - NOT normalized/scaled values
 
-import 'package:flutter/material.dart';
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/material.dart';
 
 void main() => runApp(const Task013CrosshairDemo());
 
