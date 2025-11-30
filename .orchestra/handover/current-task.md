@@ -1,4 +1,4 @@
-# Task: Expose Multi-Axis API on BravenChartPlus
+# Task 15: Expose Multi-Axis API on BravenChartPlus
 
 ## Objective
 
@@ -31,20 +31,15 @@ Add `yAxisId` and `unit` fields to the `ChartSeries` model hierarchy to enable d
 
 ## Deliverables
 
-### Files to CREATE:
+### File Operations
 
-| File | Purpose | Export To |
-| ---- | ------- | --------- |
-| `test/unit/multi_axis/chart_series_axis_fields_test.dart` | Tests for yAxisId and unit fields | N/A |
-| `test/widget/multi_axis/api_validation_test.dart` | Widget tests for axis validation | N/A |
-| `example/lib/demos/task_015_api_demo.dart` | Demo showing series with yAxisId | N/A |
-
-### Files to MODIFY:
-
-| File | Changes |
-| ---- | ------- |
-| `lib/src/models/chart_series.dart` | Add `yAxisId` and `unit` to base class and all subclasses |
-| `lib/src/braven_chart_plus.dart` | Add validation for max 4 axes and unique positions |
+| Operation | File | Purpose |
+| --------- | ---- | ------- |
+| CREATE | `test/unit/multi_axis/chart_series_axis_fields_test.dart` | Tests for yAxisId and unit fields |
+| CREATE | `test/widget/multi_axis/api_validation_test.dart` | Widget tests for axis validation |
+| CREATE | `example/lib/demos/task_015_api_demo.dart` | Demo showing series with yAxisId |
+| UPDATE | `lib/src/models/chart_series.dart` | Add `yAxisId` and `unit` to base class and all subclasses |
+| UPDATE | `lib/src/braven_chart_plus.dart` | Add validation for max 4 axes and unique positions |
 
 ### Integration Changes (for UPDATE files):
 
