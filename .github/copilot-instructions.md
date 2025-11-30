@@ -170,4 +170,88 @@ See comprehensive guides:
 - `.github/TERMINAL_QUICK_REFERENCE.md` - Quick reference card
 - `.github/SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` - System prompt additions
 
+---
+
+## ⛔ VISUAL VERIFICATION: flutter_agent.py ONLY (CRITICAL)
+
+### 🚫 ABSOLUTE PROHIBITIONS FOR VISUAL/SCREENSHOT VERIFICATION
+
+**NEVER use these for visual verification:**
+- ❌ `flutter run` directly in any terminal
+- ❌ `terminal-tools_sendCommand` with `flutter run`
+- ❌ `run_in_terminal` with `flutter run`
+- ❌ Chrome DevTools MCP tools for screenshots
+- ❌ Background processes (`isBackground: true`)
+
+**WHY THESE FAIL:**
+- AI agents CANNOT see terminal visual output
+- AI agents CANNOT interact with Chrome windows spawned by `flutter run`
+- Chrome DevTools MCP requires a running Chrome instance we can connect to
+- Background processes orphan the Flutter app with no way to stop it
+
+### ✅ MANDATORY: Use flutter_agent.py for ALL Visual Verification
+
+The ONLY approved method for running Flutter apps and taking screenshots:
+
+```powershell
+# Location: tools/flutter_agent/flutter_agent.py
+
+# 1. START app in SEPARATE PowerShell window (CRITICAL!)
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
+  "cd 'E:\path\to\project\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_NNN_demo.dart -d chrome"
+
+# 2. WAIT for app ready (in agent terminal)
+python tools/flutter_agent/flutter_agent.py wait --timeout 60
+
+# 3. TAKE SCREENSHOT
+python tools/flutter_agent/flutter_agent.py screenshot --output screenshots/task_NNN_verification.png
+
+# 4. VERIFY screenshot exists
+Test-Path screenshots/task_NNN_verification.png
+
+# 5. STOP app when done
+python tools/flutter_agent/flutter_agent.py stop
+```
+
+### flutter_agent.py Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `run <target> -d <device>` | Start Flutter app |
+| `wait --timeout <secs>` | Wait for app ready |
+| `screenshot --output <path>` | Capture screenshot |
+| `reload` | Hot reload |
+| `restart` | Hot restart |
+| `stop` | Stop the app |
+| `status` | Check app status |
+
+### Key Differences: Terminal vs flutter_agent.py
+
+| Aspect | Terminal Commands | flutter_agent.py |
+|--------|-------------------|------------------|
+| **Use For** | Tests, builds, git, pub | Visual verification, screenshots |
+| **Can See Output?** | No (text only) | Yes (via screenshot) |
+| **Screenshot?** | ❌ Impossible | ✅ Built-in |
+| **Stop App?** | Unreliable | ✅ `stop` command |
+| **Hot Reload?** | Problematic | ✅ `reload` command |
+
+### Pre-Visual-Verification Checklist
+
+Before ANY visual verification:
+
+1. ✅ Am I using `flutter_agent.py`? (NOT terminal commands)
+2. ✅ Am I starting in a SEPARATE window via `Start-Process`?
+3. ✅ Did I wait for the app to be ready?
+4. ✅ Did I take a screenshot?
+5. ✅ Did I verify the screenshot file exists?
+6. ✅ Did I stop the app when done?
+
+### Common Mistakes to AVOID for Visual Verification
+
+❌ `flutter run -d chrome` in terminal - Agent cannot see output
+❌ `isBackground: true` with flutter run - Orphans the process
+❌ Chrome DevTools MCP screenshot - Cannot connect to our Chrome
+❌ Skipping screenshot and claiming "it works" - UNVERIFIABLE
+✅ `Start-Process ... flutter_agent.py run ...` - CORRECT
+
 <!-- MANUAL ADDITIONS END -->
