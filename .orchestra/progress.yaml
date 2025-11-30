@@ -174,24 +174,50 @@ task_history:
       - Widget tests: 13/13 passing
       - Integration tests: 9/9 passing
 
+  - task_id: 12
+    title: "Update Tooltip to Show Original Values"
+    status: "completed"
+    started: "2025-11-30"
+    completed: "2025-11-30"
+    commit: "pending"
+    attempts: 1
+    verification_notes: |
+      All checks passed.
+      SpecKit tasks covered: T023, T042, T045, T040
+      
+      Deliverables:
+      - lib/src/formatting/multi_axis_value_formatter.dart (NEW - value formatting)
+      - test/unit/multi_axis/value_formatter_test.dart (27 tests)
+      - example/lib/demos/task_012_tooltip_demo.dart (demo)
+      - lib/src/rendering/chart_render_box.dart (UPDATED - uses formatter)
+      - lib/braven_charts.dart (UPDATED - export added)
+      
+      Test verification: PASSED
+      - Value formatter tests: 27/27 passing
+      - Sprint unit tests: 237/237 passing
+      
+      Code quality: No analyzer issues
+
 verification_stats:
-  tasks_attempted: 11
-  tasks_passed: 11
+  tasks_attempted: 12
+  tasks_passed: 12
   tasks_failed: 0
   tasks_reworked: 1
 
 notes: |
-  Tasks 1-11 COMPLETE
+  Tasks 1-12 COMPLETE
   
   Task 9 rework: Fixed to use MultiAxisNormalizer.normalize()
   Task 10: Color resolution from bound series working
   Task 11: Widget integration complete, visual verification skipped
+  Task 12: Value formatter for tooltips - 27 new tests
   
   Process improvements:
   - Severity system (immutable during verification)
   - MUST USE section in handover
   - flutter_agent.py ONLY for visual verification (Chrome DevTools deprecated)
   - Documentation updated to mandate flutter_agent.py
+  - Implementor scripts fixed (regex patterns)
   
-  Sprint progress: 11/16 tasks complete (68.75%)
-  Test count: 210 unit tests + 13 widget tests
+  Sprint progress: 12/16 tasks complete (75%)
+  Test count: 237 unit tests + 13 widget tests

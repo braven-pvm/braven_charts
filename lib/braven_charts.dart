@@ -12,6 +12,8 @@ export 'src/braven_chart_plus.dart';
 // Controllers
 export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
+// Formatting
+export 'src/formatting/multi_axis_value_formatter.dart';
 // Layout
 export 'src/layout/axis_layout_manager.dart';
 export 'src/layout/multi_axis_layout.dart';

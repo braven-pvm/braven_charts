@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../src/formatting/multi_axis_value_formatter.dart';
 import '../foundation/data_models/chart_data_point.dart';
 import 'models/tooltip_config.dart';
 
@@ -267,6 +268,9 @@ class TooltipProvider implements ITooltipProvider {
     String seriesId,
     TooltipStyle style,
   ) {
+    // Format Y value using MultiAxisValueFormatter for consistent formatting (T042)
+    final formattedY = MultiAxisValueFormatter.format(value: point.y);
+
     return Container(
       padding: EdgeInsets.all(style.padding),
       decoration: BoxDecoration(
@@ -298,17 +302,17 @@ class TooltipProvider implements ITooltipProvider {
             ),
           ),
           const SizedBox(height: 4),
-          // X value
+          // X value - use formatter for consistent precision
           Text(
-            'X: ${point.x.toStringAsFixed(2)}',
+            'X: ${MultiAxisValueFormatter.format(value: point.x)}',
             style: TextStyle(
               color: style.textColor,
               fontSize: style.fontSize,
             ),
           ),
-          // Y value
+          // Y value - formatted with MultiAxisValueFormatter
           Text(
-            'Y: ${point.y.toStringAsFixed(2)}',
+            'Y: $formattedY',
             style: TextStyle(
               color: style.textColor,
               fontSize: style.fontSize,
@@ -357,10 +361,10 @@ class TooltipProvider implements ITooltipProvider {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // X coordinate (common for all points)
+          // X coordinate (common for all points) - formatted with MultiAxisValueFormatter
           if (points.isNotEmpty)
             Text(
-              'X: ${points.first.x.toStringAsFixed(2)}',
+              'X: ${MultiAxisValueFormatter.format(value: points.first.x)}',
               style: TextStyle(
                 color: style.textColor,
                 fontSize: style.fontSize,
@@ -368,7 +372,7 @@ class TooltipProvider implements ITooltipProvider {
               ),
             ),
           const SizedBox(height: 4),
-          // Each series
+          // Each series - Y values formatted with MultiAxisValueFormatter (T042)
           for (var i = 0; i < points.length; i++) ...[
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -381,9 +385,9 @@ class TooltipProvider implements ITooltipProvider {
                     fontSize: style.fontSize,
                   ),
                 ),
-                // Y value
+                // Y value - formatted with MultiAxisValueFormatter
                 Text(
-                  points[i].y.toStringAsFixed(2),
+                  MultiAxisValueFormatter.format(value: points[i].y),
                   style: TextStyle(
                     color: style.textColor,
                     fontSize: style.fontSize,
@@ -410,9 +414,7 @@ class TooltipProvider implements ITooltipProvider {
 
     // Update if point changed
     if (oldPoint != null && newPoint != null) {
-      return oldPoint.x != newPoint.x ||
-          oldPoint.y != newPoint.y ||
-          oldPoint.label != newPoint.label;
+      return oldPoint.x != newPoint.x || oldPoint.y != newPoint.y || oldPoint.label != newPoint.label;
     }
 
     return false;
