@@ -143,7 +143,8 @@ phases:
         
       - id: 13
         title: "Update Crosshair to Use Per-Axis Bounds"
-        status: "pending"
+        status: "completed"
+        commit: "d455c67"
         speckit_tasks: ["T043", "T044", "T041"]
         consolidation_rationale: "Crosshair handler + tracking overlay (US4)"
         category: "integration"  # INFRASTRUCTURE/INTEGRATION/VISUAL - determines screenshot req
@@ -177,7 +178,7 @@ phases:
         notes: "Final validation - all features working together. T009 creates test/golden/multi_axis/, T016/T017/T033 are golden tests"
         category: "visual"  # INFRASTRUCTURE/INTEGRATION/VISUAL - determines screenshot req
 
-current_task: 13
+current_task: 14
 current_phase: "interaction"
 
 # Coverage summary (update after each task)
@@ -186,8 +187,8 @@ current_phase: "interaction"
 speckit_coverage:
   total_tasks: 53
   mapped_tasks: 53
-  completed_tasks: 23
-  remaining_tasks: 30
+  completed_tasks: 26
+  remaining_tasks: 27
   coverage_percent: 100
   notes: |
     All SpecKit tasks are now mapped to orchestrator tasks:

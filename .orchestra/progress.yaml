@@ -4,9 +4,9 @@
 sprint: "011-multi-axis-normalization"
 started: "2025-11-28"
 status: "in_progress"
-note: "Task 11 COMPLETE. Task 12 handover pending."
+note: "Task 13 COMPLETE. Task 14 next."
 
-current_task_id: 13
+current_task_id: 14
 current_phase: "interaction"
 
 phase_completions:
@@ -198,19 +198,54 @@ task_history:
       
       Code quality: No analyzer issues
 
+  - task_id: 13
+    title: "Update Crosshair to Use Per-Axis Bounds"
+    status: "completed"
+    started: "2025-11-30"
+    completed: "2025-11-30"
+    commit: "d455c67"
+    attempts: 2
+    verification_notes: |
+      ATTEMPT 1: REJECTED
+      - 12 analyzer issues in chart_render_box.dart (pre-existing)
+      - Policy enforced: YOU TOUCH IT, YOU OWN IT
+      - Implementor required to fix all lint issues
+      
+      ATTEMPT 2: PASSED
+      - Fixed unused variables (timestamp, claimSuccess)
+      - Fixed deprecated withOpacity -> withValues(alpha:)
+      - Fixed deprecated .opacity -> .a
+      
+      SpecKit tasks covered: T043, T044, T041
+      
+      Deliverables:
+      - lib/src/interaction/core/crosshair_tracker.dart (UPDATED - dataToScreenYForAxis)
+      - lib/src/rendering/chart_render_box.dart (UPDATED - per-axis bounds + lint fixes)
+      - test/widget/multi_axis/crosshair_values_test.dart (NEW - 12 tests)
+      - example/lib/demos/task_013_crosshair_demo.dart (NEW - demo)
+      - screenshots/task-013-crosshair.png (screenshot)
+      
+      Test verification: PASSED
+      - Widget tests: 12 new, 25 total
+      - Sprint tests: 262/262 passing
+      
+      Code quality: CLEAN - No analyzer issues
+      Visual verification: PASSED via flutter_agent.py
+
 verification_stats:
-  tasks_attempted: 12
-  tasks_passed: 12
+  tasks_attempted: 13
+  tasks_passed: 13
   tasks_failed: 0
-  tasks_reworked: 1
+  tasks_reworked: 2
 
 notes: |
-  Tasks 1-12 COMPLETE
+  Tasks 1-13 COMPLETE
   
   Task 9 rework: Fixed to use MultiAxisNormalizer.normalize()
   Task 10: Color resolution from bound series working
   Task 11: Widget integration complete, visual verification skipped
   Task 12: Value formatter for tooltips - 27 new tests
+  Task 13: Crosshair per-axis bounds - 12 widget tests, lint fixes enforced
   
   Process improvements:
   - Severity system (immutable during verification)
@@ -218,6 +253,7 @@ notes: |
   - flutter_agent.py ONLY for visual verification (Chrome DevTools deprecated)
   - Documentation updated to mandate flutter_agent.py
   - Implementor scripts fixed (regex patterns)
+  - YOU TOUCH IT, YOU OWN IT policy added (no pre-existing excuses)
   
-  Sprint progress: 12/16 tasks complete (75%)
-  Test count: 237 unit tests + 13 widget tests
+  Sprint progress: 13/16 tasks complete (81%)
+  Test count: 237 unit tests + 25 widget tests = 262 total
