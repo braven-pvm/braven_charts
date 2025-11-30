@@ -2,14 +2,15 @@
 
 ## Sprint Progress
 
-**Phase**: Interaction (Tasks 12-14)  
-**Status**: Task 11 complete, preparing Task 12
+**Phase**: Integration (Tasks 15-16)  
+**Status**: Task 14 complete, preparing Task 15
 
 ### Completed Phases
 - ✅ **Foundation** (Tasks 1-5): Models, enums, configs
 - ✅ **Core Logic** (Tasks 6-8): Normalizers, auto-detection
 - ✅ **Rendering** (Tasks 9-11): Painters, widget integration
-- 🔄 **Interaction** (Tasks 12-14): Tooltips, crosshair, constraints
+- ✅ **Interaction** (Tasks 12-14): Tooltips, crosshair, constraints
+- 🔄 **Integration** (Tasks 15-16): Final API exposure, demo
 
 ---
 
@@ -21,7 +22,7 @@ A multi-axis normalization feature for BravenChartPlus that allows displaying mu
 
 ---
 
-## Current Codebase State (After Task 11)
+## Current Codebase State (After Task 14)
 
 ### New Files Created This Sprint
 
@@ -36,17 +37,18 @@ lib/src/
 │   ├── series_axis_binding.dart   ✅ Task 3 - Series-to-axis binding
 │   ├── normalization_mode.dart    ✅ Task 4 - Mode enum
 │   └── multi_axis_config.dart     ✅ Task 5 - Container for all config
+├── formatting/
+│   └── multi_axis_value_formatter.dart ✅ Task 12 - Value formatting
 └── rendering/
     ├── multi_axis_painter.dart    ✅ Task 9 - Axis painter
     ├── multi_axis_normalizer.dart ✅ Task 6 - Normalization logic
     └── axis_color_resolver.dart   ✅ Task 10 - Color from series
 
-test/unit/multi_axis/           (210 tests)
-test/widget/multi_axis/         (13 tests) ✅ Task 11
-test/integration/               (9 multi-axis tests)
+test/unit/multi_axis/           (245 tests)
+test/widget/multi_axis/         (25 tests)
 ```
 
-**Total tests**: 210 unit + 13 widget + 9 integration = 232
+**Total tests**: 245 unit + 25 widget = 270
 
 ---
 
@@ -62,7 +64,7 @@ final config = MultiAxisConfig(
 );
 ```
 
-### MultiAxisNormalizer (Task 9)
+### MultiAxisNormalizer (Task 6)
 Facade for all normalization logic:
 ```dart
 final normalizer = MultiAxisNormalizer(config);
@@ -84,21 +86,20 @@ final color = resolver.resolveColor(axisId, seriesMap);
 // Returns first bound series' color, or default
 ```
 
+### MultiAxisValueFormatter (Task 12)
+Formats values for tooltips:
+```dart
+final formatted = MultiAxisValueFormatter.format(value, decimals: 2, unit: 'W');
+```
+
 ---
 
 ## Existing Widget: BravenChartPlus
 
-**Location**: `lib/src/braven_chart_plus.dart` (2475 lines)
+**Location**: `lib/src/braven_chart_plus.dart` (~2500 lines)
 
 ### Current State
-The widget already has some multi-axis awareness:
-```dart
-// Existing fields (from prior work)
-final bool _normalizationNeeded;
-final Map<String, YRange> _seriesYRanges;
-```
-
-### What's Available Now (Task 11 added)
+The widget has multi-axis parameters already:
 ```dart
 // Widget parameters now available:
 BravenChartPlus(
@@ -109,12 +110,27 @@ BravenChartPlus(
 );
 ```
 
+### Task 14 Additions
+- Y-zoom disabled when multi-axis mode active (FR-013)
+- Y-pan disabled when multi-axis mode active
+- Grid lines already disabled (via MultiAxisPainter path)
+
 ### SeriesAxisResolver (Task 11)
 Resolves which axis a series should use:
 ```dart
 final axisId = SeriesAxisResolver.resolveAxisId(seriesId, bindings, axes);
 final axis = SeriesAxisResolver.resolveAxis(seriesId, bindings, axes);
 ```
+
+---
+
+## ChartSeries Model
+
+**Location**: `lib/src/models/chart_series.dart`
+
+**Current state**: Base class and subclasses (LineChartSeries, AreaChartSeries, BarChartSeries, ScatterChartSeries)
+
+**Task 15 will add**: `yAxisId` and `unit` fields to enable direct axis binding on series
 
 ---
 
@@ -135,6 +151,11 @@ All normalization goes through `MultiAxisNormalizer.normalize()` - never inline 
 
 ### Color Resolution
 Axis colors derive from their bound series via `AxisColorResolver`.
+
+### Multi-Axis Constraints (Task 14)
+- `_hasMultipleYAxes()` method checks for multi-axis mode
+- Y-zoom preserves original Y bounds after scroll zoom
+- Y-pan delta zeroed in `_clampPanDelta()`
 
 ---
 

@@ -1,16 +1,16 @@
-# Task 14: Disable Y-Zoom and Grid Lines in Multi-Axis Mode
+# Task: Expose Multi-Axis API on BravenChartPlus
 
 ## Objective
 
-Disable Y-axis zoom/pan and horizontal grid lines when multi-axis mode is active, while preserving X-axis zoom functionality.
+Add `yAxisId` and `unit` fields to the `ChartSeries` model hierarchy to enable direct axis binding on series, and implement validation to prevent invalid multi-axis configurations (max 4 axes, unique positions).
 
-## Context
+**Phase**: Integration (API Exposure)
 
-Multi-axis mode uses per-axis normalization where all series are displayed in 0-1 normalized space - zooming the Y-axis would break this normalization and grid lines become meaningless since each axis has different scales. This task builds on Task 13 (crosshair per-axis bounds) by adding zoom/pan constraints.
+**Category**: INTEGRATION
 
-**Phase**: Interaction
-
-**Category**: VISUAL (requires screenshot)
+- INFRASTRUCTURE: Creates classes/logic NOT yet wired into main widget (no screenshot)
+- **INTEGRATION**: Wires components INTO BravenChartPlus (REQUIRES screenshot) ← THIS TASK
+- VISUAL: Modifies rendering output (REQUIRES screenshot)
 
 ---
 
@@ -18,42 +18,87 @@ Multi-axis mode uses per-axis normalization where all series are displayed in 0-
 
 **SpecKit Tasks Covered**:
 
-- T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/chart_render_box.dart`
-- T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
-- T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active - X-axis zoom remains functional
+- T006 - Add `yAxisId` and `unit` fields to ChartSeries base class
+- T047 - Add validation for max 4 axes
+- T048 - Add validation for unique axis positions
+- T049 - Add API documentation to all public classes
 
 **Contract References**:
 
-- [N/A - Feature requirements from spec, not contract-based]
+- N/A - This is API enhancement, follows existing ChartSeries patterns
 
 ---
 
 ## Deliverables
 
-| Operation | File | Purpose |
-|-----------|------|---------|
-| CREATE | `test/unit/multi_axis/zoom_constraint_test.dart` | Unit tests for zoom constraint behavior |
-| CREATE | `example/lib/demos/task_014_zoom_grid_demo.dart` | Standalone demo showing disabled Y-zoom and no grid |
-| UPDATE | `lib/src/rendering/chart_render_box.dart` | Disable Y-zoom and skip horizontal grid lines in multi-axis mode |
+### Files to CREATE:
+
+| File | Purpose | Export To |
+| ---- | ------- | --------- |
+| `test/unit/multi_axis/chart_series_axis_fields_test.dart` | Tests for yAxisId and unit fields | N/A |
+| `test/widget/multi_axis/api_validation_test.dart` | Widget tests for axis validation | N/A |
+| `example/lib/demos/task_015_api_demo.dart` | Demo showing series with yAxisId | N/A |
+
+### Files to MODIFY:
+
+| File | Changes |
+| ---- | ------- |
+| `lib/src/models/chart_series.dart` | Add `yAxisId` and `unit` to base class and all subclasses |
+| `lib/src/braven_chart_plus.dart` | Add validation for max 4 axes and unique positions |
 
 ### Integration Changes (for UPDATE files):
 
 ```dart
-// In ChartRenderBox, where horizontal grid lines are painted:
-// Add check: if (_hasMultipleYAxes()) skip horizontal grid lines
+// In ChartSeries base class:
+class ChartSeries {
+  const ChartSeries({
+    required this.id,
+    this.name,
+    required this.points,
+    this.color,
+    this.style,
+    this.isXOrdered = false,
+    this.metadata,
+    this.annotations = const [],
+    this.yAxisId,  // NEW: Explicit axis binding
+    this.unit,     // NEW: Unit for value formatting
+  });
 
-// In wheel/scroll event handling for Y-axis:
-// Add check: if (_hasMultipleYAxes()) ignore Y-axis zoom/pan events
-// X-axis zoom/pan should REMAIN functional
-
-// Example pattern:
-void _handleWheelEvent(...) {
-  // ... existing X-axis handling ...
+  // ... existing fields ...
   
-  // Y-axis handling - skip if multi-axis mode
-  if (!_hasMultipleYAxes()) {
-    // existing Y-axis zoom/pan logic
-  }
+  /// Optional Y-axis binding. When set, this series will be rendered
+  /// against the Y-axis with this ID. Takes precedence over axisBindings.
+  final String? yAxisId;
+  
+  /// Optional unit suffix for value formatting (e.g., 'W', 'bpm', 'L').
+  /// Used by tooltips and axis labels.
+  final String? unit;
+}
+
+// In LineChartSeries (and all other subclasses):
+class LineChartSeries extends ChartSeries {
+  const LineChartSeries({
+    // ... existing params ...
+    super.yAxisId,  // Add to super call
+    super.unit,     // Add to super call
+  });
+}
+
+// In BravenChartPlus._rebuildElements() or initState():
+// Add validation:
+assert(
+  widget.yAxes == null || widget.yAxes!.length <= 4,
+  'Maximum 4 Y-axes allowed, got ${widget.yAxes!.length}',
+);
+
+// Check for duplicate positions:
+if (widget.yAxes != null && widget.yAxes!.length > 1) {
+  final positions = widget.yAxes!.map((a) => a.position).toList();
+  final uniquePositions = positions.toSet();
+  assert(
+    positions.length == uniquePositions.length,
+    'Duplicate Y-axis positions are not allowed',
+  );
 }
 ```
 
@@ -64,113 +109,186 @@ void _handleWheelEvent(...) {
 ### Dependencies (imports from completed tasks):
 
 ```dart
-// Already available in chart_render_box.dart:
-import 'multi_axis_normalizer.dart';
-import 'multi_axis_painter.dart';
-// Already has: _hasMultipleYAxes() method
+import 'package:braven_charts/src/models/chart_series.dart';
+import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/models/y_axis_position.dart';
 ```
 
 ### ⚠️ MUST USE (DO NOT DUPLICATE):
 
 | Utility | Use For | DO NOT |
-|---------|---------|--------|
-| `_hasMultipleYAxes()` | Check if multi-axis mode is active | Create another flag or check |
+| ------- | ------- | ------ |
+| `SeriesAxisResolver` | Resolving which axis a series binds to | Create new resolution logic |
+| Existing validation pattern | Follow assert() style in BravenChartPlus | Throw exceptions in widget constructor |
 
 ### Relevant Existing Code:
 
-- `lib/src/rendering/chart_render_box.dart` - Main rendering logic, already has `_hasMultipleYAxes()` at line 640
-- Wheel/scroll handling is in this file
-- Grid line painting location needs to be identified (search for horizontal line drawing)
+- `lib/src/models/chart_series.dart` - Base class and all subclasses
+- `lib/src/braven_chart_plus.dart` - Widget with yAxes parameter
+- `lib/src/axis/series_axis_resolver.dart` - Existing axis resolution logic
 
 ---
 
 ## Testing
 
-**Test File**: `test/unit/multi_axis/zoom_constraint_test.dart`
+**Test File 1**: `test/unit/multi_axis/chart_series_axis_fields_test.dart`
 
-**Test Cases to Implement FIRST**:
+**Test Cases to Implement FIRST** (yAxisId and unit fields):
 
-1. `Y-axis zoom is disabled when multiple Y-axes configured`
-2. `X-axis zoom remains functional when multiple Y-axes configured`
-3. `Y-axis pan is disabled when multiple Y-axes configured`
-4. `X-axis pan remains functional when multiple Y-axes configured`
-5. `Single Y-axis mode allows Y-zoom and Y-pan normally`
-6. `Switching from single to multi-axis disables Y-zoom`
-7. `Grid lines are disabled in multi-axis mode`
-8. `Grid lines are enabled in single-axis mode`
+1. ChartSeries accepts yAxisId parameter
+2. ChartSeries accepts unit parameter  
+3. LineChartSeries supports yAxisId
+4. LineChartSeries supports unit
+5. AreaChartSeries supports yAxisId and unit
+6. BarChartSeries supports yAxisId and unit
+7. ScatterChartSeries supports yAxisId and unit
+8. copyWith preserves yAxisId
+9. copyWith preserves unit
+10. equality includes yAxisId and unit
+
+**Test File 2**: `test/widget/multi_axis/api_validation_test.dart`
+
+**Test Cases** (validation):
+
+1. Widget accepts up to 4 Y-axes
+2. Widget assertion fails with 5+ Y-axes
+3. Widget accepts axes at different positions
+4. Widget assertion fails with duplicate positions (e.g., two left)
 
 ### Sample Test Data
 
 ```dart
-// Sample multi-axis configuration (2 axes = multi-axis mode)
-final multiAxisConfig = [
-  YAxisConfig(id: 'power', position: YAxisPosition.left),
-  YAxisConfig(id: 'heart-rate', position: YAxisPosition.right),
+// For unit tests - series with axis binding
+final powerSeries = LineChartSeries(
+  id: 'power',
+  name: 'Power',
+  points: [ChartDataPoint(x: 0, y: 100), ChartDataPoint(x: 1, y: 200)],
+  color: Colors.blue,
+  yAxisId: 'power-axis',  // Explicit binding
+  unit: 'W',              // Unit for formatting
+);
+
+final hrSeries = LineChartSeries(
+  id: 'heartrate',
+  name: 'Heart Rate',
+  points: [ChartDataPoint(x: 0, y: 80), ChartDataPoint(x: 1, y: 120)],
+  color: Colors.red,
+  yAxisId: 'hr-axis',
+  unit: 'bpm',
+);
+
+// For widget tests - valid 4-axis config
+final validAxes = [
+  YAxisConfig(id: 'axis1', position: YAxisPosition.leftOuter),
+  YAxisConfig(id: 'axis2', position: YAxisPosition.left),
+  YAxisConfig(id: 'axis3', position: YAxisPosition.right),
+  YAxisConfig(id: 'axis4', position: YAxisPosition.rightOuter),
 ];
 
-// Sample single-axis configuration (1 axis = normal mode)
-final singleAxisConfig = [
-  YAxisConfig(id: 'default', position: YAxisPosition.left),
+// For widget tests - invalid 5-axis config (should fail)
+final invalidAxes = [...validAxes, YAxisConfig(id: 'axis5', position: YAxisPosition.left)];
+
+// For widget tests - duplicate positions (should fail)
+final duplicateAxes = [
+  YAxisConfig(id: 'axis1', position: YAxisPosition.left),
+  YAxisConfig(id: 'axis2', position: YAxisPosition.left),  // Duplicate!
 ];
-
-// Or null for legacy mode
-final noAxesConfig = null;
-
-// Test that hasMultipleYAxes() returns true/false appropriately:
-expect(renderBox.hasMultipleYAxes, isTrue); // with multiAxisConfig
-expect(renderBox.hasMultipleYAxes, isFalse); // with singleAxisConfig or null
 ```
 
 ---
 
 ## Code Scaffolds
 
+### ChartSeries Base Class Updates
+
 ```dart
-// test/unit/multi_axis/zoom_constraint_test.dart
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/models/y_axis_config.dart';
-import 'package:braven_charts/src/models/y_axis_position.dart';
-
-void main() {
-  group('Multi-Axis Zoom Constraints', () {
-    group('Y-axis zoom behavior', () {
-      test('Y-axis zoom is disabled when multiple Y-axes configured', () {
-        // IMPLEMENT:
-        // Setup chart with 2+ Y-axes
-        // Attempt Y-axis zoom (wheel event)
-        // Verify Y viewport unchanged
-      });
-
-      test('X-axis zoom remains functional in multi-axis mode', () {
-        // IMPLEMENT:
-        // Setup chart with 2+ Y-axes
-        // Perform X-axis zoom
-        // Verify X viewport changed
-      });
-
-      test('Single Y-axis mode allows Y-zoom normally', () {
-        // IMPLEMENT:
-        // Setup chart with 1 Y-axis
-        // Perform Y-axis zoom
-        // Verify Y viewport changed
-      });
-    });
-
-    group('Grid line behavior', () {
-      test('Grid lines disabled in multi-axis mode', () {
-        // IMPLEMENT:
-        // Setup chart with 2+ Y-axes
-        // Verify horizontal grid lines not painted
-      });
-
-      test('Grid lines enabled in single-axis mode', () {
-        // IMPLEMENT:
-        // Setup chart with 1 Y-axis
-        // Verify horizontal grid lines painted
-      });
-    });
+/// Base class for chart series.
+///
+/// Now supports optional Y-axis binding via [yAxisId] and value formatting
+/// via [unit].
+class ChartSeries {
+  const ChartSeries({
+    required this.id,
+    this.name,
+    required this.points,
+    this.color,
+    this.style,
+    this.isXOrdered = false,
+    this.metadata,
+    this.annotations = const [],
+    this.yAxisId,
+    this.unit,
   });
+
+  final String id;
+  final String? name;
+  final List<ChartDataPoint> points;
+  final Color? color;
+  final SeriesStyle? style;
+  final bool isXOrdered;
+  final Map<String, dynamic>? metadata;
+  final List<ChartAnnotation> annotations;
+  
+  /// Optional Y-axis ID for explicit axis binding in multi-axis mode.
+  ///
+  /// When set, this series will be rendered against the Y-axis with
+  /// this ID, rather than using the [axisBindings] parameter or
+  /// auto-detection.
+  ///
+  /// Example:
+  /// ```dart
+  /// LineChartSeries(
+  ///   id: 'power',
+  ///   points: [...],
+  ///   yAxisId: 'power-axis',  // Binds to axis with id='power-axis'
+  /// )
+  /// ```
+  final String? yAxisId;
+  
+  /// Optional unit suffix for value formatting.
+  ///
+  /// Used by tooltips and axis labels to display values with units.
+  /// Common examples: 'W' (watts), 'bpm' (beats per minute), 'L' (liters).
+  ///
+  /// Example:
+  /// ```dart
+  /// LineChartSeries(
+  ///   id: 'power',
+  ///   points: [...],
+  ///   unit: 'W',  // Values displayed as "250 W"
+  /// )
+  /// ```
+  final String? unit;
+
+  int get length => points.length;
+  bool get isEmpty => points.isEmpty;
+  bool get isNotEmpty => points.isNotEmpty;
+  String get displayName => name ?? id;
+}
+```
+
+### Validation in BravenChartPlus
+
+```dart
+// In didUpdateWidget or _rebuildElements (wherever yAxes is accessed)
+void _validateAxisConfiguration() {
+  final axes = widget.yAxes;
+  if (axes == null || axes.isEmpty) return;
+  
+  // Max 4 axes validation
+  assert(
+    axes.length <= 4,
+    'Maximum 4 Y-axes allowed. Got ${axes.length}.',
+  );
+  
+  // Unique positions validation
+  final positions = axes.map((a) => a.position).toList();
+  final uniquePositions = positions.toSet();
+  assert(
+    positions.length == uniquePositions.length,
+    'Duplicate Y-axis positions are not allowed. '
+    'Each axis must have a unique position.',
+  );
 }
 ```
 
@@ -178,101 +296,90 @@ void main() {
 
 ## Visual Verification
 
-**Task Category**: VISUAL
+**Task Category**: INTEGRATION
 
-### INTEGRATION / VISUAL Tasks (REQUIRE visual verification):
+### INTEGRATION Tasks (REQUIRE visual verification):
 
-These tasks wire components into BravenChartPlus or modify rendering. A
-STANDALONE demo is required to isolate the visual behavior being tested.
+This task wires the yAxisId field into the chart, enabling series to directly specify their axis binding.
 
 #### Step 1: Create Standalone Demo File
 
-**Demo Path**: `example/lib/demos/task_014_zoom_grid_demo.dart`
+**Demo Path**: `example/lib/demos/task_015_api_demo.dart`
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:braven_charts/braven_charts.dart';
 
-void main() => runApp(const Task014Demo());
+void main() => runApp(const Task015ApiDemo());
 
-class Task014Demo extends StatefulWidget {
-  const Task014Demo({super.key});
-
-  @override
-  State<Task014Demo> createState() => _Task014DemoState();
-}
-
-class _Task014DemoState extends State<Task014Demo> {
-  bool _multiAxisMode = true;
+class Task015ApiDemo extends StatelessWidget {
+  const Task015ApiDemo({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Series with direct yAxisId binding (new feature!)
+    final powerSeries = LineChartSeries(
+      id: 'power',
+      name: 'Power Output',
+      points: _generatePowerData(),
+      color: Colors.blue,
+      yAxisId: 'power-axis',  // Direct binding via yAxisId
+      unit: 'W',
+    );
+
+    final hrSeries = LineChartSeries(
+      id: 'heartrate',
+      name: 'Heart Rate',
+      points: _generateHRData(),
+      color: Colors.red,
+      yAxisId: 'hr-axis',  // Direct binding via yAxisId
+      unit: 'bpm',
+    );
+
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Task 014: Y-Zoom & Grid Constraints'),
-          actions: [
-            Switch(
-              value: _multiAxisMode,
-              onChanged: (v) => setState(() => _multiAxisMode = v),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                child: Text(_multiAxisMode ? 'Multi-Axis' : 'Single-Axis'),
-              ),
-            ),
-          ],
-        ),
+        appBar: AppBar(title: const Text('Task 15: API Demo - yAxisId on Series')),
         body: Center(
           child: SizedBox(
             width: 800,
-            height: 600,
+            height: 500,
             child: BravenChartPlus(
-              series: [
-                ChartSeries(
-                  id: 'power',
-                  points: List.generate(50, (i) => 
-                    ChartDataPoint(x: i.toDouble(), y: 200 + 50 * (i % 10).toDouble())),
-                  color: Colors.blue,
+              chartType: ChartType.line,
+              series: [powerSeries, hrSeries],
+              yAxes: [
+                YAxisConfig(
+                  id: 'power-axis',
+                  position: YAxisPosition.left,
+                  label: 'Power',
+                  unit: 'W',
                 ),
-                ChartSeries(
-                  id: 'heart-rate',
-                  points: List.generate(50, (i) => 
-                    ChartDataPoint(x: i.toDouble(), y: 120 + 30 * ((i + 5) % 10).toDouble())),
-                  color: Colors.red,
+                YAxisConfig(
+                  id: 'hr-axis',
+                  position: YAxisPosition.right,
+                  label: 'Heart Rate',
+                  unit: 'bpm',
                 ),
               ],
-              yAxes: _multiAxisMode
-                  ? [
-                      YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power (W)'),
-                      YAxisConfig(id: 'heart-rate', position: YAxisPosition.right, label: 'HR (bpm)'),
-                    ]
-                  : [
-                      YAxisConfig(id: 'default', position: YAxisPosition.left),
-                    ],
-              axisBindings: _multiAxisMode
-                  ? [
-                      SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
-                      SeriesAxisBinding(seriesId: 'heart-rate', yAxisId: 'heart-rate'),
-                    ]
-                  : [],
-              // Add interaction config if needed to test zoom behavior
+              // Note: No axisBindings needed - yAxisId on series handles binding!
             ),
-          ),
-        ),
-        bottomSheet: Container(
-          color: Colors.grey[200],
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            _multiAxisMode
-                ? '✓ Multi-axis mode: No horizontal grid lines, Y-zoom disabled, X-zoom works'
-                : '✓ Single-axis mode: Grid lines visible, both X and Y zoom work',
-            style: const TextStyle(fontSize: 14),
           ),
         ),
       ),
     );
+  }
+
+  List<ChartDataPoint> _generatePowerData() {
+    return List.generate(50, (i) => ChartDataPoint(
+      x: i.toDouble(),
+      y: 150 + 100 * (i % 10 < 5 ? i % 10 / 5 : (10 - i % 10) / 5),
+    ));
+  }
+
+  List<ChartDataPoint> _generateHRData() {
+    return List.generate(50, (i) => ChartDataPoint(
+      x: i.toDouble(),
+      y: 80 + 40 * (i % 10 < 5 ? i % 10 / 5 : (10 - i % 10) / 5),
+    ));
   }
 }
 ```
@@ -283,7 +390,7 @@ class _Task014DemoState extends State<Task014Demo> {
 
 ```powershell
 Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
-  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_014_zoom_grid_demo.dart -d chrome"
+  "cd 'e:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\example'; python ..\tools\flutter_agent\flutter_agent.py run lib/demos/task_015_api_demo.dart -d chrome"
 ```
 
 2. **Wait for app to be ready**:
@@ -296,7 +403,7 @@ python ..\tools\flutter_agent\flutter_agent.py wait --timeout 30
 3. **Take screenshot**:
 
 ```powershell
-python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-014-multi-axis-constraints.png
+python ..\tools\flutter_agent\flutter_agent.py screenshot --output ../screenshots/task-015-api-demo.png
 ```
 
 4. **Stop when done**:
@@ -307,20 +414,15 @@ python ..\tools\flutter_agent\flutter_agent.py stop
 
 **Expected Visual Output**:
 
-- **Multi-axis mode ON**:
-  - Two Y-axes visible (left: Power, right: HR)
-  - NO horizontal grid lines
-  - Mouse wheel Y-scroll has no effect
-  - Mouse wheel X-scroll (with Shift or horizontal scroll) still works
-  
-- **Multi-axis mode OFF** (toggle switch):
-  - Single Y-axis visible
-  - Horizontal grid lines VISIBLE
-  - Both X and Y zoom work normally
+- Chart displays two series (Power and Heart Rate)
+- Left Y-axis shows Power values (0-300 range) in blue
+- Right Y-axis shows Heart Rate values (80-120 range) in red
+- Each series uses full vertical height (normalized)
+- Axis labels show unit suffix (W, bpm)
 
 ---
 
-## Quality Gates
+## Quality Gates (MANDATORY)
 
 ### 🚫 YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE
 
@@ -336,30 +438,20 @@ Your completion signal WILL BE REJECTED if any issues remain.
 ### Linting - Zero Issues
 
 ```bash
-flutter analyze lib/src/rendering/chart_render_box.dart
-flutter analyze test/unit/multi_axis/zoom_constraint_test.dart
-flutter analyze example/lib/demos/task_014_zoom_grid_demo.dart
+flutter analyze lib/src/models/chart_series.dart
+flutter analyze lib/src/braven_chart_plus.dart
+flutter analyze test/unit/multi_axis/chart_series_axis_fields_test.dart
+flutter analyze test/widget/multi_axis/api_validation_test.dart
 ```
 
 ### All Sprint Tests Must Pass
 
 ```bash
 flutter test test/unit/multi_axis/
+flutter test test/widget/multi_axis/
 ```
 
-**Current Test Baseline**: 237 tests (MUST NOT decrease!)
-
----
-
-## Acceptance Criteria
-
-- [ ] Y-axis zoom/pan is disabled when multi-axis mode active (2+ Y-axes)
-- [ ] X-axis zoom/pan remains functional in multi-axis mode
-- [ ] Horizontal grid lines are not drawn when multi-axis mode active
-- [ ] Single-axis mode (1 Y-axis) works exactly as before (grid + Y-zoom)
-- [ ] All tests pass (baseline: 237 + new tests)
-- [ ] All touched files pass `flutter analyze` with zero issues
-- [ ] Screenshot captured showing both modes
+**Current Test Baseline**: 270 tests (MUST NOT decrease!)
 
 ---
 
@@ -369,13 +461,12 @@ When done:
 
 1. **Verify linting is clean** (BLOCKING)
 2. **Verify ALL tests pass** (BLOCKING)
-3. **Visual verification completed** (screenshot captured)
+3. **Visual verification completed** (screenshot taken)
 4. Stage your changes: `git add .`
-5. Run: `.orchestra/handover/.implementor/scripts/pre-signal-check.ps1`
-6. Write to `.orchestra/handover/completion-signal.md`:
+5. Write to `.orchestra/handover/completion-signal.md`:
    - Files created/modified
    - Number of tests added
    - Confirm linting clean
    - Confirm all sprint tests pass
-   - Visual verification notes
-7. Say "Task complete - ready for review"
+   - Visual verification notes (if applicable)
+6. Say "Task complete - ready for review"
