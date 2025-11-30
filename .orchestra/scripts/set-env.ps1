@@ -20,18 +20,18 @@ $ErrorActionPreference = "Stop"
 
 $script:CONFIG = @{
     # Sprint identification
-    SprintName = "011-multi-axis-normalization"
+    SprintName                = "011-multi-axis-normalization"
     
     # Paths (relative to repo root)
-    OrchestraRoot = ".orchestra"
-    SpeckitRoot = "specs/011-multi-axis-normalization"
-    SprintTestPath = "test/unit/multi_axis"
+    OrchestraRoot             = ".orchestra"
+    SpeckitRoot               = "specs/011-multi-axis-normalization"
+    SprintTestPath            = "test/unit/multi_axis"
     SprintIntegrationTestPath = "test/integration"
-    ScreenshotPath = ".orchestra/screenshots"
+    ScreenshotPath            = ".orchestra/verification/screenshots"
     
     # File patterns
-    TestFilePattern = "test/unit/multi_axis/*_test.dart"
-    ImplementationPath = "lib/src"
+    TestFilePattern           = "test/unit/multi_axis/*_test.dart"
+    ImplementationPath        = "lib/src"
 }
 
 # ============================================================================
@@ -54,14 +54,17 @@ if (Test-Path $progressPath) {
     
     if ($TaskOverride) {
         $env:CURRENT_TASK = $TaskOverride
-    } elseif ($progressContent -match 'current_task_id:\s*(\d+)') {
+    }
+    elseif ($progressContent -match 'current_task_id:\s*(\d+)') {
         $env:CURRENT_TASK = [int]$Matches[1]
-    } else {
+    }
+    else {
         $env:CURRENT_TASK = 1
     }
     
     $env:PREVIOUS_TASK = [Math]::Max(0, [int]$env:CURRENT_TASK - 1)
-} else {
+}
+else {
     Write-Warning "progress.yaml not found - using defaults"
     $env:CURRENT_TASK = if ($TaskOverride) { $TaskOverride } else { 1 }
     $env:PREVIOUS_TASK = 0
@@ -104,17 +107,17 @@ function global:Get-OrchestraEnv {
     Returns all orchestra environment variables as a hashtable
     #>
     @{
-        ORCHESTRA_ROOT = $env:ORCHESTRA_ROOT
-        SPECKIT_ROOT = $env:SPECKIT_ROOT
-        SPRINT_NAME = $env:SPRINT_NAME
-        CURRENT_TASK = $env:CURRENT_TASK
-        PREVIOUS_TASK = $env:PREVIOUS_TASK
-        SPRINT_TEST_PATH = $env:SPRINT_TEST_PATH
-        MANIFEST_PATH = $env:MANIFEST_PATH
-        PROGRESS_PATH = $env:PROGRESS_PATH
+        ORCHESTRA_ROOT     = $env:ORCHESTRA_ROOT
+        SPECKIT_ROOT       = $env:SPECKIT_ROOT
+        SPRINT_NAME        = $env:SPRINT_NAME
+        CURRENT_TASK       = $env:CURRENT_TASK
+        PREVIOUS_TASK      = $env:PREVIOUS_TASK
+        SPRINT_TEST_PATH   = $env:SPRINT_TEST_PATH
+        MANIFEST_PATH      = $env:MANIFEST_PATH
+        PROGRESS_PATH      = $env:PROGRESS_PATH
         SPECKIT_TASKS_PATH = $env:SPECKIT_TASKS_PATH
-        HANDOVER_PATH = $env:HANDOVER_PATH
-        VERIFICATION_PATH = $env:VERIFICATION_PATH
-        SCREENSHOT_PATH = $env:SCREENSHOT_PATH
+        HANDOVER_PATH      = $env:HANDOVER_PATH
+        VERIFICATION_PATH  = $env:VERIFICATION_PATH
+        SCREENSHOT_PATH    = $env:SCREENSHOT_PATH
     }
 }

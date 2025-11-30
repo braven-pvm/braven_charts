@@ -21,7 +21,8 @@ function Write-Check {
     
     if ($Passed) {
         Write-Host "  ✅ $Name" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  ❌ $Name" -ForegroundColor Red
         if ($Details) { 
             Write-Host "     $Details" -ForegroundColor Yellow 
@@ -196,8 +197,8 @@ function Get-SpeckitTasks {
             $taskId = $Matches[2]
             $tasks[$taskId] = @{
                 checked = $checked
-                line = $lineNum
-                text = $line.Trim()
+                line    = $lineNum
+                text    = $line.Trim()
             }
         }
     }
@@ -232,8 +233,8 @@ function Get-OrchestratorTasks {
             $speckitTasks = @()
             if ($block -match 'speckit_tasks:\s*\[([^\]]+)\]') {
                 $speckitTasks = $Matches[1] -split '\s*,\s*' | 
-                    ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
-                    Where-Object { $_ -match '^T\d+$' }
+                ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+                Where-Object { $_ -match '^T\d+$' }
             }
             
             # Get status
@@ -244,7 +245,7 @@ function Get-OrchestratorTasks {
             
             $tasks[$taskId] = @{
                 speckit_tasks = $speckitTasks
-                status = $status
+                status        = $status
             }
         }
     }
@@ -380,7 +381,7 @@ function New-CheckCollector {
     Creates a new check result collector
     #>
     return @{
-        Results = [System.Collections.ArrayList]@()
+        Results  = [System.Collections.ArrayList]@()
         Failures = [System.Collections.ArrayList]@()
         Warnings = [System.Collections.ArrayList]@()
     }
@@ -410,7 +411,8 @@ function Add-CheckResult {
     # Display immediately
     if ($Passed) {
         Write-Host "  ✅ $Name" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  ❌ $Name" -ForegroundColor Red
         if ($Details) { Write-Host "     $Details" -ForegroundColor Yellow }
     }
@@ -430,9 +432,9 @@ function Get-CheckSummary {
     $failed = $Collector.Failures.Count
     
     return @{
-        Total = $total
-        Passed = $passed
-        Failed = $failed
+        Total     = $total
+        Passed    = $passed
+        Failed    = $failed
         AllPassed = ($failed -eq 0)
     }
 }

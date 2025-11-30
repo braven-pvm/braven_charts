@@ -53,7 +53,8 @@ if ($hasUncommitted) {
     
     Write-Host "`n  Uncommitted files:" -ForegroundColor Yellow
     $uncommitted | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
-} else {
+}
+else {
     Add-CheckResult $checks "No uncommitted changes" $true
 }
 
@@ -75,7 +76,7 @@ if (Test-Path $env:PROGRESS_PATH) {
     # Check previous task status
     $prevStatus = Get-ProgressTaskStatus $env:PROGRESS_PATH $env:PREVIOUS_TASK
     Add-CheckResult $checks "Previous task (Task $env:PREVIOUS_TASK) marked completed" `
-        ($prevStatus -eq "completed") `
+    ($prevStatus -eq "completed") `
         "Status: $prevStatus" `
         "Update progress.yaml task_history for Task $env:PREVIOUS_TASK" `
         $env:PROGRESS_PATH
@@ -89,7 +90,8 @@ if (Test-Path $env:PROGRESS_PATH) {
             "Commit: $commitHash" `
             "Record the actual commit hash in progress.yaml" `
             $env:PROGRESS_PATH
-    } else {
+    }
+    else {
         Add-CheckResult $checks "Previous task has commit hash" $false `
             "No commit field found for Task $env:PREVIOUS_TASK" `
             "Add commit hash to progress.yaml task_history" `
@@ -105,7 +107,8 @@ if (Test-Path $env:PROGRESS_PATH) {
             "Update note field in progress.yaml" `
             $env:PROGRESS_PATH
     }
-} else {
+}
+else {
     Add-CheckResult $checks "progress.yaml exists" $false `
         "File not found" `
         "Create progress.yaml from template" `
@@ -129,21 +132,24 @@ if (Test-Path $env:SPECKIT_TASKS_PATH) {
     if ($completedCount -gt 0) {
         Add-CheckResult $checks "SpecKit tasks checked for previous task" $true `
             "$completedCount task(s) marked complete"
-    } else {
+    }
+    else {
         $anyRef = $tasksContent -match $prevTaskRef
         if ($anyRef) {
             Add-CheckResult $checks "SpecKit tasks checked for previous task" $false `
                 "Found reference but not marked with ✅ Completed" `
                 "Add '✅ Completed: Orchestrator Task $env:PREVIOUS_TASK, commit XXXXX' to tasks.md" `
                 $env:SPECKIT_TASKS_PATH
-        } else {
+        }
+        else {
             Add-CheckResult $checks "SpecKit tasks referenced for previous task" $false `
                 "No SpecKit task references Task $env:PREVIOUS_TASK" `
                 "Update tasks.md with orchestrator task mapping" `
                 $env:SPECKIT_TASKS_PATH
         }
     }
-} else {
+}
+else {
     Add-CheckResult $checks "tasks.md exists" $false `
         "SpecKit tasks.md not found" `
         "Verify SPECKIT_ROOT path in set-env.ps1" `
@@ -179,7 +185,8 @@ if ($screenshots) {
         "Size: $([math]::Round($screenshotSize/1024, 1)) KB - may be empty/corrupt" `
         "Recapture screenshot using Chrome DevTools MCP" `
         $screenshots[0].FullName
-} else {
+}
+else {
     # This is a warning, not a failure (not all tasks are visual)
     Write-CheckWarning "No screenshot found for Task $env:PREVIOUS_TASK" `
         "OK if not a visual/integration task"
@@ -204,7 +211,8 @@ try {
     if ($allPassed) {
         Write-Host "     $testCount tests passed" -ForegroundColor Gray
     }
-} catch {
+}
+catch {
     Add-CheckResult $checks "Sprint tests pass" $false `
         "Could not run tests: $_" `
         "Check Flutter installation and test files" `
@@ -224,7 +232,8 @@ if (Test-Path $completionPath) {
     
     if ($isEmpty) {
         Add-CheckResult $checks "completion-signal.md is clear" $true
-    } else {
+    }
+    else {
         $passed = Add-CheckResult $checks "completion-signal.md is clear" $false `
             "Contains content from previous task" `
             "Clear the file before preparing new task" `
@@ -249,7 +258,8 @@ if (Test-Path $currentTaskPath) {
         -not ($currentTaskContent -match "Task\s+$env:CURRENT_TASK\b")) {
         Write-CheckWarning "current-task.md may be stale" `
             "References Task $env:PREVIOUS_TASK, will be replaced for Task $env:CURRENT_TASK"
-    } else {
+    }
+    else {
         Write-Host "  ✅ current-task.md ready for update" -ForegroundColor Green
     }
 }
@@ -273,7 +283,8 @@ if ($summary.AllPassed) {
     Write-Host "  3. Prepare handover using template" -ForegroundColor White
     
     exit 0
-} else {
+}
+else {
     Write-Host "❌ $($summary.Failed) CHECK(S) FAILED - Cannot proceed until fixed" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
     

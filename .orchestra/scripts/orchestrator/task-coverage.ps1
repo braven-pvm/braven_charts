@@ -99,7 +99,8 @@ foreach ($taskId in $speckitTasks.Keys | Sort-Object) {
 
 if ($unmappedSpeckit.Count -eq 0) {
     Add-CheckResult $checks "All SpecKit tasks mapped" $true
-} else {
+}
+else {
     Add-CheckResult $checks "All SpecKit tasks mapped" $false `
         "$($unmappedSpeckit.Count) task(s) not mapped to any orchestrator task" `
         "Add these tasks to speckit_tasks array in manifest.yaml" `
@@ -127,7 +128,8 @@ foreach ($ref in $uniqueReferences) {
 
 if ($orphanedReferences.Count -eq 0) {
     Add-CheckResult $checks "All orchestrator references valid" $true
-} else {
+}
+else {
     Add-CheckResult $checks "All orchestrator references valid" $false `
         "$($orphanedReferences.Count) reference(s) to non-existent SpecKit tasks" `
         "Remove or correct these references in manifest.yaml" `
@@ -157,8 +159,8 @@ foreach ($orchTaskId in $orchestratorTasks.Keys | Sort-Object) {
                 if (-not $speckitTasks[$speckitId].checked) {
                     $outOfSync += @{
                         OrchestratorTask = $orchTaskId
-                        SpeckitTask = $speckitId
-                        Issue = "Orchestrator completed but SpecKit unchecked"
+                        SpeckitTask      = $speckitId
+                        Issue            = "Orchestrator completed but SpecKit unchecked"
                     }
                 }
             }
@@ -178,8 +180,8 @@ foreach ($orchTaskId in $orchestratorTasks.Keys | Sort-Object) {
                 if (-not $alsoCompletedBy) {
                     $outOfSync += @{
                         OrchestratorTask = $orchTaskId
-                        SpeckitTask = $speckitId
-                        Issue = "SpecKit checked but Orchestrator not completed"
+                        SpeckitTask      = $speckitId
+                        Issue            = "SpecKit checked but Orchestrator not completed"
                     }
                 }
             }
@@ -189,7 +191,8 @@ foreach ($orchTaskId in $orchestratorTasks.Keys | Sort-Object) {
 
 if ($outOfSync.Count -eq 0) {
     Add-CheckResult $checks "Completion status in sync" $true
-} else {
+}
+else {
     Add-CheckResult $checks "Completion status in sync" $false `
         "$($outOfSync.Count) sync issue(s) found" `
         "Update either SpecKit tasks.md or orchestrator progress" `
@@ -211,7 +214,8 @@ $referenceCounts = @{}
 foreach ($ref in $allReferences) {
     if ($referenceCounts.ContainsKey($ref)) {
         $referenceCounts[$ref]++
-    } else {
+    }
+    else {
         $referenceCounts[$ref] = 1
     }
 }
@@ -224,7 +228,8 @@ if ($duplicates) {
         Write-Host "    $($dup.Key): mapped $($dup.Value) times" -ForegroundColor Yellow
     }
     Write-Host "  (This may be intentional for shared tasks)" -ForegroundColor DarkGray
-} else {
+}
+else {
     Write-Host "  ✅ No duplicate mappings (each SpecKit task → one orchestrator task)" -ForegroundColor Green
 }
 
@@ -247,7 +252,8 @@ if ($summary.AllPassed) {
     Write-Host "`n✅ ALL COVERAGE CHECKS PASSED" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
     exit 0
-} else {
+}
+else {
     Write-Host "`n❌ $($summary.Failed) COVERAGE CHECK(S) FAILED" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
     

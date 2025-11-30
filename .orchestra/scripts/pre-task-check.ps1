@@ -17,7 +17,8 @@ function Write-Check {
     param([string]$Name, [bool]$Passed, [string]$Details = "")
     if ($Passed) {
         Write-Host "  ✅ $Name" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  ❌ $Name" -ForegroundColor Red
         if ($Details) { Write-Host "     $Details" -ForegroundColor Yellow }
         $script:failures += $Name
@@ -60,7 +61,8 @@ if ($hasUncommitted) {
     Write-Check "No uncommitted changes" $false "Found uncommitted files - commit or stash before proceeding"
     Write-Host "`n  Uncommitted files:" -ForegroundColor Yellow
     $gitStatus | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
-} else {
+}
+else {
     Write-Check "No uncommitted changes" $true
 }
 
@@ -89,7 +91,8 @@ if (Test-Path $progressPath) {
     if ($progressContent -match $lastTaskPattern) {
         $lastStatus = $Matches[1]
         Write-Check "Previous task (Task $($currentTaskId - 1)) marked completed" ($lastStatus -eq "completed") "Status: $lastStatus"
-    } else {
+    }
+    else {
         Write-Warning "Could not find previous task status" "Manual verification needed"
     }
     
@@ -107,7 +110,8 @@ if (Test-Path $progressPath) {
         $noteOk = -not ($note -match "Task $($currentTaskId - 1).*in.?progress" -or $note -match "IN PROGRESS")
         Write-Check "Note reflects completion" $noteOk "Note: $note"
     }
-} else {
+}
+else {
     Write-Check "progress.yaml exists" $false
 }
 
@@ -128,16 +132,19 @@ if (Test-Path $tasksPath) {
     
     if ($completedCount -gt 0) {
         Write-Check "SpecKit tasks checked for previous task" $true "$completedCount task(s) marked complete"
-    } else {
+    }
+    else {
         # Check if there are any references at all (even unchecked)
         $anyRef = $tasksContent -match $prevTaskRef
         if ($anyRef) {
             Write-Check "SpecKit tasks checked for previous task" $false "Found reference but not marked with ✅ Completed"
-        } else {
+        }
+        else {
             Write-Warning "No SpecKit task references found for Task $($currentTaskId - 1)" "May need manual verification"
         }
     }
-} else {
+}
+else {
     Write-Check "tasks.md exists" $false
 }
 
@@ -158,8 +165,8 @@ $resultsExist = (Test-Path $verificationResultsPath) -or (Test-Path $verificatio
 Write-Check "Verification results recorded (task-$prevTaskPadded-results.md)" $resultsExist
 
 # Check screenshot if previous task was visual
-$screenshotPattern = ".orchestra/screenshots/task-0$prevTaskNum*.png"
-$screenshots = Get-ChildItem -Path ".orchestra/screenshots" -Filter "task-0$prevTaskNum*.png" -ErrorAction SilentlyContinue
+$screenshotPattern = ".orchestra/verification/screenshots/task-0$prevTaskNum*.png"
+$screenshots = Get-ChildItem -Path ".orchestra/verification/screenshots" -Filter "task-0$prevTaskNum*.png" -ErrorAction SilentlyContinue
 
 if ($screenshots) {
     Write-Check "Screenshot exists for Task $prevTaskNum" $true "$($screenshots.Name)"
@@ -167,7 +174,8 @@ if ($screenshots) {
     # Check screenshot isn't empty (> 1KB)
     $screenshotSize = $screenshots[0].Length
     Write-Check "Screenshot has content (not empty)" ($screenshotSize -gt 1024) "Size: $([math]::Round($screenshotSize/1024, 1)) KB"
-} else {
+}
+else {
     Write-Warning "No screenshot found for Task $prevTaskNum" "OK if not a visual task"
 }
 
@@ -183,7 +191,8 @@ try {
     $allPassed = $testOutput -match "All tests passed"
     $testCount = if ($testOutput -match '\+(\d+)') { $Matches[1] } else { "?" }
     Write-Check "Sprint tests pass" $allPassed "$testCount tests"
-} catch {
+}
+catch {
     Write-Check "Sprint tests pass" $false "Could not run tests: $_"
 }
 
@@ -200,7 +209,8 @@ if (Test-Path $completionPath) {
     
     if ($isEmpty) {
         Write-Check "completion-signal.md is clear" $true
-    } else {
+    }
+    else {
         Write-Check "completion-signal.md is clear" $false "Contains content from previous task"
         if ($Fix) {
             Set-Content $completionPath ""
@@ -218,7 +228,8 @@ if (Test-Path $currentTaskPath) {
     # Check if it references the completed task (stale)
     if ($currentTaskContent -match "Task\s+$prevTaskNum\b" -and -not ($currentTaskContent -match "Task\s+$currentTaskId\b")) {
         Write-Warning "current-task.md may be stale" "References Task $prevTaskNum, expected Task $currentTaskId"
-    } else {
+    }
+    else {
         Write-Check "current-task.md ready for new task" $true
     }
 }
@@ -245,7 +256,8 @@ if ($script:failures.Count -eq 0) {
     Write-Host "  3. Prepare handover using template" -ForegroundColor White
     
     exit 0
-} else {
+}
+else {
     Write-Host "❌ CHECKS FAILED - Cannot proceed until fixed" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
     

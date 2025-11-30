@@ -122,7 +122,8 @@ if ($createPaths.Count -gt 0) {
         }
     }
     Add-CheckResult $checks "CREATE paths specified" $true
-} else {
+}
+else {
     Write-CheckWarning "No CREATE file paths found" `
         "May be OK if task only updates existing files"
 }
@@ -174,17 +175,19 @@ if ($hasDeliverables -and $createPaths.Count -gt 0) {
         "No code scaffold provided for new files" `
         "Ask orchestrator for implementation scaffold" `
         $currentTaskPath
-} else {
+}
+else {
     Write-Host "  ⏭️  Code scaffold check skipped (no CREATE files)" -ForegroundColor DarkGray
 }
 
 # Has test sample data (if TDD section exists)
 $hasTestData = $content -match "(?i)test.*data|sample.*object|mock|stub|fixture" -or 
-               ($content -match '```dart' -and $content -match 'test\(|group\(|expect\(')
+($content -match '```dart' -and $content -match 'test\(|group\(|expect\(')
 if ($hasTDD) {
     if ($hasTestData) {
         Add-CheckResult $checks "Has test sample data" $true
-    } else {
+    }
+    else {
         Write-CheckWarning "Test sample data not obvious" `
             "Ensure you have concrete test objects, not just test names"
     }
@@ -214,7 +217,8 @@ if ($isIntegration) {
         "Visual tasks should specify demo file to create" `
         "Ask orchestrator for demo scaffold" `
         $currentTaskPath
-} else {
+}
+else {
     Write-Host "  ⏭️  Integration checks skipped (not an integration task)" -ForegroundColor DarkGray
 }
 
@@ -238,7 +242,8 @@ if ($summary.AllPassed) {
     Write-Host "  4. Run pre-signal-check.ps1 before signaling done" -ForegroundColor White
     
     exit 0
-} else {
+}
+else {
     Write-Host "❌ HANDOVER VALIDATION FAILED - Task instructions incomplete" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Blue
     
