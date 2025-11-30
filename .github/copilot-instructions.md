@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-10-04
 
 ## Active Technologies
+
 - Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:ui) - NO external packages (011-multi-axis-normalization)
 
 - Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:collection) - NO external packages (001-foundation)
@@ -30,6 +31,7 @@ tests/
 Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard conventions
 
 ## Recent Changes
+
 - 011-multi-axis-normalization: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:ui) - NO external packages
 
 - 009-dual-mode-streaming: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:async for Timer, dart:ui for rendering)
@@ -177,6 +179,7 @@ See comprehensive guides:
 ### 🚫 ABSOLUTE PROHIBITIONS FOR VISUAL/SCREENSHOT VERIFICATION
 
 **NEVER use these for visual verification:**
+
 - ❌ `flutter run` directly in any terminal
 - ❌ `terminal-tools_sendCommand` with `flutter run`
 - ❌ `run_in_terminal` with `flutter run`
@@ -184,6 +187,7 @@ See comprehensive guides:
 - ❌ Background processes (`isBackground: true`)
 
 **WHY THESE FAIL:**
+
 - AI agents CANNOT see terminal visual output
 - AI agents CANNOT interact with Chrome windows spawned by `flutter run`
 - Chrome DevTools MCP requires a running Chrome instance we can connect to
@@ -215,25 +219,25 @@ python tools/flutter_agent/flutter_agent.py stop
 
 ### flutter_agent.py Command Reference
 
-| Command | Description |
-|---------|-------------|
-| `run <target> -d <device>` | Start Flutter app |
-| `wait --timeout <secs>` | Wait for app ready |
+| Command                      | Description        |
+| ---------------------------- | ------------------ |
+| `run <target> -d <device>`   | Start Flutter app  |
+| `wait --timeout <secs>`      | Wait for app ready |
 | `screenshot --output <path>` | Capture screenshot |
-| `reload` | Hot reload |
-| `restart` | Hot restart |
-| `stop` | Stop the app |
-| `status` | Check app status |
+| `reload`                     | Hot reload         |
+| `restart`                    | Hot restart        |
+| `stop`                       | Stop the app       |
+| `status`                     | Check app status   |
 
 ### Key Differences: Terminal vs flutter_agent.py
 
-| Aspect | Terminal Commands | flutter_agent.py |
-|--------|-------------------|------------------|
-| **Use For** | Tests, builds, git, pub | Visual verification, screenshots |
-| **Can See Output?** | No (text only) | Yes (via screenshot) |
-| **Screenshot?** | ❌ Impossible | ✅ Built-in |
-| **Stop App?** | Unreliable | ✅ `stop` command |
-| **Hot Reload?** | Problematic | ✅ `reload` command |
+| Aspect              | Terminal Commands       | flutter_agent.py                 |
+| ------------------- | ----------------------- | -------------------------------- |
+| **Use For**         | Tests, builds, git, pub | Visual verification, screenshots |
+| **Can See Output?** | No (text only)          | Yes (via screenshot)             |
+| **Screenshot?**     | ❌ Impossible           | ✅ Built-in                      |
+| **Stop App?**       | Unreliable              | ✅ `stop` command                |
+| **Hot Reload?**     | Problematic             | ✅ `reload` command              |
 
 ### Pre-Visual-Verification Checklist
 
