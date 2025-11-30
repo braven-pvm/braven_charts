@@ -1755,7 +1755,6 @@ class ChartRenderBox extends RenderBox {
       // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
@@ -1917,7 +1916,7 @@ class ChartRenderBox extends RenderBox {
 
         // Start interaction and claim drag mode
         coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
-        final claimSuccess = coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
 
         // Clear potential drag state
         _potentialDragPointAnnotation = null;
@@ -3017,7 +3016,7 @@ class ChartRenderBox extends RenderBox {
           // Draw dashed preview ring (different from solid selection ring)
           final interactionTheme = _theme?.interactionTheme;
           final previewPaint = Paint()
-            ..color = (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF)).withOpacity(0.5)
+            ..color = (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF)).withValues(alpha: 0.5)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
           canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
@@ -3034,7 +3033,7 @@ class ChartRenderBox extends RenderBox {
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = interactionTheme?.selectionColor.withOpacity(0.25) ?? const Color(0x4000AAFF)
+            ..color = interactionTheme?.selectionColor.withValues(alpha: 0.25) ?? const Color(0x4000AAFF)
             ..style = PaintingStyle.fill,
         );
         canvas.drawRect(
@@ -3057,7 +3056,7 @@ class ChartRenderBox extends RenderBox {
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = rangeColor.withOpacity(0.15) // 15% opacity for fill
+            ..color = rangeColor.withValues(alpha: 0.15) // 15% opacity for fill
             ..style = PaintingStyle.fill,
         );
 
@@ -4827,7 +4826,7 @@ class ChartRenderBox extends RenderBox {
 
     // Build tooltip text with Y-value formatting including units (T023)
     final seriesName = seriesElement.series.name ?? seriesElement.id;
-    
+
     // Get the axis config for this series to retrieve unit (T023, T042)
     String? yUnit;
     if (_yAxes != null && _yAxes!.isNotEmpty) {
@@ -4838,13 +4837,13 @@ class ChartRenderBox extends RenderBox {
       );
       yUnit = axisConfig?.unit;
     }
-    
+
     // Format Y value with unit using MultiAxisValueFormatter (T042, T045)
     final formattedY = MultiAxisValueFormatter.format(
       value: dataPoint.y,
       unit: yUnit,
     );
-    
+
     final tooltipText = '$seriesName\nX: ${_formatDataValue(dataPoint.x)}\nY: $formattedY';
 
     // Create text painter with configured style
@@ -4952,7 +4951,7 @@ class ChartRenderBox extends RenderBox {
       canvas.drawPath(
         shadowPath,
         Paint()
-          ..color = style.shadowColor.withOpacity(style.shadowColor.opacity * _tooltipOpacity)
+          ..color = style.shadowColor.withValues(alpha: style.shadowColor.a * _tooltipOpacity)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.shadowBlurRadius),
       );
     }
@@ -4961,7 +4960,7 @@ class ChartRenderBox extends RenderBox {
     canvas.drawPath(
       tooltipPath,
       Paint()
-        ..color = style.backgroundColor.withOpacity(style.backgroundColor.opacity * _tooltipOpacity)
+        ..color = style.backgroundColor.withValues(alpha: style.backgroundColor.a * _tooltipOpacity)
         ..style = PaintingStyle.fill,
     );
 
@@ -4970,7 +4969,7 @@ class ChartRenderBox extends RenderBox {
       canvas.drawPath(
         tooltipPath,
         Paint()
-          ..color = style.borderColor.withOpacity(style.borderColor.opacity * _tooltipOpacity)
+          ..color = style.borderColor.withValues(alpha: style.borderColor.a * _tooltipOpacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = style.borderWidth,
       );
@@ -4980,7 +4979,7 @@ class ChartRenderBox extends RenderBox {
     final textPaintWithOpacity = TextPainter(
       text: TextSpan(
         text: tooltipText,
-        style: textStyle.copyWith(color: style.textColor.withOpacity(_tooltipOpacity)),
+        style: textStyle.copyWith(color: style.textColor.withValues(alpha: _tooltipOpacity)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,

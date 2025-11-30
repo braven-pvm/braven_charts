@@ -1,0 +1,12 @@
+# Pre-Signal Check Artifact
+# =========================
+# This file documents a FAILED pre-signal check
+
+task_id: 13
+status: FAILED
+timestamp: 2025-11-30 15:26:25
+checks_passed: 13
+checks_failed: 1
+
+failures:
+- Modified: lib/src/interaction/core/crosshair_tracker.dart: File was not modified (git shows no changes)
