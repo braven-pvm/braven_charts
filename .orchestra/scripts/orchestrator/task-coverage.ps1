@@ -102,15 +102,39 @@ if ($unmappedSpeckit.Count -eq 0) {
 }
 else {
     Add-CheckResult $checks "All SpecKit tasks mapped" $false `
-        "$($unmappedSpeckit.Count) task(s) not mapped to any orchestrator task" `
-        "Add these tasks to speckit_tasks array in manifest.yaml" `
+        "BLOCKING: $($unmappedSpeckit.Count) SpecKit task(s) have NO orchestrator assignment" `
+        "MANDATORY: Map EVERY unmapped task to an orchestrator task OR document explicit exclusion" `
         $env:MANIFEST_PATH
     
-    Write-Host "`n  Unmapped SpecKit tasks:" -ForegroundColor Yellow
+    Write-Host "`n  ════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "  🚫 UNMAPPED SPECKIT TASKS - MUST BE RESOLVED BEFORE CONTINUING" -ForegroundColor Red
+    Write-Host "  ════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  These SpecKit tasks are NOT assigned to ANY orchestrator task." -ForegroundColor Yellow
+    Write-Host "  This means they will NEVER be implemented unless fixed NOW." -ForegroundColor Yellow
+    Write-Host ""
+    
     foreach ($taskId in $unmappedSpeckit) {
         $line = $speckitTasks[$taskId].line
-        Write-Host "    $taskId (line $line)" -ForegroundColor Yellow
+        Write-Host "    ❌ $taskId (tasks.md line $line)" -ForegroundColor Red
     }
+    
+    Write-Host ""
+    Write-Host "  ┌─────────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │ REQUIRED ACTIONS (choose one per unmapped task):            │" -ForegroundColor Cyan
+    Write-Host "  │                                                             │" -ForegroundColor Cyan
+    Write-Host "  │ 1. ADD to existing task's speckit_tasks array               │" -ForegroundColor Cyan
+    Write-Host "  │    → If the work is covered by an existing orchestrator task│" -ForegroundColor Cyan
+    Write-Host "  │                                                             │" -ForegroundColor Cyan
+    Write-Host "  │ 2. CREATE new orchestrator task in manifest.yaml            │" -ForegroundColor Cyan
+    Write-Host "  │    → If this is genuinely new work not yet planned          │" -ForegroundColor Cyan
+    Write-Host "  │                                                             │" -ForegroundColor Cyan
+    Write-Host "  │ 3. DOCUMENT exclusion in manifest.yaml excluded_tasks       │" -ForegroundColor Cyan
+    Write-Host "  │    → If intentionally out of scope with justification       │" -ForegroundColor Cyan
+    Write-Host "  └─────────────────────────────────────────────────────────────┘" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  ⚠️  DO NOT PROCEED TO NEXT TASK until this is resolved!" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 # ============================================================================
@@ -254,9 +278,20 @@ if ($summary.AllPassed) {
     exit 0
 }
 else {
-    Write-Host "`n❌ $($summary.Failed) COVERAGE CHECK(S) FAILED" -ForegroundColor Red
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
-    
-    Write-Host "`nFix the issues listed above before proceeding." -ForegroundColor Yellow
+    Write-Host "`n" -NoNewline
+    Write-Host "╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+    Write-Host "║  🚫 BLOCKING: $($summary.Failed) COVERAGE FAILURE(S) - CANNOT PROCEED              ║" -ForegroundColor Red
+    Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  THE ORCHESTRATOR IS FORBIDDEN FROM PREPARING THE NEXT TASK" -ForegroundColor Red
+    Write-Host "  until ALL coverage issues above are resolved." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  WHY THIS MATTERS:" -ForegroundColor Yellow
+    Write-Host "  • Unmapped tasks will NEVER be implemented" -ForegroundColor White
+    Write-Host "  • Sprint scope becomes inconsistent with SpecKit" -ForegroundColor White
+    Write-Host "  • Work will be lost or forgotten" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  If you proceed anyway, you are violating the orchestra protocol." -ForegroundColor DarkGray
+    Write-Host ""
     exit 1
 }

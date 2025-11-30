@@ -58,7 +58,9 @@
  - [x] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
    - 🔄 Mapped to: Orchestrator Task 9
    - ✅ Completed: Orchestrator Task 9
- - [ ] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
+ - [x] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
+   - 🔄 Mapped to: Orchestrator Task 6
+   - ✅ Completed: Implemented as `MultiAxisNormalizer.computeAxisBounds()` in `lib/src/rendering/multi_axis_normalizer.dart`
  - [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/grid_renderer.dart`
  - [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
    - 🔄 Mapped to: Orchestrator Task 14
