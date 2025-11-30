@@ -1,10 +1,16 @@
 # Task 12: Update Tooltip to Show Original Values
 
-## 1. Task Overview
+## Objective
 
-**Objective**: Create a multi-axis value formatter that converts normalized Y-values back to original values with proper unit formatting. Update the tooltip system to display original Y-values with their units (e.g., "250 W", "145 bpm") instead of normalized 0-1 values.
+Create a multi-axis value formatter that converts normalized Y-values back to original values with proper unit formatting. Update the tooltip system to display original Y-values with their units (e.g., "250 W", "145 bpm") instead of normalized 0-1 values.
 
-**Phase**: Interaction (Phase 6: US4)
+---
+
+## Context
+
+**Sprint**: 011-multi-axis-normalization  
+**Phase**: Interaction (Phase 6: US4)  
+**Depends On**: Task 11 (Widget Integration)
 
 **Category**: ⚠️ **INTEGRATION TASK** - Modifies existing tooltip system
 
@@ -23,7 +29,7 @@
 
 ---
 
-## 2. SpecKit Traceability
+## SpecKit Traceability
 
 **SpecKit Tasks Covered**:
 
@@ -39,26 +45,25 @@
 
 ---
 
-## 3. Deliverables
+## File Operations
 
-### Files to CREATE:
+| Operation | File Path | Purpose |
+|-----------|-----------|---------||
+| CREATE | `lib/src/formatting/multi_axis_value_formatter.dart` | T042, T045 - Value formatter with unit support |
+| CREATE | `test/unit/multi_axis/value_formatter_test.dart` | T040 - Unit tests for value formatter |
+| CREATE | `example/lib/demos/task_012_tooltip_demo.dart` | Visual verification demo |
+| UPDATE | `lib/legacy/src/interaction/tooltip_provider.dart` | T023 - Use value formatter for displaying Y-values |
+| UPDATE | `lib/braven_charts.dart` | Export new formatter |
 
-| File | Purpose | Export To |
-|------|---------|-----------|
-| `lib/src/formatting/multi_axis_value_formatter.dart` | T042, T045 - Value formatter with unit support | `lib/braven_charts.dart` |
-| `test/unit/multi_axis/value_formatter_test.dart` | T040 - Unit tests for value formatter | N/A |
-| `example/lib/demos/task_012_tooltip_demo.dart` | Visual verification demo | N/A |
-
-### Files to MODIFY:
+### Deliverable Details
 
 | File | Changes |
-|------|---------|
-| `lib/legacy/src/interaction/tooltip_provider.dart` | T023 - Use value formatter for displaying Y-values |
-| `lib/braven_charts.dart` | Export new formatter |
+| `lib/legacy/src/interaction/tooltip_provider.dart` | Integrate MultiAxisValueFormatter for Y-value display |
+| `lib/braven_charts.dart` | Add export for MultiAxisValueFormatter |
 
 ---
 
-## 4. Technical Context
+## Technical Context
 
 ### Dependencies (imports from completed tasks):
 
@@ -76,7 +81,7 @@ import 'package:braven_charts/src/models/y_axis_config.dart';
 
 ---
 
-## 5. TDD Requirements
+## TDD
 
 **Test File**: `test/unit/multi_axis/value_formatter_test.dart`
 
@@ -92,7 +97,7 @@ import 'package:braven_charts/src/models/y_axis_config.dart';
 
 ---
 
-## 6. Code Scaffold
+## Code Scaffold
 
 `dart
 /// lib/src/formatting/multi_axis_value_formatter.dart
@@ -111,14 +116,20 @@ class MultiAxisValueFormatter {
     String? unit,
     int? precision,
   }) {
-    // TODO: Implement
-    throw UnimplementedError();
+    final p = precision ?? optimalPrecision(value);
+    final formatted = value.toStringAsFixed(p);
+    final clean = _cleanTrailingZeros(formatted);
+    return unit != null ? '$clean $unit' : clean;
   }
 
   /// Determines optimal decimal precision based on value magnitude.
   static int optimalPrecision(double value) {
-    // TODO: Implement
-    throw UnimplementedError();
+    final abs = value.abs();
+    if (abs >= 100) return 0;
+    if (abs >= 10) return 1;
+    if (abs >= 1) return 2;
+    if (abs >= 0.1) return 3;
+    return 4;
   }
 
   /// Denormalizes a 0-1 value and formats it with unit.
@@ -129,15 +140,27 @@ class MultiAxisValueFormatter {
     String? unit,
     int? precision,
   }) {
-    // TODO: Use MultiAxisNormalizer.denormalize()
-    throw UnimplementedError();
+    final original = MultiAxisNormalizer.denormalize(normalizedValue, min, max);
+    return format(value: original, unit: unit, precision: precision);
+  }
+
+  static String _cleanTrailingZeros(String s) {
+    if (!s.contains('.')) return s;
+    var result = s;
+    while (result.endsWith('0')) {
+      result = result.substring(0, result.length - 1);
+    }
+    if (result.endsWith('.')) {
+      result = result.substring(0, result.length - 1);
+    }
+    return result;
   }
 }
 `
 
 ---
 
-## 7. Visual Verification
+## Visual Verification
 
 **Task Category**: INTEGRATION
 
@@ -170,7 +193,20 @@ python ..\tools\flutter_agent\flutter_agent.py stop
 
 ---
 
-## 8. Quality Gates
+## Acceptance Criteria
+
+- [ ] `MultiAxisValueFormatter.format()` exists and formats values with units
+- [ ] `MultiAxisValueFormatter.optimalPrecision()` handles all magnitude ranges
+- [ ] `MultiAxisValueFormatter.formatWithDenormalization()` uses `MultiAxisNormalizer.denormalize()`
+- [ ] All 7 unit tests pass in `value_formatter_test.dart`
+- [ ] Tooltip shows formatted values with units (visual verification)
+- [ ] No over-precision (e.g., "250.00000001" should be "250")
+- [ ] Works for both positive and negative values
+- [ ] Export added to `lib/braven_charts.dart`
+
+---
+
+## Quality Gates
 
 `bash
 flutter analyze lib/src/formatting/
@@ -182,7 +218,7 @@ flutter test test/unit/multi_axis/
 
 ---
 
-## 9. Completion Protocol
+## Completion Protocol
 
 1. Run `pre-signal-check.ps1` (MANDATORY)
 2. Verify linting clean
