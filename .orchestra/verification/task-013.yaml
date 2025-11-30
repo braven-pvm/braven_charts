@@ -1,0 +1,102 @@
+# Verification Criteria: Task 13 - Update Crosshair to Use Per-Axis Bounds
+# ⚠️ HIDDEN FROM IMPLEMENTOR - Orchestrator/Verifier only
+
+task_id: 13
+title: "Update Crosshair to Use Per-Axis Bounds"
+speckit_tasks: ["T043", "T044", "T041"]
+category: "integration"
+
+# Verification runs AFTER implementor signals completion
+# Each check has immutable severity (set at creation, NOT during verification)
+
+standard_checks:
+  - check: "Static analysis passes"
+    severity: BLOCKING
+    command: |
+      flutter analyze lib/src/rendering/chart_render_box.dart
+      flutter analyze lib/src/interaction/core/crosshair_tracker.dart
+    expected: "No issues found"
+
+  - check: "New widget tests exist"
+    severity: BLOCKING
+    command: "Test-Path test/widget/multi_axis/crosshair_values_test.dart"
+    expected: "True"
+
+  - check: "Widget tests pass"
+    severity: BLOCKING
+    command: "flutter test test/widget/multi_axis/crosshair_values_test.dart"
+    expected: "All tests passed"
+
+  - check: "Sprint unit tests still pass"
+    severity: BLOCKING
+    command: "flutter test test/unit/multi_axis/"
+    expected: "All tests passed"
+    baseline: 237
+
+  - check: "All widget tests still pass"
+    severity: BLOCKING
+    command: "flutter test test/widget/multi_axis/"
+    expected: "All tests passed"
+
+adversarial_checks:
+  - check: "Uses per-axis bounds, not global yMin/yMax"
+    severity: BLOCKING
+    file: "lib/src/rendering/chart_render_box.dart"
+    search: "dataToScreenY.*yMin.*yMax"
+    expected: "NOT FOUND or replaced with per-axis version"
+    rationale: |
+      The bug is using global yMin/yMax for all series. The fix must use
+      per-axis bounds. Search for old pattern should NOT find it.
+
+  - check: "Uses SeriesAxisResolver or equivalent"
+    severity: MAJOR
+    file: "lib/src/rendering/chart_render_box.dart"
+    search: "SeriesAxisResolver|resolveAxisId|getAxisForSeries"
+    expected: "FOUND - must resolve axis for series"
+    rationale: |
+      To get per-axis bounds, must first know which axis the series belongs to.
+
+  - check: "Uses MultiAxisNormalizer.computeAxisBounds or equivalent"
+    severity: MAJOR
+    file: "lib/src/rendering/chart_render_box.dart"
+    search: "computeAxisBounds|getAxisBounds|axisBounds"
+    expected: "FOUND - must compute per-axis bounds"
+    rationale: |
+      Task 6 created computeAxisBounds(). This should be used or equivalent.
+
+  - check: "Demo file created"
+    severity: MAJOR
+    command: "Test-Path example/lib/demos/task_013_crosshair_demo.dart"
+    expected: "True"
+
+visual_verification:
+  required: true
+  screenshot_path: ".orchestra/verification/screenshots/task-013-crosshair.png"
+  procedure: |
+    1. Run demo with flutter_agent.py
+    2. Move mouse to center of chart to activate crosshair
+    3. Take screenshot
+    4. Verify crosshair shows original values (not normalized)
+  content_checks:
+    - "Left axis shows Power scale (0-500 range)"
+    - "Right axis shows Heart Rate scale (60-180 range)"
+    - "Tooltip values are original (e.g., '350 W', '150 bpm')"
+    - "Intersection markers visible on both series lines"
+
+integration_checks:
+  - check: "chart_render_box.dart modified"
+    severity: BLOCKING
+    command: "git diff --name-only HEAD~1 | Select-String 'chart_render_box.dart'"
+    expected: "File listed in changes"
+    rationale: "This is an integration task - must modify existing rendering"
+
+  - check: "crosshair_tracker.dart enhanced or used differently"
+    severity: MAJOR
+    command: "git diff --name-only HEAD~1 | Select-String 'crosshair_tracker.dart'"
+    expected: "File may be modified or usage changed"
+
+decision_rules:
+  - "ANY BLOCKING fail → Task FAILED (return for rework)"
+  - "ANY MAJOR fail → Task FAILED (return for rework)"
+  - "MINOR fails only → Task PASSED with notes"
+  - "Visual verification REQUIRED (integration task)"
