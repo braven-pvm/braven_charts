@@ -237,7 +237,7 @@ task_history:
     status: "completed"
     started: "2025-11-30"
     completed: "2025-11-30"
-    commit: "pending"
+    commit: "0ea8c50"
     attempts: 1
     verification_notes: |
       All checks passed.
