@@ -108,6 +108,7 @@
    - ⚠️ Path changed: `chart_painter.dart` doesn't exist - rendering is in `chart_render_box.dart`
    - Added `normalizeValue()` and `denormalizeValue()` wrapper methods
  - [x] T023 [US1] Update tooltip to display original Y-values with units in `lib/src/interaction/tooltip_builder.dart`
+   - ✅ Completed: Orchestrator Task 12, commit 287d734
  - [ ] T024 [US1] Add example multi-axis chart to showcase in `example/lib/showcase/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 1 complete - multi-scale visualization working independently
@@ -190,14 +191,17 @@
 ### Tests for User Story 4
 
 - [x] T040 [P] [US4] Unit test for value formatting with units in `test/unit/multi_axis/value_formatter_test.dart`
+  - ✅ Completed: Orchestrator Task 12, commit 287d734, 27 tests
 - [ ] T041 [P] [US4] Widget test for crosshair values in `test/widget/multi_axis/crosshair_values_test.dart`
 
 ### Implementation for User Story 4
 
  - [x] T042 [US4] Create multi-axis value formatter in `lib/src/formatting/multi_axis_value_formatter.dart`
+   - ✅ Completed: Orchestrator Task 12, commit 287d734
  - [ ] T043 [US4] **[FR-014]** Update crosshair to use per-axis Y bounds lookup in `lib/src/interaction/crosshair_handler.dart` - screen Y position → per-axis data value conversion
  - [ ] T044 [US4] Update tracking mode to display all series values in `lib/src/interaction/tracking_overlay.dart`
  - [x] T045 [US4] Format decimal values appropriately (no over-precision) in `lib/src/formatting/multi_axis_value_formatter.dart`
+   - ✅ Completed: Orchestrator Task 12, commit 287d734
 - [ ] T046 [US4] Add crosshair example to showcase in `example/lib/showcase_plus/pages/scientific_data_page.dart`
 
 **Checkpoint**: User Story 4 complete - crosshair with original values working
