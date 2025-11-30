@@ -40,18 +40,23 @@ You do NOT verify your own work. An external orchestrator will verify against cr
 
 ### 0. Validate Task Structure (MANDATORY FIRST STEP)
 
-**Before ANY implementation**, validate that `current-task.md` is properly formed.
+**⛔ BEFORE ANY IMPLEMENTATION, RUN THIS SCRIPT: ⛔**
 
-Read the validation checklist in: **`.implementor/task-validator.md`** (same folder)
+```powershell
+.\.orchestra\handover\.implementor\scripts\validate-handover.ps1
+```
 
-This catches orchestrator mistakes BEFORE you waste time on incomplete specs.
+This script validates that `current-task.md` is properly formed. It catches orchestrator mistakes BEFORE you waste time on incomplete specs.
 
-**If validation fails**: 
+**If validation FAILS**: 
+- The script will tell you what's wrong
 - Write failure details to `completion-signal.md`
 - Say: "Task validation failed - see completion-signal.md for required fixes"
-- STOP and wait for orchestrator to fix
+- **STOP** and wait for orchestrator to fix
 
-**If validation passes**: Proceed to Step 1.
+**If validation PASSES**: Proceed to Step 1.
+
+> 📋 **Reference**: The validation rules are documented in `.implementor/task-validator.md` if you need to understand what's being checked.
 
 ---
 
@@ -330,12 +335,14 @@ Do NOT stop and ask - implement your best solution.
 
 ## Start Now
 
-1. Open `current-task.md`
-2. Implement the task
-3. Stage changes: `git add .`
-4. **Run pre-signal-check.ps1** (MANDATORY - creates verification artifact)
-5. If script FAILS → fix issues → run again
-6. If script PASSES → signal completion
-7. Say "ready for review"
+1. **Run `validate-handover.ps1`** (MANDATORY FIRST STEP)
+2. If validation FAILS → write to `completion-signal.md` → STOP
+3. If validation PASSES → read `current-task.md`
+4. Implement the task
+5. Stage changes: `git add .`
+6. **Run `pre-signal-check.ps1`** (MANDATORY - creates verification artifact)
+7. If script FAILS → fix issues → run again
+8. If script PASSES → signal completion in `completion-signal.md`
+9. Say "ready for review"
 
-**Remember: The orchestrator WILL check for the verification artifact. No artifact = rejection.**
+**Remember: TWO mandatory scripts - validate-handover.ps1 FIRST, pre-signal-check.ps1 LAST.**
