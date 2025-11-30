@@ -30,10 +30,10 @@ scripts/
 ├── common/
 │   └── check-utils.ps1       # Shared utilities for all scripts
 └── orchestrator/
-    ├── pre-task-check.ps1    # Run before preparing a new task
-    ├── task-coverage.ps1     # Check SpecKit ↔ Orchestrator sync
-    ├── verification-audit.ps1# Audit all verification records
-    └── handover-validate.ps1 # Validate current-task.md before handoff
+    ├── task-closeout-check.ps1  # Verify previous task is closed out
+    ├── task-coverage.ps1        # Check SpecKit ↔ Orchestrator sync
+    ├── verification-audit.ps1   # Audit all verification records
+    └── handover-validate.ps1    # Validate current-task.md before handoff
 
 handover/.implementor/scripts/
 ├── validate-handover.ps1     # Implementor reads handover
@@ -42,18 +42,25 @@ handover/.implementor/scripts/
 
 ## Orchestrator Scripts
 
-### `pre-task-check.ps1`
-**When:** Before preparing a new task
-**What:** Checks all administrative prerequisites are complete
-- Git status clean
-- Previous task verified
-- Progress tracking up to date
-- SpecKit tasks.md synced
-- Tests passing
+### `task-closeout-check.ps1`
+**When:** AFTER task completion, BEFORE preparing next handover
+**Purpose:** Gate check between implementor completion and next task prep
+**What:** Verifies the completed task is fully closed out:
+- Git status clean (all work committed)
+- Previous task marked completed in progress.yaml
+- Commit hash recorded
+- SpecKit tasks.md updated with completion
+- Verification results exist
+- Tests still passing
+
+**Workflow Position:**
+```
+Implementor signals done → Orchestrator verifies → task-closeout-check.ps1 → Prepare next handover
+```
 
 ```powershell
 . .\.orchestra\scripts\set-env.ps1
-.\.orchestra\scripts\orchestrator\pre-task-check.ps1
+.\.orchestra\scripts\orchestrator\task-closeout-check.ps1
 ```
 
 ### `task-coverage.ps1`

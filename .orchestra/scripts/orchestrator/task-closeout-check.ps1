@@ -1,9 +1,12 @@
-# Pre-Task Check Script (Orchestrator)
-# =====================================
-# MANDATORY: Run this BEFORE preparing any new task.
-# Verifies the previous task is fully closed out.
+# Task Closeout Check Script (Orchestrator)
+# ==========================================
+# MANDATORY: Run AFTER task completion, BEFORE preparing next handover.
+# Verifies the previous task is fully closed out and documented.
 #
-# Usage: .\.orchestra\scripts\orchestrator\pre-task-check.ps1
+# Purpose: Gate check between task completion and next handover preparation
+# Timing:  Implementor signals done → Orchestrator verifies → THIS SCRIPT → Prepare next handover
+#
+# Usage: .\.orchestra\scripts\orchestrator\task-closeout-check.ps1
 #
 # Returns: Exit code 0 if all checks pass, 1 if any fail
 
@@ -27,11 +30,11 @@ $scriptRoot = Split-Path -Parent $PSScriptRoot
 
 Write-Host "`n" 
 Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Magenta
-Write-Host "║          ORCHESTRATOR PRE-TASK CHECK                         ║" -ForegroundColor Magenta
-Write-Host "║   Run before preparing ANY new task                          ║" -ForegroundColor Magenta
+Write-Host "║          TASK CLOSEOUT CHECK                                 ║" -ForegroundColor Magenta
+Write-Host "║   Verify previous task before next handover                  ║" -ForegroundColor Magenta
 Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "  Checking Task $env:PREVIOUS_TASK completion before Task $env:CURRENT_TASK prep" -ForegroundColor Gray
+Write-Host "  Verifying Task $env:PREVIOUS_TASK is closed before preparing Task $env:CURRENT_TASK" -ForegroundColor Gray
 
 # Initialize collector
 $checks = New-CheckCollector
@@ -301,7 +304,7 @@ else {
     
     Write-Host "`n"
     Write-Host "Run with -Fix to auto-fix some issues:" -ForegroundColor Cyan
-    Write-Host "  .\.orchestra\scripts\orchestrator\pre-task-check.ps1 -Fix" -ForegroundColor White
+    Write-Host "  .\.orchestra\scripts\orchestrator\task-closeout-check.ps1 -Fix" -ForegroundColor White
     
     exit 1
 }

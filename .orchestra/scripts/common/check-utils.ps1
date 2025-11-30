@@ -418,7 +418,7 @@ function Add-CheckResult {
         if ($Details) { Write-Host "     $Details" -ForegroundColor Yellow }
     }
     
-    return $Passed
+    # Don't return value to avoid console output
 }
 
 function Get-CheckSummary {
