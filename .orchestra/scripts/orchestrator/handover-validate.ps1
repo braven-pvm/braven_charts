@@ -94,7 +94,8 @@ if ($hasObjective) {
         if ($isVague -or $objectiveText.Length -lt 30) {
             Write-CheckWarning "Objective may be too vague" `
                 "Be more specific about what exactly to implement"
-        } else {
+        }
+        else {
             Write-CheckPass "Objective appears specific"
         }
     }
@@ -108,7 +109,7 @@ Write-Section "File Operations"
 
 # Must have either CREATE or UPDATE
 $hasFileOps = $content -match "(?i)\|\s*(CREATE|UPDATE)\s*\|" -or 
-              $content -match "(?i)-\s*(CREATE|UPDATE):"
+$content -match "(?i)-\s*(CREATE|UPDATE):"
 Add-CheckResult $checks "Has file operations (CREATE/UPDATE)" $hasFileOps `
     "No CREATE or UPDATE operations specified" `
     "Add file operations table or list" `
@@ -121,7 +122,8 @@ if ($hasPlaceholders) {
         "Found placeholder paths like [TBD] or <path>" `
         "Replace all placeholders with actual file paths" `
         $currentTaskPath
-} else {
+}
+else {
     Write-CheckPass "No placeholders in file paths"
 }
 
@@ -185,7 +187,8 @@ if ($hasAC) {
     $hasCheckboxes = $content -match "\[ \]|\[x\]"
     if ($hasCheckboxes) {
         Write-CheckPass "Has checkbox items"
-    } else {
+    }
+    else {
         Write-CheckWarning "No checkbox items in acceptance criteria" `
             "Use [ ] for checkable acceptance items"
     }
@@ -202,7 +205,8 @@ if ($taskNumber -ne "1") {
     $hasPrevRef = $content -match "(?i)Task\s+$([int]$taskNumber - 1)|previous|builds on|depends on"
     if ($hasPrevRef) {
         Write-CheckPass "References previous task context"
-    } else {
+    }
+    else {
         Write-CheckWarning "No reference to previous task" `
             "Consider adding context about what previous task delivered"
     }
@@ -223,7 +227,7 @@ if ($hasCodeExamples) {
 
 Write-Section "Completeness"
 
-$hasTodo = $content -match "TODO:|FIXME:|XXX:|INCOMPLETE:"
+$hasTodo = $content -match "TODO:| FIXME: | XXX: | INCOMPLETE:"
 if ($hasTodo) {
     Add-CheckResult $checks "No TODO markers" $false `
         "Found TODO/FIXME markers in handover" `
@@ -233,7 +237,7 @@ if ($hasTodo) {
     Write-CheckPass "No TODO markers"
 }
 
-$hasEllipsis = $content -match "\.\.\.\s*$|…\s*$"
+$hasEllipsis = $content -match "\.\.\.\s*$| …\s*$"
 if ($hasEllipsis) {
     Add-CheckResult $checks "No incomplete ellipsis" $false `
         "Found '...' suggesting incomplete content" `

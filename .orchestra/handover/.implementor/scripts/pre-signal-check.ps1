@@ -79,7 +79,8 @@ Write-Section "Created Files"
 
 if ($createPaths.Count -eq 0) {
     Write-Host "  No CREATE files specified in task" -ForegroundColor Gray
-} else {
+}
+else {
     foreach ($path in $createPaths) {
         if ([string]::IsNullOrWhiteSpace($path)) { continue }
         
@@ -110,7 +111,8 @@ Write-Section "Modified Files"
 
 if ($updatePaths.Count -eq 0) {
     Write-Host "  No UPDATE files specified in task" -ForegroundColor Gray
-} else {
+}
+else {
     foreach ($path in $updatePaths) {
         if ([string]::IsNullOrWhiteSpace($path)) { continue }
         
@@ -161,7 +163,8 @@ if ($testPaths.Count -gt 0) {
             "Create the test file (TDD)" `
             $testPath
     }
-} else {
+}
+else {
     Write-CheckWarning "No explicit test paths found in task" `
         "Verify tests exist in $env:SPRINT_TEST_PATH"
 }
@@ -189,11 +192,13 @@ if ($filesToAnalyze.Count -gt 0) {
                 "Analyzer found issues" `
                 "Run: flutter analyze $file" `
                 $file
-        } catch {
+        }
+        catch {
             Write-CheckWarning "Could not analyze $file" $_
         }
     }
-} else {
+}
+else {
     Write-Host "  No Dart files to analyze" -ForegroundColor Gray
 }
 
@@ -233,7 +238,8 @@ try {
     if ($allPassed) {
         Write-Host "     $testCount tests passed" -ForegroundColor Gray
     }
-} catch {
+}
+catch {
     Add-CheckResult $checks "Sprint tests pass" $false `
         "Could not run tests: $_" `
         "Fix test environment" `
@@ -261,7 +267,8 @@ if ($isVisual) {
             "Demo file appears empty or incomplete" `
             "Add runnable demo widget" `
             $demoFiles[0].FullName
-    } else {
+    }
+    else {
         Add-CheckResult $checks "Demo file created" $false `
             "No demo file found for Task $taskNumber" `
             "Create example/lib/demos/task_${taskNumber}_demo.dart" `
@@ -308,7 +315,8 @@ if ($summary.AllPassed) {
     Write-Host "  3. Say 'ready for review'" -ForegroundColor White
     
     exit 0
-} else {
+}
+else {
     Write-Host "❌ PRE-SIGNAL CHECK FAILED - Do NOT signal completion yet" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Blue
     

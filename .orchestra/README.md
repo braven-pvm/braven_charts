@@ -23,6 +23,8 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   ├── task-002.yaml
 │   ├── task-010-results.md        # Verification results record
 │   ├── orchestrator-preflight-010.md  # Orchestrator audit trail
+│   ├── screenshots/               # Visual verification artifacts
+│   │   └── task-010-color-coded-axes.png
 │   └── ...
 ├── templates/              # Templates for orchestrator use (HIDDEN)
 │   ├── current-task-template.md       # ⭐ MUST use for every task
@@ -37,8 +39,6 @@ might (consciously or not) optimize for passing checks rather than quality.
 │       ├── task-coverage.ps1      # SpecKit ↔ Orchestrator sync check
 │       ├── verification-audit.ps1 # Audit verification records
 │       └── handover-validate.ps1  # Validate current-task.md
-├── screenshots/            # Visual verification artifacts
-│   └── task-010-color-coded-axes.png
 ├── handover/               # Communication channel (VISIBLE to implementor)
 │   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
 │   ├── current-task.md     # Current task for implementor

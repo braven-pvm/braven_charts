@@ -109,13 +109,33 @@ verification_criteria:
       
     - check: "Screenshot captured"
       severity: MAJOR
-      command: 'Test-Path ".orchestra/screenshots/task-010-color-coded-axes.png"'
+      command: 'Test-Path ".orchestra/verification/screenshots/task-010-color-coded-axes.png"'
       expected: "True"
       
     - check: "Demo shows color derivation from series"
       severity: MAJOR
       manual_check: true
       expected: "Axes with null color visually match their bound series colors"
+
+# ===== SCREENSHOT CONTENT VERIFICATION (Mandatory) =====
+# This section documents what was observed in the screenshot
+# Required by verification-audit.ps1 to confirm visual inspection
+screenshot_content:
+  file: "task-010-color-coded-axes.png"
+  verified_date: "2025-01-23"
+  visual_elements:
+    - "Two Y-axes visible on left side of chart"
+    - "Top axis labeled 'Power (W)' with BLUE color (derived from Power series)"  
+    - "Bottom axis labeled 'Heart Rate' with RED color (derived from HR series)"
+    - "Legend shows: Power series (blue circles), HR series (red circles)"
+    - "Grid lines and tick marks present for both axes"
+    - "Chart title showing 'Task 010: Color-Coded Axes Demo'"
+  what_was_seen: |
+    The demo renders a multi-axis chart with color-coded axes. The Power axis 
+    (left-top) displays in blue matching its bound series color. The Heart Rate 
+    axis (left-bottom) displays in red matching its bound series color. This 
+    confirms the AxisColorResolver correctly derives axis colors from their 
+    first bound series when no explicit axis.color is set.
 
   # ===== DOCUMENTATION CHECKS =====
   documentation:

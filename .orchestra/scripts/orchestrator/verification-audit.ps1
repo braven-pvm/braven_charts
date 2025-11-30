@@ -9,7 +9,7 @@
 # Returns: Exit code 0 if all audits pass, 1 if any fail
 
 param(
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [int]$TaskId
 )
 
@@ -44,13 +44,15 @@ $progressPath = "$env:ORCHESTRA_ROOT/progress.yaml"
 if (Test-Path $progressPath) {
     $progressContent = Get-Content $progressPath -Raw
     $currentTask = if ($progressContent -match "current_task_id:\s*(\d+)") { [int]$Matches[1] } else { 1 }
-} else {
+}
+else {
     $currentTask = 1
 }
 
 $auditScope = if ($TaskId -gt 0) { 
     @($TaskId) 
-} else { 
+}
+else { 
     # Audit all completed tasks
     $completedTasks = @()
     if ($progressContent -match "(?s)completed_tasks:(.*?)(?:current_|$)") {
@@ -92,7 +94,8 @@ foreach ($taskNum in $auditScope) {
     if (-not $resultsExists) {
         Write-CheckWarning "task-$taskIdPadded-results.md not found" `
             "Consider creating detailed results log"
-    } else {
+    }
+    else {
         Write-CheckPass "task-$taskIdPadded-results.md exists"
     }
 }
@@ -212,7 +215,8 @@ foreach ($taskNum in $auditScope) {
             Write-CheckWarning "Commit message doesn't mention Task ${taskNum}" `
                 "Consider more descriptive commit messages"
         }
-    } else {
+    }
+    else {
         Add-CheckResult $checks "Task ${taskNum} - Commit recorded" $false `
             "No commit hash recorded in progress.yaml" `
             "Add commit hash to task_history entry" `
@@ -250,12 +254,14 @@ if (Test-Path $screenshotPath) {
                     "Screenshot exists but content was not described" `
                     "MANDATORY: View screenshot via Chrome DevTools MCP and describe what you see" `
                     $taskScreenshots[0].FullName
-            } else {
+            }
+            else {
                 Write-CheckPass "Task ${taskNum} - Screenshot content verified"
             }
         }
     }
-} else {
+}
+else {
     Write-Host "  No screenshots directory found" -ForegroundColor Gray
 }
 
@@ -276,7 +282,8 @@ if ($summary.AllPassed) {
     Write-Host "  All verification records are complete and valid." -ForegroundColor Gray
     
     exit 0
-} else {
+}
+else {
     Write-Host "❌ VERIFICATION AUDIT FAILED - Gaps in verification" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
     
