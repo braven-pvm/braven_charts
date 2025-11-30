@@ -413,4 +413,31 @@ abstract final class CrosshairTracker {
     // Y is inverted in screen coordinates
     return chartBounds.bottom - normalizedY * chartBounds.height;
   }
+
+  /// Converts a data Y coordinate to screen Y coordinate for a SPECIFIC axis.
+  ///
+  /// This method is used for multi-axis charts where each series may have
+  /// different Y-axis bounds. Unlike [dataToScreenY] which uses global bounds,
+  /// this method uses per-axis bounds for accurate positioning.
+  ///
+  /// [dataY] The Y value in data coordinates
+  /// [chartBounds] The bounds of the chart area in screen coordinates
+  /// [axisMin] The minimum Y value for this specific axis
+  /// [axisMax] The maximum Y value for this specific axis
+  ///
+  /// Returns the screen Y coordinate for the given data Y value.
+  /// Screen Y is inverted (higher values are lower on screen).
+  static double dataToScreenYForAxis({
+    required double dataY,
+    required Rect chartBounds,
+    required double axisMin,
+    required double axisMax,
+  }) {
+    final yRange = axisMax - axisMin;
+    if (yRange <= 0) return chartBounds.bottom;
+
+    final normalizedY = (dataY - axisMin) / yRange;
+    // Y is inverted in screen coordinates
+    return chartBounds.bottom - normalizedY * chartBounds.height;
+  }
 }

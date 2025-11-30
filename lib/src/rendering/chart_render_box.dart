@@ -4324,6 +4324,9 @@ class ChartRenderBox extends RenderBox {
     final yMin = _transform!.dataYMin;
     final yMax = _transform!.dataYMax;
 
+    // Pre-compute axis bounds for multi-axis crosshair positioning
+    final axisBounds = _computeAxisBounds();
+
     final trackingState = CrosshairTracker.calculateTrackingState(
       screenX: cursorPos.dx,
       chartBounds: _plotArea,
@@ -4338,13 +4341,43 @@ class ChartRenderBox extends RenderBox {
     // Draw intersection markers on each series line
     if (crosshairConfig.showIntersectionMarkers) {
       for (final value in trackingState.seriesValues) {
-        // Convert data Y to screen Y
-        final screenY = CrosshairTracker.dataToScreenY(
-          dataY: value.y,
-          chartBounds: _plotArea,
-          yMin: yMin,
-          yMax: yMax,
-        );
+        // For multi-axis mode, use per-axis bounds for correct Y positioning
+        double screenY;
+        if (_yAxes != null && _yAxes!.length > 1) {
+          // Look up the axis for this series
+          final axisConfig = SeriesAxisResolver.resolveAxis(
+            value.seriesId,
+            _axisBindings,
+            _yAxes!,
+          );
+          final seriesAxisBounds = axisConfig != null ? axisBounds[axisConfig.id] : null;
+
+          if (seriesAxisBounds != null) {
+            // Use per-axis bounds for accurate positioning
+            screenY = CrosshairTracker.dataToScreenYForAxis(
+              dataY: value.y,
+              chartBounds: _plotArea,
+              axisMin: seriesAxisBounds.min,
+              axisMax: seriesAxisBounds.max,
+            );
+          } else {
+            // Fallback to global bounds if axis not found
+            screenY = CrosshairTracker.dataToScreenY(
+              dataY: value.y,
+              chartBounds: _plotArea,
+              yMin: yMin,
+              yMax: yMax,
+            );
+          }
+        } else {
+          // Single-axis mode: use global bounds
+          screenY = CrosshairTracker.dataToScreenY(
+            dataY: value.y,
+            chartBounds: _plotArea,
+            yMin: yMin,
+            yMax: yMax,
+          );
+        }
 
         // Draw filled circle marker
         final markerPaint = Paint()
@@ -4408,7 +4441,19 @@ class ChartRenderBox extends RenderBox {
     const markerSize = 8.0;
 
     for (final value in state.seriesValues) {
-      final displayY = _formatDataValue(value.y);
+      // Get unit from axis config for multi-axis mode
+      String? yUnit;
+      if (_yAxes != null && _yAxes!.length > 1) {
+        final axisConfig = SeriesAxisResolver.resolveAxis(
+          value.seriesId,
+          _axisBindings,
+          _yAxes!,
+        );
+        yUnit = axisConfig?.unit;
+      }
+
+      // Format Y value with unit
+      final displayY = MultiAxisValueFormatter.format(value: value.y, unit: yUnit);
       final label = '${value.seriesName}: $displayY';
       final tp = TextPainter(
         text: TextSpan(
