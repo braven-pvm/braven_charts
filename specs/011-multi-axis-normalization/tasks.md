@@ -50,10 +50,11 @@
 
 - [x] T007 Create test directory structure at `test/unit/multi_axis/`
   - ✅ Auto-completed: Created with first test file
-- [ ] T008 Create test directory structure at `test/widget/multi_axis/`
+- [x] T008 Create test directory structure at `test/widget/multi_axis/`
+  - ✅ Completed: Orchestrator Task 11, commit 1901dac
 - [ ] T009 Create test directory structure at `test/golden/multi_axis/`
- - [ ] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/braven_chart_plus.dart`
-   - 🔄 Mapped to: Orchestrator Task 11
+ - [x] T010 Add `yAxes` and `normalizationMode` parameters to BravenChartPlus widget in `lib/src/braven_chart_plus.dart`
+   - ✅ Completed: Orchestrator Task 11, commit 1901dac
    - ⚠️ Path changed: widget is at `lib/src/braven_chart_plus.dart` not `lib/src/widgets/`
  - [x] T011 Create MultiAxisLayoutDelegate for axis width computation in `lib/src/layout/multi_axis_layout.dart`
    - 🔄 Mapped to: Orchestrator Task 9
@@ -83,13 +84,15 @@
   - ✅ Completed: Orchestrator Task 6, 26 tests
 - [x] T014 [P] [US1] Unit test for axis bounds computation in `test/unit/multi_axis/axis_bounds_test.dart`
   - ✅ Completed: Orchestrator Task 6, 21 tests
-- [ ] T015 [P] [US1] Widget test for multi-axis rendering in `test/widget/multi_axis/multi_axis_chart_test.dart`
+- [x] T015 [P] [US1] Widget test for multi-axis rendering in `test/widget/multi_axis/multi_axis_chart_test.dart`
+  - ✅ Completed: Orchestrator Task 11, commit 1901dac
 - [ ] T016 [P] [US1] Golden test for 2-axis chart in `test/golden/multi_axis/two_axis_chart_test.dart`
 - [ ] T017 [P] [US1] Golden test for 4-axis chart in `test/golden/multi_axis/four_axis_chart_test.dart`
 
 ### Implementation for User Story 1
 
- - [ ] T018 [US1] Implement series-to-axis binding resolution in `lib/src/axis/series_axis_resolver.dart`
+ - [x] T018 [US1] Implement series-to-axis binding resolution in `lib/src/axis/series_axis_resolver.dart`
+   - ✅ Completed: Orchestrator Task 11, commit 1901dac
  - [x] T019 [US1] Implement per-axis Y normalization in `lib/src/rendering/multi_axis_normalizer.dart`
    - ✅ Completed: Orchestrator Task 6
    - Methods: `normalize()`, `denormalize()`, `computeAxisBounds()`
@@ -121,7 +124,8 @@
 
 - [x] T025 [P] [US2] Unit test for auto-detection algorithm in `test/unit/multi_axis/auto_detection_test.dart`
   - ✅ Completed: Orchestrator Task 7, 29 tests
-- [ ] T026 [P] [US2] Widget test for auto-mode triggering in `test/widget/multi_axis/auto_detection_widget_test.dart`
+- [x] T026 [P] [US2] Widget test for auto-mode triggering in `test/widget/multi_axis/auto_detection_widget_test.dart`
+  - ✅ Completed: Orchestrator Task 11, commit 1901dac
 
 ### Implementation for User Story 2
 
@@ -150,7 +154,8 @@
 - [x] T031 [P] [US3] Unit test for axis color resolution in `test/unit/multi_axis/axis_color_test.dart`
   - ✅ Completed: Orchestrator Task 10, commit 22be8f3
   - ⚠️ Path changed: `test/unit/multi_axis/axis_color_resolver_test.dart` (13 tests)
-- [ ] T032 [P] [US3] Widget test for color-coded axes in `test/widget/multi_axis/axis_color_widget_test.dart`
+- [x] T032 [P] [US3] Widget test for color-coded axes in `test/widget/multi_axis/axis_color_widget_test.dart`
+  - ✅ Completed: Orchestrator Task 11, commit 1901dac
 - [ ] T033 [P] [US3] Golden test for colored axes in `test/golden/multi_axis/colored_axes_test.dart`
 
 ### Implementation for User Story 3
