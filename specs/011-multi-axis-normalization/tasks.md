@@ -62,11 +62,14 @@
  - [x] T012 Create axis bounds computation utility in `lib/src/axis/axis_bounds_calculator.dart`
    - 🔄 Mapped to: Orchestrator Task 6
    - ✅ Completed: Implemented as `MultiAxisNormalizer.computeAxisBounds()` in `lib/src/rendering/multi_axis_normalizer.dart`
- - [ ] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/grid_renderer.dart`
- - [ ] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
-   - 🔄 Mapped to: Orchestrator Task 14
- - [ ] T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active in `lib/src/interaction/zoom_controller.dart` - X-axis zoom remains functional
-   - 🔄 Mapped to: Orchestrator Task 14
+ - [x] T012a [P] **[FR-009]** Disable grid lines when multi-axis active in `lib/src/rendering/grid_renderer.dart`
+   - ✅ Completed: Orchestrator Task 14
+   - ⚠️ No code change needed - MultiAxisPainter already skips grid lines
+ - [x] T012b [P] Unit test for Y-axis zoom constraint in `test/unit/multi_axis/zoom_constraint_test.dart`
+   - ✅ Completed: Orchestrator Task 14, 8 tests
+ - [x] T012c **[FR-013]** Disable Y-axis zoom/pan when multi-axis mode active in `lib/src/interaction/zoom_controller.dart` - X-axis zoom remains functional
+   - ✅ Completed: Orchestrator Task 14
+   - ⚠️ Path changed: Implemented in `chart_render_box.dart` not `zoom_controller.dart`
 
 **Checkpoint**: Foundation ready - user story implementation can begin
 

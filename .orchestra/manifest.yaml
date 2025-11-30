@@ -151,7 +151,8 @@ phases:
         
       - id: 14
         title: "Disable Y-Zoom and Grid Lines in Multi-Axis Mode"
-        status: "pending"
+        status: "completed"
+        commit: "pending"
         speckit_tasks: ["T012a", "T012b", "T012c"]
         consolidation_rationale: "FR-009 (grid lines) + FR-013 (zoom) + zoom constraint test"
         notes: "All multi-axis mode constraints: disable grid lines, disable Y-zoom/pan"
@@ -178,8 +179,8 @@ phases:
         notes: "Final validation - all features working together. T009 creates test/golden/multi_axis/, T016/T017/T033 are golden tests"
         category: "visual"  # INFRASTRUCTURE/INTEGRATION/VISUAL - determines screenshot req
 
-current_task: 14
-current_phase: "interaction"
+current_task: 15
+current_phase: "integration"
 
 # Coverage summary (update after each task)
 # All SpecKit tasks are now mapped to orchestrator tasks.
@@ -187,8 +188,8 @@ current_phase: "interaction"
 speckit_coverage:
   total_tasks: 53
   mapped_tasks: 53
-  completed_tasks: 26
-  remaining_tasks: 27
+  completed_tasks: 29
+  remaining_tasks: 24
   coverage_percent: 100
   notes: |
     All SpecKit tasks are now mapped to orchestrator tasks:
