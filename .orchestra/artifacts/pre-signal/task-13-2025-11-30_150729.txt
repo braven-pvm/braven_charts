@@ -1,0 +1,13 @@
+# Pre-Signal Check Artifact
+# =========================
+# This file documents a FAILED pre-signal check
+
+task_id: 13
+status: FAILED
+timestamp: 2025-11-30 15:07:29
+checks_passed: 13
+checks_failed: 2
+
+failures:
+- Test exists: test/flutter_test.dart: Test file not found
+- No analyzer issues: chart_render_box.dart: Analyzer found issues

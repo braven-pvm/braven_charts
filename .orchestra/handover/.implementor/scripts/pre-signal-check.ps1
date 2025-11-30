@@ -142,8 +142,10 @@ Write-Section "Test Files"
 # Find test files that should exist
 $testPaths = @()
 
-# From explicit mentions in task
-$testMatches = [regex]::Matches($content, "test[/\\][^\s`]+_test\.dart")
+# From explicit mentions in task (actual file paths, not package imports)
+# Match paths like: test/unit/..._test.dart or test/widget/..._test.dart
+# Exclude package imports like: package:flutter_test/flutter_test.dart
+$testMatches = [regex]::Matches($content, "(?<!\bpackage:)test/(unit|widget|integration)[/\\][^\s`\)]+_test\.dart")
 foreach ($match in $testMatches) {
     $testPaths += $match.Value
 }
