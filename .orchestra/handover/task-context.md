@@ -2,13 +2,14 @@
 
 ## Sprint Progress
 
-**Phase**: Rendering (Tasks 9-12)  
-**Status**: Task 10 complete, preparing Task 11
+**Phase**: Interaction (Tasks 12-14)  
+**Status**: Task 11 complete, preparing Task 12
 
 ### Completed Phases
 - ✅ **Foundation** (Tasks 1-5): Models, enums, configs
 - ✅ **Core Logic** (Tasks 6-8): Normalizers, auto-detection
-- 🔄 **Rendering** (Tasks 9-12): Painters, widget integration
+- ✅ **Rendering** (Tasks 9-11): Painters, widget integration
+- 🔄 **Interaction** (Tasks 12-14): Tooltips, crosshair, constraints
 
 ---
 
@@ -20,42 +21,32 @@ A multi-axis normalization feature for BravenChartPlus that allows displaying mu
 
 ---
 
-## Current Codebase State (After Task 10)
+## Current Codebase State (After Task 11)
 
 ### New Files Created This Sprint
 
 ```
 lib/src/
 ├── axis/
+│   ├── series_axis_resolver.dart  ✅ Task 11 - Series-to-axis binding resolution
+│   └── normalization_detector.dart ✅ Task 7 - Auto-detection
+├── models/
 │   ├── y_axis_position.dart       ✅ Task 1 - Position enum
 │   ├── y_axis_config.dart         ✅ Task 2 - Axis configuration
 │   ├── series_axis_binding.dart   ✅ Task 3 - Series-to-axis binding
-│   └── multi_axis_config.dart     ✅ Task 5 - Container for all config
-├── normalization/
 │   ├── normalization_mode.dart    ✅ Task 4 - Mode enum
-│   ├── axis_normalizer.dart       ✅ Task 6 - Core normalizer
-│   ├── group_normalizer.dart      ✅ Task 7 - Group normalization
-│   ├── normalization_detector.dart ✅ Task 8 - Auto-detection
-│   └── multi_axis_normalizer.dart ✅ Task 9 - Facade
+│   └── multi_axis_config.dart     ✅ Task 5 - Container for all config
 └── rendering/
     ├── multi_axis_painter.dart    ✅ Task 9 - Axis painter
+    ├── multi_axis_normalizer.dart ✅ Task 6 - Normalization logic
     └── axis_color_resolver.dart   ✅ Task 10 - Color from series
 
-test/unit/multi_axis/
-├── y_axis_position_test.dart      (14 tests)
-├── y_axis_config_test.dart        (25 tests)
-├── series_axis_binding_test.dart  (14 tests)
-├── normalization_mode_test.dart   (11 tests)
-├── multi_axis_config_test.dart    (23 tests)
-├── axis_normalizer_test.dart      (18 tests)
-├── group_normalizer_test.dart     (12 tests)
-├── normalization_detector_test.dart (18 tests)
-├── multi_axis_normalizer_test.dart  (41 tests)
-├── multi_axis_painter_test.dart     (21 tests)
-└── axis_color_resolver_test.dart    (13 tests)
+test/unit/multi_axis/           (210 tests)
+test/widget/multi_axis/         (13 tests) ✅ Task 11
+test/integration/               (9 multi-axis tests)
 ```
 
-**Total tests**: 210+
+**Total tests**: 210 unit + 13 widget + 9 integration = 232
 
 ---
 
@@ -107,13 +98,22 @@ final bool _normalizationNeeded;
 final Map<String, YRange> _seriesYRanges;
 ```
 
-### What's Missing (Task 11 will add)
+### What's Available Now (Task 11 added)
 ```dart
-// Parameters to add:
-final List<YAxisConfig>? yAxes;
-final NormalizationMode? normalizationMode;
-// OR unified:
-final MultiAxisConfig? multiAxisConfig;
+// Widget parameters now available:
+BravenChartPlus(
+  yAxes: [leftAxis, rightAxis],
+  normalizationMode: NormalizationMode.perAxis,
+  axisBindings: [powerBinding, hrBinding],
+  // ...
+);
+```
+
+### SeriesAxisResolver (Task 11)
+Resolves which axis a series should use:
+```dart
+final axisId = SeriesAxisResolver.resolveAxisId(seriesId, bindings, axes);
+final axis = SeriesAxisResolver.resolveAxis(seriesId, bindings, axes);
 ```
 
 ---
