@@ -302,12 +302,40 @@ Add-CheckResult $checks "Has changes to commit" $hasChanges `
 
 $summary = Get-CheckSummary $checks
 
+# Create artifact directory if needed
+$artifactDir = "$orchestraRoot/artifacts/pre-signal"
+if (-not (Test-Path $artifactDir)) {
+    New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+}
+
+# Generate artifact filename
+$timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+$artifactPath = "$artifactDir/task-$taskNumber-$timestamp.txt"
+
 Write-Host "`n"
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Blue
 
 if ($summary.AllPassed) {
     Write-Host "✅ PRE-SIGNAL CHECK PASSED - Ready to signal completion" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Blue
+    
+    # Write PASS artifact (orchestrator will check for this)
+    $artifactContent = @"
+# Pre-Signal Check Artifact
+# =========================
+# This file proves the implementor ran pre-signal-check.ps1
+
+task_id: $taskNumber
+status: PASSED
+timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+checks_passed: $($summary.Passed)
+checks_failed: $($summary.Failed)
+
+# Orchestrator: Verify this file exists before accepting completion
+"@
+    Set-Content -Path $artifactPath -Value $artifactContent
+    
+    Write-Host "`n  📝 Artifact written: $artifactPath" -ForegroundColor Cyan
     
     Write-Host "`nNext steps:" -ForegroundColor Cyan
     Write-Host "  1. Stage all changes: git add -A" -ForegroundColor White
@@ -319,6 +347,24 @@ if ($summary.AllPassed) {
 else {
     Write-Host "❌ PRE-SIGNAL CHECK FAILED - Do NOT signal completion yet" -ForegroundColor Red
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Blue
+    
+    # Write FAIL artifact (documents the failure)
+    $failDetails = ($checks.Failures | ForEach-Object { "- $($_.Name): $($_.Details)" }) -join "`n"
+    $artifactContent = @"
+# Pre-Signal Check Artifact
+# =========================
+# This file documents a FAILED pre-signal check
+
+task_id: $taskNumber
+status: FAILED
+timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+checks_passed: $($summary.Passed)
+checks_failed: $($summary.Failed)
+
+failures:
+$failDetails
+"@
+    Set-Content -Path $artifactPath -Value $artifactContent
     
     Write-Host "`n🚫 Fix these issues first:" -ForegroundColor Red
     foreach ($failure in $checks.Failures) {

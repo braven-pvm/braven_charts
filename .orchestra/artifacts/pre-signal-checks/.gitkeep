@@ -1,0 +1,2 @@
+# This folder stores verification artifacts created by pre-signal-check.ps1
+# These artifacts are checked by accept-signal-check.ps1 before accepting completion signals

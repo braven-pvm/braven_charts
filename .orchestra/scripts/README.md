@@ -31,13 +31,14 @@ scripts/
 │   └── check-utils.ps1       # Shared utilities for all scripts
 └── orchestrator/
     ├── task-closeout-check.ps1  # Verify previous task is closed out
+    ├── accept-signal-check.ps1  # ⛔ Verify implementor ran pre-signal check
     ├── task-coverage.ps1        # Check SpecKit ↔ Orchestrator sync
     ├── verification-audit.ps1   # Audit all verification records
     └── handover-validate.ps1    # Validate current-task.md before handoff
 
 handover/.implementor/scripts/
 ├── validate-handover.ps1     # Implementor reads handover
-└── pre-signal-check.ps1      # Implementor pre-completion checks
+└── pre-signal-check.ps1      # Implementor pre-completion checks (WRITES ARTIFACT)
 ```
 
 ## Orchestrator Scripts
@@ -61,6 +62,39 @@ Implementor signals done → Orchestrator verifies → task-closeout-check.ps1 �
 ```powershell
 . .\.orchestra\scripts\set-env.ps1
 .\.orchestra\scripts\orchestrator\task-closeout-check.ps1
+```
+
+### `accept-signal-check.ps1` ⛔ CRITICAL
+
+**When:** IMMEDIATELY when implementor says "ready for review" (BEFORE reading verification yaml)
+**Purpose:** STRUCTURAL GATE to ensure implementor ran pre-signal-check.ps1
+**What:** Verifies the implementor ACTUALLY ran their validation script:
+- Artifact file exists: `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+- Artifact shows "PASSED" status (not FAILED)
+- Artifact is not stale (warning if >24 hours old)
+
+**Why This Exists:**
+- Implementors can skip validation scripts
+- Without structural enforcement, process drift occurs
+- This creates a GATE: no artifact = no verification proceeds
+
+**Workflow Position:**
+```
+Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read verification YAML
+                                   ↓
+                             (if FAIL)
+                                   ↓
+                           BLOCK - Tell implementor to run pre-signal-check.ps1
+```
+
+**Consequences:**
+- If artifact missing: BLOCKING - verification cannot proceed
+- If artifact shows FAILED: BLOCKING - implementor must fix issues first
+- If artifact stale: WARNING - proceed with caution
+
+```powershell
+. .\.orchestra\scripts\set-env.ps1
+.\.orchestra\scripts\orchestrator\accept-signal-check.ps1
 ```
 
 ### `task-coverage.ps1`
@@ -116,17 +150,29 @@ Implementor signals done → Orchestrator verifies → task-closeout-check.ps1 �
 ```
 
 ### `pre-signal-check.ps1`
-**When:** Before signaling completion
-**What:** Verifies all deliverables are ready
+**When:** MANDATORY - Before signaling completion (Step 5 in agent_readme.md)
+**What:** Verifies all deliverables are ready and CREATES VERIFICATION ARTIFACT
 - CREATE files exist with content
 - UPDATE files were modified
 - Tests pass
 - No TODOs in code
 - Demo exists (if visual task)
+- **WRITES ARTIFACT to `.orchestra/artifacts/pre-signal-checks/`**
+
+**CRITICAL:** This script creates an artifact that the orchestrator's `accept-signal-check.ps1` will look for.
+If you skip this script, the orchestrator WILL block your completion signal.
 
 ```powershell
 .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
 ```
+
+**Artifact Location:** `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+
+**Artifact Contains:**
+- Timestamp
+- Task number
+- PASSED/FAILED status
+- Check results summary
 
 ## Failure Behavior
 
