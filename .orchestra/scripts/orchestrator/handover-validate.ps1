@@ -281,6 +281,48 @@ if (Test-Path $progressPath) {
         "Handover is for Task $taskNumber but progress.yaml shows Task $currentTaskInProgress" `
         "Update progress.yaml or correct task number" `
         $progressPath
+    
+    # Check current phase and verify task-context.md reflects it
+    $currentPhase = ""
+    if ($progressContent -match 'current_phase:\s*"?(\w+)"?') {
+        $currentPhase = $Matches[1]
+    }
+    
+    if ($currentPhase) {
+        $taskContextPath = "$env:HANDOVER_PATH/task-context.md"
+        if (Test-Path $taskContextPath) {
+            $contextContent = Get-Content $taskContextPath -Raw
+            $hasPhaseRef = $contextContent -match "(?i)\bphase\b.*$currentPhase | $currentPhase.*\bphase\b | \*\*Phase\*\*:\s*$currentPhase"
+            
+            Add-CheckResult $checks "task-context.md reflects '$currentPhase' phase" $hasPhaseRef `
+                "task-context.md doesn't reference current phase '$currentPhase'" `
+                "Update task-context.md with current phase info before handover" `
+                $taskContextPath
+        }
+        else {
+            Add-CheckResult $checks "task-context.md exists" $false `
+                "task-context.md not found" `
+                "Create task-context.md with sprint background and current phase" `
+                $taskContextPath
+        }
+    }
+}
+
+# ============================================================================
+# 10. COMPLETION-SIGNAL.MD MUST BE CLEAR
+# ============================================================================
+
+Write-Section "Pre-Handover State"
+
+$completionPath = "$env:HANDOVER_PATH/completion-signal.md"
+if (Test-Path $completionPath) {
+    $completionContent = Get-Content $completionPath -Raw
+    $isEmpty = [string]::IsNullOrWhiteSpace($completionContent) -or $completionContent.Trim() -eq ""
+    
+    Add-CheckResult $checks "completion-signal.md is clear" $isEmpty `
+        "completion-signal.md still has content from previous task" `
+        "Clear completion-signal.md before handover (should be empty)" `
+        $completionPath
 }
 
 # ============================================================================

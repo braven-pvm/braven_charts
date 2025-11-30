@@ -2413,3 +2413,81 @@ The `set-env.ps1` script sets sprint-level variables:
 Pre-task checks should be **mandatory and automated**, not optional and manual. When humans (or agents) can skip checks, they eventually will.
 
 ---
+
+## Session Log: Handover File Lifecycle Clarification (2025-11-30)
+
+### Issue Identified
+
+User noticed confusion about handover file states:
+- `completion-signal.md` - was empty, is this correct?
+- `task-context.md` - was stale (still showing foundation phase info for Task 11)
+
+### Investigation
+
+Reviewed all documentation:
+- `.orchestra/readme.md`
+- `.orchestra/docs/solution-options.md`
+- `.orchestra/handover/agent_readme.md`
+- `.orchestra/templates/current-task-template.md`
+
+Found: Open question in readme.md:
+> "Should `task-context.md` persist across tasks or be reset too?"
+
+### Decision: Handover File Lifecycle
+
+| File | Lifecycle | Update Trigger | Cleared By |
+|------|-----------|----------------|------------|
+| `current-task.md` | **VOLATILE** | Every task | Replaced entirely |
+| `task-context.md` | **SEMI-STABLE** | Phase change | Updated in-place |
+| `completion-signal.md` | **TRANSIENT** | Implementor signals | Cleared after verification |
+| `AGENT_README.md` | **STABLE** | Process changes only | N/A |
+
+### Detailed Rules
+
+**`completion-signal.md`**:
+- Empty = Ready for implementor to signal completion
+- Populated = Implementor has written their completion report
+- Orchestrator CLEARS after verifying task passes
+- Must be empty before preparing next handover
+
+**`task-context.md`**:
+- Contains sprint-level background context
+- Persists across tasks within same phase
+- MUST be updated when:
+  - Phase changes (foundation → core → rendering → etc.)
+  - New significant patterns are established
+  - Codebase structure changes meaningfully
+- Should show: current phase, files created so far, key classes to know
+
+### Enforcement Added
+
+1. **`task-closeout-check.ps1`**:
+   - ✅ completion-signal.md is clear (already existed)
+   - ✅ task-context.md reflects current phase (NEW - warns if stale)
+
+2. **`handover-validate.ps1`**:
+   - ✅ task-context.md reflects current phase (NEW - BLOCKING)
+   - ✅ completion-signal.md is clear (NEW - BLOCKING)
+
+3. **Documentation**:
+   - Updated readme.md directory tree with lifecycle annotations
+   - Marked open question as RESOLVED
+   - Updated pre-flight protocol checklist
+
+### Script Rename
+
+Also renamed `pre-task-check.ps1` → `task-closeout-check.ps1` for clarity:
+- Old name implied "before starting task"
+- New name clarifies "verify previous task is closed out"
+- Workflow: `Implementor signals → Orchestrator verifies → task-closeout-check → Prepare next`
+
+**Commit**: (pending)
+
+### Key Insight
+
+File lifecycle rules should be:
+1. **Documented** - Not just "understood"
+2. **Enforced** - Scripts check and block on violations
+3. **Discoverable** - Visible in directory tree annotations
+
+---

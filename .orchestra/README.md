@@ -35,15 +35,15 @@ might (consciously or not) optimize for passing checks rather than quality.
 │   ├── common/
 │   │   └── check-utils.ps1 # Shared utilities
 │   └── orchestrator/
-│       ├── pre-task-check.ps1     # ⭐ RUN before EVERY new task prep
+│       ├── task-closeout-check.ps1 # ⭐ Verify previous task is closed out
 │       ├── task-coverage.ps1      # SpecKit ↔ Orchestrator sync check
 │       ├── verification-audit.ps1 # Audit verification records
 │       └── handover-validate.ps1  # Validate current-task.md
 ├── handover/               # Communication channel (VISIBLE to implementor)
 │   ├── AGENT_README.md     # ⭐ Implementor starts here (workflow instructions)
-│   ├── current-task.md     # Current task for implementor
-│   ├── task-context.md     # Background context
-│   ├── completion-signal.md # Implementor signals done here
+│   ├── current-task.md     # Current task (REPLACED each task)
+│   ├── task-context.md     # Sprint background (SEMI-STABLE - update on phase change)
+│   ├── completion-signal.md # Implementor signals done (CLEARED after verification)
 │   └── .implementor/       # 🚫 ORCHESTRATOR DO NOT READ 🚫
 │       ├── task-validator.md  # Implementor's validation rules
 │       └── scripts/           # Implementor automation scripts
@@ -62,14 +62,14 @@ instead of following instructions. This protocol FORCES structural compliance.
 
 **BEFORE preparing ANY task, the orchestrator MUST:**
 
-### Step 0: Initialize Environment & Run Pre-Task Check (MANDATORY)
+### Step 0: Initialize Environment & Run Task Closeout Check (MANDATORY)
 
 ```powershell
 # Source the environment (ALWAYS DO THIS FIRST)
 . .\.orchestra\scripts\set-env.ps1
 
-# Run the pre-task check script
-.\.orchestra\scripts\orchestrator\pre-task-check.ps1
+# Run the task closeout check script
+.\.orchestra\scripts\orchestrator\task-closeout-check.ps1
 ```
 
 This script verifies:
@@ -81,12 +81,13 @@ This script verifies:
 - ✅ Screenshot exists and has content (if visual task)
 - ✅ Sprint tests still pass
 - ✅ completion-signal.md is clear
+- ✅ task-context.md reflects current phase
 
 **IF ANY CHECK FAILS**: Fix the issues BEFORE proceeding. Do NOT skip this step.
 
 Use `-Fix` flag to auto-fix some issues:
 ```powershell
-.\.orchestra\scripts\orchestrator\pre-task-check.ps1 -Fix
+.\.orchestra\scripts\orchestrator\task-closeout-check.ps1 -Fix
 ```
 
 ### Additional Orchestrator Scripts
@@ -660,7 +661,7 @@ This section captures iterative discoveries while developing the orchestrator pa
 
 ### Open Questions
 
-- Should `task-context.md` persist across tasks or be reset too?
+- ~~Should `task-context.md` persist across tasks or be reset too?~~ **RESOLVED**: Semi-stable. Persists across tasks, but MUST be updated when phase changes.
 - How to handle visual task verification when Flutter Agent isn't available?
 - What metadata should be captured in verification artifacts?
 
