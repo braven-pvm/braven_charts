@@ -267,6 +267,38 @@ if (Test-Path $currentTaskPath) {
     }
 }
 
+# Check task-context.md reflects current phase
+$taskContextPath = "$env:HANDOVER_PATH/task-context.md"
+if (Test-Path $taskContextPath) {
+    $contextContent = Get-Content $taskContextPath -Raw
+    
+    # Get current phase from progress.yaml
+    $currentPhase = ""
+    if (Test-Path $env:PROGRESS_PATH) {
+        $progressContent = Get-Content $env:PROGRESS_PATH -Raw
+        if ($progressContent -match 'current_phase:\s*"?(\w+)"?') {
+            $currentPhase = $Matches[1]
+        }
+    }
+    
+    if ($currentPhase) {
+        # Check if context mentions the current phase
+        $hasPhaseRef = $contextContent -match "(?i)\bphase\b.*$currentPhase|$currentPhase.*\bphase\b|\*\*Phase\*\*:\s*$currentPhase"
+        
+        if ($hasPhaseRef) {
+            Write-Host "  ✅ task-context.md reflects current phase ($currentPhase)" -ForegroundColor Green
+        }
+        else {
+            Write-CheckWarning "task-context.md may be stale for phase '$currentPhase'" `
+                "Update task-context.md with current phase context before handover"
+        }
+    }
+}
+else {
+    Write-CheckWarning "task-context.md not found" `
+        "Create task-context.md with sprint background"
+}
+
 # ============================================================================
 # SUMMARY
 # ============================================================================
