@@ -1047,6 +1047,10 @@ class ChartRenderBox extends RenderBox {
       return (requestedPlotDx, requestedPlotDy);
     }
 
+    // In multi-axis mode, disable Y-axis panning by zeroing Y delta
+    // This is required because per-axis normalization would break with Y-pan
+    final effectiveRequestedPlotDy = _hasMultipleYAxes() ? 0.0 : requestedPlotDy;
+
     // Use pan constraint transform if set (paused streaming mode with full dataset bounds),
     // otherwise use original transform (normal streaming mode with sliding window bounds)
     final constraintTransform = _panConstraintTransform ?? _originalTransform!;
@@ -1057,8 +1061,8 @@ class ChartRenderBox extends RenderBox {
     final dataPerPixelY = _transform!.dataPerPixelY;
     final requestedDataDx = requestedPlotDx * dataPerPixelX;
     final requestedDataDy = _transform!.invertY
-        ? -requestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
-        : requestedPlotDy * dataPerPixelY;
+        ? -effectiveRequestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
+        : effectiveRequestedPlotDy * dataPerPixelY;
 
     // 2. Calculate tentative new viewport position in data space
     final tentativeDataXMin = _transform!.dataXMin + requestedDataDx;
@@ -2780,7 +2784,18 @@ class ChartRenderBox extends RenderBox {
 
       // Apply zoom centered on cursor position with constraints
       final tentativeTransform = _transform!.zoom(zoomFactor, plotPosition);
-      _transform = _clampZoomLevel(tentativeTransform);
+      var clampedTransform = _clampZoomLevel(tentativeTransform);
+
+      // In multi-axis mode, disable Y-axis zoom by preserving original Y bounds
+      // This is required because per-axis normalization would break with Y-zoom
+      if (_hasMultipleYAxes()) {
+        clampedTransform = clampedTransform.copyWith(
+          dataYMin: _transform!.dataYMin,
+          dataYMax: _transform!.dataYMax,
+        );
+      }
+
+      _transform = clampedTransform;
 
       // Update axes to reflect new viewport
       _updateAxesFromTransform();

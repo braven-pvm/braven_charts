@@ -4,10 +4,10 @@
 sprint: "011-multi-axis-normalization"
 started: "2025-11-28"
 status: "in_progress"
-note: "Task 13 COMPLETE. Task 14 next."
+note: "Task 14 COMPLETE. Task 15 next."
 
-current_task_id: 14
-current_phase: "interaction"
+current_task_id: 15
+current_phase: "integration"
 
 phase_completions:
   foundation:
@@ -232,20 +232,51 @@ task_history:
       Code quality: CLEAN - No analyzer issues
       Visual verification: PASSED via flutter_agent.py
 
+  - task_id: 14
+    title: "Disable Y-Zoom and Grid Lines in Multi-Axis Mode"
+    status: "completed"
+    started: "2025-11-30"
+    completed: "2025-11-30"
+    commit: "pending"
+    attempts: 1
+    verification_notes: |
+      All checks passed.
+      SpecKit tasks covered: T012a, T012b, T012c
+      
+      Deliverables:
+      - test/unit/multi_axis/zoom_constraint_test.dart (NEW - 8 tests)
+      - example/lib/demos/task_014_zoom_grid_demo.dart (NEW - demo)
+      - lib/src/rendering/chart_render_box.dart (UPDATED - Y-zoom/pan constraints)
+      - screenshots/task-014-multi-axis-constraints.png (screenshot)
+      
+      Implementation:
+      - Y-zoom: Preserve Y bounds after zoom in multi-axis mode
+      - Y-pan: Zero out Y delta in _clampPanDelta()
+      - Grid: Already disabled by existing MultiAxisPainter code path
+      
+      Test verification: PASSED
+      - Unit tests: 245/245 passing
+      - Widget tests: 25/25 passing
+      - Total: 270 tests
+      
+      Code quality: CLEAN - No analyzer issues
+      Visual verification: PASSED via flutter_agent.py
+
 verification_stats:
-  tasks_attempted: 13
-  tasks_passed: 13
+  tasks_attempted: 14
+  tasks_passed: 14
   tasks_failed: 0
   tasks_reworked: 2
 
 notes: |
-  Tasks 1-13 COMPLETE
+  Tasks 1-14 COMPLETE
   
   Task 9 rework: Fixed to use MultiAxisNormalizer.normalize()
   Task 10: Color resolution from bound series working
   Task 11: Widget integration complete, visual verification skipped
   Task 12: Value formatter for tooltips - 27 new tests
   Task 13: Crosshair per-axis bounds - 12 widget tests, lint fixes enforced
+  Task 14: Y-zoom/pan constraints - 8 new tests, FR-009 and FR-013 complete
   
   Process improvements:
   - Severity system (immutable during verification)
@@ -254,6 +285,7 @@ notes: |
   - Documentation updated to mandate flutter_agent.py
   - Implementor scripts fixed (regex patterns)
   - YOU TOUCH IT, YOU OWN IT policy added (no pre-existing excuses)
+  - accept-signal-check.ps1 regex updated for markdown formatting
   
-  Sprint progress: 13/16 tasks complete (81%)
-  Test count: 237 unit tests + 25 widget tests = 262 total
+  Sprint progress: 14/16 tasks complete (87.5%)
+  Test count: 245 unit tests + 25 widget tests = 270 total

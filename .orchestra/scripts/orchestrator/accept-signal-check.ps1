@@ -60,8 +60,8 @@ if (Test-Path $completionPath) {
         $completionPath
     
     if ($hasContent) {
-        # Check for required sections
-        $hasStatus = $signalContent -match "(?i)status:\s*(COMPLETED|complete|done)"
+        # Check for required sections (allow markdown formatting like **Status**: or Status:)
+        $hasStatus = $signalContent -match "(?i)\*?\*?status\*?\*?:\s*[✅🟢]?\s*(COMPLETED|complete|done)"
         Add-CheckResult $checks "Signal contains COMPLETED status" $hasStatus `
             "Missing 'status: COMPLETED' in signal" `
             "Implementor must include status in completion-signal.md" `
