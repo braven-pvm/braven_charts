@@ -10,8 +10,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 100),
@@ -19,7 +19,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -53,8 +53,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 100),
@@ -62,7 +62,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -97,8 +97,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 100),
@@ -106,7 +106,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -157,11 +157,11 @@ void main() {
 
     testWidgets('handles empty yAxes gracefully', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
                   points: [

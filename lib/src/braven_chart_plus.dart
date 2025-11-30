@@ -95,6 +95,10 @@ class BravenChartPlus extends StatefulWidget {
     this.onSeriesSelected,
     this.onAnnotationTap,
     this.onAnnotationDragged,
+    // ==================== MULTI-AXIS PARAMETERS ====================
+    this.yAxes,
+    this.normalizationMode,
+    this.axisBindings,
   });
 
   // ==================== FACTORY CONSTRUCTORS ====================
@@ -571,6 +575,55 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Called when an annotation is dragged to a new position.
   final void Function(ChartAnnotation annotation, Offset newPosition)? onAnnotationDragged;
+
+  // ==================== MULTI-AXIS PARAMETERS ====================
+
+  /// Y-axis configurations for multi-axis mode.
+  ///
+  /// When provided with more than one axis, the chart enters multi-axis mode
+  /// where each series can be bound to a specific Y-axis via [axisBindings].
+  ///
+  /// If null or empty, the chart uses the default single Y-axis mode.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   yAxes: [
+  ///     YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power', unit: 'W'),
+  ///     YAxisConfig(id: 'hr', position: YAxisPosition.right, label: 'Heart Rate', unit: 'bpm'),
+  ///   ],
+  ///   axisBindings: [
+  ///     SeriesAxisBinding(seriesId: 'power-series', yAxisId: 'power'),
+  ///     SeriesAxisBinding(seriesId: 'hr-series', yAxisId: 'hr'),
+  ///   ],
+  /// )
+  /// ```
+  final List<YAxisConfig>? yAxes;
+
+  /// Controls how normalization is applied to multi-axis data.
+  ///
+  /// - [NormalizationMode.auto]: Automatically detect when normalization is needed
+  ///   based on Y-range ratios between series (>10x difference triggers normalization)
+  /// - [NormalizationMode.perSeries]: Always normalize each axis independently,
+  ///   useful when displaying conceptually different metrics
+  /// - [NormalizationMode.none]: Never normalize, use global Y scale
+  ///
+  /// Defaults to [NormalizationMode.auto] when [yAxes] is provided.
+  final NormalizationMode? normalizationMode;
+
+  /// Bindings that connect series to specific Y-axes.
+  ///
+  /// Each binding maps a series ID to a Y-axis ID. Series without explicit
+  /// bindings use the first (default) axis.
+  ///
+  /// Example:
+  /// ```dart
+  /// axisBindings: [
+  ///   SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
+  ///   SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'hr-axis'),
+  /// ]
+  /// ```
+  final List<SeriesAxisBinding>? axisBindings;
 
   @override
   State<BravenChartPlus> createState() => _BravenChartPlusState();
@@ -2268,6 +2321,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
                         onRangeCreationComplete: _onRangeCreationComplete,
+                        // Multi-axis parameters
+                        yAxes: widget.yAxes,
+                        normalizationMode: widget.normalizationMode,
+                        axisBindings: widget.axisBindings,
+                        series: widget.series,
                       ),
                     ),
                   ),
@@ -2393,6 +2451,11 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.onAnnotationChanged,
     this.onElementHover,
     this.onRangeCreationComplete,
+    // Multi-axis parameters
+    this.yAxes,
+    this.normalizationMode,
+    this.axisBindings,
+    this.series,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -2411,6 +2474,11 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
   final void Function(ChartElement? element)? onElementHover;
   final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
+  // Multi-axis fields
+  final List<YAxisConfig>? yAxes;
+  final NormalizationMode? normalizationMode;
+  final List<SeriesAxisBinding>? axisBindings;
+  final List<ChartSeries>? series;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -2423,6 +2491,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       showYScrollbar: showYScrollbar,
       scrollbarTheme: scrollbarTheme,
       interactionConfig: interactionConfig,
+      yAxes: yAxes,
+      normalizationMode: normalizationMode,
+      axisBindings: axisBindings,
+      series: series,
       onCursorChange: onCursorChange,
       onAnnotationChanged: onAnnotationChanged,
       onElementHover: onElementHover,
@@ -2443,6 +2515,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setShowXScrollbar(showXScrollbar)
       ..setShowYScrollbar(showYScrollbar)
       ..setInteractionConfig(interactionConfig)
+      ..setYAxes(yAxes)
+      ..setNormalizationMode(normalizationMode)
+      ..setAxisBindings(axisBindings)
+      ..setSeries(series)
       ..onElementHover = onElementHover;
   }
 }

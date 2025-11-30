@@ -4,8 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Auto-Detection Widget Tests', () {
-    testWidgets('detects normalization need for >10x range difference',
-        (tester) async {
+    testWidgets('detects normalization need for >10x range difference', (tester) async {
       // Power: 0-400W range = 400
       // Heart rate: 60-180bpm range = 120
       // Ratio: 400/120 = 3.33x (not enough for auto-detection)
@@ -16,8 +15,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 0),
@@ -25,7 +24,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -66,8 +65,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 100),
@@ -75,7 +74,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -113,8 +112,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 0),
@@ -122,7 +121,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
@@ -160,8 +159,8 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
-                const LineChartSeries(
+              series: const [
+                LineChartSeries(
                   id: 'power',
                   points: [
                     ChartDataPoint(x: 0, y: 100),
@@ -169,7 +168,7 @@ void main() {
                   ],
                   color: Colors.blue,
                 ),
-                const LineChartSeries(
+                LineChartSeries(
                   id: 'hr',
                   points: [
                     ChartDataPoint(x: 0, y: 60),
