@@ -1137,6 +1137,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _normalizationNeeded = needsNormalization;
     _seriesYRanges = seriesRanges;
 
+    // CRITICAL FIX: When using perSeries normalization with multi-axis,
+    // the global Y bounds should use normalized range (0-1) so that
+    // the scrollbar/transform calculations match the visual rendering.
+    // Each series is rendered with its own Y-axis bounds, but the global
+    // transform needs to use a consistent normalized space.
+    if (widget.normalizationMode == NormalizationMode.perSeries && widget.yAxes != null && widget.yAxes!.isNotEmpty) {
+      dataBounds = DataBounds(
+        xMin: dataBounds.xMin,
+        xMax: dataBounds.xMax,
+        yMin: 0.0, // Normalized Y range for multi-axis
+        yMax: 1.0, // Normalized Y range for multi-axis
+      );
+    }
+
     // Create axes from data bounds with theme colors
     // Use user's axis config if provided, otherwise create default
     final xAxisConfig = widget.xAxis ?? const AxisConfig(label: 'X');
