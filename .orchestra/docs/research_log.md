@@ -3157,3 +3157,202 @@ This structure enforces:
 5. **Role discipline** - Each role stays in their lane
 
 ---
+
+## 🚨 CRITICAL DISCOVERY: Visual Verification Gap (2025-12-01) 🚨
+
+**Date**: 2025-12-01  
+**Severity**: HIGH - Could have caught implementation issues earlier  
+**Status**: ✅ PROCESS GAP IDENTIFIED, SOLUTION DESIGNED
+
+### The Incident
+
+During Task 16 (final demo task), human observer watched the implementor agent take a screenshot.
+The observer immediately noticed: **both data series were NOT scaling correctly vertically** - 
+the normalization was visually broken.
+
+- The app ran fine
+- The screenshot existed and "looked correct" at first glance
+- Tests passed
+- But the **actual visual behavior was wrong**
+
+Human stopped the agent, described the issue, and the implementor successfully debugged and fixed it.
+
+### The Critical Question
+
+> "Since we now have a way for the orchestrator to view screenshots, should he not be able to 
+> interpret the actual screenshot against an expected result as a first line of defense?"
+
+**Answer: YES - and the spec already defined what to check!**
+
+### What the Spec Said (spec.md)
+
+From User Story 1, Acceptance Scenario 1:
+> "**Given** a chart with two series (Power: 0-300W, Tidal Volume: 0.5-4.0L), **When** the chart 
+> renders, **Then** both series span the full vertical height of the plot area"
+
+From Success Criteria SC-002:
+> "100% of series in a multi-axis chart visually span at least **80% of the available vertical 
+> plot height** (no "flat line" effect)"
+
+**The spec explicitly defined what to check!** A squished/flat series is called out as a failure.
+
+### What the Task YAML Said (task-016.yaml)
+
+```yaml
+screenshot:
+  required: true
+  path: ".orchestra/orchestrator/results/screenshots/task-016-showcase.png"
+  verify:
+    - "Chart displays with multiple Y-axes (left and right)"
+    - "Each axis has distinct color matching its series"
+    - "All series use full vertical space despite different ranges"  # ← THIS CHECK!
+    - "Axis labels show original values (not normalized 0-1)"
+    - "Crosshair or tooltip visible showing original value"
+```
+
+**The task YAML already had the verification criteria!**
+
+### Where the Process Failed
+
+| Stage | What Should Have Happened | What Actually Happened |
+|-------|---------------------------|------------------------|
+| Spec definition | ✅ Visual criteria defined | ✅ Done correctly |
+| Task YAML | ✅ Screenshot.verify section populated | ✅ Done correctly |
+| Orchestrator verification | ❌ Read task YAML, view screenshot, check EACH criterion | ⚠️ Only checked file EXISTS, not CONTENT |
+| Detection | ❌ Orchestrator catches before human | ✅ Human caught it |
+
+### Root Cause Analysis
+
+1. **The criteria existed** - Spec had it, task YAML had it
+2. **The capability existed** - Chrome DevTools MCP can view screenshots
+3. **The process was incomplete** - Closeout script only checked:
+   - Screenshot file exists: ✅
+   - Screenshot file not empty: ✅
+   - Screenshot content matches criteria: ❌ **NOT CHECKED!**
+
+### The Gap: Existence ≠ Correctness
+
+```
+What we verified:
+  Test-Path "screenshot.png"  → TRUE (file exists)
+  $file.Length -gt 1024      → TRUE (has content)
+
+What we SHOULD have verified:
+  mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
+  mcp_chrome-devtoo_take_screenshot()
+  → View image
+  → Check: "All series use full vertical space" - is this TRUE in the image?
+  → Check: "Each axis has distinct color" - is this TRUE in the image?
+  → etc.
+```
+
+### The Solution
+
+The orchestrator MUST systematically verify each `screenshot.verify` criterion:
+
+1. **Read task YAML** to get `screenshot.verify` list
+2. **View the screenshot** via Chrome DevTools MCP
+3. **For EACH criterion**:
+   - Analyze what's visible in the screenshot
+   - Determine if criterion is met
+   - Document finding
+4. **FAIL verification** if ANY criterion not met
+
+### Why This Is So Important
+
+This discovery reveals a **force multiplier** for the orchestrator pattern:
+
+| Without Visual Verification | With Visual Verification |
+|-----------------------------|--------------------------|
+| Catches: compile errors, test failures | Catches: compile errors, test failures, **visual correctness** |
+| Misses: "looks wrong but runs" bugs | Catches: subtle rendering issues |
+| Detection timing: end-to-end testing (late) | Detection timing: per-task verification (early) |
+| Human required to watch | Autonomous detection possible |
+
+### The Cost-Benefit Analysis
+
+**Cost**: 
+- More detailed specs required (visual acceptance criteria)
+- Orchestrator must use Chrome DevTools for each visual task
+- Slightly longer verification cycle
+
+**Benefit**:
+- Catch visual bugs at task-level, not sprint-level
+- Autonomous detection - no human watching required
+- Prevents accumulation of visual debt
+- Spec investment pays off in verification quality
+
+### Integration with Existing Process
+
+The `screenshot.verify` section already exists in task YAMLs. What's needed:
+
+1. **Enhance orchestrator verification protocol** (in docs/readme.md)
+   - Add step: "For visual tasks, verify EACH screenshot.verify criterion"
+   
+2. **Create verification checklist** (in closeout script or manual process)
+   - [ ] Screenshot file exists
+   - [ ] Screenshot has content (not empty)
+   - [ ] **For each criterion in task YAML screenshot.verify:**
+     - [ ] View screenshot via Chrome DevTools MCP
+     - [ ] Verify criterion is visually satisfied
+     - [ ] Document finding
+
+3. **Update task YAML template** (if needed)
+   - Ensure `screenshot.verify` section is present for all visual tasks
+   - Include criteria from spec's acceptance scenarios
+
+### The Broader Lesson
+
+> "Agents don't fail at what they can't do - they fail at what they don't remember to do."
+
+The orchestrator HAD:
+- The capability (Chrome DevTools MCP)
+- The criteria (task YAML)
+- The documentation (readme mentioned viewing screenshots)
+
+The orchestrator MISSED:
+- Actually executing the visual verification step
+- Checking each criterion systematically
+
+**Solution Pattern**: Turn documentation into **checklists** and **templates** that force execution.
+
+### Related: SpecKit Tasks.md Gap (Same Session)
+
+In the same session, we discovered 12 SpecKit tasks were unmarked despite Task 16 being "complete":
+
+- T009, T016, T017, T024, T030, T033, T039, T046, T050, T051, T052, T053
+
+**Root cause**: The closeout script only looked for "any task referencing Orchestrator Task N" 
+but didn't verify ALL mapped tasks from manifest's `speckit_tasks` array.
+
+**Fix implemented**: Enhanced `task-closeout-check.ps1` to:
+1. Read manifest's `speckit_tasks` array for the task being verified
+2. Check EACH mapped task has `[x]` checkbox AND `✅ Completed: Orchestrator Task N` reference
+3. List ALL unmarked tasks with specific reasons
+
+**Commit**: `d071989`
+
+### Action Items from This Discovery
+
+- [x] Document this scenario in research_log (this entry)
+- [x] Fix SpecKit traceability check (done - commit d071989)
+- [ ] Enhance orchestrator visual verification protocol in readme.md
+- [ ] Consider: Add screenshot verification step to closeout script (automated reminder)
+- [ ] For next sprint: Ensure task YAMLs have detailed `screenshot.verify` criteria
+
+### Quotes to Remember
+
+From user:
+> "The bigger problem here is WHEN? Do we have checkpoints where we run the app for a human 
+> to do integration tests? Do we have dashboard of screenshots (with better design of screenshots 
+> to show a wider range of implemented details)?"
+
+> "I would immediately pick this up if I were simply presented with a dashboard with a list of 
+> screenshots of tasks which I could peruse."
+
+**Future direction**: 
+- Continuous dashboard updates with forced human review at designated checkpoints
+- Screenshots designed to reveal edge cases and feature details
+- Process blocks for human approval at key milestones
+
+---
