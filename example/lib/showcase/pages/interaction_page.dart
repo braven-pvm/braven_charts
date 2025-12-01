@@ -148,6 +148,7 @@ class _InteractionPageState extends State<InteractionPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,

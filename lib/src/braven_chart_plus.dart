@@ -2305,8 +2305,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         yAxis: _yAxis,
                         theme: widget.theme,
                         tooltipsEnabled: widget.interactionConfig?.tooltip.enabled ?? true,
-                        showXScrollbar: widget.interactionConfig?.showXScrollbar ?? widget.showXScrollbar,
-                        showYScrollbar: widget.interactionConfig?.showYScrollbar ?? widget.showYScrollbar,
+                        // Prioritize widget's direct showXScrollbar/showYScrollbar properties
+                        // InteractionConfig's defaults are false, so ?? doesn't work correctly
+                        showXScrollbar: widget.showXScrollbar,
+                        showYScrollbar: widget.showYScrollbar,
                         scrollbarTheme: widget.scrollbarTheme,
                         interactionConfig: widget.interactionConfig,
                         onCursorChange: _handleCursorChange,
@@ -2506,6 +2508,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setTooltipsEnabled(tooltipsEnabled)
       ..setShowXScrollbar(showXScrollbar)
       ..setShowYScrollbar(showYScrollbar)
+      ..setScrollbarTheme(scrollbarTheme)
       ..setInteractionConfig(interactionConfig)
       ..setYAxes(yAxes)
       ..setNormalizationMode(normalizationMode)
