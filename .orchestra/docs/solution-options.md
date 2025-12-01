@@ -828,6 +828,389 @@ Given these constraints, the architecture options become:
 
 ---
 
+## Built-in Tools & Subscription Research (2025-12-01)
+
+### Question 1: Can We Access Copilot's Built-in Tools?
+
+**Answer: ❌ NO - Built-in tools are internal to Copilot**
+
+The tools visible in agent mode (from user's screenshot):
+
+| Tool | What It Does | Accessible? |
+|------|--------------|-------------|
+| `changes` | Get diffs of changed files | ❌ Internal |
+| `edit` | Edit files in workspace | ❌ Internal |
+| `extensions` | Search VS Code extensions | ❌ Internal |
+| `fetch` | Fetch web content | ❌ Internal |
+| `githubRepo` | Search GitHub repos | ❌ Internal |
+| `new` | Scaffold new workspace | ❌ Internal |
+| `openSimpleBrowser` | Preview localhost | ❌ Internal |
+| `problems` | Check for errors | ❌ Internal |
+| `runCommands` | Run terminal commands | ❌ Internal |
+| `runNotebooks` | Run notebook cells | ❌ Internal |
+| `runSubagent` | Run isolated subagent | ❌ Internal |
+| `runTasks` | Run VS Code tasks | ❌ Internal |
+| `runTests` | Run unit tests | ❌ Internal |
+| `search` | Search and read files | ❌ Internal |
+| `testFailure` | Get test failure info | ❌ Internal |
+| `todos` | Manage todo list | ❌ Internal |
+| `usages` | Find symbol usages | ❌ Internal |
+
+From documentation:
+> "The list of tools consists of **built-in tools**, tools registered by extensions, and tools from MCP servers. You can contribute to agent mode via **extensions or MCP servers**."
+
+**`vscode.lm.tools` only lists tools registered by extensions - NOT built-in tools.**
+
+### What Building Our Own Tools Looks Like
+
+We must recreate capabilities using VS Code APIs:
+
+```typescript
+// Example: Our own "edit" tool
+const editFileTool: LanguageModelChatTool = {
+  name: 'edit_file',
+  description: 'Edit a file in the workspace',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      filePath: { type: 'string', description: 'Absolute path to file' },
+      oldContent: { type: 'string', description: 'Text to replace' },
+      newContent: { type: 'string', description: 'Replacement text' }
+    },
+    required: ['filePath', 'oldContent', 'newContent']
+  }
+};
+
+// Implementation using VS Code APIs
+class EditFileTool implements vscode.LanguageModelTool<EditParams> {
+  async invoke(options: vscode.LanguageModelToolInvocationOptions<EditParams>) {
+    const { filePath, oldContent, newContent } = options.input;
+    
+    const uri = vscode.Uri.file(filePath);
+    const document = await vscode.workspace.openTextDocument(uri);
+    const text = document.getText();
+    const newText = text.replace(oldContent, newContent);
+    
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(uri, new vscode.Range(0, 0, document.lineCount, 0), newText);
+    await vscode.workspace.applyEdit(edit);
+    
+    return new vscode.LanguageModelToolResult([
+      new vscode.LanguageModelTextPart(`File ${filePath} edited successfully`)
+    ]);
+  }
+}
+```
+
+### Minimum Tools to Build
+
+| Tool | VS Code APIs to Use |
+|------|---------------------|
+| `read_file` | `vscode.workspace.openTextDocument()` |
+| `edit_file` | `vscode.WorkspaceEdit`, `applyEdit()` |
+| `list_files` | `vscode.workspace.fs.readDirectory()` |
+| `search_files` | `vscode.workspace.findFiles()` |
+| `run_terminal` | `vscode.window.createTerminal()` |
+| `get_problems` | `vscode.languages.getDiagnostics()` |
+| `run_tests` | `vscode.tests.runTests()` (Testing API) |
+| `grep_search` | `vscode.workspace.findFiles()` + text search |
+| `git_status` | Terminal or git extension API |
+| `signal_complete` | Custom - marks agent done |
+
+### Question 2: Does `vscode.lm.sendRequest()` Use Copilot Subscription?
+
+**Answer: ✅ YES - Uses your GitHub Copilot subscription**
+
+From documentation:
+> "Copilot's language models require consent from the user before an extension can use them."
+
+> "VS Code is **transparent to the user regarding how extensions are using language models and how many requests each extension is sending** and how that influences their respective quotas."
+
+> "Making the chat request might fail because... **quota limits were exceeded**"
+
+| Aspect | Answer |
+|--------|--------|
+| **Model provider** | Copilot (via `vendor: 'copilot'`) |
+| **Billing** | Against YOUR GitHub Copilot subscription |
+| **Direct LLM API key needed?** | ❌ No - routes through Copilot |
+| **Rate limits** | Yes - subject to Copilot quota |
+| **Cost transparency** | VS Code shows users which extensions use how many requests |
+| **Models available** | `gpt-4o`, `gpt-4o-mini`, `o1`, `o1-mini`, `claude-3.5-sonnet` |
+| **Token limits** | `gpt-4o` has 64K input token limit |
+
+### Cost Implications for Custom Agent
+
+If we build a custom agent using `vscode.lm.sendRequest()`:
+- Each LLM call counts against user's Copilot quota
+- Agentic loops (multiple iterations) = multiple requests
+- Tool-calling flows can generate many requests
+- User sees usage in VS Code (transparency)
+
+**Alternative: Direct API**
+- Use direct OpenAI/Anthropic API keys
+- User pays separately
+- More control, but more setup
+- Not integrated with VS Code's consent/tracking
+
+### Summary: Development Implications
+
+| Aspect | Reality |
+|--------|---------|
+| **Built-in tools** | Must rebuild from scratch using VS Code APIs |
+| **LLM access** | Use Copilot subscription (no separate API key) |
+| **Cost** | Each agent iteration uses Copilot quota |
+| **Effort** | Significant - need to build ~10+ tools minimum |
+
+**The good news**: VS Code APIs are comprehensive - we CAN build equivalents.
+**The bad news**: Substantial development effort, can't "borrow" Copilot's tools.
+
+**User decision**: "The development effort is worth it. The struggle we have with large projects and AI agents vs the benefit we have to leverage them correctly is worth it."
+
+---
+
+## Design Decisions Q&A (2025-12-01)
+
+### Answered Questions
+
+| # | Question | Answer |
+|---|----------|--------|
+| 1 | **Agent backend**: Copilot-only? Or option for direct Claude API? | Copilot is sufficient, but design to support direct model API calls in future if needed |
+| 2 | **Context memory**: Accept structured artifacts as the mechanism? | Needs discussion - RAG or efficient context/memory structure (see below) |
+| 3 | **Retry policy**: 3 attempts + human escalation acceptable? | 3 is sufficient, but must be configurable |
+| 4 | **v1 notification**: Desktop-only, webhook for v2? | Agree - abstracted, interfaced notification system. Mechanism must be in place to generate notifications |
+| 5 | **State persistence**: `.orchestra/state.json` approach acceptable? | Clarification requested (see below) |
+
+### State Persistence Clarification
+
+**Two types of state identified:**
+
+#### A. Execution State (Agent-level)
+What's happening *right now* in an active agent session:
+
+```json
+{
+  "session_id": "abc123",
+  "agent_type": "implementor",
+  "current_task": 16,
+  "phase": "implementing",
+  "started_at": "2025-12-01T10:30:00Z",
+  "last_tool_call": "edit_file",
+  "retry_count": 1,
+  "pending_tool_result": null
+}
+```
+
+**Purpose**: If VS Code crashes mid-agent-run, can we resume? Or at least know where we were?
+
+#### B. Progress State (Orchestra-level)
+The overall sprint/task progress (what we already have in `progress.yaml`):
+
+```yaml
+current_task: 16
+phase: implementation
+tasks:
+  16:
+    status: in_progress
+    attempts: 1
+    started_at: 2025-12-01T10:30:00Z
+```
+
+**Purpose**: Track task completion, verification results, historical data.
+
+#### Recommendation
+
+| State Type | Storage | Format |
+|------------|---------|--------|
+| **Execution State** | `.orchestra/runtime/session.json` | JSON (ephemeral, per-session) |
+| **Progress State** | `.orchestra/progress.yaml` | YAML (persistent, git-tracked) |
+
+Execution state is optional for v1 - we can just restart failed sessions. Progress state we already have.
+
+---
+
+## Context/Memory Deep Dive (2025-12-01)
+
+### The Problem
+
+When building custom agents, we face:
+1. **Within-session context**: Agent needs to remember what it did earlier in the same task
+2. **Cross-session context**: Orchestrator needs context from previous tasks, implementor needs context from orchestrator's handover
+3. **Token limits**: GPT-4o has 64K input tokens - can't dump everything
+
+### Option A: Structured Artifacts Only (Current Approach)
+
+```
+.orchestra/handover/
+├── current-task.md      # Orchestrator → Implementor
+├── task-context.md      # Sprint-level context
+└── completion-signal.md # Implementor → Orchestrator
+```
+
+**How it works**:
+- Agent reads specific files at start
+- Agent writes to specific files at end
+- No "memory" - just file I/O
+
+**Pros**: Simple, debuggable, git-trackable
+**Cons**: No semantic search, fixed structure, manual curation
+
+### Option B: RAG (Retrieval-Augmented Generation)
+
+```
+.orchestra/memory/
+├── embeddings.db        # Vector database (SQLite + vectors)
+├── chunks/              # Original text chunks
+└── index.json           # Metadata
+```
+
+**How it works**:
+- Embed documents (specs, code, previous outputs)
+- On each agent turn, query relevant context
+- Inject top-K results into prompt
+
+**Pros**: Scales to large codebases, semantic search
+**Cons**: Complexity, embedding model needed, latency
+
+### Option C: Hierarchical Summary Memory
+
+```
+.orchestra/memory/
+├── sprint-summary.md    # High-level sprint context (always loaded)
+├── task-summaries/      # Per-task summaries
+│   ├── task-001.md
+│   └── task-016.md
+└── active-context.md    # Current working memory (agent-managed)
+```
+
+**How it works**:
+- Agents maintain summaries at different granularities
+- Always load: sprint summary + current task summary
+- Agent can request expansion of specific sections
+
+**Pros**: Token-efficient, hierarchical, agent-controllable
+**Cons**: Summaries can lose detail, requires summarization step
+
+### Option D: Hybrid (Structured + Selective RAG)
+
+```
+.orchestra/
+├── handover/            # Structured artifacts (always loaded)
+│   ├── current-task.md
+│   └── task-context.md
+├── memory/
+│   ├── codebase-index/  # RAG for codebase (on-demand)
+│   └── history-index/   # RAG for past decisions (on-demand)
+└── tools/
+    └── query_memory     # Tool for agent to search memory
+```
+
+**How it works**:
+- Core context via structured files (deterministic)
+- Agent has `query_memory` tool for semantic search
+- RAG only when agent asks for it
+
+**Pros**: Best of both, agent-controlled, token-efficient
+**Cons**: Most complex to build
+
+### Recommendation
+
+**Phase 1 (v1)**: Hierarchical Summary Memory (Option C)
+- Simple to implement
+- Sufficient for orchestrator/implementor handover
+- Agent maintains its own `active-context.md`
+
+**Phase 2 (v2)**: Add RAG for Codebase (evolve to Option D)
+- When tasks require deep code understanding
+- Agent can query codebase semantically
+
+### Questions for User
+
+1. **How large is typical context needed?** 
+   - Just task instructions + relevant code snippets? 
+   - Or full feature spec + all related files?
+
+2. **Cross-task memory important?**
+   - Does Task 17 need to know details of Task 16's implementation?
+   - Or just "Task 16 completed, here's the summary"?
+
+3. **RAG complexity acceptable?**
+   - Willing to add embedding model dependency?
+   - Or prefer simpler file-based approach?
+
+### User Answers (2025-12-01)
+
+#### Q1: Context Size
+
+> "This depends, and brings up something we have to discuss later - **debugging**."
+
+**Role-based context needs:**
+
+| Role | Context Scope | Notes |
+|------|---------------|-------|
+| **Orchestrator** | Full spec, codebase awareness, all previous tasks | Needs comprehensive view |
+| **Implementor** | Current task + relevant code/spec only | Fresh start prevents "unwanted things from memory" |
+
+**Key insight**: Current orchestra process has implementor context "pinned down good" - keep it minimal and focused.
+
+**Deferred topic**: Debugging workflow - where/when/how does debugging happen?
+
+#### Q2: Cross-Task Memory
+
+> "Implementor basically only needs access to their own task, but access to previous tasks is beneficial for code correctness and especially debugging"
+
+**Decision**: 
+- **Default**: Implementor gets current task only
+- **Available**: Previous task context accessible when needed (debugging, code patterns)
+- **Not loaded by default**: Prevents context pollution
+
+#### Q3: RAG Complexity
+
+> "Yes RAG complexity is acceptable. In the long run it will be worth it."
+
+**Decision**: Plan for RAG, but implement incrementally.
+
+---
+
+## Architecture Decision: Tiered Context Model
+
+Based on answers, the architecture should support:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ORCHESTRATOR                              │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐│
+│  │ Sprint Spec │ │ All Tasks   │ │ Codebase RAG (semantic) ││
+│  │ (always)    │ │ (summaries) │ │ (on-demand query)       ││
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    IMPLEMENTOR                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐│
+│  │ Current     │ │ Relevant    │ │ Previous Tasks          ││
+│  │ Task Only   │ │ Code Files  │ │ (tool: query_history)   ││
+│  │ (always)    │ │ (always)    │ │ (on-demand, for debug)  ││
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Phases
+
+| Phase | Scope | Memory System |
+|-------|-------|---------------|
+| **v1** | Task loop MVP | Structured artifacts only (current handover files) |
+| **v1.5** | + Debugging | Add `query_history` tool (file-based search of past tasks) |
+| **v2** | + Scale | RAG for codebase + task history |
+
+### Deferred Discussion: Debugging
+
+When debugging is needed:
+- **Who initiates?** Orchestrator detects failure, spawns debugger?
+- **What context?** Error logs + relevant code + previous task context?
+- **How deep?** Same session retry vs new "debugger" agent role?
+
+---
+
 ## References
 
 - `.orchestra/docs/readme.md` - Current orchestrator documentation
