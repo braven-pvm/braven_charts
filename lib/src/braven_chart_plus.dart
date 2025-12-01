@@ -11,7 +11,6 @@ import 'package:flutter/services.dart';
 
 // All dependencies are in src - the main source folder
 import 'axis/axis.dart' as chart_axis;
-import 'axis/axis_config.dart';
 import 'axis/normalization_detector.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
@@ -24,6 +23,7 @@ import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'models/auto_scroll_config.dart';
+import 'models/axis_config.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
@@ -1139,54 +1139,40 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Create axes from data bounds with theme colors
     // Use user's axis config if provided, otherwise create default
-    final xAxisConfig = widget.xAxis ??
-        const AxisConfig(
-          label: 'X',
-          orientation: AxisOrientation.horizontal,
-          position: AxisPosition.bottom,
-        );
+    final xAxisConfig = widget.xAxis ?? const AxisConfig(label: 'X');
+    final yAxisConfig = widget.yAxis ?? const AxisConfig(label: 'Y');
 
-    final yAxisConfig = widget.yAxis ??
-        const AxisConfig(
-          label: 'Y',
-          orientation: AxisOrientation.vertical,
-          position: AxisPosition.left,
-        );
+    // Merge theme colors with user config
+    final xAxisWithTheme = xAxisConfig.copyWith(
+      axisColor: widget.theme?.axisStyle.lineColor ?? xAxisConfig.axisColor,
+      gridColor: widget.theme?.gridStyle.majorColor ?? xAxisConfig.gridColor,
+      labelStyle: xAxisConfig.labelStyle ??
+          TextStyle(
+            fontSize: 12,
+            color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87,
+          ),
+    );
 
-    _xAxis = chart_axis.Axis(
-      config: AxisConfig(
-        label: xAxisConfig.label,
-        orientation: xAxisConfig.orientation,
-        position: xAxisConfig.position,
-        axisColor: widget.theme?.axisStyle.lineColor ?? xAxisConfig.axisColor,
-        gridColor: widget.theme?.gridStyle.majorColor ?? xAxisConfig.gridColor,
-        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87),
-        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black54),
-        showGrid: xAxisConfig.showGrid,
-        showAxisLine: xAxisConfig.showAxisLine,
-        showTickMarks: xAxisConfig.showTickMarks,
-        tickLength: xAxisConfig.tickLength,
-        labelPadding: xAxisConfig.labelPadding,
-      ),
+    final yAxisWithTheme = yAxisConfig.copyWith(
+      axisColor: widget.theme?.axisStyle.lineColor ?? yAxisConfig.axisColor,
+      gridColor: widget.theme?.gridStyle.majorColor ?? yAxisConfig.gridColor,
+      labelStyle: yAxisConfig.labelStyle ??
+          TextStyle(
+            fontSize: 12,
+            color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87,
+          ),
+    );
+
+    _xAxis = chart_axis.Axis.fromPublicConfig(
+      config: xAxisWithTheme,
+      isXAxis: true,
       dataMin: dataBounds.xMin,
       dataMax: dataBounds.xMax,
     );
 
-    _yAxis = chart_axis.Axis(
-      config: AxisConfig(
-        label: yAxisConfig.label,
-        orientation: yAxisConfig.orientation,
-        position: yAxisConfig.position,
-        axisColor: widget.theme?.axisStyle.lineColor ?? yAxisConfig.axisColor,
-        gridColor: widget.theme?.gridStyle.majorColor ?? yAxisConfig.gridColor,
-        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87),
-        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black54),
-        showGrid: yAxisConfig.showGrid,
-        showAxisLine: yAxisConfig.showAxisLine,
-        showTickMarks: yAxisConfig.showTickMarks,
-        tickLength: yAxisConfig.tickLength,
-        labelPadding: yAxisConfig.labelPadding,
-      ),
+    _yAxis = chart_axis.Axis.fromPublicConfig(
+      config: yAxisWithTheme,
+      isXAxis: false,
       dataMin: dataBounds.yMin,
       dataMax: dataBounds.yMax,
     );
