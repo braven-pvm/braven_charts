@@ -132,6 +132,10 @@ class ChartRenderBox extends RenderBox {
   /// Bindings that connect series to specific Y-axes.
   List<SeriesAxisBinding> _axisBindings;
 
+  /// Cached effective bindings (explicit + implicit from series.yAxisId).
+  /// Invalidated when _axisBindings or _series change.
+  List<SeriesAxisBinding>? _cachedEffectiveBindings;
+
   /// Data series for multi-axis color resolution.
   List<ChartSeries> _series;
 
@@ -621,6 +625,7 @@ class ChartRenderBox extends RenderBox {
     final newBindings = bindings ?? const [];
     if (_axisBindings == newBindings) return;
     _axisBindings = newBindings;
+    _cachedEffectiveBindings = null; // Invalidate cache
     markNeedsPaint();
   }
 
@@ -629,6 +634,7 @@ class ChartRenderBox extends RenderBox {
     final newSeries = series ?? const [];
     if (_series == newSeries) return;
     _series = newSeries;
+    _cachedEffectiveBindings = null; // Invalidate cache
     markNeedsPaint();
   }
 
@@ -652,11 +658,14 @@ class ChartRenderBox extends RenderBox {
     // Compute axis bounds from series data
     final axisBounds = _computeAxisBounds();
 
+    // Use effective bindings for color resolution
+    final effectiveBindings = _getEffectiveBindings();
+
     // Create and invoke painter
     final painter = MultiAxisPainter(
       axes: _yAxes!,
       axisBounds: axisBounds,
-      bindings: _axisBindings,
+      bindings: effectiveBindings,
       series: _series,
     );
 
@@ -667,10 +676,17 @@ class ChartRenderBox extends RenderBox {
   /// Computes axis bounds from series data for multi-axis rendering.
   ///
   /// Returns a map of axis ID to [DataRange] for each axis.
+  ///
+  /// This method uses both explicit [axisBindings] and implicit bindings
+  /// from series [yAxisId] properties. Series with matching [yAxisId] are
+  /// automatically bound to their corresponding axis.
   Map<String, DataRange> _computeAxisBounds() {
     final bounds = <String, DataRange>{};
 
     if (_yAxes == null) return bounds;
+
+    // Compute effective bindings: explicit bindings + implicit from series.yAxisId
+    final effectiveBindings = _getEffectiveBindings();
 
     for (final axis in _yAxes!) {
       // Use explicit bounds if provided
@@ -683,7 +699,7 @@ class ChartRenderBox extends RenderBox {
       double? minY;
       double? maxY;
 
-      for (final binding in _axisBindings) {
+      for (final binding in effectiveBindings) {
         if (binding.yAxisId == axis.id) {
           // Find matching series
           for (final series in _series) {
@@ -705,6 +721,45 @@ class ChartRenderBox extends RenderBox {
     }
 
     return bounds;
+  }
+
+  /// Gets effective axis bindings by combining explicit bindings with
+  /// implicit bindings derived from series [yAxisId] properties.
+  ///
+  /// Priority:
+  /// 1. Explicit bindings take precedence for a series
+  /// 2. If no explicit binding exists, use series.yAxisId if set
+  /// 3. Series without explicit binding or yAxisId remain unbound
+  ///
+  /// Results are cached for performance. Cache is invalidated when
+  /// [setAxisBindings] or [setSeries] are called.
+  List<SeriesAxisBinding> _getEffectiveBindings() {
+    // Return cached if available
+    if (_cachedEffectiveBindings != null) return _cachedEffectiveBindings!;
+
+    // Start with explicit bindings
+    final effectiveBindings = List<SeriesAxisBinding>.from(_axisBindings);
+
+    // Track which series already have explicit bindings
+    final explicitlyBoundSeries = _axisBindings.map((b) => b.seriesId).toSet();
+
+    // Add implicit bindings from series.yAxisId
+    for (final series in _series) {
+      // Skip if already explicitly bound
+      if (explicitlyBoundSeries.contains(series.id)) continue;
+
+      // Add implicit binding if series has yAxisId
+      if (series.yAxisId != null && series.yAxisId!.isNotEmpty) {
+        effectiveBindings.add(SeriesAxisBinding(
+          seriesId: series.id,
+          yAxisId: series.yAxisId!,
+        ));
+      }
+    }
+
+    // Cache and return
+    _cachedEffectiveBindings = effectiveBindings;
+    return effectiveBindings;
   }
 
   /// Sets pan constraint bounds for paused streaming mode.
@@ -2956,8 +3011,10 @@ class ChartRenderBox extends RenderBox {
     final Map<String, DataRange>? axisBounds =
         (_yAxes != null && _yAxes!.isNotEmpty && _normalizationMode == NormalizationMode.perSeries) ? _computeAxisBounds() : null;
 
-    // Build series-to-axis lookup for efficient transform creation
-    final Map<String, String>? seriesToAxisMap = axisBounds != null ? {for (final binding in _axisBindings) binding.seriesId: binding.yAxisId} : null;
+    // Build series-to-axis lookup for efficient transform creation (use effective bindings)
+    final effectiveBindings = _getEffectiveBindings();
+    final Map<String, String>? seriesToAxisMap =
+        axisBounds != null ? {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId} : null;
 
     // Paint each series with current transform
     for (final series in seriesElements) {
@@ -4378,6 +4435,9 @@ class ChartRenderBox extends RenderBox {
 
     if (trackingState == null) return;
 
+    // Get effective bindings for axis resolution
+    final effectiveBindings = _getEffectiveBindings();
+
     // Draw intersection markers on each series line
     if (crosshairConfig.showIntersectionMarkers) {
       for (final value in trackingState.seriesValues) {
@@ -4387,7 +4447,7 @@ class ChartRenderBox extends RenderBox {
           // Look up the axis for this series
           final axisConfig = SeriesAxisResolver.resolveAxis(
             value.seriesId,
-            _axisBindings,
+            effectiveBindings,
             _yAxes!,
           );
           final seriesAxisBounds = axisConfig != null ? axisBounds[axisConfig.id] : null;
@@ -4480,13 +4540,16 @@ class ChartRenderBox extends RenderBox {
     const lineSpacing = 4.0;
     const markerSize = 8.0;
 
+    // Get effective bindings for axis resolution
+    final effectiveBindingsForTooltip = _getEffectiveBindings();
+
     for (final value in state.seriesValues) {
       // Get unit from axis config for multi-axis mode
       String? yUnit;
       if (_yAxes != null && _yAxes!.length > 1) {
         final axisConfig = SeriesAxisResolver.resolveAxis(
           value.seriesId,
-          _axisBindings,
+          effectiveBindingsForTooltip,
           _yAxes!,
         );
         yUnit = axisConfig?.unit;
@@ -4873,7 +4936,7 @@ class ChartRenderBox extends RenderBox {
     if (_yAxes != null && _yAxes!.isNotEmpty) {
       final axisConfig = SeriesAxisResolver.resolveAxis(
         markerInfo.seriesId,
-        _axisBindings,
+        _getEffectiveBindings(),
         _yAxes!,
       );
       yUnit = axisConfig?.unit;
