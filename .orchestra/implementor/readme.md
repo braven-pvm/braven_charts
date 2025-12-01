@@ -2,6 +2,9 @@
 
 This folder contains implementor-specific files, scripts, and artifacts.
 
+> **START HERE**: Read `.orchestra/handover/agent_readme.md` for full workflow instructions.
+> This readme is a folder structure overview only.
+
 ## Folder Structure
 
 ```

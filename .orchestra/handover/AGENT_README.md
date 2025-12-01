@@ -10,7 +10,7 @@
 > 
 > Before signaling completion, you **MUST** run:
 > ```powershell
-> .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+> .\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1
 > ```
 > 
 > **WHY THIS IS MANDATORY:**
@@ -43,7 +43,7 @@ You do NOT verify your own work. An external orchestrator will verify against cr
 **⛔ BEFORE ANY IMPLEMENTATION, RUN THIS SCRIPT: ⛔**
 
 ```powershell
-.\.orchestra\handover\.implementor\scripts\validate-handover.ps1
+.\.orchestra\implementor\.implementor-only\scripts\validate-handover.ps1
 ```
 
 This script validates that `current-task.md` is properly formed. It catches orchestrator mistakes BEFORE you waste time on incomplete specs.
@@ -81,7 +81,7 @@ git add .
 **⛔ YOU MUST RUN THIS SCRIPT BEFORE SIGNALING COMPLETION ⛔**
 
 ```powershell
-.\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+.\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1
 ```
 
 **What this script does:**

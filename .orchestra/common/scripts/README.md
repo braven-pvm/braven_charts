@@ -11,7 +11,7 @@ All scripts use hard failures - no soft warnings. If something is wrong, the scr
 Before running any script, source the environment:
 
 ```powershell
-. .\.orchestra\scripts\set-env.ps1
+. .\.orchestra\common\scripts\set-env.ps1
 ```
 
 This sets:
@@ -24,21 +24,22 @@ This sets:
 ## Directory Structure
 
 ```
-scripts/
+common/scripts/
 ├── set-env.ps1               # Environment setup (run first!)
-├── README.md                 # This file
-├── common/
-│   └── check-utils.ps1       # Shared utilities for all scripts
-└── orchestrator/
-    ├── task-closeout-check.ps1  # Verify previous task is closed out
-    ├── accept-signal-check.ps1  # ⛔ Verify implementor ran pre-signal check
-    ├── task-coverage.ps1        # Check SpecKit ↔ Orchestrator sync
-    ├── verification-audit.ps1   # Audit all verification records
-    └── handover-validate.ps1    # Validate current-task.md before handoff
+├── check-utils.ps1           # Shared utilities for all scripts
+└── README.md                 # This file
 
-handover/.implementor/scripts/
+orchestrator/scripts/
+├── task-closeout-check.ps1   # Verify previous task is closed out
+├── accept-signal-check.ps1   # ⛔ Verify implementor ran pre-signal check
+├── task-coverage.ps1         # Check SpecKit ↔ Orchestrator sync
+├── verification-audit.ps1    # Audit all verification records
+└── handover-validate.ps1     # Validate current-task.md before handoff
+
+implementor/.implementor-only/scripts/
 ├── validate-handover.ps1     # Implementor reads handover
 └── pre-signal-check.ps1      # Implementor pre-completion checks (WRITES ARTIFACT)
+```
 ```
 
 ## Orchestrator Scripts
@@ -60,8 +61,8 @@ Implementor signals done → Orchestrator verifies → task-closeout-check.ps1 �
 ```
 
 ```powershell
-. .\.orchestra\scripts\set-env.ps1
-.\.orchestra\scripts\orchestrator\task-closeout-check.ps1
+. .\.orchestra\common\scripts\set-env.ps1
+.\.orchestra\orchestrator\scripts\task-closeout-check.ps1
 ```
 
 ### `accept-signal-check.ps1` ⛔ CRITICAL
@@ -69,7 +70,7 @@ Implementor signals done → Orchestrator verifies → task-closeout-check.ps1 �
 **When:** IMMEDIATELY when implementor says "ready for review" (BEFORE reading verification yaml)
 **Purpose:** STRUCTURAL GATE to ensure implementor ran pre-signal-check.ps1
 **What:** Verifies the implementor ACTUALLY ran their validation script:
-- Artifact file exists: `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+- Artifact file exists: `.orchestra/implementor/artifacts/pre-signal/pre-signal-check-{task}.txt`
 - Artifact shows "PASSED" status (not FAILED)
 - Artifact is not stale (warning if >24 hours old)
 
@@ -93,8 +94,8 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 - If artifact stale: WARNING - proceed with caution
 
 ```powershell
-. .\.orchestra\scripts\set-env.ps1
-.\.orchestra\scripts\orchestrator\accept-signal-check.ps1
+. .\.orchestra\common\scripts\set-env.ps1
+.\.orchestra\orchestrator\scripts\accept-signal-check.ps1
 ```
 
 ### `task-coverage.ps1`
@@ -105,7 +106,7 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 - Completion status in sync
 
 ```powershell
-.\.orchestra\scripts\orchestrator\task-coverage.ps1
+.\.orchestra\orchestrator\scripts\task-coverage.ps1
 ```
 
 ### `verification-audit.ps1`
@@ -117,10 +118,10 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 
 ```powershell
 # Audit all completed tasks
-.\.orchestra\scripts\orchestrator\verification-audit.ps1
+.\.orchestra\orchestrator\scripts\verification-audit.ps1
 
 # Audit specific task
-.\.orchestra\scripts\orchestrator\verification-audit.ps1 -TaskId 10
+.\.orchestra\orchestrator\scripts\verification-audit.ps1 -TaskId 10
 ```
 
 ### `handover-validate.ps1`
@@ -131,7 +132,7 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 - Matches progress.yaml current task
 
 ```powershell
-.\.orchestra\scripts\orchestrator\handover-validate.ps1
+.\.orchestra\orchestrator\scripts\handover-validate.ps1
 ```
 
 ## Implementor Scripts
@@ -145,8 +146,8 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 - No ambiguity
 
 ```powershell
-. .\.orchestra\scripts\set-env.ps1
-.\.orchestra\handover\.implementor\scripts\validate-handover.ps1
+. .\.orchestra\common\scripts\set-env.ps1
+.\.orchestra\implementor\.implementor-only\scripts\validate-handover.ps1
 ```
 
 ### `pre-signal-check.ps1`
@@ -157,16 +158,16 @@ Implementor signals done → accept-signal-check.ps1 → (if PASS) → Read veri
 - Tests pass
 - No TODOs in code
 - Demo exists (if visual task)
-- **WRITES ARTIFACT to `.orchestra/artifacts/pre-signal-checks/`**
+- **WRITES ARTIFACT to `.orchestra/implementor/artifacts/pre-signal/`**
 
 **CRITICAL:** This script creates an artifact that the orchestrator's `accept-signal-check.ps1` will look for.
 If you skip this script, the orchestrator WILL block your completion signal.
 
 ```powershell
-.\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+.\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1
 ```
 
-**Artifact Location:** `.orchestra/artifacts/pre-signal-checks/pre-signal-check-{task}.txt`
+**Artifact Location:** `.orchestra/implementor/artifacts/pre-signal/pre-signal-check-{task}.txt`
 
 **Artifact Contains:**
 - Timestamp
