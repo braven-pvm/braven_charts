@@ -393,6 +393,24 @@ Every task verification includes these **blocking** checks:
 | **INTEGRATION** | Wires components INTO BravenChartPlus | ✅ BLOCKING |
 | **VISUAL** | Modifies existing rendering output | ✅ BLOCKING |
 
+### ⛔ CRITICAL: The Visual Verification Gap ⛔
+
+**Discovered 2025-12-01**: Orchestrator verified screenshot EXISTS but not CONTENT.
+Human caught visual bug (normalization not working) that would have slipped through.
+
+**The spec AND task YAML had explicit criteria** - but process didn't enforce using them!
+
+```
+What we checked:     ✅ File exists + ✅ File not empty
+What we MISSED:      ❌ Content matches screenshot.verify criteria
+```
+
+**THIS IS NOW MANDATORY**: For every visual task, orchestrator MUST:
+1. Read the task YAML's `screenshot.verify` section
+2. View the screenshot via Chrome DevTools MCP
+3. Check EACH criterion against what's visible
+4. FAIL if ANY criterion not met
+
 ### ⛔ PROHIBITED TOOLS - DO NOT USE ⛔
 
 | Tool | Why It's Wrong |
@@ -425,25 +443,74 @@ python tools/flutter_agent/flutter_agent.py screenshot --output screenshots/task
 python tools/flutter_agent/flutter_agent.py stop
 ```
 
-### Orchestrator: Screenshot Viewing
+### Orchestrator: Screenshot Content Verification Protocol (MANDATORY)
 
+**Step 1: Existence check** (necessary but NOT sufficient)
+```powershell
+Test-Path ".orchestra/orchestrator/results/screenshots/task-NNN-*.png"
 ```
-# Open screenshot in browser via file:// URL
+
+**Step 2: Read verification criteria from task YAML**
+```yaml
+# From .orchestra/orchestrator/.orchestrator-only/verification/task-NNN.yaml
+screenshot:
+  verify:
+    - "Chart displays with multiple Y-axes (left and right)"
+    - "Each axis has distinct color matching its series"
+    - "All series use full vertical space despite different ranges"
+    - "Axis labels show original values (not normalized 0-1)"
+```
+
+**Step 3: View screenshot via Chrome DevTools MCP** (THE ACTUAL VERIFICATION!)
+```
 mcp_chrome-devtoo_new_page(url: "file:///E:/full/path/to/screenshot.png")
-
-# Take screenshot (returns image to agent for analysis)
 mcp_chrome-devtoo_take_screenshot()
+```
 
-# Analyze content against verification criteria
+**Step 4: For EACH criterion in screenshot.verify:**
+- Analyze what is actually visible in the returned image
+- Determine if the criterion is satisfied
+- Document finding (PASS/FAIL with observation)
 
-# Close when done
+**Step 5: Verification decision**
+- ALL criteria pass → Screenshot verification PASSED
+- ANY criterion fails → Screenshot verification FAILED → Task FAILED
+
+**Step 6: Close browser page**
+```
 mcp_chrome-devtoo_close_page(pageIdx: 1)
 ```
+
+### What to Check in Returned Image
+
+| Check | What to Look For |
+|-------|------------------|
+| Elements present | Are expected visual elements visible? (axes, labels, data lines) |
+| Colors correct | Do colors match what the task specified? |
+| Layout correct | Are elements positioned as expected? |
+| Not placeholder | Is this clearly a real screenshot (not blank/fake)? |
+| Feature demonstrated | Does it show the feature being verified? |
 
 ### ⚠️ CRITICAL: "Screenshot exists" ≠ "Screenshot is correct"
 
 An implementor could create an empty/wrong image file that passes existence checks.
 You MUST view the actual content via Chrome DevTools MCP to verify correctness.
+
+### Example: The Bug We Caught
+
+**Task 16**: Create Working Demo Example
+
+**Criterion**: "All series use full vertical space despite different ranges"
+
+**What Human Saw**: One series (temperature) spanned full height, but stock price series 
+was compressed to a small band at top. Normalization was NOT working correctly.
+
+**What Automated Check Would Have Missed**: File existed, had content, app ran fine.
+
+**What Visual Verification Would Have Caught**: Looking at the image, it's obvious 
+that both series should span the full vertical space - but one didn't.
+
+This is why viewing the screenshot content is MANDATORY, not optional.
 
 ---
 
