@@ -4,9 +4,9 @@
 sprint: "011-multi-axis-normalization"
 started: "2025-11-28"
 status: "in_progress"
-note: "Task 14 COMPLETE. Task 15 next."
+note: "Task 15 VERIFIED. Task 16 (final) next."
 
-current_task_id: 15
+current_task_id: 16
 current_phase: "integration"
 
 phase_completions:
@@ -262,14 +262,51 @@ task_history:
       Code quality: CLEAN - No analyzer issues
       Visual verification: PASSED via flutter_agent.py
 
+  - task_id: 15
+    title: "Expose Multi-Axis API on BravenChartPlus"
+    status: "completed"
+    started: "2025-12-01"
+    completed: "2025-12-01"
+    commit: "pending"
+    attempts: 1
+    verification_notes: |
+      All checks passed - visual verification via Chrome DevTools MCP.
+      SpecKit tasks covered: T006, T047, T048, T049
+      
+      Deliverables:
+      - lib/src/models/chart_series.dart (UPDATED - yAxisId, unit fields)
+      - lib/src/braven_chart_plus.dart (UPDATED - max 4 axes, unique positions)
+      - test/unit/multi_axis/chart_series_axis_fields_test.dart (NEW - 17 tests)
+      - test/widget/multi_axis/api_validation_test.dart (NEW - 7 tests)
+      - example/lib/demos/task_015_api_demo.dart (NEW - demo)
+      - screenshots/task-015-api-demo.png (screenshot)
+      
+      Implementation:
+      - ChartSeries: Added yAxisId (String?) and unit (String?) fields
+      - All 4 subclasses: Support new fields via super.yAxisId, super.unit
+      - BravenChartPlus: Max 4 axes assertion (lines 103-104)
+      - BravenChartPlus: Unique positions assertion via _hasUniquePositions()
+      
+      Test verification: PASSED
+      - Unit tests: 262/262 passing (17 new)
+      - Widget tests: 32/32 passing (7 new)
+      - Total: 294 tests
+      
+      Code quality: CLEAN - No analyzer issues
+      Visual verification: PASSED via Chrome DevTools MCP
+      - Left axis: Power (W) in BLUE, 0-100W range
+      - Right axis: Heart Rate (bpm) in RED, 0-100 bpm range
+      - Two data series visible with correct colors
+      - yAxisId API feature documented in UI
+
 verification_stats:
-  tasks_attempted: 14
-  tasks_passed: 14
+  tasks_attempted: 15
+  tasks_passed: 15
   tasks_failed: 0
   tasks_reworked: 2
 
 notes: |
-  Tasks 1-14 COMPLETE
+  Tasks 1-15 COMPLETE
   
   Task 9 rework: Fixed to use MultiAxisNormalizer.normalize()
   Task 10: Color resolution from bound series working
@@ -277,6 +314,7 @@ notes: |
   Task 12: Value formatter for tooltips - 27 new tests
   Task 13: Crosshair per-axis bounds - 12 widget tests, lint fixes enforced
   Task 14: Y-zoom/pan constraints - 8 new tests, FR-009 and FR-013 complete
+  Task 15: API exposure (yAxisId, unit fields) - 24 new tests
   
   Process improvements:
   - Severity system (immutable during verification)
@@ -286,6 +324,7 @@ notes: |
   - Implementor scripts fixed (regex patterns)
   - YOU TOUCH IT, YOU OWN IT policy added (no pre-existing excuses)
   - accept-signal-check.ps1 regex updated for markdown formatting
+  - Chrome DevTools MCP reinstated for screenshot viewing (file:// URL works)
   
-  Sprint progress: 14/16 tasks complete (87.5%)
-  Test count: 245 unit tests + 25 widget tests = 270 total
+  Sprint progress: 15/16 tasks complete (93.75%)
+  Test count: 262 unit tests + 32 widget tests = 294 total

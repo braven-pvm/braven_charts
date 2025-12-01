@@ -59,7 +59,7 @@ import 'widgets/web_context_menu.dart';
 /// **Current Phase**: Foundation - Widget skeleton created
 /// Next: Create example app to test empty widget
 class BravenChartPlus extends StatefulWidget {
-  const BravenChartPlus({
+  BravenChartPlus({
     super.key,
     required this.chartType,
     this.lineStyle = LineStyle.straight,
@@ -99,7 +99,15 @@ class BravenChartPlus extends StatefulWidget {
     this.yAxes,
     this.normalizationMode,
     this.axisBindings,
-  });
+  })  : assert(
+          yAxes == null || yAxes.length <= 4,
+          'Maximum 4 Y-axes allowed.',
+        ),
+        assert(
+          _hasUniquePositions(yAxes),
+          'Duplicate Y-axis positions are not allowed. '
+          'Each axis must have a unique position.',
+        );
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
@@ -416,6 +424,19 @@ class BravenChartPlus extends StatefulWidget {
       scrollbarTheme: scrollbarTheme,
       annotationController: annotationController,
     );
+  }
+
+  /// Validates that all Y-axis positions are unique.
+  /// Returns true if yAxes is null, empty, or has all unique positions.
+  static bool _hasUniquePositions(List<YAxisConfig>? yAxes) {
+    if (yAxes == null || yAxes.isEmpty) return true;
+    final positions = <YAxisPosition>{};
+    for (final axis in yAxes) {
+      if (!positions.add(axis.position)) {
+        return false; // Duplicate found
+      }
+    }
+    return true;
   }
 
   final ChartType chartType;
@@ -961,8 +982,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             id: entry.key,
             name: entry.key,
             points: convertedPoints,
-            color: widget.theme?.seriesColors.isNotEmpty == true
-                ? widget.theme!.seriesColors[mergedSeriesList.length % widget.theme!.seriesColors.length]
+            color: widget.theme?.seriesTheme.colors.isNotEmpty == true
+                ? widget.theme!.seriesTheme.colors[mergedSeriesList.length % widget.theme!.seriesTheme.colors.length]
                 : Colors.blue,
           ));
         }
@@ -1137,10 +1158,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         label: xAxisConfig.label,
         orientation: xAxisConfig.orientation,
         position: xAxisConfig.position,
-        axisColor: widget.theme?.axisColor ?? xAxisConfig.axisColor,
-        gridColor: widget.theme?.gridColor ?? xAxisConfig.gridColor,
-        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
-        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
+        axisColor: widget.theme?.axisStyle.lineColor ?? xAxisConfig.axisColor,
+        gridColor: widget.theme?.gridStyle.majorColor ?? xAxisConfig.gridColor,
+        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87),
+        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black54),
         showGrid: xAxisConfig.showGrid,
         showAxisLine: xAxisConfig.showAxisLine,
         showTickMarks: xAxisConfig.showTickMarks,
@@ -1156,10 +1177,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         label: yAxisConfig.label,
         orientation: yAxisConfig.orientation,
         position: yAxisConfig.position,
-        axisColor: widget.theme?.axisColor ?? yAxisConfig.axisColor,
-        gridColor: widget.theme?.gridColor ?? yAxisConfig.gridColor,
-        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.textColor ?? Colors.black87),
-        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.textColor ?? Colors.black54),
+        axisColor: widget.theme?.axisStyle.lineColor ?? yAxisConfig.axisColor,
+        gridColor: widget.theme?.gridStyle.majorColor ?? yAxisConfig.gridColor,
+        labelStyle: TextStyle(fontSize: 12, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87),
+        tickLabelStyle: TextStyle(fontSize: 10, color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black54),
         showGrid: yAxisConfig.showGrid,
         showAxisLine: yAxisConfig.showAxisLine,
         showTickMarks: yAxisConfig.showTickMarks,
@@ -1180,7 +1201,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         series: effectiveSeries,
         transform: transform,
         theme: widget.theme,
-        strokeWidth: 2.0,
         coordinator: _coordinator,
       ).cast<ChartElement>().toList();
 
@@ -1228,7 +1248,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             elements.addAll(handleElements);
             // Removed excessive debugPrint (resize handles added)
           }
-        } catch (e) {}
+        } catch (_) {
+          // Silently ignore annotation conversion errors to prevent chart crashes
+          // This can occur when annotation references an invalid series or has malformed data
+        }
       }
 
       return elements;
@@ -1241,8 +1264,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _onCoordinatorChanged() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
       // Only show context menu if annotationController is provided
@@ -1275,8 +1296,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// Shows context menu at the interaction start position.
   /// Called when coordinator enters contextMenuOpen mode.
   void _showContextMenu() async {
-    final startTime = DateTime.now().millisecondsSinceEpoch;
-
     // Set guard flag to prevent duplicate menu opens
     _isShowingContextMenu = true;
 
@@ -1284,7 +1303,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final element = _coordinator.interactionStartElement;
 
     if (localPosition == null) {
-      final errorTime = DateTime.now().millisecondsSinceEpoch;
       _coordinator.releaseMode(force: true);
       _isShowingContextMenu = false;
       return;
@@ -1293,21 +1311,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Convert local position to global coordinates for menu positioning
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
-      final errorTime = DateTime.now().millisecondsSinceEpoch;
       _coordinator.releaseMode(force: true);
       _isShowingContextMenu = false;
       return;
     }
 
-    final convertTime = DateTime.now().millisecondsSinceEpoch;
     final globalPosition = renderBox.localToGlobal(localPosition);
-
-    final buildMenuTime = DateTime.now().millisecondsSinceEpoch;
 
     // Determine context for menu items
     final bool isDataPointClick = element is SeriesElement && _coordinator.hoveredMarker != null;
     final bool isSeriesLineClick = element is SeriesElement && _coordinator.hoveredMarker == null;
-    final bool isEmptyArea = element == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
 
     // Check if annotations are supported (annotationController is provided)
@@ -1375,8 +1388,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       ],
     ];
 
-    final showMenuTime = DateTime.now().millisecondsSinceEpoch;
-
     // Show the web-native context menu
     final result = await WebContextMenu.show(
       context: context,
@@ -1384,22 +1395,17 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       items: menuItems,
     );
 
-    final menuClosedTime = DateTime.now().millisecondsSinceEpoch;
-
     // Clear guard flag now that menu is closed
     _isShowingContextMenu = false;
 
     // Release mode BEFORE handling action (so action handlers can claim new modes)
     // This is critical for modal-to-modal transitions (e.g., contextMenuOpen → rangeAnnotationCreation)
-    final releaseTime = DateTime.now().millisecondsSinceEpoch;
     _coordinator.releaseMode(force: true);
 
     // Handle menu selection
     if (result != null) {
       await _handleMenuAction(result, localPosition, element);
-    } else {}
-
-    final endTime = DateTime.now().millisecondsSinceEpoch;
+    }
   }
 
   /// Handles menu action selection from context menu.
@@ -2344,7 +2350,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                             borderRadius: BorderRadius.circular(4),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withAlpha(51),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -2532,7 +2538,7 @@ class _DebugOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: Colors.black.withAlpha(179), borderRadius: BorderRadius.circular(4)),
       child: DefaultTextStyle(
         style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'monospace'),
         child: Column(

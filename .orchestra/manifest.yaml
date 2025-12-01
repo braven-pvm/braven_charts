@@ -164,7 +164,8 @@ phases:
     tasks:
       - id: 15
         title: "Expose Multi-Axis API on BravenChartPlus"
-        status: "pending"
+        status: "completed"
+        commit: "pending"
         speckit_tasks: ["T006", "T047", "T048", "T049"]
         consolidation_rationale: "API exposure + validations + documentation"
         is_integration_task: true
@@ -179,7 +180,7 @@ phases:
         notes: "Final validation - all features working together. T009 creates test/golden/multi_axis/, T016/T017/T033 are golden tests"
         category: "visual"  # INFRASTRUCTURE/INTEGRATION/VISUAL - determines screenshot req
 
-current_task: 15
+current_task: 16
 current_phase: "integration"
 
 # Coverage summary (update after each task)
