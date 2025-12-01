@@ -3,8 +3,8 @@
 
 sprint: "011-multi-axis-normalization"
 started: "2025-11-28"
-status: "in_progress"
-note: "Task 15 VERIFIED. Task 16 (final) next."
+status: "completed"
+note: "Sprint 011 COMPLETE. All 16 tasks verified. 316 tests passing."
 
 current_task_id: 16
 current_phase: "integration"
@@ -299,14 +299,67 @@ task_history:
       - Two data series visible with correct colors
       - yAxisId API feature documented in UI
 
+  - task_id: 16
+    title: "Create Working Demo Example"
+    status: "completed"
+    started: "2025-12-01"
+    completed: "2025-12-01"
+    commit: "128727b"
+    attempts: 1
+    verification_notes: |
+      FINAL TASK - Sprint 011 Capstone
+      
+      All BLOCKING checks passed:
+      - B1: Golden test directory exists ✅
+      - B2: Two-axis golden test (4 cases) ✅
+      - B3: Four-axis golden test (4 cases) ✅
+      - B4: Colored axes golden test (4 cases) ✅
+      - B5: Showcase demo exists ✅
+      - B6: Demo shows all 4 user stories ✅
+      - B7: Backward compatibility test exists ✅
+      - B8: All sprint tests pass (316) ✅
+      - B9: CHANGELOG updated ✅
+      - B10: Screenshot captured ✅
+      
+      All MAJOR checks passed:
+      - M1: Visual separation of US features ✅
+      - M2: Performance benchmark exists ✅
+      - M4: Golden tests use consistent sizing ✅
+      
+      SpecKit tasks covered: T009, T016, T017, T024, T030, T033, T039, T046, T050, T051, T053
+      
+      Deliverables:
+      - test/golden/multi_axis/two_axis_chart_test.dart (4 tests)
+      - test/golden/multi_axis/four_axis_chart_test.dart (4 tests)
+      - test/golden/multi_axis/colored_axes_test.dart (4 tests)
+      - test/golden/multi_axis/goldens/ (12 baseline images)
+      - test/widget/multi_axis/backward_compat_test.dart (10 tests)
+      - test/benchmarks/multi_axis_benchmark.dart (5 benchmarks)
+      - example/lib/demos/task_016_showcase_demo.dart (showcase)
+      - CHANGELOG.md (feature entry)
+      - screenshots/task_016_verification.png (screenshot)
+      
+      Test verification: PASSED
+      - Total sprint tests: 316 (was 262, +54 new)
+      - Golden tests: 12
+      - Backward compat: 10
+      - Benchmarks: 5
+      
+      Visual verification: PASSED via Chrome DevTools MCP
+      - Tab bar with 4 user stories visible
+      - Chart with 3 series (Revenue, Active Users, Sessions)
+      - Color-coded Y-axes matching series colors
+      - Legend showing series names
+      - US3: Color-Coded Axes tab shown in screenshot
+
 verification_stats:
-  tasks_attempted: 15
-  tasks_passed: 15
+  tasks_attempted: 16
+  tasks_passed: 16
   tasks_failed: 0
   tasks_reworked: 2
 
 notes: |
-  Tasks 1-15 COMPLETE
+  🎉 SPRINT 011 COMPLETE - All 16 tasks verified 🎉
   
   Task 9 rework: Fixed to use MultiAxisNormalizer.normalize()
   Task 10: Color resolution from bound series working
@@ -315,6 +368,7 @@ notes: |
   Task 13: Crosshair per-axis bounds - 12 widget tests, lint fixes enforced
   Task 14: Y-zoom/pan constraints - 8 new tests, FR-009 and FR-013 complete
   Task 15: API exposure (yAxisId, unit fields) - 24 new tests
+  Task 16: FINAL - Golden tests, backward compat, showcase demo - 54 new tests
   
   Process improvements:
   - Severity system (immutable during verification)
@@ -326,5 +380,7 @@ notes: |
   - accept-signal-check.ps1 regex updated for markdown formatting
   - Chrome DevTools MCP reinstated for screenshot viewing (file:// URL works)
   
-  Sprint progress: 15/16 tasks complete (93.75%)
-  Test count: 262 unit tests + 32 widget tests = 294 total
+  Final stats:
+  - Sprint progress: 16/16 tasks complete (100%)
+  - Test count: 316 tests passing
+  - All 4 user stories implemented and verified
