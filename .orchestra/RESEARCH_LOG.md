@@ -2754,3 +2754,406 @@ Do this:
 - **Simpler script logic**: `Test-Path` instead of content parsing
 
 ---
+
+## 🏗️ Major Restructure: Role-Based .orchestra Organization
+
+**Date**: 2025-12-01  
+**Status**: DESIGN APPROVED - Implementation pending  
+**Trigger**: Post-Task 15 discussion about folder organization
+
+### The Problem
+
+The `.orchestra` folder had grown organically with unclear ownership:
+
+```
+.orchestra/                           # BEFORE (messy)
+├── artifacts/                        # Who owns this?
+│   ├── pre-signal/                   # Implementor generated
+│   ├── pre-signal-checks/            # Duplicate?
+│   └── screenshots/                  # Duplicate of verification/screenshots?
+├── handover/                         # Shared, but nested .implementor/ inside?
+│   └── .implementor/                 # Weird nesting
+├── scripts/                          # Mixed orchestrator/implementor scripts
+├── templates/                        # Shared
+├── verification/                     # Orchestrator owns criteria, but screenshots shared?
+├── manifest.yaml                     # Orchestrator only (but at root)
+├── progress.yaml                     # Orchestrator only (but at root)
+└── research_log.md                   # 2600+ lines at root
+```
+
+**Issues Identified**:
+1. No clear structural separation between roles
+2. Hidden files scattered (`.implementor/` inside `handover/`)
+3. Duplicate folders (`artifacts/screenshots` vs `verification/screenshots`)
+4. Unclear ownership of scripts
+5. `manifest.yaml` and `progress.yaml` visible to implementor (shouldn't be)
+
+### The Design Principle
+
+> **Separate by ROLE, then by FUNCTION**
+
+Each role gets their own folder. Hidden content lives in `.role-only/` subfolders.
+Shared artifacts live in dedicated shared folders.
+
+The `/handover` folder becomes a **transient exchange zone**:
+- EMPTY at rest
+- Populated from templates when task starts
+- ARCHIVED to results when task completes
+- CLEARED for next task
+
+### Final Approved Structure
+
+```
+.orchestra/
+│
+├── implementor/                          # IMPLEMENTOR'S DOMAIN
+│   ├── readme.md                         # Implementor quickstart
+│   ├── .implementor-only/                # Hidden from orchestrator
+│   │   ├── scripts/                      
+│   │   │   ├── pre-signal-check.ps1      # Run BEFORE completion signal
+│   │   │   └── validate-handover.ps1     # Validate task handover format
+│   │   └── task-validator.md             # Validation rules reference
+│   └── artifacts/                        # Implementor's persisted logs
+│       └── pre-signal/                   
+│           └── task-NNN-YYYY-MM-DD_HHMMSS.txt
+│
+├── orchestrator/                         # ORCHESTRATOR'S DOMAIN
+│   ├── readme.md                         # Orchestrator quickstart
+│   ├── .orchestrator-only/               # THE HIDDEN VAULT
+│   │   ├── verification/                 # Hidden verification CRITERIA
+│   │   │   ├── task-001.yaml
+│   │   │   ├── task-002.yaml
+│   │   │   └── ...
+│   │   ├── preflight/                    # Pre-handover checklists
+│   │   │   └── task-NNN-preflight.md
+│   │   └── templates/                    # Orchestrator-only templates
+│   │       └── verification-template.yaml
+│   ├── scripts/                          
+│   │   ├── prepare-handover.ps1          # Clear + populate from templates
+│   │   ├── verify-completion.ps1         # Check implementor's work
+│   │   ├── archive-and-close.ps1         # Copy handover → results, clear
+│   │   └── task-closeout-check.ps1       
+│   ├── results/                          # COMPLETE AUDIT HISTORY
+│   │   ├── task-010/                     # Archived handover + artifacts
+│   │   │   ├── handover/                 # Exact copy of /handover at completion
+│   │   │   │   ├── current-task.md
+│   │   │   │   ├── task-context.md
+│   │   │   │   └── verification/
+│   │   │   │       ├── screenshots/
+│   │   │   │       ├── test-output.txt
+│   │   │   │       └── completion-signal.md
+│   │   │   ├── verification-results.md   # Orchestrator's verification notes
+│   │   │   └── metadata.json             # Timestamps, commit hash, etc.
+│   │   ├── task-011/
+│   │   └── ...
+│   ├── manifest.yaml                     # Sprint task list (HIDDEN from implementor)
+│   └── progress.yaml                     # Task tracking (HIDDEN from implementor)
+│
+├── handover/                             # TRANSIENT EXCHANGE ZONE
+│   │                                     # ⚠️ EMPTY at rest!
+│   │                                     # Populated by prepare-handover.ps1
+│   ├── .gitkeep                          # Only file when empty
+│   │
+│   │  (When populated for Phase 1 - Orchestrator prepares):
+│   ├── current-task.md                   
+│   ├── task-context.md                   
+│   └── verification/                     # Empty, ready for implementor
+│       └── .gitkeep
+│   │
+│   │  (When populated for Phase 2 - Implementor completes):
+│   └── verification/                     
+│       ├── screenshots/                  
+│       │   └── task-NNN-*.png
+│       ├── test-output.txt               
+│       └── completion-signal.md          
+│
+├── common/                               # SHARED UTILITIES
+│   ├── scripts/                          
+│   │   ├── set-env.ps1                   # Environment setup
+│   │   └── check-utils.ps1               # Shared PowerShell functions
+│   └── templates/                        # BOTH roles use these
+│       ├── current-task.md.template      # Orchestrator uses to create task
+│       ├── task-context.md.template      # Orchestrator uses
+│       ├── completion-signal.md.template # Implementor uses
+│       └── handover-structure.json       # Defines folder structure
+│
+└── docs/                                 # DOCUMENTATION
+    ├── readme.md                         # Main orchestra documentation
+    └── research_log.md                   # Issue/learning log (MOVED from root)
+```
+
+### Access Control Matrix
+
+| Resource | Orchestrator | Implementor | Notes |
+|----------|-------------|-------------|-------|
+| `orchestrator/.orchestrator-only/` | ✅ READ/WRITE | ❌ NEVER | Verification criteria hidden here |
+| `orchestrator/scripts/` | ✅ READ/WRITE | ⚠️ CAN SEE | Scripts are orchestrator's tools |
+| `orchestrator/results/` | ✅ READ/WRITE | ⚠️ READ (after task) | Results become visible post-verification |
+| `orchestrator/manifest.yaml` | ✅ READ/WRITE | ❌ NEVER | Task list hidden |
+| `orchestrator/progress.yaml` | ✅ READ/WRITE | ❌ NEVER | Progress hidden |
+| `implementor/.implementor-only/` | ⚠️ CAN SEE | ✅ READ/WRITE | Implementor's private scripts |
+| `implementor/artifacts/` | ✅ READ | ✅ READ/WRITE | Pre-signal logs visible to both |
+| `handover/*` | ✅ READ/WRITE | ✅ READ/WRITE | The exchange point |
+| `common/*` | ✅ READ | ✅ READ | Shared utilities |
+| `docs/*` | ✅ READ/WRITE | ✅ READ | Documentation |
+
+### The Transient Handover Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 1: TASK PREPARATION                     │
+│                    (Orchestrator fills handover)                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  /handover/ is EMPTY (just .gitkeep)                            │
+│       │                                                          │
+│       ▼                                                          │
+│  Orchestrator runs: prepare-handover.ps1 -TaskNumber 16         │
+│                                                                  │
+│  Script does:                                                   │
+│    1. Clears /handover/ entirely                                │
+│    2. Creates structure from templates                          │
+│    3. Copies current-task.md.template → current-task.md         │
+│    4. Copies task-context.md.template → task-context.md         │
+│    5. Creates /handover/verification/.gitkeep                   │
+│                                                                  │
+│  Orchestrator then fills in task details in current-task.md     │
+│                                                                  │
+│  Result:                                                        │
+│    /handover/                                                   │
+│      ├── current-task.md        ← Task instructions             │
+│      ├── task-context.md        ← Sprint context                │
+│      └── verification/          ← EMPTY subfolder               │
+│            └── .gitkeep                                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 2: IMPLEMENTATION                       │
+│                    (Implementor works)                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Implementor reads:                                             │
+│    /handover/current-task.md                                    │
+│    /handover/task-context.md                                    │
+│                                                                  │
+│  Implementor runs validation:                                   │
+│    .implementor-only/scripts/validate-handover.ps1              │
+│                                                                  │
+│  Implementor does the work (in main codebase)                   │
+│                                                                  │
+│  Implementor fills verification folder:                         │
+│    /handover/verification/                                      │
+│      ├── screenshots/                                           │
+│      │     └── task-NNN-feature.png                            │
+│      ├── test-output.txt        ← Test results                 │
+│      └── completion-signal.md   ← "I'm done" signal            │
+│                                                                  │
+│  Implementor runs pre-signal check:                             │
+│    .implementor-only/scripts/pre-signal-check.ps1               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 3: VERIFICATION                         │
+│                    (Orchestrator verifies)                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Orchestrator reads:                                            │
+│    /handover/verification/completion-signal.md                  │
+│    /handover/verification/screenshots/                          │
+│    /handover/verification/test-output.txt                       │
+│                                                                  │
+│  Orchestrator compares against HIDDEN criteria:                 │
+│    /orchestrator/.orchestrator-only/verification/task-NNN.yaml │
+│                                                                  │
+│  Orchestrator views screenshots via Chrome DevTools MCP:        │
+│    mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot")│
+│    mcp_chrome-devtoo_take_screenshot()                          │
+│                                                                  │
+│  If PASS:                                                       │
+│    Orchestrator runs: archive-and-close.ps1 -TaskNumber 16      │
+│                                                                  │
+│  If FAIL:                                                       │
+│    Orchestrator writes feedback, implementor must retry         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 4: ARCHIVE & CLOSE                      │
+│                    (Orchestrator archives)                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  archive-and-close.ps1 does:                                    │
+│                                                                  │
+│  1. Creates /orchestrator/results/task-016/                     │
+│                                                                  │
+│  2. Copies ENTIRE /handover/ → /results/task-016/handover/     │
+│     (Complete audit trail with all artifacts)                   │
+│                                                                  │
+│  3. Creates metadata.json:                                      │
+│     {                                                           │
+│       "task_id": 16,                                            │
+│       "archived_at": "2025-12-01 15:30:00",                    │
+│       "commit": "abc1234",                                      │
+│       "verified_by": "orchestrator"                             │
+│     }                                                           │
+│                                                                  │
+│  4. Clears /handover/ entirely                                  │
+│                                                                  │
+│  5. Creates /handover/.gitkeep                                  │
+│                                                                  │
+│  Result:                                                        │
+│    /orchestrator/results/task-016/                             │
+│      ├── handover/             ← Archived copy                  │
+│      │   ├── current-task.md                                   │
+│      │   ├── task-context.md                                   │
+│      │   └── verification/                                     │
+│      │       ├── screenshots/                                  │
+│      │       ├── test-output.txt                               │
+│      │       └── completion-signal.md                          │
+│      ├── verification-results.md                               │
+│      └── metadata.json                                         │
+│                                                                  │
+│    /handover/                  ← EMPTY again                    │
+│      └── .gitkeep                                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    (Back to PHASE 1 for next task)
+```
+
+### Environment Variables (set-env.ps1)
+
+```powershell
+# Role-specific paths
+$env:ORCHESTRATOR_PATH = ".orchestra/orchestrator"
+$env:ORCHESTRATOR_HIDDEN = ".orchestra/orchestrator/.orchestrator-only"
+$env:IMPLEMENTOR_PATH = ".orchestra/implementor"
+$env:IMPLEMENTOR_HIDDEN = ".orchestra/implementor/.implementor-only"
+
+# Shared paths
+$env:HANDOVER_PATH = ".orchestra/handover"
+$env:HANDOVER_VERIFICATION = ".orchestra/handover/verification"
+$env:COMMON_PATH = ".orchestra/common"
+$env:DOCS_PATH = ".orchestra/docs"
+
+# Derived paths
+$env:VERIFICATION_PATH = "$env:ORCHESTRATOR_HIDDEN/verification"
+$env:TEMPLATES_PATH = "$env:COMMON_PATH/templates"
+$env:RESULTS_PATH = "$env:ORCHESTRATOR_PATH/results"
+
+# Manifest and progress (orchestrator only)
+$env:MANIFEST_PATH = "$env:ORCHESTRATOR_PATH/manifest.yaml"
+$env:PROGRESS_PATH = "$env:ORCHESTRATOR_PATH/progress.yaml"
+```
+
+### Key Scripts
+
+#### `prepare-handover.ps1` (Orchestrator)
+
+```powershell
+param(
+    [Parameter(Mandatory=$true)]
+    [int]$TaskNumber
+)
+
+# 1. Clear handover entirely
+Remove-Item "$env:HANDOVER_PATH/*" -Recurse -Force -ErrorAction SilentlyContinue
+
+# 2. Create structure
+New-Item "$env:HANDOVER_PATH/verification/screenshots" -ItemType Directory -Force | Out-Null
+
+# 3. Copy templates
+Copy-Item "$env:TEMPLATES_PATH/current-task.md.template" "$env:HANDOVER_PATH/current-task.md"
+Copy-Item "$env:TEMPLATES_PATH/task-context.md.template" "$env:HANDOVER_PATH/task-context.md"
+
+# 4. Add .gitkeep
+New-Item "$env:HANDOVER_PATH/verification/.gitkeep" -ItemType File -Force | Out-Null
+
+Write-Host "✅ Handover prepared for Task $TaskNumber"
+Write-Host "   Edit: $env:HANDOVER_PATH/current-task.md"
+```
+
+#### `archive-and-close.ps1` (Orchestrator)
+
+```powershell
+param(
+    [Parameter(Mandatory=$true)]
+    [int]$TaskNumber
+)
+
+$taskId = $TaskNumber.ToString('D3')  # Zero-padded: 016
+$archivePath = "$env:RESULTS_PATH/task-$taskId"
+
+# 1. Create archive folder
+New-Item $archivePath -ItemType Directory -Force | Out-Null
+
+# 2. Copy ENTIRE handover folder
+Copy-Item "$env:HANDOVER_PATH/*" "$archivePath/handover" -Recurse
+
+# 3. Add metadata
+@{
+    task_id = $TaskNumber
+    archived_at = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+    commit = (git rev-parse HEAD)
+    verified_by = "orchestrator"
+} | ConvertTo-Json | Set-Content "$archivePath/metadata.json"
+
+# 4. Clear handover for next task
+Remove-Item "$env:HANDOVER_PATH/*" -Recurse -Force
+New-Item "$env:HANDOVER_PATH/.gitkeep" -ItemType File -Force | Out-Null
+
+Write-Host "✅ Task $TaskNumber archived to: $archivePath"
+Write-Host "✅ Handover cleared for next task"
+```
+
+### Migration Plan
+
+1. **Create new folder structure** (empty folders with .gitkeep)
+2. **Move files to new locations**:
+   - `manifest.yaml` → `orchestrator/manifest.yaml`
+   - `progress.yaml` → `orchestrator/progress.yaml`
+   - `verification/*.yaml` → `orchestrator/.orchestrator-only/verification/`
+   - `verification/*-results.md` → `orchestrator/results/task-NNN/`
+   - `handover/.implementor/` → `implementor/.implementor-only/`
+   - `scripts/orchestrator/` → `orchestrator/scripts/`
+   - `scripts/common/` → `common/scripts/`
+   - `templates/` → `common/templates/`
+   - `readme.md` → `docs/readme.md`
+   - `research_log.md` → `docs/research_log.md`
+3. **Update set-env.ps1** with new paths
+4. **Update all script path references**
+5. **Create new scripts** (prepare-handover.ps1, archive-and-close.ps1)
+6. **Test with closeout check**
+7. **Update copilot-instructions.md** if needed
+8. **Commit with comprehensive message**
+
+### Benefits of New Structure
+
+| Benefit | How It's Achieved |
+|---------|-------------------|
+| **Clear role separation** | Dedicated `/orchestrator` and `/implementor` folders |
+| **Hidden content is structural** | `.orchestrator-only/` and `.implementor-only/` subfolders |
+| **Complete audit trail** | Every task archived to `/results/task-NNN/` with full handover copy |
+| **Clean handover state** | Transient folder, EMPTY at rest, populated from templates |
+| **No stale files** | `archive-and-close.ps1` clears handover after each task |
+| **Consistent templates** | All documents created from `/common/templates/` |
+| **Simpler scripts** | Clear ownership, predictable paths |
+
+### Why This Matters
+
+The original problem was "implementation theater" - agents completing tasks without real verification.
+This structure enforces:
+
+1. **Orchestrator can't skip verification** - Must read hidden criteria from `.orchestrator-only/`
+2. **Implementor can't game criteria** - Criteria hidden until verification
+3. **Everything is auditable** - Full task history in `/results/`
+4. **Fresh start each task** - No accumulated cruft in handover
+5. **Role discipline** - Each role stays in their lane
+
+---
