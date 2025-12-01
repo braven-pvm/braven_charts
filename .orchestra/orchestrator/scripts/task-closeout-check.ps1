@@ -7,11 +7,13 @@
 # Timing:  Implementor signals done → Orchestrator verifies → THIS SCRIPT → Prepare next handover
 #
 # Usage: .\.orchestra\orchestrator\scripts\task-closeout-check.ps1
+#        .\.orchestra\orchestrator\scripts\task-closeout-check.ps1 -TaskToVerify 16
 #
 # Returns: Exit code 0 if all checks pass, 1 if any fail
 
 param(
-    [switch]$Fix  # If set, will attempt to fix some issues automatically
+    [switch]$Fix,           # If set, will attempt to fix some issues automatically
+    [int]$TaskToVerify = 0  # Explicit task to verify (overrides PREVIOUS_TASK)
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,6 +25,12 @@ $ErrorActionPreference = "Stop"
 $scriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . "$scriptRoot\common\scripts\set-env.ps1"
 . "$scriptRoot\common\scripts\check-utils.ps1"
+
+# Override PREVIOUS_TASK if explicitly specified
+if ($TaskToVerify -gt 0) {
+    $env:PREVIOUS_TASK = $TaskToVerify
+    $env:CURRENT_TASK = $TaskToVerify + 1
+}
 
 # ============================================================================
 # HEADER
@@ -119,44 +127,135 @@ else {
 }
 
 # ============================================================================
-# 3. SPECKIT TASKS.MD CHECK
+# 3. SPECKIT TASKS.MD CHECK - COMPREHENSIVE TRACEABILITY
 # ============================================================================
 
 Write-Section "SpecKit Traceability ($env:SPECKIT_TASKS_PATH)"
 
-if (Test-Path $env:SPECKIT_TASKS_PATH) {
-    $tasksContent = Get-Content $env:SPECKIT_TASKS_PATH -Raw
-    
-    # Check for completed markers for previous task
-    $prevTaskRef = "Orchestrator Task $env:PREVIOUS_TASK"
-    $completedPattern = "✅ Completed:.*$prevTaskRef"
-    $completedCount = ([regex]::Matches($tasksContent, $completedPattern)).Count
-    
-    if ($completedCount -gt 0) {
-        Add-CheckResult $checks "SpecKit tasks checked for previous task" $true `
-            "$completedCount task(s) marked complete"
-    }
-    else {
-        $anyRef = $tasksContent -match $prevTaskRef
-        if ($anyRef) {
-            Add-CheckResult $checks "SpecKit tasks checked for previous task" $false `
-                "Found reference but not marked with ✅ Completed" `
-                "Add '✅ Completed: Orchestrator Task $env:PREVIOUS_TASK, commit XXXXX' to tasks.md" `
-                $env:SPECKIT_TASKS_PATH
-        }
-        else {
-            Add-CheckResult $checks "SpecKit tasks referenced for previous task" $false `
-                "No SpecKit task references Task $env:PREVIOUS_TASK" `
-                "Update tasks.md with orchestrator task mapping" `
-                $env:SPECKIT_TASKS_PATH
-        }
-    }
-}
-else {
+if (-not (Test-Path $env:SPECKIT_TASKS_PATH)) {
     Add-CheckResult $checks "tasks.md exists" $false `
         "SpecKit tasks.md not found" `
         "Verify SPECKIT_ROOT path in set-env.ps1" `
         $env:SPECKIT_TASKS_PATH
+}
+elseif (-not (Test-Path $env:MANIFEST_PATH)) {
+    Add-CheckResult $checks "manifest.yaml exists for SpecKit check" $false `
+        "Cannot verify SpecKit mapping without manifest" `
+        "Ensure manifest.yaml exists" `
+        $env:MANIFEST_PATH
+}
+else {
+    $tasksContent = Get-Content $env:SPECKIT_TASKS_PATH -Raw
+    $manifestContent = Get-Content $env:MANIFEST_PATH -Raw
+    
+    # Extract speckit_tasks array for the previous task from manifest
+    # Pattern: id: N ... speckit_tasks: ["T001", "T002", ...]
+    $speckitTasksPattern = "(?s)-\s*id:\s*$env:PREVIOUS_TASK\b[^-]*?speckit_tasks:\s*\[([^\]]+)\]"
+    
+    if ($manifestContent -match $speckitTasksPattern) {
+        $speckitTasksRaw = $Matches[1]
+        # Parse the array: "T001", "T002" -> T001, T002
+        $mappedTasks = [regex]::Matches($speckitTasksRaw, '"(T\d+)"') | ForEach-Object { $_.Groups[1].Value }
+        
+        if ($mappedTasks.Count -eq 0) {
+            Write-Host "  ⚠️ No SpecKit tasks mapped for Task $env:PREVIOUS_TASK in manifest" -ForegroundColor Yellow
+            Add-CheckResult $checks "SpecKit tasks mapped in manifest" $true `
+                "No tasks mapped (may be intentional)"
+        }
+        else {
+            Write-Host "  📋 Task $env:PREVIOUS_TASK maps to $($mappedTasks.Count) SpecKit tasks: $($mappedTasks -join ', ')" -ForegroundColor Gray
+            
+            # Check each mapped task is marked complete in tasks.md
+            $unmarkedTasks = @()
+            $markedTasks = @()
+            
+            foreach ($taskId in $mappedTasks) {
+                # A task is "marked" if it has:
+                # 1. [x] checkbox AND
+                # 2. ✅ Completed: Orchestrator Task N reference
+                $prevTaskRef = "Orchestrator Task $env:PREVIOUS_TASK"
+                
+                # Find the task line and check for completion marker
+                # Pattern: - [x] T001 ... ✅ Completed: Orchestrator Task N
+                # The completion marker may be on next line(s) after the task
+                $taskLinePattern = "(?m)^\s*-\s*\[([x ])\]\s*$taskId\b"
+                
+                if ($tasksContent -match $taskLinePattern) {
+                    $isChecked = $Matches[1] -eq 'x'
+                    
+                    # Look for completion marker within ~500 chars after task line
+                    $taskMatch = [regex]::Match($tasksContent, "(?s)$taskLinePattern.{0,500}")
+                    $taskSection = $taskMatch.Value
+                    $hasCompletionRef = $taskSection -match "✅ Completed:.*$prevTaskRef"
+                    
+                    if ($isChecked -and $hasCompletionRef) {
+                        $markedTasks += $taskId
+                    }
+                    else {
+                        $reason = if (-not $isChecked) { "checkbox unchecked" } else { "missing '✅ Completed: $prevTaskRef'" }
+                        $unmarkedTasks += "$taskId ($reason)"
+                    }
+                }
+                else {
+                    # Task ID not found at all - might be different format
+                    # Try alternate pattern: [x] T001 [P] or similar
+                    $altPattern = "(?m)^\s*-?\s*\[([x ])\]\s*$taskId\b"
+                    if ($tasksContent -match $altPattern) {
+                        $isChecked = $Matches[1] -eq 'x'
+                        if (-not $isChecked) {
+                            $unmarkedTasks += "$taskId (checkbox unchecked)"
+                        }
+                        else {
+                            # Checked but may be missing ref - look for it
+                            $hasAnyRef = $tasksContent -match "$taskId[\s\S]{0,500}$prevTaskRef"
+                            if ($hasAnyRef) {
+                                $markedTasks += $taskId
+                            }
+                            else {
+                                $unmarkedTasks += "$taskId (missing completion reference)"
+                            }
+                        }
+                    }
+                    else {
+                        $unmarkedTasks += "$taskId (not found in tasks.md)"
+                    }
+                }
+            }
+            
+            # Report results
+            if ($unmarkedTasks.Count -eq 0) {
+                Add-CheckResult $checks "All SpecKit tasks marked for Task $env:PREVIOUS_TASK" $true `
+                    "$($markedTasks.Count)/$($mappedTasks.Count) tasks properly marked"
+            }
+            else {
+                Add-CheckResult $checks "All SpecKit tasks marked for Task $env:PREVIOUS_TASK" $false `
+                    "$($unmarkedTasks.Count) task(s) not properly marked: $($unmarkedTasks -join ', ')" `
+                    "Update tasks.md: For each task, ensure checkbox is [x] AND add '✅ Completed: Orchestrator Task $env:PREVIOUS_TASK, commit XXXXX'" `
+                    $env:SPECKIT_TASKS_PATH
+                
+                # List unmarked tasks for easy fixing
+                Write-Host "`n  Unmarked tasks:" -ForegroundColor Yellow
+                foreach ($task in $unmarkedTasks) {
+                    Write-Host "    • $task" -ForegroundColor Yellow
+                }
+            }
+        }
+    }
+    else {
+        # No speckit_tasks field found for this task - check if any tasks reference it
+        $prevTaskRef = "Orchestrator Task $env:PREVIOUS_TASK"
+        $completedPattern = "✅ Completed:.*$prevTaskRef"
+        $completedCount = ([regex]::Matches($tasksContent, $completedPattern)).Count
+        
+        if ($completedCount -gt 0) {
+            Add-CheckResult $checks "SpecKit tasks reference Task $env:PREVIOUS_TASK" $true `
+                "$completedCount task(s) marked (no manifest mapping to verify against)"
+        }
+        else {
+            Write-CheckWarning "No speckit_tasks mapping in manifest for Task $env:PREVIOUS_TASK" `
+                "Consider adding speckit_tasks array to manifest for traceability"
+        }
+    }
 }
 
 # ============================================================================
