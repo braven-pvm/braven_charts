@@ -174,7 +174,8 @@ phases:
         
       - id: 16
         title: "Create Working Demo Example"
-        status: "pending"
+        status: "completed"
+        commit: "128727b"
         speckit_tasks: ["T024", "T030", "T039", "T046", "T050", "T051", "T052", "T053", "T009", "T016", "T017", "T033"]
         consolidation_rationale: "All showcase/demo + polish tasks + golden test directory + golden tests"
         notes: "Final validation - all features working together. T009 creates test/golden/multi_axis/, T016/T017/T033 are golden tests"
