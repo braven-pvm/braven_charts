@@ -276,25 +276,22 @@ Write-Section "Handover State"
 
 $completionPath = "$env:HANDOVER_PATH/completion-signal.md"
 if (Test-Path $completionPath) {
-    $completionContent = Get-Content $completionPath -Raw
-    $isEmpty = [string]::IsNullOrWhiteSpace($completionContent) -or $completionContent.Trim() -eq ""
+    # New approach: DELETE the file instead of checking if empty
+    # Template will be created fresh when preparing next task
+    $passed = Add-CheckResult $checks "completion-signal.md cleaned up" $false `
+        "File exists from previous task" `
+        "Delete the file (template will be created for next task)" `
+        $completionPath
     
-    if ($isEmpty) {
-        Add-CheckResult $checks "completion-signal.md is clear" $true
+    if ($Fix) {
+        Remove-Item $completionPath -Force
+        Write-Host "     ✓ Fixed: Deleted completion-signal.md" -ForegroundColor Green
+        # Remove from failures
+        $checks.Failures = $checks.Failures | Where-Object { $_.Name -ne "completion-signal.md cleaned up" }
     }
-    else {
-        $passed = Add-CheckResult $checks "completion-signal.md is clear" $false `
-            "Contains content from previous task" `
-            "Clear the file before preparing new task" `
-            $completionPath
-        
-        if ($Fix -and -not $passed) {
-            Set-Content $completionPath ""
-            Write-Host "     ✓ Fixed: Cleared completion-signal.md" -ForegroundColor Green
-            # Remove from failures
-            $checks.Failures = $checks.Failures | Where-Object { $_.Name -ne "completion-signal.md is clear" }
-        }
-    }
+}
+else {
+    Add-CheckResult $checks "completion-signal.md cleaned up" $true
 }
 
 # Check current-task.md state

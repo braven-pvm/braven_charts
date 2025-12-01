@@ -313,20 +313,21 @@ if (Test-Path $progressPath) {
 }
 
 # ============================================================================
-# 10. COMPLETION-SIGNAL.MD MUST BE CLEAR
+# 10. COMPLETION-SIGNAL.MD MUST NOT EXIST (Fresh start for each task)
 # ============================================================================
 
 Write-Section "Pre-Handover State"
 
 $completionPath = "$env:HANDOVER_PATH/completion-signal.md"
 if (Test-Path $completionPath) {
-    $completionContent = Get-Content $completionPath -Raw
-    $isEmpty = [string]::IsNullOrWhiteSpace($completionContent) -or $completionContent.Trim() -eq ""
-    
-    Add-CheckResult $checks "completion-signal.md is clear" $isEmpty `
-        "completion-signal.md still has content from previous task" `
-        "Clear completion-signal.md before handover (should be empty)" `
+    # File should not exist - closeout should have deleted it
+    Add-CheckResult $checks "completion-signal.md cleaned up" $false `
+        "completion-signal.md exists from previous task" `
+        "Run task-closeout-check.ps1 -Fix to delete it, or delete manually" `
         $completionPath
+}
+else {
+    Add-CheckResult $checks "completion-signal.md cleaned up" $true
 }
 
 # ============================================================================

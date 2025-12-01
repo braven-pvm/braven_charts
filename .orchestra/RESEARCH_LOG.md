@@ -2605,3 +2605,152 @@ If you want to ensure a step happens, don't ask for it - require proof of it.
 The orchestrator doesn't trust the implementor's word. It trusts the artifact.
 
 ---
+
+## Issue Log: Task 15 Verification (2025-12-01)
+
+### Issue 8: Screenshot Viewing vs Screenshot Capture Confusion
+
+**Date**: 2025-12-01  
+**Severity**: HIGH - Caused orchestrator confusion and user intervention  
+**Sprint Task**: Task 15 verification
+
+#### What Happened
+
+During Task 15 verification, orchestrator needed to view the screenshot `task-015-api-demo.png` to verify visual criteria. The orchestrator:
+
+1. Read `.orchestra/readme.md` which said Chrome DevTools MCP is PROHIBITED
+2. Asked user for "human-in-the-loop" verification
+3. User pushed back: "Are you sure? Check research log"
+4. Orchestrator found the SOLUTION in `research_log.md` (lines 518-536)
+5. Successfully used Chrome DevTools MCP to view and verify the screenshot
+
+#### The Root Cause
+
+**DOCUMENTATION CONFUSION**: The instructions conflated TWO DIFFERENT use cases:
+
+| Use Case | Actor | Tool | Purpose |
+|----------|-------|------|---------|
+| **Screenshot CAPTURE** | Implementor | `flutter_agent.py` | Run Flutter app, take screenshot of running app |
+| **Screenshot VIEWING** | Orchestrator | Chrome DevTools MCP | Open existing PNG file, analyze content |
+
+The prohibition in `copilot-instructions.md` said:
+> ❌ Chrome DevTools MCP tools for screenshots
+
+This was meant to prohibit IMPLEMENTORS from trying to use Chrome DevTools to capture Flutter app screenshots (which doesn't work). But it was incorrectly interpreted to also prohibit ORCHESTRATORS from viewing existing screenshot files.
+
+#### The Actual Capabilities
+
+**Chrome DevTools MCP CAN:**
+- Open local files via `file:///` URL
+- Take a "screenshot" of what's displayed (returning the image to the agent)
+- Allow the agent to analyze the returned image content
+
+**Chrome DevTools MCP CANNOT:**
+- Connect to a Flutter app running in a separate Chrome instance
+- Capture screenshots of applications it didn't launch
+
+#### Correct Documentation
+
+**FOR IMPLEMENTORS (capturing screenshots)**:
+```
+✅ Use flutter_agent.py to:
+   1. Run Flutter app in separate window
+   2. Take screenshot of running app
+   3. Save to known path
+   
+❌ DO NOT use Chrome DevTools MCP to capture Flutter app screenshots
+   (it can't connect to separately-launched Chrome instances)
+```
+
+**FOR ORCHESTRATORS (viewing screenshots)**:
+```
+✅ Use Chrome DevTools MCP to view existing screenshot files:
+   1. mcp_chrome-devtoo_new_page(url: "file:///path/to/screenshot.png")
+   2. mcp_chrome-devtoo_take_screenshot()
+   3. Agent receives image and can analyze content!
+   
+This is the ONLY way for the agent to "see" image content.
+```
+
+#### Action Required
+
+1. ✅ Update `copilot-instructions.md` to clearly separate IMPLEMENTOR vs ORCHESTRATOR roles
+2. ✅ Add "Screenshot Viewing Protocol" section for orchestrators
+3. ✅ Keep "Screenshot Capture Protocol" section for implementors
+4. ✅ Remove blanket prohibition of Chrome DevTools MCP
+
+---
+
+### Issue 9: Empty File Check Anti-Pattern
+
+**Date**: 2025-12-01  
+**Severity**: MEDIUM - Caused script failures and extra commits  
+**Sprint Task**: Task 15 closeout
+
+#### What Happened
+
+After Task 15 verification, the `task-closeout-check.ps1` script failed because `completion-signal.md` "contained content from previous task".
+
+The orchestrator tried to clear the file with a template header, but the script still failed because it expected a **truly empty file** (whitespace only).
+
+This required:
+1. First commit with template header (failed)
+2. Second commit with completely empty file (passed)
+
+#### The Problem
+
+Checking if a file is "empty" is fragile:
+- What counts as empty? No bytes? Only whitespace? Comment-only?
+- The script logic (`[string]::IsNullOrWhiteSpace`) is confusing
+- Different agents might interpret "clear the file" differently
+
+#### Better Approach: Delete + Template
+
+Instead of:
+- Check if file is empty
+- If not empty, fail and ask orchestrator to clear it
+- Orchestrator tries to clear it (various interpretations)
+
+Do this:
+- **Closeout script**: DELETE the file entirely
+- **Handover script**: CREATE from template when needed
+- No ambiguity about "empty" vs "cleared" vs "template header"
+
+#### Implementation
+
+1. Create `.orchestra/templates/completion-signal.md.template`:
+```markdown
+# Completion Signal
+
+**Task**: [TASK_ID] - [TASK_TITLE]
+**Date**: [DATE]
+**Status**: [PENDING/COMPLETED]
+
+## Implementation Summary
+<!-- Implementor: Describe what was implemented -->
+
+## Test Results
+<!-- Include test output -->
+
+## Visual Verification (if applicable)
+<!-- Screenshot path and description -->
+
+## Files Changed
+<!-- List files created/modified -->
+```
+
+2. Update `task-closeout-check.ps1`:
+   - Replace "is file empty?" check with "delete the file"
+   - On pass: `Remove-Item .orchestra/handover/completion-signal.md -ErrorAction SilentlyContinue`
+
+3. Update `handover-prepare.ps1` (or orchestrator workflow):
+   - When preparing new task: `Copy-Item .orchestra/templates/completion-signal.md.template .orchestra/handover/completion-signal.md`
+
+#### Benefits
+
+- **No ambiguity**: File either exists (from template) or doesn't
+- **Fresh start**: Each task gets a clean template
+- **Consistent format**: Template enforces structure
+- **Simpler script logic**: `Test-Path` instead of content parsing
+
+---
