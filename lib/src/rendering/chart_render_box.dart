@@ -551,19 +551,43 @@ class ChartRenderBox extends RenderBox {
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      _transform = _transform!.copyWith(
-        dataYMin: axis.dataMin,
-        dataYMax: axis.dataMax,
-      );
+      // CRITICAL FIX: Detect if this is a chart type switch (complete data range change)
+      // vs a streaming update (incremental data range change).
+      // If the new axis bounds don't overlap with the original transform bounds,
+      // this indicates switching to a different chart/dataset - reset transforms completely.
+      final originalYMin = _originalTransform?.dataYMin ?? _transform!.dataYMin;
+      final originalYMax = _originalTransform?.dataYMax ?? _transform!.dataYMax;
+      final newYMin = axis.dataMin;
+      final newYMax = axis.dataMax;
 
-      // DO NOT update _originalTransform here - it must stay frozen at initial data range
-      // for scrollbar handle sizing to work correctly. Updating it causes the handle
-      // to always show full size because dataSpan == viewportSpan after update.
+      // Check for range overlap: if ranges don't overlap at all, it's a chart switch
+      final rangesOverlap = newYMin <= originalYMax && newYMax >= originalYMin;
 
-      // Invalidate series cache - viewport changed, need to regenerate Picture
-      _seriesCacheDirty = true;
+      // Also detect normalized range switch (0-1 bounds indicate multi-axis normalization)
+      final isNormalizedRange = (newYMin == 0.0 && newYMax == 1.0);
+      final wasNormalizedRange = (originalYMin == 0.0 && originalYMax == 1.0);
+      final normalizationChanged = isNormalizedRange != wasNormalizedRange;
 
-      // [DEBUG OUTPUT REMOVED] Y-axis viewport update - fires frequently during streaming
+      if (!rangesOverlap || normalizationChanged) {
+        // Chart type switch detected - reset transforms to use new bounds
+        _transform = null;
+        _originalTransform = null;
+        // Let performLayout() recreate transforms with new bounds
+      } else {
+        _transform = _transform!.copyWith(
+          dataYMin: axis.dataMin,
+          dataYMax: axis.dataMax,
+        );
+
+        // DO NOT update _originalTransform here - it must stay frozen at initial data range
+        // for scrollbar handle sizing to work correctly. Updating it causes the handle
+        // to always show full size because dataSpan == viewportSpan after update.
+
+        // Invalidate series cache - viewport changed, need to regenerate Picture
+        _seriesCacheDirty = true;
+
+        // [DEBUG OUTPUT REMOVED] Y-axis viewport update - fires frequently during streaming
+      }
     }
 
     markNeedsLayout();
@@ -1369,7 +1393,6 @@ class ChartRenderBox extends RenderBox {
         // CRITICAL: Use copyWith() to create a deep copy, not a reference
         // Otherwise both variables point to same object and zoom breaks scrollbar handle sizing
         _originalTransform = _transform!.copyWith();
-        // [DEBUG OUTPUT REMOVED] Original transform captured - fires once at init
 
         // Generate initial elements now that we have a transform
         if (_elementGenerator != null) {
