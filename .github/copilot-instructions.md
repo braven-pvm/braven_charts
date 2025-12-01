@@ -236,28 +236,39 @@ See comprehensive guides:
 
 ---
 
-## ⛔ VISUAL VERIFICATION: flutter_agent.py ONLY (CRITICAL)
+## 📸 VISUAL VERIFICATION: Role-Based Protocols
 
-### 🚫 ABSOLUTE PROHIBITIONS FOR VISUAL/SCREENSHOT VERIFICATION
+Visual verification has TWO distinct phases with different tools:
 
-**NEVER use these for visual verification:**
+| Phase | Actor | Tool | Purpose |
+|-------|-------|------|---------|
+| **CAPTURE** | Implementor | `flutter_agent.py` | Run Flutter app, take screenshot |
+| **VIEW** | Orchestrator | Chrome DevTools MCP | Open existing PNG, analyze content |
+
+---
+
+### 🔧 IMPLEMENTOR: Screenshot Capture (flutter_agent.py)
+
+**Use Case**: Running Flutter apps and capturing screenshots of the running application.
+
+#### 🚫 PROHIBITED for Screenshot CAPTURE
+
+**NEVER use these to run Flutter apps:**
 
 - ❌ `flutter run` directly in any terminal
 - ❌ `terminal-tools_sendCommand` with `flutter run`
 - ❌ `run_in_terminal` with `flutter run`
-- ❌ Chrome DevTools MCP tools for screenshots
+- ❌ Chrome DevTools MCP (cannot connect to separate Chrome instances)
 - ❌ Background processes (`isBackground: true`)
 
 **WHY THESE FAIL:**
 
 - AI agents CANNOT see terminal visual output
 - AI agents CANNOT interact with Chrome windows spawned by `flutter run`
-- Chrome DevTools MCP requires a running Chrome instance we can connect to
+- Chrome DevTools MCP cannot connect to Flutter's Chrome instance
 - Background processes orphan the Flutter app with no way to stop it
 
-### ✅ MANDATORY: Use flutter_agent.py for ALL Visual Verification
-
-The ONLY approved method for running Flutter apps and taking screenshots:
+#### ✅ MANDATORY: Use flutter_agent.py for Screenshot Capture
 
 ```powershell
 # Location: tools/flutter_agent/flutter_agent.py
@@ -279,7 +290,7 @@ Test-Path screenshots/task_NNN_verification.png
 python tools/flutter_agent/flutter_agent.py stop
 ```
 
-### flutter_agent.py Command Reference
+#### flutter_agent.py Command Reference
 
 | Command                      | Description        |
 | ---------------------------- | ------------------ |
@@ -291,33 +302,69 @@ python tools/flutter_agent/flutter_agent.py stop
 | `stop`                       | Stop the app       |
 | `status`                     | Check app status   |
 
-### Key Differences: Terminal vs flutter_agent.py
+---
 
-| Aspect              | Terminal Commands       | flutter_agent.py                 |
-| ------------------- | ----------------------- | -------------------------------- |
-| **Use For**         | Tests, builds, git, pub | Visual verification, screenshots |
-| **Can See Output?** | No (text only)          | Yes (via screenshot)             |
-| **Screenshot?**     | ❌ Impossible           | ✅ Built-in                      |
-| **Stop App?**       | Unreliable              | ✅ `stop` command                |
-| **Hot Reload?**     | Problematic             | ✅ `reload` command              |
+### 👁️ ORCHESTRATOR: Screenshot Viewing (Chrome DevTools MCP)
+
+**Use Case**: Viewing and analyzing existing screenshot files to verify visual criteria.
+
+#### ✅ MANDATORY: Use Chrome DevTools MCP for Screenshot Viewing
+
+The ONLY way for an AI agent to "see" image content is via Chrome DevTools MCP:
+
+```powershell
+# 1. Open the screenshot file in browser via file:// URL
+mcp_chrome-devtoo_new_page(url: "file:///E:/full/path/to/screenshot.png")
+
+# 2. Take a screenshot (returns image to agent for analysis)
+mcp_chrome-devtoo_take_screenshot()
+
+# 3. Agent receives image and can analyze content!
+# - Describe what is actually visible
+# - Compare against verification criteria
+# - Confirm it's NOT empty/fake/wrong
+
+# 4. Close the browser page when done
+mcp_chrome-devtoo_close_page(pageIdx: 1)
+```
+
+#### What to Verify in Returned Image
+
+- Are expected visual elements present? (axes, labels, data)
+- Do colors match what the task specified?
+- Is it clearly a real screenshot (not blank/placeholder)?
+- Does it demonstrate the feature being verified?
+
+#### ⚠️ CRITICAL: "Screenshot exists" ≠ "Screenshot is correct"
+
+An implementor could create an empty/wrong image file that passes existence checks.
+You MUST view the actual content via Chrome DevTools MCP to verify correctness.
+
+---
+
+### Key Differences: Capture vs View
+
+| Aspect | Capture (Implementor) | View (Orchestrator) |
+|--------|----------------------|---------------------|
+| **Tool** | `flutter_agent.py` | Chrome DevTools MCP |
+| **Purpose** | Run app, take screenshot | View existing file |
+| **Input** | Flutter demo file | PNG file path |
+| **Output** | PNG file on disk | Image in agent context |
 
 ### Pre-Visual-Verification Checklist
 
-Before ANY visual verification:
-
+**For IMPLEMENTOR (capturing):**
 1. ✅ Am I using `flutter_agent.py`? (NOT terminal commands)
 2. ✅ Am I starting in a SEPARATE window via `Start-Process`?
 3. ✅ Did I wait for the app to be ready?
 4. ✅ Did I take a screenshot?
-5. ✅ Did I verify the screenshot file exists?
-6. ✅ Did I stop the app when done?
+5. ✅ Did I stop the app when done?
 
-### Common Mistakes to AVOID for Visual Verification
-
-❌ `flutter run -d chrome` in terminal - Agent cannot see output
-❌ `isBackground: true` with flutter run - Orphans the process
-❌ Chrome DevTools MCP screenshot - Cannot connect to our Chrome
-❌ Skipping screenshot and claiming "it works" - UNVERIFIABLE
-✅ `Start-Process ... flutter_agent.py run ...` - CORRECT
+**For ORCHESTRATOR (viewing):**
+1. ✅ Did I verify the screenshot file EXISTS first?
+2. ✅ Did I use `mcp_chrome-devtoo_new_page` with `file:///` URL?
+3. ✅ Did I use `mcp_chrome-devtoo_take_screenshot` to receive the image?
+4. ✅ Did I analyze the image content against verification criteria?
+5. ✅ Did I close the browser page when done?
 
 <!-- MANUAL ADDITIONS END -->
