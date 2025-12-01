@@ -248,7 +248,7 @@ class ChartRenderBox extends RenderBox {
 
   /// Theme configuration for scrollbars.
   /// If null, defaults to ScrollbarConfig.defaultLight().
-  final ScrollbarConfig? _scrollbarTheme;
+  ScrollbarConfig? _scrollbarTheme;
 
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
@@ -285,6 +285,10 @@ class ChartRenderBox extends RenderBox {
 
   /// Timer for auto-hiding scrollbars after inactivity.
   Timer? _scrollbarAutoHideTimer;
+
+  /// Whether scrollbar initialization logic has run.
+  /// Used to ensure the postFrameCallback for auto-hide runs only once.
+  bool _scrollbarInitialized = false;
 
   /// Whether scrollbars are currently visible.
   /// When false, scrollbars don't render and don't respond to interaction.
@@ -587,13 +591,34 @@ class ChartRenderBox extends RenderBox {
   void setShowXScrollbar(bool show) {
     if (_showXScrollbar == show) return;
     _showXScrollbar = show;
-    markNeedsPaint();
+    // Need layout to recalculate scrollbar rects
+    markNeedsLayout();
   }
 
   /// Updates Y scrollbar visibility.
   void setShowYScrollbar(bool show) {
     if (_showYScrollbar == show) return;
     _showYScrollbar = show;
+    // Need layout to recalculate scrollbar rects
+    markNeedsLayout();
+  }
+
+  /// Updates scrollbar theme configuration.
+  void setScrollbarTheme(ScrollbarConfig? theme) {
+    if (_scrollbarTheme == theme) return;
+    _scrollbarTheme = theme;
+
+    // Re-evaluate scrollbar visibility based on new theme's autoHide setting
+    final autoHide = _scrollbarTheme?.autoHide ?? true;
+    if (!autoHide) {
+      // If autoHide is disabled, scrollbars should always be visible
+      _scrollbarsVisible = true;
+      _cancelScrollbarAutoHide();
+    } else {
+      // If autoHide is enabled, visibility depends on viewport modification state
+      _scrollbarsVisible = _isViewportModified();
+    }
+
     markNeedsPaint();
   }
 
@@ -1367,10 +1392,13 @@ class ChartRenderBox extends RenderBox {
     _rebuildSpatialIndex();
 
     // First render: handle scrollbar visibility based on autoHide config
-    final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
-    if (_scrollbarAutoHideTimer == null) {
+    // Note: We use _scrollbarTheme directly in the callback (not a captured local)
+    // because the theme may be updated via setScrollbarTheme before the callback runs.
+    if (_scrollbarAutoHideTimer == null && !_scrollbarInitialized) {
+      _scrollbarInitialized = true;
       // Only run once on first layout
       SchedulerBinding.instance.addPostFrameCallback((_) {
+        final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
         if (scrollbarConfig.autoHide) {
           // Auto-hide enabled: show only if viewport is modified, then schedule hide
           _scrollbarsVisible = _isViewportModified();

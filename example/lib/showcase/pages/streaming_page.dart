@@ -239,6 +239,7 @@ class _StreamingPageState extends State<StreamingPage> {
             showLegend: false,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,
