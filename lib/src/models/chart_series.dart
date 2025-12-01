@@ -169,8 +169,7 @@ class ChartSeries {
   }
 
   @override
-  String toString() =>
-      'ChartSeries(id: $id, points: ${points.length}, yAxisId: $yAxisId, unit: $unit)';
+  String toString() => 'ChartSeries(id: $id, points: ${points.length}, yAxisId: $yAxisId, unit: $unit)';
 }
 
 /// Line chart series with configurable interpolation.

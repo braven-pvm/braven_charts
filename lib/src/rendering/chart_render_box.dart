@@ -2952,12 +2952,38 @@ class ChartRenderBox extends RenderBox {
     // Series elements have priority 8, so we filter by type instead
     final seriesElements = _elements.whereType<SeriesElement>().toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
+    // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
+    final Map<String, DataRange>? axisBounds =
+        (_yAxes != null && _yAxes!.isNotEmpty && _normalizationMode == NormalizationMode.perSeries) ? _computeAxisBounds() : null;
+
+    // Build series-to-axis lookup for efficient transform creation
+    final Map<String, String>? seriesToAxisMap = axisBounds != null ? {for (final binding in _axisBindings) binding.seriesId: binding.yAxisId} : null;
+
     // Paint each series with current transform
     for (final series in seriesElements) {
       if (_transform != null) {
         // CRITICAL: Update transform before painting (enables path caching!)
         // This allows SeriesElement to cache paths and only regenerate when transform changes.
-        series.updateTransform(_transform!);
+
+        // Multi-axis mode: Create per-series transform with axis-specific Y bounds
+        if (axisBounds != null && seriesToAxisMap != null) {
+          final axisId = seriesToAxisMap[series.id];
+          if (axisId != null && axisBounds.containsKey(axisId)) {
+            final axisRange = axisBounds[axisId]!;
+            // Create transform with per-axis Y bounds for proper normalization
+            final perSeriesTransform = _transform!.copyWith(
+              dataYMin: axisRange.min,
+              dataYMax: axisRange.max,
+            );
+            series.updateTransform(perSeriesTransform);
+          } else {
+            // Fallback: No axis binding found, use global transform
+            series.updateTransform(_transform!);
+          }
+        } else {
+          // Single-axis mode: Use global transform
+          series.updateTransform(_transform!);
+        }
       }
       series.paint(canvas, size);
     }

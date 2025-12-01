@@ -1,3 +1,26 @@
+## [Unreleased]
+
+### Added
+
+- Multi-axis Y normalization for displaying series with vastly different scales
+  - Each series uses full vertical height with its own Y-axis
+  - Up to 4 Y-axes supported (left, leftOuter, right, rightOuter)
+  - Color-coded axes match their bound series
+  - Tooltips and crosshair display original (non-normalized) values
+- Automatic normalization detection when series ranges differ >10x
+- New `yAxisId` and `unit` fields on `ChartSeries` for direct axis binding
+- `YAxisConfig` class for configuring additional Y-axes
+- `NormalizationMode` enum: `none`, `auto`, `perSeries`
+- `SeriesAxisBinding` class for explicit series-to-axis bindings
+- `SeriesAxisResolver` utility for resolving axis bindings
+- `NormalizationDetector` for automatic range ratio analysis
+
+### Changed
+
+- `BravenChartPlus` widget now accepts `yAxes`, `normalizationMode`, and `axisBindings` parameters
+
+---
+
 ## 0.0.1
 
 ### Dual-Mode Streaming (009-dual-mode-streaming)
