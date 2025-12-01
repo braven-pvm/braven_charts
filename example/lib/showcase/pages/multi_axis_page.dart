@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Multi-Axis Page
 // SPDX-License-Identifier: MIT
 
+import 'dart:math';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -34,6 +36,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   late List<ChartDataPoint> _temperatureData;
   late List<ChartDataPoint> _pressureData;
 
+  // Test data - specific ranges for multi-axis testing
+  late List<ChartDataPoint> _testSmallRangeData; // 0-100
+  late List<ChartDataPoint> _testLargeRangeData; // 250-1500
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +61,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         intercept: 1013,
         noise: 5,
       );
+
+      // Test data - specific ranges for multi-axis testing with randomness
+      _testSmallRangeData = _generateSmallRangeData();
+      _testLargeRangeData = _generateLargeRangeData();
     });
   }
 
@@ -87,13 +97,21 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         children: [
           SegmentedOption<int>(
             value: _selectedDemo,
-            options: const [0, 1],
-            labelBuilder: (v) => v == 0 ? 'Athletic' : 'Scientific',
+            options: const [0, 1, 2],
+            labelBuilder: (v) => v == 0
+                ? 'Athletic'
+                : v == 1
+                    ? 'Scientific'
+                    : 'Test',
             onChanged: (v) => setState(() => _selectedDemo = v),
           ),
           const SizedBox(height: 8),
           InfoBox(
-            message: _selectedDemo == 0 ? 'Power, Heart Rate, and Cadence on different scales' : 'Temperature and Pressure with different units',
+            message: _selectedDemo == 0
+                ? 'Power, Heart Rate, and Cadence on different scales'
+                : _selectedDemo == 1
+                    ? 'Temperature and Pressure with different units'
+                    : 'Test: Series 1 (0-100) vs Series 2 (250-1500)',
           ),
         ],
       ),
@@ -118,8 +136,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       builder: (context, _) {
         if (_selectedDemo == 0) {
           return _buildAthleticChart();
-        } else {
+        } else if (_selectedDemo == 1) {
           return _buildScientificChart();
+        } else {
+          return _buildTestChart();
         }
       },
     );
@@ -271,6 +291,78 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
     );
   }
 
+  Widget _buildTestChart() {
+    return ChartCard(
+      title: 'Multi-Axis Test',
+      subtitle: 'Series 1: 0-100  |  Series 2: 250-1500',
+      child: BravenChartPlus(
+        chartType: ChartType.line,
+        lineStyle: LineStyle.smooth,
+        series: [
+          LineChartSeries(
+            id: 'small_range',
+            name: 'Small Range (0-100)',
+            points: _testSmallRangeData,
+            color: Colors.blue,
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 2.0,
+            yAxisId: 'small_axis',
+          ),
+          LineChartSeries(
+            id: 'large_range',
+            name: 'Large Range (250-1500)',
+            points: _testLargeRangeData,
+            color: Colors.red,
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 2.0,
+            yAxisId: 'large_axis',
+          ),
+        ],
+        theme: _optionsController.theme,
+        showLegend: _optionsController.showLegend,
+        showXScrollbar: _optionsController.showXScrollbar,
+        showYScrollbar: _optionsController.showYScrollbar,
+        scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+        xAxis: AxisConfig(
+          showGrid: _optionsController.showGrid,
+          showAxis: _optionsController.showAxisLines,
+        ),
+        yAxis: AxisConfig(
+          showGrid: _optionsController.showGrid,
+          showAxis: _optionsController.showAxisLines,
+        ),
+        yAxes: [
+          YAxisConfig(
+            id: 'small_axis',
+            position: YAxisPosition.left,
+            label: 'Small',
+            showAxisLine: true,
+          ),
+          YAxisConfig(
+            id: 'large_axis',
+            position: YAxisPosition.right,
+            label: 'Large',
+            showAxisLine: true,
+          ),
+        ],
+        axisBindings: const [
+          SeriesAxisBinding(seriesId: 'small_range', yAxisId: 'small_axis'),
+          SeriesAxisBinding(seriesId: 'large_range', yAxisId: 'large_axis'),
+        ],
+        normalizationMode: NormalizationMode.perSeries,
+        interactionConfig: InteractionConfig(
+          enableZoom: _optionsController.enableZoom,
+          enablePan: _optionsController.enablePan,
+          crosshair: const CrosshairConfig(
+            enabled: true,
+            displayMode: CrosshairDisplayMode.tracking, // Force tracking mode for unified tooltip
+          ),
+          tooltip: const TooltipConfig(enabled: true),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusPanel() {
     if (_selectedDemo == 0) {
       return StatusPanel(
@@ -281,7 +373,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Axes', value: '3', color: Colors.blue),
         ],
       );
-    } else {
+    } else if (_selectedDemo == 1) {
       return StatusPanel(
         items: [
           StatusItem(label: 'Temp Pts', value: '${_temperatureData.length}'),
@@ -289,6 +381,71 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Axes', value: '2', color: Colors.blue),
         ],
       );
+    } else {
+      return StatusPanel(
+        items: [
+          const StatusItem(label: 'Small Range', value: '0-100'),
+          const StatusItem(label: 'Large Range', value: '250-1500'),
+          StatusItem(label: 'Points', value: '${_testSmallRangeData.length}'),
+          const StatusItem(label: 'Axes', value: '2', color: Colors.orange),
+        ],
+      );
     }
+  }
+
+  // ============================================================
+  // Randomized Test Data Generators
+  // ============================================================
+
+  static final Random _random = Random();
+
+  /// Generates randomized data in the 0-100 range with realistic patterns
+  List<ChartDataPoint> _generateSmallRangeData() {
+    final points = <ChartDataPoint>[];
+    double value = 50 + _random.nextDouble() * 20; // Start between 50-70
+
+    for (var i = 0; i < 50; i++) {
+      final x = i.toDouble();
+
+      // Random walk with mean reversion
+      final delta = (_random.nextDouble() - 0.5) * 15;
+      value += delta;
+
+      // Add occasional jumps
+      if (_random.nextDouble() < 0.08) {
+        value += (_random.nextBool() ? 1 : -1) * _random.nextDouble() * 20;
+      }
+
+      // Keep in range 0-100
+      value = value.clamp(0.0, 100.0);
+
+      points.add(ChartDataPoint(x: x, y: value));
+    }
+    return points;
+  }
+
+  /// Generates randomized data in the 250-1500 range with realistic patterns
+  List<ChartDataPoint> _generateLargeRangeData() {
+    final points = <ChartDataPoint>[];
+    double value = 800 + _random.nextDouble() * 200; // Start between 800-1000
+
+    for (var i = 0; i < 50; i++) {
+      final x = i.toDouble();
+
+      // Random walk with larger steps for larger range
+      final delta = (_random.nextDouble() - 0.5) * 150;
+      value += delta;
+
+      // Add occasional spikes
+      if (_random.nextDouble() < 0.1) {
+        value += (_random.nextBool() ? 1 : -1) * _random.nextDouble() * 200;
+      }
+
+      // Keep in range 250-1500
+      value = value.clamp(250.0, 1500.0);
+
+      points.add(ChartDataPoint(x: x, y: value));
+    }
+    return points;
   }
 }
