@@ -1,0 +1,172 @@
+# Task 16: Create Working Demo Example
+# Verification Criteria - HIDDEN FROM IMPLEMENTOR
+# Sprint: 011-multi-axis-normalization
+
+task_id: 16
+title: "Create Working Demo Example"
+category: "visual"
+phase: "integration"
+requires_screenshot: true
+
+speckit_tasks:
+  - T009  # Create test directory structure at test/golden/multi_axis/
+  - T016  # Golden test for 2-axis chart
+  - T017  # Golden test for 4-axis chart
+  - T024  # Add example multi-axis chart to showcase
+  - T030  # Add auto-detection example to showcase
+  - T033  # Golden test for colored axes
+  - T039  # Add themed axis color example to showcase
+  - T046  # Add crosshair example to showcase
+  - T050  # Run performance benchmark
+  - T051  # Validate backward compatibility
+  - T052  # Run quickstart.md validation
+  - T053  # Update CHANGELOG.md
+
+# What makes this task pass or fail
+verification:
+  blocking:
+    - id: B1
+      check: "Golden test directory exists"
+      severity: BLOCKING
+      how: "test/golden/multi_axis/ directory exists"
+      
+    - id: B2
+      check: "Golden test for 2-axis chart exists"
+      severity: BLOCKING
+      how: "test/golden/multi_axis/two_axis_chart_test.dart exists with at least 3 test cases"
+      
+    - id: B3
+      check: "Golden test for 4-axis chart exists"
+      severity: BLOCKING
+      how: "test/golden/multi_axis/four_axis_chart_test.dart exists with at least 3 test cases"
+      
+    - id: B4
+      check: "Golden test for colored axes exists"
+      severity: BLOCKING
+      how: "test/golden/multi_axis/colored_axes_test.dart exists with at least 3 test cases"
+      
+    - id: B5
+      check: "Showcase demo file exists"
+      severity: BLOCKING
+      how: "example/lib/demos/task_016_showcase_demo.dart exists and is runnable"
+      
+    - id: B6
+      check: "Demo demonstrates all 4 user stories"
+      severity: BLOCKING
+      how: "Demo shows: (1) multi-scale viz, (2) auto-detection, (3) color-coded axes, (4) crosshair with original values"
+      
+    - id: B7
+      check: "Backward compatibility test exists"
+      severity: BLOCKING
+      how: "test/widget/multi_axis/backward_compat_test.dart verifies single-axis charts unchanged"
+      
+    - id: B8
+      check: "All sprint tests pass"
+      severity: BLOCKING
+      how: "flutter test test/unit/multi_axis/ && flutter test test/widget/multi_axis/"
+      
+    - id: B9
+      check: "CHANGELOG.md updated"
+      severity: BLOCKING
+      how: "CHANGELOG.md contains multi-axis normalization feature entry"
+      
+    - id: B10
+      check: "Visual verification screenshot captured"
+      severity: BLOCKING
+      how: "Screenshot at .orchestra/orchestrator/results/screenshots/task-016-*.png exists and shows chart"
+
+  major:
+    - id: M1
+      check: "Demo has clear visual separation of user story features"
+      severity: MAJOR
+      how: "Demo uses labels/titles to identify which US is being demonstrated"
+      
+    - id: M2
+      check: "Performance benchmark exists"
+      severity: MAJOR
+      how: "test/benchmarks/multi_axis_benchmark.dart exists"
+      
+    - id: M3
+      check: "quickstart.md code examples compile"
+      severity: MAJOR
+      how: "All code snippets in specs/011-multi-axis-normalization/quickstart.md are valid"
+      
+    - id: M4
+      check: "Golden tests use consistent sizing"
+      severity: MAJOR
+      how: "All golden tests use same chart dimensions for reproducibility"
+
+  minor:
+    - id: m1
+      check: "Demo includes helpful comments"
+      severity: MINOR
+      how: "Demo file has comments explaining what each section demonstrates"
+      
+    - id: m2
+      check: "Golden test file names follow convention"
+      severity: MINOR
+      how: "Files named descriptively: two_axis_*, four_axis_*, colored_axes_*"
+
+# Files expected to be created/modified
+expected_files:
+  create:
+    - path: "test/golden/multi_axis/.gitkeep"
+      purpose: "Create golden test directory"
+    - path: "test/golden/multi_axis/two_axis_chart_test.dart"
+      purpose: "Golden test for 2-axis configuration"
+    - path: "test/golden/multi_axis/four_axis_chart_test.dart"
+      purpose: "Golden test for 4-axis configuration"
+    - path: "test/golden/multi_axis/colored_axes_test.dart"
+      purpose: "Golden test for color-coded axes"
+    - path: "test/widget/multi_axis/backward_compat_test.dart"
+      purpose: "Verify single-axis mode unchanged"
+    - path: "test/benchmarks/multi_axis_benchmark.dart"
+      purpose: "Performance validation (60 FPS with 4 series × 1000 points)"
+    - path: "example/lib/demos/task_016_showcase_demo.dart"
+      purpose: "Comprehensive showcase of all multi-axis features"
+      
+  modify:
+    - path: "CHANGELOG.md"
+      changes: "Add multi-axis normalization feature entry"
+
+# Test expectations
+test_expectations:
+  baseline: 262
+  minimum_new: 20  # Golden tests + backward compat + benchmark
+  minimum_total: 280
+
+# Screenshot verification
+screenshot:
+  required: true
+  path: ".orchestra/orchestrator/results/screenshots/task-016-showcase.png"
+  verify:
+    - "Chart displays with multiple Y-axes (left and right)"
+    - "Each axis has distinct color matching its series"
+    - "All series use full vertical space despite different ranges"
+    - "Axis labels show original values (not normalized 0-1)"
+    - "Crosshair or tooltip visible showing original value"
+
+# Adversarial checks
+adversarial:
+  - scenario: "Demo runs without any additional setup"
+    check: "flutter run -t example/lib/demos/task_016_showcase_demo.dart -d chrome works"
+    
+  - scenario: "Golden tests generate/compare correctly"
+    check: "flutter test test/golden/multi_axis/ --update-goldens creates baseline images"
+    
+  - scenario: "Single-axis chart still works"
+    check: "Existing single-axis examples render identically to before sprint"
+
+notes: |
+  FINAL TASK - Sprint Capstone
+  
+  This task brings together all 15 previous tasks into a working demonstration.
+  It creates:
+  1. Golden tests for visual regression (future-proofing)
+  2. Comprehensive showcase demo (developer experience)
+  3. Backward compatibility proof (no regressions)
+  4. Performance validation (production readiness)
+  5. Documentation updates (discoverability)
+  
+  The demo should be impressive - it's the "proof" that the sprint succeeded.
+  All 4 user stories should be visible in a single chart or tabbed view.
