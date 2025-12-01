@@ -35,8 +35,8 @@
  - [x] T005 Create barrel export for new types in `lib/src/axis/axis.dart`
    - ✅ Completed: Folded into Tasks 2,4,5 - using `lib/src/models/enums.dart`
    - ⚠️ Path changed: used models barrel not axis barrel
- - [ ] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src/models/chart_series.dart`
-   - 🔄 Mapped to: Orchestrator Task 15
+ - [x] T006 Add `yAxisId` and `unit` fields to ChartSeries base class in `lib/src/models/chart_series.dart`
+   - ✅ Completed: Orchestrator Task 15
 
 **Checkpoint**: Core types available for user story implementation ✅ (2025-01-08)
 
@@ -218,9 +218,12 @@
 
 **Purpose**: Final validation, documentation, and cleanup
 
- - [ ] T047 [P] Add validation for max 4 axes in `lib/src/axis/y_axis_config.dart`
- - [ ] T048 [P] Add validation for unique axis positions in `lib/src/widgets/braven_chart_plus.dart`
- - [ ] T049 [P] Add API documentation to all public classes in `lib/src/axis/`
+ - [x] T047 [P] Add validation for max 4 axes in `lib/src/axis/y_axis_config.dart`
+   - ✅ Completed: Orchestrator Task 15 (in BravenChartPlus)
+ - [x] T048 [P] Add validation for unique axis positions in `lib/src/widgets/braven_chart_plus.dart`
+   - ✅ Completed: Orchestrator Task 15
+ - [x] T049 [P] Add API documentation to all public classes in `lib/src/axis/`
+   - ✅ Completed: Orchestrator Task 15 (yAxisId/unit @param docs)
 - [ ] T050 Run performance benchmark (60 FPS with 4 series × 1000 points) in `test/benchmarks/multi_axis_benchmark.dart`
 - [ ] T051 Validate backward compatibility (single-axis mode unchanged) in `test/widget/multi_axis/backward_compat_test.dart`
 - [ ] T052 Run quickstart.md validation - test all code examples compile

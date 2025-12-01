@@ -157,11 +157,11 @@ void main() {
 
     testWidgets('handles empty yAxes gracefully', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: [
+              series: const [
                 LineChartSeries(
                   id: 'power',
                   points: [
