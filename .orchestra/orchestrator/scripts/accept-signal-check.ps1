@@ -6,7 +6,7 @@
 # Purpose: Gate check BEFORE orchestrator begins verification
 # Timing:  Implementor signals done → THIS SCRIPT → Orchestrator verifies
 #
-# Usage: .\.orchestra\scripts\orchestrator\accept-signal-check.ps1
+# Usage: .\.orchestra\orchestrator\scripts\accept-signal-check.ps1
 #
 # Returns: Exit code 0 if implementor followed process, 1 if not
 
@@ -20,9 +20,9 @@ $ErrorActionPreference = "Stop"
 # LOAD DEPENDENCIES
 # ============================================================================
 
-$scriptRoot = Split-Path -Parent $PSScriptRoot
-. "$scriptRoot\set-env.ps1"
-. "$scriptRoot\common\check-utils.ps1"
+$scriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+. "$scriptRoot\common\scripts\set-env.ps1"
+. "$scriptRoot\common\scripts\check-utils.ps1"
 
 # ============================================================================
 # HEADER
@@ -90,7 +90,7 @@ else {
 
 Write-Section "Pre-Signal Check Artifact (Process Compliance)"
 
-$artifactDir = "$env:ORCHESTRA_ROOT/artifacts/pre-signal"
+$artifactDir = "$env:IMPLEMENTOR_PATH/artifacts/pre-signal"
 $artifactPattern = "task-$TaskId-*.txt"
 
 if (Test-Path $artifactDir) {
@@ -128,14 +128,14 @@ if (Test-Path $artifactDir) {
     else {
         Add-CheckResult $checks "Pre-signal check was run" $false `
             "No pre-signal artifact found for Task $TaskId" `
-            "Implementor MUST run: .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1" `
+            "Implementor MUST run: .\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1" `
             $artifactDir
     }
 }
 else {
     Add-CheckResult $checks "Pre-signal check was run" $false `
         "No pre-signal artifacts directory - scripts never run" `
-        "Implementor MUST run: .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1" `
+        "Implementor MUST run: .\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1" `
         $artifactDir
 }
 

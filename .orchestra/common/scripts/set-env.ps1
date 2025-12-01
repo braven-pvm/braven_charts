@@ -3,7 +3,7 @@
 # Sets environment variables for the current sprint.
 # Run this at the start of any orchestrator session.
 #
-# Usage: . .\.orchestra\scripts\set-env.ps1
+# Usage: . .\.orchestra\common\scripts\set-env.ps1
 # (Note the dot-space prefix for sourcing)
 
 param(
@@ -27,7 +27,7 @@ $script:CONFIG = @{
     SpeckitRoot               = "specs/011-multi-axis-normalization"
     SprintTestPath            = "test/unit/multi_axis"
     SprintIntegrationTestPath = "test/integration"
-    ScreenshotPath            = ".orchestra/verification/screenshots"
+    ScreenshotPath            = ".orchestra/orchestrator/results/screenshots"
     
     # File patterns
     TestFilePattern           = "test/unit/multi_axis/*_test.dart"
@@ -48,7 +48,7 @@ $env:SCREENSHOT_PATH = $script:CONFIG.ScreenshotPath
 $env:IMPLEMENTATION_PATH = $script:CONFIG.ImplementationPath
 
 # Task-level (derived from progress.yaml)
-$progressPath = "$env:ORCHESTRA_ROOT/progress.yaml"
+$progressPath = "$env:ORCHESTRA_ROOT/orchestrator/.orchestrator-only/progress.yaml"
 if (Test-Path $progressPath) {
     $progressContent = Get-Content $progressPath -Raw
     
@@ -71,12 +71,16 @@ else {
 }
 
 # Derived paths
-$env:MANIFEST_PATH = "$env:ORCHESTRA_ROOT/manifest.yaml"
-$env:PROGRESS_PATH = "$env:ORCHESTRA_ROOT/progress.yaml"
+$env:MANIFEST_PATH = "$env:ORCHESTRA_ROOT/orchestrator/.orchestrator-only/manifest.yaml"
+$env:PROGRESS_PATH = "$env:ORCHESTRA_ROOT/orchestrator/.orchestrator-only/progress.yaml"
 $env:SPECKIT_TASKS_PATH = "$env:SPECKIT_ROOT/tasks.md"
 $env:HANDOVER_PATH = "$env:ORCHESTRA_ROOT/handover"
-$env:VERIFICATION_PATH = "$env:ORCHESTRA_ROOT/verification"
-$env:TEMPLATES_PATH = "$env:ORCHESTRA_ROOT/templates"
+$env:VERIFICATION_PATH = "$env:ORCHESTRA_ROOT/orchestrator/.orchestrator-only/verification"
+$env:TEMPLATES_PATH = "$env:ORCHESTRA_ROOT/common/templates"
+$env:RESULTS_PATH = "$env:ORCHESTRA_ROOT/orchestrator/results"
+$env:ORCHESTRATOR_SCRIPTS = "$env:ORCHESTRA_ROOT/orchestrator/scripts"
+$env:IMPLEMENTOR_PATH = "$env:ORCHESTRA_ROOT/implementor"
+$env:DOCS_PATH = "$env:ORCHESTRA_ROOT/docs"
 
 # ============================================================================
 # DISPLAY CURRENT STATE
@@ -107,17 +111,22 @@ function global:Get-OrchestraEnv {
     Returns all orchestra environment variables as a hashtable
     #>
     @{
-        ORCHESTRA_ROOT     = $env:ORCHESTRA_ROOT
-        SPECKIT_ROOT       = $env:SPECKIT_ROOT
-        SPRINT_NAME        = $env:SPRINT_NAME
-        CURRENT_TASK       = $env:CURRENT_TASK
-        PREVIOUS_TASK      = $env:PREVIOUS_TASK
-        SPRINT_TEST_PATH   = $env:SPRINT_TEST_PATH
-        MANIFEST_PATH      = $env:MANIFEST_PATH
-        PROGRESS_PATH      = $env:PROGRESS_PATH
-        SPECKIT_TASKS_PATH = $env:SPECKIT_TASKS_PATH
-        HANDOVER_PATH      = $env:HANDOVER_PATH
-        VERIFICATION_PATH  = $env:VERIFICATION_PATH
-        SCREENSHOT_PATH    = $env:SCREENSHOT_PATH
+        ORCHESTRA_ROOT       = $env:ORCHESTRA_ROOT
+        SPECKIT_ROOT         = $env:SPECKIT_ROOT
+        SPRINT_NAME          = $env:SPRINT_NAME
+        CURRENT_TASK         = $env:CURRENT_TASK
+        PREVIOUS_TASK        = $env:PREVIOUS_TASK
+        SPRINT_TEST_PATH     = $env:SPRINT_TEST_PATH
+        MANIFEST_PATH        = $env:MANIFEST_PATH
+        PROGRESS_PATH        = $env:PROGRESS_PATH
+        SPECKIT_TASKS_PATH   = $env:SPECKIT_TASKS_PATH
+        HANDOVER_PATH        = $env:HANDOVER_PATH
+        VERIFICATION_PATH    = $env:VERIFICATION_PATH
+        SCREENSHOT_PATH      = $env:SCREENSHOT_PATH
+        RESULTS_PATH         = $env:RESULTS_PATH
+        ORCHESTRATOR_SCRIPTS = $env:ORCHESTRATOR_SCRIPTS
+        IMPLEMENTOR_PATH     = $env:IMPLEMENTOR_PATH
+        DOCS_PATH            = $env:DOCS_PATH
+        TEMPLATES_PATH       = $env:TEMPLATES_PATH
     }
 }

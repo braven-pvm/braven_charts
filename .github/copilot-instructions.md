@@ -57,15 +57,15 @@ When user says "prepare next task", "task handover", or similar:
 
 ```powershell
 # Step 1: Source environment
-. .\.orchestra\scripts\set-env.ps1
+. .\.orchestra\common\scripts\set-env.ps1
 
 # Step 2: Run closeout check (BLOCKING)
-.\.orchestra\scripts\orchestrator\task-closeout-check.ps1
+.\.orchestra\orchestrator\scripts\task-closeout-check.ps1
 ```
 
 **ONLY AFTER SCRIPT PASSES** can you proceed to:
 
-1. Read readme.md
+1. Read docs/readme.md
 2. Read manifest.yaml for next task
 3. Create handover document
 
@@ -240,10 +240,10 @@ See comprehensive guides:
 
 Visual verification has TWO distinct phases with different tools:
 
-| Phase | Actor | Tool | Purpose |
-|-------|-------|------|---------|
-| **CAPTURE** | Implementor | `flutter_agent.py` | Run Flutter app, take screenshot |
-| **VIEW** | Orchestrator | Chrome DevTools MCP | Open existing PNG, analyze content |
+| Phase       | Actor        | Tool                | Purpose                            |
+| ----------- | ------------ | ------------------- | ---------------------------------- |
+| **CAPTURE** | Implementor  | `flutter_agent.py`  | Run Flutter app, take screenshot   |
+| **VIEW**    | Orchestrator | Chrome DevTools MCP | Open existing PNG, analyze content |
 
 ---
 
@@ -344,16 +344,17 @@ You MUST view the actual content via Chrome DevTools MCP to verify correctness.
 
 ### Key Differences: Capture vs View
 
-| Aspect | Capture (Implementor) | View (Orchestrator) |
-|--------|----------------------|---------------------|
-| **Tool** | `flutter_agent.py` | Chrome DevTools MCP |
-| **Purpose** | Run app, take screenshot | View existing file |
-| **Input** | Flutter demo file | PNG file path |
-| **Output** | PNG file on disk | Image in agent context |
+| Aspect      | Capture (Implementor)    | View (Orchestrator)    |
+| ----------- | ------------------------ | ---------------------- |
+| **Tool**    | `flutter_agent.py`       | Chrome DevTools MCP    |
+| **Purpose** | Run app, take screenshot | View existing file     |
+| **Input**   | Flutter demo file        | PNG file path          |
+| **Output**  | PNG file on disk         | Image in agent context |
 
 ### Pre-Visual-Verification Checklist
 
 **For IMPLEMENTOR (capturing):**
+
 1. ✅ Am I using `flutter_agent.py`? (NOT terminal commands)
 2. ✅ Am I starting in a SEPARATE window via `Start-Process`?
 3. ✅ Did I wait for the app to be ready?
@@ -361,6 +362,7 @@ You MUST view the actual content via Chrome DevTools MCP to verify correctness.
 5. ✅ Did I stop the app when done?
 
 **For ORCHESTRATOR (viewing):**
+
 1. ✅ Did I verify the screenshot file EXISTS first?
 2. ✅ Did I use `mcp_chrome-devtoo_new_page` with `file:///` URL?
 3. ✅ Did I use `mcp_chrome-devtoo_take_screenshot` to receive the image?

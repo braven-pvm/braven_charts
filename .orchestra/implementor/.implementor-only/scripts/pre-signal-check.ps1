@@ -3,7 +3,7 @@
 # Run this BEFORE signaling completion to the orchestrator.
 # Verifies all deliverables are created and tests pass.
 #
-# Usage: .\.orchestra\handover\.implementor\scripts\pre-signal-check.ps1
+# Usage: .\.orchestra\implementor\.implementor-only\scripts\pre-signal-check.ps1
 #
 # Returns: Exit code 0 if all checks pass, 1 if any fail
 
@@ -14,8 +14,8 @@ $ErrorActionPreference = "Stop"
 # ============================================================================
 
 $orchestraRoot = (Get-Item "$PSScriptRoot\..\..\..").FullName
-. "$orchestraRoot\scripts\set-env.ps1" 2>$null
-. "$orchestraRoot\scripts\common\check-utils.ps1"
+. "$orchestraRoot\common\scripts\set-env.ps1" 2>$null
+. "$orchestraRoot\common\scripts\check-utils.ps1"
 
 # ============================================================================
 # HEADER
@@ -334,7 +334,7 @@ Add-CheckResult $checks "Has changes to commit" $hasChanges `
 $summary = Get-CheckSummary $checks
 
 # Create artifact directory if needed
-$artifactDir = "$orchestraRoot/artifacts/pre-signal"
+$artifactDir = "$orchestraRoot/implementor/artifacts/pre-signal"
 if (-not (Test-Path $artifactDir)) {
     New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
 }

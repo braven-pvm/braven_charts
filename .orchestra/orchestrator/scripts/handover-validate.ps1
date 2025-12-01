@@ -3,7 +3,7 @@
 # Validates that current-task.md is complete and follows template.
 # Run AFTER creating handover, BEFORE handing off to implementor.
 #
-# Usage: .\.orchestra\scripts\orchestrator\handover-validate.ps1
+# Usage: .\.orchestra\orchestrator\scripts\handover-validate.ps1
 #
 # Returns: Exit code 0 if valid, 1 if invalid
 
@@ -13,9 +13,9 @@ $ErrorActionPreference = "Stop"
 # LOAD COMMON UTILITIES
 # ============================================================================
 
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptRoot\..\set-env.ps1" 2>$null
-. "$scriptRoot\..\common\check-utils.ps1"
+$scriptRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+. "$scriptRoot\common\scripts\set-env.ps1" 2>$null
+. "$scriptRoot\common\scripts\check-utils.ps1"
 
 # ============================================================================
 # HEADER
@@ -275,7 +275,7 @@ else {
 
 Write-Section "Progress Alignment"
 
-$progressPath = "$env:ORCHESTRA_ROOT/progress.yaml"
+$progressPath = "$env:PROGRESS_PATH"
 if (Test-Path $progressPath) {
     $progressContent = Get-Content $progressPath -Raw
     $currentTaskInProgress = if ($progressContent -match "current_task_id:\s*(\d+)") { $Matches[1] } else { "?" }
