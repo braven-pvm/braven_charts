@@ -5,8 +5,8 @@
 //
 // This demo demonstrates the new `yAxisId` field on ChartSeries,
 // which enables direct axis binding without needing axisBindings.
-import 'package:flutter/material.dart';
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/material.dart';
 
 void main() => runApp(const Task015ApiDemo());
 
