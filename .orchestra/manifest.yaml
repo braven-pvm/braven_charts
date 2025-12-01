@@ -165,7 +165,7 @@ phases:
       - id: 15
         title: "Expose Multi-Axis API on BravenChartPlus"
         status: "completed"
-        commit: "pending"
+        commit: "8763acc"
         speckit_tasks: ["T006", "T047", "T048", "T049"]
         consolidation_rationale: "API exposure + validations + documentation"
         is_integration_task: true

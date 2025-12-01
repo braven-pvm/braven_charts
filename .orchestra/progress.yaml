@@ -267,7 +267,7 @@ task_history:
     status: "completed"
     started: "2025-12-01"
     completed: "2025-12-01"
-    commit: "pending"
+    commit: "8763acc"
     attempts: 1
     verification_notes: |
       All checks passed - visual verification via Chrome DevTools MCP.
