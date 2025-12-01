@@ -19,7 +19,7 @@ $ErrorActionPreference = "Stop"
 # LOAD COMMON UTILITIES
 # ============================================================================
 
-$scriptRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$scriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . "$scriptRoot\common\scripts\set-env.ps1" 2>$null
 . "$scriptRoot\common\scripts\check-utils.ps1"
 
