@@ -3,8 +3,8 @@
 # Audits all verification records to ensure completeness.
 # Identifies any gaps in verification logging.
 #
-# Usage: .\.orchestra\scripts\orchestrator\verification-audit.ps1
-#        .\.orchestra\scripts\orchestrator\verification-audit.ps1 -TaskId 10
+# Usage: .\.orchestra\orchestrator\scripts\verification-audit.ps1
+#        .\.orchestra\orchestrator\scripts\verification-audit.ps1 -TaskId 10
 #
 # Returns: Exit code 0 if all audits pass, 1 if any fail
 
@@ -19,9 +19,9 @@ $ErrorActionPreference = "Stop"
 # LOAD COMMON UTILITIES
 # ============================================================================
 
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-. "$scriptRoot\..\set-env.ps1" 2>$null
-. "$scriptRoot\..\common\check-utils.ps1"
+$scriptRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+. "$scriptRoot\common\scripts\set-env.ps1" 2>$null
+. "$scriptRoot\common\scripts\check-utils.ps1"
 
 # ============================================================================
 # HEADER
@@ -40,7 +40,7 @@ $checks = New-CheckCollector
 # ============================================================================
 
 # Get current task from progress.yaml
-$progressPath = "$env:ORCHESTRA_ROOT/progress.yaml"
+$progressPath = "$env:PROGRESS_PATH"
 if (Test-Path $progressPath) {
     $progressContent = Get-Content $progressPath -Raw
     $currentTask = if ($progressContent -match "current_task_id:\s*(\d+)") { [int]$Matches[1] } else { 1 }
@@ -73,7 +73,7 @@ Write-Host "`n  Auditing $($auditScope.Count) task(s): $($auditScope -join ', ')
 
 Write-Section "Verification Records"
 
-$verificationPath = "$env:ORCHESTRA_ROOT/verification"
+$verificationPath = "$env:VERIFICATION_PATH"
 
 foreach ($taskNum in $auditScope) {
     $taskIdPadded = $taskNum.ToString().PadLeft(3, '0')
@@ -230,7 +230,7 @@ foreach ($taskNum in $auditScope) {
 
 Write-Section "Screenshot Content Verification"
 
-$screenshotPath = "$env:ORCHESTRA_ROOT/verification/screenshots"
+$screenshotPath = "$env:SCREENSHOT_PATH"
 if (Test-Path $screenshotPath) {
     $screenshots = Get-ChildItem $screenshotPath -Filter "*.png" -ErrorAction SilentlyContinue
     

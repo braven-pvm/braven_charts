@@ -3,7 +3,7 @@
 # Verifies bidirectional sync between SpecKit tasks and Orchestrator tasks.
 # Run periodically to ensure all tasks are properly mapped.
 #
-# Usage: .\.orchestra\scripts\orchestrator\task-coverage.ps1
+# Usage: .\.orchestra\orchestrator\scripts\task-coverage.ps1
 #
 # Returns: Exit code 0 if all checks pass, 1 if any fail
 
@@ -13,9 +13,9 @@ $ErrorActionPreference = "Stop"
 # LOAD DEPENDENCIES
 # ============================================================================
 
-$scriptRoot = Split-Path -Parent $PSScriptRoot
-. "$scriptRoot\set-env.ps1"
-. "$scriptRoot\common\check-utils.ps1"
+$scriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+. "$scriptRoot\common\scripts\set-env.ps1"
+. "$scriptRoot\common\scripts\check-utils.ps1"
 
 # ============================================================================
 # HEADER
