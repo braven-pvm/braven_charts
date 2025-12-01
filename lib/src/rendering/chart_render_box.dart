@@ -730,6 +730,11 @@ class ChartRenderBox extends RenderBox {
   /// This method uses both explicit [axisBindings] and implicit bindings
   /// from series [yAxisId] properties. Series with matching [yAxisId] are
   /// automatically bound to their corresponding axis.
+  ///
+  /// **Viewport-Aware**: In perSeries normalization mode, when the chart is
+  /// zoomed or panned, the bounds are transformed to show the visible data range
+  /// (not full range). This ensures axis labels update correctly during
+  /// zoom and pan operations.
   Map<String, DataRange> _computeAxisBounds() {
     final bounds = <String, DataRange>{};
 
@@ -738,10 +743,34 @@ class ChartRenderBox extends RenderBox {
     // Compute effective bindings: explicit bindings + implicit from series.yAxisId
     final effectiveBindings = _getEffectiveBindings();
 
+    // Check if viewport Y range differs from original (zoom or pan in perSeries mode)
+    // In perSeries mode, normalized Y range is 0-1, so if transform differs, we need
+    // to adjust axis labels to show visible data range
+    final isViewportTransformed = _normalizationMode == NormalizationMode.perSeries &&
+        _transform != null &&
+        _originalTransform != null &&
+        (_transform!.dataYMin != _originalTransform!.dataYMin || _transform!.dataYMax != _originalTransform!.dataYMax);
+
+    // Get the normalized viewport range (0-1 when at original position)
+    final viewportYMin = _transform?.dataYMin ?? 0.0;
+    final viewportYMax = _transform?.dataYMax ?? 1.0;
+
     for (final axis in _yAxes!) {
       // Use explicit bounds if provided
       if (axis.min != null && axis.max != null) {
-        bounds[axis.id] = DataRange(min: axis.min!, max: axis.max!);
+        final fullMin = axis.min!;
+        final fullMax = axis.max!;
+
+        if (isViewportTransformed) {
+          // Transform explicit bounds based on viewport (zoom/pan)
+          final range = fullMax - fullMin;
+          bounds[axis.id] = DataRange(
+            min: fullMin + (viewportYMin * range),
+            max: fullMin + (viewportYMax * range),
+          );
+        } else {
+          bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+        }
         continue;
       }
 
@@ -764,10 +793,20 @@ class ChartRenderBox extends RenderBox {
       }
 
       // Use computed bounds, or fallback to 0-100 if no data
-      bounds[axis.id] = DataRange(
-        min: axis.min ?? minY ?? 0.0,
-        max: axis.max ?? maxY ?? 100.0,
-      );
+      final fullMin = axis.min ?? minY ?? 0.0;
+      final fullMax = axis.max ?? maxY ?? 100.0;
+
+      if (isViewportTransformed) {
+        // Transform computed bounds based on viewport (zoom/pan)
+        // The viewport Y range maps to the visible portion of the data
+        final range = fullMax - fullMin;
+        bounds[axis.id] = DataRange(
+          min: fullMin + (viewportYMin * range),
+          max: fullMin + (viewportYMax * range),
+        );
+      } else {
+        bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+      }
     }
 
     return bounds;
@@ -1152,9 +1191,9 @@ class ChartRenderBox extends RenderBox {
       return (requestedPlotDx, requestedPlotDy);
     }
 
-    // In multi-axis mode, disable Y-axis panning by zeroing Y delta
-    // This is required because per-axis normalization would break with Y-pan
-    final effectiveRequestedPlotDy = _hasMultipleYAxes() ? 0.0 : requestedPlotDy;
+    // Y-axis panning is now supported in multi-axis mode with viewport-aware axis bounds
+    // The _computeAxisBounds() method transforms axis labels based on current viewport
+    final effectiveRequestedPlotDy = requestedPlotDy;
 
     // Use pan constraint transform if set (paused streaming mode with full dataset bounds),
     // otherwise use original transform (normal streaming mode with sliding window bounds)
