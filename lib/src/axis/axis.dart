@@ -3,6 +3,7 @@
 
 // import 'package:flutter/foundation.dart' show debugPrint;
 
+import '../models/axis_config.dart' as public_config;
 import 'axis_config.dart';
 import 'linear_scale.dart';
 import 'tick.dart';
@@ -15,12 +16,9 @@ import 'tick_generator.dart';
 ///
 /// **Usage**:
 /// ```dart
-/// final xAxis = Axis(
-///   config: AxisConfig(
-///     orientation: AxisOrientation.horizontal,
-///     position: AxisPosition.bottom,
-///     label: 'Time',
-///   ),
+/// final xAxis = Axis.fromPublicConfig(
+///   config: AxisConfig(label: 'Time'),
+///   isXAxis: true,
 ///   dataMin: 0,
 ///   dataMax: 100,
 /// );
@@ -32,6 +30,10 @@ import 'tick_generator.dart';
 /// xAxis.updatePixelRange(60, 760);
 /// ```
 class Axis {
+  /// Creates an axis from an internal configuration.
+  ///
+  /// **Prefer [Axis.fromPublicConfig]** for creating axes from the public API.
+  /// This constructor is for internal use when you already have an [InternalAxisConfig].
   Axis({
     required this.config,
     required double dataMin,
@@ -53,8 +55,41 @@ class Axis {
     ticks = _generateTicks();
   }
 
-  /// Visual configuration.
-  final AxisConfig config;
+  /// Creates an axis from the public AxisConfig API.
+  ///
+  /// This is the recommended way to create axes from widget parameters.
+  /// The [isXAxis] parameter determines orientation and default position.
+  ///
+  /// Example:
+  /// ```dart
+  /// final xAxis = Axis.fromPublicConfig(
+  ///   config: AxisConfig(label: 'Time', showGrid: true),
+  ///   isXAxis: true,
+  ///   dataMin: 0,
+  ///   dataMax: 100,
+  /// );
+  /// ```
+  factory Axis.fromPublicConfig({
+    required public_config.AxisConfig config,
+    required bool isXAxis,
+    required double dataMin,
+    required double dataMax,
+    double pixelMin = 0,
+    double pixelMax = 100,
+    String Function(double value)? labelFormatter,
+  }) {
+    return Axis(
+      config: InternalAxisConfig.fromPublicConfig(config, isXAxis: isXAxis),
+      dataMin: dataMin,
+      dataMax: dataMax,
+      pixelMin: pixelMin,
+      pixelMax: pixelMax,
+      labelFormatter: labelFormatter,
+    );
+  }
+
+  /// Visual configuration (internal).
+  final InternalAxisConfig config;
 
   /// Scale for converting between data and pixel coordinates.
   late LinearScale scale;
