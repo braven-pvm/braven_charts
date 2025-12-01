@@ -25,6 +25,7 @@ import '../interaction/core/crosshair_tracker.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../layout/multi_axis_layout.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -1322,9 +1323,12 @@ class ChartRenderBox extends RenderBox {
     // Calculate plot area (reserve space for axes AND scrollbars)
     // Default margins if no axes
     double leftMargin = 10;
-    final double rightMargin = 10 + rightReserved; // Add scrollbar space
+    double rightMargin = 10 + rightReserved; // Add scrollbar space
     const double topMargin = 10;
     double bottomMargin = 10 + bottomReserved; // Add scrollbar space
+
+    // Track right axis width separately for scrollbar positioning
+    double rightAxisWidth = 0;
 
     // Reserve space for Y-axis (left side) - only if axis is visible
     if (_yAxis != null && _yAxis!.config.showAxisLine) {
@@ -1334,6 +1338,33 @@ class ChartRenderBox extends RenderBox {
     // Reserve space for X-axis (bottom) - only if axis is visible
     if (_xAxis != null && _xAxis!.config.showAxisLine) {
       bottomMargin = 50 + bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
+    }
+
+    // MULTI-AXIS: Reserve additional space for right-side Y-axes
+    // When multi-axis mode is active, compute axis widths and reserve space accordingly
+    if (_hasMultipleYAxes() && _yAxes != null) {
+      final axisBounds = _computeAxisBounds();
+      const layoutDelegate = MultiAxisLayoutDelegate();
+      final axisWidths = layoutDelegate.computeAxisWidths(
+        axes: _yAxes!,
+        axisBounds: axisBounds,
+        labelStyle: const TextStyle(fontSize: 11),
+      );
+
+      // Get total width needed for left and right axes
+      final totalLeftWidth = layoutDelegate.getTotalLeftWidth(_yAxes!, axisWidths);
+      rightAxisWidth = layoutDelegate.getTotalRightWidth(_yAxes!, axisWidths);
+
+      // CRITICAL: In multi-axis mode, use the computed axis widths directly
+      // (not the hardcoded single-axis margin of 60px) so that the plot area
+      // aligns exactly with where MultiAxisPainter draws the axis lines.
+      // This prevents gaps between Y-axis lines and X-axis lines.
+      leftMargin = totalLeftWidth > 0 ? totalLeftWidth : leftMargin;
+
+      // Add right axis width to right margin (in addition to scrollbar space)
+      if (rightAxisWidth > 0) {
+        rightMargin = rightAxisWidth + rightReserved;
+      }
     }
 
     // Calculate plot area (chart canvas excluding axes and scrollbars)
@@ -1357,8 +1388,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     if (_showYScrollbar) {
-      // Position vertical scrollbar to the right of the plot area
-      final scrollbarLeft = _plotArea.right + scrollbarPadding;
+      // Position vertical scrollbar to the right of:
+      // - Just the plot area (single axis mode)
+      // - Plot area + right axis (multi-axis mode)
+      final scrollbarLeft = _plotArea.right + rightAxisWidth + scrollbarPadding;
       _yScrollbarRect = Rect.fromLTWH(
         scrollbarLeft,
         _plotArea.top,
