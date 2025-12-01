@@ -39,6 +39,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   // Test data - specific ranges for multi-axis testing
   late List<ChartDataPoint> _testSmallRangeData; // 0-100
   late List<ChartDataPoint> _testLargeRangeData; // 250-1500
+  late List<ChartDataPoint> _testMediumRangeData; // 500-800 (right axis)
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       // Test data - specific ranges for multi-axis testing with randomness
       _testSmallRangeData = _generateSmallRangeData();
       _testLargeRangeData = _generateLargeRangeData();
+      _testMediumRangeData = _generateMediumRangeData();
     });
   }
 
@@ -111,7 +113,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
                 ? 'Power, Heart Rate, and Cadence on different scales'
                 : _selectedDemo == 1
                     ? 'Temperature and Pressure with different units'
-                    : 'Test: Series 1 (0-100) vs Series 2 (250-1500)',
+                    : 'Test: Series 1 (0-100) vs Series 2 (250-1500) vs Series 3 (500-800)',
           ),
         ],
       ),
@@ -294,7 +296,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   Widget _buildTestChart() {
     return ChartCard(
       title: 'Multi-Axis Test',
-      subtitle: 'Series 1: 0-100  |  Series 2: 250-1500',
+      subtitle: 'Series 1: 0-100  |  Series 2: 250-1500  |  Series 3: 500-800',
       child: BravenChartPlus(
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
@@ -316,6 +318,15 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
             yAxisId: 'large_axis',
+          ),
+          LineChartSeries(
+            id: 'medium_range',
+            name: 'Medium Range (500-800)',
+            points: _testMediumRangeData,
+            color: Colors.green,
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 2.0,
+            yAxisId: 'medium_axis',
           ),
         ],
         theme: _optionsController.theme,
@@ -340,14 +351,21 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           ),
           YAxisConfig(
             id: 'large_axis',
-            position: YAxisPosition.right,
+            position: YAxisPosition.leftOuter,
             label: 'Large',
+            showAxisLine: true,
+          ),
+          YAxisConfig(
+            id: 'medium_axis',
+            position: YAxisPosition.right,
+            label: 'Medium',
             showAxisLine: true,
           ),
         ],
         axisBindings: const [
           SeriesAxisBinding(seriesId: 'small_range', yAxisId: 'small_axis'),
           SeriesAxisBinding(seriesId: 'large_range', yAxisId: 'large_axis'),
+          SeriesAxisBinding(seriesId: 'medium_range', yAxisId: 'medium_axis'),
         ],
         normalizationMode: NormalizationMode.perSeries,
         interactionConfig: InteractionConfig(
@@ -386,8 +404,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         items: [
           const StatusItem(label: 'Small Range', value: '0-100'),
           const StatusItem(label: 'Large Range', value: '250-1500'),
+          const StatusItem(label: 'Medium Range', value: '500-800'),
           StatusItem(label: 'Points', value: '${_testSmallRangeData.length}'),
-          const StatusItem(label: 'Axes', value: '2', color: Colors.orange),
+          const StatusItem(label: 'Axes', value: '3', color: Colors.orange),
         ],
       );
     }
@@ -443,6 +462,31 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
       // Keep in range 250-1500
       value = value.clamp(250.0, 1500.0);
+
+      points.add(ChartDataPoint(x: x, y: value));
+    }
+    return points;
+  }
+
+  /// Generates randomized data in the 500-800 range (right axis test)
+  List<ChartDataPoint> _generateMediumRangeData() {
+    final points = <ChartDataPoint>[];
+    double value = 620 + _random.nextDouble() * 60; // Start between 620-680
+
+    for (var i = 0; i < 50; i++) {
+      final x = i.toDouble();
+
+      // Random walk with medium steps
+      final delta = (_random.nextDouble() - 0.5) * 40;
+      value += delta;
+
+      // Add occasional jumps
+      if (_random.nextDouble() < 0.1) {
+        value += (_random.nextBool() ? 1 : -1) * _random.nextDouble() * 50;
+      }
+
+      // Keep in range 500-800
+      value = value.clamp(500.0, 800.0);
 
       points.add(ChartDataPoint(x: x, y: value));
     }
