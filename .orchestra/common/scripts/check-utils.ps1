@@ -2,7 +2,7 @@
 # ======================
 # Shared functions for all orchestra scripts
 #
-# Usage: . .\.orchestra\scripts\common\check-utils.ps1
+# Usage: . .\.orchestra\common\scripts\check-utils.ps1
 
 # ============================================================================
 # OUTPUT FORMATTING
