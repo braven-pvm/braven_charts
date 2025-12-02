@@ -123,7 +123,6 @@ class YAxisConfig {
     this.unit,
     this.min,
     this.max,
-    this.showTicks = true,
     this.showAxisLine = true,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 0.0,
@@ -187,9 +186,6 @@ class YAxisConfig {
   final double? max;
 
   // ========== Visibility ==========
-
-  /// Whether to show tick marks on the axis.
-  final bool showTicks;
 
   /// Whether to show the axis line.
   final bool showAxisLine;
@@ -268,7 +264,6 @@ class YAxisConfig {
     String? unit,
     double? min,
     double? max,
-    bool? showTicks,
     bool? showAxisLine,
     AxisLabelDisplay? labelDisplay,
     double? minWidth,
@@ -287,7 +282,6 @@ class YAxisConfig {
       unit: unit ?? this.unit,
       min: min ?? this.min,
       max: max ?? this.max,
-      showTicks: showTicks ?? this.showTicks,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       labelDisplay: labelDisplay ?? this.labelDisplay,
       minWidth: minWidth ?? this.minWidth,
@@ -311,7 +305,6 @@ class YAxisConfig {
         other.unit == unit &&
         other.min == min &&
         other.max == max &&
-        other.showTicks == showTicks &&
         other.showAxisLine == showAxisLine &&
         other.labelDisplay == labelDisplay &&
         other.minWidth == minWidth &&
@@ -332,7 +325,6 @@ class YAxisConfig {
         unit,
         min,
         max,
-        showTicks,
         showAxisLine,
         labelDisplay,
         minWidth,
@@ -354,7 +346,6 @@ class YAxisConfig {
         'unit: $unit, '
         'min: $min, '
         'max: $max, '
-        'showTicks: $showTicks, '
         'showAxisLine: $showAxisLine, '
         'labelDisplay: $labelDisplay, '
         'minWidth: $minWidth, '

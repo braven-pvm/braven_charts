@@ -17,7 +17,7 @@ import '../models/y_axis_position.dart';
 /// Width computation considers:
 /// - Maximum tick label width based on [DataRange] values
 /// - Unit suffix width if specified in [YAxisConfig]
-/// - Tick mark width when [YAxisConfig.showTicks] is true
+/// - Tick mark width
 /// - Constrained by [YAxisConfig.minWidth] and [YAxisConfig.maxWidth]
 ///
 /// Example:
@@ -81,10 +81,8 @@ class MultiAxisLayoutDelegate {
         computedWidth = maxLabelWidth;
       }
 
-      // Add tick mark width if ticks are shown
-      if (axis.showTicks) {
-        computedWidth += tickMarkWidth;
-      }
+      // Add tick mark width (always included)
+      computedWidth += tickMarkWidth;
 
       // Add tick label padding (gap between tick marks and tick labels)
       computedWidth += axis.tickLabelPadding;
