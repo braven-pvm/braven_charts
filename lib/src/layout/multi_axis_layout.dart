@@ -84,8 +84,8 @@ class MultiAxisLayoutDelegate {
       // Add space for axis label (title) if shown
       if (axis.shouldShowAxisLabel && axis.label != null) {
         // The axis label is rotated 90°, so we need space for its height
-        // (which becomes width when rotated). Estimate ~14px for 12pt font.
-        const axisLabelHeight = 14.0;
+        // (which becomes width when rotated). Measure actual text height.
+        final axisLabelHeight = _measureAxisLabelHeight(axis);
         computedWidth += axisLabelHeight + axis.axisLabelPadding;
       }
 
@@ -179,5 +179,30 @@ class MultiAxisLayoutDelegate {
     )..layout();
 
     return textPainter.width;
+  }
+
+  /// Measures the height of the axis label text.
+  ///
+  /// This matches the style used in MultiAxisPainter._paintAxisLabel()
+  /// to ensure layout and painting use the same dimensions.
+  double _measureAxisLabelHeight(YAxisConfig axis) {
+    // Build label text with optional unit suffix (same logic as painter)
+    String labelText = axis.label ?? '';
+    if (axis.shouldAppendUnitToLabel && axis.unit != null && axis.unit!.isNotEmpty) {
+      labelText = '$labelText (${axis.unit})';
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: labelText,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    return textPainter.height;
   }
 }
