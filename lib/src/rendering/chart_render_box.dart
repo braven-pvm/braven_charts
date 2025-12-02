@@ -34,6 +34,7 @@ import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
+import '../models/y_axis_position.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../widgets/scrollbar/hit_test_zone.dart';
 import '../widgets/scrollbar/scrollbar_controller.dart';
@@ -4449,7 +4450,8 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Displays:
   /// - X label at bottom of plot area showing data coordinate
-  /// - Y label at left of plot area showing data coordinate
+  /// - Y label at left of plot area showing data coordinate (only in single-axis mode)
+  /// - Per-axis crosshair labels for multi-axis mode (if axis.showCrosshairLabel is true)
   void _drawCrosshairLabels(Canvas canvas, Size size, Offset cursorPos) {
     if (_transform == null) return;
 
@@ -4509,37 +4511,192 @@ class ChartRenderBox extends RenderBox {
     // Draw text
     xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
 
-    // Y coordinate label (positioned at left of chart area)
-    final yDisplayValue = _formatDataValue(dataY);
-    final yTextPainter = TextPainter(
-      text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    // Check if multi-axis mode is active
+    final isMultiAxisMode = _hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries;
 
-    // Position label inside chart area (just right of left edge)
-    final yLabelX = _plotArea.left + 8;
-    var yLabelY = cursorPos.dy - yTextPainter.height / 2;
+    if (isMultiAxisMode) {
+      // In multi-axis mode: draw per-axis crosshair labels instead of useless normalized Y-label
+      _drawPerAxisCrosshairLabels(canvas, cursorPos, dataY);
+    } else {
+      // Single-axis mode: draw standard Y coordinate label
+      final yDisplayValue = _formatDataValue(dataY);
+      final yTextPainter = TextPainter(
+        text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
 
-    // Clamp Y position to keep label within plot bounds
-    yLabelY = yLabelY.clamp(_plotArea.top + labelPadding, _plotArea.bottom - yTextPainter.height - labelPadding);
+      // Position label inside chart area (just right of left edge)
+      final yLabelX = _plotArea.left + 8;
+      var yLabelY = cursorPos.dy - yTextPainter.height / 2;
 
-    // Draw background with border and rounded corners
-    final yBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        yLabelX - labelPadding,
-        yLabelY - labelPadding,
-        yTextPainter.width + labelPadding * 2,
-        yTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
+      // Clamp Y position to keep label within plot bounds
+      yLabelY = yLabelY.clamp(_plotArea.top + labelPadding, _plotArea.bottom - yTextPainter.height - labelPadding);
+
+      // Draw background with border and rounded corners
+      final yBgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          yLabelX - labelPadding,
+          yLabelY - labelPadding,
+          yTextPainter.width + labelPadding * 2,
+          yTextPainter.height + labelPadding * 2,
+        ),
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(yBgRect, labelBackgroundPaint);
+      if (borderWidth > 0) {
+        canvas.drawRRect(yBgRect, labelBorderPaint);
+      }
+
+      // Draw text
+      yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
+    }
+  }
+
+  /// Draws per-axis crosshair labels for multi-axis mode.
+  ///
+  /// For each Y-axis with [YAxisConfig.showCrosshairLabel] enabled, draws
+  /// a label showing the denormalized Y-value at the crosshair position,
+  /// positioned over that specific axis.
+  void _drawPerAxisCrosshairLabels(Canvas canvas, Offset cursorPos, double normalizedY) {
+    final effectiveAxes = _getEffectiveYAxes();
+    final axisBounds = _computeAxisBounds();
+
+    // Get axis widths for positioning
+    final axisWidths = _computeAxisWidths();
+
+    // Use theme for crosshair label styling
+    final interactionTheme = _theme?.interactionTheme;
+    final labelStyleConfig = interactionTheme?.crosshairLabelStyle;
+    final textStyle = labelStyleConfig?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final labelPadding = labelStyleConfig?.padding.left ?? 4.0;
+    final borderRadius = labelStyleConfig?.borderRadius ?? 3.0;
+
+    for (final axis in effectiveAxes) {
+      // Only draw for axes with showCrosshairLabel enabled
+      if (!axis.showCrosshairLabel || !axis.visible) continue;
+
+      final bounds = axisBounds[axis.id];
+      if (bounds == null) continue;
+
+      // Denormalize the Y value for this axis
+      final denormalizedY = MultiAxisNormalizer.denormalize(normalizedY, bounds.min, bounds.max);
+
+      // Get axis color
+      final axisColor = _resolveAxisColor(axis);
+
+      // Format the value with unit
+      final displayValue = MultiAxisValueFormatter.format(value: denormalizedY, unit: axis.unit);
+
+      final textPainter = TextPainter(
+        text: TextSpan(text: displayValue, style: textStyle.copyWith(color: textStyle.color)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Calculate axis X position
+      final axisX = _getAxisCenterX(axis, axisWidths, effectiveAxes);
+
+      // Position label centered on axis, at crosshair Y position
+      final labelX = axisX - textPainter.width / 2;
+      final labelY = (cursorPos.dy - textPainter.height / 2).clamp(
+        _plotArea.top + labelPadding,
+        _plotArea.bottom - textPainter.height - labelPadding,
+      );
+
+      // Use semi-transparent background with axis color tint
+      final bgColor = axisColor.withValues(alpha: 0.15);
+      final bgPaint = Paint()..color = bgColor;
+      final borderPaint = Paint()
+        ..color = axisColor.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+
+      // Draw background with border
+      final bgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          labelX - labelPadding,
+          labelY - labelPadding,
+          textPainter.width + labelPadding * 2,
+          textPainter.height + labelPadding * 2,
+        ),
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(bgRect, bgPaint);
+      canvas.drawRRect(bgRect, borderPaint);
+
+      // Draw text
+      textPainter.paint(canvas, Offset(labelX, labelY));
+    }
+  }
+
+  /// Gets the horizontal center X position for an axis.
+  double _getAxisCenterX(YAxisConfig axis, Map<String, double> axisWidths, List<YAxisConfig> allAxes) {
+    final axisWidth = axisWidths[axis.id] ?? 50.0;
+
+    switch (axis.position) {
+      case YAxisPosition.leftOuter:
+        // Leftmost position - starts at plot area left edge minus all left axes
+        final leftWidth = _getPositionWidth(YAxisPosition.left, allAxes, axisWidths);
+        return _plotArea.left - leftWidth - axisWidth / 2;
+
+      case YAxisPosition.left:
+        // Just left of plot area
+        return _plotArea.left - axisWidth / 2;
+
+      case YAxisPosition.right:
+        // Just right of plot area
+        return _plotArea.right + axisWidth / 2;
+
+      case YAxisPosition.rightOuter:
+        // Rightmost position
+        final rightWidth = _getPositionWidth(YAxisPosition.right, allAxes, axisWidths);
+        return _plotArea.right + rightWidth + axisWidth / 2;
+    }
+  }
+
+  /// Gets total width of axes at a specific position.
+  double _getPositionWidth(YAxisPosition position, List<YAxisConfig> axes, Map<String, double> widths) {
+    double total = 0;
+    for (final axis in axes) {
+      if (axis.position == position && axis.visible) {
+        total += widths[axis.id] ?? 0;
+      }
+    }
+    return total;
+  }
+
+  /// Computes axis widths for layout calculations.
+  Map<String, double> _computeAxisWidths() {
+    final effectiveAxes = _getEffectiveYAxes();
+    final axisBounds = _computeAxisBounds();
+    if (effectiveAxes.isEmpty) return {};
+
+    // Use MultiAxisLayoutDelegate for consistent width calculation
+    const layoutDelegate = MultiAxisLayoutDelegate();
+    return layoutDelegate.computeAxisWidths(
+      axes: effectiveAxes,
+      axisBounds: axisBounds,
+      labelStyle: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
     );
-    canvas.drawRRect(yBgRect, labelBackgroundPaint);
-    if (borderWidth > 0) {
-      canvas.drawRRect(yBgRect, labelBorderPaint);
+  }
+
+  /// Resolves the color for an axis, using series color if not explicitly set.
+  Color _resolveAxisColor(YAxisConfig axis) {
+    if (axis.color != null) return axis.color!;
+
+    // Find series bound to this axis
+    final effectiveBindings = _getEffectiveBindings();
+    for (final binding in effectiveBindings) {
+      if (binding.yAxisId == axis.id) {
+        // Find series color
+        for (final series in _series) {
+          if (series.id == binding.seriesId && series.color != null) {
+            return series.color!;
+          }
+        }
+      }
     }
 
-    // Draw text
-    yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
+    return const Color(0xFF666666); // Default gray
   }
 
   // ============================================================================
@@ -4687,10 +4844,20 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Draw Y label on left (if horizontal line is shown)
+    // In multi-axis mode, skip the default Y-label (normalized % is useless)
+    // and draw per-axis labels instead
     if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-      // Convert cursor Y to data Y
-      final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
-      _drawTrackingYLabel(canvas, cursorPos, dataY);
+      final isMultiAxisMode = _hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries;
+
+      if (isMultiAxisMode) {
+        // Draw per-axis crosshair labels for axes with showCrosshairLabel enabled
+        final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
+        _drawPerAxisCrosshairLabels(canvas, cursorPos, dataY);
+      } else {
+        // Single-axis mode: draw standard Y coordinate label
+        final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
+        _drawTrackingYLabel(canvas, cursorPos, dataY);
+      }
     }
   }
 

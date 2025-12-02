@@ -126,6 +126,7 @@ class YAxisConfig {
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
+    this.showCrosshairLabel = false,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 0.0,
     this.maxWidth = 80.0,
@@ -218,6 +219,27 @@ class YAxisConfig {
   /// potentially still showing tick labels (controlled by [labelDisplay]).
   final bool showTicks;
 
+  /// Whether to show a crosshair Y-value label positioned over this axis.
+  ///
+  /// When enabled in multi-axis normalized mode, displays the actual
+  /// (denormalized) Y-value at the crosshair's horizontal position,
+  /// drawn with a semi-transparent background over this specific Y-axis.
+  ///
+  /// This is useful in multi-axis charts where the default crosshair Y-label
+  /// shows normalized percentages which are not meaningful to users.
+  ///
+  /// Example:
+  /// ```dart
+  /// YAxisConfig(
+  ///   id: 'power_axis',
+  ///   position: YAxisPosition.left,
+  ///   showCrosshairLabel: true, // Shows actual power value on crosshair
+  /// )
+  /// ```
+  ///
+  /// Defaults to false.
+  final bool showCrosshairLabel;
+
   /// Controls display of axis label and tick unit suffixes.
   ///
   /// Defaults to [AxisLabelDisplay.labelWithUnit] for space efficiency.
@@ -295,6 +317,7 @@ class YAxisConfig {
     bool? visible,
     bool? showAxisLine,
     bool? showTicks,
+    bool? showCrosshairLabel,
     AxisLabelDisplay? labelDisplay,
     double? minWidth,
     double? maxWidth,
@@ -315,6 +338,7 @@ class YAxisConfig {
       visible: visible ?? this.visible,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
+      showCrosshairLabel: showCrosshairLabel ?? this.showCrosshairLabel,
       labelDisplay: labelDisplay ?? this.labelDisplay,
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
@@ -340,6 +364,7 @@ class YAxisConfig {
         other.visible == visible &&
         other.showAxisLine == showAxisLine &&
         other.showTicks == showTicks &&
+        other.showCrosshairLabel == showCrosshairLabel &&
         other.labelDisplay == labelDisplay &&
         other.minWidth == minWidth &&
         other.maxWidth == maxWidth &&
@@ -362,6 +387,7 @@ class YAxisConfig {
         visible,
         showAxisLine,
         showTicks,
+        showCrosshairLabel,
         labelDisplay,
         minWidth,
         maxWidth,
@@ -385,6 +411,7 @@ class YAxisConfig {
         'visible: $visible, '
         'showAxisLine: $showAxisLine, '
         'showTicks: $showTicks, '
+        'showCrosshairLabel: $showCrosshairLabel, '
         'labelDisplay: $labelDisplay, '
         'minWidth: $minWidth, '
         'maxWidth: $maxWidth, '
