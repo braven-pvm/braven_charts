@@ -152,6 +152,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Athletic Performance',
       subtitle: 'Power (W), Heart Rate (bpm), Cadence (rpm)',
       child: BravenChartPlus(
+        key: const ValueKey('athletic'), // Prevent RenderBox reuse across charts
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
         series: [
@@ -233,6 +234,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Environmental Monitoring',
       subtitle: 'Temperature (°C) and Pressure (hPa)',
       child: BravenChartPlus(
+        key: const ValueKey('scientific'), // Prevent RenderBox reuse across charts
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
         series: [
@@ -303,6 +305,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Multi-Axis Test',
       subtitle: 'Series 1: 0-100  |  Series 2: 250-1500  |  Series 3: 500-800',
       child: BravenChartPlus(
+        key: const ValueKey('test'), // Prevent RenderBox reuse across charts
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
         series: [

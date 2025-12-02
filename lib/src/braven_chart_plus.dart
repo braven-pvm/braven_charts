@@ -1118,14 +1118,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Multi-axis is active when any series has inline yAxisConfig or yAxisId
     final hasMultiAxisConfig = widget.series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
     if (widget.normalizationMode == NormalizationMode.perSeries && hasMultiAxisConfig) {
-      debugPrint('🔍 BEFORE normalization fix: dataBounds = X[${dataBounds.xMin}, ${dataBounds.xMax}] Y[${dataBounds.yMin}, ${dataBounds.yMax}]');
       dataBounds = DataBounds(
         xMin: dataBounds.xMin,
         xMax: dataBounds.xMax,
         yMin: -0.05, // 5% buffer below normalized range
         yMax: 1.05, // 5% buffer above normalized range
       );
-      debugPrint('🔍 AFTER normalization fix: dataBounds = X[${dataBounds.xMin}, ${dataBounds.xMax}] Y[${dataBounds.yMin}, ${dataBounds.yMax}]');
     }
 
     // Create axes from data bounds with theme colors

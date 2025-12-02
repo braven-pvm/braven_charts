@@ -507,9 +507,6 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
-    // DEBUG: Log X-axis being set
-    debugPrint('🔧 setXAxis called: dataMin=${axis?.dataMin}, dataMax=${axis?.dataMax}');
-
     // [DEBUG OUTPUT REMOVED] X-axis updates - fire frequently during streaming
     _xAxis = axis;
 
@@ -1049,15 +1046,8 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
-    debugPrint(
-        '🔄 RESET VIEW - Original transform: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
-    debugPrint(
-        '🔄 RESET VIEW - Current transform: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
-
     // Restore original data ranges, preserve current plot dimensions
     _transform = _originalTransform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
-
-    debugPrint('🔄 RESET VIEW - After copy: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
 
     // Update axes to reflect reset viewport
     _updateAxesFromTransform();
@@ -1067,8 +1057,6 @@ class ChartRenderBox extends RenderBox {
 
     // Invalidate cache - transform reset to original
     _seriesCacheDirty = true;
-
-    debugPrint('🔄 RESET VIEW - Complete');
   }
 
   /// Updates the data bounds for streaming data that extends beyond original range.
@@ -1498,16 +1486,21 @@ class ChartRenderBox extends RenderBox {
     // Create/update coordinate transform
     // Transform handles Data ↔ Plot conversion based on axis data ranges
     if (_xAxis != null && _yAxis != null) {
-      // Only create initial transform if none exists, otherwise preserve zoom/pan state
-      if (_transform == null) {
-        // DEBUG: Log axis values BEFORE creating transform
-        debugPrint('🔍 AXIS VALUES BEFORE INITIAL TRANSFORM:');
-        debugPrint('   _xAxis.dataMin = ${_xAxis!.dataMin}');
-        debugPrint('   _xAxis.dataMax = ${_xAxis!.dataMax}');
-        debugPrint('   _yAxis.dataMin = ${_yAxis!.dataMin}');
-        debugPrint('   _yAxis.dataMax = ${_yAxis!.dataMax}');
+      // Detect if data range has fundamentally changed (different chart/dataset)
+      // This handles the case where Flutter reuses the same RenderBox instance
+      // when switching between charts (e.g., Athletic → Test → Scientific)
+      final bool rangeChanged = _originalTransform != null &&
+          ((_xAxis!.dataMin - _originalTransform!.dataXMin).abs() > 10 || (_xAxis!.dataMax - _originalTransform!.dataXMax).abs() > 10);
 
-        // First time: create transform from axis data ranges
+      // Create initial transform if none exists OR if data range has significantly changed
+      if (_transform == null || rangeChanged) {
+        if (rangeChanged) {
+          debugPrint('🔄 DATA RANGE CHANGED - Resetting transforms');
+          debugPrint('   Old: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}]');
+          debugPrint('   New: X[${_xAxis!.dataMin}, ${_xAxis!.dataMax}]');
+        }
+
+        // First time OR range changed: create transform from axis data ranges
         _transform = ChartTransform(
           dataXMin: _xAxis!.dataMin,
           dataXMax: _xAxis!.dataMax,

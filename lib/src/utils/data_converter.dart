@@ -1,8 +1,6 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // BravenChartPlus - Data Conversion Utilities
 
-import 'package:flutter/foundation.dart' show debugPrint;
-
 import '../coordinates/chart_transform.dart';
 import '../elements/series_element.dart';
 import '../interaction/core/coordinator.dart';
@@ -78,17 +76,6 @@ class DataConverter {
     double yMin = double.infinity;
     double yMax = double.negativeInfinity;
 
-    // DEBUG: Log series info to trace wrong bounds
-    debugPrint('🔍 computeDataBounds: ${series.length} series');
-    for (final s in series) {
-      debugPrint('   Series ${s.id}: ${s.points.length} points');
-      if (s.points.isNotEmpty) {
-        final seriesXMin = s.points.map((p) => p.x).reduce((a, b) => a < b ? a : b);
-        final seriesXMax = s.points.map((p) => p.x).reduce((a, b) => a > b ? a : b);
-        debugPrint('      X range: [$seriesXMin, $seriesXMax]');
-      }
-    }
-
     for (final s in series) {
       for (final point in s.points) {
         if (point.x < xMin) xMin = point.x;
@@ -101,9 +88,6 @@ class DataConverter {
     // Add 5% padding to data bounds for visual breathing room
     final xPadding = (xMax - xMin) * 0.05;
     final yPadding = (yMax - yMin) * 0.05;
-
-    debugPrint('   RAW bounds (before padding): X[$xMin, $xMax] Y[$yMin, $yMax]');
-    debugPrint('   Padding: X=$xPadding, Y=$yPadding');
 
     return DataBounds(xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding);
   }
