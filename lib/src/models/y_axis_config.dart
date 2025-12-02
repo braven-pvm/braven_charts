@@ -123,6 +123,7 @@ class YAxisConfig {
     this.unit,
     this.min,
     this.max,
+    this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
@@ -187,6 +188,26 @@ class YAxisConfig {
   final double? max;
 
   // ========== Visibility ==========
+
+  /// Whether the axis should be rendered at all.
+  ///
+  /// When false, the entire axis (line, ticks, labels, and axis title) is
+  /// hidden from display. However, the axis is still used for normalization
+  /// calculations if the series references it via [yAxisConfig].
+  ///
+  /// Use case: Show a normalized series without displaying its Y-axis.
+  ///
+  /// Example:
+  /// ```dart
+  /// YAxisConfig(
+  ///   id: 'cadence_axis',
+  ///   position: YAxisPosition.leftOuter,
+  ///   visible: false, // Hides entire axis but keeps series normalized
+  /// )
+  /// ```
+  ///
+  /// Defaults to true.
+  final bool visible;
 
   /// Whether to show the axis line.
   final bool showAxisLine;
@@ -271,6 +292,7 @@ class YAxisConfig {
     String? unit,
     double? min,
     double? max,
+    bool? visible,
     bool? showAxisLine,
     bool? showTicks,
     AxisLabelDisplay? labelDisplay,
@@ -290,6 +312,7 @@ class YAxisConfig {
       unit: unit ?? this.unit,
       min: min ?? this.min,
       max: max ?? this.max,
+      visible: visible ?? this.visible,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
       labelDisplay: labelDisplay ?? this.labelDisplay,
@@ -314,6 +337,7 @@ class YAxisConfig {
         other.unit == unit &&
         other.min == min &&
         other.max == max &&
+        other.visible == visible &&
         other.showAxisLine == showAxisLine &&
         other.showTicks == showTicks &&
         other.labelDisplay == labelDisplay &&
@@ -335,6 +359,7 @@ class YAxisConfig {
         unit,
         min,
         max,
+        visible,
         showAxisLine,
         showTicks,
         labelDisplay,
@@ -357,6 +382,7 @@ class YAxisConfig {
         'unit: $unit, '
         'min: $min, '
         'max: $max, '
+        'visible: $visible, '
         'showAxisLine: $showAxisLine, '
         'showTicks: $showTicks, '
         'labelDisplay: $labelDisplay, '

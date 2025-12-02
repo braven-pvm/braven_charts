@@ -132,6 +132,8 @@ class AxisLayoutManager {
   }
 
   /// Gets the total width of axes at a specific position.
+  ///
+  /// Only counts visible axes - invisible axes don't contribute to positioning.
   double _getWidthAtPosition(
     YAxisPosition position,
     List<YAxisConfig> allAxes,
@@ -139,6 +141,9 @@ class AxisLayoutManager {
   ) {
     var total = 0.0;
     for (final axis in allAxes) {
+      // Skip invisible axes - they don't take up space
+      if (!axis.visible) continue;
+
       if (axis.position == position) {
         total += axisWidths[axis.id] ?? 0.0;
       }

@@ -1,8 +1,8 @@
 import 'dart:ui' show Color;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('YAxisConfig', () {

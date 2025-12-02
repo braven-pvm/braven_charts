@@ -76,7 +76,6 @@ class ChartRenderBox extends RenderBox {
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
     InteractionConfig? interactionConfig,
-    List<YAxisConfig>? yAxes,
     NormalizationMode? normalizationMode,
     List<ChartSeries>? series,
     this.onElementClick,
@@ -92,7 +91,6 @@ class ChartRenderBox extends RenderBox {
         _showYScrollbar = showYScrollbar,
         _scrollbarTheme = scrollbarTheme,
         _interactionConfig = interactionConfig,
-        _yAxes = yAxes,
         _normalizationMode = normalizationMode,
         _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
@@ -122,9 +120,6 @@ class ChartRenderBox extends RenderBox {
 
   // ==================== MULTI-AXIS STATE ====================
 
-  /// Y-axis configurations for multi-axis mode.
-  List<YAxisConfig>? _yAxes;
-
   /// Controls how normalization is applied to multi-axis data.
   NormalizationMode? _normalizationMode;
 
@@ -132,8 +127,8 @@ class ChartRenderBox extends RenderBox {
   /// Invalidated when _series change.
   List<SeriesAxisBinding>? _cachedEffectiveBindings;
 
-  /// Cached effective Y-axes (explicit yAxes + inline yAxisConfigs from series).
-  /// Invalidated when _yAxes or _series change.
+  /// Cached effective Y-axes (inline yAxisConfigs from series only).
+  /// Invalidated when _series change.
   List<YAxisConfig>? _cachedEffectiveYAxes;
 
   /// Data series for multi-axis color resolution.
@@ -657,14 +652,6 @@ class ChartRenderBox extends RenderBox {
   // ==================== MULTI-AXIS SETTERS ====================
 
   /// Sets the Y-axis configurations for multi-axis mode.
-  void setYAxes(List<YAxisConfig>? yAxes) {
-    if (_yAxes == yAxes) return;
-    _yAxes = yAxes;
-    _cachedEffectiveYAxes = null; // Invalidate cache
-    _cachedEffectiveBindings = null; // Invalidate cache
-    markNeedsPaint();
-  }
-
   /// Sets the normalization mode for multi-axis charts.
   void setNormalizationMode(NormalizationMode? mode) {
     if (_normalizationMode == mode) return;
@@ -693,14 +680,11 @@ class ChartRenderBox extends RenderBox {
     return effectiveAxes.length > 1;
   }
 
-  /// Gets effective Y-axes by merging explicit yAxes with inline yAxisConfig from series.
+  /// Gets effective Y-axes from inline yAxisConfig on series only.
   ///
-  /// Priority:
-  /// 1. Explicit yAxes definitions (from BravenChartPlus.yAxes)
-  /// 2. Inline yAxisConfig from series (auto-generates ID as "{seriesId}_axis" if not set)
+  /// Auto-generates axis ID as "{seriesId}_axis" if the config doesn't have an ID.
   ///
-  /// Results are cached for performance. Cache is invalidated when
-  /// [setYAxes] or [setSeries] are called.
+  /// Results are cached for performance. Cache is invalidated when [setSeries] is called.
   List<YAxisConfig> _getEffectiveYAxes() {
     // Return cached if available
     if (_cachedEffectiveYAxes != null) return _cachedEffectiveYAxes!;
@@ -708,15 +692,7 @@ class ChartRenderBox extends RenderBox {
     final effectiveAxes = <YAxisConfig>[];
     final axisIds = <String>{};
 
-    // First, add all explicit yAxes
-    if (_yAxes != null) {
-      for (final axis in _yAxes!) {
-        effectiveAxes.add(axis);
-        axisIds.add(axis.id);
-      }
-    }
-
-    // Then, add inline yAxisConfig from series (if not already defined)
+    // Add inline yAxisConfig from series
     for (final series in _series) {
       if (series.yAxisConfig != null) {
         // Generate axis ID: use config's ID if set, otherwise derive from series ID
@@ -1444,18 +1420,19 @@ class ChartRenderBox extends RenderBox {
 
     // MULTI-AXIS: Reserve additional space for right-side Y-axes
     // When multi-axis mode is active, compute axis widths and reserve space accordingly
-    if (_hasMultipleYAxes() && _yAxes != null) {
+    final effectiveAxes = _getEffectiveYAxes();
+    if (effectiveAxes.length > 1) {
       final axisBounds = _computeAxisBounds();
       const layoutDelegate = MultiAxisLayoutDelegate();
       final axisWidths = layoutDelegate.computeAxisWidths(
-        axes: _yAxes!,
+        axes: effectiveAxes,
         axisBounds: axisBounds,
         labelStyle: const TextStyle(fontSize: 11),
       );
 
       // Get total width needed for left and right axes
-      final totalLeftWidth = layoutDelegate.getTotalLeftWidth(_yAxes!, axisWidths);
-      rightAxisWidth = layoutDelegate.getTotalRightWidth(_yAxes!, axisWidths);
+      final totalLeftWidth = layoutDelegate.getTotalLeftWidth(effectiveAxes, axisWidths);
+      rightAxisWidth = layoutDelegate.getTotalRightWidth(effectiveAxes, axisWidths);
 
       // CRITICAL: In multi-axis mode, use the computed axis widths directly
       // (not the hardcoded single-axis margin of 60px) so that the plot area
@@ -3189,8 +3166,9 @@ class ChartRenderBox extends RenderBox {
     final seriesElements = _elements.whereType<SeriesElement>().toList()..sort((a, b) => a.priority.compareTo(b.priority));
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
+    // Uses _hasMultipleYAxes() which checks effective axes (including inline yAxisConfig)
     final Map<String, DataRange>? axisBounds =
-        (_yAxes != null && _yAxes!.isNotEmpty && _normalizationMode == NormalizationMode.perSeries) ? _computeAxisBounds() : null;
+        (_hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries) ? _computeAxisBounds() : null;
 
     // Build series-to-axis lookup for efficient transform creation (use effective bindings)
     final effectiveBindings = _getEffectiveBindings();
@@ -4621,15 +4599,16 @@ class ChartRenderBox extends RenderBox {
 
     // Draw intersection markers on each series line
     if (crosshairConfig.showIntersectionMarkers) {
+      final effectiveAxesForMarkers = _getEffectiveYAxes();
       for (final value in trackingState.seriesValues) {
         // For multi-axis mode, use per-axis bounds for correct Y positioning
         double screenY;
-        if (_yAxes != null && _yAxes!.length > 1) {
+        if (effectiveAxesForMarkers.length > 1) {
           // Look up the axis for this series
           final axisConfig = SeriesAxisResolver.resolveAxis(
             value.seriesId,
             effectiveBindings,
-            _yAxes!,
+            effectiveAxesForMarkers,
           );
           final seriesAxisBounds = axisConfig != null ? axisBounds[axisConfig.id] : null;
 
@@ -4727,11 +4706,12 @@ class ChartRenderBox extends RenderBox {
     for (final value in state.seriesValues) {
       // Get unit from axis config for multi-axis mode
       String? yUnit;
-      if (_yAxes != null && _yAxes!.length > 1) {
+      final effectiveAxesForTooltip = _getEffectiveYAxes();
+      if (effectiveAxesForTooltip.length > 1) {
         final axisConfig = SeriesAxisResolver.resolveAxis(
           value.seriesId,
           effectiveBindingsForTooltip,
-          _yAxes!,
+          effectiveAxesForTooltip,
         );
         yUnit = axisConfig?.unit;
       }
@@ -5114,11 +5094,12 @@ class ChartRenderBox extends RenderBox {
 
     // Get the axis config for this series to retrieve unit (T023, T042)
     String? yUnit;
-    if (_yAxes != null && _yAxes!.isNotEmpty) {
+    final effectiveAxesForUnit = _getEffectiveYAxes();
+    if (effectiveAxesForUnit.isNotEmpty) {
       final axisConfig = SeriesAxisResolver.resolveAxis(
         markerInfo.seriesId,
         _getEffectiveBindings(),
-        _yAxes!,
+        effectiveAxesForUnit,
       );
       yUnit = axisConfig?.unit;
     }

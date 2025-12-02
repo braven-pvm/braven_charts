@@ -98,15 +98,20 @@ class MultiAxisPainter {
   void paint(Canvas canvas, Rect chartArea, Rect plotArea) {
     if (axes.isEmpty) return;
 
-    // Compute widths if not cached
+    // Filter to only visible axes for rendering
+    final visibleAxes = axes.where((axis) => axis.visible).toList();
+    if (visibleAxes.isEmpty) return;
+
+    // Compute widths if not cached (but compute for ALL axes, not just visible)
+    // This ensures consistent layout even when some axes are hidden
     _cachedWidths ??= _layoutDelegate.computeAxisWidths(
       axes: axes,
       axisBounds: axisBounds,
       labelStyle: labelStyle,
     );
 
-    // Paint each axis
-    for (final axis in axes) {
+    // Paint each visible axis
+    for (final axis in visibleAxes) {
       final bounds = axisBounds[axis.id];
       if (bounds == null) continue;
 

@@ -115,7 +115,7 @@ class MultiAxisLayoutDelegate {
   /// - [widths]: Map from axis ID to computed width
   ///
   /// Returns the sum of widths for axes at [YAxisPosition.leftOuter]
-  /// and [YAxisPosition.left] positions.
+  /// and [YAxisPosition.left] positions. Invisible axes are excluded.
   double getTotalLeftWidth(
     List<YAxisConfig> axes,
     Map<String, double> widths,
@@ -123,6 +123,9 @@ class MultiAxisLayoutDelegate {
     var total = 0.0;
 
     for (final axis in axes) {
+      // Skip invisible axes - they should not contribute to layout width
+      if (!axis.visible) continue;
+
       if (axis.position == YAxisPosition.leftOuter || axis.position == YAxisPosition.left) {
         total += widths[axis.id] ?? 0.0;
       }
@@ -138,7 +141,7 @@ class MultiAxisLayoutDelegate {
   /// - [widths]: Map from axis ID to computed width
   ///
   /// Returns the sum of widths for axes at [YAxisPosition.right]
-  /// and [YAxisPosition.rightOuter] positions.
+  /// and [YAxisPosition.rightOuter] positions. Invisible axes are excluded.
   double getTotalRightWidth(
     List<YAxisConfig> axes,
     Map<String, double> widths,
@@ -146,6 +149,9 @@ class MultiAxisLayoutDelegate {
     var total = 0.0;
 
     for (final axis in axes) {
+      // Skip invisible axes - they should not contribute to layout width
+      if (!axis.visible) continue;
+
       if (axis.position == YAxisPosition.right || axis.position == YAxisPosition.rightOuter) {
         total += widths[axis.id] ?? 0.0;
       }
