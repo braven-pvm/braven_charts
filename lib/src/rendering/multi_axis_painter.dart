@@ -296,10 +296,11 @@ class MultiAxisPainter {
 
     double labelX;
     if (isLeftSide) {
-      // Right-align labels on left-side axes
+      // Right-align labels on left-side axes, positioned from axis line inward
+      // Layout: [margin][axisLabel][axisLabelPadding][tickLabels][tickLabelPadding][tickMark][axisLine]
       labelX = axisRect.right - _tickLength - axis.tickLabelPadding - textPainter.width;
     } else {
-      // Left-align labels on right-side axes
+      // Left-align labels on right-side axes, positioned from axis line inward
       labelX = axisRect.left + _tickLength + axis.tickLabelPadding;
     }
 
