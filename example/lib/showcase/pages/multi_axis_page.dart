@@ -170,6 +170,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               label: 'Power',
               unit: 'W',
               showAxisLine: true,
+              showCrosshairLabel: true, // Show actual value on crosshair
             ),
           ),
           LineChartSeries(
@@ -186,6 +187,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               label: 'Heart Rate',
               unit: 'bpm',
               showAxisLine: true,
+              showCrosshairLabel: true, // Show actual value on crosshair
             ),
           ),
           LineChartSeries(
@@ -328,6 +330,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               tickLabelPadding: 0,
               minWidth: 0,
               showAxisLine: true,
+              showCrosshairLabel: true, // Show actual value on crosshair
               unit: 'RPM',
               labelDisplay: AxisLabelDisplay.labelWithUnit,
               labelFormatter: (value) => value.toStringAsFixed(2),
@@ -346,6 +349,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               position: YAxisPosition.leftOuter,
               label: 'Large',
               showAxisLine: true,
+              showCrosshairLabel: true, // Show actual value on crosshair
               unit: 'W',
               labelDisplay: AxisLabelDisplay.labelWithUnit,
             ),
@@ -363,6 +367,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               position: YAxisPosition.right,
               label: 'Medium',
               showAxisLine: true,
+              showCrosshairLabel: true, // Show actual value on crosshair
               unit: 'BPM',
               labelDisplay: AxisLabelDisplay.tickOnly,
             ),
