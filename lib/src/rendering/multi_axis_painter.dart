@@ -224,10 +224,11 @@ class MultiAxisPainter {
     // Position at the vertical center of the plot area
     final centerY = plotArea.top + plotArea.height / 2;
 
-    // Position horizontally within the axis strip (offset from edge)
+    // Position horizontally within the axis strip
+    // The text is rotated 90°, so textPainter.height is the effective width
     final labelX = isLeftSide
-        ? axisRect.left + 10 // Near left edge of axis strip
-        : axisRect.right - 10; // Near right edge of axis strip
+        ? axisRect.left + axis.axisLabelPadding + (textPainter.height / 2)
+        : axisRect.right - axis.axisLabelPadding - (textPainter.height / 2);
 
     canvas.translate(labelX, centerY);
 

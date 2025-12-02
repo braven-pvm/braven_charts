@@ -353,17 +353,21 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             id: 'small_axis',
             position: YAxisPosition.left,
             label: 'Small',
+            axisMargin: 0,
             showAxisLine: true,
             unit: 'RPM',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
+            // tickLabelPadding: 5,
           ),
           YAxisConfig(
             id: 'large_axis',
             position: YAxisPosition.leftOuter,
+            // axisMargin: 10,
             label: 'Large',
             showAxisLine: true,
             unit: 'W',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Large (W)" + tick values without unit
+            tickLabelPadding: 0,
           ),
           YAxisConfig(
             id: 'medium_axis',
@@ -372,7 +376,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             showAxisLine: true,
             unit: 'BPM',
             labelDisplay: AxisLabelDisplay.tickOnly, // "Medium (BPM)" + tick values without unit
-            
+            // tickLabelPadding: 50,
           ),
         ],
         axisBindings: const [

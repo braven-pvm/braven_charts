@@ -129,6 +129,7 @@ class YAxisConfig {
     this.minWidth = 40.0,
     this.maxWidth = 80.0,
     this.tickLabelPadding = 4.0,
+    this.axisLabelPadding = 5.0,
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
@@ -217,6 +218,12 @@ class YAxisConfig {
   /// and where the tick label text begins. Defaults to 4.0.
   final double tickLabelPadding;
 
+  /// Padding between tick labels and the rotated axis title label.
+  ///
+  /// Controls the horizontal gap between the tick label text and the
+  /// axis title (e.g., "Power (W)"). Defaults to 2.0 for compact layout.
+  final double axisLabelPadding;
+
   /// Margin between this axis and adjacent axes or the plot area.
   ///
   /// Creates visual separation between stacked axes (e.g., left and leftOuter)
@@ -266,6 +273,7 @@ class YAxisConfig {
     double? minWidth,
     double? maxWidth,
     double? tickLabelPadding,
+    double? axisLabelPadding,
     double? axisMargin,
     int? tickCount,
     YAxisLabelFormatter? labelFormatter,
@@ -284,6 +292,7 @@ class YAxisConfig {
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
       tickLabelPadding: tickLabelPadding ?? this.tickLabelPadding,
+      axisLabelPadding: axisLabelPadding ?? this.axisLabelPadding,
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: tickCount ?? this.tickCount,
       labelFormatter: labelFormatter ?? this.labelFormatter,
@@ -307,6 +316,7 @@ class YAxisConfig {
         other.minWidth == minWidth &&
         other.maxWidth == maxWidth &&
         other.tickLabelPadding == tickLabelPadding &&
+        other.axisLabelPadding == axisLabelPadding &&
         other.axisMargin == axisMargin &&
         other.tickCount == tickCount &&
         other.labelFormatter == labelFormatter;
@@ -327,6 +337,7 @@ class YAxisConfig {
         minWidth,
         maxWidth,
         tickLabelPadding,
+        axisLabelPadding,
         axisMargin,
         tickCount,
         labelFormatter,
@@ -348,6 +359,7 @@ class YAxisConfig {
         'minWidth: $minWidth, '
         'maxWidth: $maxWidth, '
         'tickLabelPadding: $tickLabelPadding, '
+        'axisLabelPadding: $axisLabelPadding, '
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount'
         ')';
