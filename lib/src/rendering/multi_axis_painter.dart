@@ -155,8 +155,15 @@ class MultiAxisPainter {
       );
     }
 
+    // Paint axis label (rotated 90°, centered on axis)
+    // Uses shouldShowAxisLabel helper to check labelDisplay mode
+    if (axis.label != null && axis.label!.isNotEmpty && axis.shouldShowAxisLabel) {
+      _paintAxisLabel(canvas, axis, axisRect, plotArea, isLeftSide, axisColor);
+    }
+
     // Generate and paint ticks
-    if (axis.showTicks || axis.showLabels) {
+    // Uses shouldShowTickLabels helper to check labelDisplay mode
+    if (axis.showTicks || axis.shouldShowTickLabels) {
       final maxTicks = axis.tickCount ?? _computeMaxTicks(plotArea.height);
       final ticks = generateTicks(bounds, maxTicks: maxTicks);
 
@@ -172,12 +179,70 @@ class MultiAxisPainter {
             _paintTickMark(canvas, axis, axisRect, screenY, isLeftSide, paint);
           }
 
-          if (axis.showLabels) {
+          if (axis.shouldShowTickLabels) {
             _paintTickLabel(canvas, axis, axisRect, screenY, tickValue, isLeftSide);
           }
         }
       }
     }
+  }
+
+  /// Paints the axis title label rotated 90 degrees.
+  ///
+  /// The label is centered vertically along the axis and positioned
+  /// within the axis strip area. Left-side axes rotate counter-clockwise
+  /// (text reads bottom-to-top), right-side axes rotate clockwise
+  /// (text reads top-to-bottom).
+  ///
+  /// If [axis.shouldAppendUnitToLabel] is true, the unit is appended
+  /// to the label in parentheses (e.g., "Power (W)").
+  void _paintAxisLabel(
+    Canvas canvas,
+    YAxisConfig axis,
+    Rect axisRect,
+    Rect plotArea,
+    bool isLeftSide,
+    Color axisColor,
+  ) {
+    // Build label text with optional unit suffix
+    String labelText = axis.label!;
+    if (axis.shouldAppendUnitToLabel && axis.unit != null && axis.unit!.isNotEmpty) {
+      labelText = '$labelText (${axis.unit})';
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: labelText,
+        style: TextStyle(
+          color: axisColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    canvas.save();
+
+    // Position at the vertical center of the plot area
+    final centerY = plotArea.top + plotArea.height / 2;
+
+    // Position horizontally within the axis strip (offset from edge)
+    final labelX = isLeftSide
+        ? axisRect.left + 10 // Near left edge of axis strip
+        : axisRect.right - 10; // Near right edge of axis strip
+
+    canvas.translate(labelX, centerY);
+
+    // Rotate: left axes rotate -90° (CCW), right axes rotate +90° (CW)
+    canvas.rotate(isLeftSide ? -math.pi / 2 : math.pi / 2);
+
+    // Center the text on the rotation point
+    canvas.translate(-textPainter.width / 2, -textPainter.height / 2);
+
+    textPainter.paint(canvas, Offset.zero);
+
+    canvas.restore();
   }
 
   /// Paints a tick mark at the specified Y position.
@@ -292,7 +357,8 @@ class MultiAxisPainter {
   /// Formats a tick value with optional unit suffix.
   ///
   /// Uses the custom [YAxisConfig.labelFormatter] if provided,
-  /// otherwise formats the number and appends the unit suffix.
+  /// otherwise formats the number and optionally appends the unit suffix
+  /// based on [YAxisConfig.shouldShowTickUnit].
   ///
   /// [value] is the tick value to format.
   /// [axis] is the axis configuration containing formatting options.
@@ -320,7 +386,8 @@ class MultiAxisPainter {
       formatted = value.round().toString();
     }
 
-    if (axis.unit != null) {
+    // Only append unit if shouldShowTickUnit is true
+    if (axis.shouldShowTickUnit && axis.unit != null) {
       formatted = '$formatted ${axis.unit}';
     }
 

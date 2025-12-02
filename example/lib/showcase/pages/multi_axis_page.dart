@@ -309,6 +309,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
             yAxisId: 'small_axis',
+            unit: "RMP",
           ),
           LineChartSeries(
             id: 'large_range',
@@ -318,6 +319,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
             yAxisId: 'large_axis',
+            unit: "Watts(W)",
           ),
           LineChartSeries(
             id: 'medium_range',
@@ -327,6 +329,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
             yAxisId: 'medium_axis',
+            unit: "BPM",
           ),
         ],
         theme: _optionsController.theme,
@@ -337,10 +340,13 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         xAxis: AxisConfig(
           showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
+          label: "Time(M)",
+          // labelStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
         yAxis: AxisConfig(
           showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
+          label: "Y-axis",
         ),
         yAxes: [
           YAxisConfig(
@@ -348,18 +354,24 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             position: YAxisPosition.left,
             label: 'Small',
             showAxisLine: true,
+            unit: 'RPM',
+            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
           ),
           YAxisConfig(
             id: 'large_axis',
             position: YAxisPosition.leftOuter,
             label: 'Large',
             showAxisLine: true,
+            unit: 'W',
+            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Large (W)" + tick values without unit
           ),
           YAxisConfig(
             id: 'medium_axis',
             position: YAxisPosition.right,
             label: 'Medium',
             showAxisLine: true,
+            unit: 'BPM',
+            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Medium (BPM)" + tick values without unit
           ),
         ],
         axisBindings: const [
