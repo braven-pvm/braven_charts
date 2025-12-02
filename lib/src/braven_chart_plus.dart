@@ -59,7 +59,7 @@ import 'widgets/web_context_menu.dart';
 /// **Current Phase**: Foundation - Widget skeleton created
 /// Next: Create example app to test empty widget
 class BravenChartPlus extends StatefulWidget {
-  BravenChartPlus({
+  const BravenChartPlus({
     super.key,
     required this.chartType,
     this.lineStyle = LineStyle.straight,
@@ -96,17 +96,8 @@ class BravenChartPlus extends StatefulWidget {
     this.onAnnotationTap,
     this.onAnnotationDragged,
     // ==================== MULTI-AXIS PARAMETERS ====================
-    this.yAxes,
     this.normalizationMode,
-  })  : assert(
-          yAxes == null || yAxes.length <= 4,
-          'Maximum 4 Y-axes allowed.',
-        ),
-        assert(
-          _hasUniquePositions(yAxes),
-          'Duplicate Y-axis positions are not allowed. '
-          'Each axis must have a unique position.',
-        );
+  });
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
@@ -425,19 +416,6 @@ class BravenChartPlus extends StatefulWidget {
     );
   }
 
-  /// Validates that all Y-axis positions are unique.
-  /// Returns true if yAxes is null, empty, or has all unique positions.
-  static bool _hasUniquePositions(List<YAxisConfig>? yAxes) {
-    if (yAxes == null || yAxes.isEmpty) return true;
-    final positions = <YAxisPosition>{};
-    for (final axis in yAxes) {
-      if (!positions.add(axis.position)) {
-        return false; // Duplicate found
-      }
-    }
-    return true;
-  }
-
   final ChartType chartType;
   final LineStyle lineStyle;
   final List<ChartSeries> series;
@@ -627,20 +605,6 @@ class BravenChartPlus extends StatefulWidget {
   ///   ],
   /// )
   /// ```
-  ///
-  /// Example with shared axes:
-  /// ```dart
-  /// BravenChartPlus(
-  ///   yAxes: [
-  ///     YAxisConfig(id: 'shared', position: YAxisPosition.left, ...),
-  ///   ],
-  ///   series: [
-  ///     LineChartSeries(yAxisId: 'shared', ...),
-  ///     LineChartSeries(yAxisId: 'shared', ...),
-  ///   ],
-  /// )
-  /// ```
-  final List<YAxisConfig>? yAxes;
 
   /// Controls how normalization is applied to multi-axis data.
   ///
@@ -650,7 +614,7 @@ class BravenChartPlus extends StatefulWidget {
   ///   useful when displaying conceptually different metrics
   /// - [NormalizationMode.none]: Never normalize, use global Y scale
   ///
-  /// Defaults to [NormalizationMode.auto] when [yAxes] is provided.
+  /// Defaults to [NormalizationMode.auto] when multiple axes are detected.
   final NormalizationMode? normalizationMode;
 
   @override
@@ -1150,7 +1114,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Each series is rendered with its own Y-axis bounds, but the global
     // transform needs to use a consistent normalized space.
     // Add 5% padding buffer to prevent data points from being cut off at edges.
-    if (widget.normalizationMode == NormalizationMode.perSeries && widget.yAxes != null && widget.yAxes!.isNotEmpty) {
+    //
+    // Multi-axis is active when any series has inline yAxisConfig or yAxisId
+    final hasMultiAxisConfig = widget.series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+    if (widget.normalizationMode == NormalizationMode.perSeries && hasMultiAxisConfig) {
       dataBounds = DataBounds(
         xMin: dataBounds.xMin,
         xMax: dataBounds.xMax,
@@ -2338,7 +2305,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         onElementHover: _handleElementHover,
                         onRangeCreationComplete: _onRangeCreationComplete,
                         // Multi-axis parameters
-                        yAxes: widget.yAxes,
                         normalizationMode: widget.normalizationMode,
                         series: widget.series,
                       ),
@@ -2467,7 +2433,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.onElementHover,
     this.onRangeCreationComplete,
     // Multi-axis parameters
-    this.yAxes,
     this.normalizationMode,
     this.series,
   });
@@ -2489,7 +2454,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final void Function(ChartElement? element)? onElementHover;
   final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
   // Multi-axis fields
-  final List<YAxisConfig>? yAxes;
   final NormalizationMode? normalizationMode;
   final List<ChartSeries>? series;
 
@@ -2504,7 +2468,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       showYScrollbar: showYScrollbar,
       scrollbarTheme: scrollbarTheme,
       interactionConfig: interactionConfig,
-      yAxes: yAxes,
       normalizationMode: normalizationMode,
       series: series,
       onCursorChange: onCursorChange,
@@ -2528,7 +2491,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setShowYScrollbar(showYScrollbar)
       ..setScrollbarTheme(scrollbarTheme)
       ..setInteractionConfig(interactionConfig)
-      ..setYAxes(yAxes)
       ..setNormalizationMode(normalizationMode)
       ..setSeries(series)
       ..onElementHover = onElementHover;
