@@ -78,8 +78,16 @@ class MultiAxisLayoutDelegate {
         computedWidth += tickMarkWidth;
       }
 
-      // Add tick label padding (from axis config)
-      computedWidth += axis.tickLabelPadding * 2;
+      // Add tick label padding (gap between tick marks and tick labels)
+      computedWidth += axis.tickLabelPadding;
+
+      // Add space for axis label (title) if shown
+      if (axis.shouldShowAxisLabel && axis.label != null) {
+        // The axis label is rotated 90°, so we need space for its height
+        // (which becomes width when rotated). Estimate ~14px for 12pt font.
+        const axisLabelHeight = 14.0;
+        computedWidth += axisLabelHeight + axis.axisLabelPadding;
+      }
 
       // Add axis margin for spacing between axes
       computedWidth += axis.axisMargin;
@@ -140,6 +148,9 @@ class MultiAxisLayoutDelegate {
   }
 
   /// Formats a numeric value for width measurement.
+  ///
+  /// Respects [YAxisConfig.shouldShowTickUnit] to determine if unit suffix
+  /// should be included in the formatted string.
   String _formatValue(double value, YAxisConfig axis) {
     if (axis.labelFormatter != null) {
       return axis.labelFormatter!(value);
@@ -152,7 +163,8 @@ class MultiAxisLayoutDelegate {
       formatted = value.toStringAsFixed(2);
     }
 
-    if (axis.unit != null) {
+    // Only append unit if shouldShowTickUnit is true
+    if (axis.shouldShowTickUnit && axis.unit != null) {
       formatted = '$formatted ${axis.unit}';
     }
 
