@@ -353,23 +353,24 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             id: 'small_axis',
             position: YAxisPosition.left,
             label: 'Small',
-            axisMargin: 0,
+            axisMargin: 5,
             axisLabelPadding: 0,
-            tickLabelPadding: 20,
+            tickLabelPadding: 0,
             showAxisLine: true,
             minWidth: 0,
             unit: 'RPM',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
+            labelFormatter: (value) {
+              return "$value";
+            },
           ),
           YAxisConfig(
             id: 'large_axis',
             position: YAxisPosition.leftOuter,
-            // axisMargin: 10,
             label: 'Large',
             showAxisLine: true,
             unit: 'W',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Large (W)" + tick values without unit
-            tickLabelPadding: 0,
           ),
           YAxisConfig(
             id: 'medium_axis',
