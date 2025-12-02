@@ -2,13 +2,14 @@
 // Feature: 004-theming-system
 // Phase 3: Theme Builder (T028)
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ScrollbarTheme;
 
 import '../chart_theme.dart';
 import '../components/animation_theme.dart';
 import '../components/axis_style.dart';
 import '../components/grid_style.dart';
 import '../components/interaction_theme.dart';
+import '../components/scrollbar_theme.dart';
 import '../components/series_theme.dart';
 import '../components/typography_theme.dart';
 
@@ -71,6 +72,7 @@ class ChartThemeBuilder {
     _interactionTheme = InteractionTheme.defaultLight;
     _typographyTheme = TypographyTheme.defaultLight;
     _animationTheme = AnimationTheme.defaultLight;
+    _scrollbarTheme = ScrollbarTheme.defaultLight;
   }
 
   /// Creates a builder starting from an existing theme.
@@ -95,6 +97,7 @@ class ChartThemeBuilder {
     _interactionTheme = theme.interactionTheme;
     _typographyTheme = theme.typographyTheme;
     _animationTheme = theme.animationTheme;
+    _scrollbarTheme = theme.scrollbarTheme;
   }
 
   // ========== Private State ==========
@@ -109,6 +112,7 @@ class ChartThemeBuilder {
   late InteractionTheme _interactionTheme;
   late TypographyTheme _typographyTheme;
   late AnimationTheme _animationTheme;
+  late ScrollbarTheme _scrollbarTheme;
 
   // ========== Fluent Setters ==========
 
@@ -224,6 +228,17 @@ class ChartThemeBuilder {
     return this;
   }
 
+  /// Sets the scrollbar theme for chart scrollbars.
+  ///
+  /// Example:
+  /// ```dart
+  /// builder.scrollbarTheme(ScrollbarTheme.defaultDark)
+  /// ```
+  ChartThemeBuilder scrollbarTheme(ScrollbarTheme value) {
+    _scrollbarTheme = value;
+    return this;
+  }
+
   // ========== Build ==========
 
   /// Builds the final ChartTheme after validation.
@@ -248,6 +263,7 @@ class ChartThemeBuilder {
       interactionTheme: _interactionTheme,
       typographyTheme: _typographyTheme,
       animationTheme: _animationTheme,
+      scrollbarTheme: _scrollbarTheme,
     );
   }
 

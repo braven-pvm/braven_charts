@@ -4,37 +4,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Multi-Axis Chart Widget', () {
-    testWidgets('renders chart with multiple Y-axes', (tester) async {
+    testWidgets('renders chart with multiple Y-axes using inline yAxisConfig', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 80),
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
             ),
           ),
@@ -53,31 +53,31 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 400),
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180),
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.perSeries,
             ),
@@ -98,6 +98,7 @@ void main() {
             body: BravenChartPlus(
               chartType: ChartType.line,
               series: const [
+                // Power series has yAxisId reference
                 LineChartSeries(
                   id: 'power',
                   points: [
@@ -105,7 +106,9 @@ void main() {
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue,
+                  yAxisId: 'power-axis',
                 ),
+                // HR series has no yAxisId or yAxisConfig - uses default
                 LineChartSeries(
                   id: 'hr',
                   points: [
@@ -119,10 +122,6 @@ void main() {
                 YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
                 YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
               ],
-              // Only power has binding, hr uses default (first axis)
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-              ],
             ),
           ),
         ),
@@ -133,7 +132,7 @@ void main() {
       // Verify chart renders without error
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Test SeriesAxisResolver behavior
+      // Test SeriesAxisResolver behavior (internal API)
       const bindings = [
         SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
       ];

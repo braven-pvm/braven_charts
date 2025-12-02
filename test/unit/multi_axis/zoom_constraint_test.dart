@@ -19,8 +19,8 @@ void main() {
       YAxisConfig(id: 'default', position: YAxisPosition.left),
     ];
 
-    // Sample series data
-    final testSeries = [
+    // Sample series data with inline yAxisConfig
+    final testSeriesWithInlineConfig = [
       LineChartSeries(
         id: 'power',
         points: List.generate(
@@ -28,6 +28,7 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (200 + 50 * (i % 5)).toDouble()),
         ),
         color: Colors.blue,
+        yAxisConfig: YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power'),
       ),
       LineChartSeries(
         id: 'heart-rate',
@@ -36,18 +37,69 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (120 + 20 * (i % 5)).toDouble()),
         ),
         color: Colors.red,
+        yAxisConfig: YAxisConfig(id: 'heart-rate', position: YAxisPosition.right, label: 'HR'),
       ),
     ];
 
-    // Sample axis bindings for multi-axis mode
-    const multiAxisBindings = [
-      SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
-      SeriesAxisBinding(seriesId: 'heart-rate', yAxisId: 'heart-rate'),
+    // Sample series data with yAxisId references
+    final testSeriesWithAxisIds = [
+      LineChartSeries(
+        id: 'power',
+        points: List.generate(
+          20,
+          (i) => ChartDataPoint(x: i.toDouble(), y: (200 + 50 * (i % 5)).toDouble()),
+        ),
+        color: Colors.blue,
+        yAxisId: 'power',
+      ),
+      LineChartSeries(
+        id: 'heart-rate',
+        points: List.generate(
+          20,
+          (i) => ChartDataPoint(x: i.toDouble(), y: (120 + 20 * (i % 5)).toDouble()),
+        ),
+        color: Colors.red,
+        yAxisId: 'heart-rate',
+      ),
     ];
 
-    Widget buildTestChart({
+    // Sample series without axis binding (for single-axis mode)
+    final testSeriesNoBinding = [
+      const LineChartSeries(
+        id: 'power',
+        points: [
+          ChartDataPoint(x: 0, y: 200),
+          ChartDataPoint(x: 10, y: 250),
+        ],
+        color: Colors.blue,
+      ),
+      const LineChartSeries(
+        id: 'heart-rate',
+        points: [
+          ChartDataPoint(x: 0, y: 120),
+          ChartDataPoint(x: 10, y: 140),
+        ],
+        color: Colors.red,
+      ),
+    ];
+
+    Widget buildTestChartWithInlineConfig() {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 600,
+            child: BravenChartPlus(
+              chartType: ChartType.line,
+              series: testSeriesWithInlineConfig,
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget buildTestChartWithAxisIds({
       List<YAxisConfig>? yAxes,
-      List<SeriesAxisBinding> axisBindings = const [],
     }) {
       return MaterialApp(
         home: Scaffold(
@@ -56,9 +108,26 @@ void main() {
             height: 600,
             child: BravenChartPlus(
               chartType: ChartType.line,
-              series: testSeries,
+              series: testSeriesWithAxisIds,
               yAxes: yAxes,
-              axisBindings: axisBindings,
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget buildTestChartSingleAxis({
+      List<YAxisConfig>? yAxes,
+    }) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 600,
+            child: BravenChartPlus(
+              chartType: ChartType.line,
+              series: testSeriesNoBinding,
+              yAxes: yAxes,
             ),
           ),
         ),
@@ -66,13 +135,9 @@ void main() {
     }
 
     group('Y-axis zoom behavior', () {
-      testWidgets('Y-axis zoom is disabled when multiple Y-axes configured',
-          (tester) async {
-        // Setup chart with 2+ Y-axes (multi-axis mode)
-        await tester.pumpWidget(buildTestChart(
-          yAxes: multiAxisConfig,
-          axisBindings: multiAxisBindings,
-        ));
+      testWidgets('Y-axis zoom is disabled when multiple Y-axes configured (inline config)', (tester) async {
+        // Setup chart with inline yAxisConfig (multi-axis mode)
+        await tester.pumpWidget(buildTestChartWithInlineConfig());
         await tester.pumpAndSettle();
 
         // Find the chart widget
@@ -102,13 +167,35 @@ void main() {
         expect(chartFinder, findsOneWidget);
       });
 
-      testWidgets('X-axis zoom remains functional in multi-axis mode',
-          (tester) async {
-        // Setup chart with 2+ Y-axes
-        await tester.pumpWidget(buildTestChart(
+      testWidgets('Y-axis zoom is disabled when multiple Y-axes configured (yAxisId references)', (tester) async {
+        // Setup chart with yAxisId references + yAxes list
+        await tester.pumpWidget(buildTestChartWithAxisIds(
           yAxes: multiAxisConfig,
-          axisBindings: multiAxisBindings,
         ));
+        await tester.pumpAndSettle();
+
+        final chartFinder = find.byType(BravenChartPlus);
+        expect(chartFinder, findsOneWidget);
+
+        final chartCenter = tester.getCenter(chartFinder);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shift);
+
+        final scrollEvent = PointerScrollEvent(
+          position: chartCenter,
+          scrollDelta: const Offset(0, -50),
+        );
+        await tester.sendEventToBinding(scrollEvent);
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shift);
+
+        expect(chartFinder, findsOneWidget);
+      });
+
+      testWidgets('X-axis zoom remains functional in multi-axis mode', (tester) async {
+        // Setup chart with inline yAxisConfig (multi-axis)
+        await tester.pumpWidget(buildTestChartWithInlineConfig());
         await tester.pumpAndSettle();
 
         final chartFinder = find.byType(BravenChartPlus);
@@ -132,10 +219,9 @@ void main() {
         expect(chartFinder, findsOneWidget);
       });
 
-      testWidgets('Single Y-axis mode allows Y-zoom normally',
-          (tester) async {
+      testWidgets('Single Y-axis mode allows Y-zoom normally', (tester) async {
         // Setup chart with 1 Y-axis (single-axis mode)
-        await tester.pumpWidget(buildTestChart(
+        await tester.pumpWidget(buildTestChartSingleAxis(
           yAxes: singleAxisConfig,
         ));
         await tester.pumpAndSettle();
@@ -161,10 +247,9 @@ void main() {
         expect(chartFinder, findsOneWidget);
       });
 
-      testWidgets('Null Y-axes config allows Y-zoom normally (legacy mode)',
-          (tester) async {
+      testWidgets('Null Y-axes config allows Y-zoom normally (legacy mode)', (tester) async {
         // Setup chart without yAxes (null = legacy mode)
-        await tester.pumpWidget(buildTestChart(
+        await tester.pumpWidget(buildTestChartSingleAxis(
           yAxes: null,
         ));
         await tester.pumpAndSettle();
@@ -189,13 +274,9 @@ void main() {
     });
 
     group('Y-axis pan behavior', () {
-      testWidgets('Y-axis pan is disabled when multiple Y-axes configured',
-          (tester) async {
-        // Setup chart with 2+ Y-axes
-        await tester.pumpWidget(buildTestChart(
-          yAxes: multiAxisConfig,
-          axisBindings: multiAxisBindings,
-        ));
+      testWidgets('Y-axis pan is disabled when multiple Y-axes configured', (tester) async {
+        // Setup chart with inline yAxisConfig (multi-axis)
+        await tester.pumpWidget(buildTestChartWithInlineConfig());
         await tester.pumpAndSettle();
 
         final chartFinder = find.byType(BravenChartPlus);
@@ -218,12 +299,8 @@ void main() {
         expect(chartFinder, findsOneWidget);
       });
 
-      testWidgets('X-axis pan remains functional in multi-axis mode',
-          (tester) async {
-        await tester.pumpWidget(buildTestChart(
-          yAxes: multiAxisConfig,
-          axisBindings: multiAxisBindings,
-        ));
+      testWidgets('X-axis pan remains functional in multi-axis mode', (tester) async {
+        await tester.pumpWidget(buildTestChartWithInlineConfig());
         await tester.pumpAndSettle();
 
         final chartFinder = find.byType(BravenChartPlus);
@@ -235,11 +312,8 @@ void main() {
 
     group('Grid line behavior', () {
       testWidgets('Grid lines disabled in multi-axis mode', (tester) async {
-        // Setup chart with 2+ Y-axes
-        await tester.pumpWidget(buildTestChart(
-          yAxes: multiAxisConfig,
-          axisBindings: multiAxisBindings,
-        ));
+        // Setup chart with inline yAxisConfig (multi-axis)
+        await tester.pumpWidget(buildTestChartWithInlineConfig());
         await tester.pumpAndSettle();
 
         // Chart should render
@@ -251,7 +325,7 @@ void main() {
 
       testWidgets('Grid lines enabled in single-axis mode', (tester) async {
         // Setup chart with 1 Y-axis
-        await tester.pumpWidget(buildTestChart(
+        await tester.pumpWidget(buildTestChartSingleAxis(
           yAxes: singleAxisConfig,
         ));
         await tester.pumpAndSettle();

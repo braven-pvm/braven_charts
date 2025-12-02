@@ -14,6 +14,8 @@
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/interaction/core/crosshair_tracker.dart';
+// Import internal classes for resolver unit tests
+import 'package:braven_charts/src/models/series_axis_binding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,31 +31,35 @@ void main() {
         YAxisConfig(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
       ];
 
+      // Bindings used for internal resolver tests
       testBindings = const [
         SeriesAxisBinding(seriesId: 'power-series', yAxisId: 'power'),
         SeriesAxisBinding(seriesId: 'hr-series', yAxisId: 'hr'),
       ];
 
-      testSeries = const [
+      // Series with inline yAxisConfig for widget tests
+      testSeries = [
         LineChartSeries(
           id: 'power-series',
           name: 'Power',
-          points: [
+          points: const [
             ChartDataPoint(x: 0, y: 0),
             ChartDataPoint(x: 50, y: 250),
             ChartDataPoint(x: 100, y: 500),
           ],
-          color: Color(0xFF2196F3),
+          color: const Color(0xFF2196F3),
+          yAxisConfig: YAxisConfig(id: 'power', position: YAxisPosition.left, unit: 'W'),
         ),
         LineChartSeries(
           id: 'hr-series',
           name: 'Heart Rate',
-          points: [
+          points: const [
             ChartDataPoint(x: 0, y: 60),
             ChartDataPoint(x: 50, y: 150),
             ChartDataPoint(x: 100, y: 180),
           ],
-          color: Color(0xFFF44336),
+          color: const Color(0xFFF44336),
+          yAxisConfig: YAxisConfig(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
         ),
       ];
     });
@@ -200,7 +206,7 @@ void main() {
 
     group('Widget integration', () {
       testWidgets('crosshair shows correct value for left axis series', (tester) async {
-        // Create chart with multi-axis config and crosshair enabled
+        // Create chart with multi-axis config using inline yAxisConfig
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -210,8 +216,6 @@ void main() {
                 child: BravenChartPlus(
                   chartType: ChartType.line,
                   series: testSeries,
-                  yAxes: testAxes,
-                  axisBindings: testBindings,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
                     crosshair: CrosshairConfig(
@@ -247,8 +251,6 @@ void main() {
                 child: BravenChartPlus(
                   chartType: ChartType.line,
                   series: testSeries,
-                  yAxes: testAxes,
-                  axisBindings: testBindings,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
                     crosshair: CrosshairConfig(
@@ -280,8 +282,6 @@ void main() {
                 child: BravenChartPlus(
                   chartType: ChartType.line,
                   series: testSeries,
-                  yAxes: testAxes,
-                  axisBindings: testBindings,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
                     crosshair: CrosshairConfig(
@@ -313,8 +313,6 @@ void main() {
                 child: BravenChartPlus(
                   chartType: ChartType.line,
                   series: testSeries,
-                  yAxes: testAxes,
-                  axisBindings: testBindings,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
                     crosshair: CrosshairConfig(

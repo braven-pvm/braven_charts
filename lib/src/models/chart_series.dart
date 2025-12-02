@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
+import 'y_axis_config.dart';
 
 /// Interpolation methods for line and area charts.
 enum LineInterpolation {
@@ -38,6 +39,7 @@ class ChartSeries {
     this.metadata,
     this.annotations = const [],
     this.yAxisId,
+    this.yAxisConfig,
     this.unit,
   });
 
@@ -50,21 +52,48 @@ class ChartSeries {
   final Map<String, dynamic>? metadata;
   final List<ChartAnnotation> annotations;
 
-  /// Optional Y-axis ID for explicit axis binding in multi-axis mode.
+  /// Optional Y-axis ID for referencing a shared axis in multi-axis mode.
   ///
-  /// When set, this series will be rendered against the Y-axis with
-  /// this ID, rather than using the [axisBindings] parameter or
-  /// auto-detection.
+  /// Use this when multiple series should share the same Y-axis defined
+  /// in [BravenChartPlus.yAxes]. The ID should match a [YAxisConfig.id].
+  ///
+  /// For series with their own dedicated axis, prefer using [yAxisConfig]
+  /// instead, which allows inline axis configuration.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Reference a shared axis
+  /// LineChartSeries(
+  ///   id: 'power',
+  ///   points: [...],
+  ///   yAxisId: 'shared-axis',  // References YAxisConfig with id='shared-axis'
+  /// )
+  /// ```
+  final String? yAxisId;
+
+  /// Inline Y-axis configuration for this series.
+  ///
+  /// When set, creates a dedicated Y-axis for this series with the
+  /// specified configuration. The axis ID is auto-generated from the
+  /// series ID if not explicitly set in the config.
+  ///
+  /// This is the preferred way to configure axes when each series has
+  /// its own axis. For shared axes (multiple series on one axis), use
+  /// [yAxisId] to reference axes defined in [BravenChartPlus.yAxes].
   ///
   /// Example:
   /// ```dart
   /// LineChartSeries(
   ///   id: 'power',
   ///   points: [...],
-  ///   yAxisId: 'power-axis',  // Binds to axis with id='power-axis'
+  ///   yAxisConfig: YAxisConfig(
+  ///     position: YAxisPosition.left,
+  ///     label: 'Power',
+  ///     unit: 'W',
+  ///   ),
   /// )
   /// ```
-  final String? yAxisId;
+  final YAxisConfig? yAxisConfig;
 
   /// Optional unit suffix for value formatting.
   ///
@@ -100,6 +129,7 @@ class ChartSeries {
     Map<String, dynamic>? metadata,
     List<ChartAnnotation>? annotations,
     String? yAxisId,
+    YAxisConfig? yAxisConfig,
     String? unit,
   }) {
     return ChartSeries(
@@ -112,6 +142,7 @@ class ChartSeries {
       metadata: metadata ?? this.metadata,
       annotations: annotations ?? this.annotations,
       yAxisId: yAxisId ?? this.yAxisId,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
     );
   }
@@ -129,6 +160,7 @@ class ChartSeries {
         _mapEquals(other.metadata, metadata) &&
         _listEquals(other.annotations, annotations) &&
         other.yAxisId == yAxisId &&
+        other.yAxisConfig == yAxisConfig &&
         other.unit == unit;
   }
 
@@ -143,6 +175,7 @@ class ChartSeries {
         metadata != null ? Object.hashAll(metadata!.entries) : null,
         Object.hashAll(annotations),
         yAxisId,
+        yAxisConfig,
         unit,
       );
 
@@ -182,6 +215,7 @@ class LineChartSeries extends ChartSeries {
     super.isXOrdered = false,
     super.metadata,
     super.yAxisId,
+    super.yAxisConfig,
     super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
@@ -210,6 +244,7 @@ class ScatterChartSeries extends ChartSeries {
     super.isXOrdered = false,
     super.metadata,
     super.yAxisId,
+    super.yAxisConfig,
     super.unit,
     this.markerRadius = 5.0,
   });
@@ -230,6 +265,7 @@ class AreaChartSeries extends ChartSeries {
     super.isXOrdered = false,
     super.metadata,
     super.yAxisId,
+    super.yAxisConfig,
     super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
@@ -260,6 +296,7 @@ class BarChartSeries extends ChartSeries {
     super.isXOrdered = false,
     super.metadata,
     super.yAxisId,
+    super.yAxisConfig,
     super.unit,
     this.barWidthPercent,
     this.barWidthPixels,

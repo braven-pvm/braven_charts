@@ -58,62 +58,79 @@ class _Task014DemoState extends State<Task014Demo> {
                 padding: const EdgeInsets.all(16),
                 child: BravenChartPlus(
                   chartType: ChartType.line,
-                  series: [
-                    LineChartSeries(
-                      id: 'power',
-                      points: List.generate(
-                        50,
-                        (i) => ChartDataPoint(
-                          x: i.toDouble(),
-                          y: 200 + 100 * (i % 10 / 10) + 50 * (i ~/ 10),
-                        ),
-                      ),
-                      color: Colors.blue,
-                    ),
-                    LineChartSeries(
-                      id: 'heart-rate',
-                      points: List.generate(
-                        50,
-                        (i) => ChartDataPoint(
-                          x: i.toDouble(),
-                          y: 100 + 40 * ((i + 3) % 10 / 10) + 20 * (i ~/ 10),
-                        ),
-                      ),
-                      color: Colors.red,
-                    ),
-                  ],
-                  yAxes: _multiAxisMode
+                  series: _multiAxisMode
+                      // Multi-axis mode: series with inline yAxisConfig
                       ? [
-                          YAxisConfig(
+                          LineChartSeries(
                             id: 'power',
-                            position: YAxisPosition.left,
-                            label: 'Power',
-                            unit: 'W',
+                            points: List.generate(
+                              50,
+                              (i) => ChartDataPoint(
+                                x: i.toDouble(),
+                                y: 200 + 100 * (i % 10 / 10) + 50 * (i ~/ 10),
+                              ),
+                            ),
                             color: Colors.blue,
+                            yAxisConfig: YAxisConfig(
+                              id: 'power',
+                              position: YAxisPosition.left,
+                              label: 'Power',
+                              unit: 'W',
+                              color: Colors.blue,
+                            ),
                           ),
-                          YAxisConfig(
+                          LineChartSeries(
                             id: 'heart-rate',
-                            position: YAxisPosition.right,
-                            label: 'Heart Rate',
-                            unit: 'bpm',
+                            points: List.generate(
+                              50,
+                              (i) => ChartDataPoint(
+                                x: i.toDouble(),
+                                y: 100 + 40 * ((i + 3) % 10 / 10) + 20 * (i ~/ 10),
+                              ),
+                            ),
                             color: Colors.red,
+                            yAxisConfig: YAxisConfig(
+                              id: 'heart-rate',
+                              position: YAxisPosition.right,
+                              label: 'Heart Rate',
+                              unit: 'bpm',
+                              color: Colors.red,
+                            ),
                           ),
                         ]
+                      // Single-axis mode: series without axis config (uses default)
+                      : [
+                          LineChartSeries(
+                            id: 'power',
+                            points: List.generate(
+                              50,
+                              (i) => ChartDataPoint(
+                                x: i.toDouble(),
+                                y: 200 + 100 * (i % 10 / 10) + 50 * (i ~/ 10),
+                              ),
+                            ),
+                            color: Colors.blue,
+                          ),
+                          LineChartSeries(
+                            id: 'heart-rate',
+                            points: List.generate(
+                              50,
+                              (i) => ChartDataPoint(
+                                x: i.toDouble(),
+                                y: 100 + 40 * ((i + 3) % 10 / 10) + 20 * (i ~/ 10),
+                              ),
+                            ),
+                            color: Colors.red,
+                          ),
+                        ],
+                  yAxes: _multiAxisMode
+                      ? null // Axes auto-detected from series.yAxisConfig
                       : [
                           YAxisConfig(
                             id: 'default',
                             position: YAxisPosition.left,
                           ),
                         ],
-                  axisBindings: _multiAxisMode
-                      ? const [
-                          SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
-                          SeriesAxisBinding(
-                            seriesId: 'heart-rate',
-                            yAxisId: 'heart-rate',
-                          ),
-                        ]
-                      : const [],
                 ),
               ),
             ),

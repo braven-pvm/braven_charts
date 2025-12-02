@@ -21,11 +21,11 @@ class Task013CrosshairDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Power series (0-500W range)
-    const powerSeries = LineChartSeries(
+    // Power series (0-500W range) with inline yAxisConfig
+    final powerSeries = LineChartSeries(
       id: 'power',
       name: 'Power',
-      points: [
+      points: const [
         ChartDataPoint(x: 0, y: 100),
         ChartDataPoint(x: 10, y: 180),
         ChartDataPoint(x: 20, y: 220),
@@ -38,15 +38,22 @@ class Task013CrosshairDemo extends StatelessWidget {
         ChartDataPoint(x: 90, y: 400),
         ChartDataPoint(x: 100, y: 450),
       ],
-      color: Color(0xFF2196F3), // Blue
+      color: const Color(0xFF2196F3), // Blue
       strokeWidth: 2.5,
+      yAxisConfig: YAxisConfig(
+        id: 'power',
+        position: YAxisPosition.left,
+        unit: 'W',
+        min: 0,
+        max: 500,
+      ),
     );
 
-    // Heart rate series (60-180bpm range)
-    const hrSeries = LineChartSeries(
+    // Heart rate series (60-180bpm range) with inline yAxisConfig
+    final hrSeries = LineChartSeries(
       id: 'heartrate',
       name: 'Heart Rate',
-      points: [
+      points: const [
         ChartDataPoint(x: 0, y: 80),
         ChartDataPoint(x: 10, y: 95),
         ChartDataPoint(x: 20, y: 110),
@@ -59,33 +66,16 @@ class Task013CrosshairDemo extends StatelessWidget {
         ChartDataPoint(x: 90, y: 170),
         ChartDataPoint(x: 100, y: 175),
       ],
-      color: Color(0xFFF44336), // Red
+      color: const Color(0xFFF44336), // Red
       strokeWidth: 2.5,
-    );
-
-    // Y-axis configurations with units
-    final yAxes = [
-      YAxisConfig(
-        id: 'power',
-        position: YAxisPosition.left,
-        unit: 'W',
-        min: 0,
-        max: 500,
-      ),
-      YAxisConfig(
+      yAxisConfig: YAxisConfig(
         id: 'heartrate',
         position: YAxisPosition.right,
         unit: 'bpm',
         min: 60,
         max: 180,
       ),
-    ];
-
-    // Bind each series to its axis
-    const axisBindings = [
-      SeriesAxisBinding(seriesId: 'power', yAxisId: 'power'),
-      SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'heartrate'),
-    ];
+    );
 
     return MaterialApp(
       title: 'Task 13: Crosshair Per-Axis Demo',
@@ -119,8 +109,7 @@ class Task013CrosshairDemo extends StatelessWidget {
                       Text('✓ Move mouse over chart to see crosshair'),
                       Text('✓ Intersection markers appear on BOTH lines'),
                       Text('✓ Markers are at correct Y positions (not overlapping)'),
-                      Text(
-                          '✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"'),
+                      Text('✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"'),
                       Text('✓ Values are ORIGINAL (not normalized to 0-1)'),
                     ],
                   ),
@@ -132,9 +121,7 @@ class Task013CrosshairDemo extends StatelessWidget {
               Expanded(
                 child: BravenChartPlus(
                   chartType: ChartType.line,
-                  series: const [powerSeries, hrSeries],
-                  yAxes: yAxes,
-                  axisBindings: axisBindings,
+                  series: [powerSeries, hrSeries],
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
                     crosshair: CrosshairConfig(
