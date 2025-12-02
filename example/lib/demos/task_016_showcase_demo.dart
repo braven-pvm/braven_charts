@@ -87,6 +87,7 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
 
   /// Demonstrates displaying Power (0-300W) and Heart Rate (60-200bpm)
   /// on the same chart, each using full vertical space.
+  /// Uses the NEW inline yAxisConfig API.
   Widget _buildMultiScaleDemo() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -96,7 +97,8 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
           _buildDemoHeader(
             'US1: Multi-Scale Visualization',
             'Power (W) and Heart Rate (bpm) with vastly different ranges\n'
-                'displayed on the same chart. Each series uses the full vertical space.',
+                'displayed on the same chart. Each series uses the full vertical space.\n'
+                'Using NEW inline yAxisConfig API - no separate yAxes needed!',
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -108,38 +110,33 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
                   name: 'Power Output',
                   points: _generatePowerData(),
                   color: Colors.blue,
-                  yAxisId: 'power-axis',
                   unit: 'W',
+                  // NEW: inline yAxisConfig - axis auto-registered!
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                    label: 'Power',
+                    unit: 'W',
+                    color: Colors.blue,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
                   name: 'Heart Rate',
                   points: _generateHRData(),
                   color: Colors.red,
-                  yAxisId: 'hr-axis',
                   unit: 'bpm',
+                  // NEW: inline yAxisConfig - axis auto-registered!
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                    label: 'Heart Rate',
+                    unit: 'bpm',
+                    color: Colors.red,
+                  ),
                 ),
               ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'power-axis',
-                  position: YAxisPosition.left,
-                  label: 'Power',
-                  unit: 'W',
-                  color: Colors.blue,
-                ),
-                YAxisConfig(
-                  id: 'hr-axis',
-                  position: YAxisPosition.right,
-                  label: 'Heart Rate',
-                  unit: 'bpm',
-                  color: Colors.red,
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
-              ],
+              // No yAxes needed - auto-extracted from series.yAxisConfig!
               normalizationMode: NormalizationMode.perSeries,
             ),
           ),
@@ -147,13 +144,24 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
           _buildCodeSnippet('''
 BravenChartPlus(
   series: [
-    LineChartSeries(id: 'power', yAxisId: 'power-axis', unit: 'W', ...),
-    LineChartSeries(id: 'hr', yAxisId: 'hr-axis', unit: 'bpm', ...),
+    LineChartSeries(
+      id: 'power',
+      yAxisConfig: YAxisConfig(  // NEW! Inline config
+        id: 'power-axis',
+        position: YAxisPosition.left,
+        ...
+      ),
+    ),
+    LineChartSeries(
+      id: 'hr', 
+      yAxisConfig: YAxisConfig(  // NEW! Inline config
+        id: 'hr-axis',
+        position: YAxisPosition.right,
+        ...
+      ),
+    ),
   ],
-  yAxes: [
-    YAxisConfig(id: 'power-axis', position: YAxisPosition.left, ...),
-    YAxisConfig(id: 'hr-axis', position: YAxisPosition.right, ...),
-  ],
+  // No separate yAxes or axisBindings needed!
   normalizationMode: NormalizationMode.perSeries,
 )'''),
         ],
@@ -183,14 +191,20 @@ BravenChartPlus(
             child: BravenChartPlus(
               chartType: ChartType.line,
               series: [
-                // Temperature: 20-80°C range
+                // Temperature: 20-80°C range with inline axis config
                 LineChartSeries(
                   id: 'temp',
                   name: 'Temperature',
                   points: _generateTemperatureData(),
                   color: Colors.orange,
-                  yAxisId: 'temp-axis',
                   unit: '°C',
+                  yAxisConfig: YAxisConfig(
+                    id: 'temp-axis',
+                    position: YAxisPosition.left,
+                    label: 'Temperature',
+                    unit: '°C',
+                    color: Colors.orange,
+                  ),
                 ),
                 // Pressure: 1000-9000 Pa range (~100x different scale)
                 LineChartSeries(
@@ -198,29 +212,15 @@ BravenChartPlus(
                   name: 'Pressure',
                   points: _generatePressureData(),
                   color: Colors.purple,
-                  yAxisId: 'pressure-axis',
                   unit: 'Pa',
+                  yAxisConfig: YAxisConfig(
+                    id: 'pressure-axis',
+                    position: YAxisPosition.right,
+                    label: 'Pressure',
+                    unit: 'Pa',
+                    color: Colors.purple,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'temp-axis',
-                  position: YAxisPosition.left,
-                  label: 'Temperature',
-                  unit: '°C',
-                  color: Colors.orange,
-                ),
-                YAxisConfig(
-                  id: 'pressure-axis',
-                  position: YAxisPosition.right,
-                  label: 'Pressure',
-                  unit: 'Pa',
-                  color: Colors.purple,
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'temp', yAxisId: 'temp-axis'),
-                SeriesAxisBinding(seriesId: 'pressure', yAxisId: 'pressure-axis'),
               ],
               normalizationMode: NormalizationMode.auto, // Auto-detect!
             ),
@@ -229,10 +229,17 @@ BravenChartPlus(
           _buildCodeSnippet('''
 BravenChartPlus(
   series: [
-    LineChartSeries(id: 'temp', points: tempData, ...),  // 20-80 range
-    LineChartSeries(id: 'pressure', points: pressureData, ...),  // 1000-9000 range
+    LineChartSeries(
+      id: 'temp',
+      points: tempData,  // 20-80 range
+      yAxisConfig: YAxisConfig(...),
+    ),
+    LineChartSeries(
+      id: 'pressure',
+      points: pressureData,  // 1000-9000 range
+      yAxisConfig: YAxisConfig(...),
+    ),
   ],
-  yAxes: [...],
   normalizationMode: NormalizationMode.auto,  // System detects >10x difference!
 )'''),
         ],
@@ -266,61 +273,55 @@ BravenChartPlus(
                   name: 'Revenue',
                   points: _generateRevenueData(),
                   color: const Color(0xFF1E88E5), // Blue
-                  yAxisId: 'revenue-axis',
                   unit: '\$K',
+                  yAxisConfig: YAxisConfig(
+                    id: 'revenue-axis',
+                    position: YAxisPosition.left,
+                    label: 'Revenue',
+                    unit: '\$K',
+                    color: const Color(0xFF1E88E5), // Matches series!
+                  ),
                 ),
                 LineChartSeries(
                   id: 'users',
                   name: 'Active Users',
                   points: _generateUsersData(),
                   color: const Color(0xFFD81B60), // Pink
-                  yAxisId: 'users-axis',
                   unit: '',
+                  yAxisConfig: YAxisConfig(
+                    id: 'users-axis',
+                    position: YAxisPosition.right,
+                    label: 'Users',
+                    color: const Color(0xFFD81B60), // Matches series!
+                  ),
                 ),
                 LineChartSeries(
                   id: 'sessions',
                   name: 'Sessions',
                   points: _generateSessionsData(),
                   color: const Color(0xFF43A047), // Green
-                  yAxisId: 'sessions-axis',
+                  yAxisConfig: YAxisConfig(
+                    id: 'sessions-axis',
+                    position: YAxisPosition.rightOuter,
+                    label: 'Sessions',
+                    color: const Color(0xFF43A047), // Matches series!
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'revenue-axis',
-                  position: YAxisPosition.left,
-                  label: 'Revenue',
-                  unit: '\$K',
-                  color: const Color(0xFF1E88E5), // Matches series!
-                ),
-                YAxisConfig(
-                  id: 'users-axis',
-                  position: YAxisPosition.right,
-                  label: 'Users',
-                  color: const Color(0xFFD81B60), // Matches series!
-                ),
-                YAxisConfig(
-                  id: 'sessions-axis',
-                  position: YAxisPosition.rightOuter,
-                  label: 'Sessions',
-                  color: const Color(0xFF43A047), // Matches series!
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'revenue', yAxisId: 'revenue-axis'),
-                SeriesAxisBinding(seriesId: 'users', yAxisId: 'users-axis'),
-                SeriesAxisBinding(seriesId: 'sessions', yAxisId: 'sessions-axis'),
               ],
               normalizationMode: NormalizationMode.perSeries,
             ),
           ),
           const SizedBox(height: 16),
           _buildCodeSnippet('''
-YAxisConfig(
-  id: 'revenue-axis',
-  position: YAxisPosition.left,
-  label: 'Revenue',
-  color: Color(0xFF1E88E5),  // Same color as series!
+LineChartSeries(
+  id: 'revenue',
+  color: Color(0xFF1E88E5),  // Series color
+  yAxisConfig: YAxisConfig(
+    id: 'revenue-axis',
+    position: YAxisPosition.left,
+    label: 'Revenue',
+    color: Color(0xFF1E88E5),  // Same color for axis!
+  ),
 )'''),
         ],
       ),
@@ -354,37 +355,29 @@ YAxisConfig(
                   name: 'Power',
                   points: _generatePowerData(),
                   color: Colors.blue,
-                  yAxisId: 'power-axis',
                   unit: 'W',
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                    label: 'Power',
+                    unit: 'W',
+                    color: Colors.blue,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
                   name: 'Heart Rate',
                   points: _generateHRData(),
                   color: Colors.red,
-                  yAxisId: 'hr-axis',
                   unit: 'bpm',
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                    label: 'Heart Rate',
+                    unit: 'bpm',
+                    color: Colors.red,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'power-axis',
-                  position: YAxisPosition.left,
-                  label: 'Power',
-                  unit: 'W',
-                  color: Colors.blue,
-                ),
-                YAxisConfig(
-                  id: 'hr-axis',
-                  position: YAxisPosition.right,
-                  label: 'Heart Rate',
-                  unit: 'bpm',
-                  color: Colors.red,
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.perSeries,
               // Crosshair and tooltip enabled by default via interactionConfig

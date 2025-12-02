@@ -5,41 +5,40 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Auto-Detection Widget Tests', () {
     testWidgets('detects normalization need for >10x range difference', (tester) async {
-      // Power: 0-400W range = 400
+      // Power: 0-4000W range = 4000
       // Heart rate: 60-180bpm range = 120
-      // Ratio: 400/120 = 3.33x (not enough for auto-detection)
-      // Need 10x difference: e.g., Power 0-4000W vs HR 60-180bpm
+      // Ratio: 4000/120 = 33x (>10x threshold for auto-detection)
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 0),
                     ChartDataPoint(x: 1, y: 4000), // Large range: 0-4000
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180), // Small range: 60-180
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.auto,
             ),
@@ -65,31 +64,31 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 200), // Small range: 100-200
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180), // Similar range: 60-180
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.auto,
             ),
@@ -112,31 +111,31 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 0),
                     ChartDataPoint(x: 1, y: 4000), // Large range: 0-4000
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180), // Small range: 60-180
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.none, // Force disabled
             ),
@@ -159,31 +158,31 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 200), // Small range
                   ],
                   color: Colors.blue,
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180), // Similar range
                   ],
                   color: Colors.red,
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.perSeries, // Force enabled
             ),

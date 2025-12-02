@@ -78,7 +78,6 @@ class ChartRenderBox extends RenderBox {
     InteractionConfig? interactionConfig,
     List<YAxisConfig>? yAxes,
     NormalizationMode? normalizationMode,
-    List<SeriesAxisBinding>? axisBindings,
     List<ChartSeries>? series,
     this.onElementClick,
     this.onElementHover,
@@ -95,7 +94,6 @@ class ChartRenderBox extends RenderBox {
         _interactionConfig = interactionConfig,
         _yAxes = yAxes,
         _normalizationMode = normalizationMode,
-        _axisBindings = axisBindings ?? const [],
         _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
@@ -130,12 +128,13 @@ class ChartRenderBox extends RenderBox {
   /// Controls how normalization is applied to multi-axis data.
   NormalizationMode? _normalizationMode;
 
-  /// Bindings that connect series to specific Y-axes.
-  List<SeriesAxisBinding> _axisBindings;
-
-  /// Cached effective bindings (explicit + implicit from series.yAxisId).
-  /// Invalidated when _axisBindings or _series change.
+  /// Cached effective bindings (derived from series.yAxisConfig and series.yAxisId).
+  /// Invalidated when _series change.
   List<SeriesAxisBinding>? _cachedEffectiveBindings;
+
+  /// Cached effective Y-axes (explicit yAxes + inline yAxisConfigs from series).
+  /// Invalidated when _yAxes or _series change.
+  List<YAxisConfig>? _cachedEffectiveYAxes;
 
   /// Data series for multi-axis color resolution.
   List<ChartSeries> _series;
@@ -661,6 +660,8 @@ class ChartRenderBox extends RenderBox {
   void setYAxes(List<YAxisConfig>? yAxes) {
     if (_yAxes == yAxes) return;
     _yAxes = yAxes;
+    _cachedEffectiveYAxes = null; // Invalidate cache
+    _cachedEffectiveBindings = null; // Invalidate cache
     markNeedsPaint();
   }
 
@@ -671,20 +672,12 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
-  /// Sets the series-to-axis bindings.
-  void setAxisBindings(List<SeriesAxisBinding>? bindings) {
-    final newBindings = bindings ?? const [];
-    if (_axisBindings == newBindings) return;
-    _axisBindings = newBindings;
-    _cachedEffectiveBindings = null; // Invalidate cache
-    markNeedsPaint();
-  }
-
   /// Sets the data series for multi-axis color resolution.
   void setSeries(List<ChartSeries>? series) {
     final newSeries = series ?? const [];
     if (_series == newSeries) return;
     _series = newSeries;
+    _cachedEffectiveYAxes = null; // Invalidate cache
     _cachedEffectiveBindings = null; // Invalidate cache
     markNeedsPaint();
   }
@@ -693,9 +686,56 @@ class ChartRenderBox extends RenderBox {
 
   /// Checks if multi-axis mode is active.
   ///
-  /// Multi-axis mode is active when there are two or more Y-axes configured.
+  /// Multi-axis mode is active when there are two or more Y-axes configured
+  /// (either explicit yAxes or inline yAxisConfig from series).
   bool _hasMultipleYAxes() {
-    return _yAxes != null && _yAxes!.length > 1;
+    final effectiveAxes = _getEffectiveYAxes();
+    return effectiveAxes.length > 1;
+  }
+
+  /// Gets effective Y-axes by merging explicit yAxes with inline yAxisConfig from series.
+  ///
+  /// Priority:
+  /// 1. Explicit yAxes definitions (from BravenChartPlus.yAxes)
+  /// 2. Inline yAxisConfig from series (auto-generates ID as "{seriesId}_axis" if not set)
+  ///
+  /// Results are cached for performance. Cache is invalidated when
+  /// [setYAxes] or [setSeries] are called.
+  List<YAxisConfig> _getEffectiveYAxes() {
+    // Return cached if available
+    if (_cachedEffectiveYAxes != null) return _cachedEffectiveYAxes!;
+
+    final effectiveAxes = <YAxisConfig>[];
+    final axisIds = <String>{};
+
+    // First, add all explicit yAxes
+    if (_yAxes != null) {
+      for (final axis in _yAxes!) {
+        effectiveAxes.add(axis);
+        axisIds.add(axis.id);
+      }
+    }
+
+    // Then, add inline yAxisConfig from series (if not already defined)
+    for (final series in _series) {
+      if (series.yAxisConfig != null) {
+        // Generate axis ID: use config's ID if set, otherwise derive from series ID
+        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
+
+        // Skip if this axis ID already exists
+        if (axisIds.contains(axisId)) continue;
+
+        // Add the inline config with the resolved ID
+        final resolvedConfig = series.yAxisConfig!.id.isEmpty ? series.yAxisConfig!.copyWith(id: axisId) : series.yAxisConfig!;
+
+        effectiveAxes.add(resolvedConfig);
+        axisIds.add(axisId);
+      }
+    }
+
+    // Cache and return
+    _cachedEffectiveYAxes = effectiveAxes;
+    return effectiveAxes;
   }
 
   /// Paints multiple Y-axes using [MultiAxisPainter].
@@ -704,7 +744,8 @@ class ChartRenderBox extends RenderBox {
   /// It computes axis bounds from series data and renders each axis
   /// with appropriate colors and labels.
   void _paintMultipleYAxes(Canvas canvas) {
-    if (_yAxes == null || _yAxes!.isEmpty) return;
+    final effectiveAxes = _getEffectiveYAxes();
+    if (effectiveAxes.isEmpty) return;
 
     // Compute axis bounds from series data
     final axisBounds = _computeAxisBounds();
@@ -714,7 +755,7 @@ class ChartRenderBox extends RenderBox {
 
     // Create and invoke painter
     final painter = MultiAxisPainter(
-      axes: _yAxes!,
+      axes: effectiveAxes,
       axisBounds: axisBounds,
       bindings: effectiveBindings,
       series: _series,
@@ -728,8 +769,8 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Returns a map of axis ID to [DataRange] for each axis.
   ///
-  /// This method uses both explicit [axisBindings] and implicit bindings
-  /// from series [yAxisId] properties. Series with matching [yAxisId] are
+  /// This method uses effective bindings derived from series.yAxisConfig,
+  /// series.yAxisId properties. Series with matching axis configs are
   /// automatically bound to their corresponding axis.
   ///
   /// **Viewport-Aware**: In perSeries normalization mode, when the chart is
@@ -739,9 +780,10 @@ class ChartRenderBox extends RenderBox {
   Map<String, DataRange> _computeAxisBounds() {
     final bounds = <String, DataRange>{};
 
-    if (_yAxes == null) return bounds;
+    final effectiveAxes = _getEffectiveYAxes();
+    if (effectiveAxes.isEmpty) return bounds;
 
-    // Compute effective bindings: explicit bindings + implicit from series.yAxisId
+    // Compute effective bindings from series
     final effectiveBindings = _getEffectiveBindings();
 
     // Check if viewport Y range differs from original (zoom or pan in perSeries mode)
@@ -752,7 +794,7 @@ class ChartRenderBox extends RenderBox {
         _originalTransform != null &&
         (_transform!.dataYMin != _originalTransform!.dataYMin || _transform!.dataYMax != _originalTransform!.dataYMax);
 
-    for (final axis in _yAxes!) {
+    for (final axis in effectiveAxes) {
       // Use explicit bounds if provided
       if (axis.min != null && axis.max != null) {
         final fullMin = axis.min!;
@@ -830,32 +872,35 @@ class ChartRenderBox extends RenderBox {
     return bounds;
   }
 
-  /// Gets effective axis bindings by combining explicit bindings with
-  /// implicit bindings derived from series [yAxisId] properties.
+  /// Gets effective axis bindings by deriving bindings from series properties.
   ///
   /// Priority:
-  /// 1. Explicit bindings take precedence for a series
-  /// 2. If no explicit binding exists, use series.yAxisId if set
-  /// 3. Series without explicit binding or yAxisId remain unbound
+  /// 1. series.yAxisConfig (inline config) → generates binding with auto ID
+  /// 2. series.yAxisId (explicit reference) → generates binding with that ID
+  /// 3. Series without yAxisConfig or yAxisId remain unbound
   ///
   /// Results are cached for performance. Cache is invalidated when
-  /// [setAxisBindings] or [setSeries] are called.
+  /// [setSeries] is called.
   List<SeriesAxisBinding> _getEffectiveBindings() {
     // Return cached if available
     if (_cachedEffectiveBindings != null) return _cachedEffectiveBindings!;
 
-    // Start with explicit bindings
-    final effectiveBindings = List<SeriesAxisBinding>.from(_axisBindings);
+    final effectiveBindings = <SeriesAxisBinding>[];
 
-    // Track which series already have explicit bindings
-    final explicitlyBoundSeries = _axisBindings.map((b) => b.seriesId).toSet();
-
-    // Add implicit bindings from series.yAxisId
     for (final series in _series) {
-      // Skip if already explicitly bound
-      if (explicitlyBoundSeries.contains(series.id)) continue;
+      // Priority 1: Inline yAxisConfig
+      if (series.yAxisConfig != null) {
+        // Generate axis ID: use config's ID if set, otherwise derive from series ID
+        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
 
-      // Add implicit binding if series has yAxisId
+        effectiveBindings.add(SeriesAxisBinding(
+          seriesId: series.id,
+          yAxisId: axisId,
+        ));
+        continue;
+      }
+
+      // Priority 2: Explicit yAxisId reference
       if (series.yAxisId != null && series.yAxisId!.isNotEmpty) {
         effectiveBindings.add(SeriesAxisBinding(
           seriesId: series.id,

@@ -140,6 +140,13 @@ class Task012TooltipDemo extends StatelessWidget {
                   strokeWidth: 2.5,
                   showDataPointMarkers: true,
                   dataPointMarkerRadius: 5.0,
+                  // Multi-axis with inline config
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                    label: 'Power',
+                    unit: 'W', // Unit shown in tooltip
+                  ),
                 ),
                 LineChartSeries(
                   id: 'heartrate',
@@ -149,26 +156,14 @@ class Task012TooltipDemo extends StatelessWidget {
                   strokeWidth: 2.5,
                   showDataPointMarkers: true,
                   dataPointMarkerRadius: 5.0,
+                  // Multi-axis with inline config
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                    label: 'Heart Rate',
+                    unit: 'bpm', // Unit shown in tooltip
+                  ),
                 ),
-              ],
-              // Multi-axis with units for tooltip display
-              yAxes: [
-                YAxisConfig(
-                  id: 'power-axis',
-                  position: YAxisPosition.left,
-                  label: 'Power',
-                  unit: 'W', // Unit shown in tooltip
-                ),
-                YAxisConfig(
-                  id: 'hr-axis',
-                  position: YAxisPosition.right,
-                  label: 'Heart Rate',
-                  unit: 'bpm', // Unit shown in tooltip
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'hr-axis'),
               ],
               normalizationMode: NormalizationMode.perSeries,
               theme: ChartTheme.dark,

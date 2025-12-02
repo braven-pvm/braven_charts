@@ -301,6 +301,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
         series: [
+          // NEW API: Inline yAxisConfig directly on series
           LineChartSeries(
             id: 'small_range',
             name: 'Small Range (0-100)',
@@ -308,8 +309,21 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             color: Colors.blue,
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
-            yAxisId: 'small_axis',
-            unit: "RMP",
+            unit: "RPM",
+            // Inline axis configuration - no separate yAxes/axisBindings needed!
+            yAxisConfig: YAxisConfig(
+              id: 'small_axis',
+              position: YAxisPosition.left,
+              label: 'Small',
+              axisMargin: 5,
+              axisLabelPadding: 5,
+              tickLabelPadding: 0,
+              minWidth: 0,
+              showAxisLine: true,
+              unit: 'RPM',
+              labelDisplay: AxisLabelDisplay.labelWithUnit,
+              labelFormatter: (value) => value.toStringAsFixed(2),
+            ),
           ),
           LineChartSeries(
             id: 'large_range',
@@ -318,8 +332,15 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             color: Colors.red,
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
-            yAxisId: 'large_axis',
             unit: "Watts(W)",
+            yAxisConfig: YAxisConfig(
+              id: 'large_axis',
+              position: YAxisPosition.leftOuter,
+              label: 'Large',
+              showAxisLine: true,
+              unit: 'W',
+              labelDisplay: AxisLabelDisplay.labelWithUnit,
+            ),
           ),
           LineChartSeries(
             id: 'medium_range',
@@ -328,8 +349,15 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             color: Colors.green,
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
-            yAxisId: 'medium_axis',
             unit: "BPM",
+            yAxisConfig: YAxisConfig(
+              id: 'medium_axis',
+              position: YAxisPosition.right,
+              label: 'Medium',
+              showAxisLine: true,
+              unit: 'BPM',
+              labelDisplay: AxisLabelDisplay.tickOnly,
+            ),
           ),
         ],
         theme: _optionsController.theme,
@@ -341,52 +369,13 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
           label: "Time(M)",
-          // labelStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
         yAxis: AxisConfig(
           showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
           label: "Y-axis",
         ),
-        yAxes: [
-          YAxisConfig(
-              id: 'small_axis',
-              position: YAxisPosition.left,
-              label: 'Small',
-              axisMargin: 5,
-              axisLabelPadding: 5,
-              tickLabelPadding: 0,
-              minWidth: 0,
-              showAxisLine: true,
-              unit: 'RPM',
-              labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
-              labelFormatter: (value) {
-                return value.toStringAsFixed(2);
-                // return "$value";
-              }),
-          YAxisConfig(
-            id: 'large_axis',
-            position: YAxisPosition.leftOuter,
-            label: 'Large',
-            showAxisLine: true,
-            unit: 'W',
-            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Large (W)" + tick values without unit
-          ),
-          YAxisConfig(
-            id: 'medium_axis',
-            position: YAxisPosition.right,
-            label: 'Medium',
-            showAxisLine: true,
-            unit: 'BPM',
-            labelDisplay: AxisLabelDisplay.tickOnly, // "Medium (BPM)" + tick values without unit
-            // tickLabelPadding: 50,
-          ),
-        ],
-        axisBindings: const [
-          SeriesAxisBinding(seriesId: 'small_range', yAxisId: 'small_axis'),
-          SeriesAxisBinding(seriesId: 'large_range', yAxisId: 'large_axis'),
-          SeriesAxisBinding(seriesId: 'medium_range', yAxisId: 'medium_axis'),
-        ],
+        // No yAxes or axisBindings needed - all defined inline on series!
         normalizationMode: NormalizationMode.perSeries,
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,

@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 /// Task 11 Demo: Multi-Axis Widget Integration
 ///
 /// Demonstrates:
-/// - yAxes parameter on BravenChartPlus
-/// - axisBindings connecting series to axes
+/// - Inline yAxisConfig on series for dedicated axes
 /// - Both axes rendering with derived colors
 /// - Data properly normalized per-axis
 void main() => runApp(const Task011IntegrationDemo());
@@ -116,6 +115,14 @@ class Task011IntegrationDemo extends StatelessWidget {
             points: powerData,
             color: Colors.blue,
             strokeWidth: 2.5,
+            // NEW: Inline axis configuration - no separate yAxes needed!
+            yAxisConfig: YAxisConfig(
+              id: 'power-axis',
+              position: YAxisPosition.left,
+              label: 'Power',
+              unit: 'W',
+              // color: null - will derive from series (blue)
+            ),
           ),
           LineChartSeries(
             id: 'heartrate',
@@ -123,28 +130,15 @@ class Task011IntegrationDemo extends StatelessWidget {
             points: hrData,
             color: Colors.red,
             strokeWidth: 2.5,
+            // NEW: Inline axis configuration
+            yAxisConfig: YAxisConfig(
+              id: 'hr-axis',
+              position: YAxisPosition.right,
+              label: 'Heart Rate',
+              unit: 'bpm',
+              // color: null - will derive from series (red)
+            ),
           ),
-        ],
-        // NEW: Multi-axis configuration via widget parameters
-        yAxes: [
-          YAxisConfig(
-            id: 'power-axis',
-            position: YAxisPosition.left,
-            label: 'Power',
-            unit: 'W',
-            // color: null - will derive from series (blue)
-          ),
-          YAxisConfig(
-            id: 'hr-axis',
-            position: YAxisPosition.right,
-            label: 'Heart Rate',
-            unit: 'bpm',
-            // color: null - will derive from series (red)
-          ),
-        ],
-        axisBindings: const [
-          SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-          SeriesAxisBinding(seriesId: 'heartrate', yAxisId: 'hr-axis'),
         ],
         normalizationMode: NormalizationMode.perSeries,
         theme: ChartTheme.dark,
@@ -173,12 +167,12 @@ class Task011IntegrationDemo extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            '• BravenChartPlus now accepts yAxes: List<YAxisConfig>\n'
+            '• Series can have inline yAxisConfig for dedicated axes\n'
             '• Each axis can be positioned left/right with labels and units\n'
-            '• SeriesAxisBinding connects series to their Y-axes\n'
             '• Axes inherit colors from bound series when not explicitly set\n'
             '• NormalizationMode.perSeries ensures each series uses full height\n'
-            '• Multi-axis rendering via MultiAxisPainter in ChartRenderBox',
+            '• Multi-axis rendering via MultiAxisPainter in ChartRenderBox\n'
+            '• Alternative: Use yAxisId + yAxes for shared axes',
             style: TextStyle(
               fontSize: 14,
               color: Colors.white70,

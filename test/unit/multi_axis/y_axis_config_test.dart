@@ -30,7 +30,7 @@ void main() {
           max: 400,
           showTicks: false,
           showAxisLine: false,
-          showLabels: false,
+          labelDisplay: AxisLabelDisplay.none,
           minWidth: 50.0,
           maxWidth: 100.0,
           tickCount: 5,
@@ -46,7 +46,7 @@ void main() {
         expect(config.max, equals(400));
         expect(config.showTicks, isFalse);
         expect(config.showAxisLine, isFalse);
-        expect(config.showLabels, isFalse);
+        expect(config.shouldShowTickLabels, isFalse);
         expect(config.minWidth, equals(50.0));
         expect(config.maxWidth, equals(100.0));
         expect(config.tickCount, equals(5));
@@ -66,8 +66,8 @@ void main() {
         expect(config.max, isNull);
         expect(config.showTicks, isTrue);
         expect(config.showAxisLine, isTrue);
-        expect(config.showLabels, isTrue);
-        expect(config.minWidth, equals(40.0));
+        expect(config.shouldShowTickLabels, isTrue);
+        expect(config.minWidth, equals(0.0));
         expect(config.maxWidth, equals(80.0));
         expect(config.tickCount, isNull);
         expect(config.labelFormatter, isNull);
@@ -85,16 +85,7 @@ void main() {
         );
       });
 
-      test('throws assertion error for minWidth <= 0', () {
-        expect(
-          () => YAxisConfig(
-            id: 'test',
-            position: YAxisPosition.left,
-            minWidth: 0,
-          ),
-          throwsA(isA<AssertionError>()),
-        );
-
+      test('throws assertion error for negative minWidth', () {
         expect(
           () => YAxisConfig(
             id: 'test',
@@ -244,7 +235,7 @@ void main() {
           max: 400,
           showTicks: false,
           showAxisLine: false,
-          showLabels: false,
+          labelDisplay: AxisLabelDisplay.none,
           minWidth: 50,
           maxWidth: 100,
           tickCount: 5,
@@ -260,7 +251,7 @@ void main() {
         expect(copy.max, equals(400));
         expect(copy.showTicks, isFalse);
         expect(copy.showAxisLine, isFalse);
-        expect(copy.showLabels, isFalse);
+        expect(copy.shouldShowTickLabels, isFalse);
         expect(copy.minWidth, equals(50));
         expect(copy.maxWidth, equals(100));
         expect(copy.tickCount, equals(5));

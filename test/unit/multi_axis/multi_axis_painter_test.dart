@@ -463,11 +463,12 @@ void main() {
     });
 
     group('formatTickLabel', () {
-      test('formats tick value with unit suffix', () {
+      test('formats tick value with unit suffix when labelDisplay shows tick unit', () {
         final axis = YAxisConfig(
           id: 'power',
           position: YAxisPosition.left,
           unit: 'W',
+          labelDisplay: AxisLabelDisplay.labelAndTickUnit,
         );
         final painter = MultiAxisPainter(
           axes: [axis],
@@ -480,10 +481,13 @@ void main() {
         expect(label, contains('W'));
       });
 
-      test('formats tick value without unit suffix when not provided', () {
+      test('formats tick value without unit suffix with default labelDisplay', () {
         final axis = YAxisConfig(
           id: 'power',
           position: YAxisPosition.left,
+          unit: 'W',
+          // Default: labelDisplay: AxisLabelDisplay.labelWithUnit
+          // which shows unit on label, not on ticks
         );
         final painter = MultiAxisPainter(
           axes: [axis],
@@ -492,14 +496,16 @@ void main() {
 
         final label = painter.formatTickLabel(240.0, axis);
 
+        // With default labelWithUnit, unit goes on axis label, not ticks
         expect(label, equals('240'));
       });
 
-      test('formats decimal values appropriately', () {
+      test('formats decimal values appropriately with tick unit', () {
         final axis = YAxisConfig(
           id: 'percentage',
           position: YAxisPosition.left,
           unit: '%',
+          labelDisplay: AxisLabelDisplay.labelAndTickUnit,
         );
         final painter = MultiAxisPainter(
           axes: [axis],
@@ -620,11 +626,13 @@ void main() {
         id: 'power',
         position: YAxisPosition.left,
         unit: 'W',
+        labelDisplay: AxisLabelDisplay.labelAndTickUnit,
       );
       final hrAxis = YAxisConfig(
         id: 'heartrate',
         position: YAxisPosition.right,
         unit: 'bpm',
+        labelDisplay: AxisLabelDisplay.labelAndTickUnit,
       );
 
       final bounds = {
@@ -645,7 +653,7 @@ void main() {
       final hrTicks = painter.generateTicks(bounds['heartrate']!, maxTicks: 10);
       expect(hrTicks.every((t) => t >= 60 && t <= 200), isTrue);
 
-      // Labels should show original values with units
+      // Labels should show original values with units (when labelDisplay shows tick unit)
       final powerLabel = painter.formatTickLabel(240.0, powerAxis);
       expect(powerLabel, contains('W'));
 

@@ -1,4 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
+// Import internal classes for resolver unit tests
+import 'package:braven_charts/src/models/series_axis_binding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,39 +15,33 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue, // Power is blue
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                    color: null, // Should derive blue from series
+                  ),
                 ),
                 LineChartSeries(
                   id: 'hr',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 60),
                     ChartDataPoint(x: 1, y: 180),
                   ],
                   color: Colors.red, // HR is red
+                  yAxisConfig: YAxisConfig(
+                    id: 'hr-axis',
+                    position: YAxisPosition.right,
+                    color: null, // Should derive red from series
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'power-axis',
-                  position: YAxisPosition.left,
-                  color: null, // Should derive blue from power series
-                ),
-                YAxisConfig(
-                  id: 'hr-axis',
-                  position: YAxisPosition.right,
-                  color: null, // Should derive red from hr series
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
-                SeriesAxisBinding(seriesId: 'hr', yAxisId: 'hr-axis'),
               ],
             ),
           ),
@@ -57,7 +53,7 @@ void main() {
       // Verify chart renders without error
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Verify AxisColorResolver behavior
+      // Verify AxisColorResolver behavior (internal API)
       const powerSeries = ChartSeries(
         id: 'power',
         points: [],
@@ -108,25 +104,20 @@ void main() {
           home: Scaffold(
             body: BravenChartPlus(
               chartType: ChartType.line,
-              series: const [
+              series: [
                 LineChartSeries(
                   id: 'power',
-                  points: [
+                  points: const [
                     ChartDataPoint(x: 0, y: 100),
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue, // Series is blue
+                  yAxisConfig: YAxisConfig(
+                    id: 'power-axis',
+                    position: YAxisPosition.left,
+                    color: greenColor, // Explicit green overrides blue
+                  ),
                 ),
-              ],
-              yAxes: [
-                YAxisConfig(
-                  id: 'power-axis',
-                  position: YAxisPosition.left,
-                  color: greenColor, // Explicit green overrides blue
-                ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
               ],
             ),
           ),
@@ -138,7 +129,7 @@ void main() {
       // Verify chart renders without error
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Verify AxisColorResolver behavior
+      // Verify AxisColorResolver behavior (internal API)
       const powerSeries = ChartSeries(
         id: 'power',
         points: [],
@@ -165,7 +156,7 @@ void main() {
     });
 
     testWidgets('shared axis uses first bound series color', (tester) async {
-      // Two series bound to same axis - axis uses first series' color
+      // Two series bound to same axis via yAxisId - axis uses first series' color
 
       await tester.pumpWidget(
         MaterialApp(
@@ -180,6 +171,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 75),
                   ],
                   color: Colors.green, // First series - GREEN
+                  yAxisId: 'percentage-axis',
                 ),
                 LineChartSeries(
                   id: 'memory',
@@ -188,6 +180,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 80),
                   ],
                   color: Colors.purple, // Second series - PURPLE
+                  yAxisId: 'percentage-axis',
                 ),
               ],
               yAxes: [
@@ -196,10 +189,6 @@ void main() {
                   position: YAxisPosition.left,
                   color: null, // Should use green (first bound series)
                 ),
-              ],
-              axisBindings: const [
-                SeriesAxisBinding(seriesId: 'cpu', yAxisId: 'percentage-axis'),
-                SeriesAxisBinding(seriesId: 'memory', yAxisId: 'percentage-axis'),
               ],
             ),
           ),
@@ -211,7 +200,7 @@ void main() {
       // Verify chart renders without error
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Verify AxisColorResolver behavior with shared axis
+      // Verify AxisColorResolver behavior with shared axis (internal API)
       const cpuSeries = ChartSeries(
         id: 'cpu',
         points: [],
@@ -258,6 +247,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue,
+                  // No yAxisId or yAxisConfig - not bound to unbound-axis
                 ),
               ],
               yAxes: [
@@ -267,8 +257,6 @@ void main() {
                   color: null, // No binding, no explicit color
                 ),
               ],
-              // No bindings - axis has no bound series
-              axisBindings: const [],
             ),
           ),
         ),
@@ -279,7 +267,7 @@ void main() {
       // Verify chart renders without error
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Verify AxisColorResolver behavior with unbound axis
+      // Verify AxisColorResolver behavior with unbound axis (internal API)
       final unboundAxis = YAxisConfig(
         id: 'unbound-axis',
         position: YAxisPosition.left,
