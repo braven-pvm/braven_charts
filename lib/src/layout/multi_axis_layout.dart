@@ -149,6 +149,8 @@ class MultiAxisLayoutDelegate {
 
   /// Formats a numeric value for width measurement.
   ///
+  /// Uses the same formatting logic as MultiAxisPainter.formatTickLabel()
+  /// to ensure consistent width calculations.
   /// Respects [YAxisConfig.shouldShowTickUnit] to determine if unit suffix
   /// should be included in the formatted string.
   String _formatValue(double value, YAxisConfig axis) {
@@ -159,8 +161,20 @@ class MultiAxisLayoutDelegate {
     String formatted;
     if (value == value.roundToDouble()) {
       formatted = value.toInt().toString();
-    } else {
+    } else if (value.abs() < 1) {
+      // Small decimals - show more precision (matches painter)
       formatted = value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      // Medium values - show one decimal if needed (matches painter)
+      final rounded = _roundToDecimals(value, 1);
+      if (rounded == rounded.roundToDouble()) {
+        formatted = rounded.toInt().toString();
+      } else {
+        formatted = rounded.toStringAsFixed(1);
+      }
+    } else {
+      // Large values - show as integer (matches painter)
+      formatted = value.round().toString();
     }
 
     // Only append unit if shouldShowTickUnit is true
@@ -169,6 +183,21 @@ class MultiAxisLayoutDelegate {
     }
 
     return formatted;
+  }
+
+  /// Rounds a value to the specified number of decimal places.
+  double _roundToDecimals(double value, int decimals) {
+    final multiplier = _pow10(decimals);
+    return (value * multiplier).round() / multiplier;
+  }
+
+  /// Returns 10^n for positive n.
+  double _pow10(int n) {
+    var result = 1.0;
+    for (var i = 0; i < n; i++) {
+      result *= 10;
+    }
+    return result;
   }
 
   /// Measures the width of text using TextPainter.
