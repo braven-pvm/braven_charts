@@ -61,6 +61,12 @@ enum AxisLabelDisplay {
   /// Use when: Space is very limited, only tick units needed.
   tickUnitOnly,
 
+  /// Shows no axis label, tick values without unit suffix.
+  ///
+  /// Example: Label = (none), Ticks = "250", "500", "750"
+  /// Use when: Maximum space efficiency, values self-explanatory.
+  tickOnly,
+
   /// Hides both axis label and unit suffixes on ticks.
   ///
   /// Example: Label = (none), Ticks = "250", "500", "750"
@@ -319,9 +325,10 @@ class YAxisConfig {
   ///
   /// Based on [labelDisplay] setting:
   /// - Shows label for: labelOnly, labelWithUnit, labelAndTickUnit, labelWithUnitAndTickUnit
-  /// - Hides label for: tickUnitOnly, none
+  /// - Hides label for: tickUnitOnly, tickOnly, none
   bool get shouldShowAxisLabel {
     return labelDisplay != AxisLabelDisplay.tickUnitOnly &&
+        labelDisplay != AxisLabelDisplay.tickOnly &&
         labelDisplay != AxisLabelDisplay.none;
   }
 
@@ -329,17 +336,16 @@ class YAxisConfig {
   ///
   /// Based on [labelDisplay] setting:
   /// - Appends unit for: labelWithUnit, labelWithUnitAndTickUnit
-  /// - No unit for: labelOnly, labelAndTickUnit, tickUnitOnly, none
+  /// - No unit for: labelOnly, labelAndTickUnit, tickUnitOnly, tickOnly, none
   bool get shouldAppendUnitToLabel {
-    return labelDisplay == AxisLabelDisplay.labelWithUnit ||
-        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
+    return labelDisplay == AxisLabelDisplay.labelWithUnit || labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
   }
 
   /// Returns true if the unit should be shown on tick labels.
   ///
   /// Based on [labelDisplay] setting:
   /// - Shows unit for: labelAndTickUnit, labelWithUnitAndTickUnit, tickUnitOnly
-  /// - No unit for: labelOnly, labelWithUnit, none
+  /// - No unit for: labelOnly, labelWithUnit, tickOnly, none
   bool get shouldShowTickUnit {
     return labelDisplay == AxisLabelDisplay.labelAndTickUnit ||
         labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit ||
@@ -348,9 +354,9 @@ class YAxisConfig {
 
   /// Returns true if tick labels (values) should be displayed.
   ///
-  /// Tick labels are shown for all modes except when explicitly hidden.
+  /// Tick labels are shown for all modes except none.
   /// Note: This is independent of whether units are shown on ticks.
   bool get shouldShowTickLabels {
-    return labelDisplay != AxisLabelDisplay.none || labelDisplay == AxisLabelDisplay.tickUnitOnly;
+    return labelDisplay != AxisLabelDisplay.none;
   }
 }
