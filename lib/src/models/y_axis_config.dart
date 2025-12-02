@@ -8,6 +8,66 @@ import 'dart:ui' show Color;
 
 import 'y_axis_position.dart';
 
+/// Controls how axis labels and units are displayed on Y-axes.
+///
+/// This enum provides fine-grained control over the display of axis titles
+/// and unit suffixes, enabling space-efficient layouts by consolidating
+/// unit information in the axis label rather than repeating it on every tick.
+///
+/// Example:
+/// ```dart
+/// // Most space-efficient: "Power (W)" label + "250", "500" ticks
+/// YAxisConfig(
+///   label: 'Power',
+///   unit: 'W',
+///   labelDisplay: AxisLabelDisplay.labelWithUnit,
+/// )
+///
+/// // Most verbose: "Power (W)" label + "250 W", "500 W" ticks
+/// YAxisConfig(
+///   label: 'Power',
+///   unit: 'W',
+///   labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
+/// )
+/// ```
+enum AxisLabelDisplay {
+  /// Shows axis label only, tick values without unit.
+  ///
+  /// Example: Label = "Power", Ticks = "250", "500", "750"
+  /// Use when: Unit is obvious from context or not needed.
+  labelOnly,
+
+  /// Shows axis label with unit appended, tick values without unit.
+  ///
+  /// Example: Label = "Power (W)", Ticks = "250", "500", "750"
+  /// Use when: Space efficiency is important. **Recommended default.**
+  labelWithUnit,
+
+  /// Shows axis label only, tick values with unit suffix.
+  ///
+  /// Example: Label = "Power", Ticks = "250 W", "500 W", "750 W"
+  /// Use when: Label context is clear but tick units needed.
+  labelAndTickUnit,
+
+  /// Shows axis label with unit AND tick values with unit (most verbose).
+  ///
+  /// Example: Label = "Power (W)", Ticks = "250 W", "500 W", "750 W"
+  /// Use when: Maximum clarity is needed, space is not a concern.
+  labelWithUnitAndTickUnit,
+
+  /// Shows no axis label, tick values with unit suffix.
+  ///
+  /// Example: Label = (none), Ticks = "250 W", "500 W", "750 W"
+  /// Use when: Space is very limited, only tick units needed.
+  tickUnitOnly,
+
+  /// Hides both axis label and unit suffixes on ticks.
+  ///
+  /// Example: Label = (none), Ticks = "250", "500", "750"
+  /// Use when: Minimal display, unit communicated elsewhere.
+  none,
+}
+
 /// Typedef for custom Y-axis label formatters.
 typedef YAxisLabelFormatter = String Function(double value);
 
@@ -59,7 +119,7 @@ class YAxisConfig {
     this.max,
     this.showTicks = true,
     this.showAxisLine = true,
-    this.showLabels = true,
+    this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 40.0,
     this.maxWidth = 80.0,
     this.tickCount,
@@ -125,8 +185,11 @@ class YAxisConfig {
   /// Whether to show the axis line.
   final bool showAxisLine;
 
-  /// Whether to show tick labels.
-  final bool showLabels;
+  /// Controls display of axis label and tick unit suffixes.
+  ///
+  /// Defaults to [AxisLabelDisplay.labelWithUnit] for space efficiency.
+  /// See [AxisLabelDisplay] for all available display modes.
+  final AxisLabelDisplay labelDisplay;
 
   // ========== Sizing ==========
 
@@ -169,7 +232,7 @@ class YAxisConfig {
     double? max,
     bool? showTicks,
     bool? showAxisLine,
-    bool? showLabels,
+    AxisLabelDisplay? labelDisplay,
     double? minWidth,
     double? maxWidth,
     int? tickCount,
@@ -185,7 +248,7 @@ class YAxisConfig {
       max: max ?? this.max,
       showTicks: showTicks ?? this.showTicks,
       showAxisLine: showAxisLine ?? this.showAxisLine,
-      showLabels: showLabels ?? this.showLabels,
+      labelDisplay: labelDisplay ?? this.labelDisplay,
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
       tickCount: tickCount ?? this.tickCount,
@@ -206,7 +269,7 @@ class YAxisConfig {
         other.max == max &&
         other.showTicks == showTicks &&
         other.showAxisLine == showAxisLine &&
-        other.showLabels == showLabels &&
+        other.labelDisplay == labelDisplay &&
         other.minWidth == minWidth &&
         other.maxWidth == maxWidth &&
         other.tickCount == tickCount &&
@@ -224,7 +287,7 @@ class YAxisConfig {
         max,
         showTicks,
         showAxisLine,
-        showLabels,
+        labelDisplay,
         minWidth,
         maxWidth,
         tickCount,
@@ -243,10 +306,51 @@ class YAxisConfig {
         'max: $max, '
         'showTicks: $showTicks, '
         'showAxisLine: $showAxisLine, '
-        'showLabels: $showLabels, '
+        'labelDisplay: $labelDisplay, '
         'minWidth: $minWidth, '
         'maxWidth: $maxWidth, '
         'tickCount: $tickCount'
         ')';
+  }
+
+  // ========== Helper Methods ==========
+
+  /// Returns true if the axis label should be displayed.
+  ///
+  /// Based on [labelDisplay] setting:
+  /// - Shows label for: labelOnly, labelWithUnit, labelAndTickUnit, labelWithUnitAndTickUnit
+  /// - Hides label for: tickUnitOnly, none
+  bool get shouldShowAxisLabel {
+    return labelDisplay != AxisLabelDisplay.tickUnitOnly &&
+        labelDisplay != AxisLabelDisplay.none;
+  }
+
+  /// Returns true if the unit should be appended to the axis label.
+  ///
+  /// Based on [labelDisplay] setting:
+  /// - Appends unit for: labelWithUnit, labelWithUnitAndTickUnit
+  /// - No unit for: labelOnly, labelAndTickUnit, tickUnitOnly, none
+  bool get shouldAppendUnitToLabel {
+    return labelDisplay == AxisLabelDisplay.labelWithUnit ||
+        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
+  }
+
+  /// Returns true if the unit should be shown on tick labels.
+  ///
+  /// Based on [labelDisplay] setting:
+  /// - Shows unit for: labelAndTickUnit, labelWithUnitAndTickUnit, tickUnitOnly
+  /// - No unit for: labelOnly, labelWithUnit, none
+  bool get shouldShowTickUnit {
+    return labelDisplay == AxisLabelDisplay.labelAndTickUnit ||
+        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit ||
+        labelDisplay == AxisLabelDisplay.tickUnitOnly;
+  }
+
+  /// Returns true if tick labels (values) should be displayed.
+  ///
+  /// Tick labels are shown for all modes except when explicitly hidden.
+  /// Note: This is independent of whether units are shown on ticks.
+  bool get shouldShowTickLabels {
+    return labelDisplay != AxisLabelDisplay.none || labelDisplay == AxisLabelDisplay.tickUnitOnly;
   }
 }

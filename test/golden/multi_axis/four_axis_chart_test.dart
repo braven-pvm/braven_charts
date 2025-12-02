@@ -295,7 +295,7 @@ void main() {
                     color: Colors.blue,
                     showAxisLine: true,
                     showTicks: true,
-                    showLabels: true,
+                    labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
                   YAxisConfig(
                     id: 'hr-axis',
@@ -305,7 +305,7 @@ void main() {
                     color: Colors.red,
                     showAxisLine: false, // Hidden axis line
                     showTicks: true,
-                    showLabels: true,
+                    labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
                   YAxisConfig(
                     id: 'cadence-axis',
@@ -315,7 +315,7 @@ void main() {
                     color: Colors.green,
                     showAxisLine: true,
                     showTicks: false, // Hidden ticks
-                    showLabels: true,
+                    labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
                   YAxisConfig(
                     id: 'speed-axis',
@@ -325,7 +325,7 @@ void main() {
                     color: Colors.orange,
                     showAxisLine: true,
                     showTicks: true,
-                    showLabels: true,
+                    labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
                 ],
                 normalizationMode: NormalizationMode.perSeries,
