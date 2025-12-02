@@ -226,9 +226,10 @@ class MultiAxisPainter {
 
     // Position horizontally within the axis strip
     // The text is rotated 90°, so textPainter.height is the effective width
+    // axisMargin provides space from the outer edge
     final labelX = isLeftSide
-        ? axisRect.left + axis.axisLabelPadding + (textPainter.height / 2)
-        : axisRect.right - axis.axisLabelPadding - (textPainter.height / 2);
+        ? axisRect.left + axis.axisMargin + (textPainter.height / 2)
+        : axisRect.right - axis.axisMargin - (textPainter.height / 2);
 
     canvas.translate(labelX, centerY);
 

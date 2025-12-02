@@ -355,7 +355,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             label: 'Small',
             axisMargin: 0,
             axisLabelPadding: 0,
-            tickLabelPadding: 0,
+            tickLabelPadding: 20,
             showAxisLine: true,
             minWidth: 0,
             unit: 'RPM',
