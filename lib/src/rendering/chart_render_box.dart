@@ -507,6 +507,9 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
+    // DEBUG: Log X-axis being set
+    debugPrint('🔧 setXAxis called: dataMin=${axis?.dataMin}, dataMax=${axis?.dataMax}');
+    
     // [DEBUG OUTPUT REMOVED] X-axis updates - fire frequently during streaming
     _xAxis = axis;
 
@@ -1495,6 +1498,13 @@ class ChartRenderBox extends RenderBox {
     if (_xAxis != null && _yAxis != null) {
       // Only create initial transform if none exists, otherwise preserve zoom/pan state
       if (_transform == null) {
+        // DEBUG: Log axis values BEFORE creating transform
+        debugPrint('🔍 AXIS VALUES BEFORE INITIAL TRANSFORM:');
+        debugPrint('   _xAxis.dataMin = ${_xAxis!.dataMin}');
+        debugPrint('   _xAxis.dataMax = ${_xAxis!.dataMax}');
+        debugPrint('   _yAxis.dataMin = ${_yAxis!.dataMin}');
+        debugPrint('   _yAxis.dataMax = ${_yAxis!.dataMax}');
+        
         // First time: create transform from axis data ranges
         _transform = ChartTransform(
           dataXMin: _xAxis!.dataMin,
