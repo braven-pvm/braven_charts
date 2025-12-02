@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'dart:math' as math;
+
 import 'package:flutter/painting.dart';
 
 import '../models/data_range.dart';
@@ -63,14 +65,20 @@ class MultiAxisLayoutDelegate {
       double computedWidth = 0.0;
 
       if (bounds != null) {
-        // Compute maximum label width from min and max values
-        final minLabel = _formatValue(bounds.min, axis);
-        final maxLabel = _formatValue(bounds.max, axis);
+        // Generate representative tick values (nice round numbers) for width measurement.
+        // This ensures we measure what will actually be displayed, not raw bounds.
+        final representativeTicks = _generateRepresentativeTicks(bounds.min, bounds.max);
 
-        final minWidth = _measureTextWidth(minLabel, labelStyle);
-        final maxWidth = _measureTextWidth(maxLabel, labelStyle);
+        double maxLabelWidth = 0.0;
+        for (final tickValue in representativeTicks) {
+          final label = _formatValue(tickValue, axis);
+          final width = _measureTextWidth(label, labelStyle);
+          if (width > maxLabelWidth) {
+            maxLabelWidth = width;
+          }
+        }
 
-        computedWidth = minWidth > maxWidth ? minWidth : maxWidth;
+        computedWidth = maxLabelWidth;
       }
 
       // Add tick mark width if ticks are shown
@@ -184,6 +192,76 @@ class MultiAxisLayoutDelegate {
     }
 
     return formatted;
+  }
+
+  /// Generates representative tick values for width measurement.
+  ///
+  /// These are "nice" round numbers that match what the painter will
+  /// actually display, ensuring accurate width calculations.
+  List<double> _generateRepresentativeTicks(double minValue, double maxValue) {
+    final range = maxValue - minValue;
+    if (range <= 0) return [minValue];
+
+    // Compute a nice tick spacing (same algorithm as MultiAxisPainter)
+    final roughTickSpacing = range / 5; // Aim for ~5 ticks
+    final niceSpacing = _niceNum(roughTickSpacing, round: true);
+
+    // Round min down and max up to nice values
+    final niceMin = (minValue / niceSpacing).floor() * niceSpacing;
+    final niceMax = (maxValue / niceSpacing).ceil() * niceSpacing;
+
+    // Generate tick values
+    final ticks = <double>[];
+    var tick = niceMin;
+    while (tick <= niceMax + niceSpacing * 0.5) {
+      ticks.add(tick);
+      tick += niceSpacing;
+      if (ticks.length > 20) break; // Safety limit
+    }
+
+    // Always include at least the extremes if no ticks generated
+    if (ticks.isEmpty) {
+      ticks.add(minValue);
+      ticks.add(maxValue);
+    }
+
+    return ticks;
+  }
+
+  /// Returns a "nice" number that is approximately equal to range.
+  ///
+  /// A "nice" number is either 1, 2, or 5 times a power of 10.
+  /// If [round] is true, rounds to nearest nice number; otherwise rounds up.
+  double _niceNum(double range, {bool round = true}) {
+    if (range == 0) return 0;
+
+    final exponent = (math.log(range.abs()) / math.ln10).floor();
+    final fraction = range / math.pow(10, exponent);
+
+    double niceFraction;
+    if (round) {
+      if (fraction < 1.5) {
+        niceFraction = 1;
+      } else if (fraction < 3) {
+        niceFraction = 2;
+      } else if (fraction < 7) {
+        niceFraction = 5;
+      } else {
+        niceFraction = 10;
+      }
+    } else {
+      if (fraction <= 1) {
+        niceFraction = 1;
+      } else if (fraction <= 2) {
+        niceFraction = 2;
+      } else if (fraction <= 5) {
+        niceFraction = 5;
+      } else {
+        niceFraction = 10;
+      }
+    }
+
+    return niceFraction * math.pow(10, exponent);
   }
 
   /// Rounds a value to the specified number of decimal places.
