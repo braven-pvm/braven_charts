@@ -42,5 +42,5 @@ hash.txt
 *.temp
 terminal_input.txt
 
-# Orchestra - separate git repository
-tools/orchestra/
+# Orchestra - now a submodule (remove ignore to allow submodule tracking)
+# tools/orchestra/
