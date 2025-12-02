@@ -126,7 +126,6 @@ void main() {
           YAxisConfig(
             id: 'test',
             position: YAxisPosition.left,
-            showTicks: true,
           ),
         ];
         final bounds = {

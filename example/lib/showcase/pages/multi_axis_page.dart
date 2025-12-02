@@ -350,22 +350,20 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         ),
         yAxes: [
           YAxisConfig(
-            id: 'small_axis',
-            position: YAxisPosition.left,
-            label: 'Small',
-            axisMargin: 5,
-            axisLabelPadding: 5,
-            tickLabelPadding: 0,
-            minWidth: 0,
-            showAxisLine: true,
-            unit: 'RPM',
-            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
-            labelFormatter: (value) {
-              return value.toStringAsFixed(2);
-              // return "$value";
-            },
-            
-          ),
+              id: 'small_axis',
+              position: YAxisPosition.left,
+              label: 'Small',
+              axisMargin: 5,
+              axisLabelPadding: 5,
+              tickLabelPadding: 0,
+              minWidth: 0,
+              showAxisLine: true,
+              unit: 'RPM',
+              labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
+              labelFormatter: (value) {
+                return value.toStringAsFixed(2);
+                // return "$value";
+              }),
           YAxisConfig(
             id: 'large_axis',
             position: YAxisPosition.leftOuter,
