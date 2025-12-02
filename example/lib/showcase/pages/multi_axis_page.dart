@@ -371,7 +371,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             label: 'Medium',
             showAxisLine: true,
             unit: 'BPM',
-            labelDisplay: AxisLabelDisplay.labelWithUnit, // "Medium (BPM)" + tick values without unit
+            labelDisplay: AxisLabelDisplay.tickOnly, // "Medium (BPM)" + tick values without unit
+            
           ),
         ],
         axisBindings: const [
