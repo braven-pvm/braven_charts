@@ -356,8 +356,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             axisMargin: 5,
             axisLabelPadding: 0,
             tickLabelPadding: 0,
-            showAxisLine: true,
             minWidth: 0,
+            showAxisLine: true,
+
             unit: 'RPM',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
             labelFormatter: (value) {

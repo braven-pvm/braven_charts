@@ -446,8 +446,9 @@ class ChartRenderBox extends RenderBox {
   // ==========================================================================
 
   /// Minimum zoom level (relative to original data range).
-  /// 1.0 = cannot zoom out beyond original view (no zoom out allowed).
-  static const double minZoomLevel = 1.0;
+  /// 0.8 = can zoom out to show 125% of original data range.
+  /// This provides headroom for data at the edges to be fully visible.
+  static const double minZoomLevel = 0.8;
 
   /// Maximum zoom level (relative to original data range).
   /// 10.0 = can zoom in to show 1/10th of original data range.
@@ -751,25 +752,31 @@ class ChartRenderBox extends RenderBox {
         _originalTransform != null &&
         (_transform!.dataYMin != _originalTransform!.dataYMin || _transform!.dataYMax != _originalTransform!.dataYMax);
 
-    // Get the normalized viewport range (0-1 when at original position)
-    final viewportYMin = _transform?.dataYMin ?? 0.0;
-    final viewportYMax = _transform?.dataYMax ?? 1.0;
-
     for (final axis in _yAxes!) {
       // Use explicit bounds if provided
       if (axis.min != null && axis.max != null) {
         final fullMin = axis.min!;
         final fullMax = axis.max!;
 
+        // Add 5% padding buffer even for explicit bounds
+        final explicitRange = fullMax - fullMin;
+        final explicitPadding = explicitRange * 0.05;
+        final explicitPaddedMin = fullMin - explicitPadding;
+        final explicitPaddedMax = fullMax + explicitPadding;
+
         if (isViewportTransformed) {
           // Transform explicit bounds based on viewport (zoom/pan)
-          final range = fullMax - fullMin;
+          // Use the buffer range (-0.05 to 1.05) for viewport calculation
+          const bufferRange = 1.1;
+          final viewportNormMin = (_transform!.dataYMin + 0.05) / bufferRange;
+          final viewportNormMax = (_transform!.dataYMax + 0.05) / bufferRange;
+          final paddedRange = explicitPaddedMax - explicitPaddedMin;
           bounds[axis.id] = DataRange(
-            min: fullMin + (viewportYMin * range),
-            max: fullMin + (viewportYMax * range),
+            min: explicitPaddedMin + (viewportNormMin * paddedRange),
+            max: explicitPaddedMin + (viewportNormMax * paddedRange),
           );
         } else {
-          bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+          bounds[axis.id] = DataRange(min: explicitPaddedMin, max: explicitPaddedMax);
         }
         continue;
       }
@@ -796,16 +803,27 @@ class ChartRenderBox extends RenderBox {
       final fullMin = axis.min ?? minY ?? 0.0;
       final fullMax = axis.max ?? maxY ?? 100.0;
 
+      // Add 5% padding buffer to prevent data points from being cut off at edges
+      // This matches the padding used in DataConverter.computeBounds()
+      final range = fullMax - fullMin;
+      final paddingAmount = range * 0.05;
+      final paddedMin = fullMin - paddingAmount;
+      final paddedMax = fullMax + paddingAmount;
+
       if (isViewportTransformed) {
         // Transform computed bounds based on viewport (zoom/pan)
         // The viewport Y range maps to the visible portion of the data
-        final range = fullMax - fullMin;
+        // Use the buffer range (-0.05 to 1.05) for viewport calculation
+        const bufferRange = 1.1; // -0.05 to 1.05
+        final viewportNormMin = (_transform!.dataYMin + 0.05) / bufferRange; // Convert from buffer space to 0-1
+        final viewportNormMax = (_transform!.dataYMax + 0.05) / bufferRange;
+        final paddedRange = paddedMax - paddedMin;
         bounds[axis.id] = DataRange(
-          min: fullMin + (viewportYMin * range),
-          max: fullMin + (viewportYMax * range),
+          min: paddedMin + (viewportNormMin * paddedRange),
+          max: paddedMin + (viewportNormMax * paddedRange),
         );
       } else {
-        bounds[axis.id] = DataRange(min: fullMin, max: fullMax);
+        bounds[axis.id] = DataRange(min: paddedMin, max: paddedMax);
       }
     }
 
