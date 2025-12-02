@@ -134,7 +134,7 @@ class YAxisConfig {
     this.tickCount,
     this.labelFormatter,
   })  : assert(id.isNotEmpty, 'id must be non-empty'),
-        assert(minWidth > 0, 'minWidth must be positive'),
+        assert(minWidth >= 0, 'minWidth must be non-negative'),
         assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
         assert(
           min == null || max == null || min < max,
@@ -204,7 +204,8 @@ class YAxisConfig {
 
   /// Minimum width of the axis area in logical pixels.
   ///
-  /// Must be positive.
+  /// Must be non-negative. Set to 0 to allow the axis to shrink
+  /// to fit its actual content. Defaults to 40.0.
   final double minWidth;
 
   /// Maximum width of the axis area in logical pixels.
