@@ -4584,8 +4584,11 @@ class ChartRenderBox extends RenderBox {
       // Get axis color
       final axisColor = _resolveAxisColor(axis);
 
-      // Format the value with unit
-      final displayValue = MultiAxisValueFormatter.format(value: denormalizedY, unit: axis.unit);
+      // Format the value - follow the same unit display rule as tick labels
+      // If axis.shouldShowTickUnit is true, include unit; otherwise value only
+      final displayValue = axis.shouldShowTickUnit
+          ? MultiAxisValueFormatter.format(value: denormalizedY, unit: axis.unit)
+          : MultiAxisValueFormatter.format(value: denormalizedY, unit: null);
 
       final textPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle.copyWith(color: textStyle.color)),
