@@ -2962,16 +2962,11 @@ class ChartRenderBox extends RenderBox {
 
       // Apply zoom centered on cursor position with constraints
       final tentativeTransform = _transform!.zoom(zoomFactor, plotPosition);
-      var clampedTransform = _clampZoomLevel(tentativeTransform);
+      final clampedTransform = _clampZoomLevel(tentativeTransform);
 
-      // In multi-axis mode, disable Y-axis zoom by preserving original Y bounds
-      // This is required because per-axis normalization would break with Y-zoom
-      if (_hasMultipleYAxes()) {
-        clampedTransform = clampedTransform.copyWith(
-          dataYMin: _transform!.dataYMin,
-          dataYMax: _transform!.dataYMax,
-        );
-      }
+      // Note: Previously Y-axis zoom was disabled for multi-axis charts.
+      // This restriction was removed because perSeries normalization now
+      // correctly handles Y-zoom with synchronized axis label updates.
 
       _transform = clampedTransform;
 

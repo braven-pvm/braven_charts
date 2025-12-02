@@ -1142,12 +1142,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // the scrollbar/transform calculations match the visual rendering.
     // Each series is rendered with its own Y-axis bounds, but the global
     // transform needs to use a consistent normalized space.
+    // Add 5% padding buffer to prevent data points from being cut off at edges.
     if (widget.normalizationMode == NormalizationMode.perSeries && widget.yAxes != null && widget.yAxes!.isNotEmpty) {
       dataBounds = DataBounds(
         xMin: dataBounds.xMin,
         xMax: dataBounds.xMax,
-        yMin: 0.0, // Normalized Y range for multi-axis
-        yMax: 1.0, // Normalized Y range for multi-axis
+        yMin: -0.05, // 5% buffer below normalized range
+        yMax: 1.05, // 5% buffer above normalized range
       );
     }
 
