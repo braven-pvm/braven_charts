@@ -126,7 +126,7 @@ class YAxisConfig {
     this.showTicks = true,
     this.showAxisLine = true,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
-    this.minWidth = 40.0,
+    this.minWidth = 0.0,
     this.maxWidth = 80.0,
     this.tickLabelPadding = 4.0,
     this.axisLabelPadding = 5.0,
@@ -204,8 +204,8 @@ class YAxisConfig {
 
   /// Minimum width of the axis area in logical pixels.
   ///
-  /// Must be non-negative. Set to 0 to allow the axis to shrink
-  /// to fit its actual content. Defaults to 40.0.
+  /// Must be non-negative. Defaults to 0.0 to allow the axis to
+  /// shrink to fit its actual content. Set higher for fixed-width axes.
   final double minWidth;
 
   /// Maximum width of the axis area in logical pixels.

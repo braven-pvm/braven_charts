@@ -81,16 +81,17 @@ class MultiAxisLayoutDelegate {
       // Add tick label padding (gap between tick marks and tick labels)
       computedWidth += axis.tickLabelPadding;
 
+      // Add axis margin for spacing from outer edge
+      computedWidth += axis.axisMargin;
+
       // Add space for axis label (title) if shown
       if (axis.shouldShowAxisLabel && axis.label != null) {
         // The axis label is rotated 90°, so we need space for its height
         // (which becomes width when rotated). Measure actual text height.
         final axisLabelHeight = _measureAxisLabelHeight(axis);
+        // axisLabelPadding provides gap between label and tick labels
         computedWidth += axisLabelHeight + axis.axisLabelPadding;
       }
-
-      // Add axis margin for spacing between axes
-      computedWidth += axis.axisMargin;
 
       // Clamp to configured min/max
       computedWidth = computedWidth.clamp(axis.minWidth, axis.maxWidth);
