@@ -128,6 +128,8 @@ class YAxisConfig {
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 40.0,
     this.maxWidth = 80.0,
+    this.tickLabelPadding = 4.0,
+    this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
   })  : assert(id.isNotEmpty, 'id must be non-empty'),
@@ -209,6 +211,28 @@ class YAxisConfig {
   /// Must be >= [minWidth].
   final double maxWidth;
 
+  /// Padding between tick marks and tick labels in logical pixels.
+  ///
+  /// Controls the horizontal gap between where the tick mark ends
+  /// and where the tick label text begins. Defaults to 4.0.
+  final double tickLabelPadding;
+
+  /// Margin between this axis and adjacent axes or the plot area.
+  ///
+  /// Creates visual separation between stacked axes (e.g., left and leftOuter)
+  /// and between the innermost axis and the chart plot area. Defaults to 8.0.
+  ///
+  /// Example:
+  /// ```dart
+  /// // More separation between axes
+  /// YAxisConfig(
+  ///   id: 'power',
+  ///   position: YAxisPosition.left,
+  ///   axisMargin: 16.0, // Double the default spacing
+  /// )
+  /// ```
+  final double axisMargin;
+
   // ========== Formatting ==========
 
   /// Preferred number of tick marks.
@@ -241,6 +265,8 @@ class YAxisConfig {
     AxisLabelDisplay? labelDisplay,
     double? minWidth,
     double? maxWidth,
+    double? tickLabelPadding,
+    double? axisMargin,
     int? tickCount,
     YAxisLabelFormatter? labelFormatter,
   }) {
@@ -257,6 +283,8 @@ class YAxisConfig {
       labelDisplay: labelDisplay ?? this.labelDisplay,
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
+      tickLabelPadding: tickLabelPadding ?? this.tickLabelPadding,
+      axisMargin: axisMargin ?? this.axisMargin,
       tickCount: tickCount ?? this.tickCount,
       labelFormatter: labelFormatter ?? this.labelFormatter,
     );
@@ -278,6 +306,8 @@ class YAxisConfig {
         other.labelDisplay == labelDisplay &&
         other.minWidth == minWidth &&
         other.maxWidth == maxWidth &&
+        other.tickLabelPadding == tickLabelPadding &&
+        other.axisMargin == axisMargin &&
         other.tickCount == tickCount &&
         other.labelFormatter == labelFormatter;
   }
@@ -296,6 +326,8 @@ class YAxisConfig {
         labelDisplay,
         minWidth,
         maxWidth,
+        tickLabelPadding,
+        axisMargin,
         tickCount,
         labelFormatter,
       );
@@ -315,6 +347,8 @@ class YAxisConfig {
         'labelDisplay: $labelDisplay, '
         'minWidth: $minWidth, '
         'maxWidth: $maxWidth, '
+        'tickLabelPadding: $tickLabelPadding, '
+        'axisMargin: $axisMargin, '
         'tickCount: $tickCount'
         ')';
   }
@@ -327,9 +361,7 @@ class YAxisConfig {
   /// - Shows label for: labelOnly, labelWithUnit, labelAndTickUnit, labelWithUnitAndTickUnit
   /// - Hides label for: tickUnitOnly, tickOnly, none
   bool get shouldShowAxisLabel {
-    return labelDisplay != AxisLabelDisplay.tickUnitOnly &&
-        labelDisplay != AxisLabelDisplay.tickOnly &&
-        labelDisplay != AxisLabelDisplay.none;
+    return labelDisplay != AxisLabelDisplay.tickUnitOnly && labelDisplay != AxisLabelDisplay.tickOnly && labelDisplay != AxisLabelDisplay.none;
   }
 
   /// Returns true if the unit should be appended to the axis label.

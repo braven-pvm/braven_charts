@@ -78,9 +78,6 @@ class MultiAxisPainter {
   /// Default tick mark length.
   static const double _tickLength = 6.0;
 
-  /// Padding between tick mark and label.
-  static const double _labelPadding = 4.0;
-
   /// Default axis line width.
   static const double _axisLineWidth = 1.0;
 
@@ -299,10 +296,10 @@ class MultiAxisPainter {
     double labelX;
     if (isLeftSide) {
       // Right-align labels on left-side axes
-      labelX = axisRect.right - _tickLength - _labelPadding - textPainter.width;
+      labelX = axisRect.right - _tickLength - axis.tickLabelPadding - textPainter.width;
     } else {
       // Left-align labels on right-side axes
-      labelX = axisRect.left + _tickLength + _labelPadding;
+      labelX = axisRect.left + _tickLength + axis.tickLabelPadding;
     }
 
     // Center label vertically on tick

@@ -34,7 +34,7 @@ class MultiAxisLayoutDelegate {
   /// Default tick mark length in logical pixels.
   static const double tickMarkWidth = 6.0;
 
-  /// Default padding between axis elements.
+  /// Default padding between axis elements (used when not overridden by axis config).
   static const double axisPadding = 4.0;
 
   /// Computes the required width for each axis.
@@ -78,8 +78,11 @@ class MultiAxisLayoutDelegate {
         computedWidth += tickMarkWidth;
       }
 
-      // Add padding
-      computedWidth += axisPadding * 2;
+      // Add tick label padding (from axis config)
+      computedWidth += axis.tickLabelPadding * 2;
+
+      // Add axis margin for spacing between axes
+      computedWidth += axis.axisMargin;
 
       // Clamp to configured min/max
       computedWidth = computedWidth.clamp(axis.minWidth, axis.maxWidth);
