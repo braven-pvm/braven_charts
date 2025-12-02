@@ -354,16 +354,17 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             position: YAxisPosition.left,
             label: 'Small',
             axisMargin: 5,
-            axisLabelPadding: 0,
+            axisLabelPadding: 5,
             tickLabelPadding: 0,
             minWidth: 0,
             showAxisLine: true,
-
             unit: 'RPM',
             labelDisplay: AxisLabelDisplay.labelWithUnit, // "Small (RPM)" + tick values without unit
             labelFormatter: (value) {
-              return "$value";
+              return value.toStringAsFixed(2);
+              // return "$value";
             },
+            
           ),
           YAxisConfig(
             id: 'large_axis',
