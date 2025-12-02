@@ -1046,8 +1046,13 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
+    debugPrint('🔄 RESET VIEW - Original transform: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
+    debugPrint('🔄 RESET VIEW - Current transform: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+
     // Restore original data ranges, preserve current plot dimensions
     _transform = _originalTransform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
+
+    debugPrint('🔄 RESET VIEW - After copy: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
 
     // Update axes to reflect reset viewport
     _updateAxesFromTransform();
@@ -1058,7 +1063,7 @@ class ChartRenderBox extends RenderBox {
     // Invalidate cache - transform reset to original
     _seriesCacheDirty = true;
 
-    // [DEBUG OUTPUT REMOVED] View reset - fires on user action
+    debugPrint('🔄 RESET VIEW - Complete');
   }
 
   /// Updates the data bounds for streaming data that extends beyond original range.
@@ -1505,6 +1510,9 @@ class ChartRenderBox extends RenderBox {
         // CRITICAL: Use copyWith() to create a deep copy, not a reference
         // Otherwise both variables point to same object and zoom breaks scrollbar handle sizing
         _originalTransform = _transform!.copyWith();
+        
+        debugPrint('📊 INITIAL TRANSFORM - X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+        debugPrint('📊 ORIGINAL TRANSFORM (copy) - X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
 
         // Generate initial elements now that we have a transform
         if (_elementGenerator != null) {
