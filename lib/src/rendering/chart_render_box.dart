@@ -509,7 +509,7 @@ class ChartRenderBox extends RenderBox {
 
     // DEBUG: Log X-axis being set
     debugPrint('🔧 setXAxis called: dataMin=${axis?.dataMin}, dataMax=${axis?.dataMax}');
-    
+
     // [DEBUG OUTPUT REMOVED] X-axis updates - fire frequently during streaming
     _xAxis = axis;
 
@@ -1049,8 +1049,10 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
-    debugPrint('🔄 RESET VIEW - Original transform: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
-    debugPrint('🔄 RESET VIEW - Current transform: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
+    debugPrint(
+        '🔄 RESET VIEW - Original transform: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
+    debugPrint(
+        '🔄 RESET VIEW - Current transform: X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
 
     // Restore original data ranges, preserve current plot dimensions
     _transform = _originalTransform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
@@ -1504,7 +1506,7 @@ class ChartRenderBox extends RenderBox {
         debugPrint('   _xAxis.dataMax = ${_xAxis!.dataMax}');
         debugPrint('   _yAxis.dataMin = ${_yAxis!.dataMin}');
         debugPrint('   _yAxis.dataMax = ${_yAxis!.dataMax}');
-        
+
         // First time: create transform from axis data ranges
         _transform = ChartTransform(
           dataXMin: _xAxis!.dataMin,
@@ -1520,9 +1522,10 @@ class ChartRenderBox extends RenderBox {
         // CRITICAL: Use copyWith() to create a deep copy, not a reference
         // Otherwise both variables point to same object and zoom breaks scrollbar handle sizing
         _originalTransform = _transform!.copyWith();
-        
+
         debugPrint('📊 INITIAL TRANSFORM - X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
-        debugPrint('📊 ORIGINAL TRANSFORM (copy) - X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
+        debugPrint(
+            '📊 ORIGINAL TRANSFORM (copy) - X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
 
         // Generate initial elements now that we have a transform
         if (_elementGenerator != null) {
