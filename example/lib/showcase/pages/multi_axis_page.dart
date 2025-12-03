@@ -172,6 +172,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         value: 7.0,
         label: 'VT1',
         lineColor: Colors.green.withValues(alpha: 0.7),
+        lineWidth: 1.5,
+        elevation: 4.0, // Adds subtle glow in default state
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
       ));
@@ -186,11 +188,12 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       ));
       _annotationController.addAnnotation(RangeAnnotation(
         id: 'exercise_zone',
-        startX: 5.0,
-        endX: 15.0,
-        label: 'Exercise Phase',
-        fillColor: Colors.amber.withValues(alpha: 0.1),
-        borderColor: Colors.amber.withValues(alpha: 0.3),
+        startX: 0.0,
+        endX: 5.0,
+        label: 'Warm-up',
+        fillColor: Colors.grey.withValues(alpha: 0.2),
+        labelPosition: AnnotationLabelPosition.bottomLeft,
+        borderColor: Colors.red,
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
         snapToValue: _snapToValue,

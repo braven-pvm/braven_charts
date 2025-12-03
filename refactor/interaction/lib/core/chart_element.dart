@@ -33,7 +33,7 @@ abstract class ChartElement {
   /// (integer comparison vs memcmp).
   ChartElementType get elementType;
 
-  /// Priority level for conflict resolution.
+  /// Priority level for HIT TEST conflict resolution.
   ///
   /// Default implementation derives priority from element type.
   /// Override if element needs dynamic priority based on state
@@ -42,7 +42,23 @@ abstract class ChartElement {
   /// See [ElementPriority] for the complete hierarchy.
   ///
   /// Higher values win conflicts when elements overlap.
+  ///
+  /// **NOTE**: This is for HIT TESTING only, not render order!
+  /// See [renderOrder] for paint z-index.
   int get priority => ElementPriority.forType(elementType);
+
+  /// Render order (z-index) for paint ordering.
+  ///
+  /// **IMPORTANT**: This is SEPARATE from hit test [priority]!
+  /// - [priority] determines which element wins a click
+  /// - [renderOrder] determines which element is painted on top
+  ///
+  /// Lower values paint FIRST (in back), higher values paint LAST (in front).
+  ///
+  /// See [RenderOrder] for the complete hierarchy.
+  ///
+  /// Default returns [RenderOrder.defaultOrder]. Override in subclasses.
+  int get renderOrder => RenderOrder.defaultOrder;
 
   /// Whether this element is currently selected.
   bool get isSelected;

@@ -46,6 +46,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
   late AnnotationAxis _selectedAxis;
   late Color _lineColor;
   late double _lineWidth;
+  late double _elevation;
   late List<double>? _dashPattern;
   late AnnotationLabelPosition _labelPosition;
   late double _labelMargin;
@@ -79,11 +80,12 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
 
     _valueController = TextEditingController(text: initialValue);
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    
+
     if (annotation != null) {
       // Edit mode - use existing annotation values
       _lineColor = annotation.lineColor;
       _lineWidth = annotation.lineWidth;
+      _elevation = annotation.elevation;
       _dashPattern = annotation.dashPattern;
       _labelPosition = annotation.labelPosition;
       _labelMargin = annotation.labelMargin;
@@ -91,6 +93,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       // Create mode with theme defaults
       _lineColor = thresholdDefaults.lineColor;
       _lineWidth = thresholdDefaults.lineWidth;
+      _elevation = 0.0;
       _dashPattern = thresholdDefaults.dashPattern.isNotEmpty ? thresholdDefaults.dashPattern : null;
       _labelPosition = AnnotationLabelPosition.topLeft;
       _labelMargin = 8.0;
@@ -98,6 +101,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       // Fallback defaults (no theme provided)
       _lineColor = Colors.red;
       _lineWidth = 1.0;
+      _elevation = 0.0;
       _dashPattern = null;
       _labelPosition = AnnotationLabelPosition.topLeft;
       _labelMargin = 8.0;
@@ -146,6 +150,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       label: _labelController.text.isEmpty ? null : _labelController.text,
       lineColor: _lineColor,
       lineWidth: _lineWidth,
+      elevation: _elevation,
       dashPattern: _dashPattern,
       labelPosition: _labelPosition,
       labelMargin: _labelMargin,
@@ -315,6 +320,35 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                           width: 50,
                           child: Text(
                             '${_lineWidth.toStringAsFixed(1)}px',
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Elevation/Glow
+                    Row(
+                      children: [
+                        const Icon(Icons.blur_on, size: 20),
+                        const SizedBox(width: 12),
+                        const Text('Glow'),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Slider(
+                            value: _elevation,
+                            min: 0.0,
+                            max: 12.0,
+                            divisions: 24,
+                            label: _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
+                            onChanged: (value) => setState(() => _elevation = value),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 50,
+                          child: Text(
+                            _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
                             textAlign: TextAlign.right,
                           ),
                         ),

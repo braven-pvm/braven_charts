@@ -3708,6 +3708,20 @@ class ChartRenderBox extends RenderBox {
     canvas.translate(_plotArea.left, _plotArea.top);
     canvas.clipRect(Offset.zero & _plotArea.size);
 
+    // ==========================================================================
+    // LAYER 0: Background annotations (Range annotations with renderOrder < 2)
+    // These must paint BEFORE series so they appear behind the data lines
+    // ==========================================================================
+    final backgroundElements = _elements.where((e) => e is! SeriesElement && e.renderOrder < RenderOrder.series).toList()
+      ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
+
+    for (final element in backgroundElements) {
+      if (_transform != null && element is RangeAnnotationElement) {
+        element.updateTransform(_transform!);
+      }
+      element.paint(canvas, _plotArea.size);
+    }
+
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
     final cacheValid = _isCacheValid();
@@ -3732,27 +3746,16 @@ class ChartRenderBox extends RenderBox {
       // [DEBUG OUTPUT REMOVED] Picture regenerated - fires on data updates
     }
 
-    // Paint non-series elements (annotations, handles, etc.)
-    // These are not cached because they're less expensive and change frequently
-    // Sort by: 1) priority (lower = paint first/back), 2) annotation type (Range < others)
-    final nonSeriesElements = _elements.where((e) => e is! SeriesElement).toList()
-      ..sort((a, b) {
-        // First, sort by priority (lower priority = paint first = in back)
-        final priorityCompare = a.priority.compareTo(b.priority);
-        if (priorityCompare != 0) return priorityCompare;
-
-        // Within same priority, RangeAnnotations paint FIRST (in back)
-        final aIsRange = a is RangeAnnotationElement;
-        final bIsRange = b is RangeAnnotationElement;
-
-        if (aIsRange && !bIsRange) return -1; // a (Range) paints first
-        if (!aIsRange && bIsRange) return 1; // b (Range) paints first
-
-        return 0; // Equal priority and type
-      });
+    // LAYER 2: Foreground annotations (handles, points, text, thresholds, etc.)
+    // These paint AFTER series so they appear on top of data lines
+    // Only paint elements with renderOrder >= series (already painted background in Layer 0)
+    // Sort by renderOrder (lower = paint first/back, higher = paint last/front)
+    // NOTE: renderOrder is SEPARATE from hit test priority!
+    final foregroundElements = _elements.where((e) => e is! SeriesElement && e.renderOrder >= RenderOrder.series).toList()
+      ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
-    for (final element in nonSeriesElements) {
+    for (final element in foregroundElements) {
       // [DEBUG OUTPUT REMOVED] Per-element painting - was firing at 60fps
 
       // Update transform for annotation elements before painting (enables dynamic positioning)
@@ -3775,7 +3778,7 @@ class ChartRenderBox extends RenderBox {
 
     canvas.restore(); // Restore canvas state (removes clipping and translation from plot area)
 
-    // LAYER 2: Overlays (dynamic, always rendered fresh)
+    // LAYER 3: Overlays (dynamic, always rendered fresh)
     // Crosshair, selection box, preview indicators - change every frame during hover/drag
     // Use saveLayer to create independent compositing layer for crosshair
     // This allows Flutter to repaint ONLY the crosshair without touching series layer

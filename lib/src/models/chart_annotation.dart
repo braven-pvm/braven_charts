@@ -452,8 +452,10 @@ class ThresholdAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelPosition = AnnotationLabelPosition.topLeft,
     this.labelMargin = 8.0,
+    this.elevation = 0.0,
   })  : assert(value.isFinite, 'Threshold value must be finite'),
         assert(labelMargin >= 0, 'Label margin must be non-negative'),
+        assert(elevation >= 0, 'Elevation must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
   /// Which axis this threshold line is perpendicular to.
@@ -480,6 +482,15 @@ class ThresholdAnnotation extends ChartAnnotation {
   /// Defaults to 8.0 logical pixels.
   final double labelMargin;
 
+  /// The elevation/glow spread for the threshold line in the default state.
+  ///
+  /// When greater than 0, a glow effect is drawn behind the line using the
+  /// same color as [lineColor]. The value controls the blur radius of the glow.
+  ///
+  /// This only affects the default state (not selected or dragging).
+  /// Defaults to 0.0 (no glow).
+  final double elevation;
+
   /// Creates a copy with modified properties.
   ThresholdAnnotation copyWith({
     String? id,
@@ -495,6 +506,7 @@ class ThresholdAnnotation extends ChartAnnotation {
     List<double>? dashPattern,
     AnnotationLabelPosition? labelPosition,
     double? labelMargin,
+    double? elevation,
   }) {
     return ThresholdAnnotation(
       id: id ?? this.id,
@@ -510,6 +522,7 @@ class ThresholdAnnotation extends ChartAnnotation {
       dashPattern: dashPattern ?? this.dashPattern,
       labelPosition: labelPosition ?? this.labelPosition,
       labelMargin: labelMargin ?? this.labelMargin,
+      elevation: elevation ?? this.elevation,
     );
   }
 }

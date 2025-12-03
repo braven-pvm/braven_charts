@@ -146,6 +146,11 @@ class PointAnnotationElement extends ChartElement {
   ChartElementType get elementType => ChartElementType.datapoint;
 
   @override
+  // Render order is SEPARATE from hit test priority!
+  // Points render in foreground (over series and range annotations)
+  int get renderOrder => RenderOrder.pointAnnotation;
+
+  @override
   bool get isSelected => _isSelected;
 
   @override
@@ -505,6 +510,11 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
   @override
   ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  // Range annotations render in BACKGROUND (behind everything else)
+  // This is SEPARATE from hit test priority!
+  int get renderOrder => RenderOrder.rangeAnnotation;
 
   @override
   bool get isSelected => _isSelected;
@@ -1064,6 +1074,10 @@ class TextAnnotationElement extends ChartElement {
   ChartElementType get elementType => ChartElementType.annotation;
 
   @override
+  // Text annotations render in foreground (on top of data)
+  int get renderOrder => RenderOrder.textAnnotation;
+
+  @override
   bool get isSelected => _isSelected;
 
   @override
@@ -1323,6 +1337,10 @@ class ThresholdAnnotationElement extends ChartElement {
   ChartElementType get elementType => ChartElementType.annotation;
 
   @override
+  // Threshold lines render in data layer (with series)
+  int get renderOrder => RenderOrder.thresholdAnnotation;
+
+  @override
   bool get isSelected => _isSelected;
 
   @override
@@ -1393,6 +1411,22 @@ class ThresholdAnnotationElement extends ChartElement {
 
       // Draw value label during drag (similar to crosshair labels)
       _drawDragValueLabel(canvas, size, value, start, end);
+    }
+
+    // Draw elevation glow in DEFAULT state only (not selected, not dragging)
+    // This creates a subtle glow effect using the line color
+    if (!_isSelected && !isDragging && annotation.elevation > 0) {
+      final elevationPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(60)
+        ..strokeWidth = annotation.lineWidth + annotation.elevation * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, annotation.elevation);
+
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, start, end, elevationPaint, annotation.dashPattern!);
+      } else {
+        canvas.drawLine(start, end, elevationPaint);
+      }
     }
 
     // Draw selection glow (behind the line)
@@ -1996,6 +2030,10 @@ class TrendAnnotationElement extends ChartElement {
 
   @override
   ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  // Trend lines render in data layer (with series)
+  int get renderOrder => RenderOrder.trendAnnotation;
 
   @override
   bool get isSelected => _isSelected;
