@@ -41,6 +41,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   late List<ChartDataPoint> _testLargeRangeData; // 250-1500
   late List<ChartDataPoint> _testMediumRangeData; // 500-800 (right axis)
 
+  // VO2 Max Test data
+  late List<ChartDataPoint> _targetPowerData; // Stepped target zones (0-350W)
+  late List<ChartDataPoint> _feO2Data; // FeO2% (14-19%)
+  late List<ChartDataPoint> _eqO2Data; // EqO2 (20-60)
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +72,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       _testSmallRangeData = _generateSmallRangeData();
       _testLargeRangeData = _generateLargeRangeData();
       _testMediumRangeData = _generateMediumRangeData();
+
+      // VO2 Max Test data
+      _targetPowerData = _generateTargetPowerData();
+      _feO2Data = _generateFeO2Data();
+      _eqO2Data = _generateEqO2Data();
     });
   }
 
@@ -99,12 +109,14 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         children: [
           SegmentedOption<int>(
             value: _selectedDemo,
-            options: const [0, 1, 2],
+            options: const [0, 1, 2, 3],
             labelBuilder: (v) => v == 0
                 ? 'Athletic'
                 : v == 1
                     ? 'Scientific'
-                    : 'Test',
+                    : v == 2
+                        ? 'Test'
+                        : 'VO2 Test',
             onChanged: (v) => setState(() => _selectedDemo = v),
           ),
           const SizedBox(height: 8),
@@ -113,7 +125,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
                 ? 'Power, Heart Rate, and Cadence on different scales'
                 : _selectedDemo == 1
                     ? 'Temperature and Pressure with different units'
-                    : 'Test: Series 1 (0-100) vs Series 2 (250-1500) vs Series 3 (500-800)',
+                    : _selectedDemo == 2
+                        ? 'Test: Series 1 (0-100) vs Series 2 (250-1500) vs Series 3 (500-800)'
+                        : 'VO2 Max Test: Stepped power targets with gas exchange metrics',
           ),
         ],
       ),
@@ -140,8 +154,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           return _buildAthleticChart();
         } else if (_selectedDemo == 1) {
           return _buildScientificChart();
-        } else {
+        } else if (_selectedDemo == 2) {
           return _buildTestChart();
+        } else {
+          return _buildVO2TestChart();
         }
       },
     );
@@ -403,6 +419,111 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
     );
   }
 
+  /// Builds the VO2 Max Test chart - demonstrates stepped area with line overlays.
+  ///
+  /// This replicates a typical cardiopulmonary exercise test (CPET) display:
+  /// - Stepped target power zones (gray area) - Warm-Up, VT1, Test, VT2, VO2 max
+  /// - FeO2% line (magenta) - Fraction of expired O2
+  /// - EqO2 line (blue) - Ventilatory equivalent for O2
+  Widget _buildVO2TestChart() {
+    return ChartCard(
+      title: 'VO2 Max Test - Gas Exchange',
+      subtitle: 'Target Power Zones with FeO2% and EqO2 metrics',
+      child: BravenChartPlus(
+        key: const ValueKey('vo2_test'),
+        chartType: ChartType.line, // Series types define actual rendering
+        series: [
+          // Stepped target power zones (area chart - painted first/behind)
+          AreaChartSeries(
+            id: 'target_power',
+            name: 'Target[W]',
+            points: _targetPowerData,
+            color: const Color(0xFF9E9E9E), // Gray
+            interpolation: LineInterpolation.stepped,
+            strokeWidth: 1.0,
+            fillOpacity: 0.3,
+            yAxisConfig: YAxisConfig(
+              id: 'power_axis',
+              position: YAxisPosition.right,
+              label: 'Target',
+              unit: 'W',
+              showAxisLine: true,
+              labelDisplay: AxisLabelDisplay.tickOnly,
+              min: 0,
+              max: 350,
+            ),
+          ),
+          // FeO2% line (magenta)
+          LineChartSeries(
+            id: 'feo2',
+            name: 'FeO2[%]',
+            points: _feO2Data,
+            color: const Color(0xFFE040FB), // Magenta/Purple-pink
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 1.5,
+            unit: '%',
+            yAxisConfig: YAxisConfig(
+              id: 'feo2_axis',
+              position: YAxisPosition.rightOuter,
+              label: 'FeO2',
+              unit: '%',
+              showAxisLine: true,
+              showCrosshairLabel: true,
+              labelDisplay: AxisLabelDisplay.tickOnly,
+              min: 14,
+              max: 19,
+            ),
+          ),
+          // EqO2 line (blue)
+          LineChartSeries(
+            id: 'eqo2',
+            name: 'EqO2',
+            points: _eqO2Data,
+            color: const Color(0xFF42A5F5), // Blue
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 1.5,
+            unit: '',
+            yAxisConfig: YAxisConfig(
+              id: 'eqo2_axis',
+              position: YAxisPosition.left,
+              label: 'GasExchange',
+              unit: '',
+              showAxisLine: true,
+              showCrosshairLabel: true,
+              labelDisplay: AxisLabelDisplay.labelOnly,
+              min: 0,
+              max: 60,
+            ),
+          ),
+        ],
+        theme: _optionsController.theme,
+        showLegend: _optionsController.showLegend,
+        showXScrollbar: _optionsController.showXScrollbar,
+        showYScrollbar: _optionsController.showYScrollbar,
+        scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+        xAxis: AxisConfig(
+          showGrid: _optionsController.showGrid,
+          showAxis: _optionsController.showAxisLines,
+          label: '',
+        ),
+        yAxis: AxisConfig(
+          showGrid: _optionsController.showGrid,
+          showAxis: _optionsController.showAxisLines,
+        ),
+        normalizationMode: NormalizationMode.perSeries,
+        interactionConfig: InteractionConfig(
+          enableZoom: _optionsController.enableZoom,
+          enablePan: _optionsController.enablePan,
+          crosshair: const CrosshairConfig(
+            enabled: true,
+            displayMode: CrosshairDisplayMode.tracking,
+          ),
+          tooltip: const TooltipConfig(enabled: true),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusPanel() {
     if (_selectedDemo == 0) {
       return StatusPanel(
@@ -421,7 +542,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Axes', value: '2', color: Colors.blue),
         ],
       );
-    } else {
+    } else if (_selectedDemo == 2) {
       return StatusPanel(
         items: [
           const StatusItem(label: 'Small Range', value: '0-100'),
@@ -429,6 +550,15 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Medium Range', value: '500-800'),
           StatusItem(label: 'Points', value: '${_testSmallRangeData.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.orange),
+        ],
+      );
+    } else {
+      return StatusPanel(
+        items: [
+          StatusItem(label: 'Target Pts', value: '${_targetPowerData.length}'),
+          StatusItem(label: 'FeO2 Pts', value: '${_feO2Data.length}'),
+          StatusItem(label: 'EqO2 Pts', value: '${_eqO2Data.length}'),
+          const StatusItem(label: 'Axes', value: '3', color: Colors.purple),
         ],
       );
     }
@@ -511,6 +641,149 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       value = value.clamp(500.0, 800.0);
 
       points.add(ChartDataPoint(x: x, y: value));
+    }
+    return points;
+  }
+
+  // ============================================================
+  // VO2 Max Test Data Generators
+  // ============================================================
+
+  /// Generates stepped target power data simulating a VO2 max test protocol.
+  ///
+  /// Protocol phases (time in minutes):
+  /// - 0:00-5:00: Warm-Up (~75W)
+  /// - 5:00-7:00: VT1 Zone (~100W)
+  /// - 7:00-10:00: Test Zone (~150W stepping to 200W)
+  /// - 10:00-12:30: VT2 Zone (~250W)
+  /// - 12:30-15:00: VO2 Max Zone (~300W stepping to 350W)
+  List<ChartDataPoint> _generateTargetPowerData() {
+    final points = <ChartDataPoint>[];
+    const totalMinutes = 15.0;
+    const samplesPerMinute = 12; // ~5 second intervals
+
+    for (var i = 0; i <= totalMinutes * samplesPerMinute; i++) {
+      final minutes = i / samplesPerMinute;
+      double power;
+
+      if (minutes < 5.0) {
+        // Warm-Up: 75W
+        power = 75;
+      } else if (minutes < 7.0) {
+        // VT1: 100W
+        power = 100;
+      } else if (minutes < 8.5) {
+        // Test phase 1: 150W
+        power = 150;
+      } else if (minutes < 10.0) {
+        // Test phase 2: 200W
+        power = 200;
+      } else if (minutes < 11.25) {
+        // VT2 phase 1: 250W
+        power = 250;
+      } else if (minutes < 12.5) {
+        // VT2 phase 2: 275W
+        power = 275;
+      } else if (minutes < 13.75) {
+        // VO2 max phase 1: 300W
+        power = 300;
+      } else {
+        // VO2 max phase 2: 325W
+        power = 325;
+      }
+
+      points.add(ChartDataPoint(x: minutes, y: power));
+    }
+    return points;
+  }
+
+  /// Generates FeO2% data (Fraction of Expired O2) for VO2 max test.
+  ///
+  /// FeO2 typically:
+  /// - Starts around 16-17% at rest/warm-up
+  /// - Drops to ~15-15.5% during moderate exercise
+  /// - Can drop to ~14-14.5% at VO2 max
+  /// - Shows a characteristic "hockey stick" pattern near VO2 max
+  List<ChartDataPoint> _generateFeO2Data() {
+    final points = <ChartDataPoint>[];
+    const totalMinutes = 15.0;
+    const samplesPerMinute = 12;
+
+    for (var i = 0; i <= totalMinutes * samplesPerMinute; i++) {
+      final minutes = i / samplesPerMinute;
+
+      // Simulate FeO2 response to exercise
+      double feo2;
+      if (minutes < 5.0) {
+        // Warm-up: gradual decrease from 16.8 to 16.2
+        feo2 = 16.8 - (minutes / 5.0) * 0.6;
+      } else if (minutes < 7.0) {
+        // VT1: decrease to ~15.8
+        feo2 = 16.2 - ((minutes - 5.0) / 2.0) * 0.4;
+      } else if (minutes < 10.0) {
+        // Test: decrease to ~15.4
+        feo2 = 15.8 - ((minutes - 7.0) / 3.0) * 0.4;
+      } else if (minutes < 12.5) {
+        // VT2: sharp decrease to ~15.0
+        feo2 = 15.4 - ((minutes - 10.0) / 2.5) * 0.4;
+      } else {
+        // VO2 max: plateau/slight increase (exhaustion)
+        feo2 = 15.0 + ((minutes - 12.5) / 2.5) * 0.3;
+      }
+
+      // Add noise
+      feo2 += (_random.nextDouble() - 0.5) * 0.15;
+      feo2 = feo2.clamp(14.0, 19.0);
+
+      points.add(ChartDataPoint(x: minutes, y: feo2));
+    }
+    return points;
+  }
+
+  /// Generates EqO2 data (Ventilatory Equivalent for O2) for VO2 max test.
+  ///
+  /// EqO2 typically:
+  /// - Starts around 25-30 at rest
+  /// - Decreases initially as exercise efficiency improves
+  /// - Reaches minimum (~20-22) around VT1
+  /// - Increases progressively after VT1
+  /// - Sharp increase near VO2 max (can reach 40-50+)
+  List<ChartDataPoint> _generateEqO2Data() {
+    final points = <ChartDataPoint>[];
+    const totalMinutes = 15.0;
+    const samplesPerMinute = 12;
+
+    for (var i = 0; i <= totalMinutes * samplesPerMinute; i++) {
+      final minutes = i / samplesPerMinute;
+
+      // Simulate EqO2 response to exercise
+      double eqo2;
+      if (minutes < 2.0) {
+        // Initial warm-up: starts high, decreasing
+        eqo2 = 32 - (minutes / 2.0) * 4;
+      } else if (minutes < 5.0) {
+        // Rest of warm-up: continues decreasing
+        eqo2 = 28 - ((minutes - 2.0) / 3.0) * 5;
+      } else if (minutes < 7.0) {
+        // VT1: minimum reached (~21-22)
+        eqo2 = 23 - ((minutes - 5.0) / 2.0) * 2;
+      } else if (minutes < 10.0) {
+        // Test: gradual increase
+        eqo2 = 21 + ((minutes - 7.0) / 3.0) * 4;
+      } else if (minutes < 12.5) {
+        // VT2: steeper increase
+        eqo2 = 25 + ((minutes - 10.0) / 2.5) * 8;
+      } else {
+        // VO2 max: sharp exponential-like increase
+        final progress = (minutes - 12.5) / 2.5;
+        eqo2 = 33 + progress * progress * 15;
+      }
+
+      // Add noise
+      eqo2 += (_random.nextDouble() - 0.5) * 1.5;
+      eqo2 = eqo2.clamp(18.0, 55.0);
+
+      points.add(ChartDataPoint(x: minutes, y: eqo2));
     }
     return points;
   }
