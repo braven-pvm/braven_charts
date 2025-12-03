@@ -192,6 +192,11 @@ class PointAnnotationElement extends ChartElement {
           ..style = PaintingStyle.fill;
         _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, ghostPaint);
 
+        // Draw ghost label at original position (if present)
+        if (annotation.label != null && annotation.label!.isNotEmpty) {
+          _drawLabel(canvas, screenPos, annotation.label!, alpha: 0.3);
+        }
+
         // Draw preview marker at candidate position (highlighted)
         final previewPaint = Paint()
           ..color = annotation.markerColor.withValues(alpha: 0.8)
@@ -204,6 +209,11 @@ class PointAnnotationElement extends ChartElement {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
         _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, outlinePaint);
+
+        // Draw preview label at candidate position (if present)
+        if (annotation.label != null && annotation.label!.isNotEmpty) {
+          _drawLabel(canvas, candidatePos, annotation.label!, alpha: 0.7);
+        }
 
         return; // Don't draw the normal marker when showing preview
       }
@@ -327,8 +337,14 @@ class PointAnnotationElement extends ChartElement {
     }
   }
 
-  void _drawLabel(Canvas canvas, Offset position, String label) {
-    final textStyle = annotation.style.textStyle;
+  void _drawLabel(Canvas canvas, Offset position, String label, {double alpha = 1.0}) {
+    final baseTextStyle = annotation.style.textStyle;
+    // Apply alpha to text color
+    final textStyle = alpha < 1.0
+        ? baseTextStyle.copyWith(
+            color: (baseTextStyle.color ?? Colors.black).withValues(alpha: alpha),
+          )
+        : baseTextStyle;
     final textSpan = TextSpan(text: label, style: textStyle);
     final textPainter = TextPainter(
       text: textSpan,
@@ -355,8 +371,9 @@ class PointAnnotationElement extends ChartElement {
 
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
+      final bgColor = alpha < 1.0 ? annotation.style.backgroundColor!.withValues(alpha: alpha) : annotation.style.backgroundColor!;
       final bgPaint = Paint()
-        ..color = annotation.style.backgroundColor!
+        ..color = bgColor
         ..style = PaintingStyle.fill;
 
       final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
@@ -366,8 +383,9 @@ class PointAnnotationElement extends ChartElement {
 
     // Draw border if specified
     if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+      final borderColor = alpha < 1.0 ? annotation.style.borderColor!.withValues(alpha: alpha) : annotation.style.borderColor!;
       final borderPaint = Paint()
-        ..color = annotation.style.borderColor!
+        ..color = borderColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = annotation.style.borderWidth;
 
