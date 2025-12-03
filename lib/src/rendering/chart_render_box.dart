@@ -3224,11 +3224,23 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
+    // Track previous marker state to detect changes
+    final previousMarker = coordinator.hoveredMarker;
+
     // Update coordinator state immediately
     coordinator.setHoveredMarker(nearestMarker);
 
-    // Invalidate series cache if marker state changed
-    _seriesCacheDirty = true;
+    // Only invalidate series cache if marker state ACTUALLY changed
+    // This prevents Picture regeneration on every mouse move
+    final markerChanged = (previousMarker == null) != (nearestMarker == null) ||
+        (previousMarker != null &&
+            nearestMarker != null &&
+            (previousMarker.seriesId != nearestMarker.seriesId ||
+                previousMarker.markerIndex != nearestMarker.markerIndex));
+
+    if (markerChanged) {
+      _seriesCacheDirty = true;
+    }
   }
 
   /// Finds the nearest marker within a series element.
