@@ -4595,11 +4595,28 @@ class ChartRenderBox extends RenderBox {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Calculate axis X position
-      final axisX = _getAxisCenterX(axis, axisWidths, effectiveAxes);
+      // Calculate label X position based on axis position
+      // Left axes: right-align label to axis line (label ends at axis line)
+      // Right axes: left-align label to axis line (label starts at axis line)
+      final double labelX;
+      final isLeftAxis = axis.position == YAxisPosition.left || axis.position == YAxisPosition.leftOuter;
 
-      // Position label centered on axis, at crosshair Y position
-      final labelX = axisX - textPainter.width / 2;
+      if (isLeftAxis) {
+        // Right-align: label ends at the axis line (which is at plot area left edge for left axes)
+        // For leftOuter, the axis line is further left
+        final axisLineX = axis.position == YAxisPosition.left
+            ? _plotArea.left
+            : _plotArea.left - _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+        labelX = axisLineX - textPainter.width - labelPadding * 2;
+      } else {
+        // Left-align: label starts at the axis line (which is at plot area right edge for right axes)
+        // For rightOuter, the axis line is further right
+        final axisLineX = axis.position == YAxisPosition.right
+            ? _plotArea.right
+            : _plotArea.right + _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
+        labelX = axisLineX + labelPadding * 2;
+      }
+
       final labelY = (cursorPos.dy - textPainter.height / 2).clamp(
         _plotArea.top + labelPadding,
         _plotArea.bottom - textPainter.height - labelPadding,
@@ -4628,31 +4645,6 @@ class ChartRenderBox extends RenderBox {
 
       // Draw text
       textPainter.paint(canvas, Offset(labelX, labelY));
-    }
-  }
-
-  /// Gets the horizontal center X position for an axis.
-  double _getAxisCenterX(YAxisConfig axis, Map<String, double> axisWidths, List<YAxisConfig> allAxes) {
-    final axisWidth = axisWidths[axis.id] ?? 50.0;
-
-    switch (axis.position) {
-      case YAxisPosition.leftOuter:
-        // Leftmost position - starts at plot area left edge minus all left axes
-        final leftWidth = _getPositionWidth(YAxisPosition.left, allAxes, axisWidths);
-        return _plotArea.left - leftWidth - axisWidth / 2;
-
-      case YAxisPosition.left:
-        // Just left of plot area
-        return _plotArea.left - axisWidth / 2;
-
-      case YAxisPosition.right:
-        // Just right of plot area
-        return _plotArea.right + axisWidth / 2;
-
-      case YAxisPosition.rightOuter:
-        // Rightmost position
-        final rightWidth = _getPositionWidth(YAxisPosition.right, allAxes, axisWidths);
-        return _plotArea.right + rightWidth + axisWidth / 2;
     }
   }
 
