@@ -4591,7 +4591,7 @@ class ChartRenderBox extends RenderBox {
   /// positioned over that specific axis.
   void _drawPerAxisCrosshairLabels(Canvas canvas, Offset cursorPos, double normalizedY) {
     final effectiveAxes = _getEffectiveYAxes();
-    
+
     // Early exit: check if ANY axis needs crosshair labels before computing expensive data
     final axesWithLabels = effectiveAxes.where((a) => a.showCrosshairLabel && a.visible).toList();
     if (axesWithLabels.isEmpty) return;
@@ -4639,9 +4639,8 @@ class ChartRenderBox extends RenderBox {
       if (isLeftAxis) {
         // Right-align: label ends at the axis line (which is at plot area left edge for left axes)
         // For leftOuter, the axis line is further left
-        final axisLineX = axis.position == YAxisPosition.left
-            ? _plotArea.left
-            : _plotArea.left - _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+        final axisLineX =
+            axis.position == YAxisPosition.left ? _plotArea.left : _plotArea.left - _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
         labelX = axisLineX - textPainter.width - labelPadding * 2;
       } else {
         // Left-align: label starts at the axis line (which is at plot area right edge for right axes)
