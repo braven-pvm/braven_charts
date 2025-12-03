@@ -87,8 +87,8 @@ class PointAnnotationElement extends ChartElement {
   @override
   String get id => annotation.id;
 
-  @override
-  Rect get bounds {
+  /// Calculate marker bounds (circle around marker position).
+  Rect _calculateMarkerBounds() {
     final screenPos = _getScreenPosition();
     if (screenPos == null) return Rect.zero;
 
@@ -97,6 +97,47 @@ class PointAnnotationElement extends ChartElement {
       center: screenPos,
       radius: hitRadius,
     );
+  }
+
+  /// Calculate label bounds if label exists, null otherwise.
+  /// Uses same positioning logic as _drawLabel() to ensure consistency.
+  Rect? _calculateLabelBounds() {
+    if (annotation.label == null || annotation.label!.isEmpty) return null;
+
+    final screenPos = _getScreenPosition();
+    if (screenPos == null) return null;
+
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final labelMargin = annotation.labelMargin;
+
+    // Label positioned to the right of the marker, vertically centered
+    return Rect.fromLTWH(
+      screenPos.dx + annotation.markerSize + labelMargin,
+      screenPos.dy - containerHeight / 2,
+      containerWidth,
+      containerHeight,
+    );
+  }
+
+  @override
+  Rect get bounds {
+    final markerBounds = _calculateMarkerBounds();
+    final labelBounds = _calculateLabelBounds();
+
+    // Expand bounds to include label if present
+    if (labelBounds != null) {
+      return markerBounds.expandToInclude(labelBounds);
+    }
+    return markerBounds;
   }
 
   @override
@@ -118,6 +159,11 @@ class PointAnnotationElement extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
+    // Check label first (if present) - labels are typically easier click targets
+    final labelBounds = _calculateLabelBounds();
+    if (labelBounds?.contains(position) == true) return true;
+
+    // Check marker
     final screenPos = _getScreenPosition();
     if (screenPos == null) return false;
 
@@ -158,16 +204,38 @@ class PointAnnotationElement extends ChartElement {
       }
     }
 
+    // Draw selection glow (behind the marker)
+    if (_isSelected) {
+      final glowPaint = Paint()
+        ..color = annotation.markerColor.withAlpha(100)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
+
+      // Draw larger glow circle behind marker
+      _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize * 2.0, glowPaint);
+    }
+
     final paint = Paint()
       ..color = annotation.markerColor
       ..style = PaintingStyle.fill;
 
-    // Add selection/hover feedback
-    if (_isSelected || _isHovered) {
-      paint.color = paint.color.withValues(alpha: _isSelected ? 1.0 : 0.7);
+    // Add hover feedback (slightly transparent)
+    if (_isHovered && !_isSelected) {
+      paint.color = paint.color.withValues(alpha: 0.7);
     }
 
-    _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, paint);
+    // Draw marker slightly larger when selected
+    final markerSize = _isSelected ? annotation.markerSize * 1.2 : annotation.markerSize;
+    _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, paint);
+
+    // Draw outline ring when selected
+    if (_isSelected) {
+      final outlinePaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, outlinePaint);
+    }
 
     // Draw label if present
     if (annotation.label != null && annotation.label!.isNotEmpty) {
@@ -1156,33 +1224,107 @@ class ThresholdAnnotationElement extends ChartElement {
   @override
   String get id => annotation.id;
 
-  @override
-  Rect get bounds {
-    // Use temp value during drag, otherwise use annotation value
+  /// Calculate the line hit zone bounds (strip along the line).
+  Rect _calculateLineBounds() {
     final value = _tempValue ?? annotation.value;
-
-    // Threshold spans the entire plot area in one direction
     const hitMargin = 20.0; // 20px margin on each side of line for easier clicking
 
     if (annotation.axis == AnnotationAxis.y) {
-      // Horizontal line at Y value
       final plotY = _currentTransform.dataToPlot(0, value).dy;
       return Rect.fromLTWH(
         0,
-        plotY - annotation.lineWidth / 2 - hitMargin, // Center line, then add margin above
+        plotY - annotation.lineWidth / 2 - hitMargin,
         _currentTransform.plotWidth,
-        annotation.lineWidth + (hitMargin * 2), // Line width plus margin on both sides
+        annotation.lineWidth + (hitMargin * 2),
       );
     } else {
-      // Vertical line at X value
       final plotX = _currentTransform.dataToPlot(value, 0).dx;
       return Rect.fromLTWH(
-        plotX - annotation.lineWidth / 2 - hitMargin, // Center line, then add margin to left
+        plotX - annotation.lineWidth / 2 - hitMargin,
         0,
-        annotation.lineWidth + (hitMargin * 2), // Line width plus margin on both sides
+        annotation.lineWidth + (hitMargin * 2),
         _currentTransform.plotHeight,
       );
     }
+  }
+
+  /// Calculate label bounds if label exists, null otherwise.
+  /// Uses same positioning logic as paint() to ensure consistency.
+  Rect? _calculateLabelBounds() {
+    if (annotation.label == null || annotation.label!.isEmpty) return null;
+
+    final value = _tempValue ?? annotation.value;
+
+    // Calculate line position (same as paint())
+    Offset start, end;
+    if (annotation.axis == AnnotationAxis.y) {
+      final plotY = _currentTransform.dataToPlot(0, value).dy;
+      start = Offset(0, plotY);
+      end = Offset(_currentTransform.plotWidth, plotY);
+    } else {
+      final plotX = _currentTransform.dataToPlot(value, 0).dx;
+      start = Offset(plotX, 0);
+      end = Offset(plotX, _currentTransform.plotHeight);
+    }
+
+    // Calculate label dimensions (same as paint())
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final labelMargin = annotation.labelMargin;
+
+    // Position label container based on labelPosition and axis orientation (same as paint())
+    Rect bgRect;
+    if (annotation.axis == AnnotationAxis.y) {
+      final lineY = start.dy;
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.topRight:
+          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.bottomLeft:
+          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.bottomRight:
+          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.center:
+          bgRect = Rect.fromLTWH((start.dx + end.dx) / 2 - containerWidth / 2, lineY - containerHeight / 2, containerWidth, containerHeight);
+      }
+    } else {
+      final lineX = start.dx;
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.topRight:
+          bgRect = Rect.fromLTWH(lineX + labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.bottomLeft:
+          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.bottomRight:
+          bgRect = Rect.fromLTWH(lineX + labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.center:
+          bgRect = Rect.fromLTWH(lineX - containerWidth / 2, (start.dy + end.dy) / 2 - containerHeight / 2, containerWidth, containerHeight);
+      }
+    }
+
+    return bgRect;
+  }
+
+  @override
+  Rect get bounds {
+    final lineBounds = _calculateLineBounds();
+    final labelBounds = _calculateLabelBounds();
+
+    // Expand bounds to include label if present
+    if (labelBounds != null) {
+      return lineBounds.expandToInclude(labelBounds);
+    }
+    return lineBounds;
   }
 
   @override
@@ -1202,7 +1344,12 @@ class ThresholdAnnotationElement extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
-    return bounds.contains(position);
+    // Check label first (if present) - labels are typically easier click targets
+    final labelBounds = _calculateLabelBounds();
+    if (labelBounds?.contains(position) == true) return true;
+
+    // Check line hit zone
+    return _calculateLineBounds().contains(position);
   }
 
   @override
