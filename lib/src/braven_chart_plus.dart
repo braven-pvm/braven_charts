@@ -1294,7 +1294,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final globalPosition = renderBox.localToGlobal(localPosition);
 
     // Determine context for menu items
-    final bool isDataPointClick = element is SeriesElement && _coordinator.hoveredMarker != null;
+    // Show "Add Point Annotation" if hoveredMarker is set (within snap radius of a data point)
+    // This matches the tooltip behavior - if you can see the tooltip, you can add a point annotation
+    final bool isDataPointClick = _coordinator.hoveredMarker != null;
     final bool isSeriesLineClick = element is SeriesElement && _coordinator.hoveredMarker == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
 
