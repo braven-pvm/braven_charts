@@ -429,6 +429,398 @@ class PointAnnotationElement extends ChartElement {
   }
 }
 
+/// A chart element that renders a pin annotation marker at arbitrary coordinates.
+///
+/// Similar to [PointAnnotationElement] but not tied to any series.
+/// Uses explicit x/y coordinates for positioning.
+class PinAnnotationElement extends ChartElement {
+  PinAnnotationElement({
+    required this.annotation,
+    required this.transform,
+  })  : _isSelected = false,
+        _isHovered = false,
+        _currentTransform = transform;
+
+  final PinAnnotation annotation;
+  final ChartTransform transform; // Initial transform for construction
+  ChartTransform _currentTransform; // Current transform for painting
+
+  bool _isSelected;
+  bool _isHovered;
+
+  // Temporary position during drag (in data coordinates)
+  double? _tempX;
+  double? _tempY;
+
+  /// Update the current transform before painting (for real-time pan/zoom).
+  void updateTransform(ChartTransform newTransform) {
+    _currentTransform = newTransform;
+  }
+
+  /// Update temporary position during drag (in data coordinates).
+  void updateTempPosition(double x, double y) {
+    _tempX = x;
+    _tempY = y;
+  }
+
+  /// Clear temporary position after drag completes.
+  void clearTempPosition() {
+    _tempX = null;
+    _tempY = null;
+  }
+
+  /// Get current temp position (if dragging).
+  (double, double)? get tempPosition => _tempX != null && _tempY != null ? (_tempX!, _tempY!) : null;
+
+  /// Recalculate screen position using current transform.
+  Offset _getScreenPosition() {
+    final x = _tempX ?? annotation.x;
+    final y = _tempY ?? annotation.y;
+    return _currentTransform.dataToPlot(x, y);
+  }
+
+  @override
+  String get id => annotation.id;
+
+  /// Calculate marker bounds (circle around marker position).
+  Rect _calculateMarkerBounds() {
+    final screenPos = _getScreenPosition();
+    final hitRadius = annotation.markerSize + 4.0;
+    return Rect.fromCircle(
+      center: screenPos,
+      radius: hitRadius,
+    );
+  }
+
+  /// Calculate label bounds if label exists, null otherwise.
+  Rect? _calculateLabelBounds() {
+    if (annotation.label == null || annotation.label!.isEmpty) return null;
+
+    final screenPos = _getScreenPosition();
+
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final labelMargin = annotation.labelMargin;
+
+    // Label positioned to the right of the marker, vertically centered
+    return Rect.fromLTWH(
+      screenPos.dx + annotation.markerSize + labelMargin,
+      screenPos.dy - containerHeight / 2,
+      containerWidth,
+      containerHeight,
+    );
+  }
+
+  @override
+  Rect get bounds {
+    final markerBounds = _calculateMarkerBounds();
+    final labelBounds = _calculateLabelBounds();
+
+    if (labelBounds != null) {
+      return markerBounds.expandToInclude(labelBounds);
+    }
+    return markerBounds;
+  }
+
+  @override
+  // PinAnnotations have same priority as PointAnnotations (datapoint level)
+  ChartElementType get elementType => ChartElementType.datapoint;
+
+  @override
+  // Render order same as PointAnnotation (foreground)
+  int get renderOrder => RenderOrder.pointAnnotation;
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  bool get isHovered => _isHovered;
+
+  @override
+  bool get isSelectable => true;
+
+  @override
+  bool get isDraggable => annotation.allowDragging;
+
+  @override
+  bool hitTest(Offset position) {
+    // Check label first (if present)
+    final labelBounds = _calculateLabelBounds();
+    if (labelBounds?.contains(position) == true) return true;
+
+    // Check marker
+    final screenPos = _getScreenPosition();
+    final hitRadius = annotation.markerSize + 4.0;
+    final distance = (position - screenPos).distance;
+    return distance <= hitRadius;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final screenPos = _getScreenPosition();
+    final isDragging = _tempX != null;
+
+    final paint = Paint()
+      ..color = annotation.markerColor
+      ..style = PaintingStyle.fill;
+
+    // Add hover feedback (slightly transparent)
+    if (_isHovered && !_isSelected) {
+      paint.color = paint.color.withValues(alpha: 0.7);
+    }
+
+    // Draw marker slightly larger when selected
+    final markerSize = _isSelected ? annotation.markerSize * 1.2 : annotation.markerSize;
+    _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, paint);
+
+    // Draw selection border
+    if (_isSelected) {
+      final borderPaint = Paint()
+        ..color = annotation.markerColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize + 6, borderPaint);
+    }
+
+    // Draw drag value label during drag
+    if (isDragging) {
+      _drawDragValueLabel(canvas, size, screenPos);
+    }
+
+    // Draw label if present
+    if (annotation.label != null && annotation.label!.isNotEmpty) {
+      _drawLabel(canvas, screenPos, annotation.label!);
+    }
+  }
+
+  void _drawMarker(Canvas canvas, Offset center, MarkerShape shape, double size, Paint paint) {
+    final radius = size / 2;
+
+    switch (shape) {
+      case MarkerShape.circle:
+        canvas.drawCircle(center, radius, paint);
+        break;
+
+      case MarkerShape.square:
+        final rect = Rect.fromCenter(center: center, width: size, height: size);
+        canvas.drawRect(rect, paint);
+        break;
+
+      case MarkerShape.triangle:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - radius)
+          ..lineTo(center.dx + radius * 0.866, center.dy + radius * 0.5)
+          ..lineTo(center.dx - radius * 0.866, center.dy + radius * 0.5)
+          ..close();
+        canvas.drawPath(path, paint);
+        break;
+
+      case MarkerShape.diamond:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - radius)
+          ..lineTo(center.dx + radius, center.dy)
+          ..lineTo(center.dx, center.dy + radius)
+          ..lineTo(center.dx - radius, center.dy)
+          ..close();
+        canvas.drawPath(path, paint);
+        break;
+
+      case MarkerShape.star:
+        final path = Path();
+        const numPoints = 5;
+        const outerRadius = 1.0;
+        const innerRadius = 0.4;
+
+        for (var i = 0; i < numPoints * 2; i++) {
+          final angle = (i * math.pi / numPoints) - math.pi / 2;
+          final r = (i.isEven ? outerRadius : innerRadius) * radius;
+          final x = center.dx + r * math.cos(angle);
+          final y = center.dy + r * math.sin(angle);
+
+          if (i == 0) {
+            path.moveTo(x, y);
+          } else {
+            path.lineTo(x, y);
+          }
+        }
+        path.close();
+        canvas.drawPath(path, paint);
+        break;
+
+      case MarkerShape.cross:
+        final path = Path()
+          ..moveTo(center.dx - radius, center.dy - radius)
+          ..lineTo(center.dx + radius, center.dy + radius)
+          ..moveTo(center.dx + radius, center.dy - radius)
+          ..lineTo(center.dx - radius, center.dy + radius);
+        canvas.drawPath(
+            path,
+            Paint()
+              ..color = paint.color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.0);
+        break;
+
+      case MarkerShape.plus:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - radius)
+          ..lineTo(center.dx, center.dy + radius)
+          ..moveTo(center.dx - radius, center.dy)
+          ..lineTo(center.dx + radius, center.dy);
+        canvas.drawPath(
+            path,
+            Paint()
+              ..color = paint.color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.0);
+        break;
+
+      case MarkerShape.none:
+        break;
+    }
+  }
+
+  void _drawLabel(Canvas canvas, Offset position, String label) {
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: label, style: textStyle);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final labelMargin = annotation.labelMargin;
+
+    // Position label container to the right of the marker, vertically centered
+    final bgRect = Rect.fromLTWH(
+      position.dx + annotation.markerSize + labelMargin,
+      position.dy - containerHeight / 2,
+      containerWidth,
+      containerHeight,
+    );
+
+    // Draw background if specified
+    if (annotation.style.backgroundColor != null) {
+      final bgPaint = Paint()
+        ..color = annotation.style.backgroundColor!
+        ..style = PaintingStyle.fill;
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, bgPaint);
+    }
+
+    // Draw border if specified
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = annotation.style.borderColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = annotation.style.borderWidth;
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final rrect = borderRadius.toRRect(bgRect);
+      canvas.drawRRect(rrect, borderPaint);
+    }
+
+    // Draw text inside container
+    final textPosition = Offset(
+      bgRect.left + padding.left,
+      bgRect.top + padding.top,
+    );
+    textPainter.paint(canvas, textPosition);
+  }
+
+  /// Draws coordinate value labels during drag (similar to ThresholdAnnotation).
+  void _drawDragValueLabel(Canvas canvas, Size size, Offset screenPos) {
+    const textStyle = TextStyle(
+      color: Color(0xFF000000),
+      fontSize: 10,
+      backgroundColor: Color(0xF0FFFFFF),
+    );
+
+    const labelPadding = 4.0;
+    final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
+
+    final x = _tempX ?? annotation.x;
+    final y = _tempY ?? annotation.y;
+    final labelText = 'X: ${_formatDataValue(x)}, Y: ${_formatDataValue(y)}';
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: labelText, style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Position label below the marker
+    double labelX = screenPos.dx - textPainter.width / 2;
+    double labelY = screenPos.dy + annotation.markerSize + 8;
+
+    // Clamp to keep within bounds
+    labelX = labelX.clamp(labelPadding, _currentTransform.plotWidth - textPainter.width - labelPadding);
+    labelY = labelY.clamp(labelPadding, _currentTransform.plotHeight - textPainter.height - labelPadding);
+
+    // Draw background
+    final bgRect = Rect.fromLTWH(
+      labelX - labelPadding,
+      labelY - labelPadding,
+      textPainter.width + labelPadding * 2,
+      textPainter.height + labelPadding * 2,
+    );
+    canvas.drawRect(bgRect, labelBackgroundPaint);
+
+    // Draw text
+    textPainter.paint(canvas, Offset(labelX, labelY));
+  }
+
+  String _formatDataValue(double value) {
+    if ((value - value.round()).abs() < 0.0001) {
+      return value.round().toString();
+    }
+    if (value.abs() < 0.01) {
+      return value.toStringAsExponential(1);
+    } else if (value.abs() < 1) {
+      return value.toStringAsFixed(2);
+    } else if (value.abs() < 100) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(0);
+    }
+  }
+
+  @override
+  void onSelect() => _isSelected = true;
+
+  @override
+  void onDeselect() => _isSelected = false;
+
+  @override
+  void onHoverEnter() => _isHovered = true;
+
+  @override
+  void onHoverExit() => _isHovered = false;
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) {
+    final copy = PinAnnotationElement(
+      annotation: annotation,
+      transform: transform,
+    );
+    copy._isSelected = isSelected ?? _isSelected;
+    copy._isHovered = isHovered ?? _isHovered;
+    copy._currentTransform = _currentTransform;
+    copy._tempX = _tempX;
+    copy._tempY = _tempY;
+    return copy;
+  }
+}
+
 /// A chart element that renders a range annotation.
 ///
 /// Highlights a rectangular region on the chart with optional fill and border.
