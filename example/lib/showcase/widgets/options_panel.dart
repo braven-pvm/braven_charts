@@ -468,7 +468,7 @@ class SegmentedOption<T> extends StatelessWidget {
         final label = labelBuilder?.call(opt) ?? opt.toString().split('.').last;
         return ButtonSegment<T>(
           value: opt,
-          label: Text(label, style: const TextStyle(fontSize: 12)),
+          label: Text(label, style: const TextStyle(fontSize: 11.5)),
         );
       }).toList(),
       selected: {value},

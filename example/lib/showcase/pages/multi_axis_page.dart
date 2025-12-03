@@ -29,6 +29,16 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   // Multi-axis demo selection
   int _selectedDemo = 0;
 
+  // Annotation controller for reactive, editable annotations
+  final AnnotationController _annotationController = AnnotationController();
+
+  // Annotation interaction settings
+  bool _interactiveAnnotations = true;
+  bool _allowDragging = true;
+  bool _allowEditing = true;
+  bool _snapToValue = false;
+  bool _showAnnotations = true;
+
   // Generated data for different demos
   late List<ChartDataPoint> _powerData;
   late List<ChartDataPoint> _heartRateData;
@@ -44,14 +54,13 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   // VO2 Max Test data
   late List<ChartDataPoint> _targetPowerData; // Stepped target zones (0-350W)
   late List<ChartDataPoint> _feO2Data; // FeO2% (14-19%)
-  late List<ChartDataPoint> _eqO2Data;
-  // Annotation controller for reactive, editable annotations
-  final AnnotationController _annotationController = AnnotationController(); // EqO2 (20-60)
+  late List<ChartDataPoint> _eqO2Data; // EqO2 (20-60)
 
   @override
   void initState() {
     super.initState();
     _regenerateData();
+    _rebuildAnnotations();
   }
 
   void _regenerateData() {
@@ -80,6 +89,113 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       _feO2Data = _generateFeO2Data();
       _eqO2Data = _generateEqO2Data();
     });
+  }
+
+  /// Rebuilds annotations based on current demo and settings.
+  void _rebuildAnnotations() {
+    _annotationController.clearAnnotations();
+    if (!_showAnnotations) return;
+
+    if (_selectedDemo == 0) {
+      // Athletic demo: Power thresholds and zones
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'power_threshold_low',
+        axis: AnnotationAxis.y,
+        value: 200,
+        label: 'Zone 2',
+        lineColor: Colors.green.withValues(alpha: 0.7),
+        labelPosition: AnnotationLabelPosition.bottomLeft,
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'power_threshold_high',
+        axis: AnnotationAxis.y,
+        value: 300,
+        label: 'Zone 4',
+        lineColor: Colors.red.withValues(alpha: 0.7),
+        labelPosition: AnnotationLabelPosition.topRight,
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+      _annotationController.addAnnotation(RangeAnnotation(
+        id: 'optimal_zone',
+        startX: 50,
+        endX: 150,
+        label: 'Optimal Window',
+        fillColor: Colors.blue.withValues(alpha: 0.15),
+        borderColor: Colors.blue.withValues(alpha: 0.5),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+        snapToValue: _snapToValue,
+      ));
+    } else if (_selectedDemo == 1) {
+      // Scientific demo: Temperature thresholds
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'temp_cold',
+        axis: AnnotationAxis.y,
+        value: 15,
+        label: 'Cold',
+        lineColor: Colors.blue.withValues(alpha: 0.7),
+        labelPosition: AnnotationLabelPosition.bottomLeft,
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'temp_hot',
+        axis: AnnotationAxis.y,
+        value: 25,
+        label: 'Hot',
+        lineColor: Colors.orange.withValues(alpha: 0.7),
+        labelPosition: AnnotationLabelPosition.topRight,
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+    } else if (_selectedDemo == 2) {
+      // Test demo: Range highlight
+      _annotationController.addAnnotation(RangeAnnotation(
+        id: 'test_range',
+        startX: 15,
+        endX: 35,
+        label: 'Test Window',
+        fillColor: Colors.purple.withValues(alpha: 0.15),
+        borderColor: Colors.purple.withValues(alpha: 0.5),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+        snapToValue: _snapToValue,
+      ));
+    } else {
+      // VO2 demo: VT1/VT2 thresholds
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'vt1_threshold',
+        axis: AnnotationAxis.x,
+        value: 7.0,
+        label: 'VT1',
+        lineColor: Colors.green.withValues(alpha: 0.7),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'vt2_threshold',
+        axis: AnnotationAxis.x,
+        value: 12.5,
+        label: 'VT2',
+        lineColor: Colors.red.withValues(alpha: 0.7),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+      _annotationController.addAnnotation(RangeAnnotation(
+        id: 'exercise_zone',
+        startX: 5.0,
+        endX: 15.0,
+        label: 'Exercise Phase',
+        fillColor: Colors.amber.withValues(alpha: 0.1),
+        borderColor: Colors.amber.withValues(alpha: 0.3),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+        snapToValue: _snapToValue,
+      ));
+    }
   }
 
   @override
@@ -119,7 +235,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
                     : v == 2
                         ? 'Test'
                         : 'VO2 Test',
-            onChanged: (v) => setState(() => _selectedDemo = v),
+            onChanged: (v) {
+              setState(() => _selectedDemo = v);
+              _rebuildAnnotations();
+            },
           ),
           const SizedBox(height: 8),
           InfoBox(
@@ -142,6 +261,56 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             label: 'Regenerate Data',
             icon: Icons.refresh,
             onPressed: _regenerateData,
+          ),
+        ],
+      ),
+
+      // Annotation behavior settings
+      OptionSection(
+        title: 'Annotation Behavior',
+        icon: Icons.touch_app,
+        children: [
+          BoolOption(
+            label: 'Show Annotations',
+            value: _showAnnotations,
+            onChanged: (v) {
+              setState(() => _showAnnotations = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Display annotations on chart',
+          ),
+          BoolOption(
+            label: 'Interactive Annotations',
+            value: _interactiveAnnotations,
+            onChanged: (v) => setState(() => _interactiveAnnotations = v),
+            subtitle: 'Enable all annotation interactions',
+          ),
+          BoolOption(
+            label: 'Allow Dragging',
+            value: _allowDragging,
+            onChanged: (v) {
+              setState(() => _allowDragging = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Drag to reposition annotations',
+          ),
+          BoolOption(
+            label: 'Allow Editing',
+            value: _allowEditing,
+            onChanged: (v) {
+              setState(() => _allowEditing = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Double-click to edit properties',
+          ),
+          BoolOption(
+            label: 'Snap to Value',
+            value: _snapToValue,
+            onChanged: (v) {
+              setState(() => _snapToValue = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Ranges snap to data values',
           ),
         ],
       ),
@@ -245,6 +414,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           crosshair: const CrosshairConfig(enabled: true),
           tooltip: const TooltipConfig(enabled: true),
         ),
+        annotationController: _annotationController,
+        interactiveAnnotations: _interactiveAnnotations,
       ),
     );
   }
@@ -316,6 +487,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             enabled: true,
           ),
         ),
+        annotationController: _annotationController,
+        interactiveAnnotations: _interactiveAnnotations,
       ),
     );
   }
@@ -417,6 +590,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           ),
           tooltip: const TooltipConfig(enabled: true),
         ),
+        annotationController: _annotationController,
+        interactiveAnnotations: _interactiveAnnotations,
       ),
     );
   }
@@ -433,6 +608,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       subtitle: 'Target Power Zones with FeO2% and EqO2 metrics',
       child: BravenChartPlus(
         annotationController: _annotationController,
+        interactiveAnnotations: _interactiveAnnotations,
         key: const ValueKey('vo2_test'),
         chartType: ChartType.line, // Series types define actual rendering
         series: [
@@ -530,6 +706,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   }
 
   Widget _buildStatusPanel() {
+    final annotationCount = _annotationController.annotations.length;
+    final annotationStatus = _showAnnotations
+        ? '$annotationCount visible'
+        : '$annotationCount hidden';
+
     if (_selectedDemo == 0) {
       return StatusPanel(
         items: [
@@ -537,6 +718,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'HR Pts', value: '${_heartRateData.length}'),
           StatusItem(label: 'Cadence Pts', value: '${_cadenceData.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.blue),
+          StatusItem(
+            label: 'Annotations',
+            value: annotationStatus,
+            color: _interactiveAnnotations ? Colors.green : Colors.grey,
+          ),
         ],
       );
     } else if (_selectedDemo == 1) {
@@ -545,6 +731,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'Temp Pts', value: '${_temperatureData.length}'),
           StatusItem(label: 'Pressure Pts', value: '${_pressureData.length}'),
           const StatusItem(label: 'Axes', value: '2', color: Colors.blue),
+          StatusItem(
+            label: 'Annotations',
+            value: annotationStatus,
+            color: _interactiveAnnotations ? Colors.green : Colors.grey,
+          ),
         ],
       );
     } else if (_selectedDemo == 2) {
@@ -555,6 +746,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Medium Range', value: '500-800'),
           StatusItem(label: 'Points', value: '${_testSmallRangeData.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.orange),
+          StatusItem(
+            label: 'Annotations',
+            value: annotationStatus,
+            color: _interactiveAnnotations ? Colors.green : Colors.grey,
+          ),
         ],
       );
     } else {
@@ -564,6 +760,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'FeO2 Pts', value: '${_feO2Data.length}'),
           StatusItem(label: 'EqO2 Pts', value: '${_eqO2Data.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.purple),
+          StatusItem(
+            label: 'Annotations',
+            value: annotationStatus,
+            color: _interactiveAnnotations ? Colors.green : Colors.grey,
+          ),
         ],
       );
     }
