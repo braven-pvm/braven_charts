@@ -3235,8 +3235,7 @@ class ChartRenderBox extends RenderBox {
     final markerChanged = (previousMarker == null) != (nearestMarker == null) ||
         (previousMarker != null &&
             nearestMarker != null &&
-            (previousMarker.seriesId != nearestMarker.seriesId ||
-                previousMarker.markerIndex != nearestMarker.markerIndex));
+            (previousMarker.seriesId != nearestMarker.seriesId || previousMarker.markerIndex != nearestMarker.markerIndex));
 
     if (markerChanged) {
       _seriesCacheDirty = true;
