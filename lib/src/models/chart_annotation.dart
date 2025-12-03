@@ -527,6 +527,97 @@ class ThresholdAnnotation extends ChartAnnotation {
   }
 }
 
+/// A pin annotation that marks an arbitrary position on the chart using x/y coordinates.
+///
+/// Unlike [PointAnnotation] which is tied to a specific series and data point,
+/// PinAnnotation uses explicit x/y coordinates and is not attached to any series.
+/// It moves with zoom/pan based on coordinate transformation.
+///
+/// Example:
+/// ```dart
+/// PinAnnotation(
+///   id: 'marker1',
+///   x: 25.0,
+///   y: 150.0,
+///   label: 'Important Point',
+///   markerShape: MarkerShape.star,
+///   markerSize: 12.0,
+///   markerColor: Colors.red,
+/// )
+/// ```
+class PinAnnotation extends ChartAnnotation {
+  /// Creates a pin annotation at the specified x/y coordinates.
+  PinAnnotation({
+    String? id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    required this.x,
+    required this.y,
+    this.markerShape = MarkerShape.circle,
+    this.markerSize = 8.0,
+    this.markerColor = Colors.blue,
+    this.labelMargin = 4.0,
+  })  : assert(x.isFinite, 'X coordinate must be finite'),
+        assert(y.isFinite, 'Y coordinate must be finite'),
+        assert(labelMargin >= 0, 'Label margin must be non-negative'),
+        super(id: id ?? ChartAnnotation.generateId());
+
+  /// The X-axis data coordinate.
+  final double x;
+
+  /// The Y-axis data coordinate.
+  final double y;
+
+  /// The shape of the marker to draw.
+  final MarkerShape markerShape;
+
+  /// The size of the marker in logical pixels.
+  final double markerSize;
+
+  /// The fill color of the marker.
+  final Color markerColor;
+
+  /// The spacing between the marker edge and the label container edge.
+  ///
+  /// Controls how far the label is positioned from the marker.
+  /// Defaults to 4.0 logical pixels.
+  final double labelMargin;
+
+  /// Creates a copy with modified properties.
+  PinAnnotation copyWith({
+    String? id,
+    String? label,
+    AnnotationStyle? style,
+    bool? allowDragging,
+    bool? allowEditing,
+    int? zIndex,
+    double? x,
+    double? y,
+    MarkerShape? markerShape,
+    double? markerSize,
+    Color? markerColor,
+    double? labelMargin,
+  }) {
+    return PinAnnotation(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      style: style ?? this.style,
+      allowDragging: allowDragging ?? this.allowDragging,
+      allowEditing: allowEditing ?? this.allowEditing,
+      zIndex: zIndex ?? this.zIndex,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      markerShape: markerShape ?? this.markerShape,
+      markerSize: markerSize ?? this.markerSize,
+      markerColor: markerColor ?? this.markerColor,
+      labelMargin: labelMargin ?? this.labelMargin,
+    );
+  }
+}
+
 /// Type of trend calculation.
 enum TrendType {
   /// Linear regression (y = mx + b).

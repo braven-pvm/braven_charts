@@ -41,6 +41,7 @@ import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'widgets/chart_legend.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
+import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/range_annotation_dialog.dart';
 import 'widgets/dialogs/text_annotation_dialog.dart';
 import 'widgets/dialogs/threshold_annotation_dialog.dart';
@@ -1194,6 +1195,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                 ),
                 transform: transform,
               ),
+            PinAnnotation() => PinAnnotationElement(
+                annotation: annotation,
+                transform: transform,
+              ),
             RangeAnnotation() => RangeAnnotationElement(
                 annotation: annotation,
                 transform: transform,
@@ -1314,6 +1319,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           label: 'Add Text Annotation',
         ),
 
+        // PinAnnotation - ALWAYS available (arbitrary position marker)
+        const WebContextMenuAction(
+          value: 'add_pin',
+          icon: Icons.push_pin,
+          label: 'Add Pin Annotation',
+        ),
+
         // PointAnnotation - ONLY when clicking on data point marker
         if (isDataPointClick)
           const WebContextMenuAction(
@@ -1391,6 +1403,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       case 'add_text':
         await _showAddTextAnnotationDialog(localPosition);
         break;
+      case 'add_pin':
+        await _showAddPinAnnotationDialog(localPosition);
+        break;
       case 'add_point':
         await _showAddPointAnnotationDialog(element);
         break;
@@ -1427,6 +1442,38 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (result != null && mounted) {
       widget.annotationController?.addAnnotation(result);
     } else {}
+  }
+
+  /// Shows the PinAnnotation creation dialog.
+  Future<void> _showAddPinAnnotationDialog(Offset localPosition) async {
+    if (!mounted) return;
+
+    // Convert click position to data coordinates
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    double? initialX;
+    double? initialY;
+
+    if (renderBox != null) {
+      final transform = renderBox.transform;
+      if (transform != null) {
+        final dataPos = transform.plotToData(localPosition.dx, localPosition.dy);
+        initialX = dataPos.dx;
+        initialY = dataPos.dy;
+      }
+    }
+
+    final result = await showDialog<PinAnnotation>(
+      context: context,
+      builder: (context) => PinAnnotationDialog(
+        initialX: initialX,
+        initialY: initialY,
+        chartTheme: widget.theme,
+      ),
+    );
+
+    if (result != null && mounted) {
+      widget.annotationController?.addAnnotation(result);
+    }
   }
 
   /// Shows the PointAnnotation creation dialog.
@@ -1572,6 +1619,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (element == null ||
         (element is! TextAnnotationElement &&
             element is! PointAnnotationElement &&
+            element is! PinAnnotationElement &&
             element is! ThresholdAnnotationElement &&
             element is! TrendAnnotationElement &&
             element is! RangeAnnotationElement)) {
@@ -1606,6 +1654,21 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       if (result != null && mounted) {
         widget.annotationController?.updateAnnotation(annotation.id, result);
       } else {}
+    } else if (element is PinAnnotationElement) {
+      final annotation = element.annotation;
+      final result = await showDialog<PinAnnotation>(
+        context: context,
+        builder: (context) => PinAnnotationDialog(
+          annotation: annotation,
+          initialX: annotation.x,
+          initialY: annotation.y,
+          chartTheme: widget.theme,
+        ),
+      );
+
+      if (result != null && mounted) {
+        widget.annotationController?.updateAnnotation(annotation.id, result);
+      }
     } else if (element is ThresholdAnnotationElement) {
       final annotation = element.annotation;
       final result = await showDialog<ThresholdAnnotation>(

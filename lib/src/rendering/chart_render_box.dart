@@ -206,6 +206,17 @@ class ChartRenderBox extends RenderBox {
   ThresholdAnnotationElement? _potentialDragThresholdAnnotation;
   Offset? _potentialDragThresholdStartPosition;
 
+  /// Potential drag state for click-and-hold pattern on PinAnnotation.
+  /// Wait for movement to decide: click (select) or drag (move to new position).
+  PinAnnotationElement? _potentialDragPinAnnotation;
+  Offset? _potentialDragPinStartPosition;
+
+  /// Current move state (if moving PinAnnotation).
+  PinAnnotationElement? _movingPinAnnotation;
+  Offset? _movePinStartPosition;
+  double? _movePinStartX; // Original X in data coordinates
+  double? _movePinStartY; // Original Y in data coordinates
+
   /// Current move state (if moving ThresholdAnnotation).
   ThresholdAnnotationElement? _movingThresholdAnnotation;
   Offset? _moveThresholdStartPosition;
@@ -2026,6 +2037,28 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
+  /// Performs move operation for PinAnnotation during drag.
+  /// Converts screen position to data coordinates and updates temp position.
+  void _performPinAnnotationMove(Offset currentPosition) {
+    if (_movingPinAnnotation == null || _movePinStartPosition == null || _movePinStartX == null || _movePinStartY == null) {
+      return;
+    }
+
+    // Convert start and end screen positions to data coordinates
+    final dataStart = _transform!.plotToData(_movePinStartPosition!.dx, _movePinStartPosition!.dy);
+    final dataEnd = _transform!.plotToData(currentPosition.dx, currentPosition.dy);
+
+    // Calculate data delta
+    final dataDelta = dataEnd - dataStart;
+
+    // Apply delta to original position
+    final newX = _movePinStartX! + dataDelta.dx;
+    final newY = _movePinStartY! + dataDelta.dy;
+
+    _movingPinAnnotation!.updateTempPosition(newX, newY);
+    markNeedsPaint();
+  }
+
   // ============================================================================
   // Event Handling
   // ============================================================================
@@ -2138,6 +2171,12 @@ class ChartRenderBox extends RenderBox {
           _potentialDragThresholdAnnotation = hitElement;
           _potentialDragThresholdStartPosition = position;
           // Don't claim mode or call callbacks yet - wait for movement or release
+        } else if (hitElement is PinAnnotationElement && hitElement.annotation.allowDragging) {
+          // Clicked on PinAnnotation - store as potential drag
+          // Wait for movement to decide: click (to select) or drag (to move)
+          _potentialDragPinAnnotation = hitElement;
+          _potentialDragPinStartPosition = position;
+          // Don't claim mode or call callbacks yet - wait for movement or release
         } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
           // Clicked on PointAnnotation with dragging enabled - store as potential drag
           // We don't know yet if this is a click (to select) or click-and-hold (to drag)
@@ -2225,6 +2264,35 @@ class ChartRenderBox extends RenderBox {
 
         // Perform initial move to current position
         _performThresholdAnnotationMove(position);
+        markNeedsPaint();
+        return;
+      }
+      // Still within threshold - keep waiting
+      return;
+    }
+
+    // PRIORITY 0C: Check for drag threshold on potential PinAnnotation drag
+    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
+    if (_potentialDragPinAnnotation != null && _potentialDragPinStartPosition != null) {
+      final dragDistance = (position - _potentialDragPinStartPosition!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        // Threshold exceeded - convert potential drag to actual drag
+        final hitElement = _potentialDragPinAnnotation!;
+        _movingPinAnnotation = hitElement;
+        _movePinStartPosition = _potentialDragPinStartPosition;
+        _movePinStartX = hitElement.annotation.x;
+        _movePinStartY = hitElement.annotation.y;
+
+        coordinator.startInteraction(_potentialDragPinStartPosition!, element: hitElement);
+        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        // Clear potential drag state
+        _potentialDragPinAnnotation = null;
+        _potentialDragPinStartPosition = null;
+
+        // Perform initial move to current position
+        _performPinAnnotationMove(position);
         markNeedsPaint();
         return;
       }
@@ -2350,6 +2418,13 @@ class ChartRenderBox extends RenderBox {
     // Handle ThresholdAnnotation move dragging (axis-constrained)
     if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingThresholdAnnotation != null && _moveThresholdStartPosition != null) {
       _performThresholdAnnotationMove(position);
+      markNeedsPaint();
+      return;
+    }
+
+    // Handle PinAnnotation move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPinAnnotation != null && _movePinStartPosition != null) {
+      _performPinAnnotationMove(position);
       markNeedsPaint();
       return;
     }
@@ -2767,6 +2842,27 @@ class ChartRenderBox extends RenderBox {
       markNeedsPaint();
     }
 
+    // Handle potential PinAnnotation drag that never exceeded threshold (treat as selection click)
+    if (_potentialDragPinAnnotation != null) {
+      final hitElement = _potentialDragPinAnnotation!;
+
+      // This was a quick click without dragging - toggle selection
+      if (coordinator.isCtrlPressed) {
+        coordinator.toggleElementSelection(hitElement);
+      } else {
+        coordinator.selectElement(hitElement);
+      }
+
+      // Emit click callback
+      onElementClick?.call(hitElement, event);
+
+      // Clear potential drag state
+      _potentialDragPinAnnotation = null;
+      _potentialDragPinStartPosition = null;
+
+      markNeedsPaint();
+    }
+
     // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
     // Skip selection logic if we just completed a resize or move operation
     // Otherwise the "potential drag" handler would call selectElement() which clears selection first
@@ -2895,6 +2991,39 @@ class ChartRenderBox extends RenderBox {
         // Create updated annotation with new value
         final updatedAnnotation = movedAnnotation.copyWith(
           value: newValue,
+        );
+
+        // Emit callback
+        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+      }
+    }
+
+    // Clear PinAnnotation move state
+    if (_movingPinAnnotation != null) {
+      // Get the final moved position from the element's temp position
+      final originalX = _movingPinAnnotation!.annotation.x;
+      final originalY = _movingPinAnnotation!.annotation.y;
+      final tempPos = _movingPinAnnotation!.tempPosition;
+      final newX = tempPos?.$1 ?? originalX;
+      final newY = tempPos?.$2 ?? originalY;
+
+      // Clear temp position
+      _movingPinAnnotation!.clearTempPosition();
+
+      // CRITICAL: Store references BEFORE clearing state
+      final movedAnnotation = _movingPinAnnotation!.annotation;
+
+      // Clear the moving state NOW, before emitting callback
+      _movingPinAnnotation = null;
+      _movePinStartPosition = null;
+      _movePinStartX = null;
+      _movePinStartY = null;
+
+      // Emit annotation changed callback with updated position (only if changed)
+      if (onAnnotationChanged != null && (newX != originalX || newY != originalY)) {
+        final updatedAnnotation = movedAnnotation.copyWith(
+          x: newX,
+          y: newY,
         );
 
         // Emit callback
