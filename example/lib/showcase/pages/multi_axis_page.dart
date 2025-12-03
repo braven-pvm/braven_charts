@@ -439,17 +439,18 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             name: 'Target[W]',
             points: _targetPowerData,
             color: const Color(0xFF9E9E9E), // Gray
-            interpolation: LineInterpolation.stepped,
-
+            interpolation: LineInterpolation.linear,
             strokeWidth: 0.1,
-            fillOpacity: 0.15,
+            fillOpacity: 0.075,
             yAxisConfig: YAxisConfig(
               id: 'power_axis',
               position: YAxisPosition.right,
               label: 'Target',
               unit: 'W',
               showAxisLine: true,
-              labelDisplay: AxisLabelDisplay.tickOnly,
+              labelDisplay: AxisLabelDisplay.labelAndTickUnit,
+              showCrosshairLabel: true,
+              axisMargin: 0,
               min: 0,
               max: 350,
             ),
@@ -471,8 +472,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
               showAxisLine: true,
               showCrosshairLabel: true,
               labelDisplay: AxisLabelDisplay.tickOnly,
-              min: 14,
-              max: 19,
+              // min: 14,
+              // max: 19,
             ),
           ),
           // EqO2 line (blue)
@@ -487,13 +488,13 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             yAxisConfig: YAxisConfig(
               id: 'eqo2_axis',
               position: YAxisPosition.left,
-              label: 'GasExchange',
+              label: 'Gas Exchange',
               unit: '',
               showAxisLine: true,
               showCrosshairLabel: true,
               labelDisplay: AxisLabelDisplay.labelOnly,
-              min: 0,
-              max: 60,
+              // min: 0,
+              // max: 60,
             ),
           ),
         ],
@@ -666,15 +667,23 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
     // Stepped interpolation: for each point, draws horizontal to X, then vertical to Y
     // So we only need the END of each zone (step will draw horizontal line)
     return const [
-      ChartDataPoint(x: 0.0, y: 75),    // Start at warm-up level
-      ChartDataPoint(x: 5.0, y: 100),   // Jump to VT1 at minute 5
-      ChartDataPoint(x: 7.0, y: 150),   // Jump to test phase 1 at minute 7
-      ChartDataPoint(x: 8.5, y: 200),   // Jump to test phase 2 at minute 8.5
-      ChartDataPoint(x: 10.0, y: 250),  // Jump to VT2 phase 1 at minute 10
+      ChartDataPoint(x: 0.0, y: 75), // Start at warm-up level
+      ChartDataPoint(x: 5.0, y: 75), // Start at warm-up level
+      ChartDataPoint(x: 5.0, y: 100), // Jump to VT1 at minute 5
+      ChartDataPoint(x: 5.0, y: 150), // Jump to VT1 at minute 5
+      ChartDataPoint(x: 7.0, y: 150), // Jump to test phase 1 at minute 7
+      ChartDataPoint(x: 7.0, y: 200), // Jump to test phase 1 at minute 7
+      ChartDataPoint(x: 8.5, y: 200), // Jump to test phase 2 at minute 8.5
+      ChartDataPoint(x: 8.5, y: 250), // Jump to test phase 2 at minute 8.5
+      ChartDataPoint(x: 10.0, y: 250), // Jump to VT2 phase 1 at minute 10
+      ChartDataPoint(x: 10.0, y: 275), // Jump to VT2 phase 1 at minute 10
       ChartDataPoint(x: 11.25, y: 275), // Jump to VT2 phase 2 at minute 11.25
-      ChartDataPoint(x: 12.5, y: 300),  // Jump to VO2 max phase 1 at minute 12.5
+      ChartDataPoint(x: 11.25, y: 300), // Jump to VT2 phase 2 at minute 11.25
+      ChartDataPoint(x: 12.5, y: 300), // Jump to VO2 max phase 1 at minute 12.5
+      ChartDataPoint(x: 12.5, y: 325), // Jump to VO2 max phase 1 at minute 12.5
       ChartDataPoint(x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
-      ChartDataPoint(x: 15.0, y: 325),  // End point (maintains last level)
+
+      ChartDataPoint(x: 15.0, y: 325), // End point (maintains last level)
     ];
   }
 
