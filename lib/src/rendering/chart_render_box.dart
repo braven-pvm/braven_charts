@@ -3419,8 +3419,32 @@ class ChartRenderBox extends RenderBox {
         final mode = crosshairConfig.mode;
 
         // Horizontal line across plot area (if mode allows)
+        // In multi-axis mode, extend line to reach outer axes for visual continuity
         if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-          canvas.drawLine(Offset(_plotArea.left, cursorPos.dy), Offset(_plotArea.right, cursorPos.dy), crosshairPaint);
+          double lineLeft = _plotArea.left;
+          double lineRight = _plotArea.right;
+
+          // Check for multi-axis mode and extend line to outer axes
+          if (_normalizationMode == NormalizationMode.perSeries) {
+            final effectiveAxes = _getEffectiveYAxes();
+            final axisWidths = _computeAxisWidths();
+
+            // Extend left for leftOuter axes
+            final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
+            if (leftOuterWidth > 0) {
+              final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+              lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
+            }
+
+            // Extend right for rightOuter axes
+            final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
+            if (rightOuterWidth > 0) {
+              final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
+              lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+            }
+          }
+
+          canvas.drawLine(Offset(lineLeft, cursorPos.dy), Offset(lineRight, cursorPos.dy), crosshairPaint);
         }
 
         // Vertical line across plot area (if mode allows)
@@ -4586,9 +4610,10 @@ class ChartRenderBox extends RenderBox {
 
       // Format the value - follow the same unit display rule as tick labels
       // If axis.shouldShowTickUnit is true, include unit; otherwise value only
+      // Use formatFixed to maintain consistent decimal places (prevents label resize jitter)
       final displayValue = axis.shouldShowTickUnit
-          ? MultiAxisValueFormatter.format(value: denormalizedY, unit: axis.unit)
-          : MultiAxisValueFormatter.format(value: denormalizedY, unit: null);
+          ? MultiAxisValueFormatter.formatFixed(value: denormalizedY, unit: axis.unit)
+          : MultiAxisValueFormatter.formatFixed(value: denormalizedY, unit: null);
 
       final textPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle.copyWith(color: textStyle.color)),
