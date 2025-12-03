@@ -43,6 +43,10 @@ class ResizeHandleElement extends ChartElement {
   ChartElementType get elementType => ChartElementType.resizeHandle;
 
   @override
+  // Resize handles render on top (controls layer)
+  int get renderOrder => RenderOrder.resizeHandle;
+
+  @override
   bool get isSelected => parentAnnotation.isSelected;
 
   @override

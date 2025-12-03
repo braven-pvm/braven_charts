@@ -120,6 +120,10 @@ class SeriesElement implements ChartElement {
   int get priority => ElementPriority.forType(elementType);
 
   @override
+  // Series render in data layer
+  int get renderOrder => RenderOrder.series;
+
+  @override
   bool get isSelectable => true;
 
   @override

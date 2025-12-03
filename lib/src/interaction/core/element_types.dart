@@ -136,3 +136,67 @@ class ElementPriority {
     return 'PASSIVE';
   }
 }
+
+/// Render order mapping for z-index/paint ordering.
+///
+/// **IMPORTANT**: This is SEPARATE from hit test priority!
+/// - [ElementPriority] determines which element wins a click when overlapping
+/// - [RenderOrder] determines which element is painted on top (higher = front)
+///
+/// Lower values paint FIRST (in back), higher values paint LAST (in front).
+///
+/// **Hierarchy**:
+/// - BACKGROUND (0-1): Range annotations (shaded regions)
+/// - DATA (2-3): Series lines, thresholds
+/// - FOREGROUND (4-5): Point annotations, text annotations
+/// - CONTROLS (6-7): Resize handles, selection indicators
+class RenderOrder {
+  const RenderOrder._();
+
+  // ============================================================================
+  // BACKGROUND (0-1) - Painted first, behind everything
+  // ============================================================================
+
+  /// Range annotations (shaded background regions).
+  static const int rangeAnnotation = 0;
+
+  // ============================================================================
+  // DATA (2-3) - Chart data elements
+  // ============================================================================
+
+  /// Series lines/areas (main chart data).
+  static const int series = 2;
+
+  /// Threshold lines (horizontal/vertical reference lines).
+  static const int thresholdAnnotation = 3;
+
+  /// Trend lines.
+  static const int trendAnnotation = 3;
+
+  // ============================================================================
+  // FOREGROUND (4-5) - Annotations that should be visible over data
+  // ============================================================================
+
+  /// Point annotations (markers on data points).
+  static const int pointAnnotation = 4;
+
+  /// Text annotations (labels, callouts).
+  static const int textAnnotation = 5;
+
+  // ============================================================================
+  // CONTROLS (6-7) - UI controls always on top
+  // ============================================================================
+
+  /// Resize handles (annotation edges).
+  static const int resizeHandle = 6;
+
+  /// Selection indicators, drag previews.
+  static const int selectionIndicator = 7;
+
+  // ============================================================================
+  // Default for unknown types
+  // ============================================================================
+
+  /// Default render order for unknown element types.
+  static const int defaultOrder = 3;
+}
