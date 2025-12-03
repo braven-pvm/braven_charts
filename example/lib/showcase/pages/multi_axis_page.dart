@@ -44,7 +44,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   // VO2 Max Test data
   late List<ChartDataPoint> _targetPowerData; // Stepped target zones (0-350W)
   late List<ChartDataPoint> _feO2Data; // FeO2% (14-19%)
-  late List<ChartDataPoint> _eqO2Data; // EqO2 (20-60)
+  late List<ChartDataPoint> _eqO2Data;
+  // Annotation controller for reactive, editable annotations
+  final AnnotationController _annotationController = AnnotationController(); // EqO2 (20-60)
 
   @override
   void initState() {
@@ -430,6 +432,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'VO2 Max Test - Gas Exchange',
       subtitle: 'Target Power Zones with FeO2% and EqO2 metrics',
       child: BravenChartPlus(
+        annotationController: _annotationController,
         key: const ValueKey('vo2_test'),
         chartType: ChartType.line, // Series types define actual rendering
         series: [
