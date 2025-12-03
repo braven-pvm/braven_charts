@@ -440,8 +440,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             points: _targetPowerData,
             color: const Color(0xFF9E9E9E), // Gray
             interpolation: LineInterpolation.stepped,
-            strokeWidth: 1.0,
-            fillOpacity: 0.3,
+
+            strokeWidth: 0.1,
+            fillOpacity: 0.15,
             yAxisConfig: YAxisConfig(
               id: 'power_axis',
               position: YAxisPosition.right,
@@ -651,6 +652,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
   /// Generates stepped target power data simulating a VO2 max test protocol.
   ///
+  /// Uses zone boundary points for clean stepped visualization.
+  /// The stepped interpolation automatically draws horizontal-then-vertical steps.
+  /// Only need one point per zone transition - the step handles the jump.
+  ///
   /// Protocol phases (time in minutes):
   /// - 0:00-5:00: Warm-Up (~75W)
   /// - 5:00-7:00: VT1 Zone (~100W)
@@ -658,43 +663,19 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
   /// - 10:00-12:30: VT2 Zone (~250W)
   /// - 12:30-15:00: VO2 Max Zone (~300W stepping to 350W)
   List<ChartDataPoint> _generateTargetPowerData() {
-    final points = <ChartDataPoint>[];
-    const totalMinutes = 15.0;
-    const samplesPerMinute = 12; // ~5 second intervals
-
-    for (var i = 0; i <= totalMinutes * samplesPerMinute; i++) {
-      final minutes = i / samplesPerMinute;
-      double power;
-
-      if (minutes < 5.0) {
-        // Warm-Up: 75W
-        power = 75;
-      } else if (minutes < 7.0) {
-        // VT1: 100W
-        power = 100;
-      } else if (minutes < 8.5) {
-        // Test phase 1: 150W
-        power = 150;
-      } else if (minutes < 10.0) {
-        // Test phase 2: 200W
-        power = 200;
-      } else if (minutes < 11.25) {
-        // VT2 phase 1: 250W
-        power = 250;
-      } else if (minutes < 12.5) {
-        // VT2 phase 2: 275W
-        power = 275;
-      } else if (minutes < 13.75) {
-        // VO2 max phase 1: 300W
-        power = 300;
-      } else {
-        // VO2 max phase 2: 325W
-        power = 325;
-      }
-
-      points.add(ChartDataPoint(x: minutes, y: power));
-    }
-    return points;
+    // Stepped interpolation: for each point, draws horizontal to X, then vertical to Y
+    // So we only need the END of each zone (step will draw horizontal line)
+    return const [
+      ChartDataPoint(x: 0.0, y: 75),    // Start at warm-up level
+      ChartDataPoint(x: 5.0, y: 100),   // Jump to VT1 at minute 5
+      ChartDataPoint(x: 7.0, y: 150),   // Jump to test phase 1 at minute 7
+      ChartDataPoint(x: 8.5, y: 200),   // Jump to test phase 2 at minute 8.5
+      ChartDataPoint(x: 10.0, y: 250),  // Jump to VT2 phase 1 at minute 10
+      ChartDataPoint(x: 11.25, y: 275), // Jump to VT2 phase 2 at minute 11.25
+      ChartDataPoint(x: 12.5, y: 300),  // Jump to VO2 max phase 1 at minute 12.5
+      ChartDataPoint(x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
+      ChartDataPoint(x: 15.0, y: 325),  // End point (maintains last level)
+    ];
   }
 
   /// Generates FeO2% data (Fraction of Expired O2) for VO2 max test.
