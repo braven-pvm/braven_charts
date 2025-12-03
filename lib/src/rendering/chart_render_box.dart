@@ -1426,6 +1426,7 @@ class ChartRenderBox extends RenderBox {
 
     // Collect all elements to insert, including generated sub-elements
     final allElements = <ChartElement>[];
+    final generatedHandles = <ResizeHandleElement>[];
 
     // Insert all chart elements
     for (final element in _elements) {
@@ -1434,13 +1435,15 @@ class ChartRenderBox extends RenderBox {
       // For resizable annotations, also insert their resize handle elements
       // ONLY if the annotation is currently resizable (typically when selected)
       if (element is ResizableElement && element.isResizable) {
-        final handleElements = element.createResizeHandleElements().cast<ChartElement>();
+        final handleElements = element.createResizeHandleElements().cast<ResizeHandleElement>();
         allElements.addAll(handleElements);
+        generatedHandles.addAll(handleElements);
       }
       // Legacy support for SimulatedAnnotation (test class)
       else if (element is SimulatedAnnotation && element.isResizable) {
-        final handleElements = element.createResizeHandleElements().cast<ChartElement>();
+        final handleElements = element.createResizeHandleElements().cast<ResizeHandleElement>();
         allElements.addAll(handleElements);
+        generatedHandles.addAll(handleElements);
       }
     }
 
@@ -1450,9 +1453,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Update _elements to include handle elements for painting
-    // Keep original order, then add handles at the end
-    final handleElements = allElements.skip(_elements.length).toList();
-    _elements = [..._elements, ...handleElements];
+    // CRITICAL: Only add the ResizeHandleElements we generated, not arbitrary elements.
+    // Previous bug used allElements.skip(_elements.length) which incorrectly included
+    // annotation elements when handles were interleaved in allElements.
+    _elements = [..._elements, ...generatedHandles];
   }
 
   /// Rebuilds elements using the element generator with current transform.
@@ -1472,7 +1476,6 @@ class ChartRenderBox extends RenderBox {
 
     // Generate new elements using current transform
     _elements = generator(transform);
-    // [DEBUG OUTPUT REMOVED] Elements regenerated - fires on data updates
 
     // Restore selection state on new elements that match by ID
     if (selectedIds.isNotEmpty) {
@@ -3747,12 +3750,6 @@ class ChartRenderBox extends RenderBox {
 
         return 0; // Equal priority and type
       });
-
-    // DEBUG: Print final paint order (only annotations)
-    final annotations = nonSeriesElements.where((e) => e.elementType == ChartElementType.annotation).toList();
-    if (annotations.isNotEmpty) {
-      for (var i = 0; i < annotations.length; i++) {}
-    }
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
     for (final element in nonSeriesElements) {
