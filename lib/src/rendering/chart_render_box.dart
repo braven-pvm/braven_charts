@@ -489,11 +489,30 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Rebuilds the spatial index with new elements.
   /// Invalidates series cache since data has changed.
+  /// Preserves selection state by matching elements by ID.
   void updateElements(List<ChartElement> elements) {
     if (elements == _elements) return;
 
+    // Preserve selection state: get IDs of currently selected elements
+    final selectedIds = coordinator.selectedElements.map((e) => e.id).toSet();
+
+    // Replace elements
     _elements = elements;
     _seriesCacheDirty = true; // Invalidate cache - data changed
+
+    // Restore selection state on new elements that match by ID
+    if (selectedIds.isNotEmpty) {
+      // Clear old selection (references to old elements)
+      coordinator.clearSelection();
+
+      // Re-select new elements that match the old selection by ID
+      for (final element in _elements) {
+        if (selectedIds.contains(element.id)) {
+          coordinator.addToSelection({element});
+        }
+      }
+    }
+
     _rebuildSpatialIndex();
     markNeedsPaint();
   }
@@ -1319,6 +1338,10 @@ class ChartRenderBox extends RenderBox {
     // QuadTree bounds = plot area (in plot space, not widget space)
     _spatialIndex = QuadTree(bounds: Offset.zero & _plotArea.size, maxElementsPerNode: 4, maxDepth: 8);
 
+    // First, filter out any existing resize handles from _elements
+    // (handles are generated dynamically, not persisted)
+    _elements = _elements.where((e) => e is! ResizeHandleElement).toList();
+
     // Collect all elements to insert, including generated sub-elements
     final allElements = <ChartElement>[];
 
@@ -1326,9 +1349,15 @@ class ChartRenderBox extends RenderBox {
     for (final element in _elements) {
       allElements.add(element);
 
-      // For annotations, also insert their resize handle elements
-      if (element is SimulatedAnnotation) {
-        final handleElements = element.createResizeHandleElements();
+      // For resizable annotations, also insert their resize handle elements
+      // ONLY if the annotation is currently resizable (typically when selected)
+      if (element is ResizableElement && element.isResizable) {
+        final handleElements = element.createResizeHandleElements().cast<ChartElement>();
+        allElements.addAll(handleElements);
+      }
+      // Legacy support for SimulatedAnnotation (test class)
+      else if (element is SimulatedAnnotation && element.isResizable) {
+        final handleElements = element.createResizeHandleElements().cast<ChartElement>();
         allElements.addAll(handleElements);
       }
     }
@@ -1356,9 +1385,25 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
+    // Preserve selection state: get IDs of currently selected elements
+    final selectedIds = coordinator.selectedElements.map((e) => e.id).toSet();
+
     // Generate new elements using current transform
     _elements = generator(transform);
     // [DEBUG OUTPUT REMOVED] Elements regenerated - fires on data updates
+
+    // Restore selection state on new elements that match by ID
+    if (selectedIds.isNotEmpty) {
+      // Clear old selection (references to old elements)
+      coordinator.clearSelection();
+
+      // Re-select new elements that match the old selection by ID
+      for (final element in _elements) {
+        if (selectedIds.contains(element.id)) {
+          coordinator.addToSelection({element});
+        }
+      }
+    }
 
     // Rebuild spatial index with new elements
     _rebuildSpatialIndex();
@@ -2039,12 +2084,18 @@ class ChartRenderBox extends RenderBox {
           } else {
             coordinator.selectElement(hitElement);
           }
+          // Rebuild spatial index after selection change so ResizableElements
+          // can update their isResizable state (e.g., RangeAnnotation resize handles)
+          _rebuildSpatialIndex();
           coordinator.claimMode(InteractionMode.selecting, element: hitElement);
           onElementClick?.call(hitElement, event);
         }
       } else {
         // Clicked on empty area - clear selection and prepare for box select
         coordinator.clearSelection();
+        // Rebuild spatial index after selection change so ResizableElements
+        // can update their isResizable state (e.g., RangeAnnotation resize handles)
+        _rebuildSpatialIndex();
         onEmptyAreaClick?.call(position, event);
         markNeedsPaint();
       }
@@ -2383,8 +2434,13 @@ class ChartRenderBox extends RenderBox {
       return;
     }
 
+    // Track if we just completed a resize or move operation
+    // (to skip selection logic which would clear the selection)
+    bool completedResizeOrMove = false;
+
     // Clear resize state
     if (_resizingAnnotation != null) {
+      completedResizeOrMove = true;
       // CRITICAL: Read temp bounds BEFORE clearing them!
       // clearTempBounds() will null out _tempResizeBounds, causing bounds getter
       // to fall back to original annotation data instead of the resized values.
@@ -2507,6 +2563,7 @@ class ChartRenderBox extends RenderBox {
 
     // Clear move state
     if (_movingAnnotation != null) {
+      completedResizeOrMove = true;
       // CRITICAL: Read temp bounds BEFORE clearing them!
       final movedBounds = _movingAnnotation!.bounds; // Get moved bounds while temp bounds still exist
 
@@ -2637,7 +2694,9 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
-    if (_potentialDragRangeAnnotation != null) {
+    // Skip selection logic if we just completed a resize or move operation
+    // Otherwise the "potential drag" handler would call selectElement() which clears selection first
+    if (_potentialDragRangeAnnotation != null && !completedResizeOrMove) {
       final hitElement = _potentialDragRangeAnnotation!;
 
       // This was a quick click without dragging - toggle selection
@@ -2647,15 +2706,20 @@ class ChartRenderBox extends RenderBox {
         coordinator.selectElement(hitElement);
       }
 
+      // Rebuild spatial index after selection change so resize handles become active
+      _rebuildSpatialIndex();
+
       // Emit click callback
       onElementClick?.call(hitElement, event);
 
-      // Clear potential drag state
+      markNeedsPaint();
+    }
+
+    // Always clear potential drag state
+    if (_potentialDragRangeAnnotation != null) {
       _potentialDragRangeAnnotation = null;
       _potentialDragRangeStartPosition = null;
       _potentialDragRangeStartBounds = null;
-
-      markNeedsPaint();
     }
 
     // Handle potential PointAnnotation drag that never exceeded threshold (treat as selection click)

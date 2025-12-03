@@ -137,13 +137,13 @@ class PointAnnotationElement extends ChartElement {
       if (candidatePos != null) {
         // Draw ghost marker at original position (semi-transparent)
         final ghostPaint = Paint()
-          ..color = annotation.markerColor.withOpacity(0.3)
+          ..color = annotation.markerColor.withValues(alpha: 0.3)
           ..style = PaintingStyle.fill;
         _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, ghostPaint);
 
         // Draw preview marker at candidate position (highlighted)
         final previewPaint = Paint()
-          ..color = annotation.markerColor.withOpacity(0.8)
+          ..color = annotation.markerColor.withValues(alpha: 0.8)
           ..style = PaintingStyle.fill;
         _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, previewPaint);
 
@@ -164,7 +164,7 @@ class PointAnnotationElement extends ChartElement {
 
     // Add selection/hover feedback
     if (_isSelected || _isHovered) {
-      paint.color = paint.color.withOpacity(_isSelected ? 1.0 : 0.7);
+      paint.color = paint.color.withValues(alpha: _isSelected ? 1.0 : 0.7);
     }
 
     _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, paint);
@@ -474,7 +474,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         ..style = PaintingStyle.fill;
 
       if (_isHovered) {
-        fillPaint.color = fillPaint.color.withOpacity(fillPaint.color.opacity * 1.2);
+        fillPaint.color = fillPaint.color.withValues(alpha: fillPaint.color.a * 1.2);
       }
 
       canvas.drawRect(fillRect, fillPaint);
@@ -893,6 +893,15 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   @override
   bool get showResizeHandles => _isSelected;
 
+  /// Resize handles are only active when the annotation is selected.
+  ///
+  /// This prevents resize handles from blocking other annotations (like
+  /// ThresholdAnnotations) when the range is not actively being edited.
+  /// User must first select the RangeAnnotation, then resize handles become
+  /// active for hit testing.
+  @override
+  bool get isResizable => _isSelected;
+
   // ============================================================================
 
   @override
@@ -1021,7 +1030,7 @@ class TextAnnotationElement extends ChartElement {
       final bgPaint = Paint()..color = bgColor;
 
       if (_isHovered) {
-        bgPaint.color = bgPaint.color.withOpacity((bgPaint.color.opacity * 1.1).clamp(0.0, 1.0));
+        bgPaint.color = bgPaint.color.withValues(alpha: (bgPaint.color.a * 1.1).clamp(0.0, 1.0));
       }
 
       if (annotation.style.borderRadius != null) {
