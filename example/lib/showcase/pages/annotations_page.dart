@@ -112,6 +112,21 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
       ));
+
+      // vertical line
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'lt1',
+        axis: AnnotationAxis.x,
+        value: 95,
+        label: 'LT1',
+        labelPosition: AnnotationLabelPosition.topRight,
+        lineColor: Colors.deepOrange,
+        lineWidth: 3,
+        style: const AnnotationStyle(padding: EdgeInsets.all(0)),
+        dashPattern: [4, 4],
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
     }
 
     if (_showRanges) {
@@ -148,13 +163,16 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         id: 'peak_text',
         text: 'Peak Value',
         position: const Offset(25, 90),
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Colors.blue,
-            fontSize: 12,
-          ),
-          backgroundColor: Colors.white,
-        ),
+        style: AnnotationStyle(
+            textStyle: const TextStyle(
+              color: Colors.blue,
+              fontSize: 12,
+            ),
+            backgroundColor: Colors.grey.shade100.withValues(alpha: 0.8),
+            borderColor: Colors.grey.shade400,
+            borderWidth: 0.5,
+            padding: const EdgeInsets.all(8),
+            borderRadius: BorderRadius.circular(5)),
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
       ));
