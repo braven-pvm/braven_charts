@@ -204,17 +204,6 @@ class PointAnnotationElement extends ChartElement {
       }
     }
 
-    // Draw selection glow (behind the marker)
-    if (_isSelected) {
-      final glowPaint = Paint()
-        ..color = annotation.markerColor.withAlpha(100)
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
-
-      // Draw larger glow circle behind marker
-      _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize * 2.0, glowPaint);
-    }
-
     final paint = Paint()
       ..color = annotation.markerColor
       ..style = PaintingStyle.fill;
@@ -228,13 +217,16 @@ class PointAnnotationElement extends ChartElement {
     final markerSize = _isSelected ? annotation.markerSize * 1.2 : annotation.markerSize;
     _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, paint);
 
-    // Draw outline ring when selected
+    // Draw selection border (simple ring around the marker)
     if (_isSelected) {
-      final outlinePaint = Paint()
-        ..color = Colors.white
+      // Use series color for the border, fallback to blue if not available
+      final borderColor = series.color ?? Colors.blue;
+      final borderPaint = Paint()
+        ..color = borderColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
-      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, outlinePaint);
+      // Draw border slightly larger than the marker
+      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize + 6, borderPaint);
     }
 
     // Draw label if present
