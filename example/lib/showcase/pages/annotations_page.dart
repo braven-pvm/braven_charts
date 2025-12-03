@@ -25,10 +25,19 @@ class AnnotationsPage extends StatefulWidget {
 class _AnnotationsPageState extends State<AnnotationsPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
 
-  // Annotation toggles
+  // Annotation controller for reactive, editable annotations
+  final AnnotationController _annotationController = AnnotationController();
+
+  // Annotation visibility toggles
   bool _showThresholds = true;
   bool _showRanges = true;
   bool _showTextAnnotations = true;
+
+  // Annotation interaction settings
+  bool _interactiveAnnotations = true;
+  bool _allowDragging = true;
+  bool _allowEditing = true;
+  bool _snapToValue = false;
 
   // Generated data
   late List<ChartDataPoint> _data;
@@ -37,6 +46,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   void initState() {
     super.initState();
     _regenerateData();
+    _rebuildAnnotations();
   }
 
   void _regenerateData() {
@@ -53,7 +63,102 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   @override
   void dispose() {
     _optionsController.dispose();
+    _annotationController.dispose();
     super.dispose();
+  }
+
+  /// Rebuilds annotations based on current toggle states and settings.
+  void _rebuildAnnotations() {
+    _annotationController.clearAnnotations();
+
+    if (_showThresholds) {
+      // Upper threshold
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'upper_limit',
+        axis: AnnotationAxis.y,
+        value: 80,
+        label: 'Upper Limit',
+        labelPosition: AnnotationLabelPosition.topLeft,
+        lineColor: Colors.red,
+        lineWidth: 2.0,
+        dashPattern: [5, 3],
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+
+      // Lower threshold
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'lower_limit',
+        axis: AnnotationAxis.y,
+        value: 20,
+        label: 'Lower Limit',
+        labelPosition: AnnotationLabelPosition.bottomLeft,
+        lineColor: Colors.orange,
+        lineWidth: 2.0,
+        dashPattern: [5, 3],
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+
+      // Target line
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'target',
+        axis: AnnotationAxis.y,
+        value: 50,
+        label: 'Target',
+        labelPosition: AnnotationLabelPosition.topRight,
+        lineColor: Colors.green,
+        lineWidth: 1.5,
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+    }
+
+    if (_showRanges) {
+      // Optimal range
+      _annotationController.addAnnotation(RangeAnnotation(
+        id: 'optimal_zone',
+        startX: 20,
+        endX: 40,
+        label: 'Optimal Zone',
+        fillColor: Colors.green.withValues(alpha: 0.2),
+        borderColor: Colors.green.withValues(alpha: 0.5),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+        snapToValue: _snapToValue,
+      ));
+
+      // Warning range
+      _annotationController.addAnnotation(RangeAnnotation(
+        id: 'caution_zone',
+        startX: 60,
+        endX: 80,
+        label: 'Caution Zone',
+        fillColor: Colors.orange.withValues(alpha: 0.2),
+        borderColor: Colors.orange.withValues(alpha: 0.5),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+        snapToValue: _snapToValue,
+      ));
+    }
+
+    if (_showTextAnnotations) {
+      // Text at peak
+      _annotationController.addAnnotation(TextAnnotation(
+        id: 'peak_text',
+        text: 'Peak Value',
+        position: const Offset(25, 90),
+        style: const AnnotationStyle(
+          textStyle: TextStyle(
+            color: Colors.blue,
+            fontSize: 12,
+          ),
+          backgroundColor: Colors.white,
+        ),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+    }
   }
 
   @override
@@ -72,28 +177,78 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
       // Standard display options
       StandardChartOptions(controller: _optionsController),
 
-      // Annotation options
+      // Annotation visibility options
       OptionSection(
-        title: 'Annotations',
-        icon: Icons.edit_note,
+        title: 'Annotation Types',
+        icon: Icons.layers,
         children: [
           BoolOption(
             label: 'Show Thresholds',
             value: _showThresholds,
-            onChanged: (v) => setState(() => _showThresholds = v),
+            onChanged: (v) {
+              setState(() => _showThresholds = v);
+              _rebuildAnnotations();
+            },
             subtitle: 'Horizontal limit lines',
           ),
           BoolOption(
             label: 'Show Range Highlights',
             value: _showRanges,
-            onChanged: (v) => setState(() => _showRanges = v),
+            onChanged: (v) {
+              setState(() => _showRanges = v);
+              _rebuildAnnotations();
+            },
             subtitle: 'Highlighted regions',
           ),
           BoolOption(
             label: 'Show Text Labels',
             value: _showTextAnnotations,
-            onChanged: (v) => setState(() => _showTextAnnotations = v),
+            onChanged: (v) {
+              setState(() => _showTextAnnotations = v);
+              _rebuildAnnotations();
+            },
             subtitle: 'Custom text overlays',
+          ),
+        ],
+      ),
+
+      // Annotation interaction settings
+      OptionSection(
+        title: 'Annotation Behavior',
+        icon: Icons.touch_app,
+        children: [
+          BoolOption(
+            label: 'Interactive Annotations',
+            value: _interactiveAnnotations,
+            onChanged: (v) => setState(() => _interactiveAnnotations = v),
+            subtitle: 'Enable all annotation interactions',
+          ),
+          BoolOption(
+            label: 'Allow Dragging',
+            value: _allowDragging,
+            onChanged: (v) {
+              setState(() => _allowDragging = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Drag to reposition annotations',
+          ),
+          BoolOption(
+            label: 'Allow Editing',
+            value: _allowEditing,
+            onChanged: (v) {
+              setState(() => _allowEditing = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Double-click to edit properties',
+          ),
+          BoolOption(
+            label: 'Snap to Value',
+            value: _snapToValue,
+            onChanged: (v) {
+              setState(() => _snapToValue = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Ranges snap to data values',
           ),
         ],
       ),
@@ -107,13 +262,38 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             icon: Icons.refresh,
             onPressed: _regenerateData,
           ),
+          ActionButton(
+            label: 'Clear All Annotations',
+            icon: Icons.clear_all,
+            onPressed: () {
+              _annotationController.clearAnnotations();
+              setState(() {
+                _showThresholds = false;
+                _showRanges = false;
+                _showTextAnnotations = false;
+              });
+            },
+          ),
+          ActionButton(
+            label: 'Reset Annotations',
+            icon: Icons.restore,
+            onPressed: () {
+              setState(() {
+                _showThresholds = true;
+                _showRanges = true;
+                _showTextAnnotations = true;
+              });
+              _rebuildAnnotations();
+            },
+          ),
         ],
       ),
 
       // Info
       const InfoBox(
         message: 'Annotations help highlight important values, ranges, '
-            'and trends in your data.',
+            'and trends in your data. Enable dragging and editing to '
+            'interactively modify annotations.',
       ),
     ];
   }
@@ -124,7 +304,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
       builder: (context, _) {
         return ChartCard(
           title: 'Annotated Chart',
-          subtitle: 'Sine wave with annotations',
+          subtitle: 'Sine wave with interactive annotations',
           child: BravenChartPlus(
             chartType: ChartType.line,
             lineStyle: LineStyle.smooth,
@@ -139,7 +319,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                 showDataPointMarkers: _optionsController.showDataMarkers,
               ),
             ],
-            annotations: _buildAnnotations(),
+            annotationController: _annotationController,
             theme: _optionsController.theme,
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
@@ -157,113 +337,57 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
               enableZoom: _optionsController.enableZoom,
               enablePan: _optionsController.enablePan,
             ),
-            interactiveAnnotations: true,
+            interactiveAnnotations: _interactiveAnnotations,
+            onAnnotationTap: (annotation) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tapped: ${annotation.label ?? annotation.id}'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            onAnnotationDragged: (annotation, newPosition) {
+              // The controller automatically updates the annotation
+              // This callback is for additional handling if needed
+            },
           ),
         );
       },
     );
   }
 
-  List<ChartAnnotation> _buildAnnotations() {
-    final annotations = <ChartAnnotation>[];
-
-    if (_showThresholds) {
-      // Upper threshold
-      annotations.add(ThresholdAnnotation(
-        axis: AnnotationAxis.y,
-        value: 80,
-        label: 'Upper Limit',
-        labelPosition: AnnotationLabelPosition.topLeft,
-        lineColor: Colors.red,
-        lineWidth: 2.0,
-        dashPattern: [5, 3],
-      ));
-
-      // Lower threshold
-      annotations.add(ThresholdAnnotation(
-        axis: AnnotationAxis.y,
-        value: 20,
-        label: 'Lower Limit',
-        labelPosition: AnnotationLabelPosition.bottomLeft,
-        lineColor: Colors.orange,
-        lineWidth: 2.0,
-        dashPattern: [5, 3],
-      ));
-
-      // Target line
-      annotations.add(ThresholdAnnotation(
-        axis: AnnotationAxis.y,
-        value: 50,
-        label: 'Target',
-        labelPosition: AnnotationLabelPosition.topRight,
-        lineColor: Colors.green,
-        lineWidth: 1.5,
-      ));
-    }
-
-    if (_showRanges) {
-      // Optimal range
-      annotations.add(RangeAnnotation(
-        startX: 20,
-        endX: 40,
-        label: 'Optimal Zone',
-        fillColor: Colors.green.withValues(alpha: 0.2),
-        borderColor: Colors.green.withValues(alpha: 0.5),
-      ));
-
-      // Warning range
-      annotations.add(RangeAnnotation(
-        startX: 60,
-        endX: 80,
-        label: 'Caution Zone',
-        fillColor: Colors.orange.withValues(alpha: 0.2),
-        borderColor: Colors.orange.withValues(alpha: 0.5),
-      ));
-    }
-
-    if (_showTextAnnotations) {
-      // Text at peak
-      annotations.add(TextAnnotation(
-        text: 'Peak Value',
-        position: const Offset(25, 90),
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Colors.blue,
-            fontSize: 12,
-          ),
-          backgroundColor: Colors.white,
-        ),
-      ));
-    }
-
-    return annotations;
-  }
-
   Widget _buildStatusPanel() {
-    int annotationCount = 0;
-    if (_showThresholds) annotationCount += 3;
-    if (_showRanges) annotationCount += 2;
-    if (_showTextAnnotations) annotationCount += 1;
-
-    return StatusPanel(
-      items: [
-        StatusItem(
-          label: 'Data Points',
-          value: '${_data.length}',
-        ),
-        StatusItem(
-          label: 'Annotations',
-          value: '$annotationCount',
-        ),
-        StatusItem(
-          label: 'Thresholds',
-          value: _showThresholds ? 'On' : 'Off',
-        ),
-        StatusItem(
-          label: 'Ranges',
-          value: _showRanges ? 'On' : 'Off',
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: _annotationController,
+      builder: (context, _) {
+        return StatusPanel(
+          items: [
+            StatusItem(
+              label: 'Data Points',
+              value: '${_data.length}',
+            ),
+            StatusItem(
+              label: 'Annotations',
+              value: '${_annotationController.length}',
+            ),
+            StatusItem(
+              label: 'Interactive',
+              value: _interactiveAnnotations ? 'On' : 'Off',
+              color: _interactiveAnnotations ? Colors.green : Colors.grey,
+            ),
+            StatusItem(
+              label: 'Draggable',
+              value: _allowDragging ? 'On' : 'Off',
+              color: _allowDragging ? Colors.blue : Colors.grey,
+            ),
+            StatusItem(
+              label: 'Editable',
+              value: _allowEditing ? 'On' : 'Off',
+              color: _allowEditing ? Colors.orange : Colors.grey,
+            ),
+          ],
+        );
+      },
     );
   }
 }
