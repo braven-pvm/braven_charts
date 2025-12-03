@@ -40,8 +40,8 @@ import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'widgets/chart_legend.dart';
-import 'widgets/dialogs/point_annotation_dialog.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
+import 'widgets/dialogs/point_annotation_dialog.dart';
 import 'widgets/dialogs/range_annotation_dialog.dart';
 import 'widgets/dialogs/text_annotation_dialog.dart';
 import 'widgets/dialogs/threshold_annotation_dialog.dart';
@@ -1800,6 +1800,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         // Double-click detected!
         if (tappedElement is TextAnnotationElement ||
             tappedElement is PointAnnotationElement ||
+            tappedElement is PinAnnotationElement ||
             tappedElement is ThresholdAnnotationElement ||
             tappedElement is TrendAnnotationElement ||
             tappedElement is RangeAnnotationElement) {
@@ -1819,6 +1820,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Trigger callbacks
     if (tappedElement != null) {
       if (tappedElement is PointAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is PinAnnotationElement) {
         widget.onAnnotationTap?.call(tappedElement.annotation);
       } else if (tappedElement is TextAnnotationElement) {
         widget.onAnnotationTap?.call(tappedElement.annotation);

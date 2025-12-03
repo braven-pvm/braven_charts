@@ -2287,6 +2287,9 @@ class ChartRenderBox extends RenderBox {
         coordinator.startInteraction(_potentialDragPinStartPosition!, element: hitElement);
         coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
 
+        // Show selected state while dragging
+        coordinator.selectElement(hitElement);
+
         // Clear potential drag state
         _potentialDragPinAnnotation = null;
         _potentialDragPinStartPosition = null;
@@ -3889,7 +3892,7 @@ class ChartRenderBox extends RenderBox {
 
       // Update transform for annotation elements before painting (enables dynamic positioning)
       // CRITICAL FIX: Update transform for ALL annotation types, not just Point and Range
-      // This ensures Threshold and Trend annotations update during pan/zoom gestures
+      // This ensures Threshold, Trend, and Pin annotations update during pan/zoom gestures
       if (_transform != null) {
         if (element is PointAnnotationElement) {
           element.updateTransform(_transform!);
@@ -3898,6 +3901,8 @@ class ChartRenderBox extends RenderBox {
         } else if (element is ThresholdAnnotationElement) {
           element.updateTransform(_transform!);
         } else if (element is TrendAnnotationElement) {
+          element.updateTransform(_transform!);
+        } else if (element is PinAnnotationElement) {
           element.updateTransform(_transform!);
         }
       }
