@@ -39,6 +39,7 @@ class PointAnnotationElement extends ChartElement {
       final point = series.points[annotation.dataPointIndex];
       _dataPosition = Offset(point.x, point.y);
     }
+    _cacheLabelPainter(); // Cache the label TextPainter if label exists
   }
 
   final PointAnnotation annotation;
@@ -50,6 +51,24 @@ class PointAnnotationElement extends ChartElement {
   bool _isSelected;
   bool _isHovered;
   int? _candidateDataPointIndex; // For drag preview - shows where annotation will move to
+
+  /// Cached label TextPainter to avoid recreating on every bounds/paint call.
+  TextPainter? _cachedLabelPainter;
+  Size? _cachedLabelSize;
+
+  /// Caches the label TextPainter if label exists.
+  /// Called once on construction since label text doesn't change.
+  void _cacheLabelPainter() {
+    if (annotation.label == null || annotation.label!.isEmpty) return;
+
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    _cachedLabelPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _cachedLabelSize = _cachedLabelPainter!.size;
+  }
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows annotations to move smoothly during pan without regenerating elements.
@@ -100,23 +119,17 @@ class PointAnnotationElement extends ChartElement {
   }
 
   /// Calculate label bounds if label exists, null otherwise.
-  /// Uses same positioning logic as _drawLabel() to ensure consistency.
+  /// Uses cached TextPainter for efficiency.
   Rect? _calculateLabelBounds() {
-    if (annotation.label == null || annotation.label!.isEmpty) return null;
+    // Use cached size if available
+    if (_cachedLabelSize == null) return null;
 
     final screenPos = _getScreenPosition();
     if (screenPos == null) return null;
 
-    final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth = textPainter.width + padding.left + padding.right;
-    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final containerWidth = _cachedLabelSize!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelSize!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Label positioned to the right of the marker, vertically centered
@@ -338,18 +351,25 @@ class PointAnnotationElement extends ChartElement {
   }
 
   void _drawLabel(Canvas canvas, Offset position, String label, {double alpha = 1.0}) {
-    final baseTextStyle = annotation.style.textStyle;
-    // Apply alpha to text color
-    final textStyle = alpha < 1.0
-        ? baseTextStyle.copyWith(
-            color: (baseTextStyle.color ?? Colors.black).withValues(alpha: alpha),
-          )
-        : baseTextStyle;
-    final textSpan = TextSpan(text: label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    if (_cachedLabelSize == null) return;
+
+    // Use cached painter for full opacity, create new one for ghost effect
+    TextPainter textPainter;
+    if (alpha < 1.0) {
+      // Ghost effect needs modified color
+      final baseTextStyle = annotation.style.textStyle;
+      final textStyle = baseTextStyle.copyWith(
+        color: (baseTextStyle.color ?? Colors.black).withValues(alpha: alpha),
+      );
+      final textSpan = TextSpan(text: label, style: textStyle);
+      textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+    } else {
+      // Use cached painter for normal rendering
+      textPainter = _cachedLabelPainter!;
+    }
 
     // Get padding from style or use default
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
@@ -425,6 +445,8 @@ class PointAnnotationElement extends ChartElement {
     copy._isHovered = isHovered ?? _isHovered;
     copy._dataPosition = _dataPosition;
     copy._currentTransform = _currentTransform;
+    copy._cachedLabelPainter = _cachedLabelPainter;
+    copy._cachedLabelSize = _cachedLabelSize;
     return copy;
   }
 }
@@ -439,7 +461,9 @@ class PinAnnotationElement extends ChartElement {
     required this.transform,
   })  : _isSelected = false,
         _isHovered = false,
-        _currentTransform = transform;
+        _currentTransform = transform {
+    _cacheLabelPainter();
+  }
 
   final PinAnnotation annotation;
   final ChartTransform transform; // Initial transform for construction
@@ -451,6 +475,23 @@ class PinAnnotationElement extends ChartElement {
   // Temporary position during drag (in data coordinates)
   double? _tempX;
   double? _tempY;
+
+  /// Cached label TextPainter to avoid recreating on every bounds/paint call.
+  TextPainter? _cachedLabelPainter;
+  Size? _cachedLabelSize;
+
+  /// Caches the label TextPainter if label exists.
+  void _cacheLabelPainter() {
+    if (annotation.label == null || annotation.label!.isEmpty) return;
+
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    _cachedLabelPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _cachedLabelSize = _cachedLabelPainter!.size;
+  }
 
   /// Update the current transform before painting (for real-time pan/zoom).
   void updateTransform(ChartTransform newTransform) {
@@ -493,21 +534,15 @@ class PinAnnotationElement extends ChartElement {
   }
 
   /// Calculate label bounds if label exists, null otherwise.
+  /// Uses cached TextPainter for efficiency.
   Rect? _calculateLabelBounds() {
-    if (annotation.label == null || annotation.label!.isEmpty) return null;
+    if (_cachedLabelSize == null) return null;
 
     final screenPos = _getScreenPosition();
 
-    final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth = textPainter.width + padding.left + padding.right;
-    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final containerWidth = _cachedLabelSize!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelSize!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Label positioned to the right of the marker, vertically centered
@@ -689,16 +724,11 @@ class PinAnnotationElement extends ChartElement {
   }
 
   void _drawLabel(Canvas canvas, Offset position, String label) {
-    final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    if (_cachedLabelPainter == null) return;
 
     final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth = textPainter.width + padding.left + padding.right;
-    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final containerWidth = _cachedLabelPainter!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelPainter!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Position label container to the right of the marker, vertically centered
@@ -730,12 +760,12 @@ class PinAnnotationElement extends ChartElement {
       canvas.drawRRect(rrect, borderPaint);
     }
 
-    // Draw text inside container
+    // Draw text inside container using cached painter
     final textPosition = Offset(
       bgRect.left + padding.left,
       bgRect.top + padding.top,
     );
-    textPainter.paint(canvas, textPosition);
+    _cachedLabelPainter!.paint(canvas, textPosition);
   }
 
   /// Draws coordinate value labels during drag (similar to ThresholdAnnotation).
@@ -817,6 +847,8 @@ class PinAnnotationElement extends ChartElement {
     copy._currentTransform = _currentTransform;
     copy._tempX = _tempX;
     copy._tempY = _tempY;
+    copy._cachedLabelPainter = _cachedLabelPainter;
+    copy._cachedLabelSize = _cachedLabelSize;
     return copy;
   }
 }
@@ -1406,7 +1438,7 @@ class TextAnnotationElement extends ChartElement {
     required this.annotation,
   })  : _isSelected = false,
         _isHovered = false {
-    _calculateBounds();
+    _calculateBoundsAndPainter();
   }
 
   final TextAnnotation annotation;
@@ -1416,22 +1448,35 @@ class TextAnnotationElement extends ChartElement {
   bool _isSelected;
   bool _isHovered;
 
+  /// Cached TextPainter to avoid recreating on every paint call.
+  /// This is expensive to create, especially for rich text with complex formatting.
+  TextPainter? _cachedTextPainter;
+
+  /// Cached TextSpan to detect when we need to rebuild the painter.
+  TextSpan? _cachedTextSpan;
+
   /// Temporary position during drag (null when not dragging).
   Offset? _tempPosition;
 
   /// Get the current temp position (used during drag completion).
   Offset? get tempPosition => _tempPosition;
 
-  void _calculateBounds() {
+  /// Calculates bounds and caches the TextPainter for efficient painting.
+  /// This is called once on construction and when position changes during drag.
+  void _calculateBoundsAndPainter() {
     final textStyle = annotation.style.textStyle;
+
     // Use toTextSpan() to support both plain and rich text
-    final textSpan = annotation.toTextSpan(baseStyle: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
+    // Cache the span to avoid rebuilding on every paint
+    _cachedTextSpan = annotation.toTextSpan(baseStyle: textStyle);
+
+    // Create and cache the TextPainter
+    _cachedTextPainter = TextPainter(
+      text: _cachedTextSpan,
       textDirection: TextDirection.ltr,
     )..layout();
 
-    final textSize = textPainter.size;
+    final textSize = _cachedTextPainter!.size;
     final padding = annotation.style.padding ?? const EdgeInsets.all(4.0);
 
     // Use temp position during drag, otherwise use annotation's position
@@ -1554,27 +1599,22 @@ class TextAnnotationElement extends ChartElement {
       }
     }
 
-    // Draw text - use toTextSpan() to support both plain and rich text
-    final textStyle = annotation.style.textStyle;
-    final textSpan = annotation.toTextSpan(baseStyle: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    textPainter.paint(canvas, Offset(_anchoredPosition!.dx, _anchoredPosition!.dy));
+    // Draw text using cached TextPainter (created in _calculateBoundsAndPainter)
+    if (_cachedTextPainter != null) {
+      _cachedTextPainter!.paint(canvas, Offset(_anchoredPosition!.dx, _anchoredPosition!.dy));
+    }
   }
 
   /// Update temporary position during drag.
   void updateTempPosition(Offset newPosition) {
     _tempPosition = newPosition;
-    _calculateBounds(); // Recalculate bounds with new position
+    _calculateBoundsAndPainter(); // Recalculate bounds with new position
   }
 
   /// Clear temporary position after drag completes.
   void clearTempPosition() {
     _tempPosition = null;
-    _calculateBounds(); // Recalculate bounds with original position
+    _calculateBoundsAndPainter(); // Recalculate bounds with original position
   }
 
   @override
@@ -1596,6 +1636,8 @@ class TextAnnotationElement extends ChartElement {
     copy._isHovered = isHovered ?? _isHovered;
     copy._bounds = _bounds;
     copy._anchoredPosition = _anchoredPosition;
+    copy._cachedTextPainter = _cachedTextPainter;
+    copy._cachedTextSpan = _cachedTextSpan;
     return copy;
   }
 }
