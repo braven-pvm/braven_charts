@@ -3419,28 +3419,36 @@ class ChartRenderBox extends RenderBox {
         final mode = crosshairConfig.mode;
 
         // Horizontal line across plot area (if mode allows)
-        // In multi-axis mode, extend line to reach outer axes for visual continuity
+        // In multi-axis mode, extend line to reach outer axes with showCrosshairLabel enabled
         if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
           double lineLeft = _plotArea.left;
           double lineRight = _plotArea.right;
 
-          // Check for multi-axis mode and extend line to outer axes
+          // Check for multi-axis mode and extend line to outer axes (only if they have crosshair labels)
           if (_normalizationMode == NormalizationMode.perSeries) {
             final effectiveAxes = _getEffectiveYAxes();
-            final axisWidths = _computeAxisWidths();
+            if (effectiveAxes.length > 1) {
+              final axisWidths = _computeAxisWidths();
 
-            // Extend left for leftOuter axes
-            final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
-            if (leftOuterWidth > 0) {
-              final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
-              lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
-            }
+              // Extend left for leftOuter axes ONLY if they have showCrosshairLabel enabled
+              final leftOuterAxes = effectiveAxes.where(
+                (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
+              );
+              if (leftOuterAxes.isNotEmpty) {
+                final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
+                final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+                lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
+              }
 
-            // Extend right for rightOuter axes
-            final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
-            if (rightOuterWidth > 0) {
-              final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
-              lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+              // Extend right for rightOuter axes ONLY if they have showCrosshairLabel enabled
+              final rightOuterAxes = effectiveAxes.where(
+                (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
+              );
+              if (rightOuterAxes.isNotEmpty) {
+                final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
+                final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
+                lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+              }
             }
           }
 
@@ -4583,9 +4591,13 @@ class ChartRenderBox extends RenderBox {
   /// positioned over that specific axis.
   void _drawPerAxisCrosshairLabels(Canvas canvas, Offset cursorPos, double normalizedY) {
     final effectiveAxes = _getEffectiveYAxes();
-    final axisBounds = _computeAxisBounds();
+    
+    // Early exit: check if ANY axis needs crosshair labels before computing expensive data
+    final axesWithLabels = effectiveAxes.where((a) => a.showCrosshairLabel && a.visible).toList();
+    if (axesWithLabels.isEmpty) return;
 
-    // Get axis widths for positioning
+    // Only compute these expensive values if we actually have axes to render
+    final axisBounds = _computeAxisBounds();
     final axisWidths = _computeAxisWidths();
 
     // Use theme for crosshair label styling
@@ -4595,10 +4607,8 @@ class ChartRenderBox extends RenderBox {
     final labelPadding = labelStyleConfig?.padding.left ?? 4.0;
     final borderRadius = labelStyleConfig?.borderRadius ?? 3.0;
 
-    for (final axis in effectiveAxes) {
-      // Only draw for axes with showCrosshairLabel enabled
-      if (!axis.showCrosshairLabel || !axis.visible) continue;
-
+    for (final axis in axesWithLabels) {
+      // Already filtered for showCrosshairLabel and visible
       final bounds = axisBounds[axis.id];
       if (bounds == null) continue;
 
@@ -4756,28 +4766,36 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Horizontal line (optional in tracking mode based on config)
-    // In multi-axis mode, extend line to reach outer axes for visual continuity
+    // In multi-axis mode, extend line to reach outer axes with showCrosshairLabel enabled
     if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
       double lineLeft = _plotArea.left;
       double lineRight = _plotArea.right;
 
-      // Check for multi-axis mode and extend line to outer axes
+      // Check for multi-axis mode and extend line to outer axes (only if they have crosshair labels)
       if (_normalizationMode == NormalizationMode.perSeries) {
         final effectiveAxes = _getEffectiveYAxes();
-        final axisWidths = _computeAxisWidths();
+        if (effectiveAxes.length > 1) {
+          final axisWidths = _computeAxisWidths();
 
-        // Extend left for leftOuter axes
-        final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
-        if (leftOuterWidth > 0) {
-          final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
-          lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
-        }
+          // Extend left for leftOuter axes ONLY if they have showCrosshairLabel enabled
+          final leftOuterAxes = effectiveAxes.where(
+            (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
+          );
+          if (leftOuterAxes.isNotEmpty) {
+            final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
+            final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+            lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
+          }
 
-        // Extend right for rightOuter axes
-        final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
-        if (rightOuterWidth > 0) {
-          final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
-          lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+          // Extend right for rightOuter axes ONLY if they have showCrosshairLabel enabled
+          final rightOuterAxes = effectiveAxes.where(
+            (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
+          );
+          if (rightOuterAxes.isNotEmpty) {
+            final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
+            final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
+            lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+          }
         }
       }
 
