@@ -535,8 +535,8 @@ class PinAnnotationElement extends ChartElement {
   ChartElementType get elementType => ChartElementType.datapoint;
 
   @override
-  // Render order same as PointAnnotation (foreground)
-  int get renderOrder => RenderOrder.pointAnnotation;
+  // Render order same as TextAnnotation (foreground labels)
+  int get renderOrder => RenderOrder.pinAnnotation;
 
   @override
   bool get isSelected => _isSelected;
