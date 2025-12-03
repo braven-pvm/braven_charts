@@ -4756,10 +4756,34 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Horizontal line (optional in tracking mode based on config)
+    // In multi-axis mode, extend line to reach outer axes for visual continuity
     if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
+      double lineLeft = _plotArea.left;
+      double lineRight = _plotArea.right;
+
+      // Check for multi-axis mode and extend line to outer axes
+      if (_normalizationMode == NormalizationMode.perSeries) {
+        final effectiveAxes = _getEffectiveYAxes();
+        final axisWidths = _computeAxisWidths();
+
+        // Extend left for leftOuter axes
+        final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
+        if (leftOuterWidth > 0) {
+          final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
+          lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
+        }
+
+        // Extend right for rightOuter axes
+        final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
+        if (rightOuterWidth > 0) {
+          final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
+          lineRight = _plotArea.right + rightWidth + rightOuterWidth;
+        }
+      }
+
       canvas.drawLine(
-        Offset(_plotArea.left, cursorPos.dy),
-        Offset(_plotArea.right, cursorPos.dy),
+        Offset(lineLeft, cursorPos.dy),
+        Offset(lineRight, cursorPos.dy),
         crosshairPaint,
       );
     }
