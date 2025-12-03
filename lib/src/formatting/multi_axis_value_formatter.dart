@@ -73,6 +73,39 @@ class MultiAxisValueFormatter {
     return clean;
   }
 
+  /// Formats a value with fixed decimal places (preserves trailing zeros).
+  ///
+  /// Unlike [format], this method does NOT clean trailing zeros, ensuring
+  /// consistent string width for labels that update dynamically (e.g.,
+  /// crosshair Y-value labels). This prevents visual jitter from label resizing.
+  ///
+  /// Parameters:
+  /// - [value]: The numeric value to format
+  /// - [unit]: Optional unit suffix (e.g., 'W', 'bpm', 'L')
+  /// - [precision]: Decimal precision (defaults to 2)
+  ///
+  /// Returns a formatted string like "250.00 W" or "123.46".
+  ///
+  /// Example:
+  /// ```dart
+  /// formatFixed(value: 250.0, unit: 'W')           // '250.00 W'
+  /// formatFixed(value: 100.0, precision: 2)       // '100.00'
+  /// formatFixed(value: 123.456, precision: 1)     // '123.5'
+  /// ```
+  static String formatFixed({
+    required double value,
+    String? unit,
+    int precision = 2,
+  }) {
+    final formatted = value.toStringAsFixed(precision);
+
+    // Treat empty string as null for unit
+    if (unit != null && unit.isNotEmpty) {
+      return '$formatted $unit';
+    }
+    return formatted;
+  }
+
   /// Determines optimal decimal precision based on value magnitude.
   ///
   /// Uses the absolute value to determine precision:
