@@ -707,9 +707,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
   Widget _buildStatusPanel() {
     final annotationCount = _annotationController.annotations.length;
-    final annotationStatus = _showAnnotations
-        ? '$annotationCount visible'
-        : '$annotationCount hidden';
+    final annotationStatus = _showAnnotations ? '$annotationCount visible' : '$annotationCount hidden';
 
     if (_selectedDemo == 0) {
       return StatusPanel(

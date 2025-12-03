@@ -368,6 +368,25 @@ class ChartRenderBox extends RenderBox {
   ChartTransform? _panConstraintTransform;
 
   // ==========================================================================
+  // Widget-Provided Axis Bounds Tracking
+  // ==========================================================================
+
+  /// Tracks the ORIGINAL full data bounds as provided by the widget.
+  ///
+  /// These values are captured when a new axis is first set and represent
+  /// the FULL data range from the widget (before any zoom/pan adjustments).
+  /// They are used to detect whether widget-level data has actually changed
+  /// vs. just an axis object recreation during annotation updates.
+  ///
+  /// CRITICAL: These are NOT the same as _originalTransform bounds!
+  /// - _widgetProvidedX/YBounds: Always the FULL range from widget (never zoomed)
+  /// - _originalTransform: Can be the zoomed range in some scenarios
+  double? _widgetProvidedXMin;
+  double? _widgetProvidedXMax;
+  double? _widgetProvidedYMin;
+  double? _widgetProvidedYMax;
+
+  // ==========================================================================
   // Layer Separation & Picture Caching (Sprint 1)
   // ==========================================================================
 
@@ -522,13 +541,43 @@ class ChartRenderBox extends RenderBox {
   /// Triggers layout and paint when axis is changed.
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setXAxis(chart_axis.Axis? axis) {
+    // Compare by data bounds, not reference - axis objects are recreated on each rebuild
+    // but we only need to update if the actual data range changed
     if (_xAxis == axis) {
-      // [DEBUG OUTPUT REMOVED] Same axis reference - fires frequently during streaming
       return;
     }
 
-    // [DEBUG OUTPUT REMOVED] X-axis updates - fire frequently during streaming
+    // Check if the NEW axis bounds match the WIDGET-PROVIDED full data range.
+    // This is crucial for preserving zoom/pan during annotation updates:
+    // - When zoomed, _xAxis.dataMin/Max reflect the zoomed viewport (e.g., 5-15)
+    // - When widget rebuilds, new axis has FULL data range (e.g., 0-100)
+    // - We track the ORIGINAL widget-provided bounds separately from _originalTransform
+    //   because _originalTransform can get updated during zoom/pan operations
+    final boundsMatchWidgetProvided = _widgetProvidedXMin != null &&
+        _widgetProvidedXMax != null &&
+        axis != null &&
+        _widgetProvidedXMin == axis.dataMin &&
+        _widgetProvidedXMax == axis.dataMax;
+
     _xAxis = axis;
+
+    // Skip transform updates if new bounds match widget-provided - preserves zoom/pan state
+    // during annotation-only updates (where data bounds don't actually change)
+    if (boundsMatchWidgetProvided && _transform != null) {
+      // CRITICAL: The new axis has FULL data range ticks, but we're zoomed.
+      // We must sync the new axis to the current zoomed viewport so tick labels
+      // reflect the zoomed range, not the full range.
+      _xAxis!.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
+      _seriesCacheDirty = true;
+      markNeedsLayout();
+      return;
+    }
+
+    // Track the widget-provided bounds for future comparisons
+    if (axis != null) {
+      _widgetProvidedXMin = axis.dataMin;
+      _widgetProvidedXMax = axis.dataMax;
+    }
 
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
@@ -544,8 +593,6 @@ class ChartRenderBox extends RenderBox {
 
       // Invalidate series cache - viewport changed, need to regenerate Picture
       _seriesCacheDirty = true;
-
-      // [DEBUG OUTPUT REMOVED] X-axis viewport update - fires frequently during streaming
     }
 
     markNeedsLayout();
@@ -556,13 +603,50 @@ class ChartRenderBox extends RenderBox {
   /// Triggers layout and paint when axis is changed.
   /// If transform exists (zoomed/panned state), syncs new axis with current viewport.
   void setYAxis(chart_axis.Axis? axis) {
+    // Compare by data bounds, not reference - axis objects are recreated on each rebuild
+    // but we only need to update if the actual data range changed
     if (_yAxis == axis) {
-      // [DEBUG OUTPUT REMOVED] Same axis reference - fires frequently during streaming
       return;
     }
 
-    // [DEBUG OUTPUT REMOVED] Y-axis updates - fire frequently during streaming
+    // Check if widget-provided bounds have actually changed
+    // This compares the NEW axis bounds against the LAST widget-provided bounds
+    // (not the zoomed axis bounds, not _originalTransform which has complex lifecycle)
+    //
+    // Why this approach works:
+    // - _originalTransform gets updated during pan constraint calculations, chart switches, etc.
+    // - After first annotation drag, _originalTransform may contain ZOOMED range, not original
+    // - Widget-provided bounds are stable: always the FULL data range from the widget
+    // - This correctly detects "same data, just annotation change" vs "actual data range change"
+    final boundsMatchWidgetProvided = _widgetProvidedYMin != null &&
+        _widgetProvidedYMax != null &&
+        axis != null &&
+        _widgetProvidedYMin == axis.dataMin &&
+        _widgetProvidedYMax == axis.dataMax;
+
     _yAxis = axis;
+
+    // Skip transform updates if widget-provided bounds haven't changed
+    // This preserves zoom/pan state during annotation-only updates
+    if (boundsMatchWidgetProvided && _transform != null) {
+      // CRITICAL: The new axis has FULL data range ticks, but we're zoomed.
+      // We must sync the new axis to the current zoomed viewport so tick labels
+      // reflect the zoomed range, not the full range.
+      // Note: We call updateDataRange directly on the new axis object, not via
+      // _updateAxesFromTransform(), because that method uses _lastXMin/_lastYMin
+      // tracking which may skip the update if values haven't changed (but we have
+      // a NEW axis object that needs its ticks regenerated for the zoomed range).
+      _yAxis!.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
+      _seriesCacheDirty = true;
+      markNeedsLayout();
+      return;
+    }
+
+    // Track the widget-provided bounds for future comparisons
+    if (axis != null) {
+      _widgetProvidedYMin = axis.dataMin;
+      _widgetProvidedYMax = axis.dataMax;
+    }
 
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
@@ -601,8 +685,6 @@ class ChartRenderBox extends RenderBox {
 
         // Invalidate series cache - viewport changed, need to regenerate Picture
         _seriesCacheDirty = true;
-
-        // [DEBUG OUTPUT REMOVED] Y-axis viewport update - fires frequently during streaming
       }
     }
 
@@ -1540,12 +1622,6 @@ class ChartRenderBox extends RenderBox {
 
       // Create initial transform if none exists OR if data range has significantly changed
       if (_transform == null || rangeChanged) {
-        if (rangeChanged) {
-          debugPrint('🔄 DATA RANGE CHANGED - Resetting transforms');
-          debugPrint('   Old: X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}]');
-          debugPrint('   New: X[${_xAxis!.dataMin}, ${_xAxis!.dataMax}]');
-        }
-
         // First time OR range changed: create transform from axis data ranges
         _transform = ChartTransform(
           dataXMin: _xAxis!.dataMin,
@@ -1562,13 +1638,8 @@ class ChartRenderBox extends RenderBox {
         // Otherwise both variables point to same object and zoom breaks scrollbar handle sizing
         _originalTransform = _transform!.copyWith();
 
-        debugPrint('📊 INITIAL TRANSFORM - X[${_transform!.dataXMin}, ${_transform!.dataXMax}] Y[${_transform!.dataYMin}, ${_transform!.dataYMax}]');
-        debugPrint(
-            '📊 ORIGINAL TRANSFORM (copy) - X[${_originalTransform!.dataXMin}, ${_originalTransform!.dataXMax}] Y[${_originalTransform!.dataYMin}, ${_originalTransform!.dataYMax}]');
-
         // Generate initial elements now that we have a transform
         if (_elementGenerator != null) {
-          // [DEBUG OUTPUT REMOVED] Generating initial elements - fires once at init
           _rebuildElementsWithTransform();
 
           // Invalidate cache - initial element generation
