@@ -13,6 +13,8 @@ dependencies:
   flutter:
     sdk: flutter
   flex_color_picker: ^3.7.1
+  fleather: ^1.26.0  # Rich text editor for TextAnnotation
+  parchment: ^1.25.1  # Document model for fleather (Delta format serialization)
 
 dev_dependencies:
   flutter_test:
