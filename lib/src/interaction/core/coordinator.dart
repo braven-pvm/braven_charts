@@ -160,8 +160,6 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// [requestedMode] is the mode being requested.
   /// [element] is the element associated with this mode (if any).
   bool claimMode(InteractionMode requestedMode, {ChartElement? element}) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
     // Modal states block everything except themselves
     if (_currentMode.isModal && requestedMode != _currentMode) {
       return false;
@@ -179,13 +177,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
   /// Sets the interaction mode (internal).
   void _setMode(InteractionMode mode, {ChartElement? element}) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
     if (_currentMode == mode && _activeElement == element) {
       return; // No change
     }
-
-    final oldMode = _currentMode;
 
     _currentMode = mode;
     _activeElement = element;
@@ -197,18 +191,13 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       _boxSelectionRect = null;
     }
 
-    final notifyTime = DateTime.now().millisecondsSinceEpoch;
     notifyListeners();
-
-    final endTime = DateTime.now().millisecondsSinceEpoch;
   }
 
   /// Releases the current interaction mode and returns to idle.
   ///
   /// [force] if true, releases even modal modes (use with caution).
   void releaseMode({bool force = false}) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
     if (_currentMode.isModal && !force) {
       return; // Don't release modal modes unless forced
     }
