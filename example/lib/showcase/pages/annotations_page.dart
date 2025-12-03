@@ -158,7 +158,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     }
 
     if (_showTextAnnotations) {
-      // Text at peak
+      // Text at peak (plain text)
       _annotationController.addAnnotation(TextAnnotation(
         id: 'peak_text',
         text: 'Peak Value',
@@ -173,6 +173,38 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             borderWidth: 0.5,
             padding: const EdgeInsets.all(8),
             borderRadius: BorderRadius.circular(5)),
+        allowDragging: _allowDragging,
+        allowEditing: _allowEditing,
+      ));
+
+      // Rich text annotation with formatting
+      // Note: Uses Fleather's standard attributes (b, i, u, s)
+      _annotationController.addAnnotation(TextAnnotation.rich(
+        id: 'rich_text_note',
+        richTextDelta: [
+          {
+            'insert': 'Important: ',
+            'attributes': {'b': true}
+          },
+          {'insert': 'This zone shows '},
+          {
+            'insert': 'critical',
+            'attributes': {'i': true, 'u': true}
+          },
+          {'insert': ' data!\n'},
+        ],
+        position: const Offset(70, 30),
+        style: AnnotationStyle(
+          textStyle: const TextStyle(
+            color: Colors.black87,
+            fontSize: 12,
+          ),
+          backgroundColor: Colors.amber.shade50,
+          borderColor: Colors.amber.shade700,
+          borderWidth: 1.0,
+          padding: const EdgeInsets.all(10),
+          borderRadius: BorderRadius.circular(6),
+        ),
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
       ));

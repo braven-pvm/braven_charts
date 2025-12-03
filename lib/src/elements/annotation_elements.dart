@@ -1424,7 +1424,8 @@ class TextAnnotationElement extends ChartElement {
 
   void _calculateBounds() {
     final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: annotation.text, style: textStyle);
+    // Use toTextSpan() to support both plain and rich text
+    final textSpan = annotation.toTextSpan(baseStyle: textStyle);
     final textPainter = TextPainter(
       text: textSpan,
       textDirection: TextDirection.ltr,
@@ -1553,9 +1554,9 @@ class TextAnnotationElement extends ChartElement {
       }
     }
 
-    // Draw text
+    // Draw text - use toTextSpan() to support both plain and rich text
     final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: annotation.text, style: textStyle);
+    final textSpan = annotation.toTextSpan(baseStyle: textStyle);
     final textPainter = TextPainter(
       text: textSpan,
       textDirection: TextDirection.ltr,

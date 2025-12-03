@@ -2,6 +2,7 @@
 // Chart Annotation Base Classes for BravenChartPlus
 
 import 'package:flutter/material.dart';
+import 'package:parchment/parchment.dart';
 
 import 'annotation_style.dart';
 import 'enums.dart';
@@ -346,8 +347,51 @@ class RangeAnnotation extends ChartAnnotation {
 ///   anchor: AnnotationAnchor.topLeft,
 /// )
 /// ```
+///
+/// Rich text example:
+/// ```dart
+/// TextAnnotation.rich(
+///   id: 'formatted',
+///   richTextDelta: [
+///     {'insert': 'Bold ', 'attributes': {'bold': true}},
+///     {'insert': 'and normal text\n'},
+///   ],
+///   position: Offset(100, 50),
+/// )
+/// ```
 class TextAnnotation extends ChartAnnotation {
-  /// Creates a text annotation at a screen position.
+  /// Creates a TextAnnotation from JSON.
+  factory TextAnnotation.fromJson(Map<String, dynamic> json) {
+    final posJson = json['position'] as Map<String, dynamic>;
+    final position = Offset(
+      (posJson['dx'] as num).toDouble(),
+      (posJson['dy'] as num).toDouble(),
+    );
+
+    final anchorName = json['anchor'] as String?;
+    final anchor = anchorName != null
+        ? AnnotationAnchor.values.firstWhere(
+            (a) => a.name == anchorName,
+            orElse: () => AnnotationAnchor.topLeft,
+          )
+        : AnnotationAnchor.topLeft;
+
+    return TextAnnotation._internal(
+      id: json['id'] as String,
+      label: json['label'] as String?,
+      text: json['text'] as String?,
+      richTextDelta: json['richTextDelta'] as List<dynamic>?,
+      position: position,
+      anchor: anchor,
+      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
+      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
+      allowDragging: json['allowDragging'] as bool? ?? false,
+      allowEditing: json['allowEditing'] as bool? ?? false,
+      zIndex: json['zIndex'] as int? ?? 0,
+    );
+  }
+
+  /// Creates a text annotation with plain text at a screen position.
   TextAnnotation({
     String? id,
     super.label,
@@ -355,19 +399,70 @@ class TextAnnotation extends ChartAnnotation {
     super.allowDragging,
     super.allowEditing,
     super.zIndex,
-    required this.text,
+    required String this.text,
     required this.position,
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  })  : assert(
+  })  : richTextDelta = null,
+        assert(
           position.dx >= 0 && position.dy >= 0,
           'Position cannot have negative coordinates',
         ),
         super(id: id ?? ChartAnnotation.generateId());
 
-  /// The text content to display.
-  final String text;
+  /// Creates a text annotation with rich text (Delta format) at a screen position.
+  TextAnnotation.rich({
+    String? id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    required List<dynamic> this.richTextDelta,
+    required this.position,
+    this.anchor = AnnotationAnchor.topLeft,
+    this.backgroundColor,
+    this.borderColor,
+  })  : text = null,
+        assert(
+          position.dx >= 0 && position.dy >= 0,
+          'Position cannot have negative coordinates',
+        ),
+        super(id: id ?? ChartAnnotation.generateId());
+
+  /// Internal constructor for copyWith and fromJson.
+  TextAnnotation._internal({
+    required super.id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    this.text,
+    this.richTextDelta,
+    required this.position,
+    this.anchor = AnnotationAnchor.topLeft,
+    this.backgroundColor,
+    this.borderColor,
+  }) : assert(
+          text != null || richTextDelta != null,
+          'Either text or richTextDelta must be provided',
+        );
+
+  /// The plain text content to display (null if using rich text).
+  final String? text;
+
+  /// The rich text content as Delta JSON (null if using plain text).
+  ///
+  /// Delta format from Parchment/Fleather:
+  /// ```json
+  /// [
+  ///   {"insert": "Bold ", "attributes": {"bold": true}},
+  ///   {"insert": "normal\n"}
+  /// ]
+  /// ```
+  final List<dynamic>? richTextDelta;
 
   /// The screen position where this annotation is anchored.
   final Offset position;
@@ -381,6 +476,341 @@ class TextAnnotation extends ChartAnnotation {
   /// Optional border color for the text box.
   final Color? borderColor;
 
+  /// Returns true if this annotation uses rich text formatting.
+  bool get isRichText => richTextDelta != null;
+
+  /// Returns the plain text content, extracting from rich text if needed.
+  String get plainText {
+    if (text != null) return text!;
+    if (richTextDelta == null) return '';
+
+    // Extract plain text from Delta
+    final buffer = StringBuffer();
+    for (final op in richTextDelta!) {
+      if (op is Map && op['insert'] is String) {
+        buffer.write(op['insert']);
+      }
+    }
+    return buffer.toString().trim();
+  }
+
+  /// Converts the annotation content to a TextSpan for rendering.
+  ///
+  /// For plain text, uses the style's textStyle.
+  /// For rich text, converts Delta attributes to TextSpan children.
+  ///
+  /// Handles block-level attributes like headings properly:
+  /// In Parchment/Quill Delta format, heading attributes are applied to the
+  /// newline character at the end of a line, not the text content itself.
+  /// This method looks ahead to find heading attributes and applies them
+  /// to all text content in that line.
+  TextSpan toTextSpan({TextStyle? baseStyle}) {
+    final effectiveBaseStyle = baseStyle ?? style.textStyle;
+
+    if (!isRichText) {
+      return TextSpan(text: text, style: effectiveBaseStyle);
+    }
+
+    // Convert Delta to TextSpan children with heading support
+    final children = <TextSpan>[];
+    final ops = richTextDelta!;
+
+    // Process each operation, looking ahead to find heading attributes
+    for (int i = 0; i < ops.length; i++) {
+      final op = ops[i];
+      if (op is! Map) continue;
+
+      final insert = op['insert'];
+      if (insert is String) {
+        // Get inline attributes for this operation
+        final attributes = op['attributes'] as Map<String, dynamic>? ?? {};
+
+        // Check if this is a newline with heading attribute
+        if (insert == '\n' && attributes.containsKey('heading')) {
+          // This is a line-ending newline with heading style
+          // The heading has already been applied to previous text in this line
+          // Just add the newline
+          children.add(TextSpan(text: insert, style: effectiveBaseStyle));
+          continue;
+        }
+
+        // For regular text, look ahead to find if this line has a heading
+        int? headingLevel;
+        if (!insert.contains('\n')) {
+          // Look ahead to find the line-ending newline with heading attribute
+          headingLevel = _findHeadingForPosition(ops, i);
+        }
+
+        // Build style from base + heading + inline attributes
+        TextStyle spanStyle = effectiveBaseStyle;
+
+        // Apply heading style first (block level)
+        if (headingLevel != null) {
+          spanStyle = _applyHeadingStyle(spanStyle, headingLevel);
+        }
+
+        // Apply inline attributes on top
+        if (attributes.isNotEmpty) {
+          spanStyle = _applyDeltaAttributes(spanStyle, attributes);
+        }
+
+        children.add(TextSpan(text: insert, style: spanStyle));
+      }
+      // Skip embeds and other non-string inserts
+    }
+
+    // Fallback: if no children were created, show plain text
+    if (children.isEmpty) {
+      return TextSpan(text: plainText, style: effectiveBaseStyle);
+    }
+
+    return TextSpan(children: children, style: effectiveBaseStyle);
+  }
+
+  /// Finds the heading level for text at the given operation index.
+  /// Looks ahead to find the next newline character that ends this line
+  /// and checks if it has a heading attribute.
+  int? _findHeadingForPosition(List<dynamic> ops, int startIndex) {
+    for (int i = startIndex; i < ops.length; i++) {
+      final op = ops[i];
+      if (op is! Map) continue;
+
+      final insert = op['insert'];
+      if (insert is String && insert.contains('\n')) {
+        // Found a newline - check for heading attribute
+        final attrs = op['attributes'] as Map<String, dynamic>?;
+        if (attrs != null && attrs.containsKey('heading')) {
+          final headingValue = attrs['heading'];
+          if (headingValue is int) {
+            return headingValue;
+          }
+        }
+        // Found newline without heading
+        return null;
+      }
+    }
+    // No newline found - no heading
+    return null;
+  }
+
+  /// Applies heading style based on level (1-6).
+  /// Uses font sizes similar to HTML heading levels.
+  TextStyle _applyHeadingStyle(TextStyle style, int level) {
+    // Base font size from style, default to 14 if not set
+    final baseFontSize = style.fontSize ?? 14.0;
+
+    // Heading size multipliers (similar to typical heading ratios)
+    final double sizeMultiplier;
+    switch (level) {
+      case 1:
+        sizeMultiplier = 2.0; // H1: 2x base
+      case 2:
+        sizeMultiplier = 1.7; // H2: 1.7x base
+      case 3:
+        sizeMultiplier = 1.4; // H3: 1.4x base
+      case 4:
+        sizeMultiplier = 1.2; // H4: 1.2x base
+      case 5:
+        sizeMultiplier = 1.1; // H5: 1.1x base
+      case 6:
+        sizeMultiplier = 1.0; // H6: same as base
+      default:
+        return style; // Unknown level, no change
+    }
+
+    return style.copyWith(
+      fontSize: baseFontSize * sizeMultiplier,
+      fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600,
+    );
+  }
+
+  /// Applies Delta attributes to a TextStyle.
+  ///
+  /// Supports Fleather's standard attributes:
+  /// - 'b' for bold, 'i' for italic, 'u' for underline, 's' for strikethrough
+  /// - 'fg' for foreground/text color (Parchment standard)
+  /// - 'bg' for background/highlight color (Parchment standard)
+  /// Also supports custom attributes for extended styling.
+  TextStyle _applyDeltaAttributes(TextStyle style, Map<String, dynamic> attrs) {
+    TextStyle result = style;
+
+    // Fleather standard attributes: 'b' for bold, 'i' for italic, etc.
+    if (attrs['b'] == true || attrs['bold'] == true) {
+      result = result.copyWith(fontWeight: FontWeight.bold);
+    }
+    if (attrs['i'] == true || attrs['italic'] == true) {
+      result = result.copyWith(fontStyle: FontStyle.italic);
+    }
+    if (attrs['u'] == true || attrs['underline'] == true) {
+      result = result.copyWith(decoration: TextDecoration.underline);
+    }
+    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
+      result = result.copyWith(decoration: TextDecoration.lineThrough);
+    }
+
+    // Fleather/Parchment standard color attributes:
+    // 'fg' is foreground (text) color - stored as ARGB int
+    if (attrs['fg'] != null) {
+      final fgValue = attrs['fg'];
+      if (fgValue is int) {
+        result = result.copyWith(color: Color(fgValue));
+      }
+    }
+    // 'bg' is background (highlight) color - stored as ARGB int
+    if (attrs['bg'] != null) {
+      final bgValue = attrs['bg'];
+      if (bgValue is int) {
+        result = result.copyWith(backgroundColor: Color(bgValue));
+      }
+    }
+
+    // Custom attributes (for potential future use or external data):
+    // 'color' as alternative text color attribute
+    if (attrs['color'] != null) {
+      final colorValue = attrs['color'];
+      if (colorValue is int) {
+        result = result.copyWith(color: Color(colorValue));
+      } else if (colorValue is String) {
+        // Parse hex color like "#FF0000" or "0xFFFF0000"
+        final parsed = _parseColor(colorValue);
+        if (parsed != null) {
+          result = result.copyWith(color: parsed);
+        }
+      }
+    }
+    // 'background' as alternative background color attribute
+    if (attrs['background'] != null) {
+      final bgValue = attrs['background'];
+      if (bgValue is int) {
+        result = result.copyWith(backgroundColor: Color(bgValue));
+      } else if (bgValue is String) {
+        final parsed = _parseColor(bgValue);
+        if (parsed != null) {
+          result = result.copyWith(backgroundColor: parsed);
+        }
+      }
+    }
+    // 'size' for font size (custom, not in standard Parchment)
+    if (attrs['size'] != null) {
+      final size = attrs['size'];
+      if (size is num) {
+        result = result.copyWith(fontSize: size.toDouble());
+      }
+    }
+
+    return result;
+  }
+
+  /// Parses a color string (hex format).
+  Color? _parseColor(String colorStr) {
+    try {
+      String hex = colorStr.replaceFirst('#', '').replaceFirst('0x', '');
+      if (hex.length == 6) {
+        hex = 'FF$hex'; // Add alpha if not present
+      }
+      return Color(int.parse(hex, radix: 16));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Creates a ParchmentDocument from this annotation's content.
+  ///
+  /// Useful for initializing a Fleather editor.
+  /// Note: Custom attributes like 'color' are filtered out since Parchment
+  /// only supports its registered attributes (b, i, u, s, a, heading, block, etc.).
+  ParchmentDocument toParchmentDocument() {
+    if (isRichText && richTextDelta != null) {
+      // Filter out custom attributes that Parchment doesn't understand
+      final filteredDelta = _filterDeltaForParchment(richTextDelta!);
+      return ParchmentDocument.fromJson(filteredDelta);
+    }
+    // Create a simple document with plain text
+    return ParchmentDocument()..insert(0, text ?? '');
+  }
+
+  /// Filters Delta operations to only include Parchment-compatible attributes.
+  ///
+  /// Parchment supports: b, i, u, s, a (link), fg, bg (colors), heading, block, etc.
+  /// Custom attributes like 'color', 'background', 'size' are removed.
+  List<dynamic> _filterDeltaForParchment(List<dynamic> delta) {
+    const parchmentAttributes = {
+      'b', 'i', 'u', 's', 'a', 'c', // inline (c = inline code)
+      'fg', 'bg', // colors (foreground/background)
+      'heading', 'block', 'indent', 'align', 'alignment', 'direction', 'checked', // block
+    };
+
+    return delta.map((op) {
+      if (op is! Map) return op;
+      final opMap = Map<String, dynamic>.from(op);
+
+      if (opMap['attributes'] != null && opMap['attributes'] is Map) {
+        final attrs = Map<String, dynamic>.from(opMap['attributes'] as Map);
+        attrs.removeWhere((key, value) => !parchmentAttributes.contains(key));
+        if (attrs.isEmpty) {
+          opMap.remove('attributes');
+        } else {
+          opMap['attributes'] = attrs;
+        }
+      }
+      return opMap;
+    }).toList();
+  }
+
+  /// Creates a TextAnnotation from a ParchmentDocument.
+  ///
+  /// Useful for saving from a Fleather editor.
+  static TextAnnotation fromParchmentDocument({
+    required ParchmentDocument document,
+    required Offset position,
+    String? id,
+    String? label,
+    AnnotationStyle style = const AnnotationStyle(),
+    bool allowDragging = false,
+    bool allowEditing = false,
+    int zIndex = 0,
+    AnnotationAnchor anchor = AnnotationAnchor.topLeft,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    // IMPORTANT: Delta.toJson() returns List<Operation>, not List<Map>!
+    // We need to convert each Operation to its JSON map representation.
+    final delta = document.toDelta();
+    final jsonDelta = delta.toList().map((op) => op.toJson()).toList();
+    return TextAnnotation.rich(
+      id: id,
+      label: label,
+      style: style,
+      allowDragging: allowDragging,
+      allowEditing: allowEditing,
+      zIndex: zIndex,
+      richTextDelta: jsonDelta,
+      position: position,
+      anchor: anchor,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+    );
+  }
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'TextAnnotation',
+      if (label != null) 'label': label,
+      if (text != null) 'text': text,
+      if (richTextDelta != null) 'richTextDelta': richTextDelta,
+      'position': {'dx': position.dx, 'dy': position.dy},
+      'anchor': anchor.name,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
+      if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+      // Note: AnnotationStyle serialization would need its own toJson method
+    };
+  }
+
   /// Creates a copy with modified properties.
   TextAnnotation copyWith({
     String? id,
@@ -390,12 +820,13 @@ class TextAnnotation extends ChartAnnotation {
     bool? allowEditing,
     int? zIndex,
     String? text,
+    List<dynamic>? richTextDelta,
     Offset? position,
     AnnotationAnchor? anchor,
     Color? backgroundColor,
     Color? borderColor,
   }) {
-    return TextAnnotation(
+    return TextAnnotation._internal(
       id: id ?? this.id,
       label: label ?? this.label,
       style: style ?? this.style,
@@ -403,6 +834,7 @@ class TextAnnotation extends ChartAnnotation {
       allowEditing: allowEditing ?? this.allowEditing,
       zIndex: zIndex ?? this.zIndex,
       text: text ?? this.text,
+      richTextDelta: richTextDelta ?? this.richTextDelta,
       position: position ?? this.position,
       anchor: anchor ?? this.anchor,
       backgroundColor: backgroundColor ?? this.backgroundColor,
