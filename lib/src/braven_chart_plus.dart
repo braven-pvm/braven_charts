@@ -36,6 +36,7 @@ import 'models/streaming_config.dart';
 import 'rendering/chart_render_box.dart';
 import 'rendering/spatial_index.dart';
 import 'streaming/buffer_manager.dart';
+import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
@@ -80,6 +81,7 @@ class BravenChartPlus extends StatefulWidget {
     this.dataStream,
     this.streamingConfig,
     this.streamingController,
+    this.liveStreamController,
     this.controller,
     this.interactionConfig,
     this.title,
@@ -510,7 +512,37 @@ class BravenChartPlus extends StatefulWidget {
   ///
   /// Allows pausing/resuming streaming and provides state notifications.
   /// Optional - streaming works without it, but useful for custom UI controls.
+  ///
+  /// **Deprecated**: Use [liveStreamController] for high-performance streaming.
   final StreamingController? streamingController;
+
+  /// High-performance live streaming controller (recommended).
+  ///
+  /// The recommended way to stream high-frequency data (50Hz+) to charts.
+  /// Provides frame-coalesced updates, direct RenderBox path (bypasses widget
+  /// rebuild), built-in pause/resume with buffering, and auto-scroll.
+  ///
+  /// **Usage**:
+  /// ```dart
+  /// final controller = LiveStreamController(
+  ///   seriesId: 'sensor',  // Must match series ID
+  ///   maxPoints: 500,      // Sliding window size
+  ///   autoScroll: true,    // Follow latest data
+  /// );
+  ///
+  /// // Stream data
+  /// sensorStream.listen((p) => controller.addPoint(p));
+  ///
+  /// // Use in widget
+  /// BravenChartPlus(
+  ///   liveStreamController: controller,
+  ///   series: [LineChartSeries(id: 'sensor', points: [])],
+  /// )
+  /// ```
+  ///
+  /// For simple, low-frequency updates, use [controller] with `addPoint()`.
+  /// For complex custom streaming, use [dataStream] with [streamingController].
+  final LiveStreamController? liveStreamController;
 
   /// Configuration for interactive features (crosshair, tooltip, gestures, keyboard navigation).
   ///
@@ -735,6 +767,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (widget.dataStream != null) {
       _setupStreamSubscription();
     }
+
+    // Attach LiveStreamController after first build (needs RenderBox to exist)
+    if (widget.liveStreamController != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _attachLiveStreamController();
+      });
+    }
   }
 
   @override
@@ -752,6 +791,16 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (widget.annotationController != oldWidget.annotationController) {
       oldWidget.annotationController?.removeListener(_onAnnotationControllerUpdate);
       widget.annotationController?.addListener(_onAnnotationControllerUpdate);
+    }
+
+    // Handle LiveStreamController changes
+    if (widget.liveStreamController != oldWidget.liveStreamController) {
+      oldWidget.liveStreamController?.detachRenderBox();
+      if (widget.liveStreamController != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _attachLiveStreamController();
+        });
+      }
     }
 
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme || widget.annotations != oldWidget.annotations) {
@@ -780,6 +829,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _streamSubscription?.cancel();
     widget.controller?.removeListener(_onControllerUpdate);
     widget.annotationController?.removeListener(_onAnnotationControllerUpdate);
+    widget.liveStreamController?.detachRenderBox();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
@@ -1970,9 +2020,30 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
-  // Streaming methods
+  // ============================================================================
+  // LiveStreamController Integration
+  // ============================================================================
+
+  /// Attaches the LiveStreamController to the RenderBox.
+  ///
+  /// Called after build when the RenderBox exists. This enables the
+  /// high-performance direct path for streaming data.
+  void _attachLiveStreamController() {
+    if (!mounted || widget.liveStreamController == null) return;
+
+    final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox != null) {
+      widget.liveStreamController!.attachRenderBox(renderBox);
+    }
+  }
+
+  // ============================================================================
+  // Legacy Streaming Methods (deprecated - use LiveStreamController instead)
+  // ============================================================================
 
   /// Sets up the stream subscription for real-time data ingestion.
+  ///
+  /// **Deprecated**: Use [LiveStreamController] for better performance.
   void _setupStreamSubscription() {
     final config = widget.streamingConfig ?? const StreamingConfig();
 

@@ -72,6 +72,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
     _dataTimer?.cancel();
     _dataStream.close();
     _streamingController.dispose();
+
     super.dispose();
   }
 
@@ -111,9 +112,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Advanced Streaming Example'),
-      ),
+      appBar: AppBar(title: const Text('Advanced Streaming Example')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -136,9 +135,7 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                         const SizedBox(width: 8),
                         Text(
                           'Mode: ${_currentMode == ChartMode.streaming ? "STREAMING" : "INTERACTIVE"}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -255,29 +252,16 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Event Log:',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
+                    Text('Event Log:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Container(
                       height: 120,
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
                       child: ListView.builder(
                         itemCount: _eventLog.length,
                         itemBuilder: (context, index) {
-                          return Text(
-                            _eventLog[index],
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontFamily: 'monospace',
-                                ),
-                          );
+                          return Text(_eventLog[index], style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'));
                         },
                       ),
                     ),
@@ -291,4 +275,3 @@ class _AdvancedStreamingExampleState extends State<AdvancedStreamingExample> {
     );
   }
 }
-

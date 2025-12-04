@@ -3,14 +3,15 @@
 
 import 'package:flutter/material.dart';
 
+import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/interaction_page.dart';
-import 'pages/annotations_page.dart';
+import 'pages/live_streaming_page.dart';
+import 'pages/multi_axis_page.dart';
+import 'pages/performance_page.dart';
+import 'pages/scientific_page.dart';
 import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
-import 'pages/performance_page.dart';
-import 'pages/multi_axis_page.dart';
-import 'pages/scientific_page.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -109,6 +110,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: StreamingPage(),
     ),
     const NavDestination(
+      label: 'Live Stream',
+      icon: Icons.bolt_outlined,
+      selectedIcon: Icons.bolt,
+      page: LiveStreamingPage(),
+      badge: '★', // New high-performance API
+    ),
+    const NavDestination(
       label: 'Theming',
       icon: Icons.palette_outlined,
       selectedIcon: Icons.palette,
@@ -120,11 +128,11 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.speed,
       page: PerformancePage(),
     ),
-    NavDestination(
+    const NavDestination(
       label: 'Multi-Axis',
       icon: Icons.align_vertical_bottom_outlined,
       selectedIcon: Icons.align_vertical_bottom,
-      page: const MultiAxisPage(),
+      page: MultiAxisPage(),
       badge: '★', // Star feature
     ),
     const NavDestination(

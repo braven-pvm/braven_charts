@@ -39,7 +39,7 @@ class SeriesElement implements ChartElement {
     _computeBounds();
   }
 
-  final ChartSeries series;
+  ChartSeries series; // Made mutable for updateSeries()
   final ChartTransform transform; // Initial transform for bounds computation
   ChartTransform _currentTransform; // Current transform for painting
   final SeriesTheme? seriesTheme;
@@ -67,6 +67,23 @@ class SeriesElement implements ChartElement {
   /// but _currentTransform updates on every paint.
   void updateTransform(ChartTransform newTransform) {
     _currentTransform = newTransform;
+  }
+
+  /// Update the series data without recreating the element.
+  /// This preserves the path cache, avoiding expensive Bezier regeneration.
+  /// Only invalidates cache if the point count changed significantly.
+  void updateSeries(ChartSeries newSeries) {
+    // Check if we need to invalidate path cache
+    final pointCountChanged = newSeries.points.length != series.points.length;
+    
+    series = newSeries;
+    _computeBounds();
+    
+    // Invalidate cache only if geometry changed significantly
+    if (pointCountChanged) {
+      _cachedPath = null;
+      _cachedTransformedPoints = null;
+    }
   }
 
   @override
@@ -220,11 +237,33 @@ class SeriesElement implements ChartElement {
     final needsRegeneration = _cachedPath == null || _cachedTransform != _currentTransform;
 
     if (needsRegeneration) {
-      // PRE-TRANSFORM all points ONCE to avoid redundant calculations
-      final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
+      // PERFORMANCE OPTIMIZATION: Only process points within visible viewport
+      // During streaming with 500+ points but only 100 visible, this saves 80% of work
+      final visiblePoints = <ChartDataPoint>[];
+      final xMin = _currentTransform.dataXMin;
+      final xMax = _currentTransform.dataXMax;
+      
+      for (final point in series.points) {
+        // Include points slightly outside viewport for smooth edge rendering
+        if (point.x >= xMin - 1 && point.x <= xMax + 1) {
+          visiblePoints.add(point);
+        } else if (point.x > xMax + 1) {
+          break; // Points are sorted by X, no need to check further
+        }
+      }
+      
+      // If no visible points, skip rendering
+      if (visiblePoints.isEmpty) {
+        _cachedPath = Path();
+        _cachedTransformedPoints = [];
+        _cachedTransform = _currentTransform;
+        return;
+      }
+
+      // PRE-TRANSFORM visible points ONCE to avoid redundant calculations
+      final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
       final path = Path();
-      if (transformedPoints.isEmpty) return;
       path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
 
       // Draw line with configured interpolation using cached transforms
