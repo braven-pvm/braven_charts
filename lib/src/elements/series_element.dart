@@ -72,13 +72,23 @@ class SeriesElement implements ChartElement {
   /// Update the series data without recreating the element.
   /// This preserves the path cache, avoiding expensive Bezier regeneration.
   /// Only invalidates cache if the point count changed significantly.
-  void updateSeries(ChartSeries newSeries) {
+  ///
+  /// [skipBoundsComputation] should be true for streaming updates where
+  /// bounds are tracked externally (in StreamingBuffer). This avoids
+  /// expensive O(n) iteration through all points on every frame.
+  void updateSeries(ChartSeries newSeries, {bool skipBoundsComputation = true}) {
     // Check if we need to invalidate path cache
     final pointCountChanged = newSeries.points.length != series.points.length;
-    
+
     series = newSeries;
-    _computeBounds();
-    
+
+    // PERFORMANCE: Skip bounds computation for streaming updates.
+    // Streaming elements use pre-computed bounds from StreamingBuffer
+    // and aren't added to QuadTree, so bounds aren't needed.
+    if (!skipBoundsComputation) {
+      _computeBounds();
+    }
+
     // Invalidate cache only if geometry changed significantly
     if (pointCountChanged) {
       _cachedPath = null;
@@ -242,7 +252,7 @@ class SeriesElement implements ChartElement {
       final visiblePoints = <ChartDataPoint>[];
       final xMin = _currentTransform.dataXMin;
       final xMax = _currentTransform.dataXMax;
-      
+
       for (final point in series.points) {
         // Include points slightly outside viewport for smooth edge rendering
         if (point.x >= xMin - 1 && point.x <= xMax + 1) {
@@ -251,7 +261,7 @@ class SeriesElement implements ChartElement {
           break; // Points are sorted by X, no need to check further
         }
       }
-      
+
       // If no visible points, skip rendering
       if (visiblePoints.isEmpty) {
         _cachedPath = Path();

@@ -181,6 +181,10 @@ class LiveStreamController extends ChangeNotifier {
   /// Whether this controller has been disposed.
   bool _isDisposed = false;
 
+  /// Frame rate tracking for diagnostics.
+  int _frameCount = 0;
+  DateTime? _frameCountStartTime;
+
   // ============================================================================
   // Public State
   // ============================================================================
@@ -190,6 +194,15 @@ class LiveStreamController extends ChangeNotifier {
   /// When true, new points are immediately added to the chart.
   /// When false (paused), new points are buffered for later.
   bool get isStreaming => _isStreaming;
+
+  /// Measured frame rate (frames per second) over the last second.
+  /// Returns 0 if no frames have been rendered yet.
+  double get measuredFrameRate {
+    if (_frameCountStartTime == null || _frameCount == 0) return 0;
+    final elapsed = DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    if (elapsed < 100) return 0; // Need at least 100ms of data
+    return _frameCount / (elapsed / 1000);
+  }
 
   /// Number of points currently in the streaming buffer.
   int get pointCount => _streamingBuffer.length;
@@ -384,6 +397,16 @@ class LiveStreamController extends ChangeNotifier {
   void _onFrame() {
     if (_isDisposed || _pendingPoints.isEmpty) return;
 
+    // Track frame rate
+    _frameCount++;
+    _frameCountStartTime ??= DateTime.now();
+    // Reset counter every second for rolling average
+    final elapsed = DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    if (elapsed > 1000) {
+      _frameCount = 1;
+      _frameCountStartTime = DateTime.now();
+    }
+
     if (_isStreaming) {
       // Streaming: add to buffer and update chart
       _streamingBuffer.addAll(_pendingPoints);
@@ -405,14 +428,12 @@ class LiveStreamController extends ChangeNotifier {
     final renderBox = _renderBox;
     if (renderBox == null) return;
 
-    final points = _streamingBuffer.toList();
-    final bounds = _streamingBuffer.bounds;
-
-    // Send complete buffer to RenderBox
+    // PERFORMANCE: Pass buffer reference directly instead of copying to list.
+    // The RenderBox will read from the buffer using indexed access.
     renderBox.setStreamingData(
       seriesId: seriesId,
-      points: points,
-      bounds: bounds,
+      buffer: _streamingBuffer,
+      expandViewportWhenNotAutoScrolling: !autoScroll,
     );
 
     // Auto-scroll to latest if enabled
@@ -431,6 +452,11 @@ class LiveStreamController extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+
+    // Clear streaming data from RenderBox before detaching
+    // This resets the viewport state for the next controller
+    _renderBox?.clearStreamingData(seriesId);
+
     _renderBox = null;
     _pendingPoints.clear();
     _streamingBuffer.clear();

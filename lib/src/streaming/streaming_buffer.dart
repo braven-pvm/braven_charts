@@ -59,6 +59,10 @@ class StreamingBuffer {
   /// Current number of valid elements (0 to maxSize).
   int _count = 0;
 
+  /// Version counter - incremented on every modification.
+  /// Used for efficient change detection without comparing all data.
+  int _version = 0;
+
   // ============================================================================
   // Incremental Bounds Tracking
   // ============================================================================
@@ -90,6 +94,10 @@ class StreamingBuffer {
 
   /// Current number of elements in the buffer.
   int get length => _count;
+
+  /// Version counter - incremented on every add/clear operation.
+  /// Use this for efficient change detection without comparing data.
+  int get version => _version;
 
   /// Whether the buffer is empty.
   bool get isEmpty => _count == 0;
@@ -162,6 +170,9 @@ class StreamingBuffer {
       _count++;
     }
 
+    // Increment version for change detection
+    _version++;
+
     // Update bounds incrementally (always correct for new point)
     _updateBoundsIncremental(point);
   }
@@ -220,6 +231,42 @@ class StreamingBuffer {
     }
   }
 
+  /// Gets a point by logical index (0 = oldest, length-1 = newest).
+  ///
+  /// **Performance**: O(1).
+  ///
+  /// **Throws**: [RangeError] if index is out of bounds.
+  ChartDataPoint operator [](int logicalIndex) {
+    if (logicalIndex < 0 || logicalIndex >= _count) {
+      throw RangeError.index(logicalIndex, this, 'index', null, _count);
+    }
+    final start = _count < _maxSize ? 0 : _head;
+    final physicalIndex = (start + logicalIndex) % _maxSize;
+    return _data[physicalIndex];
+  }
+
+  /// Iterates over a range of points by logical index without allocation.
+  ///
+  /// [startIndex] is inclusive, [endIndex] is exclusive.
+  /// Useful for rendering only visible points.
+  ///
+  /// **Performance**: O(endIndex - startIndex), no allocation.
+  void forEachInRange(
+    int startIndex,
+    int endIndex,
+    void Function(ChartDataPoint point, int index) callback,
+  ) {
+    if (_count == 0) return;
+    final clampedStart = startIndex.clamp(0, _count);
+    final clampedEnd = endIndex.clamp(0, _count);
+
+    final bufferStart = _count < _maxSize ? 0 : _head;
+    for (var i = clampedStart; i < clampedEnd; i++) {
+      final physicalIndex = (bufferStart + i) % _maxSize;
+      callback(_data[physicalIndex], i);
+    }
+  }
+
   /// Clears all data from the buffer.
   ///
   /// Resets the buffer to empty state. Does not deallocate memory
@@ -229,6 +276,7 @@ class StreamingBuffer {
   void clear() {
     _head = 0;
     _count = 0;
+    _version++;
     _xMin = double.infinity;
     _xMax = double.negativeInfinity;
     _yMin = double.infinity;

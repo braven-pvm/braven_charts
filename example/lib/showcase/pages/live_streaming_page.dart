@@ -89,10 +89,15 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     _streamController?.removeListener(_onStreamStateChanged);
     _streamController?.dispose();
 
+    // When auto-scroll is OFF, we want to keep ALL data (expand mode)
+    // Use a much larger buffer to avoid losing data
+    // When auto-scroll is ON, use the configured maxPoints for sliding window
+    final effectiveMaxPoints = _autoScroll ? _maxPoints : 100000;
+
     // Create new controller with current settings
     _streamController = LiveStreamController(
       seriesId: 'live-data', // Must match series ID in chart
-      maxPoints: _maxPoints,
+      maxPoints: effectiveMaxPoints,
       autoScroll: _autoScroll,
       autoScrollMarginPercent: _autoScrollMarginPercent,
       viewportDataPoints: _viewportDataPoints,
@@ -265,50 +270,53 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       StandardChartOptions(controller: _optionsController),
 
       // LiveStreamController Configuration
-      OptionSection(
-        title: 'Buffer Settings',
-        icon: Icons.memory,
-        children: [
-          IntSliderOption(
-            label: 'Max Points (Window Size)',
-            value: _maxPoints,
-            min: 100,
-            max: 5000,
-            suffix: 'pts',
-            onChanged: (v) {
-              setState(() => _maxPoints = v);
-              _recreateController();
-            },
-          ),
-          IntSliderOption(
-            label: 'Pause Buffer Size',
-            value: _pauseBufferSize,
-            min: 1000,
-            max: 50000,
-            suffix: 'pts',
-            onChanged: (v) {
-              setState(() => _pauseBufferSize = v);
-              _recreateController();
-            },
-          ),
-        ],
-      ),
+      // Only show buffer settings when auto-scroll is ON
+      // When auto-scroll is OFF (expand mode), buffer is effectively unlimited
+      if (_autoScroll)
+        OptionSection(
+          title: 'Buffer Settings',
+          icon: Icons.memory,
+          children: [
+            IntSliderOption(
+              label: 'Max Points (Window Size)',
+              value: _maxPoints,
+              min: 100,
+              max: 5000,
+              suffix: 'pts',
+              onChanged: (v) {
+                setState(() => _maxPoints = v);
+                _recreateController();
+              },
+            ),
+            IntSliderOption(
+              label: 'Pause Buffer Size',
+              value: _pauseBufferSize,
+              min: 1000,
+              max: 50000,
+              suffix: 'pts',
+              onChanged: (v) {
+                setState(() => _pauseBufferSize = v);
+                _recreateController();
+              },
+            ),
+          ],
+        ),
 
       // Auto-scroll settings
       OptionSection(
-        title: 'Auto-Scroll',
-        icon: Icons.auto_awesome,
+        title: 'Viewport Mode',
+        icon: _autoScroll ? Icons.auto_awesome : Icons.zoom_out_map,
         children: [
           BoolOption(
-            label: 'Enable Auto-Scroll',
+            label: 'Auto-Scroll Mode',
             value: _autoScroll,
-            subtitle: 'Automatically follow latest data',
+            subtitle: _autoScroll ? 'Following latest data (sliding window)' : 'Expand Mode: Viewport grows to show ALL data',
             onChanged: (v) {
               setState(() => _autoScroll = v);
               _recreateController();
             },
           ),
-          if (_autoScroll)
+          if (_autoScroll) ...[
             SliderOption(
               label: 'Scroll Margin',
               value: _autoScrollMarginPercent,
@@ -321,7 +329,6 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
                 _recreateController();
               },
             ),
-          if (_autoScroll)
             IntSliderOption(
               label: 'Viewport Width',
               value: _viewportDataPoints,
@@ -332,6 +339,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
                 setState(() => _viewportDataPoints = v);
               },
             ),
+          ],
         ],
       ),
 
@@ -594,6 +602,10 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       }
     }
 
+    // Get measured frame rate from controller
+    final frameRate = _streamController?.measuredFrameRate ?? 0;
+    final frameRateStr = frameRate > 0 ? '${frameRate.toStringAsFixed(1)} fps' : '-';
+
     return StatusPanel(
       highlighted: isDataFlowing && !isPaused,
       items: [
@@ -614,6 +626,11 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         StatusItem(
           label: 'Rate',
           value: effectiveRate,
+        ),
+        StatusItem(
+          label: 'Frame Rate',
+          value: frameRateStr,
+          color: frameRate > 50 ? Colors.green : (frameRate > 30 ? Colors.orange : Colors.red),
         ),
         StatusItem(
           label: 'Pattern',
