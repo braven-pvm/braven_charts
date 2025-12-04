@@ -231,6 +231,43 @@ class LineChartSeries extends ChartSeries {
   final double dataPointMarkerRadius;
 
   @override
+  LineChartSeries copyWith({
+    String? id,
+    String? name,
+    List<ChartDataPoint>? points,
+    Color? color,
+    SeriesStyle? style,
+    bool? isXOrdered,
+    Map<String, dynamic>? metadata,
+    List<ChartAnnotation>? annotations,
+    String? yAxisId,
+    YAxisConfig? yAxisConfig,
+    String? unit,
+    LineInterpolation? interpolation,
+    double? strokeWidth,
+    double? tension,
+    bool? showDataPointMarkers,
+    double? dataPointMarkerRadius,
+  }) {
+    return LineChartSeries(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      points: points ?? this.points,
+      color: color ?? this.color,
+      isXOrdered: isXOrdered ?? this.isXOrdered,
+      metadata: metadata ?? this.metadata,
+      yAxisId: yAxisId ?? this.yAxisId,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
+      unit: unit ?? this.unit,
+      interpolation: interpolation ?? this.interpolation,
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+      tension: tension ?? this.tension,
+      showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
+      dataPointMarkerRadius: dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+    );
+  }
+
+  @override
   String toString() => 'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
 }
 

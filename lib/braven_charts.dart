@@ -41,6 +41,8 @@ export 'src/rendering/axis_color_resolver.dart';
 export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
 // Streaming
+export 'src/streaming/live_stream_controller.dart';
+export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
 // Theming
 export 'src/theming/components/scrollbar_config.dart';
