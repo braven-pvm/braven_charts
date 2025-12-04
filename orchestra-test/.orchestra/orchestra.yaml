@@ -1,7 +1,7 @@
 version: "1.0"
 paths:
   manifest: "manifest.yaml"
-  handovers: "implementor/handovers"
+  handovers: "handover"
   signals: "implementor/signals"
   feedback: "implementor/feedback"
   artifacts: "artifacts"
@@ -15,3 +15,7 @@ retry:
 git:
   auto_commit: false
   commit_prefix: "orchestra"
+template:
+  default_format: "markdown"
+  validate_on_render: true
+  strict_mode: false
