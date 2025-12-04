@@ -1,0 +1,25 @@
+# Task {{id}}: {{title}}
+
+## Objective
+
+{{description}}
+
+## Deliverables
+
+{{#each deliverables}}
+- [ ] {{this}}
+{{/each}}
+
+## Dependencies
+
+{{#if dependencies.length}}
+{{#each dependencies}}
+- {{id}}: {{title}} {{#if completed}}✓{{else}}○{{/if}}
+{{/each}}
+{{else}}
+No dependencies.
+{{/if}}
+
+## Notes
+
+<!-- Add implementation notes here -->

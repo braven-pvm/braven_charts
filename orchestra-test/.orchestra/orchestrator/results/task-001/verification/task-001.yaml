@@ -1,0 +1,8 @@
+task_id: 1
+task_title: "Create Widget"
+checks:
+  - id: C1
+    description: Widget file exists
+    type: file_exists
+    severity: critical
+    path: src/widget.ts

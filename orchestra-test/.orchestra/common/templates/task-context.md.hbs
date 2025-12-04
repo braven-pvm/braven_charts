@@ -1,0 +1,24 @@
+# Sprint Context
+
+## Sprint Info
+- **ID**: {{sprint.id}}
+- **Title**: {{sprint.title}}
+- **Branch**: {{sprint.branch}}
+
+## Current Task
+- **Task**: {{currentTask.id}} - {{currentTask.title}}
+- **Status**: {{currentTask.status}}
+
+## Progress
+
+| Status | Count |
+|--------|-------|
+| Completed | {{stats.completed}} |
+| In Progress | {{stats.inProgress}} |
+| Not Started | {{stats.notStarted}} |
+
+## Completed Tasks
+
+{{#each completedTasks}}
+- {{id}}: {{title}} ✓
+{{/each}}

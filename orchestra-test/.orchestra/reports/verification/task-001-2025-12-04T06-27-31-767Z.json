@@ -1,0 +1,91 @@
+{
+  "taskId": 1,
+  "taskTitle": "Create Widget",
+  "timestamp": "2025-12-04T06:27:31.767Z",
+  "duration": 21,
+  "acceptSignal": {
+    "passed": true,
+    "skipped": false,
+    "report": {
+      "taskId": 1,
+      "timestamp": "2025-12-04T06:27:31.766Z",
+      "overall": "ACCEPTED",
+      "checks": [
+        {
+          "passed": true,
+          "id": "S1",
+          "check": "Pre-signal artifact",
+          "expected": "Present",
+          "actual": "Found"
+        },
+        {
+          "passed": true,
+          "id": "S2",
+          "check": "Pre-signal status",
+          "expected": "PASSED",
+          "actual": "PASSED"
+        },
+        {
+          "passed": true,
+          "id": "S3",
+          "check": "Task ID",
+          "expected": 1,
+          "actual": 1
+        },
+        {
+          "passed": true,
+          "id": "S4",
+          "check": "Artifact freshness",
+          "expected": "< 60m",
+          "actual": "-119m"
+        },
+        {
+          "passed": true,
+          "id": "S5",
+          "check": "Completion signal",
+          "expected": "Filled",
+          "actual": "Complete"
+        },
+        {
+          "passed": true,
+          "id": "S6",
+          "check": "Deliverables",
+          "expected": "All exist",
+          "actual": "PASSED"
+        }
+      ],
+      "canVerify": true,
+      "preSignalDetails": {
+        "task_id": 1,
+        "timestamp": "2025-12-04T08:26:10.715Z",
+        "status": "PASSED",
+        "checks": {
+          "deliverables": {
+            "status": "PASSED"
+          }
+        }
+      }
+    }
+  },
+  "checks": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "checkId": "C1",
+      "type": "file_exists",
+      "description": "Widget file exists",
+      "severity": "critical",
+      "passed": true,
+      "message": "File found: src/widget.ts",
+      "details": {
+        "path": "E:\\cloud services\\Dropbox\\Repositories\\Flutter\\braven_charts_v2.0\\orchestra-test\\src\\widget.ts"
+      },
+      "duration": 0
+    }
+  ],
+  "overallPassed": true
+}

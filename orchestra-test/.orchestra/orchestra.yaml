@@ -1,0 +1,17 @@
+version: "1.0"
+paths:
+  manifest: "manifest.yaml"
+  handovers: "implementor/handovers"
+  signals: "implementor/signals"
+  feedback: "implementor/feedback"
+  artifacts: "artifacts"
+  templates: "common/templates"
+verification:
+  flutter_analyze: true
+  flutter_test: true
+  file_checks: true
+retry:
+  max_retries: 3
+git:
+  auto_commit: false
+  commit_prefix: "orchestra"
