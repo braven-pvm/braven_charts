@@ -102,6 +102,10 @@ class Axis {
   /// If provided, used instead of default formatting.
   final String Function(double value)? labelFormatter;
 
+  /// Cached tick interval for throttling tick regeneration during streaming.
+  /// Only regenerate ticks when the interval would change significantly.
+  double? _lastTickInterval;
+
   /// Current data range (visible viewport).
   double get dataMin => scale.dataMin;
   double get dataMax => scale.dataMax;
@@ -112,15 +116,58 @@ class Axis {
 
   /// Updates the visible data range (called when zooming/panning).
   ///
-  /// Regenerates ticks for the new range.
+  /// Regenerates ticks only when the tick interval would change significantly.
+  /// This throttles tick regeneration during high-frequency streaming updates.
   void updateDataRange(double newDataMin, double newDataMax) {
     scale = scale.copyWith(
       dataMin: newDataMin,
       dataMax: newDataMax,
     );
 
-    ticks = _generateTicks();
-    // debugPrint('   Axis ticks regenerated: ${ticks.length} ticks for range [$newDataMin, $newDataMax]');
+    // Calculate what the new tick interval would be
+    final dataRange = newDataMax - newDataMin;
+    final roughInterval = dataRange / TickGenerator.defaultTargetCount;
+    final niceInterval = _makeNiceInterval(roughInterval);
+
+    // Only regenerate ticks if interval changed significantly (>10%)
+    // This throttles tick regeneration during streaming where the range
+    // changes every frame but the tick spacing remains similar
+    if (_lastTickInterval == null || (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.1) {
+      _lastTickInterval = niceInterval;
+      ticks = _generateTicks();
+    }
+  }
+
+  /// Rounds a value to a "nice" number for tick interval calculation.
+  /// Duplicated from TickGenerator to avoid creating instance just for checking.
+  double _makeNiceInterval(double roughInterval) {
+    if (roughInterval <= 0) return 1.0;
+    final exponent = (roughInterval.abs()).toString().split('.')[0].length - 1;
+    final magnitude = _pow10(exponent.toDouble());
+    final fraction = roughInterval / magnitude;
+
+    double niceFraction;
+    if (fraction <= 1.5) {
+      niceFraction = 1.0;
+    } else if (fraction <= 3.0) {
+      niceFraction = 2.0;
+    } else if (fraction <= 7.0) {
+      niceFraction = 5.0;
+    } else {
+      niceFraction = 10.0;
+    }
+    return niceFraction * magnitude;
+  }
+
+  /// Fast power of 10 calculation.
+  double _pow10(double exp) {
+    if (exp == 0) return 1.0;
+    if (exp == 1) return 10.0;
+    if (exp == 2) return 100.0;
+    if (exp == 3) return 1000.0;
+    if (exp == -1) return 0.1;
+    if (exp == -2) return 0.01;
+    return 1.0; // Fallback
   }
 
   /// Updates the pixel range (called when layout changes).
