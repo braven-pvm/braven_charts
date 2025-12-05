@@ -44,6 +44,7 @@ import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
 import 'modules/series_cache_manager.dart';
+import 'modules/tooltip_animator.dart';
 import 'multi_axis_normalizer.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
@@ -99,6 +100,7 @@ class ChartRenderBox extends RenderBox {
         _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
+    _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
   }
 
   /// Spatial index for O(log n) hit testing.
@@ -235,20 +237,13 @@ class ChartRenderBox extends RenderBox {
   /// Used when triggerMode is tap or both.
   HoveredMarkerInfo? _tappedMarker;
 
-  /// Current tooltip opacity for fade animation (0.0 = hidden, 1.0 = visible)
-  double _tooltipOpacity = 0.0;
-
-  /// Timer for delaying tooltip show
-  Timer? _tooltipShowTimer;
-
-  /// Timer for delaying tooltip hide
-  Timer? _tooltipHideTimer;
-
-  /// Timer for fade animation steps (incremental opacity changes)
-  Timer? _tooltipFadeTimer;
-
-  /// Target marker for tooltip display (cached to detect marker changes)
-  HoveredMarkerInfo? _tooltipTargetMarker;
+  /// Manages tooltip show/hide animations with configurable delays.
+  ///
+  /// Handles timing and opacity animation for tooltips:
+  /// - Show delay: Wait before displaying tooltip on hover
+  /// - Hide delay: Wait before hiding tooltip when moving away
+  /// - Fade animation: Smooth opacity transitions
+  late final TooltipAnimator _tooltipAnimator;
 
   /// Whether to show horizontal scrollbar at bottom of chart.
   bool _showXScrollbar;
@@ -486,11 +481,10 @@ class ChartRenderBox extends RenderBox {
   @override
   void dispose() {
     _seriesCacheManager.dispose();
+    _tooltipAnimator.dispose();
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
     _scrollbarAutoHideTimer?.cancel();
-    // Cancel tooltip animation timers to prevent memory leaks
-    _cancelTooltipTimers();
     super.dispose();
   }
 
@@ -4253,30 +4247,32 @@ class ChartRenderBox extends RenderBox {
       // Handle show/hide animations based on marker presence
       if (markerToShow != null) {
         // Start show animation if marker changed or newly appeared
-        if (_tooltipTargetMarker != markerToShow) {
-          _showTooltipWithDelay(markerToShow);
+        final currentTarget = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        if (currentTarget != markerToShow) {
+          _tooltipAnimator.show(markerToShow, config);
         }
 
         // Only draw tooltip if it has some opacity (visible or fading)
-        if (_tooltipOpacity > 0.001) {
+        if (_tooltipAnimator.isVisible) {
           _drawMarkerTooltip(canvas, size, markerToShow);
         }
       } else {
         // Start hide animation if marker disappeared
-        if (_tooltipTargetMarker != null) {
-          _hideTooltipWithDelay();
+        final currentTarget = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        if (currentTarget != null) {
+          _tooltipAnimator.hide(config);
         }
 
         // Still draw tooltip during fade-out
-        if (_tooltipOpacity > 0.001 && _tooltipTargetMarker != null) {
-          _drawMarkerTooltip(canvas, size, _tooltipTargetMarker!);
+        final targetMarker = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        if (_tooltipAnimator.isVisible && targetMarker != null) {
+          _drawMarkerTooltip(canvas, size, targetMarker);
         }
       }
     } else {
       // Tooltips disabled or panning - cancel animations and hide
-      if (_tooltipOpacity > 0) {
-        _cancelTooltipTimers();
-        _tooltipOpacity = 0.0;
+      if (_tooltipAnimator.opacity > 0) {
+        _tooltipAnimator.hideImmediately();
       }
     }
 
@@ -6303,7 +6299,7 @@ class ChartRenderBox extends RenderBox {
       canvas.drawPath(
         shadowPath,
         Paint()
-          ..color = style.shadowColor.withValues(alpha: style.shadowColor.a * _tooltipOpacity)
+          ..color = style.shadowColor.withValues(alpha: style.shadowColor.a * _tooltipAnimator.opacity)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.shadowBlurRadius),
       );
     }
@@ -6312,7 +6308,7 @@ class ChartRenderBox extends RenderBox {
     canvas.drawPath(
       tooltipPath,
       Paint()
-        ..color = style.backgroundColor.withValues(alpha: style.backgroundColor.a * _tooltipOpacity)
+        ..color = style.backgroundColor.withValues(alpha: style.backgroundColor.a * _tooltipAnimator.opacity)
         ..style = PaintingStyle.fill,
     );
 
@@ -6321,7 +6317,7 @@ class ChartRenderBox extends RenderBox {
       canvas.drawPath(
         tooltipPath,
         Paint()
-          ..color = style.borderColor.withValues(alpha: style.borderColor.a * _tooltipOpacity)
+          ..color = style.borderColor.withValues(alpha: style.borderColor.a * _tooltipAnimator.opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = style.borderWidth,
       );
@@ -6331,104 +6327,12 @@ class ChartRenderBox extends RenderBox {
     final textPaintWithOpacity = TextPainter(
       text: TextSpan(
         text: tooltipText,
-        style: textStyle.copyWith(color: style.textColor.withValues(alpha: _tooltipOpacity)),
+        style: textStyle.copyWith(color: style.textColor.withValues(alpha: _tooltipAnimator.opacity)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     )..layout();
     textPaintWithOpacity.paint(canvas, Offset(tooltipX + padding, tooltipY + padding));
-  }
-
-  /// Shows tooltip with configured delay and fade-in animation.
-  void _showTooltipWithDelay(HoveredMarkerInfo markerInfo) {
-    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-
-    // Cancel existing timers
-    _tooltipShowTimer?.cancel();
-    _tooltipHideTimer?.cancel();
-
-    // Cache target marker to detect changes
-    _tooltipTargetMarker = markerInfo;
-
-    // If showDelay is zero, show immediately
-    if (config.showDelay == Duration.zero) {
-      _animateTooltipOpacity(1.0, const Duration(milliseconds: 150));
-      return;
-    }
-
-    // Start show delay timer
-    _tooltipShowTimer = Timer(config.showDelay, () {
-      // Only show if still targeting same marker
-      if (_tooltipTargetMarker == markerInfo) {
-        _animateTooltipOpacity(1.0, const Duration(milliseconds: 150));
-      }
-    });
-  }
-
-  /// Hides tooltip with configured delay and fade-out animation.
-  void _hideTooltipWithDelay() {
-    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-
-    // Cancel show timer (user moved away before delay finished)
-    _tooltipShowTimer?.cancel();
-    _tooltipTargetMarker = null;
-
-    // If hideDelay is zero, hide immediately
-    if (config.hideDelay == Duration.zero) {
-      _animateTooltipOpacity(0.0, const Duration(milliseconds: 100));
-      return;
-    }
-
-    // Start hide delay timer
-    _tooltipHideTimer = Timer(config.hideDelay, () {
-      _animateTooltipOpacity(0.0, const Duration(milliseconds: 100));
-    });
-  }
-
-  /// Animates tooltip opacity to target value over specified duration.
-  void _animateTooltipOpacity(double target, Duration duration) {
-    _tooltipFadeTimer?.cancel();
-
-    final startOpacity = _tooltipOpacity;
-    final delta = target - startOpacity;
-
-    // If already at target, nothing to do
-    if (delta.abs() < 0.001) {
-      _tooltipOpacity = target;
-      markNeedsPaint();
-      return;
-    }
-
-    // Animate in small steps for smooth fade
-    const fps = 60;
-    const stepDuration = Duration(milliseconds: 1000 ~/ fps);
-    final totalSteps = (duration.inMilliseconds * fps / 1000).round();
-    var currentStep = 0;
-
-    _tooltipFadeTimer = Timer.periodic(stepDuration, (timer) {
-      currentStep++;
-
-      if (currentStep >= totalSteps) {
-        _tooltipOpacity = target;
-        timer.cancel();
-        markNeedsPaint();
-      } else {
-        final progress = currentStep / totalSteps;
-        _tooltipOpacity = startOpacity + delta * progress;
-        markNeedsPaint();
-      }
-    });
-  }
-
-  /// Cancels all tooltip timers and resets animation state.
-  void _cancelTooltipTimers() {
-    _tooltipShowTimer?.cancel();
-    _tooltipShowTimer = null;
-    _tooltipHideTimer?.cancel();
-    _tooltipHideTimer = null;
-    _tooltipFadeTimer?.cancel();
-    _tooltipFadeTimer = null;
-    _tooltipTargetMarker = null;
   }
 
   /// Gets the effective tooltip style, using theme defaults when config is not provided.

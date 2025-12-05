@@ -6,8 +6,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart' show Size, Offset;
 
 import '../../coordinates/chart_transform.dart';
-import '../../interaction/core/chart_element.dart';
 import '../../elements/series_element.dart';
+import '../../interaction/core/chart_element.dart';
 
 /// Callback type for painting series elements.
 ///
