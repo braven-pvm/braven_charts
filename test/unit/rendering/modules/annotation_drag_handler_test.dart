@@ -207,11 +207,11 @@ ChartSeries createTestSeries({
     color: const Color(0xFF0000FF),
     points: points ??
         [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 25, y: 50),
-          ChartDataPoint(x: 50, y: 100),
-          ChartDataPoint(x: 75, y: 50),
-          ChartDataPoint(x: 100, y: 0),
+          const ChartDataPoint(x: 0, y: 0),
+          const ChartDataPoint(x: 25, y: 50),
+          const ChartDataPoint(x: 50, y: 100),
+          const ChartDataPoint(x: 75, y: 50),
+          const ChartDataPoint(x: 100, y: 0),
         ],
   );
 }

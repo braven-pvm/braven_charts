@@ -4,11 +4,10 @@
 import 'dart:ui';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/rendering/modules/streaming_manager.dart';
 import 'package:braven_charts/src/streaming/streaming_buffer.dart';
-import 'package:braven_charts/src/models/chart_data_point.dart';
-import 'package:braven_charts/src/utils/data_converter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // =============================================================================
@@ -482,10 +481,10 @@ void main() {
 
       test('paints streaming buffers with matching series', () {
         final series = [
-          LineChartSeries(
+          const LineChartSeries(
             id: 'test',
             points: [],
-            color: const Color(0xFF0000FF),
+            color: Color(0xFF0000FF),
           ),
         ];
         final delegate = MockStreamingDelegate(
@@ -527,10 +526,10 @@ void main() {
 
       test('uses binary search for visible range', () {
         final series = [
-          LineChartSeries(
+          const LineChartSeries(
             id: 'test',
             points: [],
-            color: const Color(0xFF0000FF),
+            color: Color(0xFF0000FF),
           ),
         ];
         // Transform showing only middle portion
@@ -590,8 +589,8 @@ void main() {
     group('Multiple Series', () {
       test('handles multiple streaming series', () {
         final series = [
-          LineChartSeries(id: 'series1', points: [], color: const Color(0xFF0000FF)),
-          LineChartSeries(id: 'series2', points: [], color: const Color(0xFFFF0000)),
+          const LineChartSeries(id: 'series1', points: [], color: Color(0xFF0000FF)),
+          const LineChartSeries(id: 'series2', points: [], color: Color(0xFFFF0000)),
         ];
         final delegate = MockStreamingDelegate(
           transform: createTransform(),
@@ -611,8 +610,8 @@ void main() {
 
       test('clearing one series preserves others', () {
         final series = [
-          LineChartSeries(id: 'series1', points: [], color: const Color(0xFF0000FF)),
-          LineChartSeries(id: 'series2', points: [], color: const Color(0xFFFF0000)),
+          const LineChartSeries(id: 'series1', points: [], color: Color(0xFF0000FF)),
+          const LineChartSeries(id: 'series2', points: [], color: Color(0xFFFF0000)),
         ];
         final delegate = MockStreamingDelegate(
           transform: createTransform(),
@@ -741,8 +740,8 @@ void main() {
         manager.setStreamingData(seriesId: 'test', buffer: buffer);
 
         // Add more points to same buffer
-        buffer.add(ChartDataPoint(x: 2, y: 30));
-        buffer.add(ChartDataPoint(x: 3, y: 25));
+        buffer.add(const ChartDataPoint(x: 2, y: 30));
+        buffer.add(const ChartDataPoint(x: 3, y: 25));
 
         // Update with same buffer (simulating streaming updates)
         manager.setStreamingData(seriesId: 'test', buffer: buffer);
