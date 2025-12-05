@@ -45,6 +45,7 @@ import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
 import 'modules/series_cache_manager.dart';
 import 'modules/tooltip_animator.dart';
+import 'modules/viewport_constraints.dart';
 import 'multi_axis_normalizer.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
@@ -445,20 +446,9 @@ class ChartRenderBox extends RenderBox {
   // Zoom/Pan Constraints
   // ==========================================================================
 
-  /// Minimum zoom level (relative to original data range).
-  /// 0.8 = can zoom out to show 125% of original data range.
-  /// This provides headroom for data at the edges to be fully visible.
-  static const double minZoomLevel = 0.8;
-
-  /// Maximum zoom level (relative to original data range).
-  /// 10.0 = can zoom in to show 1/10th of original data range.
-  static const double maxZoomLevel = 10.0;
-
-  /// Maximum whitespace allowed beyond data boundaries when panning.
-  /// 0.1 = can pan until original data edge is 10% into viewport
-  /// (leaving maximum 90% of data visible, minimum 10% whitespace).
-  /// This is viewport-based, so it's independent of zoom level.
-  static const double maxWhitespaceFraction = 0.1;
+  /// Viewport constraint calculator for zoom/pan limits.
+  /// Enforces min/max zoom levels and pan whitespace limits.
+  static const ViewportConstraints _viewportConstraints = ViewportConstraints();
 
   /// Public getter for plot width.
   double get plotWidth => _plotArea.width;
@@ -1224,154 +1214,42 @@ class ChartRenderBox extends RenderBox {
 
   /// Clamps a transform to enforce min/max zoom levels.
   ///
-  /// **Constraints**:
-  /// - Min zoom: 0.1x (can zoom out to show 10x original data)
-  /// - Max zoom: 10.0x (can zoom in to show 1/10th original data)
-  ///
-  /// **Algorithm**:
-  /// 1. Calculate current zoom level: original_range / current_range
-  /// 2. If zoom exceeds limits, scale ranges back to limit
-  /// 3. Preserve center point of current viewport
+  /// Delegates to ViewportConstraints module for the actual calculation.
+  /// Handles null checks and pan constraint transform selection.
   ChartTransform _clampZoomLevel(ChartTransform transform) {
     if (_originalTransform == null) return transform;
 
     // Use pan constraint transform if set (paused streaming with full dataset),
     // otherwise use original transform (normal mode or active streaming with sliding window)
-    // This ensures zoom is calculated relative to the actual data range, not stale initial bounds
     final zoomBaseTransform = _panConstraintTransform ?? _originalTransform!;
 
-    final originalXRange = zoomBaseTransform.dataXMax - zoomBaseTransform.dataXMin;
-    final originalYRange = zoomBaseTransform.dataYMax - zoomBaseTransform.dataYMin;
-
-    final currentXRange = transform.dataXMax - transform.dataXMin;
-    final currentYRange = transform.dataYMax - transform.dataYMin;
-
-    // Calculate current zoom levels
-    final currentZoomX = originalXRange / currentXRange;
-    final currentZoomY = originalYRange / currentYRange;
-
-    // Check if clamping needed
-    final bool needsClampX = currentZoomX < minZoomLevel || currentZoomX > maxZoomLevel;
-    final bool needsClampY = currentZoomY < minZoomLevel || currentZoomY > maxZoomLevel;
-
-    if (!needsClampX && !needsClampY) {
-      return transform; // No clamping needed
-    }
-
-    // Clamp zoom levels
-    final clampedZoomX = currentZoomX.clamp(minZoomLevel, maxZoomLevel);
-    final clampedZoomY = currentZoomY.clamp(minZoomLevel, maxZoomLevel);
-
-    // Calculate new ranges from clamped zoom
-    final newXRange = originalXRange / clampedZoomX;
-    final newYRange = originalYRange / clampedZoomY;
-
-    // Preserve center of current viewport
-    final centerX = (transform.dataXMin + transform.dataXMax) / 2;
-    final centerY = (transform.dataYMin + transform.dataYMax) / 2;
-
-    // Calculate new bounds centered on viewport center
-    final newDataXMin = centerX - newXRange / 2;
-    final newDataXMax = centerX + newXRange / 2;
-    final newDataYMin = centerY - newYRange / 2;
-    final newDataYMax = centerY + newYRange / 2;
-
-    return ChartTransform(
-      dataXMin: newDataXMin,
-      dataXMax: newDataXMax,
-      dataYMin: newDataYMin,
-      dataYMax: newDataYMax,
-      plotWidth: transform.plotWidth,
-      plotHeight: transform.plotHeight,
-      invertY: transform.invertY,
+    return _viewportConstraints.clampZoomLevel(
+      transform: transform,
+      baseTransform: zoomBaseTransform,
     );
   }
 
   /// Clamps pan delta to enforce viewport bounds (limit whitespace).
   ///
-  /// **Correct Viewport Position Constraint Algorithm**:
-  ///
-  /// **Core Concept**: Track WHERE THE VIEWPORT IS in data space, not where
-  /// original boundaries appear in viewport. This makes constraints zoom-independent.
-  ///
-  /// **Algorithm**:
-  /// 1. Convert requested plot delta to data delta
-  /// 2. Calculate tentative new viewport position (dataXMin, dataYMin)
-  /// 3. Calculate max allowed whitespace in data space (zoom-aware)
-  /// 4. Calculate allowed bounds for viewport position
-  /// 5. Clamp tentative position to allowed bounds
-  /// 6. Calculate actual movement and convert back to plot delta
-  ///
-  /// **Constraint**: Viewport can show up to 10% whitespace beyond original data.
-  /// - Example at 1x zoom (800px plot, 1000 data range):
-  ///   maxWhitespace = 800 * 0.1 * (1000/800) = 100 data units
-  /// - Example at 2x zoom (800px plot, 500 data range):
-  ///   maxWhitespace = 800 * 0.1 * (500/800) = 50 data units
-  ///
-  /// **Result**: Consistent 10% whitespace at ALL zoom levels. Zoom-independent!
+  /// Delegates to ViewportConstraints module for the actual calculation.
+  /// Handles null checks and pan constraint transform selection.
   (double, double) _clampPanDelta(double requestedPlotDx, double requestedPlotDy) {
     if (_originalTransform == null || _transform == null) {
       return (requestedPlotDx, requestedPlotDy);
     }
 
-    // Y-axis panning is now supported in multi-axis mode with viewport-aware axis bounds
-    // The _computeAxisBounds() method transforms axis labels based on current viewport
-    final effectiveRequestedPlotDy = requestedPlotDy;
-
     // Use pan constraint transform if set (paused streaming mode with full dataset bounds),
     // otherwise use original transform (normal streaming mode with sliding window bounds)
     final constraintTransform = _panConstraintTransform ?? _originalTransform!;
 
-    // 1. Convert requested plot delta to data space
-    // CRITICAL: Match the inversion logic in ChartTransform.pan()!
-    final dataPerPixelX = _transform!.dataPerPixelX;
-    final dataPerPixelY = _transform!.dataPerPixelY;
-    final requestedDataDx = requestedPlotDx * dataPerPixelX;
-    final requestedDataDy = _transform!.invertY
-        ? -effectiveRequestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
-        : effectiveRequestedPlotDy * dataPerPixelY;
+    final result = _viewportConstraints.clampPanDelta(
+      requestedPlotDx: requestedPlotDx,
+      requestedPlotDy: requestedPlotDy,
+      currentTransform: _transform!,
+      constraintTransform: constraintTransform,
+    );
 
-    // 2. Calculate tentative new viewport position in data space
-    final tentativeDataXMin = _transform!.dataXMin + requestedDataDx;
-    final tentativeDataYMin = _transform!.dataYMin + requestedDataDy;
-
-    // 3. Calculate maximum allowed whitespace in data space (zoom-aware!)
-    // At 1x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange / plotWidth) = originalRange * 0.1
-    // At 2x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange/2 / plotWidth) = originalRange * 0.05
-    // This ensures 10% whitespace in VIEWPORT, which scales correctly with zoom
-    final maxWhitespaceDataX = _transform!.plotWidth * maxWhitespaceFraction * dataPerPixelX;
-    final maxWhitespaceDataY = _transform!.plotHeight * maxWhitespaceFraction * dataPerPixelY;
-
-    // 4. Calculate allowed bounds for viewport position using constraint transform
-    // Viewport left edge (dataXMin) can range from:
-    //   - Minimum: constraintDataXMin - maxWhitespace (show whitespace on left)
-    //   - Maximum: constraintDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
-    final minAllowedDataXMin = constraintTransform.dataXMin - maxWhitespaceDataX;
-    final maxAllowedDataXMin = constraintTransform.dataXMax - _transform!.dataXRange + maxWhitespaceDataX;
-
-    final minAllowedDataYMin = constraintTransform.dataYMin - maxWhitespaceDataY;
-    final maxAllowedDataYMin = constraintTransform.dataYMax - _transform!.dataYRange + maxWhitespaceDataY;
-
-    // 5. Clamp tentative viewport position to allowed bounds
-    // Defensive: If min > max (viewport larger than constraint range), allow full movement
-    final clampedDataXMin =
-        minAllowedDataXMin <= maxAllowedDataXMin ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin) : tentativeDataXMin;
-    final clampedDataYMin =
-        minAllowedDataYMin <= maxAllowedDataYMin ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin) : tentativeDataYMin;
-
-    // 6. Calculate actual movement allowed and convert back to plot space
-    // CRITICAL: Reverse the inversion applied in step 1!
-    final actualDataDx = clampedDataXMin - _transform!.dataXMin;
-    final actualDataDy = clampedDataYMin - _transform!.dataYMin;
-
-    final actualPlotDx = actualDataDx / dataPerPixelX;
-    final actualPlotDy = _transform!.invertY
-        ? -actualDataDy / dataPerPixelY // Reverse Y inversion
-        : actualDataDy / dataPerPixelY;
-
-    // [DEBUG OUTPUT REMOVED] Pan constrained - fires frequently during dragging
-
-    return (actualPlotDx, actualPlotDy);
+    return (result.dx, result.dy);
   }
 
   // ============================================================================
