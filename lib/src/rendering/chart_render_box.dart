@@ -1,14 +1,10 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Interaction Architecture
 
-import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 import '../axis/axis.dart' as chart_axis;
 import '../axis/axis_renderer.dart';
@@ -20,10 +16,8 @@ import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
-import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/chart_annotation.dart';
-import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
@@ -34,6 +28,7 @@ import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
+import 'modules/event_handler_manager.dart';
 import 'modules/multi_axis_manager.dart';
 import 'modules/scrollbar_manager.dart';
 import 'modules/series_cache_manager.dart';
@@ -94,6 +89,7 @@ class ChartRenderBox extends RenderBox {
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
     _initAnnotationDragHandler();
+    _initEventHandlerManager();
     _initMultiAxisManager(normalizationMode, series);
   }
 
@@ -127,6 +123,13 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  /// Initializes the EventHandlerManager with a delegate that references this RenderBox.
+  void _initEventHandlerManager() {
+    _eventHandlerManager = EventHandlerManager(
+      delegate: _EventHandlerDelegateImpl(this),
+    );
+  }
+
   /// Scrollbar manager handling all scrollbar state and interactions.
   late final ScrollbarManager _scrollbarManager;
 
@@ -135,6 +138,9 @@ class ChartRenderBox extends RenderBox {
 
   /// Annotation drag handler managing resize/move operations for all annotation types.
   late final AnnotationDragHandler _annotationDragHandler;
+
+  /// Event handler manager handling all pointer events and annotation drags.
+  late final EventHandlerManager _eventHandlerManager;
 
   /// Spatial index for O(log n) hit testing.
   QuadTree? _spatialIndex;
@@ -197,74 +203,12 @@ class ChartRenderBox extends RenderBox {
   /// Provides data coordinates of dragged rectangle (startX, endX, startY, endY).
   final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
 
-  /// Current resize state (if resizing annotation).
-  // Current resize state (if resizing annotation).
-  ResizeDirection? _activeResizeDirection;
-  RangeAnnotationElement? _resizingAnnotation;
-  Rect? _resizeStartBounds;
-
-  /// Current move state (if moving RangeAnnotation).
-  RangeAnnotationElement? _movingAnnotation;
-  Offset? _moveStartPosition;
-  Rect? _moveStartBounds;
-
-  /// Current move state (if moving TextAnnotation).
-  TextAnnotationElement? _movingTextAnnotation;
-  Offset? _moveTextStartPosition;
-
-  /// Current move state (if moving PointAnnotation).
-  PointAnnotationElement? _movingPointAnnotation;
-  int? _originalDataPointIndex;
-  int? _candidateDataPointIndex;
-
-  /// Potential drag state for click-and-hold pattern on PointAnnotation.
-  /// When user clicks on PointAnnotation, we don't immediately start dragging.
-  /// Instead, we wait to see if they move the pointer (drag) or release quickly (click to select).
-  PointAnnotationElement? _potentialDragPointAnnotation;
-  Offset? _potentialDragStartPosition;
-  static const double _dragThresholdPixels = 5.0; // Minimum movement to trigger drag
-
-  /// Potential drag state for click-and-hold pattern on RangeAnnotation.
-  /// Same pattern as PointAnnotation - wait for movement to distinguish click from drag.
-  RangeAnnotationElement? _potentialDragRangeAnnotation;
-  Offset? _potentialDragRangeStartPosition;
-  Rect? _potentialDragRangeStartBounds;
-
-  /// Potential drag state for click-and-hold pattern on TextAnnotation.
-  /// Wait for movement to decide: click (select) or drag (reposition).
-  TextAnnotationElement? _potentialDragTextAnnotation;
-  Offset? _potentialDragTextStartPosition;
-
-  /// Potential drag state for click-and-hold pattern on ThresholdAnnotation.
-  /// Wait for movement to decide: click (select) or drag (move along axis).
-  ThresholdAnnotationElement? _potentialDragThresholdAnnotation;
-  Offset? _potentialDragThresholdStartPosition;
-
-  /// Potential drag state for click-and-hold pattern on PinAnnotation.
-  /// Wait for movement to decide: click (select) or drag (move to new position).
-  PinAnnotationElement? _potentialDragPinAnnotation;
-  Offset? _potentialDragPinStartPosition;
-
-  /// Current move state (if moving PinAnnotation).
-  PinAnnotationElement? _movingPinAnnotation;
-  Offset? _movePinStartPosition;
-  double? _movePinStartX; // Original X in data coordinates
-  double? _movePinStartY; // Original Y in data coordinates
-
-  /// Current move state (if moving ThresholdAnnotation).
-  ThresholdAnnotationElement? _movingThresholdAnnotation;
-  Offset? _moveThresholdStartPosition;
-  double? _moveThresholdStartValue; // Original value in data coordinates
-
-  /// Current cursor position (for crosshair rendering).
-  Offset? _cursorPosition;
+  // ==================== EVENT STATE (delegated to EventHandlerManager) ====================
+  // Resize, move, potential drag state, cursor position, pan position, hit test throttling
+  // are now managed by EventHandlerManager module.
 
   /// Whether tooltips are enabled.
   bool _tooltipsEnabled;
-
-  /// Tracks the tapped marker for tap-triggered tooltips.
-  /// Used when triggerMode is tap or both.
-  HoveredMarkerInfo? _tappedMarker;
 
   /// Manages tooltip show/hide animations with configurable delays.
   ///
@@ -276,31 +220,6 @@ class ChartRenderBox extends RenderBox {
 
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
-
-  /// Last pan position (for calculating delta during middle-button drag).
-  Offset? _lastPanPosition;
-
-  // ==========================================================================
-  // Hit Test Throttling (Performance Optimization)
-  // ===========================================================================
-
-  /// Pending hover position for deferred hit testing.
-  ///
-  /// When mouse moves rapidly, we update crosshair immediately but defer
-  /// expensive hit testing until movement slows or stops.
-  Offset? _pendingHitTestPosition;
-
-  /// Timer for debouncing hit testing during rapid hover movements.
-  ///
-  /// Scheduled when mouse moves, cancelled if mouse moves again before firing.
-  /// This ensures hit testing only runs when mouse is relatively still.
-  Timer? _hitTestDebounceTimer;
-
-  /// Throttle duration for hit testing (milliseconds).
-  ///
-  /// Hit testing will be deferred until mouse movement pauses for this duration.
-  /// Tuned to balance responsiveness with performance (16ms = ~60fps frame budget).
-  static const Duration _hitTestThrottleDuration = Duration(milliseconds: 50);
 
   /// X-axis for the chart (optional).
   chart_axis.Axis? _xAxis;
@@ -464,8 +383,7 @@ class ChartRenderBox extends RenderBox {
     _scrollbarManager.dispose();
     _streamingManager.dispose();
     _annotationDragHandler.dispose();
-    _hitTestDebounceTimer?.cancel();
-    _hitTestDebounceTimer = null;
+    _eventHandlerManager.dispose();
     super.dispose();
   }
 
@@ -1497,1560 +1415,14 @@ class ChartRenderBox extends RenderBox {
     return candidates.where((e) => e.elementType == ChartElementType.datapoint && plotRect.contains(e.bounds.center)).toList();
   }
 
-  /// Hit tests for resize handles on annotations.
-  ///
-  /// Returns annotation and direction if a handle is hit, null otherwise.
-  ///
-  /// Performs resize operation during drag.
-  void _performResize(Offset currentPosition, Offset startPosition) {
-    if (_resizingAnnotation == null || _activeResizeDirection == null || _resizeStartBounds == null) {
-      return;
-    }
-
-    final delta = currentPosition - startPosition;
-    final oldBounds = _resizeStartBounds!;
-    Rect newBounds;
-
-    // Calculate new bounds based on resize direction
-    switch (_activeResizeDirection!) {
-      case ResizeDirection.topLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top + delta.dy, oldBounds.right, oldBounds.bottom);
-        break;
-      case ResizeDirection.topRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy, oldBounds.right + delta.dx, oldBounds.bottom);
-        break;
-      case ResizeDirection.bottomLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top, oldBounds.right, oldBounds.bottom + delta.dy);
-        break;
-      case ResizeDirection.bottomRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right + delta.dx, oldBounds.bottom + delta.dy);
-        break;
-      case ResizeDirection.top:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy, oldBounds.right, oldBounds.bottom);
-        break;
-      case ResizeDirection.right:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right + delta.dx, oldBounds.bottom);
-        break;
-      case ResizeDirection.bottom:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right, oldBounds.bottom + delta.dy);
-        break;
-      case ResizeDirection.left:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top, oldBounds.right, oldBounds.bottom);
-        break;
-    }
-
-    // Apply minimum size constraints (40x40 minimum)
-    const minSize = 40.0;
-    if (newBounds.width < minSize || newBounds.height < minSize) {
-      // Don't allow resize below minimum
-      return;
-    }
-
-    // Update annotation bounds
-    // Note: Spatial index will be rebuilt on pointer up for performance
-    _resizingAnnotation!.updateBounds(newBounds);
-
-    // Update temporary edge values for value label display (only if we have a transform)
-    if (_elements.whereType<SeriesElement>().isNotEmpty) {
-      final seriesElement = _elements.whereType<SeriesElement>().first;
-      final transform = seriesElement.transform;
-      final annotation = _resizingAnnotation!.annotation;
-
-      // Convert pixel bounds to data coordinates
-      final leftData = transform.plotToData(newBounds.left, newBounds.top);
-      final rightData = transform.plotToData(newBounds.right, newBounds.bottom);
-
-      // Determine which edges are being resized
-      double? tempStartX;
-      double? tempEndX;
-      double? tempStartY;
-      double? tempEndY;
-
-      // Only set temp values for edges that are being resized AND are bound
-      if ((_activeResizeDirection == ResizeDirection.left ||
-              _activeResizeDirection == ResizeDirection.topLeft ||
-              _activeResizeDirection == ResizeDirection.bottomLeft) &&
-          annotation.startX != null) {
-        tempStartX = leftData.dx;
-      }
-
-      if ((_activeResizeDirection == ResizeDirection.right ||
-              _activeResizeDirection == ResizeDirection.topRight ||
-              _activeResizeDirection == ResizeDirection.bottomRight) &&
-          annotation.endX != null) {
-        tempEndX = rightData.dx;
-      }
-
-      if ((_activeResizeDirection == ResizeDirection.bottom ||
-              _activeResizeDirection == ResizeDirection.bottomLeft ||
-              _activeResizeDirection == ResizeDirection.bottomRight) &&
-          annotation.startY != null) {
-        tempStartY = rightData.dy; // Bottom pixel → lower Y data
-      }
-
-      if ((_activeResizeDirection == ResizeDirection.top ||
-              _activeResizeDirection == ResizeDirection.topLeft ||
-              _activeResizeDirection == ResizeDirection.topRight) &&
-          annotation.endY != null) {
-        tempEndY = leftData.dy; // Top pixel → higher Y data
-      }
-
-      // Update element with temporary values for label display
-      _resizingAnnotation!.updateTempValues(
-        startX: tempStartX,
-        endX: tempEndX,
-        startY: tempStartY,
-        endY: tempEndY,
-      );
-    }
-  }
-
-  /// Performs move operation for RangeAnnotation during drag.
-  ///
-  /// Moves the entire annotation region by updating both start and end coordinates
-  /// while maintaining the original width/height of the region.
-  void _performMove(Offset currentPosition) {
-    if (_movingAnnotation == null || _moveStartPosition == null || _moveStartBounds == null) {
-      return;
-    }
-
-    final delta = currentPosition - _moveStartPosition!;
-    final oldBounds = _moveStartBounds!;
-
-    // Calculate new bounds by shifting entire region
-    final newBounds = Rect.fromLTRB(
-      oldBounds.left + delta.dx,
-      oldBounds.top + delta.dy,
-      oldBounds.right + delta.dx,
-      oldBounds.bottom + delta.dy,
-    );
-
-    // Update annotation bounds
-    // Note: Spatial index will be rebuilt on pointer up for performance
-    _movingAnnotation!.updateBounds(newBounds);
-  }
-
-  /// Performs move operation for PointAnnotation during drag.
-  ///
-  /// Finds the nearest data point in the same series and updates the candidate index
-  /// for visual preview. The annotation will snap to this point on pointer up.
-  void _performPointAnnotationMove(Offset currentPosition) {
-    if (_movingPointAnnotation == null) {
-      return;
-    }
-
-    final annotation = _movingPointAnnotation!.annotation;
-
-    // Find the series element for this annotation
-    final seriesElements = _elements.whereType<SeriesElement>();
-    SeriesElement? targetSeries;
-    for (final seriesElement in seriesElements) {
-      if (seriesElement.series.id == annotation.seriesId) {
-        targetSeries = seriesElement;
-        break;
-      }
-    }
-
-    if (targetSeries == null || targetSeries.series.points.isEmpty) {
-      return;
-    }
-
-    // Convert cursor position to data coordinates
-    final transform = targetSeries.transform;
-    final plotPos = widgetToPlot(currentPosition);
-    final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
-
-    // Find nearest data point in the series
-    final points = targetSeries.series.points;
-    double minDistance = double.infinity;
-    int nearestIndex = _originalDataPointIndex ?? 0;
-
-    for (int i = 0; i < points.length; i++) {
-      final point = points[i];
-      // Calculate Euclidean distance in data space
-      final dx = point.x - dataPos.dx;
-      final dy = point.y - dataPos.dy;
-      final distance = math.sqrt(dx * dx + dy * dy);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestIndex = i;
-      }
-    }
-
-    // Calculate snap tolerance (5% of viewport range, similar to RangeAnnotation)
-    final xRange = transform.dataXMax - transform.dataXMin;
-    final yRange = transform.dataYMax - transform.dataYMin;
-    final snapTolerance = 0.05 * math.sqrt(xRange * xRange + yRange * yRange);
-
-    // Update candidate index if within snap tolerance
-    if (minDistance <= snapTolerance) {
-      _candidateDataPointIndex = nearestIndex;
-      // Update element's candidate index for visual preview
-      _movingPointAnnotation!.updateCandidateIndex(nearestIndex);
-    } else {
-      // Out of snap tolerance - keep the CURRENT candidate (last valid snap), not the original
-      // This allows smooth progression: point A -> point B -> point C (not A -> B -> A)
-      // The candidate stays at the last snapped position until we snap to a new one
-      _movingPointAnnotation!.updateCandidateIndex(_candidateDataPointIndex);
-    }
-  }
-
-  /// Performs move operation for TextAnnotation during drag.
-  ///
-  /// Updates the annotation's position by the drag delta. The position is stored
-  /// as screen coordinates, so we just offset by the pointer movement.
-  void _performTextAnnotationMove(Offset currentPosition) {
-    if (_movingTextAnnotation == null || _moveTextStartPosition == null) {
-      return;
-    }
-
-    final delta = currentPosition - _moveTextStartPosition!;
-    final originalPosition = _movingTextAnnotation!.annotation.position;
-    final newPosition = originalPosition + delta;
-
-    // Update element's temporary position for visual preview
-    _movingTextAnnotation!.updateTempPosition(newPosition);
-  }
-
-  /// Perform ThresholdAnnotation move with axis-constrained drag.
-  /// Converts screen delta to data delta and updates temp value for preview.
-  void _performThresholdAnnotationMove(Offset currentPosition) {
-    if (_movingThresholdAnnotation == null || _moveThresholdStartPosition == null || _moveThresholdStartValue == null) {
-      return;
-    }
-
-    final element = _movingThresholdAnnotation!;
-    final annotation = element.annotation;
-
-    // Convert screen coordinates to data coordinates (axis-constrained)
-    double newValue;
-    if (annotation.axis == AnnotationAxis.x) {
-      // Vertical line - only X movement matters
-      // Convert screen X to data X
-      final screenX1 = _moveThresholdStartPosition!.dx;
-      final screenX2 = currentPosition.dx;
-      final dataX1 = _transform!.plotToData(screenX1, 0).dx;
-      final dataX2 = _transform!.plotToData(screenX2, 0).dx;
-      final dataDelta = dataX2 - dataX1;
-      newValue = _moveThresholdStartValue! + dataDelta;
-    } else {
-      // Horizontal line (y-axis) - only Y movement matters
-      // Convert screen Y to data Y
-      final screenY1 = _moveThresholdStartPosition!.dy;
-      final screenY2 = currentPosition.dy;
-      final dataY1 = _transform!.plotToData(0, screenY1).dy;
-      final dataY2 = _transform!.plotToData(0, screenY2).dy;
-      final dataDelta = dataY2 - dataY1;
-      newValue = _moveThresholdStartValue! + dataDelta;
-    }
-
-    element.updateTempValue(newValue);
-    markNeedsPaint();
-  }
-
-  /// Performs move operation for PinAnnotation during drag.
-  /// Converts screen position to data coordinates and updates temp position.
-  void _performPinAnnotationMove(Offset currentPosition) {
-    if (_movingPinAnnotation == null || _movePinStartPosition == null || _movePinStartX == null || _movePinStartY == null) {
-      return;
-    }
-
-    // Convert start and end screen positions to data coordinates
-    final dataStart = _transform!.plotToData(_movePinStartPosition!.dx, _movePinStartPosition!.dy);
-    final dataEnd = _transform!.plotToData(currentPosition.dx, currentPosition.dy);
-
-    // Calculate data delta
-    final dataDelta = dataEnd - dataStart;
-
-    // Apply delta to original position
-    final newX = _movePinStartX! + dataDelta.dx;
-    final newY = _movePinStartY! + dataDelta.dy;
-
-    _movingPinAnnotation!.updateTempPosition(newX, newY);
-    markNeedsPaint();
-  }
-
   // ============================================================================
-  // Event Handling
+  // Event Handling (delegated to EventHandlerManager)
   // ============================================================================
 
   @override
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
-
-    // Modal states block all events except themselves
-    // EXCEPTION: rangeAnnotationCreation mode needs pointer events to work
-    if (coordinator.isModal && coordinator.currentMode != InteractionMode.rangeAnnotationCreation) {
-      return;
-    }
-
-    // CRITICAL: Use event.localPosition, NOT entry.localPosition!
-    // entry.localPosition is captured at hit test time (pointer down) and never updates.
-    // event.localPosition gives us the current position for move events.
-    final localPosition = event.localPosition;
-
-    if (event is PointerDownEvent) {
-      _handlePointerDown(event, localPosition);
-    } else if (event is PointerMoveEvent) {
-      _handlePointerMove(event, localPosition);
-    } else if (event is PointerUpEvent) {
-      _handlePointerUp(event, localPosition);
-    } else if (event is PointerHoverEvent) {
-      _handlePointerHover(event, localPosition);
-    } else if (event is PointerScrollEvent) {
-      _handlePointerScroll(event, localPosition);
-    }
-  }
-
-  void _handlePointerDown(PointerDownEvent event, Offset position) {
-    // PRIORITY 1: Check if pointer is on scrollbar (highest priority)
-    if (_scrollbarManager.hitTestScrollbars(
-      position,
-      event.buttons,
-      isModal: coordinator.isModal,
-      onClaimMode: () => coordinator.claimMode(InteractionMode.scrollbarDragging),
-      cancelAutoScroll: _streamingManager.cancelAutoScroll,
-    )) {
-      return; // Scrollbar claimed the event
-    }
-
-    // Use unified hit testing with priority-based conflict resolution
-    final hitElement = hitTestElements(position);
-
-    coordinator.startInteraction(position, element: hitElement);
-
-    // Check if we hit a resize handle (priority 7)
-    if (event.buttons == kPrimaryMouseButton && hitElement is ResizeHandleElement) {
-      // Clicked on resize handle - extract parent annotation and direction
-      final annotation = hitElement.parentAnnotation;
-      final direction = hitElement.direction;
-
-      // Only RangeAnnotationElement supports resizing currently
-      if (annotation is! RangeAnnotationElement) {
-        return;
-      }
-
-      // Select the annotation first if not already selected
-      if (!annotation.isSelected) {
-        coordinator.selectElement(annotation);
-      }
-
-      _activeResizeDirection = direction;
-      _resizingAnnotation = annotation;
-      _resizeStartBounds = annotation.bounds;
-      coordinator.claimMode(InteractionMode.resizingAnnotation, element: annotation);
-      markNeedsPaint();
-      return;
-    }
-
-    // Per conflict resolution: Different buttons have different behaviors
-    if (event.buttons == kMiddleMouseButton) {
-      // Check if pan is enabled
-      final enablePan = _interactionConfig?.enablePan ?? true;
-      if (!enablePan) {
-        return;
-      }
-
-      // Middle-click: EXCLUSIVELY pan (per scenario 6)
-      // [DEBUG OUTPUT REMOVED] Middle button down - fires on user interaction
-      coordinator.claimMode(InteractionMode.panning);
-      // Store initial pan position in widget space
-      _lastPanPosition = position;
-      // Show scrollbars when pan starts (once, not on every move)
-      _scrollbarManager.showScrollbarsAndScheduleHide();
-      // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
-    } else if (event.buttons == kSecondaryMouseButton) {
-      // Right-click: EXCLUSIVELY context menu (per scenario 8)
-      coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
-    } else if (event.buttons == kPrimaryMouseButton) {
-      // Left-click: Select, or start drag/box-select (determined on move)
-      if (hitElement != null) {
-        if (hitElement is PointAnnotationElement) {}
-
-        // Check if we clicked on a RangeAnnotationElement body (not a resize handle)
-        // This allows moving the entire annotation region
-        if (hitElement is RangeAnnotationElement) {
-          // Clicked on RangeAnnotation body - store as potential drag
-          // Wait for movement to decide: click (to select) or drag (to move)
-          _potentialDragRangeAnnotation = hitElement;
-          _potentialDragRangeStartPosition = position;
-          _potentialDragRangeStartBounds = hitElement.bounds;
-          // Don't claim mode or call callbacks yet - wait for movement or release
-        } else if (hitElement is TextAnnotationElement && hitElement.annotation.allowDragging) {
-          // Clicked on TextAnnotation - store as potential drag
-          // Wait for movement to decide: click (to select) or drag (to reposition)
-          _potentialDragTextAnnotation = hitElement;
-          _potentialDragTextStartPosition = position;
-          // Don't claim mode or call callbacks yet - wait for movement or release
-        } else if (hitElement is ThresholdAnnotationElement && hitElement.annotation.allowDragging) {
-          // Clicked on ThresholdAnnotation - store as potential drag
-          // Wait for movement to decide: click (to select) or drag (to move along axis)
-          _potentialDragThresholdAnnotation = hitElement;
-          _potentialDragThresholdStartPosition = position;
-          // Don't claim mode or call callbacks yet - wait for movement or release
-        } else if (hitElement is PinAnnotationElement && hitElement.annotation.allowDragging) {
-          // Clicked on PinAnnotation - store as potential drag
-          // Wait for movement to decide: click (to select) or drag (to move)
-          _potentialDragPinAnnotation = hitElement;
-          _potentialDragPinStartPosition = position;
-          // Don't claim mode or call callbacks yet - wait for movement or release
-        } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
-          // Clicked on PointAnnotation with dragging enabled - store as potential drag
-          // We don't know yet if this is a click (to select) or click-and-hold (to drag)
-          // Wait for pointer movement to decide
-          _potentialDragPointAnnotation = hitElement;
-          _potentialDragStartPosition = position;
-          // Don't claim mode or call callbacks yet - wait for movement or release
-        } else {
-          // Check if selection is enabled
-          final enableSelection = _interactionConfig?.enableSelection ?? true;
-          if (!enableSelection) {
-            return;
-          }
-
-          // Clicked on element - select it (or toggle if Ctrl)
-          if (coordinator.isCtrlPressed) {
-            coordinator.toggleElementSelection(hitElement);
-          } else {
-            coordinator.selectElement(hitElement);
-          }
-          // Rebuild spatial index after selection change so ResizableElements
-          // can update their isResizable state (e.g., RangeAnnotation resize handles)
-          _rebuildSpatialIndex();
-          coordinator.claimMode(InteractionMode.selecting, element: hitElement);
-          onElementClick?.call(hitElement, event);
-        }
-      } else {
-        // Clicked on empty area - clear selection and prepare for box select
-        coordinator.clearSelection();
-        // Rebuild spatial index after selection change so ResizableElements
-        // can update their isResizable state (e.g., RangeAnnotation resize handles)
-        _rebuildSpatialIndex();
-        onEmptyAreaClick?.call(position, event);
-        markNeedsPaint();
-      }
-    }
-  }
-
-  void _handlePointerMove(PointerMoveEvent event, Offset position) {
-    // PRIORITY 0: Check for drag threshold on potential TextAnnotation drag
-    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
-    if (_potentialDragTextAnnotation != null && _potentialDragTextStartPosition != null) {
-      final dragDistance = (position - _potentialDragTextStartPosition!).distance;
-
-      if (dragDistance >= _dragThresholdPixels) {
-        // Threshold exceeded - convert potential drag to actual drag
-        final hitElement = _potentialDragTextAnnotation!;
-        _movingTextAnnotation = hitElement;
-        _moveTextStartPosition = _potentialDragTextStartPosition;
-
-        coordinator.startInteraction(_potentialDragTextStartPosition!, element: hitElement);
-        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
-        // Clear potential drag state
-        _potentialDragTextAnnotation = null;
-        _potentialDragTextStartPosition = null;
-
-        // Perform initial move to current position
-        _performTextAnnotationMove(position);
-        markNeedsPaint();
-        return;
-      }
-      // Still within threshold - keep waiting
-      return;
-    }
-
-    // PRIORITY 0B: Check for drag threshold on potential ThresholdAnnotation drag
-    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
-    if (_potentialDragThresholdAnnotation != null && _potentialDragThresholdStartPosition != null) {
-      final dragDistance = (position - _potentialDragThresholdStartPosition!).distance;
-
-      if (dragDistance >= _dragThresholdPixels) {
-        // Threshold exceeded - convert potential drag to actual drag
-        final hitElement = _potentialDragThresholdAnnotation!;
-        _movingThresholdAnnotation = hitElement;
-        _moveThresholdStartPosition = _potentialDragThresholdStartPosition;
-        _moveThresholdStartValue = hitElement.annotation.value; // Store original value
-
-        coordinator.startInteraction(_potentialDragThresholdStartPosition!, element: hitElement);
-        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
-        // Clear potential drag state
-        _potentialDragThresholdAnnotation = null;
-        _potentialDragThresholdStartPosition = null;
-
-        // Perform initial move to current position
-        _performThresholdAnnotationMove(position);
-        markNeedsPaint();
-        return;
-      }
-      // Still within threshold - keep waiting
-      return;
-    }
-
-    // PRIORITY 0C: Check for drag threshold on potential PinAnnotation drag
-    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
-    if (_potentialDragPinAnnotation != null && _potentialDragPinStartPosition != null) {
-      final dragDistance = (position - _potentialDragPinStartPosition!).distance;
-
-      if (dragDistance >= _dragThresholdPixels) {
-        // Threshold exceeded - convert potential drag to actual drag
-        final hitElement = _potentialDragPinAnnotation!;
-        _movingPinAnnotation = hitElement;
-        _movePinStartPosition = _potentialDragPinStartPosition;
-        _movePinStartX = hitElement.annotation.x;
-        _movePinStartY = hitElement.annotation.y;
-
-        coordinator.startInteraction(_potentialDragPinStartPosition!, element: hitElement);
-        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
-        // Show selected state while dragging
-        coordinator.selectElement(hitElement);
-
-        // Clear potential drag state
-        _potentialDragPinAnnotation = null;
-        _potentialDragPinStartPosition = null;
-
-        // Perform initial move to current position
-        _performPinAnnotationMove(position);
-        markNeedsPaint();
-        return;
-      }
-      // Still within threshold - keep waiting
-      return;
-    }
-
-    // PRIORITY 0A: Check for drag threshold on potential RangeAnnotation drag
-    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
-    if (_potentialDragRangeAnnotation != null && _potentialDragRangeStartPosition != null && _potentialDragRangeStartBounds != null) {
-      final dragDistance = (position - _potentialDragRangeStartPosition!).distance;
-
-      if (dragDistance >= _dragThresholdPixels) {
-        // Threshold exceeded - convert potential drag to actual drag
-        final hitElement = _potentialDragRangeAnnotation!;
-        _movingAnnotation = hitElement;
-        _moveStartPosition = _potentialDragRangeStartPosition;
-        _moveStartBounds = _potentialDragRangeStartBounds;
-
-        coordinator.startInteraction(_potentialDragRangeStartPosition!, element: hitElement);
-        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
-        // Clear potential drag state
-        _potentialDragRangeAnnotation = null;
-        _potentialDragRangeStartPosition = null;
-        _potentialDragRangeStartBounds = null;
-
-        // Perform initial move to current position
-        _performMove(position);
-        markNeedsPaint();
-        return;
-      }
-      // Still within threshold - keep waiting
-      return;
-    }
-
-    // PRIORITY 0B: Check for drag threshold on potential PointAnnotation drag
-    // This must happen BEFORE checking coordinator.isInteracting because we haven't claimed mode yet
-    if (_potentialDragPointAnnotation != null && _potentialDragStartPosition != null) {
-      final dragDistance = (position - _potentialDragStartPosition!).distance;
-      if (dragDistance >= _dragThresholdPixels) {
-        // Pointer moved beyond threshold - convert to actual drag
-        final hitElement = _potentialDragPointAnnotation!;
-
-        // Initialize drag state
-        _movingPointAnnotation = hitElement;
-        _originalDataPointIndex = hitElement.annotation.dataPointIndex;
-        _candidateDataPointIndex = hitElement.annotation.dataPointIndex;
-
-        // Check coordinator state BEFORE claiming
-
-        // Start interaction and claim drag mode
-        coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
-        coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
-
-        // Clear potential drag state
-        _potentialDragPointAnnotation = null;
-        _potentialDragStartPosition = null;
-
-        // Now perform the first move to current position
-        _performPointAnnotationMove(position);
-        markNeedsPaint();
-        return;
-      }
-      // Still within threshold - don't start drag yet, just return
-      return;
-    }
-
-    // PRIORITY 1: Handle scrollbar drag if active
-    if (_scrollbarManager.isDragging) {
-      _scrollbarManager.handleScrollbarDrag(position);
-      return; // Scrollbar is handling the event
-    }
-
-    // PRIORITY 1.5: Handle range annotation creation mode (Option 4)
-    // This must happen BEFORE isInteracting check because we enter this mode from menu (not pointer down)
-    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation && event.buttons == kPrimaryMouseButton) {
-      // First move after entering mode - start interaction
-      if (!coordinator.isInteracting) {
-        coordinator.startInteraction(position);
-      }
-
-      final startPos = coordinator.interactionStartPosition;
-      if (startPos != null) {
-        coordinator.updateBoxSelection(startPos, position);
-        markNeedsPaint(); // Trigger rubber-band rendering
-      }
-      return;
-    }
-
-    if (!coordinator.isInteracting) return;
-
-    final startPos = coordinator.interactionStartPosition;
-    if (startPos == null) return;
-
-    // Handle resize dragging
-    if (coordinator.currentMode == InteractionMode.resizingAnnotation &&
-        _resizingAnnotation != null &&
-        _activeResizeDirection != null &&
-        _resizeStartBounds != null) {
-      _performResize(position, startPos);
-      markNeedsPaint();
-      return;
-    }
-
-    // Handle RangeAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
-        _movingAnnotation != null &&
-        _moveStartPosition != null &&
-        _moveStartBounds != null) {
-      _performMove(position);
-      markNeedsPaint();
-      return;
-    }
-
-    // Handle TextAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingTextAnnotation != null && _moveTextStartPosition != null) {
-      _performTextAnnotationMove(position);
-      markNeedsPaint();
-      return;
-    }
-
-    // Handle ThresholdAnnotation move dragging (axis-constrained)
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingThresholdAnnotation != null && _moveThresholdStartPosition != null) {
-      _performThresholdAnnotationMove(position);
-      markNeedsPaint();
-      return;
-    }
-
-    // Handle PinAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPinAnnotation != null && _movePinStartPosition != null) {
-      _performPinAnnotationMove(position);
-      markNeedsPaint();
-      return;
-    }
-
-    // Handle PointAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPointAnnotation != null) {
-      _performPointAnnotationMove(position);
-      markNeedsPaint();
-      return;
-    }
-
-    // Middle-button drag = pan (per conflict resolution scenario 6)
-    if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
-      // debugPrint(
-      //   ' Middle button MOVE: buttons=${event.buttons}, mode=${coordinator.currentMode}, lastPos=$_lastPanPosition, transform=${_transform != null}',
-      // );
-      if (_lastPanPosition != null && _transform != null && _originalTransform != null) {
-        // Calculate delta in widget space (for debugging if needed)
-        // final widgetDelta = position - _lastPanPosition!;
-
-        // Convert widget delta to plot space (widget space -> plot space is just offset removal)
-        final plotDelta = widgetToPlot(position) - widgetToPlot(_lastPanPosition!);
-
-        // debugPrint(' BEFORE CLAMP: position=$position, lastPos=$_lastPanPosition, plotDelta=$plotDelta');
-
-        // Clamp pan delta BEFORE applying (prevents overshoot/snap-back)
-        final (clampedDx, clampedDy) = _clampPanDelta(-plotDelta.dx, -plotDelta.dy);
-
-        // Apply constrained pan (won't violate boundaries)
-        _transform = _transform!.pan(clampedDx, clampedDy);
-
-        // Update axes to match new transform
-        _updateAxesFromTransform();
-
-        // DO NOT regenerate elements during pan - just update transform
-        // Elements will use the updated _transform during paint() for coordinate conversion
-        // Regeneration happens in _handlePointerUp when pan ends
-
-        // Update last position for next move event
-        _lastPanPosition = position;
-
-        // Repaint with updated transform (elements use _transform during paint)
-        // Note: Scrollbars already shown in _handlePointerDown, no need to reset timer on every move
-        markNeedsPaint();
-
-        // if (clampedDx != -plotDelta.dx || clampedDy != -plotDelta.dy) {
-        //   debugPrint(' Pan constrained: requested=${Offset(-plotDelta.dx, -plotDelta.dy)} to allowed=${Offset(clampedDx, clampedDy)}');
-        // } else {
-        //   debugPrint(' Middle-button pan: widgetDelta=$widgetDelta, plotDelta=$plotDelta');
-        // }
-      }
-      return;
-    }
-
-    // Left-button drag: datapoint drag, annotation drag, or box select
-    if (event.buttons == kPrimaryMouseButton) {
-      final startElement = coordinator.interactionStartElement;
-
-      // Update box selection rectangle if already in box select mode
-      if (coordinator.currentMode == InteractionMode.boxSelecting) {
-        coordinator.updateBoxSelection(startPos, position);
-        final newRect = coordinator.boxSelectionRect;
-
-        // Track cursor position for crosshair rendering
-        _cursorPosition = position;
-
-        // Update preview selection with elements currently in box
-        if (newRect != null) {
-          final previewElements = hitTestRect(newRect);
-          coordinator.updatePreviewSelection(previewElements.toSet());
-        }
-
-        markNeedsPaint();
-        return;
-      }
-
-      if (startElement != null && startElement.isDraggable) {
-        // Dragging an element (per scenarios 5, 10, 13)
-        if (startElement.elementType == ChartElementType.datapoint) {
-          coordinator.claimMode(InteractionMode.draggingDataPoint, element: startElement);
-        } else if (startElement.elementType == ChartElementType.annotation) {
-          coordinator.claimMode(InteractionMode.draggingAnnotation, element: startElement);
-        }
-      } else if (coordinator.shouldStartBoxSelect(position)) {
-        // Box selection (per scenario 5: >5px drag on empty area)
-        coordinator.claimMode(InteractionMode.boxSelecting);
-        coordinator.updateBoxSelection(startPos, position);
-        markNeedsPaint(); // Repaint to show box selection rectangle
-      }
-    }
-  }
-
-  void _handlePointerUp(PointerUpEvent event, Offset position) {
-    // Clear scrollbar drag state if active
-    if (_scrollbarManager.isDragging) {
-      _scrollbarManager.clearScrollbarDragState();
-
-      // Release scrollbar mode and end interaction
-      coordinator.endInteraction();
-      coordinator.releaseMode();
-      return;
-    }
-
-    // Complete box selection if active
-    if (coordinator.currentMode == InteractionMode.boxSelecting) {
-      final boxRect = coordinator.boxSelectionRect;
-      if (boxRect != null) {
-        final selectedElements = hitTestRect(boxRect);
-
-        // Clear preview before committing actual selection
-        coordinator.clearPreviewSelection();
-        coordinator.addToSelection(selectedElements.toSet());
-      }
-    }
-
-    // Complete range annotation creation if active (Option 4 workflow)
-    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
-      final boxRect = coordinator.boxSelectionRect;
-      if (boxRect != null && onRangeCreationComplete != null) {
-        // Get transform from first series to convert plot coords to data coords
-        if (_elements.whereType<SeriesElement>().isNotEmpty) {
-          final seriesElement = _elements.whereType<SeriesElement>().first;
-          final transform = seriesElement.transform;
-
-          // Convert plot coordinates to data coordinates
-          final topLeft = transform.plotToData(boxRect.left, boxRect.top);
-          final bottomRight = transform.plotToData(boxRect.right, boxRect.bottom);
-
-          // Calculate data bounds (note: Y axis is inverted in plot space)
-          final startX = topLeft.dx < bottomRight.dx ? topLeft.dx : bottomRight.dx;
-          final endX = topLeft.dx > bottomRight.dx ? topLeft.dx : bottomRight.dx;
-          final startY = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
-          final endY = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
-
-          // End interaction (clear boxSelectionRect) but DON'T release mode yet
-          // The widget callback will release mode after dialog closes
-          coordinator.endInteraction();
-
-          // Notify widget to open dialog with pre-filled coordinates
-          onRangeCreationComplete!(startX, endX, startY, endY);
-          markNeedsPaint();
-          return;
-        } else {}
-      } else if (boxRect == null) {}
-
-      // Release mode even if cancelled
-      coordinator.endInteraction();
-      coordinator.releaseMode();
-      markNeedsPaint();
-      return;
-    }
-
-    // Track if we just completed a resize or move operation
-    // (to skip selection logic which would clear the selection)
-    bool completedResizeOrMove = false;
-
-    // Clear resize state
-    if (_resizingAnnotation != null) {
-      completedResizeOrMove = true;
-      // CRITICAL: Read temp bounds BEFORE clearing them!
-      // clearTempBounds() will null out _tempResizeBounds, causing bounds getter
-      // to fall back to original annotation data instead of the resized values.
-      final resizedBounds = _resizingAnnotation!.bounds; // Get resized bounds while temp bounds still exist
-
-      _resizingAnnotation!.clearTempBounds(); // Now safe to clear temporary resize bounds
-
-      // CRITICAL: Store references BEFORE clearing state
-      // We need to clear _resizingAnnotation BEFORE the callback to prevent old
-      // element references from being accessed during the rebuild cycle triggered
-      // by notifyListeners() in the callback.
-      // BUT we need to capture the values we need FIRST!
-      final resizedAnnotation = _resizingAnnotation!.annotation;
-      final resizeDirection = _activeResizeDirection; // Capture before clearing
-
-      // Clear the resizing state NOW, before emitting callback
-      // This ensures that when notifyListeners() triggers rebuilds, the old
-      // element reference is no longer accessible
-      _resizingAnnotation = null;
-      _activeResizeDirection = null;
-      _resizeStartBounds = null;
-
-      // Emit annotation changed callback with updated bounds
-      // Convert pixel bounds back to data coordinates for the annotation
-      if (onAnnotationChanged != null) {
-        // Get transform from first series (all series share same transform)
-        if (_elements.whereType<SeriesElement>().isNotEmpty) {
-          final seriesElement = _elements.whereType<SeriesElement>().first;
-          final transform = seriesElement.transform;
-
-          // Convert pixel bounds back to data coordinates
-          // plotToData returns Offset(dataX, dataY)
-          final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
-          final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
-
-          var newStartX = leftData.dx;
-          var newEndX = rightData.dx;
-          // Y axis: Only set Y coordinates if they were originally defined
-          // If original annotation had null Y values (full height), keep them null
-          double? newStartY;
-          double? newEndY;
-
-          if (resizedAnnotation.startY != null && resizedAnnotation.endY != null) {
-            // Y axis is inverted: top pixel (smaller value) = higher Y data
-            // bottom pixel (larger value) = lower Y data
-            // So we need to swap them to maintain startY < endY
-            newStartY = rightData.dy; // bottom pixel → lower Y data (startY)
-            newEndY = leftData.dy; // top pixel → higher Y data (endY)
-          }
-
-          // Apply snapping if enabled
-          if (resizedAnnotation.snapToValue) {
-            // Calculate tolerance distances in data units (percentage of visible range)
-            final xTolerance = (transform.dataXMax - transform.dataXMin) * resizedAnnotation.snapTolerance;
-            final yTolerance = (transform.dataYMax - transform.dataYMin) * resizedAnnotation.snapTolerance;
-
-            // Determine which edge was resized based on resize direction
-            final needsSnapStartX = resizeDirection == ResizeDirection.left ||
-                resizeDirection == ResizeDirection.topLeft ||
-                resizeDirection == ResizeDirection.bottomLeft;
-            final needsSnapEndX = resizeDirection == ResizeDirection.right ||
-                resizeDirection == ResizeDirection.topRight ||
-                resizeDirection == ResizeDirection.bottomRight;
-
-            // CRITICAL: Y-axis mapping is INVERTED from screen pixels
-            // Screen: top pixel (small Y) = higher data value (endY)
-            // Screen: bottom pixel (large Y) = lower data value (startY)
-            // So when dragging BOTTOM handle, we're changing startY (not endY!)
-            final needsSnapStartY = resizeDirection == ResizeDirection.bottom ||
-                resizeDirection == ResizeDirection.bottomLeft ||
-                resizeDirection == ResizeDirection.bottomRight;
-            final needsSnapEndY =
-                resizeDirection == ResizeDirection.top || resizeDirection == ResizeDirection.topLeft || resizeDirection == ResizeDirection.topRight;
-
-            // Snap X coordinates if needed
-            if (needsSnapStartX) {
-              final snapped = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
-              if (snapped != null) {
-                newStartX = snapped;
-              }
-            }
-            if (needsSnapEndX) {
-              final snapped = _findNearestDataValue(newEndX, axis: 'x', tolerance: xTolerance);
-              if (snapped != null) {
-                newEndX = snapped;
-              }
-            }
-
-            // Snap Y coordinates if needed (only if they're defined)
-            if (needsSnapStartY && newStartY != null) {
-              final snapped = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
-              if (snapped != null) {
-                newStartY = snapped;
-              }
-            }
-            if (needsSnapEndY && newEndY != null) {
-              final snapped = _findNearestDataValue(newEndY, axis: 'y', tolerance: yTolerance);
-              if (snapped != null) {
-                newEndY = snapped;
-              }
-            }
-          }
-
-          // Create updated annotation with new bounds
-          // CRITICAL: Preserve null for axes that were originally unbound
-          final updatedAnnotation = resizedAnnotation.copyWith(
-            startX: resizedAnnotation.startX != null ? newStartX : null,
-            endX: resizedAnnotation.endX != null ? newEndX : null,
-            startY: resizedAnnotation.startY != null ? newStartY : null,
-            endY: resizedAnnotation.endY != null ? newEndY : null,
-          );
-
-          // Emit callback
-          onAnnotationChanged!(resizedAnnotation.id, updatedAnnotation);
-        }
-      }
-      // Note: _resizingAnnotation, _activeResizeDirection, and _resizeStartBounds
-      // were already cleared above before the callback was emitted
-    }
-
-    // Clear move state
-    if (_movingAnnotation != null) {
-      completedResizeOrMove = true;
-      // CRITICAL: Read temp bounds BEFORE clearing them!
-      final movedBounds = _movingAnnotation!.bounds; // Get moved bounds while temp bounds still exist
-
-      _movingAnnotation!.clearTempBounds(); // Now safe to clear temporary bounds
-
-      // CRITICAL: Store references BEFORE clearing state
-      final movedAnnotation = _movingAnnotation!.annotation;
-
-      // Clear the moving state NOW, before emitting callback
-      _movingAnnotation = null;
-      _moveStartPosition = null;
-      _moveStartBounds = null;
-
-      // Emit annotation changed callback with updated bounds
-      // Convert pixel bounds back to data coordinates for the annotation
-      if (onAnnotationChanged != null) {
-        // Get transform from first series (all series share same transform)
-        if (_elements.whereType<SeriesElement>().isNotEmpty) {
-          final seriesElement = _elements.whereType<SeriesElement>().first;
-          final transform = seriesElement.transform;
-
-          // Convert pixel bounds back to data coordinates
-          // plotToData returns Offset(dataX, dataY)
-          final leftData = transform.plotToData(movedBounds.left, movedBounds.top);
-          final rightData = transform.plotToData(movedBounds.right, movedBounds.bottom);
-
-          var newStartX = leftData.dx;
-          var newEndX = rightData.dx;
-          // Y axis: Only set Y coordinates if they were originally defined
-          // If original annotation had null Y values (full height), keep them null
-          double? newStartY;
-          double? newEndY;
-
-          if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
-            // Y axis is inverted: top pixel (smaller value) = higher Y data
-            // bottom pixel (larger value) = lower Y data
-            // So we need to swap them to maintain startY < endY
-            newStartY = rightData.dy; // bottom pixel → lower Y data (startY)
-            newEndY = leftData.dy; // top pixel → higher Y data (endY)
-          }
-
-          // Apply snapping if enabled
-          if (movedAnnotation.snapToValue) {
-            // Calculate tolerance distances in data units (percentage of visible range)
-            final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
-            final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
-
-            // Snap X coordinates only if they're defined in the original annotation
-            if (movedAnnotation.startX != null && movedAnnotation.endX != null) {
-              final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
-              if (snappedStartX != null) {
-                // Maintain width by shifting both edges
-                final width = newEndX - newStartX;
-                newStartX = snappedStartX;
-                newEndX = newStartX + width;
-              }
-            } else {}
-
-            // Snap Y coordinates only if they're defined in the original annotation
-            if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
-              final snappedStartY = _findNearestDataValue(newStartY!, axis: 'y', tolerance: yTolerance);
-              if (snappedStartY != null) {
-                // Maintain height by shifting both edges
-                final height = newEndY! - newStartY;
-                newStartY = snappedStartY;
-                newEndY = newStartY + height;
-              }
-            } else {}
-          }
-
-          // Create updated annotation with new bounds
-          // CRITICAL: Preserve null for axes that were originally unbound
-          final updatedAnnotation = movedAnnotation.copyWith(
-            startX: movedAnnotation.startX != null ? newStartX : null,
-            endX: movedAnnotation.endX != null ? newEndX : null,
-            startY: movedAnnotation.startY != null ? newStartY : null,
-            endY: movedAnnotation.endY != null ? newEndY : null,
-          );
-
-          // Emit callback
-          onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
-        }
-      }
-      // Note: _movingAnnotation, _moveStartPosition, and _moveStartBounds
-      // were already cleared above before the callback was emitted
-    }
-
-    // Handle potential TextAnnotation drag that never exceeded threshold (treat as selection click)
-    if (_potentialDragTextAnnotation != null) {
-      final hitElement = _potentialDragTextAnnotation!;
-
-      // This was a quick click without dragging - toggle selection
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-
-      // Emit click callback
-      onElementClick?.call(hitElement, event);
-
-      // Clear potential drag state
-      _potentialDragTextAnnotation = null;
-      _potentialDragTextStartPosition = null;
-
-      markNeedsPaint();
-    }
-
-    // Handle potential ThresholdAnnotation drag that never exceeded threshold (treat as selection click)
-    if (_potentialDragThresholdAnnotation != null) {
-      final hitElement = _potentialDragThresholdAnnotation!;
-
-      // This was a quick click without dragging - toggle selection
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-
-      // Emit click callback
-      onElementClick?.call(hitElement, event);
-
-      // Clear potential drag state
-      _potentialDragThresholdAnnotation = null;
-      _potentialDragThresholdStartPosition = null;
-
-      markNeedsPaint();
-    }
-
-    // Handle potential PinAnnotation drag that never exceeded threshold (treat as selection click)
-    if (_potentialDragPinAnnotation != null) {
-      final hitElement = _potentialDragPinAnnotation!;
-
-      // This was a quick click without dragging - toggle selection
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-
-      // Emit click callback
-      onElementClick?.call(hitElement, event);
-
-      // Clear potential drag state
-      _potentialDragPinAnnotation = null;
-      _potentialDragPinStartPosition = null;
-
-      markNeedsPaint();
-    }
-
-    // Handle potential RangeAnnotation drag that never exceeded threshold (treat as selection click)
-    // Skip selection logic if we just completed a resize or move operation
-    // Otherwise the "potential drag" handler would call selectElement() which clears selection first
-    if (_potentialDragRangeAnnotation != null && !completedResizeOrMove) {
-      final hitElement = _potentialDragRangeAnnotation!;
-
-      // This was a quick click without dragging - toggle selection
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-
-      // Rebuild spatial index after selection change so resize handles become active
-      _rebuildSpatialIndex();
-
-      // Emit click callback
-      onElementClick?.call(hitElement, event);
-
-      markNeedsPaint();
-    }
-
-    // Always clear potential drag state
-    if (_potentialDragRangeAnnotation != null) {
-      _potentialDragRangeAnnotation = null;
-      _potentialDragRangeStartPosition = null;
-      _potentialDragRangeStartBounds = null;
-    }
-
-    // Handle potential PointAnnotation drag that never exceeded threshold (treat as selection click)
-    if (_potentialDragPointAnnotation != null) {
-      final hitElement = _potentialDragPointAnnotation!;
-
-      // This was a quick click without dragging - toggle selection
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-
-      // Emit click callback
-      onElementClick?.call(hitElement, event);
-
-      // Clear potential drag state
-      _potentialDragPointAnnotation = null;
-      _potentialDragStartPosition = null;
-
-      markNeedsPaint();
-    }
-
-    // Clear PointAnnotation move state
-    if (_movingPointAnnotation != null) {
-      // CRITICAL: Store references BEFORE clearing state
-      final movedAnnotation = _movingPointAnnotation!.annotation;
-      final newIndex = _candidateDataPointIndex ?? _originalDataPointIndex ?? movedAnnotation.dataPointIndex;
-
-      // Clear candidate preview
-      _movingPointAnnotation!.clearCandidateIndex();
-
-      // Clear the moving state NOW, before emitting callback
-      _movingPointAnnotation = null;
-      _originalDataPointIndex = null;
-      _candidateDataPointIndex = null;
-
-      // Emit annotation changed callback with updated dataPointIndex (only if changed)
-      if (onAnnotationChanged != null && newIndex != movedAnnotation.dataPointIndex) {
-        // Create updated annotation with new dataPointIndex
-        final updatedAnnotation = movedAnnotation.copyWith(
-          dataPointIndex: newIndex,
-        );
-
-        // Emit callback
-        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
-      }
-    }
-
-    // Clear TextAnnotation move state
-    if (_movingTextAnnotation != null) {
-      // Get the final moved position from the element's temp position
-      final originalPosition = _movingTextAnnotation!.annotation.position;
-      final tempPosition = _movingTextAnnotation!.tempPosition;
-      final newPosition = tempPosition ?? originalPosition; // Use temp if available, else original
-
-      // Clear temp position
-      _movingTextAnnotation!.clearTempPosition();
-
-      // CRITICAL: Store references BEFORE clearing state
-      final movedAnnotation = _movingTextAnnotation!.annotation;
-
-      // Clear the moving state NOW, before emitting callback
-      _movingTextAnnotation = null;
-      _moveTextStartPosition = null;
-
-      // Emit annotation changed callback with updated position (only if changed)
-      if (onAnnotationChanged != null && newPosition != originalPosition) {
-        // Create updated annotation with new position
-        final updatedAnnotation = movedAnnotation.copyWith(
-          position: newPosition,
-        );
-
-        // Emit callback
-        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
-      }
-    }
-
-    // Clear ThresholdAnnotation move state
-    if (_movingThresholdAnnotation != null) {
-      // Get the final moved value from the element's temp value
-      final originalValue = _movingThresholdAnnotation!.annotation.value;
-      final tempValue = _movingThresholdAnnotation!.tempValue;
-      final newValue = tempValue ?? originalValue; // Use temp if available, else original
-
-      // Clear temp value
-      _movingThresholdAnnotation!.clearTempValue();
-
-      // CRITICAL: Store references BEFORE clearing state
-      final movedAnnotation = _movingThresholdAnnotation!.annotation;
-
-      // Clear the moving state NOW, before emitting callback
-      _movingThresholdAnnotation = null;
-      _moveThresholdStartPosition = null;
-      _moveThresholdStartValue = null;
-
-      // Emit annotation changed callback with updated value (only if changed)
-      if (onAnnotationChanged != null && newValue != originalValue) {
-        // Create updated annotation with new value
-        final updatedAnnotation = movedAnnotation.copyWith(
-          value: newValue,
-        );
-
-        // Emit callback
-        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
-      }
-    }
-
-    // Clear PinAnnotation move state
-    if (_movingPinAnnotation != null) {
-      // Get the final moved position from the element's temp position
-      final originalX = _movingPinAnnotation!.annotation.x;
-      final originalY = _movingPinAnnotation!.annotation.y;
-      final tempPos = _movingPinAnnotation!.tempPosition;
-      final newX = tempPos?.$1 ?? originalX;
-      final newY = tempPos?.$2 ?? originalY;
-
-      // Clear temp position
-      _movingPinAnnotation!.clearTempPosition();
-
-      // CRITICAL: Store references BEFORE clearing state
-      final movedAnnotation = _movingPinAnnotation!.annotation;
-
-      // Clear the moving state NOW, before emitting callback
-      _movingPinAnnotation = null;
-      _movePinStartPosition = null;
-      _movePinStartX = null;
-      _movePinStartY = null;
-
-      // Emit annotation changed callback with updated position (only if changed)
-      if (onAnnotationChanged != null && (newX != originalX || newY != originalY)) {
-        final updatedAnnotation = movedAnnotation.copyWith(
-          x: newX,
-          y: newY,
-        );
-
-        // Emit callback
-        onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
-      }
-    }
-
-    // Clear pan state and regenerate elements if we were panning
-    // (Elements were not regenerated during drag for performance)
-    final wasPanning = coordinator.currentMode == InteractionMode.panning;
-    _lastPanPosition = null;
-    if (wasPanning && _elementGenerator != null) {
-      // Update axes after panning completes
-      _updateAxesFromTransform();
-
-      // Regenerate elements with new transform
-      // Note: Scrollbars already visible from pointer down, auto-hide timer will handle hiding
-      _rebuildElementsWithTransform();
-
-      // Invalidate cache - transform changed from panning
-      _seriesCacheManager.invalidate();
-
-      // [DEBUG OUTPUT REMOVED] Pan ended - fires on user interaction
-    }
-
-    // Handle tap on marker for tap-triggered tooltips
-    // Check if we're still hovering the same marker we started with (indicates a tap, not a drag)
-    final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-    if ((config.triggerMode == TooltipTriggerMode.tap || config.triggerMode == TooltipTriggerMode.both) &&
-        coordinator.hoveredMarker != null &&
-        !coordinator.isPanning &&
-        !wasPanning) {
-      // Toggle tapped marker: if same marker, clear it (hide tooltip), else set it (show tooltip)
-      if (_tappedMarker == coordinator.hoveredMarker) {
-        _tappedMarker = null; // Tap same marker again = hide tooltip
-      } else {
-        _tappedMarker = coordinator.hoveredMarker; // Tap new marker = show tooltip
-      }
-    }
-
-    // Clear cursor position
-    _cursorPosition = null;
-
-    // Release interaction
-    coordinator.endInteraction();
-    coordinator.releaseMode();
-    markNeedsPaint();
-  }
-
-  /// Find the nearest data point value on the specified axis within tolerance.
-  ///
-  /// Searches all series data points and returns the nearest X or Y value
-  /// that is within the specified tolerance distance from [targetValue].
-  ///
-  /// Returns null if no data point is within tolerance.
-  double? _findNearestDataValue(double targetValue, {required String axis, required double tolerance}) {
-    double? nearestValue;
-    double minDistance = double.infinity;
-    ChartDataPoint? nearestPoint; // Track the full point for debugging
-
-    // Collect all data points from all series for both X and Y axes
-    for (final element in _elements.whereType<SeriesElement>()) {
-      for (final point in element.series.points) {
-        // Get the value for the specified axis
-        final value = axis == 'x' ? point.x : point.y;
-        final distance = (value - targetValue).abs();
-
-        // Check if this is the nearest point within tolerance
-        if (distance < minDistance && distance <= tolerance) {
-          minDistance = distance;
-          nearestValue = value;
-          nearestPoint = point; // Store the full point
-        }
-      }
-    }
-
-    // Debug output to show which data point was found
-    if (nearestValue != null && nearestPoint != null) {}
-
-    return nearestValue;
-  }
-
-  void _handlePointerHover(PointerHoverEvent event, Offset position) {
-    // Track cursor position for crosshair rendering
-    _cursorPosition = position;
-
-    // Always update crosshair immediately for smooth 60fps tracking
-    markNeedsPaint();
-
-    // PRIORITY 1: Check scrollbar hover first (before element hit testing)
-    // Fixes issue #5: Show appropriate cursors for pan (center) and zoom (edges)
-    if (_scrollbarManager.checkScrollbarHover(position)) {
-      return; // Scrollbar handled hover, don't check elements
-    }
-
-    // Per conflict resolution scenario 7: Hover is passive
-    // Per scenario 12: Hover/tooltips suspended during panning
-    if (coordinator.isPanning) {
-      coordinator.setHoveredElement(null);
-      coordinator.setHoveredMarker(null);
-      onCursorChange?.call(SystemMouseCursors.basic);
-      return;
-    }
-
-    // IMMEDIATE marker highlighting for snappy response (not deferred!)
-    // This must be instant - moving from one marker to another should immediately
-    // unhighlight the old and highlight the new without any delay
-    _updateHoveredMarker(position);
-
-    // Throttle expensive hit testing during rapid mouse movement
-    // Strategy: Update crosshair immediately, defer hit testing until movement slows
-    _pendingHitTestPosition = position;
-
-    // Cancel previous hit test if still pending (mouse moved again before timer fired)
-    _hitTestDebounceTimer?.cancel();
-
-    // Schedule deferred hit testing
-    _hitTestDebounceTimer = Timer(_hitTestThrottleDuration, () {
-      _performDeferredHitTest();
-    });
-  }
-
-  /// Performs deferred hit testing after mouse movement slows/stops.
-  ///
-  /// This method is called by the debounce timer when mouse movement pauses.
-  /// It performs the expensive hit testing operations (QuadTree query, precise
-  /// hit test, priority sorting) that would cause lag if done on every hover event.
-  void _performDeferredHitTest() {
-    final position = _pendingHitTestPosition;
-    if (position == null) return;
-
-    // Clear pending state
-    _pendingHitTestPosition = null;
-
-    // Use unified hit testing with priority-based conflict resolution
-    final hitElement = hitTestElements(position);
-
-    // Check if we hit a resize handle (priority 7)
-    if (hitElement is ResizeHandleElement) {
-      // Hovering over resize handle - show resize cursor
-      final cursor = _getCursorForResizeDirection(hitElement.direction);
-      onCursorChange?.call(cursor);
-      coordinator.setHoveredElement(hitElement.parentAnnotation);
-      onElementHover?.call(hitElement.parentAnnotation);
-      markNeedsPaint(); // Repaint for hover highlight
-      return;
-    }
-
-    // For any other element (datapoint=9, series=8, annotation=6, etc.)
-    // Priority system ensures the highest-priority element wins
-    onCursorChange?.call(SystemMouseCursors.basic);
-    coordinator.setHoveredElement(hitElement);
-    onElementHover?.call(hitElement);
-
-    markNeedsPaint(); // Repaint for hover highlight
-  }
-
-  /// Updates the hovered marker state immediately (no debounce).
-  ///
-  /// Called on every hover event for instant snappy marker highlighting.
-  /// When moving from one marker to another, this immediately clears the old
-  /// and highlights the new without any delay.
-  void _updateHoveredMarker(Offset widgetPosition) {
-    if (_transform == null) {
-      coordinator.setHoveredMarker(null);
-      return;
-    }
-
-    final plotPosition = widgetToPlot(widgetPosition);
-    const snapRadius = 20.0; // Match BravenChart's precise snap radius
-
-    HoveredMarkerInfo? nearestMarker;
-    double minDistance = snapRadius;
-
-    // Search all series elements for nearest marker
-    for (final element in _elements.whereType<SeriesElement>()) {
-      // Skip series that don't show data point markers - no tooltip if markers hidden
-      final series = element.series;
-      if (series is LineChartSeries && !series.showDataPointMarkers) continue;
-
-      for (int i = 0; i < element.series.points.length; i++) {
-        final point = element.series.points[i];
-        final markerPlotPos = _transform!.dataToPlot(point.x, point.y);
-        final distance = (plotPosition - markerPlotPos).distance;
-
-        // Only consider markers WITHIN snap radius
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestMarker = HoveredMarkerInfo(
-            seriesId: element.id,
-            markerIndex: i,
-            plotPosition: markerPlotPos,
-          );
-        }
-      }
-    }
-
-    // Track previous marker state to detect changes
-    final previousMarker = coordinator.hoveredMarker;
-
-    // Update coordinator state immediately
-    coordinator.setHoveredMarker(nearestMarker);
-
-    // Only invalidate series cache if marker state ACTUALLY changed
-    // This prevents Picture regeneration on every mouse move
-    final markerChanged = (previousMarker == null) != (nearestMarker == null) ||
-        (previousMarker != null &&
-            nearestMarker != null &&
-            (previousMarker.seriesId != nearestMarker.seriesId || previousMarker.markerIndex != nearestMarker.markerIndex));
-
-    if (markerChanged) {
-      _seriesCacheManager.invalidate();
-    }
-  }
-
-  /// Finds the nearest marker within a series element.
-  ///
-  /// Returns marker information if a marker is within the snap radius,
-  /// null otherwise.
-  ///
-  /// **Performance**: Only called after debounced hit testing (50ms throttle),
-  /// and only on the series that was hit by priority-based resolution.
-  /// Gets the appropriate cursor for a resize direction.
-  MouseCursor _getCursorForResizeDirection(ResizeDirection direction) {
-    switch (direction) {
-      case ResizeDirection.topLeft:
-      case ResizeDirection.bottomRight:
-        return SystemMouseCursors.resizeUpLeftDownRight;
-      case ResizeDirection.topRight:
-      case ResizeDirection.bottomLeft:
-        return SystemMouseCursors.resizeUpRightDownLeft;
-      case ResizeDirection.top:
-      case ResizeDirection.bottom:
-        return SystemMouseCursors.resizeUpDown;
-      case ResizeDirection.left:
-      case ResizeDirection.right:
-        return SystemMouseCursors.resizeLeftRight;
-    }
-  }
-
-  void _handlePointerScroll(PointerScrollEvent event, Offset position) {
-    // Check if zoom is enabled
-    final enableZoom = _interactionConfig?.enableZoom ?? true;
-    if (!enableZoom) {
-      return;
-    }
-
-    // Prevent scroll wheel zoom during scrollbar drag
-    if (coordinator.currentMode == InteractionMode.scrollbarDragging) {
-      return;
-    }
-
-    // Check for Shift modifier to trigger zoom
-    if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null && _originalTransform != null) {
-      // Claim zooming mode
-      coordinator.claimMode(InteractionMode.zooming);
-
-      // Calculate zoom factor from scroll delta
-      // Positive scrollDelta.dy = scroll down = zoom out
-      // Negative scrollDelta.dy = scroll up = zoom in
-      final double scrollAmount = event.scrollDelta.dy;
-      const double zoomSensitivity = 0.001; // Adjust for comfortable zoom speed
-      final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
-
-      // [DEBUG OUTPUT REMOVED] Zoom factor - fires on scroll events
-
-      // Convert cursor position (widget space) to plot space
-      final Offset plotPosition = widgetToPlot(position);
-
-      // Apply zoom centered on cursor position with constraints
-      final tentativeTransform = _transform!.zoom(zoomFactor, plotPosition);
-      final clampedTransform = _clampZoomLevel(tentativeTransform);
-
-      // Note: Previously Y-axis zoom was disabled for multi-axis charts.
-      // This restriction was removed because perSeries normalization now
-      // correctly handles Y-zoom with synchronized axis label updates.
-
-      _transform = clampedTransform;
-
-      // Update axes to reflect new viewport
-      _updateAxesFromTransform();
-
-      // Regenerate elements with new transform
-      _rebuildElementsWithTransform();
-
-      // Show scrollbars on viewport change from mouse wheel zoom
-      _scrollbarManager.showScrollbarsAndScheduleHide();
-
-      // Invalidate cache - transform changed from scroll zoom
-      _seriesCacheManager.invalidate();
-
-      // [DEBUG OUTPUT REMOVED] Transform updated - fires on scroll zoom
-
-      // Release zoom mode after short delay
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (coordinator.currentMode == InteractionMode.zooming) {
-          coordinator.releaseMode();
-        }
-      });
-    } else {
-      // [DEBUG OUTPUT REMOVED] Scroll without zoom - fires on regular scroll
-
-      // Without Shift, just claim mode for compatibility
-      coordinator.claimMode(InteractionMode.zooming);
-
-      // Release zoom mode after short delay (zoom is instant, not continuous)
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (coordinator.currentMode == InteractionMode.zooming) {
-          coordinator.releaseMode();
-        }
-      });
-    }
+    _eventHandlerManager.handleEvent(event);
   }
 
   // ============================================================================
@@ -3287,7 +1659,7 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Draw crosshair at cursor position (in widget space)
-    final cursorPos = _cursorPosition;
+    final cursorPos = _eventHandlerManager.cursorPosition;
     final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
     final crosshairEnabled = crosshairConfig.enabled;
     if (crosshairEnabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
@@ -3325,11 +1697,11 @@ class ChartRenderBox extends RenderBox {
           break;
         case TooltipTriggerMode.tap:
           // Show tooltip only for tapped marker
-          markerToShow = _tappedMarker;
+          markerToShow = _eventHandlerManager.tappedMarker;
           break;
         case TooltipTriggerMode.both:
           // Show tooltip for either hover or tap (prefer tapped if both exist)
-          markerToShow = _tappedMarker ?? coordinator.hoveredMarker;
+          markerToShow = _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
           break;
       }
 
@@ -3597,7 +1969,7 @@ class ChartRenderBox extends RenderBox {
       markerInfo: markerInfo,
       elements: _elements,
       animator: _tooltipAnimator,
-      cursorPosition: _cursorPosition,
+      cursorPosition: _eventHandlerManager.cursorPosition,
       interactionConfig: _interactionConfig,
       theme: _theme,
       effectiveAxes: _getEffectiveYAxes(),
@@ -3777,5 +2149,176 @@ class _AnnotationDragDelegateImpl implements AnnotationDragDelegate {
   @override
   void notifyAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
     _renderBox.onAnnotationChanged?.call(annotationId, updatedAnnotation);
+  }
+}
+
+/// Internal delegate implementation for EventHandlerManager.
+///
+/// This class adapts ChartRenderBox to the EventHandlerDelegate interface,
+/// providing the event handler manager with access to all required dependencies
+/// for handling pointer events, hit testing, and interaction state management.
+class _EventHandlerDelegateImpl implements EventHandlerDelegate {
+  _EventHandlerDelegateImpl(this._renderBox);
+
+  final ChartRenderBox _renderBox;
+
+  // ============================================================================
+  // Core dependencies
+  // ============================================================================
+
+  @override
+  ChartInteractionCoordinator get coordinator => _renderBox.coordinator;
+
+  @override
+  ChartTransform? get transform => _renderBox._transform;
+
+  @override
+  set transform(ChartTransform? value) {
+    _renderBox._transform = value;
+  }
+
+  @override
+  ChartTransform? get originalTransform => _renderBox._originalTransform;
+
+  @override
+  InteractionConfig? get interactionConfig => _renderBox._interactionConfig;
+
+  @override
+  List<ChartElement> get elements => _renderBox._elements;
+
+  @override
+  Rect get plotArea => _renderBox._plotArea;
+
+  // ============================================================================
+  // Callbacks
+  // ============================================================================
+
+  @override
+  void Function(ChartElement, PointerEvent)? get onElementClick => _renderBox.onElementClick;
+
+  @override
+  void Function(Offset, PointerEvent)? get onEmptyAreaClick => _renderBox.onEmptyAreaClick;
+
+  @override
+  void Function(ChartElement?)? get onElementHover => _renderBox.onElementHover;
+
+  @override
+  void Function(MouseCursor)? get onCursorChange => _renderBox.onCursorChange;
+
+  @override
+  void Function(String, ChartAnnotation)? get onAnnotationChanged => _renderBox.onAnnotationChanged;
+
+  @override
+  void Function(double, double, double, double)? get onRangeCreationComplete => _renderBox.onRangeCreationComplete;
+
+  // ============================================================================
+  // Hit testing
+  // ============================================================================
+
+  @override
+  ChartElement? hitTestElements(Offset position) {
+    return _renderBox.hitTestElements(position);
+  }
+
+  @override
+  List<ChartElement> hitTestRect(Rect rect) {
+    return _renderBox.hitTestRect(rect).toList();
+  }
+
+  @override
+  void rebuildSpatialIndex() {
+    _renderBox._rebuildSpatialIndex();
+  }
+
+  // ============================================================================
+  // Module delegations
+  // ============================================================================
+
+  @override
+  bool hitTestScrollbars(
+    Offset position,
+    int buttons, {
+    required bool isModal,
+    required VoidCallback onClaimMode,
+    required VoidCallback cancelAutoScroll,
+  }) {
+    return _renderBox._scrollbarManager.hitTestScrollbars(
+      position,
+      buttons,
+      isModal: isModal,
+      onClaimMode: onClaimMode,
+      cancelAutoScroll: cancelAutoScroll,
+    );
+  }
+
+  @override
+  bool get isScrollbarDragging => _renderBox._scrollbarManager.isDragging;
+
+  @override
+  void handleScrollbarDrag(Offset position) {
+    _renderBox._scrollbarManager.handleScrollbarDrag(position);
+  }
+
+  @override
+  void clearScrollbarDragState() {
+    _renderBox._scrollbarManager.clearScrollbarDragState();
+  }
+
+  @override
+  bool checkScrollbarHover(Offset position) {
+    return _renderBox._scrollbarManager.checkScrollbarHover(position);
+  }
+
+  @override
+  void showScrollbarsAndScheduleHide() {
+    _renderBox._scrollbarManager.showScrollbarsAndScheduleHide();
+  }
+
+  @override
+  void cancelAutoScroll() {
+    _renderBox._streamingManager.cancelAutoScroll();
+  }
+
+  @override
+  void invalidateSeriesCache() {
+    _renderBox._seriesCacheManager.invalidate();
+  }
+
+  // ============================================================================
+  // Transform operations
+  // ============================================================================
+
+  @override
+  Offset widgetToPlot(Offset widgetPosition) {
+    return _renderBox.widgetToPlot(widgetPosition);
+  }
+
+  @override
+  (double, double) clampPanDelta(double dx, double dy) {
+    return _renderBox._clampPanDelta(dx, dy);
+  }
+
+  @override
+  void updateAxesFromTransform() {
+    _renderBox._updateAxesFromTransform();
+  }
+
+  @override
+  void rebuildElementsWithTransform() {
+    _renderBox._rebuildElementsWithTransform();
+  }
+
+  @override
+  ChartTransform clampZoomLevel(ChartTransform tentativeTransform) {
+    return _renderBox._clampZoomLevel(tentativeTransform);
+  }
+
+  // ============================================================================
+  // Render operations
+  // ============================================================================
+
+  @override
+  void markNeedsPaint() {
+    _renderBox.markNeedsPaint();
   }
 }
