@@ -43,6 +43,7 @@ import '../widgets/scrollbar/scrollbar_controller.dart';
 import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
+import 'modules/series_cache_manager.dart';
 import 'multi_axis_normalizer.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
@@ -403,7 +404,7 @@ class ChartRenderBox extends RenderBox {
   // Layer Separation & Picture Caching (Sprint 1)
   // ==========================================================================
 
-  /// Cached rendering of series layer as a Picture.
+  /// Manages GPU-accelerated Picture caching for series layer rendering.
   ///
   /// This cache stores the rendered output of all series elements as a
   /// GPU-accelerated Picture. The cache is invalidated when:
@@ -417,30 +418,7 @@ class ChartRenderBox extends RenderBox {
   /// - Annotation drag
   ///
   /// Memory footprint: ~170KB for typical chart (5 series, 1000 points each)
-  ui.Picture? _cachedSeriesPicture;
-
-  /// Flag indicating if the series cache needs regeneration.
-  ///
-  /// Set to true when cache-invalidating events occur:
-  /// - setElements() called with new data
-  /// - setTransform() called with different transform
-  /// - setTheme() called with new theme
-  ///
-  /// Set to false after cache successfully regenerated in _getSeriesPicture()
-  bool _seriesCacheDirty = true;
-
-  /// Transform state when cache was last generated.
-  ///
-  /// Used to detect if transform has changed since cache generation,
-  /// which would require cache invalidation and regeneration.
-  ChartTransform? _cachedTransform;
-
-  /// Hash of series data when cache was last generated.
-  ///
-  /// Used to detect if series data has changed since cache generation.
-  /// Computed from series count, element count, and data ranges.
-  /// If hash changes, cache must be regenerated.
-  int _cachedSeriesHash = 0;
+  final SeriesCacheManager _seriesCacheManager = SeriesCacheManager();
 
   // ==========================================================================
   // Crosshair Label Caching (Sprint 3 Optimization)
@@ -507,8 +485,7 @@ class ChartRenderBox extends RenderBox {
   /// Critical to prevent memory leaks in long-running applications.
   @override
   void dispose() {
-    _cachedSeriesPicture?.dispose();
-    _cachedSeriesPicture = null;
+    _seriesCacheManager.dispose();
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
     _scrollbarAutoHideTimer?.cancel();
@@ -530,7 +507,7 @@ class ChartRenderBox extends RenderBox {
 
     // Replace elements
     _elements = elements;
-    _seriesCacheDirty = true; // Invalidate cache - data changed
+    _seriesCacheManager.invalidate(); // Invalidate cache - data changed
 
     // Restore selection state on new elements that match by ID
     if (selectedIds.isNotEmpty) {
@@ -581,7 +558,7 @@ class ChartRenderBox extends RenderBox {
       // We must sync the new axis to the current zoomed viewport so tick labels
       // reflect the zoomed range, not the full range.
       _xAxis!.updateDataRange(_transform!.dataXMin, _transform!.dataXMax);
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
       markNeedsLayout();
       return;
     }
@@ -605,7 +582,7 @@ class ChartRenderBox extends RenderBox {
       // to always show full size because dataSpan == viewportSpan after update.
 
       // Invalidate series cache - viewport changed, need to regenerate Picture
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
     }
 
     markNeedsLayout();
@@ -650,7 +627,7 @@ class ChartRenderBox extends RenderBox {
       // tracking which may skip the update if values haven't changed (but we have
       // a NEW axis object that needs its ticks regenerated for the zoomed range).
       _yAxis!.updateDataRange(_transform!.dataYMin, _transform!.dataYMax);
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
       markNeedsLayout();
       return;
     }
@@ -697,7 +674,7 @@ class ChartRenderBox extends RenderBox {
         // to always show full size because dataSpan == viewportSpan after update.
 
         // Invalidate series cache - viewport changed, need to regenerate Picture
-        _seriesCacheDirty = true;
+        _seriesCacheManager.invalidate();
       }
     }
 
@@ -711,7 +688,7 @@ class ChartRenderBox extends RenderBox {
   void setTheme(ChartTheme? theme) {
     if (_theme == theme) return;
     _theme = theme;
-    _seriesCacheDirty = true; // Invalidate cache - theme changed
+    _seriesCacheManager.invalidate(); // Invalidate cache - theme changed
     markNeedsPaint();
   }
 
@@ -1073,7 +1050,7 @@ class ChartRenderBox extends RenderBox {
       _rebuildElementsWithTransform();
 
       // Invalidate cache - element generator changed (new data/theme)
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
     }
   }
 
@@ -1114,7 +1091,7 @@ class ChartRenderBox extends RenderBox {
     _showScrollbarsAndScheduleHide();
 
     // Invalidate cache - transform changed
-    _seriesCacheDirty = true;
+    _seriesCacheManager.invalidate();
 
     // [DEBUG OUTPUT REMOVED] Keyboard zoom - fires on user interaction
   }
@@ -1171,7 +1148,7 @@ class ChartRenderBox extends RenderBox {
     _rebuildElementsWithTransform();
 
     // Invalidate cache - transform reset to original
-    _seriesCacheDirty = true;
+    _seriesCacheManager.invalidate();
   }
 
   /// Updates the data bounds for streaming data that extends beyond original range.
@@ -1201,7 +1178,7 @@ class ChartRenderBox extends RenderBox {
 
     _updateAxesFromTransform();
     _rebuildElementsWithTransform();
-    _seriesCacheDirty = true;
+    _seriesCacheManager.invalidate();
     markNeedsPaint();
 
     // [DEBUG OUTPUT REMOVED] Data bounds updated - fires during streaming
@@ -1641,7 +1618,7 @@ class ChartRenderBox extends RenderBox {
       );
     }
 
-    _seriesCacheDirty = true;
+    _seriesCacheManager.invalidate();
     markNeedsPaint();
   }
 
@@ -2153,7 +2130,7 @@ class ChartRenderBox extends RenderBox {
           _rebuildElementsWithTransform();
 
           // Invalidate cache - initial element generation
-          _seriesCacheDirty = true;
+          _seriesCacheManager.invalidate();
         }
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
@@ -3543,7 +3520,7 @@ class ChartRenderBox extends RenderBox {
       _rebuildElementsWithTransform();
 
       // Invalidate cache - transform changed from panning
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
 
       // [DEBUG OUTPUT REMOVED] Pan ended - fires on user interaction
     }
@@ -3734,7 +3711,7 @@ class ChartRenderBox extends RenderBox {
             (previousMarker.seriesId != nearestMarker.seriesId || previousMarker.markerIndex != nearestMarker.markerIndex));
 
     if (markerChanged) {
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
     }
   }
 
@@ -3812,7 +3789,7 @@ class ChartRenderBox extends RenderBox {
       _showScrollbarsAndScheduleHide();
 
       // Invalidate cache - transform changed from scroll zoom
-      _seriesCacheDirty = true;
+      _seriesCacheManager.invalidate();
 
       // [DEBUG OUTPUT REMOVED] Transform updated - fires on scroll zoom
 
@@ -3845,90 +3822,14 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Computes a hash based on:
   /// - Number of series elements
-  /// - Number of points per series
-  /// - Data ranges (min/max X and Y values)
-  ///
-  /// This hash is used to detect if series data has changed since the cache
-  /// was generated. If the hash changes, the cache must be regenerated.
-  ///
-  /// Returns: Hash value as int, 0 if no series elements present
-  int _calculateSeriesHash() {
-    final seriesElements = _elements.whereType<SeriesElement>().toList();
-    if (seriesElements.isEmpty) return 0;
-
-    int hash = seriesElements.length;
-
-    for (final seriesElement in seriesElements) {
-      final points = seriesElement.series.points;
-
-      // Hash number of points
-      hash = hash ^ points.length;
-
-      // Hash data ranges (first and last points as proxy for data range)
-      if (points.isNotEmpty) {
-        final first = points.first;
-        final last = points.last;
-        hash = hash ^ first.x.hashCode;
-        hash = hash ^ first.y.hashCode;
-        hash = hash ^ last.x.hashCode;
-        hash = hash ^ last.y.hashCode;
-      }
-    }
-
-    return hash;
-  }
-
-  /// Check if transform has changed since cache was generated.
-  ///
-  /// Compares current transform with cached transform to detect changes
-  /// that would require cache regeneration (pan/zoom operations).
-  ///
-  /// Returns: true if transform has changed, false otherwise
-  bool _transformChanged() {
-    if (_transform == null || _cachedTransform == null) {
-      return true; // Consider changed if either is null
-    }
-
-    // Compare data ranges (this is what affects rendering)
-    return _transform!.dataXMin != _cachedTransform!.dataXMin ||
-        _transform!.dataXMax != _cachedTransform!.dataXMax ||
-        _transform!.dataYMin != _cachedTransform!.dataYMin ||
-        _transform!.dataYMax != _cachedTransform!.dataYMax;
-  }
-
-  /// Check if series cache is valid and can be reused.
-  ///
-  /// Cache is valid if:
-  /// 1. Cache exists (_cachedSeriesPicture != null)
-  /// 2. Cache is not marked dirty (_seriesCacheDirty == false)
-  /// 3. Series data hash hasn't changed
-  /// 4. Transform hasn't changed
-  ///
-  /// Returns: true if cache is valid and can be reused
-  bool _isCacheValid() {
-    if (_cachedSeriesPicture == null || _seriesCacheDirty) {
-      return false;
-    }
-
-    // Check if series data changed
-    final currentHash = _calculateSeriesHash();
-    if (currentHash != _cachedSeriesHash) {
-      return false;
-    }
-
-    // Check if transform changed
-    if (_transformChanged()) {
-      return false;
-    }
-
-    return true;
-  }
+  // NOTE: Series cache hash calculation, transform change detection, and cache
+  // validity checking are now handled by SeriesCacheManager module.
 
   // ============================================================================
   // Painting
   // ============================================================================
 
-  /// Paints all series elements into a PictureRecorder for caching.
+  /// Paints all series elements onto the provided canvas.
   ///
   /// This method isolates series rendering for GPU-accelerated Picture caching.
   /// It paints series elements in priority order within the plot area bounds.
@@ -3945,13 +3846,10 @@ class ChartRenderBox extends RenderBox {
   /// during hover, enabling 60fps interaction with large datasets.
   ///
   /// Parameters:
-  /// - recorder: PictureRecorder to capture rendering commands
+  /// - canvas: Canvas to paint series elements (already clipped to plot area)
   /// - size: Size of the plot area (for element paint calls)
-  void _paintSeriesLayer(ui.PictureRecorder recorder, Size size) {
-    final canvas = Canvas(recorder);
-
-    // Clip to plot area bounds to prevent rendering outside cache region
-    canvas.clipRect(Offset.zero & size);
+  void _paintSeriesLayerContent(ui.Canvas canvas, Size size) {
+    // Note: Canvas is already clipped to plot area by SeriesCacheManager
 
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
@@ -4120,41 +4018,7 @@ class ChartRenderBox extends RenderBox {
     canvas.drawPath(path, paint);
   }
 
-  /// Generates a cached Picture of the series layer.
-  ///
-  /// This method creates a GPU-accelerated Picture by recording all series
-  /// rendering commands into a PictureRecorder, then ending the recording
-  /// to produce a reusable Picture.
-  ///
-  /// **Cache Management**:
-  /// - Updates _cachedSeriesHash with current data state
-  /// - Updates _cachedTransform with current transform state
-  /// - Clears _seriesCacheDirty flag
-  /// - Returns new Picture ready for drawing
-  ///
-  /// **Performance**: Picture recording adds ~1-2ms overhead on first paint,
-  /// but saves ~17ms on every subsequent hover frame (17x ROI!).
-  ///
-  /// **Memory**: Picture consumes ~170KB for typical chart (5 series, 1000 points).
-  ///
-  /// Returns: Cached Picture of series layer, ready to draw with Canvas.drawPicture()
-  ui.Picture _generateSeriesPicture() {
-    // Create recorder with plot area bounds
-    final recorder = ui.PictureRecorder();
-
-    // Paint series into recorder
-    _paintSeriesLayer(recorder, _plotArea.size);
-
-    // End recording to produce Picture
-    final picture = recorder.endRecording();
-
-    // Update cache metadata
-    _cachedSeriesHash = _calculateSeriesHash();
-    _cachedTransform = _transform?.copyWith(); // Deep copy to detect future changes
-    _seriesCacheDirty = false;
-
-    return picture;
-  }
+  // NOTE: Picture generation is now handled by SeriesCacheManager.generatePicture()
 
   /// Paints the overlay layer (crosshair, selection box, preview indicators).
   ///
@@ -4486,24 +4350,29 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
-    final cacheValid = _isCacheValid();
+    final cacheValid = _seriesCacheManager.isValid(
+      elements: _elements,
+      currentTransform: _transform,
+    );
     // [DEBUG OUTPUT REMOVED] Cache hit/miss - was firing at 60fps
 
     if (cacheValid) {
       // Cache hit! Draw cached Picture (fast path ~0.1ms)
-      canvas.drawPicture(_cachedSeriesPicture!);
+      canvas.drawPicture(_seriesCacheManager.cachedPicture!);
     } else {
       // Cache miss - regenerate Picture from current data/transform
       // [DEBUG OUTPUT REMOVED] Picture regeneration - fires on data updates
 
-      // Dispose old Picture to free GPU memory
-      _cachedSeriesPicture?.dispose();
-
       // Generate new Picture (slow path ~17ms for 5 series)
-      _cachedSeriesPicture = _generateSeriesPicture();
+      final picture = _seriesCacheManager.generatePicture(
+        elements: _elements,
+        plotAreaSize: _plotArea.size,
+        currentTransform: _transform,
+        painter: _paintSeriesLayerContent,
+      );
 
       // Draw freshly generated Picture
-      canvas.drawPicture(_cachedSeriesPicture!);
+      canvas.drawPicture(picture);
 
       // [DEBUG OUTPUT REMOVED] Picture regenerated - fires on data updates
     }

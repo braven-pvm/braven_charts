@@ -6,14 +6,13 @@
 //
 // CRITICAL: Run these tests after EVERY refactoring change to ensure no regressions.
 
+import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/interaction/core/chart_element.dart';
+import 'package:braven_charts/src/interaction/core/coordinator.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:braven_charts/src/coordinates/chart_transform.dart';
-import 'package:braven_charts/src/interaction/core/coordinator.dart';
-import 'package:braven_charts/src/interaction/core/chart_element.dart';
-import 'package:braven_charts/src/rendering/chart_render_box.dart';
 
 void main() {
   group('ChartRenderBox Baseline Tests', () {
