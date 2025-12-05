@@ -164,12 +164,10 @@ class ViewportConstraints {
 
     // 5. Clamp tentative viewport position to allowed bounds
     // Defensive: If min > max (viewport larger than constraint range), allow full movement
-    final clampedDataXMin = minAllowedDataXMin <= maxAllowedDataXMin
-        ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin)
-        : tentativeDataXMin;
-    final clampedDataYMin = minAllowedDataYMin <= maxAllowedDataYMin
-        ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin)
-        : tentativeDataYMin;
+    final clampedDataXMin =
+        minAllowedDataXMin <= maxAllowedDataXMin ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin) : tentativeDataXMin;
+    final clampedDataYMin =
+        minAllowedDataYMin <= maxAllowedDataYMin ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin) : tentativeDataYMin;
 
     // 6. Calculate actual movement allowed and convert back to plot space
     // CRITICAL: Reverse the inversion applied in step 1!

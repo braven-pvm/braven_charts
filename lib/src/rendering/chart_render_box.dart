@@ -21,7 +21,6 @@ import '../elements/simulated_annotation.dart';
 import '../formatting/multi_axis_value_formatter.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
-import '../interaction/core/crosshair_tracker.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
@@ -34,7 +33,6 @@ import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
-import '../models/y_axis_position.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../utils/data_converter.dart';
@@ -43,6 +41,7 @@ import '../widgets/scrollbar/scrollbar_controller.dart';
 import '../widgets/scrollbar/scrollbar_interaction.dart';
 import '../widgets/scrollbar/scrollbar_painter.dart';
 import '../widgets/scrollbar/scrollbar_state.dart';
+import 'modules/crosshair_renderer.dart';
 import 'modules/series_cache_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/viewport_constraints.dart';
@@ -415,6 +414,14 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Memory footprint: ~170KB for typical chart (5 series, 1000 points each)
   final SeriesCacheManager _seriesCacheManager = SeriesCacheManager();
+
+  /// Crosshair renderer module.
+  ///
+  /// Handles all crosshair-related rendering:
+  /// - Standard crosshair lines and coordinate labels
+  /// - Per-axis crosshair labels for multi-axis mode
+  /// - Tracking mode with intersection markers and tooltip
+  static const CrosshairRenderer _crosshairRenderer = CrosshairRenderer();
 
   // ==========================================================================
   // Crosshair Label Caching (Sprint 3 Optimization)
@@ -964,6 +971,26 @@ class ChartRenderBox extends RenderBox {
     // Cache and return
     _cachedEffectiveBindings = effectiveBindings;
     return effectiveBindings;
+  }
+
+  /// Builds MultiAxisInfo for the CrosshairRenderer module.
+  ///
+  /// This helper gathers all multi-axis configuration data needed for
+  /// crosshair rendering, encapsulated in a [MultiAxisInfo] object.
+  MultiAxisInfo _buildMultiAxisInfo() {
+    final effectiveAxes = _getEffectiveYAxes();
+    final axisBounds = _computeAxisBounds();
+    final axisWidths = _computeAxisWidths();
+    final effectiveBindings = _getEffectiveBindings();
+
+    return MultiAxisInfo(
+      effectiveAxes: effectiveAxes,
+      axisBounds: axisBounds,
+      axisWidths: axisWidths,
+      effectiveBindings: effectiveBindings,
+      normalizationMode: _normalizationMode,
+      series: _series,
+    );
   }
 
   /// Sets pan constraint bounds for paused streaming mode.
@@ -4029,76 +4056,22 @@ class ChartRenderBox extends RenderBox {
       // Only draw crosshair if cursor is inside plot area AND not dragging
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
 
-      // Check if tracking mode should be used based on data point count
-      final totalDataPoints = _getTotalDataPoints();
-      final useTrackingMode = crosshairConfig.shouldUseTrackingMode(totalDataPoints);
+      // Build multi-axis info for crosshair rendering
+      final multiAxisInfo = _buildMultiAxisInfo();
 
-      if (useTrackingMode) {
-        // Tracking mode: vertical line only + intersection markers + persistent tooltip
-        _drawTrackingModeOverlay(canvas, size, cursorPos);
-      } else {
-        // Standard mode: both crosshair lines + coordinate labels
-        // Use theme colors with mode-aware behavior: blue for range creation, theme default otherwise
-        final isRangeCreationMode = coordinator.currentMode == InteractionMode.rangeAnnotationCreation;
-        final interactionTheme = _theme?.interactionTheme;
-        final crosshairColor = isRangeCreationMode
-            ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF)) // Theme color or default blue for range creation
-            : (interactionTheme?.crosshairColor ?? const Color(0x80666666)); // Theme color or default gray for normal mode
-        final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
-
-        final crosshairPaint = Paint()
-          ..color = crosshairColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = crosshairWidth;
-
-        // Draw lines based on crosshair mode configuration
-        final mode = crosshairConfig.mode;
-
-        // Horizontal line across plot area (if mode allows)
-        // In multi-axis mode, extend line to reach outer axes with showCrosshairLabel enabled
-        if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-          double lineLeft = _plotArea.left;
-          double lineRight = _plotArea.right;
-
-          // Check for multi-axis mode and extend line to outer axes (only if they have crosshair labels)
-          if (_normalizationMode == NormalizationMode.perSeries) {
-            final effectiveAxes = _getEffectiveYAxes();
-            if (effectiveAxes.length > 1) {
-              final axisWidths = _computeAxisWidths();
-
-              // Extend left for leftOuter axes ONLY if they have showCrosshairLabel enabled
-              final leftOuterAxes = effectiveAxes.where(
-                (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
-              );
-              if (leftOuterAxes.isNotEmpty) {
-                final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
-                final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
-                lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
-              }
-
-              // Extend right for rightOuter axes ONLY if they have showCrosshairLabel enabled
-              final rightOuterAxes = effectiveAxes.where(
-                (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
-              );
-              if (rightOuterAxes.isNotEmpty) {
-                final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
-                final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
-                lineRight = _plotArea.right + rightWidth + rightOuterWidth;
-              }
-            }
-          }
-
-          canvas.drawLine(Offset(lineLeft, cursorPos.dy), Offset(lineRight, cursorPos.dy), crosshairPaint);
-        }
-
-        // Vertical line across plot area (if mode allows)
-        if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
-          canvas.drawLine(Offset(cursorPos.dx, _plotArea.top), Offset(cursorPos.dx, _plotArea.bottom), crosshairPaint);
-        }
-
-        // Draw coordinate labels (showing both screen and data coordinates)
-        _drawCrosshairLabels(canvas, size, cursorPos);
-      }
+      // Delegate to CrosshairRenderer module
+      _crosshairRenderer.paint(
+        canvas: canvas,
+        size: size,
+        cursorPosition: cursorPos,
+        plotArea: _plotArea,
+        transform: _transform!,
+        theme: _theme,
+        crosshairConfig: crosshairConfig,
+        multiAxisInfo: multiAxisInfo,
+        seriesElements: _elements.whereType<SeriesElement>().toList(),
+        isRangeCreationMode: coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
+      );
     }
 
     // Draw tooltip for hovered/tapped marker (if any)
@@ -5196,221 +5169,6 @@ class ChartRenderBox extends RenderBox {
     _showScrollbarsAndScheduleHide();
   }
 
-  /// Draws coordinate labels for the crosshair showing screen and data coordinates.
-  ///
-  /// Displays:
-  /// - X label at bottom of plot area showing data coordinate
-  /// - Y label at left of plot area showing data coordinate (only in single-axis mode)
-  /// - Per-axis crosshair labels for multi-axis mode (if axis.showCrosshairLabel is true)
-  void _drawCrosshairLabels(Canvas canvas, Size size, Offset cursorPos) {
-    if (_transform == null) return;
-
-    // Convert cursor position (widget space) to plot space for data coordinate calculation
-    final plotPos = widgetToPlot(cursorPos);
-
-    // Convert plot coordinates to data coordinates
-    final dataPos = _transform!.plotToData(plotPos.dx, plotPos.dy);
-    final dataX = dataPos.dx;
-    final dataY = dataPos.dy;
-
-    // Use theme for crosshair label styling (separate from tooltip theme)
-    final interactionTheme = _theme?.interactionTheme;
-    final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = labelStyle?.borderWidth ?? 1.0;
-    final borderRadius = labelStyle?.borderRadius ?? 3.0;
-
-    final labelPadding = labelStyle?.padding.left ?? 4.0;
-    final labelBackgroundPaint = Paint()..color = backgroundColor;
-    final labelBorderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth;
-
-    // X coordinate label (positioned at bottom of chart area)
-    final xDisplayValue = _formatDataValue(dataX);
-    final xTextPainter = TextPainter(
-      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Position label inside chart area (just above bottom edge)
-    var xLabelX = cursorPos.dx - xTextPainter.width / 2;
-    final xLabelY = _plotArea.bottom - xTextPainter.height - 8;
-
-    // Clamp X position to keep label within plot bounds
-    xLabelX = xLabelX.clamp(_plotArea.left + labelPadding, _plotArea.right - xTextPainter.width - labelPadding);
-
-    // Draw background with border and rounded corners
-    final xBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        xLabelX - labelPadding,
-        xLabelY - labelPadding,
-        xTextPainter.width + labelPadding * 2,
-        xTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
-    );
-    canvas.drawRRect(xBgRect, labelBackgroundPaint);
-    if (borderWidth > 0) {
-      canvas.drawRRect(xBgRect, labelBorderPaint);
-    }
-
-    // Draw text
-    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
-
-    // Check if multi-axis mode is active
-    final isMultiAxisMode = _hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries;
-
-    if (isMultiAxisMode) {
-      // In multi-axis mode: draw per-axis crosshair labels instead of useless normalized Y-label
-      _drawPerAxisCrosshairLabels(canvas, cursorPos, dataY);
-    } else {
-      // Single-axis mode: draw standard Y coordinate label
-      final yDisplayValue = _formatDataValue(dataY);
-      final yTextPainter = TextPainter(
-        text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      // Position label inside chart area (just right of left edge)
-      final yLabelX = _plotArea.left + 8;
-      var yLabelY = cursorPos.dy - yTextPainter.height / 2;
-
-      // Clamp Y position to keep label within plot bounds
-      yLabelY = yLabelY.clamp(_plotArea.top + labelPadding, _plotArea.bottom - yTextPainter.height - labelPadding);
-
-      // Draw background with border and rounded corners
-      final yBgRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          yLabelX - labelPadding,
-          yLabelY - labelPadding,
-          yTextPainter.width + labelPadding * 2,
-          yTextPainter.height + labelPadding * 2,
-        ),
-        Radius.circular(borderRadius),
-      );
-      canvas.drawRRect(yBgRect, labelBackgroundPaint);
-      if (borderWidth > 0) {
-        canvas.drawRRect(yBgRect, labelBorderPaint);
-      }
-
-      // Draw text
-      yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
-    }
-  }
-
-  /// Draws per-axis crosshair labels for multi-axis mode.
-  ///
-  /// For each Y-axis with [YAxisConfig.showCrosshairLabel] enabled, draws
-  /// a label showing the denormalized Y-value at the crosshair position,
-  /// positioned over that specific axis.
-  void _drawPerAxisCrosshairLabels(Canvas canvas, Offset cursorPos, double normalizedY) {
-    final effectiveAxes = _getEffectiveYAxes();
-
-    // Early exit: check if ANY axis needs crosshair labels before computing expensive data
-    final axesWithLabels = effectiveAxes.where((a) => a.showCrosshairLabel && a.visible).toList();
-    if (axesWithLabels.isEmpty) return;
-
-    // Only compute these expensive values if we actually have axes to render
-    final axisBounds = _computeAxisBounds();
-    final axisWidths = _computeAxisWidths();
-
-    // Use theme for crosshair label styling
-    final interactionTheme = _theme?.interactionTheme;
-    final labelStyleConfig = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyleConfig?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final labelPadding = labelStyleConfig?.padding.left ?? 4.0;
-    final borderRadius = labelStyleConfig?.borderRadius ?? 3.0;
-
-    for (final axis in axesWithLabels) {
-      // Already filtered for showCrosshairLabel and visible
-      final bounds = axisBounds[axis.id];
-      if (bounds == null) continue;
-
-      // Denormalize the Y value for this axis
-      final denormalizedY = MultiAxisNormalizer.denormalize(normalizedY, bounds.min, bounds.max);
-
-      // Get axis color
-      final axisColor = _resolveAxisColor(axis);
-
-      // Format the value - follow the same unit display rule as tick labels
-      // If axis.shouldShowTickUnit is true, include unit; otherwise value only
-      // Use formatFixed to maintain consistent decimal places (prevents label resize jitter)
-      final displayValue = axis.shouldShowTickUnit
-          ? MultiAxisValueFormatter.formatFixed(value: denormalizedY, unit: axis.unit)
-          : MultiAxisValueFormatter.formatFixed(value: denormalizedY, unit: null);
-
-      final textPainter = TextPainter(
-        text: TextSpan(text: displayValue, style: textStyle.copyWith(color: textStyle.color)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      // Calculate label X position based on axis position
-      // Left axes: right-align label to axis line (label ends at axis line)
-      // Right axes: left-align label to axis line (label starts at axis line)
-      final double labelX;
-      final isLeftAxis = axis.position == YAxisPosition.left || axis.position == YAxisPosition.leftOuter;
-
-      if (isLeftAxis) {
-        // Right-align: label ends at the axis line (which is at plot area left edge for left axes)
-        // For leftOuter, the axis line is further left
-        final axisLineX =
-            axis.position == YAxisPosition.left ? _plotArea.left : _plotArea.left - _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
-        labelX = axisLineX - textPainter.width - labelPadding * 2;
-      } else {
-        // Left-align: label starts at the axis line (which is at plot area right edge for right axes)
-        // For rightOuter, the axis line is further right
-        final axisLineX = axis.position == YAxisPosition.right
-            ? _plotArea.right
-            : _plotArea.right + _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
-        labelX = axisLineX + labelPadding * 2;
-      }
-
-      final labelY = (cursorPos.dy - textPainter.height / 2).clamp(
-        _plotArea.top + labelPadding,
-        _plotArea.bottom - textPainter.height - labelPadding,
-      );
-
-      // Use semi-transparent background with axis color tint
-      final bgColor = axisColor.withValues(alpha: 0.15);
-      final bgPaint = Paint()..color = bgColor;
-      final borderPaint = Paint()
-        ..color = axisColor.withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0;
-
-      // Draw background with border
-      final bgRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          labelX - labelPadding,
-          labelY - labelPadding,
-          textPainter.width + labelPadding * 2,
-          textPainter.height + labelPadding * 2,
-        ),
-        Radius.circular(borderRadius),
-      );
-      canvas.drawRRect(bgRect, bgPaint);
-      canvas.drawRRect(bgRect, borderPaint);
-
-      // Draw text
-      textPainter.paint(canvas, Offset(labelX, labelY));
-    }
-  }
-
-  /// Gets total width of axes at a specific position.
-  double _getPositionWidth(YAxisPosition position, List<YAxisConfig> axes, Map<String, double> widths) {
-    double total = 0;
-    for (final axis in axes) {
-      if (axis.position == position && axis.visible) {
-        total += widths[axis.id] ?? 0;
-      }
-    }
-    return total;
-  }
-
   /// Computes axis widths for layout calculations.
   Map<String, double> _computeAxisWidths() {
     final effectiveAxes = _getEffectiveYAxes();
@@ -5424,415 +5182,6 @@ class ChartRenderBox extends RenderBox {
       axisBounds: axisBounds,
       labelStyle: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
     );
-  }
-
-  /// Resolves the color for an axis, using series color if not explicitly set.
-  Color _resolveAxisColor(YAxisConfig axis) {
-    if (axis.color != null) return axis.color!;
-
-    // Find series bound to this axis
-    final effectiveBindings = _getEffectiveBindings();
-    for (final binding in effectiveBindings) {
-      if (binding.yAxisId == axis.id) {
-        // Find series color
-        for (final series in _series) {
-          if (series.id == binding.seriesId && series.color != null) {
-            return series.color!;
-          }
-        }
-      }
-    }
-
-    return const Color(0xFF666666); // Default gray
-  }
-
-  // ============================================================================
-  // Tracking Mode Helpers
-  // ============================================================================
-
-  /// Gets the total number of data points across all series.
-  int _getTotalDataPoints() {
-    final seriesList = _elements.whereType<SeriesElement>().map((e) => e.series).toList();
-    return CrosshairTracker.getTotalPointCount(seriesList);
-  }
-
-  /// Draws tracking mode overlay (vertical line only + intersection markers + tooltip).
-  void _drawTrackingModeOverlay(Canvas canvas, Size size, Offset cursorPos) {
-    if (_transform == null) return;
-
-    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
-    final interactionTheme = _theme?.interactionTheme;
-    final crosshairColor = interactionTheme?.crosshairColor ?? const Color(0x80666666);
-    final crosshairWidth = interactionTheme?.crosshairWidth ?? 1.0;
-
-    // Draw crosshair lines based on mode configuration
-    final crosshairPaint = Paint()
-      ..color = crosshairColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = crosshairWidth;
-
-    final mode = crosshairConfig.mode;
-
-    // Vertical line (primary line for tracking mode)
-    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
-      canvas.drawLine(
-        Offset(cursorPos.dx, _plotArea.top),
-        Offset(cursorPos.dx, _plotArea.bottom),
-        crosshairPaint,
-      );
-    }
-
-    // Horizontal line (optional in tracking mode based on config)
-    // In multi-axis mode, extend line to reach outer axes with showCrosshairLabel enabled
-    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-      double lineLeft = _plotArea.left;
-      double lineRight = _plotArea.right;
-
-      // Check for multi-axis mode and extend line to outer axes (only if they have crosshair labels)
-      if (_normalizationMode == NormalizationMode.perSeries) {
-        final effectiveAxes = _getEffectiveYAxes();
-        if (effectiveAxes.length > 1) {
-          final axisWidths = _computeAxisWidths();
-
-          // Extend left for leftOuter axes ONLY if they have showCrosshairLabel enabled
-          final leftOuterAxes = effectiveAxes.where(
-            (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
-          );
-          if (leftOuterAxes.isNotEmpty) {
-            final leftOuterWidth = _getPositionWidth(YAxisPosition.leftOuter, effectiveAxes, axisWidths);
-            final leftWidth = _getPositionWidth(YAxisPosition.left, effectiveAxes, axisWidths);
-            lineLeft = _plotArea.left - leftWidth - leftOuterWidth;
-          }
-
-          // Extend right for rightOuter axes ONLY if they have showCrosshairLabel enabled
-          final rightOuterAxes = effectiveAxes.where(
-            (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
-          );
-          if (rightOuterAxes.isNotEmpty) {
-            final rightOuterWidth = _getPositionWidth(YAxisPosition.rightOuter, effectiveAxes, axisWidths);
-            final rightWidth = _getPositionWidth(YAxisPosition.right, effectiveAxes, axisWidths);
-            lineRight = _plotArea.right + rightWidth + rightOuterWidth;
-          }
-        }
-      }
-
-      canvas.drawLine(
-        Offset(lineLeft, cursorPos.dy),
-        Offset(lineRight, cursorPos.dy),
-        crosshairPaint,
-      );
-    }
-
-    // Get series list and data bounds from transform
-    final seriesList = _elements.whereType<SeriesElement>().map((e) => e.series).toList();
-    final xMin = _transform!.dataXMin;
-    final xMax = _transform!.dataXMax;
-    final yMin = _transform!.dataYMin;
-    final yMax = _transform!.dataYMax;
-
-    // Pre-compute axis bounds for multi-axis crosshair positioning
-    final axisBounds = _computeAxisBounds();
-
-    final trackingState = CrosshairTracker.calculateTrackingState(
-      screenX: cursorPos.dx,
-      chartBounds: _plotArea,
-      xMin: xMin,
-      xMax: xMax,
-      seriesList: seriesList,
-      interpolate: crosshairConfig.interpolateValues,
-    );
-
-    if (trackingState == null) return;
-
-    // Get effective bindings for axis resolution
-    final effectiveBindings = _getEffectiveBindings();
-
-    // Draw intersection markers on each series line
-    if (crosshairConfig.showIntersectionMarkers) {
-      final effectiveAxesForMarkers = _getEffectiveYAxes();
-      for (final value in trackingState.seriesValues) {
-        // For multi-axis mode, use per-axis bounds for correct Y positioning
-        double screenY;
-        if (effectiveAxesForMarkers.length > 1) {
-          // Look up the axis for this series
-          final axisConfig = SeriesAxisResolver.resolveAxis(
-            value.seriesId,
-            effectiveBindings,
-            effectiveAxesForMarkers,
-          );
-          final seriesAxisBounds = axisConfig != null ? axisBounds[axisConfig.id] : null;
-
-          if (seriesAxisBounds != null) {
-            // Use per-axis bounds for accurate positioning
-            screenY = CrosshairTracker.dataToScreenYForAxis(
-              dataY: value.y,
-              chartBounds: _plotArea,
-              axisMin: seriesAxisBounds.min,
-              axisMax: seriesAxisBounds.max,
-            );
-          } else {
-            // Fallback to global bounds if axis not found
-            screenY = CrosshairTracker.dataToScreenY(
-              dataY: value.y,
-              chartBounds: _plotArea,
-              yMin: yMin,
-              yMax: yMax,
-            );
-          }
-        } else {
-          // Single-axis mode: use global bounds
-          screenY = CrosshairTracker.dataToScreenY(
-            dataY: value.y,
-            chartBounds: _plotArea,
-            yMin: yMin,
-            yMax: yMax,
-          );
-        }
-
-        // Draw filled circle marker
-        final markerPaint = Paint()
-          ..color = value.seriesColor
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(
-          Offset(cursorPos.dx, screenY),
-          crosshairConfig.intersectionMarkerRadius,
-          markerPaint,
-        );
-
-        // Draw border for visibility
-        final borderPaint = Paint()
-          ..color = const Color(0xFFFFFFFF)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5;
-        canvas.drawCircle(
-          Offset(cursorPos.dx, screenY),
-          crosshairConfig.intersectionMarkerRadius,
-          borderPaint,
-        );
-      }
-    }
-
-    // Draw tracking tooltip (follows cursor)
-    if (crosshairConfig.showTrackingTooltip && trackingState.seriesValues.isNotEmpty) {
-      _drawTrackingTooltip(canvas, cursorPos, trackingState);
-    }
-
-    // Draw X label at bottom (if vertical line is shown)
-    if (mode == CrosshairMode.vertical || mode == CrosshairMode.both) {
-      _drawTrackingXLabel(canvas, cursorPos, trackingState.dataX);
-    }
-
-    // Draw Y label on left (if horizontal line is shown)
-    // In multi-axis mode, skip the default Y-label (normalized % is useless)
-    // and draw per-axis labels instead
-    if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-      final isMultiAxisMode = _hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries;
-
-      if (isMultiAxisMode) {
-        // Draw per-axis crosshair labels for axes with showCrosshairLabel enabled
-        final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
-        _drawPerAxisCrosshairLabels(canvas, cursorPos, dataY);
-      } else {
-        // Single-axis mode: draw standard Y coordinate label
-        final dataY = _transform!.plotToData(cursorPos.dx, cursorPos.dy).dy;
-        _drawTrackingYLabel(canvas, cursorPos, dataY);
-      }
-    }
-  }
-
-  /// Draws the tracking tooltip that follows the cursor.
-  void _drawTrackingTooltip(Canvas canvas, Offset cursorPos, CrosshairTrackingState state) {
-    final interactionTheme = _theme?.interactionTheme;
-    final tooltipTheme = interactionTheme?.tooltipStyle;
-
-    final backgroundColor = tooltipTheme?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final textColor = tooltipTheme?.textStyle.color ?? const Color(0xFF333333);
-    final fontSize = tooltipTheme?.textStyle.fontSize ?? 12.0;
-    final borderColor = tooltipTheme?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = tooltipTheme?.borderWidth ?? 1.0;
-    final borderRadius = tooltipTheme?.borderRadius ?? 4.0;
-    final padding = tooltipTheme?.padding.left ?? 8.0;
-
-    // Build tooltip content
-    final textPainters = <(TextPainter, Color)>[];
-    double maxWidth = 0;
-    double totalHeight = 0;
-    const lineSpacing = 4.0;
-    const markerSize = 8.0;
-
-    // Get effective bindings for axis resolution
-    final effectiveBindingsForTooltip = _getEffectiveBindings();
-
-    for (final value in state.seriesValues) {
-      // Get unit from axis config for multi-axis mode
-      String? yUnit;
-      final effectiveAxesForTooltip = _getEffectiveYAxes();
-      if (effectiveAxesForTooltip.length > 1) {
-        final axisConfig = SeriesAxisResolver.resolveAxis(
-          value.seriesId,
-          effectiveBindingsForTooltip,
-          effectiveAxesForTooltip,
-        );
-        yUnit = axisConfig?.unit;
-      }
-
-      // Format Y value with unit
-      final displayY = MultiAxisValueFormatter.format(value: value.y, unit: yUnit);
-      final label = '${value.seriesName}: $displayY';
-      final tp = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(color: textColor, fontSize: fontSize),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainters.add((tp, value.seriesColor));
-      maxWidth = math.max(maxWidth, tp.width + markerSize + 6);
-      totalHeight += tp.height + (textPainters.length > 1 ? lineSpacing : 0);
-    }
-
-    // Calculate tooltip position (follow cursor, offset to right)
-    const cursorOffset = 12.0;
-    var tooltipX = cursorPos.dx + cursorOffset;
-    var tooltipY = cursorPos.dy - totalHeight / 2 - padding;
-
-    final tooltipWidth = maxWidth + padding * 2;
-    final tooltipHeight = totalHeight + padding * 2;
-
-    // Keep tooltip within plot area bounds
-    if (tooltipX + tooltipWidth > _plotArea.right) {
-      tooltipX = cursorPos.dx - tooltipWidth - cursorOffset;
-    }
-    tooltipY = tooltipY.clamp(_plotArea.top, _plotArea.bottom - tooltipHeight);
-
-    // Draw background
-    final bgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
-      Radius.circular(borderRadius),
-    );
-
-    // Shadow
-    final shadowPaint = Paint()
-      ..color = const Color(0x20000000)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawRRect(bgRect.shift(const Offset(2, 2)), shadowPaint);
-
-    // Background and border
-    canvas.drawRRect(bgRect, Paint()..color = backgroundColor);
-    if (borderWidth > 0) {
-      canvas.drawRRect(
-        bgRect,
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth,
-      );
-    }
-
-    // Draw text lines with colored markers
-    var currentY = tooltipY + padding;
-    for (final (tp, color) in textPainters) {
-      canvas.drawCircle(
-        Offset(tooltipX + padding + markerSize / 2, currentY + tp.height / 2),
-        markerSize / 2 - 1,
-        Paint()..color = color,
-      );
-      tp.paint(canvas, Offset(tooltipX + padding + markerSize + 6, currentY));
-      currentY += tp.height + lineSpacing;
-    }
-  }
-
-  /// Draws the X-axis label for tracking mode.
-  void _drawTrackingXLabel(Canvas canvas, Offset cursorPos, double dataX) {
-    final interactionTheme = _theme?.interactionTheme;
-    final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = labelStyle?.borderWidth ?? 1.0;
-    final borderRadius = labelStyle?.borderRadius ?? 3.0;
-    final labelPadding = labelStyle?.padding.left ?? 4.0;
-
-    final xDisplayValue = _formatDataValue(dataX);
-    final xTextPainter = TextPainter(
-      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    var xLabelX = cursorPos.dx - xTextPainter.width / 2;
-    final xLabelY = _plotArea.bottom - xTextPainter.height - 8;
-
-    xLabelX = xLabelX.clamp(_plotArea.left + labelPadding, _plotArea.right - xTextPainter.width - labelPadding);
-
-    final xBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        xLabelX - labelPadding,
-        xLabelY - labelPadding,
-        xTextPainter.width + labelPadding * 2,
-        xTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
-    );
-    canvas.drawRRect(xBgRect, Paint()..color = backgroundColor);
-    if (borderWidth > 0) {
-      canvas.drawRRect(
-        xBgRect,
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth,
-      );
-    }
-    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
-  }
-
-  /// Draws the Y-axis label for tracking mode (when horizontal line is shown).
-  void _drawTrackingYLabel(Canvas canvas, Offset cursorPos, double dataY) {
-    final interactionTheme = _theme?.interactionTheme;
-    final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = labelStyle?.borderWidth ?? 1.0;
-    final borderRadius = labelStyle?.borderRadius ?? 3.0;
-    final labelPadding = labelStyle?.padding.left ?? 4.0;
-
-    final yDisplayValue = _formatDataValue(dataY);
-    final yTextPainter = TextPainter(
-      text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Position Y label on the left side of the plot area
-    final yLabelX = _plotArea.left + 8;
-    var yLabelY = cursorPos.dy - yTextPainter.height / 2;
-
-    // Clamp to stay within plot area
-    yLabelY = yLabelY.clamp(
-      _plotArea.top + labelPadding,
-      _plotArea.bottom - yTextPainter.height - labelPadding,
-    );
-
-    final yBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        yLabelX - labelPadding,
-        yLabelY - labelPadding,
-        yTextPainter.width + labelPadding * 2,
-        yTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
-    );
-    canvas.drawRRect(yBgRect, Paint()..color = backgroundColor);
-    if (borderWidth > 0) {
-      canvas.drawRRect(
-        yBgRect,
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth,
-      );
-    }
-    yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
   }
 
   /// Formats data values for display (same logic as axis labels).
