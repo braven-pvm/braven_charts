@@ -35,6 +35,7 @@ import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
+import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
 import 'modules/scrollbar_manager.dart';
 import 'modules/series_cache_manager.dart';
@@ -96,6 +97,7 @@ class ChartRenderBox extends RenderBox {
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
+    _initAnnotationDragHandler();
   }
 
   /// Initializes the ScrollbarManager with a delegate that references this RenderBox.
@@ -115,11 +117,21 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  /// Initializes the AnnotationDragHandler with a delegate that references this RenderBox.
+  void _initAnnotationDragHandler() {
+    _annotationDragHandler = AnnotationDragHandler(
+      delegate: _AnnotationDragDelegateImpl(this),
+    );
+  }
+
   /// Scrollbar manager handling all scrollbar state and interactions.
   late final ScrollbarManager _scrollbarManager;
 
   /// Streaming manager handling real-time data buffering and viewport auto-scroll.
   late final StreamingManager _streamingManager;
+
+  /// Annotation drag handler managing resize/move operations for all annotation types.
+  late final AnnotationDragHandler _annotationDragHandler;
 
   /// Spatial index for O(log n) hit testing.
   QuadTree? _spatialIndex;
@@ -443,6 +455,8 @@ class ChartRenderBox extends RenderBox {
     _seriesCacheManager.dispose();
     _tooltipAnimator.dispose();
     _scrollbarManager.dispose();
+    _streamingManager.dispose();
+    _annotationDragHandler.dispose();
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
     super.dispose();
@@ -4294,5 +4308,44 @@ class _StreamingDelegateImpl implements StreamingDelegate {
   @override
   void clearPanConstraintBounds() {
     _renderBox.clearPanConstraintBounds();
+  }
+}
+
+// =============================================================================
+// Annotation Drag Delegate Implementation
+// =============================================================================
+
+/// Internal delegate implementation for AnnotationDragHandler.
+///
+/// This class adapts ChartRenderBox to the AnnotationDragDelegate interface,
+/// providing the annotation drag handler with access to elements, transforms,
+/// and the ability to trigger repaints and notify about annotation changes.
+class _AnnotationDragDelegateImpl implements AnnotationDragDelegate {
+  _AnnotationDragDelegateImpl(this._renderBox);
+
+  final ChartRenderBox _renderBox;
+
+  @override
+  ChartTransform? get transform => _renderBox._transform;
+
+  @override
+  List<ChartElement> get elements => _renderBox._elements;
+
+  @override
+  List<ChartSeries> get series => _renderBox._series;
+
+  @override
+  void rebuildSpatialIndex() {
+    _renderBox._rebuildSpatialIndex();
+  }
+
+  @override
+  void markNeedsPaint() {
+    _renderBox.markNeedsPaint();
+  }
+
+  @override
+  void notifyAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
+    _renderBox.onAnnotationChanged?.call(annotationId, updatedAnnotation);
   }
 }
