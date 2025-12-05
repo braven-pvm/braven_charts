@@ -15,16 +15,16 @@ This document outlines the detailed plan for refactoring `ChartRenderBox` (6,652
 |--------|--------|-------|--------|
 | SeriesCacheManager | ✅ Complete | 170 | 876a479 |
 | TooltipAnimator | ✅ Complete | 168 | c19e96c |
+| ViewportConstraints | ✅ Complete | 190 | 7ef6396 |
 | CrosshairRenderer | ⏳ Pending | ~350 | - |
-| ViewportController | ⏳ Pending | ~400 | - |
 | StreamingManager | ⏳ Pending | ~500 | - |
 | ScrollbarManager | ⏳ Pending | ~350 | - |
 | AnnotationInteractionHandler | ⏳ Pending | ~500 | - |
 | EventDispatcher | ⏳ Pending | ~400 | - |
 
-**Current ChartRenderBox Size**: 6,424 lines (reduced from 6,652)
-**Lines Extracted**: 228 lines (net reduction after integration code)
-**New Module Lines**: 338 lines (SeriesCacheManager: 170, TooltipAnimator: 168)
+**Current ChartRenderBox Size**: 6,302 lines (reduced from 6,652)
+**Lines Extracted**: 350 lines (net reduction after integration code)
+**New Module Lines**: 528 lines (SeriesCacheManager: 170, TooltipAnimator: 168, ViewportConstraints: 190)
 
 ## Goals
 
@@ -285,19 +285,33 @@ class SeriesCacheManager {
 
 ## Implementation Order
 
-### Phase 1: Low-Risk Extractions (No behavior change)
+### Phase 1: Low-Risk Extractions (Pure calculations, no complex state)
 1. **SeriesCacheManager** ✅ - Self-contained caching logic (commit 876a479)
-2. **TooltipAnimator** ✅ - Isolated with clear timer management (commit c19e96c)
-3. **CrosshairRenderer** - Isolated rendering, no state dependencies
+2. **TooltipAnimator** ✅ - Timer-based animation, clear boundaries (commit c19e96c)
+3. **ViewportConstraints** ✅ - Pure zoom/pan calculations (commit 7ef6396)
+4. **CrosshairRenderer** - Isolated rendering (depends on multi-axis for labels)
 
-### Phase 2: State-Heavy Extractions
-4. **ViewportController** - Core transform management
-5. **MultiAxisManager** - Multi-axis logic (depends on ViewportController)
-6. **ScrollbarManager** - Complex but isolated interaction
+### Phase 2: State-Heavy Extractions (Complex state dependencies)
+5. **StreamingManager** - Live streaming mode, viewport animation
+6. **ScrollbarManager** - Complex interaction with hover/drag/hide states
+7. **MultiAxisManager** - Multi-axis configuration and normalization
 
-### Phase 3: Event Flow Extractions
-7. **AnnotationInteractionHandler** - Complex state machine
-8. **EventDispatcher** - High-level routing (depends on all handlers)
+### Phase 3: Event Flow Extractions (High coupling)
+8. **AnnotationInteractionHandler** - Complex state machine for annotation editing
+9. **EventDispatcher** - High-level routing (depends on all handlers)
+
+### Complexity Assessment (Low → High)
+| Module | Complexity | Dependencies | Recommended Order |
+|--------|------------|--------------|-------------------|
+| SeriesCacheManager | ⬛ Low | None | ✅ Done |
+| TooltipAnimator | ⬛ Low | Timer only | ✅ Done |
+| ViewportConstraints | ⬛ Low | ChartTransform | ✅ Done |
+| CrosshairRenderer | ⬛⬛ Medium | Multi-axis, Theme | Next candidate |
+| ScrollbarManager | ⬛⬛ Medium | Timer, Hover state | Later |
+| StreamingManager | ⬛⬛⬛ Medium-High | Viewport, Animation | Later |
+| MultiAxisManager | ⬛⬛⬛ Medium-High | Many paint methods | Later |
+| AnnotationInteractionHandler | ⬛⬛⬛⬛ High | State machine | Last |
+| EventDispatcher | ⬛⬛⬛⬛ High | All handlers | Last |
 
 ### Phase 4: Integration
 9. **StreamingManager** - Last due to cross-cutting concerns
