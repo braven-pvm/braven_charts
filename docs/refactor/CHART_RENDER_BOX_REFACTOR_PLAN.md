@@ -14,17 +14,17 @@ This document outlines the detailed plan for refactoring `ChartRenderBox` (6,652
 | Module | Status | Lines | Commit |
 |--------|--------|-------|--------|
 | SeriesCacheManager | ✅ Complete | 170 | 876a479 |
+| TooltipAnimator | ✅ Complete | 168 | c19e96c |
 | CrosshairRenderer | ⏳ Pending | ~350 | - |
-| TooltipAnimator | ⏳ Pending | ~200 | - |
 | ViewportController | ⏳ Pending | ~400 | - |
 | StreamingManager | ⏳ Pending | ~500 | - |
 | ScrollbarManager | ⏳ Pending | ~350 | - |
 | AnnotationInteractionHandler | ⏳ Pending | ~500 | - |
 | EventDispatcher | ⏳ Pending | ~400 | - |
 
-**Current ChartRenderBox Size**: 6,521 lines (reduced from 6,652)
-**Lines Extracted**: 131 lines (net reduction after integration code)
-**New Module Lines**: 170 lines
+**Current ChartRenderBox Size**: 6,424 lines (reduced from 6,652)
+**Lines Extracted**: 228 lines (net reduction after integration code)
+**New Module Lines**: 338 lines (SeriesCacheManager: 170, TooltipAnimator: 168)
 
 ## Goals
 
@@ -286,9 +286,9 @@ class SeriesCacheManager {
 ## Implementation Order
 
 ### Phase 1: Low-Risk Extractions (No behavior change)
-1. **SeriesCacheManager** - Self-contained caching logic
-2. **CrosshairRenderer** - Isolated rendering, no state dependencies
-3. **TooltipAnimator** - Isolated with clear timer management
+1. **SeriesCacheManager** ✅ - Self-contained caching logic (commit 876a479)
+2. **TooltipAnimator** ✅ - Isolated with clear timer management (commit c19e96c)
+3. **CrosshairRenderer** - Isolated rendering, no state dependencies
 
 ### Phase 2: State-Heavy Extractions
 4. **ViewportController** - Core transform management
