@@ -22,7 +22,6 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/hit_test_strategy.dart';
 import '../interaction/core/interaction_mode.dart';
-import '../layout/multi_axis_layout.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -35,13 +34,13 @@ import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
+import 'modules/multi_axis_manager.dart';
 import 'modules/scrollbar_manager.dart';
 import 'modules/series_cache_manager.dart';
 import 'modules/streaming_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/tooltip_renderer.dart';
 import 'modules/viewport_constraints.dart';
-import 'multi_axis_normalizer.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
 
@@ -89,14 +88,19 @@ class ChartRenderBox extends RenderBox {
         _theme = theme,
         _tooltipsEnabled = tooltipsEnabled,
         _interactionConfig = interactionConfig,
-        _normalizationMode = normalizationMode,
-        _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
     _initAnnotationDragHandler();
+    _initMultiAxisManager(normalizationMode, series);
+  }
+
+  /// Initializes the MultiAxisManager with normalization mode and series.
+  void _initMultiAxisManager(NormalizationMode? normalizationMode, List<ChartSeries>? series) {
+    _multiAxisManager.setNormalizationMode(normalizationMode);
+    _multiAxisManager.setSeries(series);
   }
 
   /// Initializes the ScrollbarManager with a delegate that references this RenderBox.
@@ -153,21 +157,17 @@ class ChartRenderBox extends RenderBox {
   /// Current theme for the chart (colors, styles, etc.)
   ChartTheme? _theme;
 
-  // ==================== MULTI-AXIS STATE ====================
+  // ==================== MULTI-AXIS MODULE ====================
 
-  /// Controls how normalization is applied to multi-axis data.
-  NormalizationMode? _normalizationMode;
-
-  /// Cached effective bindings (derived from series.yAxisConfig and series.yAxisId).
-  /// Invalidated when _series change.
-  List<SeriesAxisBinding>? _cachedEffectiveBindings;
-
-  /// Cached effective Y-axes (inline yAxisConfigs from series only).
-  /// Invalidated when _series change.
-  List<YAxisConfig>? _cachedEffectiveYAxes;
-
-  /// Data series for multi-axis color resolution.
-  List<ChartSeries> _series;
+  /// Multi-axis manager module.
+  ///
+  /// Manages all multi-axis configuration and rendering:
+  /// - Effective Y-axis configuration resolution (with caching)
+  /// - Series-to-axis binding resolution (with caching)
+  /// - Viewport-aware bounds computation
+  /// - Axis width calculation
+  /// - Multi-axis painting coordination
+  final MultiAxisManager _multiAxisManager = MultiAxisManager();
 
   /// Interaction coordinator for conflict resolution.
   final ChartInteractionCoordinator coordinator;
@@ -683,262 +683,77 @@ class ChartRenderBox extends RenderBox {
 
   // ==================== MULTI-AXIS SETTERS ====================
 
-  /// Sets the Y-axis configurations for multi-axis mode.
   /// Sets the normalization mode for multi-axis charts.
+  ///
+  /// Delegates to [MultiAxisManager.setNormalizationMode].
   void setNormalizationMode(NormalizationMode? mode) {
-    if (_normalizationMode == mode) return;
-    _normalizationMode = mode;
-    markNeedsPaint();
+    if (_multiAxisManager.setNormalizationMode(mode)) {
+      markNeedsPaint();
+    }
   }
 
   /// Sets the data series for multi-axis color resolution.
+  ///
+  /// Delegates to [MultiAxisManager.setSeries].
   void setSeries(List<ChartSeries>? series) {
-    final newSeries = series ?? const [];
-    if (_series == newSeries) return;
-    _series = newSeries;
-    _cachedEffectiveYAxes = null; // Invalidate cache
-    _cachedEffectiveBindings = null; // Invalidate cache
-    markNeedsPaint();
+    if (_multiAxisManager.setSeries(series)) {
+      markNeedsPaint();
+    }
   }
 
-  // ==================== MULTI-AXIS HELPERS ====================
+  // ==================== MULTI-AXIS HELPERS (DELEGATING) ====================
 
   /// Checks if multi-axis mode is active.
   ///
-  /// Multi-axis mode is active when there are two or more Y-axes configured
-  /// (either explicit yAxes or inline yAxisConfig from series).
+  /// Delegates to [MultiAxisManager.hasMultipleYAxes].
   bool _hasMultipleYAxes() {
-    final effectiveAxes = _getEffectiveYAxes();
-    return effectiveAxes.length > 1;
+    return _multiAxisManager.hasMultipleYAxes();
   }
 
-  /// Gets effective Y-axes from inline yAxisConfig on series only.
+  /// Gets effective Y-axes from inline yAxisConfig on series.
   ///
-  /// Auto-generates axis ID as "{seriesId}_axis" if the config doesn't have an ID.
-  ///
-  /// Results are cached for performance. Cache is invalidated when [setSeries] is called.
+  /// Delegates to [MultiAxisManager.getEffectiveYAxes].
   List<YAxisConfig> _getEffectiveYAxes() {
-    // Return cached if available
-    if (_cachedEffectiveYAxes != null) return _cachedEffectiveYAxes!;
-
-    final effectiveAxes = <YAxisConfig>[];
-    final axisIds = <String>{};
-
-    // Add inline yAxisConfig from series
-    for (final series in _series) {
-      if (series.yAxisConfig != null) {
-        // Generate axis ID: use config's ID if set, otherwise derive from series ID
-        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
-
-        // Skip if this axis ID already exists
-        if (axisIds.contains(axisId)) continue;
-
-        // Add the inline config with the resolved ID
-        final resolvedConfig = series.yAxisConfig!.id.isEmpty ? series.yAxisConfig!.copyWith(id: axisId) : series.yAxisConfig!;
-
-        effectiveAxes.add(resolvedConfig);
-        axisIds.add(axisId);
-      }
-    }
-
-    // Cache and return
-    _cachedEffectiveYAxes = effectiveAxes;
-    return effectiveAxes;
+    return _multiAxisManager.getEffectiveYAxes();
   }
 
   /// Paints multiple Y-axes using [MultiAxisPainter].
   ///
-  /// This method is called during paint when multi-axis mode is active.
-  /// It computes axis bounds from series data and renders each axis
-  /// with appropriate colors and labels.
+  /// Delegates to [MultiAxisManager.paintMultipleYAxes].
   void _paintMultipleYAxes(Canvas canvas) {
-    final effectiveAxes = _getEffectiveYAxes();
-    if (effectiveAxes.isEmpty) return;
-
-    // Compute axis bounds from series data
-    final axisBounds = _computeAxisBounds();
-
-    // Use effective bindings for color resolution
-    final effectiveBindings = _getEffectiveBindings();
-
-    // Create and invoke painter
-    final painter = MultiAxisPainter(
-      axes: effectiveAxes,
-      axisBounds: axisBounds,
-      bindings: effectiveBindings,
-      series: _series,
+    _multiAxisManager.paintMultipleYAxes(
+      canvas: canvas,
+      size: size,
+      plotArea: _plotArea,
+      transform: _transform,
+      originalTransform: _originalTransform,
     );
-
-    // Paint axes - chartArea is full size, plotArea is content area
-    painter.paint(canvas, Offset.zero & size, _plotArea);
   }
 
   /// Computes axis bounds from series data for multi-axis rendering.
   ///
-  /// Returns a map of axis ID to [DataRange] for each axis.
-  ///
-  /// This method uses effective bindings derived from series.yAxisConfig,
-  /// series.yAxisId properties. Series with matching axis configs are
-  /// automatically bound to their corresponding axis.
-  ///
-  /// **Viewport-Aware**: In perSeries normalization mode, when the chart is
-  /// zoomed or panned, the bounds are transformed to show the visible data range
-  /// (not full range). This ensures axis labels update correctly during
-  /// zoom and pan operations.
+  /// Delegates to [MultiAxisManager.computeAxisBounds].
   Map<String, DataRange> _computeAxisBounds() {
-    final bounds = <String, DataRange>{};
-
-    final effectiveAxes = _getEffectiveYAxes();
-    if (effectiveAxes.isEmpty) return bounds;
-
-    // Compute effective bindings from series
-    final effectiveBindings = _getEffectiveBindings();
-
-    // Check if viewport Y range differs from original (zoom or pan in perSeries mode)
-    // In perSeries mode, normalized Y range is 0-1, so if transform differs, we need
-    // to adjust axis labels to show visible data range
-    final isViewportTransformed = _normalizationMode == NormalizationMode.perSeries &&
-        _transform != null &&
-        _originalTransform != null &&
-        (_transform!.dataYMin != _originalTransform!.dataYMin || _transform!.dataYMax != _originalTransform!.dataYMax);
-
-    for (final axis in effectiveAxes) {
-      // Use explicit bounds if provided
-      if (axis.min != null && axis.max != null) {
-        final fullMin = axis.min!;
-        final fullMax = axis.max!;
-
-        // Add 5% padding buffer even for explicit bounds
-        final explicitRange = fullMax - fullMin;
-        final explicitPadding = explicitRange * 0.05;
-        final explicitPaddedMin = fullMin - explicitPadding;
-        final explicitPaddedMax = fullMax + explicitPadding;
-
-        if (isViewportTransformed) {
-          // Transform explicit bounds based on viewport (zoom/pan)
-          // Use the buffer range (-0.05 to 1.05) for viewport calculation
-          const bufferRange = 1.1;
-          final viewportNormMin = (_transform!.dataYMin + 0.05) / bufferRange;
-          final viewportNormMax = (_transform!.dataYMax + 0.05) / bufferRange;
-          final paddedRange = explicitPaddedMax - explicitPaddedMin;
-          bounds[axis.id] = DataRange(
-            min: explicitPaddedMin + (viewportNormMin * paddedRange),
-            max: explicitPaddedMin + (viewportNormMax * paddedRange),
-          );
-        } else {
-          bounds[axis.id] = DataRange(min: explicitPaddedMin, max: explicitPaddedMax);
-        }
-        continue;
-      }
-
-      // Find series bound to this axis and compute bounds from data
-      double? minY;
-      double? maxY;
-
-      for (final binding in effectiveBindings) {
-        if (binding.yAxisId == axis.id) {
-          // Find matching series
-          for (final series in _series) {
-            if (series.id == binding.seriesId) {
-              for (final point in series.points) {
-                if (minY == null || point.y < minY) minY = point.y;
-                if (maxY == null || point.y > maxY) maxY = point.y;
-              }
-            }
-          }
-        }
-      }
-
-      // Use computed bounds, or fallback to 0-100 if no data
-      final fullMin = axis.min ?? minY ?? 0.0;
-      final fullMax = axis.max ?? maxY ?? 100.0;
-
-      // Add 5% padding buffer to prevent data points from being cut off at edges
-      // This matches the padding used in DataConverter.computeBounds()
-      final range = fullMax - fullMin;
-      final paddingAmount = range * 0.05;
-      final paddedMin = fullMin - paddingAmount;
-      final paddedMax = fullMax + paddingAmount;
-
-      if (isViewportTransformed) {
-        // Transform computed bounds based on viewport (zoom/pan)
-        // The viewport Y range maps to the visible portion of the data
-        // Use the buffer range (-0.05 to 1.05) for viewport calculation
-        const bufferRange = 1.1; // -0.05 to 1.05
-        final viewportNormMin = (_transform!.dataYMin + 0.05) / bufferRange; // Convert from buffer space to 0-1
-        final viewportNormMax = (_transform!.dataYMax + 0.05) / bufferRange;
-        final paddedRange = paddedMax - paddedMin;
-        bounds[axis.id] = DataRange(
-          min: paddedMin + (viewportNormMin * paddedRange),
-          max: paddedMin + (viewportNormMax * paddedRange),
-        );
-      } else {
-        bounds[axis.id] = DataRange(min: paddedMin, max: paddedMax);
-      }
-    }
-
-    return bounds;
+    return _multiAxisManager.computeAxisBounds(
+      transform: _transform,
+      originalTransform: _originalTransform,
+    );
   }
 
   /// Gets effective axis bindings by deriving bindings from series properties.
   ///
-  /// Priority:
-  /// 1. series.yAxisConfig (inline config) → generates binding with auto ID
-  /// 2. series.yAxisId (explicit reference) → generates binding with that ID
-  /// 3. Series without yAxisConfig or yAxisId remain unbound
-  ///
-  /// Results are cached for performance. Cache is invalidated when
-  /// [setSeries] is called.
+  /// Delegates to [MultiAxisManager.getEffectiveBindings].
   List<SeriesAxisBinding> _getEffectiveBindings() {
-    // Return cached if available
-    if (_cachedEffectiveBindings != null) return _cachedEffectiveBindings!;
-
-    final effectiveBindings = <SeriesAxisBinding>[];
-
-    for (final series in _series) {
-      // Priority 1: Inline yAxisConfig
-      if (series.yAxisConfig != null) {
-        // Generate axis ID: use config's ID if set, otherwise derive from series ID
-        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
-
-        effectiveBindings.add(SeriesAxisBinding(
-          seriesId: series.id,
-          yAxisId: axisId,
-        ));
-        continue;
-      }
-
-      // Priority 2: Explicit yAxisId reference
-      if (series.yAxisId != null && series.yAxisId!.isNotEmpty) {
-        effectiveBindings.add(SeriesAxisBinding(
-          seriesId: series.id,
-          yAxisId: series.yAxisId!,
-        ));
-      }
-    }
-
-    // Cache and return
-    _cachedEffectiveBindings = effectiveBindings;
-    return effectiveBindings;
+    return _multiAxisManager.getEffectiveBindings();
   }
 
   /// Builds MultiAxisInfo for the CrosshairRenderer module.
   ///
-  /// This helper gathers all multi-axis configuration data needed for
-  /// crosshair rendering, encapsulated in a [MultiAxisInfo] object.
+  /// Delegates to [MultiAxisManager.buildMultiAxisInfo].
   MultiAxisInfo _buildMultiAxisInfo() {
-    final effectiveAxes = _getEffectiveYAxes();
-    final axisBounds = _computeAxisBounds();
-    final axisWidths = _computeAxisWidths();
-    final effectiveBindings = _getEffectiveBindings();
-
-    return MultiAxisInfo(
-      effectiveAxes: effectiveAxes,
-      axisBounds: axisBounds,
-      axisWidths: axisWidths,
-      effectiveBindings: effectiveBindings,
-      normalizationMode: _normalizationMode,
-      series: _series,
+    return _multiAxisManager.buildMultiAxisInfo(
+      transform: _transform,
+      originalTransform: _originalTransform,
     );
   }
 
@@ -1462,16 +1277,11 @@ class ChartRenderBox extends RenderBox {
     final effectiveAxes = _getEffectiveYAxes();
     if (effectiveAxes.length > 1) {
       final axisBounds = _computeAxisBounds();
-      const layoutDelegate = MultiAxisLayoutDelegate();
-      final axisWidths = layoutDelegate.computeAxisWidths(
-        axes: effectiveAxes,
-        axisBounds: axisBounds,
-        labelStyle: const TextStyle(fontSize: 11),
-      );
+      final axisWidths = _multiAxisManager.computeAxisWidths(axisBounds: axisBounds);
 
       // Get total width needed for left and right axes
-      final totalLeftWidth = layoutDelegate.getTotalLeftWidth(effectiveAxes, axisWidths);
-      rightAxisWidth = layoutDelegate.getTotalRightWidth(effectiveAxes, axisWidths);
+      final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(axisWidths);
+      rightAxisWidth = _multiAxisManager.getTotalRightAxisWidth(axisWidths);
 
       // CRITICAL: In multi-axis mode, use the computed axis widths directly
       // (not the hardcoded single-axis margin of 60px) so that the plot area
@@ -3286,8 +3096,7 @@ class ChartRenderBox extends RenderBox {
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
     // Uses _hasMultipleYAxes() which checks effective axes (including inline yAxisConfig)
-    final Map<String, DataRange>? axisBounds =
-        (_hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries) ? _computeAxisBounds() : null;
+    final Map<String, DataRange>? axisBounds = (_multiAxisManager.isMultiAxisNormalizationActive()) ? _computeAxisBounds() : null;
 
     // Build series-to-axis lookup for efficient transform creation (use effective bindings)
     final effectiveBindings = _getEffectiveBindings();
@@ -3734,21 +3543,6 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
-  /// Computes axis widths for layout calculations.
-  Map<String, double> _computeAxisWidths() {
-    final effectiveAxes = _getEffectiveYAxes();
-    final axisBounds = _computeAxisBounds();
-    if (effectiveAxes.isEmpty) return {};
-
-    // Use MultiAxisLayoutDelegate for consistent width calculation
-    const layoutDelegate = MultiAxisLayoutDelegate();
-    return layoutDelegate.computeAxisWidths(
-      axes: effectiveAxes,
-      axisBounds: axisBounds,
-      labelStyle: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
-    );
-  }
-
   /// Formats data values for display (same logic as axis labels).
   String _formatDataValue(double value) {
     // If the value is very close to an integer, show it as an integer
@@ -3783,23 +3577,14 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Returns: Normalized value in 0.0-1.0 range
   double normalizeYValue(double value, double seriesMin, double seriesMax) {
-    return MultiAxisNormalizer.normalize(value, seriesMin, seriesMax);
+    return _multiAxisManager.normalizeYValue(value, seriesMin, seriesMax);
   }
 
   /// Denormalizes a Y value back to original data coordinates (FR-008).
   ///
-  /// This is used for tooltip display and crosshair value labels when
-  /// multi-axis normalization is active. Users see original values, not
-  /// normalized 0.0-1.0 values.
-  ///
-  /// Parameters:
-  /// - [normalizedValue]: The normalized value (0.0-1.0)
-  /// - [seriesMin]: The minimum Y value in this series
-  /// - [seriesMax]: The maximum Y value in this series
-  ///
-  /// Returns: Original data value in series range
+  /// Delegates to [MultiAxisManager.denormalizeYValue].
   double denormalizeYValue(double normalizedValue, double seriesMin, double seriesMax) {
-    return MultiAxisNormalizer.denormalize(normalizedValue, seriesMin, seriesMax);
+    return _multiAxisManager.denormalizeYValue(normalizedValue, seriesMin, seriesMax);
   }
 
   /// Draws a tooltip for the hovered marker.
@@ -3840,44 +3625,16 @@ class ChartRenderBox extends RenderBox {
 
   /// Normalizes a Y-axis value from data space to normalized [0, 1] space.
   ///
-  /// This method wraps [MultiAxisNormalizer.normalize] for use in rendering
-  /// logic when multiple series with different Y-ranges need to share the
-  /// same visual axis.
-  ///
-  /// Parameters:
-  /// - [value]: The raw data value to normalize
-  /// - [min]: The minimum value of the data range
-  /// - [max]: The maximum value of the data range
-  ///
-  /// Returns a value in the range [0, 1] where:
-  /// - 0 represents the minimum of the data range
-  /// - 1 represents the maximum of the data range
-  ///
-  /// Edge cases:
-  /// - If min == max, returns 0.5 (value is at center of degenerate range)
-  /// - Handles values outside the min/max range (clamps to [0, 1])
+  /// Delegates to [MultiAxisManager.normalizeValue].
   double normalizeValue(double value, double min, double max) {
-    return MultiAxisNormalizer.normalize(value, min, max);
+    return _multiAxisManager.normalizeValue(value, min, max);
   }
 
   /// Denormalizes a value from normalized [0, 1] space back to data space.
   ///
-  /// This method wraps [MultiAxisNormalizer.denormalize] for use in
-  /// interaction logic (e.g., tooltips, crosshairs) when converting
-  /// visual positions back to original data values.
-  ///
-  /// Parameters:
-  /// - [normalizedValue]: A value in [0, 1] range
-  /// - [min]: The minimum value of the target data range
-  /// - [max]: The maximum value of the target data range
-  ///
-  /// Returns the original data value corresponding to the normalized position.
-  ///
-  /// Edge cases:
-  /// - If min == max, returns min (degenerate range)
-  /// - Handles normalized values outside [0, 1] (extrapolates linearly)
+  /// Delegates to [MultiAxisManager.denormalizeValue].
   double denormalizeValue(double normalizedValue, double min, double max) {
-    return MultiAxisNormalizer.denormalize(normalizedValue, min, max);
+    return _multiAxisManager.denormalizeValue(normalizedValue, min, max);
   }
 }
 
@@ -3956,7 +3713,7 @@ class _StreamingDelegateImpl implements StreamingDelegate {
   }
 
   @override
-  List<ChartSeries> get series => _renderBox._series;
+  List<ChartSeries> get series => _renderBox._multiAxisManager.series;
 
   @override
   void updateAxesFromTransform() {
@@ -4005,7 +3762,7 @@ class _AnnotationDragDelegateImpl implements AnnotationDragDelegate {
   List<ChartElement> get elements => _renderBox._elements;
 
   @override
-  List<ChartSeries> get series => _renderBox._series;
+  List<ChartSeries> get series => _renderBox._multiAxisManager.series;
 
   @override
   void rebuildSpatialIndex() {
