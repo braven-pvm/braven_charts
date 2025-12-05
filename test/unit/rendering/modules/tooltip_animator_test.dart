@@ -160,7 +160,7 @@ void main() {
         expect(animator.getTargetMarker<Object>(), isNull);
       });
 
-      test('hideImmediately triggers repaint', () async {
+      test('hideImmediately does NOT trigger repaint (called during paint phase)', () async {
         const config = TooltipConfig(showDelay: Duration.zero);
         animator.show('marker1', config);
         await Future.delayed(const Duration(milliseconds: 200));
@@ -168,7 +168,10 @@ void main() {
         final countBefore = repaintCount;
         animator.hideImmediately();
 
-        expect(repaintCount, greaterThan(countBefore));
+        // hideImmediately should NOT call onRepaint because it's typically
+        // called during the paint phase where markNeedsPaint is invalid
+        expect(repaintCount, equals(countBefore));
+        expect(animator.opacity, equals(0.0));
       });
     });
 

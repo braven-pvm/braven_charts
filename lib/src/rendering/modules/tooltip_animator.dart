@@ -50,6 +50,9 @@ class TooltipAnimator {
   /// Generic type allows different marker info objects.
   Object? _targetMarker;
 
+  /// Whether this animator has been disposed.
+  bool _disposed = false;
+
   /// Gets current tooltip opacity.
   double get opacity => _opacity;
 
@@ -108,12 +111,15 @@ class TooltipAnimator {
   }
 
   /// Immediately hides tooltip without animation.
+  ///
+  /// IMPORTANT: This method does NOT call onRepaint() because it's typically
+  /// called during the paint phase where markNeedsPaint() is invalid.
+  /// The caller is already in paint(), so the current frame will reflect
+  /// the new opacity value.
   void hideImmediately() {
     cancelAll();
-    if (_opacity > 0) {
-      _opacity = 0.0;
-      onRepaint();
-    }
+    _opacity = 0.0;
+    // Note: Do not call onRepaint() here - this is called during paint()
   }
 
   /// Cancels all timers and resets animation state.
@@ -129,12 +135,23 @@ class TooltipAnimator {
 
   /// Disposes resources. Must be called when the animator is no longer needed.
   void dispose() {
+    _disposed = true;
     cancelAll();
+  }
+
+  /// Safely requests a repaint if not disposed.
+  void _safeRepaint() {
+    if (!_disposed) {
+      onRepaint();
+    }
   }
 
   /// Animates opacity to target value over specified duration.
   void _animateOpacity(double target, Duration duration) {
     _fadeTimer?.cancel();
+
+    // Don't animate if disposed
+    if (_disposed) return;
 
     final startOpacity = _opacity;
     final delta = target - startOpacity;
@@ -142,7 +159,7 @@ class TooltipAnimator {
     // If already at target, nothing to do
     if (delta.abs() < 0.001) {
       _opacity = target;
-      onRepaint();
+      _safeRepaint();
       return;
     }
 
@@ -153,16 +170,22 @@ class TooltipAnimator {
     var currentStep = 0;
 
     _fadeTimer = Timer.periodic(stepDuration, (timer) {
+      // Stop if disposed during animation
+      if (_disposed) {
+        timer.cancel();
+        return;
+      }
+
       currentStep++;
 
       if (currentStep >= totalSteps) {
         _opacity = target;
         timer.cancel();
-        onRepaint();
+        _safeRepaint();
       } else {
         final progress = currentStep / totalSteps;
         _opacity = startOpacity + delta * progress;
-        onRepaint();
+        _safeRepaint();
       }
     });
   }
