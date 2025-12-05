@@ -5,26 +5,282 @@
 This document outlines the detailed plan for refactoring `ChartRenderBox` (6,652 lines) into smaller, more manageable modules while preserving the existing public API.
 
 **Date Created**: 2025-12-05
+**Last Updated**: 2025-12-06
 **Status**: In Progress
 **Branch**: render-refactor
 **Backup Location**: `lib/src/rendering/chart_render_box.dart.backup`
 
 ## Progress Summary
 
-| Module | Status | Lines | Commit |
-|--------|--------|-------|--------|
-| SeriesCacheManager | ✅ Complete | 170 | 876a479 |
-| TooltipAnimator | ✅ Complete | 168 | c19e96c |
-| ViewportConstraints | ✅ Complete | 190 | 7ef6396 |
-| CrosshairRenderer | ⏳ Pending | ~350 | - |
-| StreamingManager | ⏳ Pending | ~500 | - |
-| ScrollbarManager | ⏳ Pending | ~350 | - |
-| AnnotationInteractionHandler | ⏳ Pending | ~500 | - |
-| EventDispatcher | ⏳ Pending | ~400 | - |
+| Module | Status | Lines | Commit | Complexity |
+|--------|--------|-------|--------|------------|
+| SeriesCacheManager | ✅ Complete | 170 | 876a479 | LOW |
+| TooltipAnimator | ✅ Complete | 168 | c19e96c | LOW |
+| ViewportConstraints | ✅ Complete | 190 | 7ef6396 | LOW |
+| CrosshairRenderer | ⏳ Pending | ~400 | - | MEDIUM |
+| ScrollbarManager | ⏳ Pending | ~700 | - | MEDIUM-HIGH |
+| StreamingManager | ⏳ Pending | ~500 | - | HIGH |
+| AnnotationInteractionHandler | ⏳ Pending | ~800 | - | HIGH |
+| EventDispatcher | ⏳ Pending | ~1300 | - | HIGHEST |
 
 **Current ChartRenderBox Size**: 6,302 lines (reduced from 6,652)
 **Lines Extracted**: 350 lines (net reduction after integration code)
 **New Module Lines**: 528 lines (SeriesCacheManager: 170, TooltipAnimator: 168, ViewportConstraints: 190)
+
+---
+
+## Detailed Complexity Analysis (Updated 2025-12-06)
+
+### 1. CrosshairRenderer - MEDIUM Complexity
+
+**Lines**: ~400 (lines 5200-5620)
+
+**Methods to Extract**:
+- `_drawCrosshairLabels()` (~120 lines) - X/Y label positioning and rendering
+- `_drawPerAxisCrosshairLabels()` (~135 lines) - Multi-axis label rendering
+- `_drawTrackingModeOverlay()` (~165 lines) - Crosshair lines, markers, tooltips
+
+**Dependencies**:
+- READ: `_plotArea`, `_transform`, `_theme`, `_cursorPosition`
+- READ: `_getEffectiveYAxes()`, `_computeAxisWidths()`, `_computeAxisBounds()`
+- READ: `_normalizationMode`, `_xAxis`, `_yAxis`
+- WRITE: None (pure rendering)
+
+**Impact Assessment**:
+- ✅ No state mutation - safe extraction
+- ⚠️ Depends on multi-axis helper methods (must pass as parameters or callback)
+- ✅ Well-isolated in paint cycle
+- ⚠️ Label positioning requires axis width calculations
+
+**Extraction Strategy**:
+1. Pass `ChartTransform`, `Rect plotArea`, `ChartTheme` as params
+2. Pass multi-axis config via `MultiAxisInfo` data class
+3. Return drawing commands or paint directly on canvas
+
+**Risk Level**: LOW-MEDIUM
+
+---
+
+### 2. ScrollbarManager - MEDIUM-HIGH Complexity
+
+**Lines**: ~700 (spread across multiple sections)
+
+**State Fields** (~50 lines, 249-302):
+- `_showXScrollbar`, `_showYScrollbar` - visibility flags
+- `_scrollbarTheme` - configuration
+- `_xScrollbarRect`, `_yScrollbarRect` - layout rects
+- `_activeScrollbarAxis` - which axis is being dragged
+- `_scrollbarDragStartPosition`, `_scrollbarDragStartZone` - drag state
+- `_xScrollbarHoverZone`, `_yScrollbarHoverZone` - hover feedback
+- `_scrollbarAutoHideTimer`, `_scrollbarsVisible` - auto-hide logic
+
+**Methods to Extract**:
+- `_hitTestScrollbars()` (~60 lines, 4458-4517) - hit testing
+- `_handleScrollbarDrag()` (~200 lines, 4581-4779) - drag interaction
+- `_paintScrollbars()` (~170 lines, 4779-4950) - rendering
+- `_handleXScrollbarDelta()` (~90 lines) - X axis viewport changes
+- `_handleYScrollbarDelta()` (~90 lines) - Y axis viewport changes
+- Auto-hide timer management (~30 lines)
+
+**Dependencies**:
+- READ: `_transform`, `_originalTransform`, `_streamingBounds`
+- READ: `_plotArea`, `coordinator`
+- WRITE: `_transform` (via delta handlers)
+- WRITE: `_activeScrollbarAxis`, hover zones, timer
+
+**Impact Assessment**:
+- ⚠️ Modifies `_transform` - requires callback to apply viewport changes
+- ⚠️ Complex state machine (idle → hover → drag → release)
+- ⚠️ Timer management requires careful disposal
+- ✅ Already uses separate `ScrollbarPainter` and `ScrollbarController`
+- ✅ Scrollbar rendering is well-isolated
+
+**Extraction Strategy**:
+1. Create `ScrollbarManager` class with own state
+2. Inject `ViewportDelegate` callback for transform updates
+3. Manager handles all hit testing, drag state, auto-hide internally
+4. ChartRenderBox calls `manager.paint()`, `manager.handleEvent()`
+
+**Risk Level**: MEDIUM
+
+---
+
+### 3. StreamingManager - HIGH Complexity
+
+**Lines**: ~500 (lines 1260-1500+)
+
+**State Fields**:
+- `_streamingBuffers` - Map<String, StreamingBuffer> (zero-copy refs)
+- `_streamingElements` - Map<String, SeriesElement> (cached elements)
+- `_streamingBounds` - DataBounds (full data range)
+- `_viewportLockedForPause` - pause mode flag
+- `_autoScrollTargetXMax`, `_autoScrollTargetWidth` - X animation targets
+- `_expansionTargetYMin`, `_expansionTargetYMax` - Y animation targets
+- `_autoScrollAnimationScheduled` - animation frame flag
+
+**Methods to Extract**:
+- `setStreamingData()` (~150 lines) - main entry point
+- `clearStreamingData()` (~30 lines) - cleanup
+- `lockViewportForPause()` / `unlockViewport()` (~40 lines)
+- `_animateViewportExpansion()` (~100 lines) - smooth viewport animation
+- `_paintStreamingBuffer()` (~100 lines) - direct buffer rendering
+
+**Dependencies**:
+- READ: `_transform`, `_originalTransform`, `_plotArea`
+- WRITE: `_transform`, `_originalTransform` (viewport updates)
+- WRITE: Triggers `markNeedsPaint()`, `_updateAxesFromTransform()`
+- Uses `SchedulerBinding.instance.addPostFrameCallback` for animation
+
+**Impact Assessment**:
+- ⚠️ Complex animation state machine (auto-scroll vs expand modes)
+- ⚠️ Directly modifies `_transform` and `_originalTransform`
+- ⚠️ Interacts with `_seriesCacheManager.invalidate()`
+- ⚠️ Must coordinate with pause/resume and user pan interactions
+- ❌ Tightly coupled to viewport lifecycle
+
+**Extraction Strategy**:
+1. Pass `ViewportDelegate` for transform mutations
+2. Manager handles animation scheduling internally
+3. Requires bidirectional communication (manager ↔ renderbox)
+4. Consider extracting animation loop separately
+
+**Risk Level**: HIGH
+
+---
+
+### 4. AnnotationInteractionHandler - HIGH Complexity
+
+**Lines**: ~800 (spread across event handlers)
+
+**State Fields** (~30+ fields):
+```dart
+// Resize state
+_resizingAnnotation: RangeAnnotationElement?
+_activeResizeDirection: ResizeDirection?
+_resizeStartBounds: Rect?
+
+// Move state (per annotation type - 5 types!)
+_movingAnnotation: RangeAnnotationElement?  // Range
+_moveStartPosition, _moveStartBounds: Offset?, Rect?
+
+_movingPointAnnotation: PointAnnotationElement?  // Point
+_originalDataPointIndex, _candidateDataPointIndex: int?
+
+_movingTextAnnotation: TextAnnotationElement?  // Text
+_moveTextStartPosition: Offset?
+
+_movingThresholdAnnotation: ThresholdAnnotationElement?  // Threshold
+_moveThresholdStartPosition, _moveThresholdStartValue: Offset?, double?
+
+_movingPinAnnotation: PinAnnotationElement?  // Pin
+_movePinStartPosition, _movePinStartX, _movePinStartY: Offset?, double?, double?
+
+// Potential drag state (before threshold exceeded - 5 types!)
+_potentialDragRangeAnnotation, _potentialDragRangeStartPosition, _potentialDragRangeStartBounds
+_potentialDragPointAnnotation, _potentialDragStartPosition
+_potentialDragTextAnnotation, _potentialDragTextStartPosition
+_potentialDragThresholdAnnotation, _potentialDragThresholdStartPosition
+_potentialDragPinAnnotation, _potentialDragPinStartPosition
+```
+
+**Methods to Extract**:
+- `_performResize()` (~107 lines, 2138-2245)
+- `_performMove()` (~25 lines, 2245-2270) - Range annotation
+- `_performPointAnnotationMove()` (~66 lines, 2270-2336)
+- `_performTextAnnotationMove()` (~15 lines, 2336-2351)
+- `_performThresholdAnnotationMove()` (~36 lines, 2351-2387)
+- `_performPinAnnotationMove()` (~40 lines, 2387-2427)
+- Drag threshold detection logic (~200 lines in `_handlePointerMove`)
+- Pointer up finalization logic (~300 lines in `_handlePointerUp`)
+
+**Dependencies**:
+- READ: `_transform`, `_plotArea`, series elements
+- WRITE: Element temp bounds via `updateTempValues()`, `updateBounds()`
+- WRITE: Emits `onAnnotationChanged` callback with new data coordinates
+- Uses `coordinator` for mode claiming
+
+**Impact Assessment**:
+- ❌ 5 different annotation types with different move semantics
+- ❌ Complex state machine: potential drag → threshold → actual drag → release
+- ❌ Tightly coupled to event handlers (`_handlePointerDown`, `_handlePointerMove`, `_handlePointerUp`)
+- ❌ Snapping logic requires access to data points
+- ⚠️ Coordinate conversion (pixels ↔ data) at multiple points
+
+**Extraction Strategy**:
+1. Create unified `AnnotationInteractionHandler` with type-specific strategies
+2. Use command pattern: handler returns `AnnotationUpdate` command objects
+3. ChartRenderBox applies commands (separation of decision vs execution)
+4. Consider splitting into per-type handlers if complexity warrants
+
+**Risk Level**: HIGH
+
+---
+
+### 5. EventDispatcher - HIGHEST Complexity
+
+**Lines**: ~1300 (lines 2420-3615+)
+
+**Methods**:
+- `handleEvent()` routing (~20 lines)
+- `_handlePointerDown()` (~124 lines, 2439-2563)
+- `_handlePointerMove()` (~305 lines, 2563-2868)
+- `_handlePointerUp()` (~589 lines, 2868-3457)
+- `_handlePointerHover()` (~158 lines, 3457-3615)
+- `_handlePointerScroll()` (~100 lines, 3615-3715)
+
+**Dependencies**:
+- ALL state fields - event handling touches everything
+- ALL modules - scrollbar, annotation, tooltip, crosshair, streaming
+- `coordinator` for interaction mode management
+- All callbacks: `onElementClick`, `onEmptyAreaClick`, `onAnnotationChanged`, etc.
+
+**Impact Assessment**:
+- ❌ Central orchestration point - everything flows through here
+- ❌ Cannot extract without extracting all subsystems first
+- ❌ Complex priority-based event routing
+- ❌ Many interleaved concerns in single methods
+
+**Extraction Strategy**:
+1. **MUST BE LAST** - extract all subsystems first
+2. EventDispatcher becomes thin router that delegates to modules
+3. Each module exposes `handlePointerDown()`, `handlePointerMove()`, etc.
+4. Dispatcher just routes based on current mode and hit test results
+
+**Risk Level**: HIGHEST - DO NOT ATTEMPT UNTIL ALL OTHER MODULES EXTRACTED
+
+---
+
+## Revised Priority Order (Low-Hanging Fruit First)
+
+### Phase 1: LOW Complexity (Complete)
+1. ✅ SeriesCacheManager - Pure caching, no external deps
+2. ✅ TooltipAnimator - Timer-based, clear boundaries  
+3. ✅ ViewportConstraints - Pure calculations
+
+### Phase 2: MEDIUM Complexity (Next)
+4. **CrosshairRenderer** - Pure rendering, multi-axis read-only
+5. **ScrollbarManager** - Self-contained with delegate pattern
+
+### Phase 3: HIGH Complexity (Later)
+6. **StreamingManager** - Complex animation, transform mutations
+7. **AnnotationInteractionHandler** - Complex state machine
+
+### Phase 4: HIGHEST Complexity (Last)
+8. **EventDispatcher** - Must wait for all other modules
+
+---
+
+## Recommended Next Steps
+
+1. **Extract CrosshairRenderer** (~400 lines, MEDIUM)
+   - Create `MultiAxisInfo` record to pass axis config
+   - Pure rendering, no state mutation
+   - Estimated: 2 hours
+
+2. **Extract ScrollbarManager** (~700 lines, MEDIUM-HIGH)
+   - Use delegate pattern for transform updates
+   - Self-contained timer and state management
+   - Estimated: 3 hours
 
 ## Goals
 
