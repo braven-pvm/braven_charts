@@ -35,13 +35,8 @@ import '../models/series_axis_binding.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
-import '../utils/data_converter.dart';
-import '../widgets/scrollbar/hit_test_zone.dart';
-import '../widgets/scrollbar/scrollbar_controller.dart';
-import '../widgets/scrollbar/scrollbar_interaction.dart';
-import '../widgets/scrollbar/scrollbar_painter.dart';
-import '../widgets/scrollbar/scrollbar_state.dart';
 import 'modules/crosshair_renderer.dart';
+import 'modules/scrollbar_manager.dart';
 import 'modules/series_cache_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/viewport_constraints.dart';
@@ -92,16 +87,27 @@ class ChartRenderBox extends RenderBox {
   })  : _elementGenerator = elementGenerator,
         _theme = theme,
         _tooltipsEnabled = tooltipsEnabled,
-        _showXScrollbar = showXScrollbar,
-        _showYScrollbar = showYScrollbar,
-        _scrollbarTheme = scrollbarTheme,
         _interactionConfig = interactionConfig,
         _normalizationMode = normalizationMode,
         _series = series ?? const [],
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
+    _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
   }
+
+  /// Initializes the ScrollbarManager with a delegate that references this RenderBox.
+  void _initScrollbarManager(bool showXScrollbar, bool showYScrollbar, ScrollbarConfig? scrollbarTheme) {
+    _scrollbarManager = ScrollbarManager(
+      delegate: _ScrollbarDelegateImpl(this),
+      showXScrollbar: showXScrollbar,
+      showYScrollbar: showYScrollbar,
+      scrollbarTheme: scrollbarTheme,
+    );
+  }
+
+  /// Scrollbar manager handling all scrollbar state and interactions.
+  late final ScrollbarManager _scrollbarManager;
 
   /// Spatial index for O(log n) hit testing.
   QuadTree? _spatialIndex;
@@ -245,60 +251,11 @@ class ChartRenderBox extends RenderBox {
   /// - Fade animation: Smooth opacity transitions
   late final TooltipAnimator _tooltipAnimator;
 
-  /// Whether to show horizontal scrollbar at bottom of chart.
-  bool _showXScrollbar;
-
-  /// Whether to show vertical scrollbar on right side of chart.
-  bool _showYScrollbar;
-
-  /// Theme configuration for scrollbars.
-  /// If null, defaults to ScrollbarConfig.defaultLight().
-  ScrollbarConfig? _scrollbarTheme;
-
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
 
   /// Last pan position (for calculating delta during middle-button drag).
   Offset? _lastPanPosition;
-
-  // ==========================================================================
-  // Scrollbar Interaction State
-  // ==========================================================================
-
-  /// Active scrollbar being dragged (null if not dragging scrollbar).
-  Axis? _activeScrollbarAxis;
-
-  /// Initial pointer position when scrollbar drag started (in widget coordinates).
-  Offset? _scrollbarDragStartPosition;
-
-  /// Hit test zone where drag started (leftEdge, rightEdge, center, track, etc.).
-  HitTestZone? _scrollbarDragStartZone;
-
-  /// Last known drag position for incremental delta calculation.
-  /// Using incremental deltas instead of accumulated deltas prevents oversensitivity.
-  Offset? _scrollbarLastDragPosition;
-
-  /// Current hover zone for X scrollbar (for visual feedback).
-  HitTestZone? _xScrollbarHoverZone;
-
-  /// Current hover zone for Y scrollbar (for visual feedback).
-  HitTestZone? _yScrollbarHoverZone;
-
-  // ==========================================================================
-  // Scrollbar Auto-Hide State
-  // ==========================================================================
-
-  /// Timer for auto-hiding scrollbars after inactivity.
-  Timer? _scrollbarAutoHideTimer;
-
-  /// Whether scrollbar initialization logic has run.
-  /// Used to ensure the postFrameCallback for auto-hide runs only once.
-  bool _scrollbarInitialized = false;
-
-  /// Whether scrollbars are currently visible.
-  /// When false, scrollbars don't render and don't respond to interaction.
-  /// Defaults to true - will be adjusted in performLayout based on autoHide config.
-  bool _scrollbarsVisible = true;
 
   // ==========================================================================
   // Hit Test Throttling (Performance Optimization)
@@ -337,12 +294,6 @@ class ChartRenderBox extends RenderBox {
 
   /// Plot area where chart elements are rendered (excluding axis space).
   Rect _plotArea = Rect.zero;
-
-  /// Horizontal scrollbar rectangle (positioned below chart, if enabled).
-  Rect? _xScrollbarRect;
-
-  /// Vertical scrollbar rectangle (positioned to right of chart, if enabled).
-  Rect? _yScrollbarRect;
 
   /// Coordinate transform for Data ↔ Plot conversion.
   ///
@@ -479,9 +430,9 @@ class ChartRenderBox extends RenderBox {
   void dispose() {
     _seriesCacheManager.dispose();
     _tooltipAnimator.dispose();
+    _scrollbarManager.dispose();
     _hitTestDebounceTimer?.cancel();
     _hitTestDebounceTimer = null;
-    _scrollbarAutoHideTimer?.cancel();
     super.dispose();
   }
 
@@ -687,41 +638,6 @@ class ChartRenderBox extends RenderBox {
   void setTooltipsEnabled(bool enabled) {
     if (_tooltipsEnabled == enabled) return;
     _tooltipsEnabled = enabled;
-    markNeedsPaint();
-  }
-
-  /// Updates X scrollbar visibility.
-  void setShowXScrollbar(bool show) {
-    if (_showXScrollbar == show) return;
-    _showXScrollbar = show;
-    // Need layout to recalculate scrollbar rects
-    markNeedsLayout();
-  }
-
-  /// Updates Y scrollbar visibility.
-  void setShowYScrollbar(bool show) {
-    if (_showYScrollbar == show) return;
-    _showYScrollbar = show;
-    // Need layout to recalculate scrollbar rects
-    markNeedsLayout();
-  }
-
-  /// Updates scrollbar theme configuration.
-  void setScrollbarTheme(ScrollbarConfig? theme) {
-    if (_scrollbarTheme == theme) return;
-    _scrollbarTheme = theme;
-
-    // Re-evaluate scrollbar visibility based on new theme's autoHide setting
-    final autoHide = _scrollbarTheme?.autoHide ?? true;
-    if (!autoHide) {
-      // If autoHide is disabled, scrollbars should always be visible
-      _scrollbarsVisible = true;
-      _cancelScrollbarAutoHide();
-    } else {
-      // If autoHide is enabled, visibility depends on viewport modification state
-      _scrollbarsVisible = _isViewportModified();
-    }
-
     markNeedsPaint();
   }
 
@@ -1099,7 +1015,7 @@ class ChartRenderBox extends RenderBox {
     _rebuildElementsWithTransform();
 
     // Show scrollbars on viewport change from programmatic zoom
-    _showScrollbarsAndScheduleHide();
+    _scrollbarManager.showScrollbarsAndScheduleHide();
 
     // Invalidate cache - transform changed
     _seriesCacheManager.invalidate();
@@ -1135,7 +1051,7 @@ class ChartRenderBox extends RenderBox {
     // _rebuildElementsWithTransform();  // REMOVED - was causing massive slowdown during pan
 
     // Show scrollbars on viewport change from programmatic pan
-    _showScrollbarsAndScheduleHide();
+    _scrollbarManager.showScrollbarsAndScheduleHide();
 
     // Mark for repaint (will paint existing elements with new transform)
     markNeedsPaint();
@@ -1895,18 +1811,18 @@ class ChartRenderBox extends RenderBox {
     );
 
     // Get scrollbar theme (use default if not provided)
-    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+    final scrollbarTheme = _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
     final scrollbarPadding = scrollbarTheme.padding;
 
     // Calculate space needed for scrollbars
     double rightReserved = 0;
     double bottomReserved = 0;
 
-    if (_showYScrollbar) {
+    if (_scrollbarManager.showYScrollbar) {
       rightReserved = scrollbarTheme.thickness + scrollbarPadding;
     }
 
-    if (_showXScrollbar) {
+    if (_scrollbarManager.showXScrollbar) {
       bottomReserved = scrollbarTheme.thickness + (scrollbarPadding * 2); // Padding above and below scrollbar
     }
 
@@ -1962,36 +1878,38 @@ class ChartRenderBox extends RenderBox {
     _plotArea = Rect.fromLTRB(leftMargin, topMargin, size.width - rightMargin, size.height - bottomMargin);
 
     // Calculate scrollbar rectangles if enabled
-    if (_showXScrollbar) {
+    Rect? xScrollbarRect;
+    Rect? yScrollbarRect;
+
+    if (_scrollbarManager.showXScrollbar) {
       // Position horizontal scrollbar BELOW the X-axis label
       // Layout order: plot area → tick labels (~30px) → axis label (~20px) → scrollbar
       // So scrollbar should start after ~50px total
       const xAxisAndLabelHeight = 50.0; // Space for tick labels + axis label
       final scrollbarTop = _plotArea.bottom + xAxisAndLabelHeight + scrollbarPadding;
-      _xScrollbarRect = Rect.fromLTWH(
+      xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
         scrollbarTop,
         _plotArea.width, // Match plot area width
         scrollbarTheme.thickness,
       );
-    } else {
-      _xScrollbarRect = null;
     }
 
-    if (_showYScrollbar) {
+    if (_scrollbarManager.showYScrollbar) {
       // Position vertical scrollbar to the right of:
       // - Just the plot area (single axis mode)
       // - Plot area + right axis (multi-axis mode)
       final scrollbarLeft = _plotArea.right + rightAxisWidth + scrollbarPadding;
-      _yScrollbarRect = Rect.fromLTWH(
+      yScrollbarRect = Rect.fromLTWH(
         scrollbarLeft,
         _plotArea.top,
         scrollbarTheme.thickness,
         _plotArea.height, // Match plot area height
       );
-    } else {
-      _yScrollbarRect = null;
     }
+
+    // Update scrollbar manager with calculated rects
+    _scrollbarManager.setScrollbarRects(xRect: xScrollbarRect, yRect: yScrollbarRect);
 
     // Update axis pixel ranges to match plot area
     _xAxis?.updatePixelRange(_plotArea.left, _plotArea.right);
@@ -2044,22 +1962,23 @@ class ChartRenderBox extends RenderBox {
     _rebuildSpatialIndex();
 
     // First render: handle scrollbar visibility based on autoHide config
-    // Note: We use _scrollbarTheme directly in the callback (not a captured local)
+    // Note: We use _scrollbarManager directly in the callback (not a captured local)
     // because the theme may be updated via setScrollbarTheme before the callback runs.
-    if (_scrollbarAutoHideTimer == null && !_scrollbarInitialized) {
-      _scrollbarInitialized = true;
+    if (!_scrollbarManager.scrollbarInitialized) {
+      _scrollbarManager.markInitialized();
       // Only run once on first layout
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
+        final scrollbarConfig = _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
         if (scrollbarConfig.autoHide) {
           // Auto-hide enabled: show only if viewport is modified, then schedule hide
-          _scrollbarsVisible = _isViewportModified();
-          if (_scrollbarsVisible) {
-            _scheduleScrollbarAutoHide();
+          final isModified = _scrollbarManager.isViewportModified();
+          _scrollbarManager.setScrollbarsVisible(isModified);
+          if (isModified) {
+            _scrollbarManager.scheduleScrollbarAutoHide();
           }
         } else {
           // Auto-hide disabled: always show scrollbars
-          _scrollbarsVisible = true;
+          _scrollbarManager.setScrollbarsVisible(true);
         }
         markNeedsPaint();
       });
@@ -2465,7 +2384,17 @@ class ChartRenderBox extends RenderBox {
 
   void _handlePointerDown(PointerDownEvent event, Offset position) {
     // PRIORITY 1: Check if pointer is on scrollbar (highest priority)
-    if (_hitTestScrollbars(position, event)) {
+    if (_scrollbarManager.hitTestScrollbars(
+      position,
+      event.buttons,
+      isModal: coordinator.isModal,
+      onClaimMode: () => coordinator.claimMode(InteractionMode.scrollbarDragging),
+      cancelAutoScroll: () {
+        _autoScrollTargetXMax = null;
+        _autoScrollTargetWidth = null;
+        _autoScrollAnimationScheduled = false;
+      },
+    )) {
       return; // Scrollbar claimed the event
     }
 
@@ -2512,7 +2441,7 @@ class ChartRenderBox extends RenderBox {
       // Store initial pan position in widget space
       _lastPanPosition = position;
       // Show scrollbars when pan starts (once, not on every move)
-      _showScrollbarsAndScheduleHide();
+      _scrollbarManager.showScrollbarsAndScheduleHide();
       // [DEBUG OUTPUT REMOVED] Pan mode claimed - fires on user interaction
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
@@ -2737,8 +2666,8 @@ class ChartRenderBox extends RenderBox {
     }
 
     // PRIORITY 1: Handle scrollbar drag if active
-    if (_activeScrollbarAxis != null && _scrollbarDragStartPosition != null) {
-      _handleScrollbarDrag(position);
+    if (_scrollbarManager.isDragging) {
+      _scrollbarManager.handleScrollbarDrag(position);
       return; // Scrollbar is handling the event
     }
 
@@ -2894,18 +2823,12 @@ class ChartRenderBox extends RenderBox {
 
   void _handlePointerUp(PointerUpEvent event, Offset position) {
     // Clear scrollbar drag state if active
-    if (_activeScrollbarAxis != null) {
-      _activeScrollbarAxis = null;
-      _scrollbarDragStartPosition = null;
-      _scrollbarDragStartZone = null;
-
-      // Schedule auto-hide after drag ends (start inactivity timer)
-      _scheduleScrollbarAutoHide();
+    if (_scrollbarManager.isDragging) {
+      _scrollbarManager.clearScrollbarDragState();
 
       // Release scrollbar mode and end interaction
       coordinator.endInteraction();
       coordinator.releaseMode();
-      markNeedsPaint(); // Redraw with updated hover state
       return;
     }
 
@@ -3490,7 +3413,7 @@ class ChartRenderBox extends RenderBox {
 
     // PRIORITY 1: Check scrollbar hover first (before element hit testing)
     // Fixes issue #5: Show appropriate cursors for pan (center) and zoom (edges)
-    if (_checkScrollbarHover(position)) {
+    if (_scrollbarManager.checkScrollbarHover(position)) {
       return; // Scrollbar handled hover, don't check elements
     }
 
@@ -3685,7 +3608,7 @@ class ChartRenderBox extends RenderBox {
       _rebuildElementsWithTransform();
 
       // Show scrollbars on viewport change from mouse wheel zoom
-      _showScrollbarsAndScheduleHide();
+      _scrollbarManager.showScrollbarsAndScheduleHide();
 
       // Invalidate cache - transform changed from scroll zoom
       _seriesCacheManager.invalidate();
@@ -4273,900 +4196,36 @@ class ChartRenderBox extends RenderBox {
     canvas.restore(); // Restore from saveLayer
 
     // Paint scrollbars if enabled (outside plot area clipping)
-    _paintScrollbars(canvas, size);
+    _scrollbarManager.paint(canvas, size);
 
     canvas.restore(); // Final restore (removes initial offset translation)
   }
 
   // ==========================================================================
-  // Scrollbar Interaction Handlers
+  // Scrollbar Setters (delegate to ScrollbarManager)
   // ==========================================================================
 
-  /// Checks if pointer is hovering over a scrollbar and updates cursor.
-  ///
-  /// Returns true if hovering over scrollbar (prevents element hit testing).
-  /// Fixes issue #5: Show appropriate cursors for pan (center) vs zoom (edges).
-  bool _checkScrollbarHover(Offset position) {
-    if (_transform == null || _originalTransform == null) return false;
-
-    // When scrollbars are hidden, they don't exist for interaction
-    if (!_scrollbarsVisible) return false;
-
-    // Check X scrollbar hover
-    if (_showXScrollbar && _xScrollbarRect != null && _xScrollbarRect!.contains(position)) {
-      final localX = position.dx - _xScrollbarRect!.left;
-      final zone = _getScrollbarZoneAtPosition(Axis.horizontal, localX);
-      final cursor = _getCursorForScrollbarZone(zone, Axis.horizontal);
-      onCursorChange?.call(cursor);
-
-      // Cancel auto-hide while hovering (user might be about to interact)
-      _cancelScrollbarAutoHide();
-
-      // Store hover zone and repaint to show visual feedback
-      if (_xScrollbarHoverZone != zone) {
-        _xScrollbarHoverZone = zone;
-        markNeedsPaint();
-      }
-
-      return true;
+  /// Updates X scrollbar visibility.
+  void setShowXScrollbar(bool show) {
+    if (_scrollbarManager.setShowXScrollbar(show)) {
+      // Need layout to recalculate scrollbar rects
+      markNeedsLayout();
     }
+  }
 
-    // Check Y scrollbar hover
-    if (_showYScrollbar && _yScrollbarRect != null && _yScrollbarRect!.contains(position)) {
-      final localY = position.dy - _yScrollbarRect!.top;
-      final zone = _getScrollbarZoneAtPosition(Axis.vertical, localY);
-      final cursor = _getCursorForScrollbarZone(zone, Axis.vertical);
-      onCursorChange?.call(cursor);
-
-      // Cancel auto-hide while hovering (user might be about to interact)
-      _cancelScrollbarAutoHide();
-
-      // Store hover zone and repaint to show visual feedback
-      if (_yScrollbarHoverZone != zone) {
-        _yScrollbarHoverZone = zone;
-        markNeedsPaint();
-      }
-
-      return true;
+  /// Updates Y scrollbar visibility.
+  void setShowYScrollbar(bool show) {
+    if (_scrollbarManager.setShowYScrollbar(show)) {
+      // Need layout to recalculate scrollbar rects
+      markNeedsLayout();
     }
+  }
 
-    // Clear hover zones when not hovering over scrollbars
-    if (_xScrollbarHoverZone != null || _yScrollbarHoverZone != null) {
-      _xScrollbarHoverZone = null;
-      _yScrollbarHoverZone = null;
-
-      // Resume auto-hide timer when mouse leaves scrollbar
-      _scheduleScrollbarAutoHide();
-
+  /// Updates scrollbar theme configuration.
+  void setScrollbarTheme(ScrollbarConfig? theme) {
+    if (_scrollbarManager.setScrollbarTheme(theme)) {
       markNeedsPaint();
     }
-
-    return false; // Not hovering over scrollbar
-  }
-
-  /// Gets the scrollbar zone at a local position within the scrollbar.
-  HitTestZone? _getScrollbarZoneAtPosition(Axis axis, double localPos) {
-    if (_transform == null || _originalTransform == null) return null;
-
-    final scrollbarRect = axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
-    if (scrollbarRect == null) return null;
-
-    final trackLength = axis == Axis.horizontal ? scrollbarRect.width : scrollbarRect.height;
-
-    // CRITICAL: Use streaming bounds when available for correct handle positioning
-    final double dataMin;
-    final double dataMax;
-    if (_streamingBounds != null && axis == Axis.horizontal) {
-      dataMin = _streamingBounds!.xMin;
-      dataMax = _streamingBounds!.xMax;
-    } else if (_streamingBounds != null && axis == Axis.vertical) {
-      dataMin = _streamingBounds!.yMin;
-      dataMax = _streamingBounds!.yMax;
-    } else {
-      dataMin = axis == Axis.horizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
-      dataMax = axis == Axis.horizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
-    }
-    final viewportMin = axis == Axis.horizontal ? _transform!.dataXMin : _transform!.dataYMin;
-    final viewportMax = axis == Axis.horizontal ? _transform!.dataXMax : _transform!.dataYMax;
-
-    final dataSpan = dataMax - dataMin;
-    final viewportSpan = viewportMax - viewportMin;
-    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
-
-    // Calculate handle geometry
-    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-    // Calculate handle position (same logic for both axes - no inversion!)
-    // For Y-axis: Chart Y increases upward, but screen Y increases downward
-    // The natural mapping works: viewport at bottom (low Y) → handle at top (low screen Y)
-    final handlePosition = ((viewportMin - dataMin) / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
-
-    // Calculate zoom-adjusted edge grip width (must match rendering logic)
-    // Both X and Y axes now use LINEAR zoom scaling for consistency
-    final zoomFactor = dataSpan / viewportSpan;
-    final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-    final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size
-    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
-        .clamp(
-          math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
-          maxEdgeGripWidth,
-        )
-        .toDouble();
-
-    // Use ScrollbarController to determine zone
-    final zone = ScrollbarController.getHitTestZone(
-      axis == Axis.horizontal ? Offset(localPos, 0) : Offset(0, localPos),
-      axis,
-      trackLength,
-      handlePosition,
-      handleSize,
-      edgeDetectionThreshold: zoomAdjustedEdgeGripWidth,
-    );
-
-    return zone;
-  }
-
-  /// Gets the appropriate cursor for a scrollbar zone.
-  MouseCursor _getCursorForScrollbarZone(HitTestZone? zone, Axis axis) {
-    if (zone == null) return SystemMouseCursors.basic;
-
-    switch (zone) {
-      case HitTestZone.track:
-        return SystemMouseCursors.click; // Click to jump
-      case HitTestZone.center:
-        return SystemMouseCursors.grab; // Drag to pan
-      case HitTestZone.leftEdge:
-      case HitTestZone.rightEdge:
-        return SystemMouseCursors.resizeColumn; // Drag to zoom horizontally
-      case HitTestZone.topEdge:
-      case HitTestZone.bottomEdge:
-        return SystemMouseCursors.resizeRow; // Drag to zoom vertically
-    }
-  }
-
-  /// Hit tests scrollbar regions and handles initial scrollbar interaction.
-  ///
-  /// Returns true if pointer is on a scrollbar and starts interaction, false otherwise.
-  /// When true is returned, the pointer event should not propagate to chart handlers.
-  bool _hitTestScrollbars(Offset position, PointerDownEvent event) {
-    if (event.buttons != kPrimaryMouseButton) {
-      return false; // Only left-click interacts with scrollbars
-    }
-
-    // Check X scrollbar (horizontal, bottom of chart)
-    if (_showXScrollbar && _xScrollbarRect != null && _xScrollbarRect!.contains(position)) {
-      return _startScrollbarInteraction(Axis.horizontal, position);
-    }
-
-    // Check Y scrollbar (vertical, right of chart)
-    if (_showYScrollbar && _yScrollbarRect != null && _yScrollbarRect!.contains(position)) {
-      return _startScrollbarInteraction(Axis.vertical, position);
-    }
-
-    return false; // Not on any scrollbar
-  }
-
-  /// Starts scrollbar interaction after hit test confirms pointer is on scrollbar.
-  ///
-  /// Returns true to indicate event was claimed by scrollbar.
-  bool _startScrollbarInteraction(Axis axis, Offset position) {
-    if (_transform == null || _originalTransform == null) {
-      return false; // Transform not ready
-    }
-
-    // Check if coordinator allows scrollbar interaction (not blocked by modal modes)
-    if (coordinator.isModal) {
-      return false; // Modal state blocks scrollbar interaction
-    }
-
-    // Get scrollbar rect based on axis
-    final scrollbarRect = axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
-    if (scrollbarRect == null) return false;
-
-    // Calculate handle geometry
-    final isHorizontal = axis == Axis.horizontal;
-    final trackLength = isHorizontal ? scrollbarRect.width : scrollbarRect.height;
-
-    // CRITICAL: Use streaming bounds when available for correct handle positioning
-    final double dataMin;
-    final double dataMax;
-    if (_streamingBounds != null && isHorizontal) {
-      dataMin = _streamingBounds!.xMin;
-      dataMax = _streamingBounds!.xMax;
-    } else if (_streamingBounds != null && !isHorizontal) {
-      dataMin = _streamingBounds!.yMin;
-      dataMax = _streamingBounds!.yMax;
-    } else {
-      dataMin = isHorizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
-      dataMax = isHorizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
-    }
-    final viewportMin = isHorizontal ? _transform!.dataXMin : _transform!.dataYMin;
-    final viewportMax = isHorizontal ? _transform!.dataXMax : _transform!.dataYMax;
-
-    final dataSpan = dataMax - dataMin;
-    final viewportSpan = viewportMax - viewportMin;
-    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
-
-    // Calculate handle size and position using same formulas as _paintScrollbars
-    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-    // Calculate handle position (same formula for both axes - natural mapping works!)
-    final handlePosition = ((viewportMin - dataMin) / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
-
-    // Calculate zoom-adjusted edge grip width (must match rendering logic)
-    // Both X and Y axes use LINEAR zoom scaling for consistency
-    final zoomFactor = dataSpan / viewportSpan;
-    final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-    final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size
-    final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
-        .clamp(
-          math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
-          maxEdgeGripWidth,
-        )
-        .toDouble();
-
-    // Convert pointer position to scrollbar-local coordinate
-    final localPos = isHorizontal ? (position.dx - scrollbarRect.left) : (position.dy - scrollbarRect.top);
-
-    // Use ScrollbarController to determine which zone was hit (with zoom-adjusted edges)
-    final hitZone = ScrollbarController.getHitTestZone(
-      isHorizontal ? Offset(localPos, 0) : Offset(0, localPos), // Correct offset based on axis
-      axis,
-      trackLength,
-      handlePosition,
-      handleSize,
-      edgeDetectionThreshold: zoomAdjustedEdgeGripWidth,
-    );
-
-    if (hitZone == null) {
-      return false; // Outside scrollbar bounds
-    }
-
-    // Store drag state
-    _activeScrollbarAxis = axis;
-    _scrollbarDragStartPosition = position;
-    _scrollbarLastDragPosition = position; // Initialize for incremental delta tracking
-    _scrollbarDragStartZone = hitZone;
-
-    // CRITICAL: Cancel auto-scroll when user interacts with scrollbar
-    // This prevents auto-scroll from overriding manual scrollbar zoom/pan
-    _autoScrollTargetXMax = null;
-    _autoScrollTargetWidth = null;
-    _autoScrollAnimationScheduled = false;
-
-    // Show scrollbars and cancel auto-hide during drag (don't hide while dragging!)
-    _scrollbarsVisible = true;
-    _cancelScrollbarAutoHide();
-
-    // Handle track click immediately (doesn't require drag)
-    if (hitZone == HitTestZone.track) {
-      _handleScrollbarTrackClick(axis, localPos, trackLength, handleSize);
-    }
-
-    // Claim scrollbar mode in coordinator
-    coordinator.claimMode(InteractionMode.scrollbarDragging);
-
-    markNeedsPaint(); // Redraw with active state
-    return true; // Event claimed by scrollbar
-  }
-
-  /// Handles ongoing scrollbar drag interaction.
-  void _handleScrollbarDrag(Offset currentPosition) {
-    if (_activeScrollbarAxis == null ||
-        _scrollbarDragStartPosition == null ||
-        _scrollbarDragStartZone == null ||
-        _scrollbarLastDragPosition == null) {
-      return; // No active drag
-    }
-
-    // Track clicks don't drag - they jump immediately
-    if (_scrollbarDragStartZone == HitTestZone.track) {
-      return;
-    }
-
-    final axis = _activeScrollbarAxis!;
-    final lastPos = _scrollbarLastDragPosition!;
-    final zone = _scrollbarDragStartZone!;
-
-    // Calculate INCREMENTAL pixel delta from last position (not from drag start)
-    // This fixes issue #4: oversensitive pan due to accumulated delta
-    final pixelDelta = axis == Axis.horizontal ? (currentPosition.dx - lastPos.dx) : (currentPosition.dy - lastPos.dy);
-
-    // Update last position for next incremental delta
-    _scrollbarLastDragPosition = currentPosition;
-
-    // Convert zone to interaction type
-    final interactionType = _scrollbarZoneToInteractionType(zone, axis);
-
-    // Call appropriate pixel-delta handler
-    if (axis == Axis.horizontal) {
-      _handleXScrollbarDelta(pixelDelta, interactionType);
-    } else {
-      _handleYScrollbarDelta(pixelDelta, interactionType);
-    }
-  }
-
-  /// Handles track click (jump to clicked position).
-  void _handleScrollbarTrackClick(Axis axis, double clickPosition, double trackLength, double handleSize) {
-    // Calculate where the handle CENTER should be positioned (clicked position)
-    final targetHandleCenter = clickPosition;
-
-    // Calculate where handle CENTER currently is
-    final currentHandlePosition =
-        axis == Axis.horizontal ? _calculateCurrentHandlePosition(Axis.horizontal) : _calculateCurrentHandlePosition(Axis.vertical);
-    final currentHandleCenter = currentHandlePosition + (handleSize / 2.0);
-
-    // Pixel delta = where we want to be - where we are
-    final pixelDelta = targetHandleCenter - currentHandleCenter;
-
-    // Call pixel-delta handler with trackClick interaction type
-    if (axis == Axis.horizontal) {
-      _handleXScrollbarDelta(pixelDelta, ScrollbarInteraction.trackClick);
-    } else {
-      _handleYScrollbarDelta(pixelDelta, ScrollbarInteraction.trackClick);
-    }
-  }
-
-  /// Calculates current handle position for an axis (used for track click calculations).
-  double _calculateCurrentHandlePosition(Axis axis) {
-    if (_transform == null || _originalTransform == null) return 0.0;
-
-    final isHorizontal = axis == Axis.horizontal;
-    final scrollbarRect = isHorizontal ? _xScrollbarRect : _yScrollbarRect;
-    if (scrollbarRect == null) return 0.0;
-
-    final trackLength = isHorizontal ? scrollbarRect.width : scrollbarRect.height;
-
-    // CRITICAL: Use streaming bounds when available for correct scrollbar behavior
-    final double dataMin;
-    final double dataMax;
-    if (_streamingBounds != null && isHorizontal) {
-      dataMin = _streamingBounds!.xMin;
-      dataMax = _streamingBounds!.xMax;
-    } else if (_streamingBounds != null && !isHorizontal) {
-      dataMin = _streamingBounds!.yMin;
-      dataMax = _streamingBounds!.yMax;
-    } else {
-      dataMin = isHorizontal ? _originalTransform!.dataXMin : _originalTransform!.dataYMin;
-      dataMax = isHorizontal ? _originalTransform!.dataXMax : _originalTransform!.dataYMax;
-    }
-    final viewportMin = isHorizontal ? _transform!.dataXMin : _transform!.dataYMin;
-
-    final dataSpan = dataMax - dataMin;
-    if (dataSpan <= 0) return 0.0;
-
-    // Calculate handle position (same formula for both axes - natural mapping!)
-    final viewportOffset = viewportMin - dataMin;
-    return (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength);
-  }
-
-  /// Converts HitTestZone to ScrollbarInteraction type.
-  ScrollbarInteraction _scrollbarZoneToInteractionType(HitTestZone zone, Axis axis) {
-    switch (zone) {
-      case HitTestZone.leftEdge:
-      case HitTestZone.topEdge:
-        return ScrollbarInteraction.zoomLeftOrTop;
-      case HitTestZone.rightEdge:
-      case HitTestZone.bottomEdge:
-        return ScrollbarInteraction.zoomRightOrBottom;
-      case HitTestZone.center:
-        return ScrollbarInteraction.pan;
-      case HitTestZone.track:
-        return ScrollbarInteraction.trackClick;
-    }
-  }
-
-  // ==========================================================================
-  // Scrollbar Auto-Hide Logic
-  // ==========================================================================
-
-  /// Schedules scrollbar auto-hide after configured inactivity delay.
-  ///
-  /// "Inactivity" means no zoom/pan actions (mouse, keyboard, or scrollbar).
-  /// Cancels any existing timer and starts fresh countdown.
-  void _scheduleScrollbarAutoHide() {
-    final scrollbarConfig = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
-    if (!scrollbarConfig.autoHide) return;
-
-    _cancelScrollbarAutoHide();
-
-    _scrollbarAutoHideTimer = Timer(scrollbarConfig.autoHideDelay, () {
-      _scrollbarsVisible = false;
-      markNeedsPaint();
-    });
-  }
-
-  /// Cancels scheduled auto-hide timer without changing visibility.
-  void _cancelScrollbarAutoHide() {
-    _scrollbarAutoHideTimer?.cancel();
-    _scrollbarAutoHideTimer = null;
-  }
-
-  /// Shows scrollbars and schedules auto-hide.
-  ///
-  /// Call on any zoom/pan action to show scrollbars and reset inactivity timer.
-  void _showScrollbarsAndScheduleHide() {
-    _scrollbarsVisible = true;
-    _scheduleScrollbarAutoHide();
-    markNeedsPaint();
-  }
-
-  /// Checks if viewport is zoomed or panned from original state.
-  bool _isViewportModified() {
-    if (_transform == null || _originalTransform == null) return false;
-
-    return _transform!.dataXMin != _originalTransform!.dataXMin ||
-        _transform!.dataXMax != _originalTransform!.dataXMax ||
-        _transform!.dataYMin != _originalTransform!.dataYMin ||
-        _transform!.dataYMax != _originalTransform!.dataYMax;
-  }
-
-  // ==========================================================================
-  // Scrollbar Rendering
-  // ==========================================================================
-
-  /// Paints scrollbars if enabled.
-  ///
-  /// Renders horizontal and/or vertical scrollbars using ScrollbarPainter.
-  /// Scrollbars show the current viewport range relative to the full data range.
-  ///
-  /// **ScrollbarConfig Properties - Implementation Status:**
-  ///
-  /// ✅ **FULLY IMPLEMENTED (Visual):**
-  /// - `thickness` - Width/height of scrollbar track
-  /// - `minHandleSize` - Minimum LENGTH of draggable handle (prevents tiny handle when zoomed out)
-  /// - `padding` - Space between scrollbar and chart edge
-  /// - `borderRadius` - Corner radius for rounded edges
-  /// - `edgeGripWidth` - WIDTH of zoom edge zones at each end (relationship: minHandleSize >= edgeGripWidth * 2)
-  ///
-  /// ✅ **FULLY IMPLEMENTED (Colors):**
-  /// - `trackColor` - Background color of scrollbar track
-  /// - `trackHoverColor` - Track color when hovering over track (not on handle)
-  /// - `handleColor` - Default handle color
-  /// - `handleHoverColor` - Handle color when hovering
-  /// - `handleActiveColor` - Handle color when dragging
-  /// - `handleDisabledColor` - Handle color when disabled (TODO: wire to InteractionConfig)
-  /// - `edgeZoneColor` - Default color of edge zones (always visible)
-  /// - `edgeHoverColor` - Edge zone color when hovering (zoom affordance)
-  /// - `gripIndicatorColor` - Color of grip indicator lines
-  ///
-  /// ✅ **FULLY IMPLEMENTED (Grip Indicators):**
-  /// - `showGripIndicator` - Toggle center grip indicator on/off
-  ///
-  /// ❌ **NOT IMPLEMENTED (Animations - Architectural):**
-  /// - `autoHide` - Auto-hide after inactivity (requires animation system)
-  /// - `autoHideDelay` - Delay before hiding (requires timer management)
-  /// - `fadeDuration` - Fade animation duration (requires animation controller)
-  ///
-  /// ❌ **NOT IMPLEMENTED (Behavior - Architectural):**
-  /// - `enableResizeHandles` - Edge zones always enabled (no conditional logic)
-  /// - `minZoomRatio` - Zoom limits not enforced in scrollbar (handled elsewhere)
-  /// - `maxZoomRatio` - Zoom limits not enforced in scrollbar (handled elsewhere)
-  ///
-  /// ❌ **NOT IMPLEMENTED (Accessibility - Platform-Specific):**
-  /// - `forcedColorsMode` - High contrast mode (requires MediaQuery integration)
-  /// - `prefersReducedMotion` - Motion preferences (requires MediaQuery integration)
-  ///
-  /// **Note:** The ChartScrollbar widget (separate component) implements some of these
-  /// missing features, but chart_render_box does direct rendering for performance.
-  void _paintScrollbars(Canvas canvas, Size size) {
-    if (_transform == null || _originalTransform == null) return;
-
-    // Don't render scrollbars when hidden (they shouldn't exist)
-    if (!_scrollbarsVisible) return;
-
-    final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
-
-    // Paint horizontal scrollbar (X-axis)
-    if (_showXScrollbar && _xScrollbarRect != null) {
-      // CRITICAL FIX: Use streaming bounds for full data range when available
-      // During streaming, _originalTransform may be overwritten by performLayout
-      // to match the sliding viewport, but _streamingBounds always has the TRUE
-      // full data range (0 to latest point).
-      final double dataMin;
-      final double dataMax;
-      if (_streamingBounds != null) {
-        dataMin = _streamingBounds!.xMin;
-        dataMax = _streamingBounds!.xMax;
-      } else {
-        dataMin = _originalTransform!.dataXMin;
-        dataMax = _originalTransform!.dataXMax;
-      }
-
-      // Use current transform for viewport range
-      final viewportMin = _transform!.dataXMin;
-      final viewportMax = _transform!.dataXMax;
-
-      final trackLength = _xScrollbarRect!.width;
-      final dataSpan = dataMax - dataMin;
-
-      // Guard against zero/negative data span
-      if (dataSpan <= 0) return;
-
-      // Calculate handle size as ZOOM LEVEL representation
-      // At 100% zoom (all data visible): handle = ~80% of track (no zoom applied)
-      // As zoom increases: handle shrinks to show zoomed-in state
-      // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
-      final viewportSpan = viewportMax - viewportMin;
-      final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
-      final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-      // Calculate handle position (where viewport starts relative to data)
-      final viewportOffset = viewportMin - dataMin;
-      final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
-
-      // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
-      // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 8px)
-      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2x base size (e.g., 16px)
-      // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
-      final zoomFactor = dataSpan / viewportSpan;
-      final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-      final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size to leave center draggable
-      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
-          .clamp(
-            math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
-            maxEdgeGripWidth,
-          )
-          .toDouble();
-
-      // Create modified scrollbar config with zoom-adjusted edge zones
-      final zoomAdjustedConfig = scrollbarTheme.copyWith(
-        edgeGripWidth: zoomAdjustedEdgeGripWidth,
-      );
-
-      // Create scrollbar state with hover zone for visual feedback
-      final state = ScrollbarState(
-        handlePosition: handlePosition,
-        handleSize: handleSize,
-        isDragging: _activeScrollbarAxis == Axis.horizontal,
-        hoverZone: _xScrollbarHoverZone,
-        isFocused: false,
-        isVisible: true,
-      );
-
-      // Create painter and render with zoom-adjusted config
-      final painter = ScrollbarPainter(
-        config: zoomAdjustedConfig,
-        state: state,
-        isHorizontal: true,
-        trackLength: trackLength,
-        isTrackHovered: _xScrollbarHoverZone == HitTestZone.track,
-        opacity: 1.0,
-      );
-
-      canvas.save();
-      canvas.translate(_xScrollbarRect!.left, _xScrollbarRect!.top);
-      painter.paint(canvas, Size(_xScrollbarRect!.width, _xScrollbarRect!.height));
-      canvas.restore();
-    }
-
-    // Paint vertical scrollbar (Y-axis)
-    if (_showYScrollbar && _yScrollbarRect != null) {
-      // Use original transform for full data range
-      final dataMin = _originalTransform!.dataYMin;
-      final dataMax = _originalTransform!.dataYMax;
-
-      // Use current transform for viewport range
-      final viewportMin = _transform!.dataYMin;
-      final viewportMax = _transform!.dataYMax;
-
-      final trackLength = _yScrollbarRect!.height;
-      final dataSpan = dataMax - dataMin;
-
-      // Calculate handle size as ZOOM LEVEL representation
-      // At 100% zoom (all data visible): handle = ~80% of track (no zoom applied)
-      // As zoom increases: handle shrinks to show zoomed-in state
-      // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
-      final viewportSpan = viewportMax - viewportMin;
-      final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
-      final handleSize = (visibleRatio * trackLength).clamp(scrollbarTheme.minHandleSize, trackLength);
-
-      // Calculate handle position (where viewport starts relative to data)
-      // Y-AXIS INVERTED: In chart space, Y increases upward, but in screen space Y increases downward
-      // When viewport shows LOWER Y values (bottom of chart), handle should be at TOP of scrollbar
-      // When viewport shows HIGHER Y values (top of chart), handle should be at BOTTOM of scrollbar
-      // Therefore: use viewportMin (not viewportMax) and NO inversion needed!
-      final viewportOffset = viewportMin - dataMin;
-      final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(0.0, trackLength - handleSize);
-
-      // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
-      // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 40px)
-      // At 200% zoom (visibleRatio=0.5): edgeGripWidth = 2x base size (e.g., 80px)
-      // Formula: zoomFactor = 1 / visibleRatio = dataSpan / viewportSpan
-      final zoomFactor = dataSpan / viewportSpan;
-      final baseEdgeGripWidth = scrollbarTheme.edgeGripWidth;
-      final maxEdgeGripWidth = handleSize * 0.4; // Max 40% of handle size to leave center draggable
-      final zoomAdjustedEdgeGripWidth = (baseEdgeGripWidth * zoomFactor)
-          .clamp(
-            math.min(baseEdgeGripWidth, maxEdgeGripWidth), // Ensure min <= max
-            maxEdgeGripWidth,
-          )
-          .toDouble();
-
-      // Create modified scrollbar config with zoom-adjusted edge zones
-      final zoomAdjustedConfig = scrollbarTheme.copyWith(
-        edgeGripWidth: zoomAdjustedEdgeGripWidth,
-      );
-
-      // Create scrollbar state with hover zone for visual feedback
-      final state = ScrollbarState(
-        handlePosition: handlePosition,
-        handleSize: handleSize,
-        isDragging: _activeScrollbarAxis == Axis.vertical,
-        hoverZone: _yScrollbarHoverZone,
-        isFocused: false,
-        isVisible: true,
-      );
-
-      // Create painter and render with zoom-adjusted config
-      final painter = ScrollbarPainter(
-        config: zoomAdjustedConfig,
-        state: state,
-        isHorizontal: false,
-        trackLength: trackLength,
-        isTrackHovered: _yScrollbarHoverZone == HitTestZone.track,
-        opacity: 1.0,
-      );
-
-      canvas.save();
-      canvas.translate(_yScrollbarRect!.left, _yScrollbarRect!.top);
-      painter.paint(canvas, Size(_yScrollbarRect!.width, _yScrollbarRect!.height));
-      canvas.restore();
-    }
-  }
-
-  // ============================================================================
-  // Scrollbar Interaction Handlers
-  // ============================================================================
-
-  /// Handles horizontal scrollbar pixel delta and converts to viewport change.
-  ///
-  /// Converts pixel delta from scrollbar to data delta using current viewport,
-  /// then updates the X viewport range accordingly.
-  ///
-  /// **Parameters**:
-  /// - `pixelDelta`: Horizontal pixel offset from scrollbar drag
-  /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
-  void _handleXScrollbarDelta(double pixelDelta, ScrollbarInteraction interactionType) {
-    if (_transform == null || _originalTransform == null || _xScrollbarRect == null) return;
-
-    final trackLength = _xScrollbarRect!.width;
-    if (trackLength == 0) return;
-
-    // CRITICAL: Use streaming bounds when available for correct scrollbar interaction
-    final double dataMin;
-    final double dataMax;
-    if (_streamingBounds != null) {
-      dataMin = _streamingBounds!.xMin;
-      dataMax = _streamingBounds!.xMax;
-    } else {
-      dataMin = _originalTransform!.dataXMin;
-      dataMax = _originalTransform!.dataXMax;
-    }
-    final dataSpan = dataMax - dataMin;
-    if (dataSpan <= 0) return;
-
-    // Get current viewport range
-    final viewportMin = _transform!.dataXMin;
-    final viewportMax = _transform!.dataXMax;
-    final viewportSpan = viewportMax - viewportMin;
-
-    // Convert pixel delta to data delta
-    final dataPerPixel = dataSpan / trackLength;
-    final dataDelta = pixelDelta * dataPerPixel;
-
-    // Apply based on interaction type
-    switch (interactionType) {
-      case ScrollbarInteraction.pan:
-        // Pan: shift entire viewport by delta
-        var newMin = viewportMin + dataDelta;
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
-        break;
-
-      case ScrollbarInteraction.zoomLeftOrTop:
-        // Zoom left: adjust minimum boundary only
-        var newMin = viewportMin + dataDelta;
-
-        // Clamp to prevent inversion and respect data bounds
-        newMin = newMin.clamp(dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
-
-        _transform = _transform!.copyWith(dataXMin: newMin);
-        break;
-
-      case ScrollbarInteraction.zoomRightOrBottom:
-        // Zoom right: adjust maximum boundary only
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to prevent inversion and respect data bounds
-        newMax = newMax.clamp(viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
-
-        _transform = _transform!.copyWith(dataXMax: newMax);
-        break;
-
-      case ScrollbarInteraction.trackClick:
-        // Track click: center viewport at clicked position
-        final targetDataPosition = dataMin + (pixelDelta * dataPerPixel);
-        final halfSpan = viewportSpan / 2;
-
-        var newMin = targetDataPosition - halfSpan;
-        var newMax = targetDataPosition + halfSpan;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
-        break;
-
-      case ScrollbarInteraction.keyboard:
-        // Keyboard: apply delta directly (already calculated by controller)
-        var newMin = viewportMin + dataDelta;
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataXMin: newMin, dataXMax: newMax);
-        break;
-    }
-
-    // Update axes and trigger repaint
-    _updateAxesFromTransform();
-
-    // Show scrollbars and schedule auto-hide after viewport change
-    _showScrollbarsAndScheduleHide();
-  }
-
-  /// Handles vertical scrollbar pixel delta and converts to viewport change.
-  ///
-  /// Converts pixel delta from scrollbar to data delta using current viewport,
-  /// then updates the Y viewport range accordingly.
-  ///
-  /// **Y-AXIS COORDINATE MAPPING**: Drag direction matches viewport movement.
-  /// Positive pixelDelta (drag down) moves viewport DOWN (to lower Y values).
-  /// Negative pixelDelta (drag up) moves viewport UP (to higher Y values).
-  ///
-  /// **Parameters**:
-  /// - `pixelDelta`: Vertical pixel offset from scrollbar drag
-  /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
-  void _handleYScrollbarDelta(double pixelDelta, ScrollbarInteraction interactionType) {
-    if (_transform == null || _originalTransform == null || _yScrollbarRect == null) return;
-
-    final trackLength = _yScrollbarRect!.height;
-    if (trackLength == 0) return;
-
-    // CRITICAL: Use streaming bounds when available for correct scrollbar interaction
-    final double dataMin;
-    final double dataMax;
-    if (_streamingBounds != null) {
-      dataMin = _streamingBounds!.yMin;
-      dataMax = _streamingBounds!.yMax;
-    } else {
-      dataMin = _originalTransform!.dataYMin;
-      dataMax = _originalTransform!.dataYMax;
-    }
-    final dataSpan = dataMax - dataMin;
-    if (dataSpan <= 0) return;
-
-    // Get current viewport range
-    final viewportMin = _transform!.dataYMin;
-    final viewportMax = _transform!.dataYMax;
-    final viewportSpan = viewportMax - viewportMin;
-
-    // Convert pixel delta to data delta (natural mapping for Y-axis)
-    final dataPerPixel = dataSpan / trackLength;
-    final dataDelta = pixelDelta * dataPerPixel; // Drag down = move viewport down
-
-    // Apply based on interaction type
-    switch (interactionType) {
-      case ScrollbarInteraction.pan:
-        // Pan: shift entire viewport by delta
-        var newMin = viewportMin + dataDelta;
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
-        break;
-
-      case ScrollbarInteraction.zoomLeftOrTop:
-        // Zoom top: adjust minimum boundary only
-        var newMin = viewportMin + dataDelta;
-
-        // Clamp to prevent inversion and respect data bounds
-        newMin = newMin.clamp(dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
-
-        _transform = _transform!.copyWith(dataYMin: newMin);
-        break;
-
-      case ScrollbarInteraction.zoomRightOrBottom:
-        // Zoom bottom: adjust maximum boundary only
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to prevent inversion and respect data bounds
-        newMax = newMax.clamp(viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
-
-        _transform = _transform!.copyWith(dataYMax: newMax);
-        break;
-
-      case ScrollbarInteraction.trackClick:
-        // Track click: center viewport at clicked position
-        final targetDataPosition = dataMin + (pixelDelta * dataPerPixel);
-        final halfSpan = viewportSpan / 2;
-
-        var newMin = targetDataPosition - halfSpan;
-        var newMax = targetDataPosition + halfSpan;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
-        break;
-
-      case ScrollbarInteraction.keyboard:
-        // Keyboard: apply delta directly (already calculated by controller)
-        var newMin = viewportMin + dataDelta;
-        var newMax = viewportMax + dataDelta;
-
-        // Clamp to data bounds
-        if (newMin < dataMin) {
-          newMin = dataMin;
-          newMax = dataMin + viewportSpan;
-        }
-        if (newMax > dataMax) {
-          newMax = dataMax;
-          newMin = dataMax - viewportSpan;
-        }
-
-        _transform = _transform!.copyWith(dataYMin: newMin, dataYMax: newMax);
-        break;
-    }
-
-    // Update axes and trigger repaint
-    _updateAxesFromTransform();
-
-    // Show scrollbars and schedule auto-hide after viewport change
-    _showScrollbarsAndScheduleHide();
   }
 
   /// Computes axis widths for layout calculations.
@@ -5647,5 +4706,49 @@ class ChartRenderBox extends RenderBox {
   /// - Handles normalized values outside [0, 1] (extrapolates linearly)
   double denormalizeValue(double normalizedValue, double min, double max) {
     return MultiAxisNormalizer.denormalize(normalizedValue, min, max);
+  }
+}
+
+// =============================================================================
+// Scrollbar Delegate Implementation
+// =============================================================================
+
+/// Internal delegate implementation for ScrollbarManager.
+///
+/// This class adapts ChartRenderBox to the ScrollbarDelegate interface,
+/// providing the scrollbar manager with access to transforms and the ability
+/// to apply viewport changes.
+class _ScrollbarDelegateImpl implements ScrollbarDelegate {
+  _ScrollbarDelegateImpl(this._renderBox);
+
+  final ChartRenderBox _renderBox;
+
+  @override
+  ChartTransform? get transform => _renderBox._transform;
+
+  @override
+  ChartTransform? get originalTransform => _renderBox._originalTransform;
+
+  @override
+  DataBounds? get streamingBounds => _renderBox._streamingBounds;
+
+  @override
+  void applyTransform(ChartTransform newTransform) {
+    _renderBox._transform = newTransform;
+  }
+
+  @override
+  void updateAxesFromTransform() {
+    _renderBox._updateAxesFromTransform();
+  }
+
+  @override
+  void markNeedsPaint() {
+    _renderBox.markNeedsPaint();
+  }
+
+  @override
+  void setCursor(MouseCursor cursor) {
+    _renderBox.onCursorChange?.call(cursor);
   }
 }
