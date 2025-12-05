@@ -71,6 +71,9 @@ class LiveStreamController extends ChangeNotifier {
   ///   margin on the right side when auto-scrolling. Default: 5%.
   /// - [viewportDataPoints]: Number of data points to show in viewport during
   ///   auto-scroll. If null, shows all accumulated data. Default: null.
+  /// - [maxVisiblePoints]: Maximum points to show in viewport when autoScroll
+  ///   is false (expand mode). When exceeded, viewport switches to sliding
+  ///   window behavior. User can still pan back to see older data. Default: 10000.
   /// - [pauseBufferSize]: Maximum points to buffer while paused.
   ///   Older buffered points are discarded (FIFO). Default: 10000.
   ///
@@ -90,6 +93,7 @@ class LiveStreamController extends ChangeNotifier {
     this.autoScroll = true,
     this.autoScrollMarginPercent = 5.0,
     this.viewportDataPoints,
+    this.maxVisiblePoints = 10000,
     this.pauseBufferSize = 10000,
   })  : assert(maxPoints > 0, 'maxPoints must be positive'),
         assert(
@@ -100,6 +104,7 @@ class LiveStreamController extends ChangeNotifier {
           viewportDataPoints == null || viewportDataPoints > 0,
           'viewportDataPoints must be positive if specified',
         ),
+        assert(maxVisiblePoints > 0, 'maxVisiblePoints must be positive'),
         assert(pauseBufferSize > 0, 'pauseBufferSize must be positive'),
         _streamingBuffer = StreamingBuffer(maxSize: maxPoints),
         _pauseBuffer = BufferManager<ChartDataPoint>(maxSize: pauseBufferSize);
@@ -149,6 +154,20 @@ class LiveStreamController extends ChangeNotifier {
   ///
   /// **Example**: Set to 100 to always show the last 100 points.
   final int? viewportDataPoints;
+
+  /// Maximum points to show in viewport when autoScroll is false (expand mode).
+  ///
+  /// When the buffer exceeds this limit:
+  /// - Viewport switches from expand mode to sliding window behavior
+  /// - Oldest points scroll off the left edge (but remain in buffer)
+  /// - User can still pan left to see historical data
+  ///
+  /// This prevents performance degradation when streaming large datasets
+  /// in expand mode. Set higher for more visible history, lower for better
+  /// performance.
+  ///
+  /// **Default**: 10000 points.
+  final int maxVisiblePoints;
 
   /// Maximum points to buffer while streaming is paused.
   ///
@@ -434,6 +453,7 @@ class LiveStreamController extends ChangeNotifier {
       seriesId: seriesId,
       buffer: _streamingBuffer,
       expandViewportWhenNotAutoScrolling: !autoScroll,
+      maxVisiblePoints: maxVisiblePoints,
     );
 
     // Auto-scroll to latest if enabled

@@ -55,6 +55,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   double _autoScrollMarginPercent = 5.0;
   int _pauseBufferSize = 5000;
   int _viewportDataPoints = 100; // How many points to show in viewport
+  int _maxVisiblePoints = 1000; // Max points before expand mode switches to sliding
 
   // Data Generation Configuration
   int _updateRateHz = 20;
@@ -101,6 +102,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       autoScroll: _autoScroll,
       autoScrollMarginPercent: _autoScrollMarginPercent,
       viewportDataPoints: _viewportDataPoints,
+      maxVisiblePoints: _maxVisiblePoints,
       pauseBufferSize: _pauseBufferSize,
     );
 
@@ -310,7 +312,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           BoolOption(
             label: 'Auto-Scroll Mode',
             value: _autoScroll,
-            subtitle: _autoScroll ? 'Following latest data (sliding window)' : 'Expand Mode: Viewport grows to show ALL data',
+            subtitle: _autoScroll ? 'Following latest data (sliding window)' : 'Expand Mode: Viewport grows until $_maxVisiblePoints pts',
             onChanged: (v) {
               setState(() => _autoScroll = v);
               _recreateController();
@@ -337,6 +339,19 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
               suffix: 'pts',
               onChanged: (v) {
                 setState(() => _viewportDataPoints = v);
+              },
+            ),
+          ] else ...[
+            // Expand mode settings
+            IntSliderOption(
+              label: 'Max Visible Points',
+              value: _maxVisiblePoints,
+              min: 500,
+              max: 50000,
+              suffix: 'pts',
+              onChanged: (v) {
+                setState(() => _maxVisiblePoints = v);
+                _recreateController();
               },
             ),
           ],
