@@ -1457,6 +1457,7 @@ class ChartRenderBox extends RenderBox {
     required String seriesId,
     required StreamingBuffer buffer,
     bool expandViewportWhenNotAutoScrolling = false,
+    int maxVisiblePoints = 10000,
   }) {
     // Store buffer reference (zero-copy!)
     _streamingBuffers[seriesId] = buffer;
@@ -1517,38 +1518,64 @@ class ChartRenderBox extends RenderBox {
 
       // When auto-scroll is OFF, use smooth animation to expand viewport
       if (expandViewportWhenNotAutoScrolling) {
-        // In initial state, set viewport directly to data bounds (no animation from 0-1)
-        if (isInitialState) {
-          _transform = _transform!.copyWith(
-            dataXMin: xMin,
-            dataXMax: xMax,
-            dataYMin: targetYMin,
-            dataYMax: targetYMax,
-          );
-          _updateAxesFromTransform();
-          // Initialize expansion targets to current data bounds
-          _expansionTargetYMin = targetYMin;
-          _expansionTargetYMax = targetYMax;
+        // Check if we've exceeded maxVisiblePoints - switch to sliding window mode
+        final exceedsMaxVisible = buffer.length > maxVisiblePoints;
+
+        if (exceedsMaxVisible) {
+          // HYBRID MODE: Too many points to expand, switch to sliding window
+          // Calculate viewport width to show only the last maxVisiblePoints
+          final dataRange = xMax - xMin;
+          final pointSpacing = buffer.length > 1 ? dataRange / (buffer.length - 1) : 1.0;
+          final visibleWidth = pointSpacing * maxVisiblePoints;
+
+          // Smoothly slide viewport forward (animation will calculate xMin from width)
           _autoScrollTargetXMax = xMax;
+          _autoScrollTargetWidth = visibleWidth;
+
+          // Also update Y targets
+          if (targetYMin < (_expansionTargetYMin ?? _transform!.dataYMin)) {
+            _expansionTargetYMin = targetYMin;
+          }
+          if (targetYMax > (_expansionTargetYMax ?? _transform!.dataYMax)) {
+            _expansionTargetYMax = targetYMax;
+          }
+
+          // Start sliding animation
+          if (!_autoScrollAnimationScheduled) {
+            _autoScrollAnimationScheduled = true;
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+              _animateViewportExpansion();
+            });
+          }
         } else {
-          // Check if we need to expand (data exceeds current viewport)
-          final needsXExpansion = xMax > _transform!.dataXMax;
-          final needsYExpansion = targetYMin < _transform!.dataYMin || targetYMax > _transform!.dataYMax;
+          // EXPAND MODE: Defer viewport updates to animation loop for consistency with auto-scroll
+          // This matches the auto-scroll pattern which uses animation for smooth updates
+          final needsXUpdate = xMax > _transform!.dataXMax;
+          final needsYUpdate = targetYMin < _transform!.dataYMin || targetYMax > _transform!.dataYMax;
 
-          if (needsXExpansion || needsYExpansion) {
-            // Set animation targets for smooth expansion
+          if (isInitialState) {
+            // Initial setup: apply directly
+            _transform = _transform!.copyWith(
+              dataXMin: xMin,
+              dataXMax: xMax,
+              dataYMin: targetYMin,
+              dataYMax: targetYMax,
+            );
+            _updateAxesFromTransform();
+          } else if (needsXUpdate || needsYUpdate) {
+            // DEFERRED UPDATE: Set targets and let animation handle it
+            // This matches auto-scroll behavior and avoids synchronous overhead
             _autoScrollTargetXMax = xMax;
-            _autoScrollTargetWidth = null; // Let width expand naturally
+            _autoScrollTargetWidth = null; // null = expand mode (no fixed width)
 
-            // Update Y targets (expand to encompass new data)
-            if (needsYExpansion) {
+            if (needsYUpdate) {
               _expansionTargetYMin =
                   targetYMin < (_expansionTargetYMin ?? _transform!.dataYMin) ? targetYMin : (_expansionTargetYMin ?? _transform!.dataYMin);
               _expansionTargetYMax =
                   targetYMax > (_expansionTargetYMax ?? _transform!.dataYMax) ? targetYMax : (_expansionTargetYMax ?? _transform!.dataYMax);
             }
 
-            // Start animation if not already running
+            // Schedule animation if not already running
             if (!_autoScrollAnimationScheduled) {
               _autoScrollAnimationScheduled = true;
               SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -1788,12 +1815,14 @@ class ChartRenderBox extends RenderBox {
 
   /// Continuous animation loop for smooth viewport expansion (when auto-scroll OFF).
   /// Runs at 60fps and smoothly expands viewport to show all data.
+  /// When maxVisiblePoints is exceeded, switches to sliding window mode.
   void _animateViewportExpansion() {
     _autoScrollAnimationScheduled = false;
 
     // Stop if paused, no target, or disposed
     if (_viewportLockedForPause || _autoScrollTargetXMax == null || _transform == null) {
       _autoScrollTargetXMax = null;
+      _autoScrollTargetWidth = null;
       _expansionTargetYMin = null;
       _expansionTargetYMax = null;
       return;
@@ -1801,6 +1830,7 @@ class ChartRenderBox extends RenderBox {
 
     final targetXMax = _autoScrollTargetXMax!;
     final currentXMax = _transform!.dataXMax;
+    final currentXMin = _transform!.dataXMin;
 
     // Y targets (use current if no target set)
     final targetYMin = _expansionTargetYMin ?? _transform!.dataYMin;
@@ -1808,14 +1838,27 @@ class ChartRenderBox extends RenderBox {
     final currentYMin = _transform!.dataYMin;
     final currentYMax = _transform!.dataYMax;
 
+    // Calculate target xMin based on whether we have a fixed width (sliding mode)
+    // or expanding width (normal expand mode)
+    final double targetXMin;
+    if (_autoScrollTargetWidth != null) {
+      // Sliding window mode: maintain fixed width, slide forward
+      targetXMin = targetXMax - _autoScrollTargetWidth!;
+    } else {
+      // Expand mode: keep xMin at origin
+      targetXMin = currentXMin;
+    }
+
     // Calculate deltas to targets
-    final deltaX = targetXMax - currentXMax;
+    final deltaXMax = targetXMax - currentXMax;
+    final deltaXMin = targetXMin - currentXMin;
     final deltaYMin = targetYMin - currentYMin;
     final deltaYMax = targetYMax - currentYMax;
 
     // If close enough to all targets, snap directly and stop
-    if (deltaX.abs() < 0.1 && deltaYMin.abs() < 0.01 && deltaYMax.abs() < 0.01) {
+    if (deltaXMax.abs() < 0.1 && deltaXMin.abs() < 0.1 && deltaYMin.abs() < 0.01 && deltaYMax.abs() < 0.01) {
       _transform = _transform!.copyWith(
+        dataXMin: targetXMin,
         dataXMax: targetXMax,
         dataYMin: targetYMin,
         dataYMax: targetYMax,
@@ -1824,6 +1867,7 @@ class ChartRenderBox extends RenderBox {
       markNeedsPaint();
 
       _autoScrollTargetXMax = null;
+      _autoScrollTargetWidth = null;
       _expansionTargetYMin = null;
       _expansionTargetYMax = null;
       return;
@@ -1831,12 +1875,14 @@ class ChartRenderBox extends RenderBox {
 
     // Smooth interpolation (lerp 15% toward target each frame)
     const lerpFactor = 0.15;
-    final newXMax = currentXMax + deltaX * lerpFactor;
+    final newXMin = currentXMin + deltaXMin * lerpFactor;
+    final newXMax = currentXMax + deltaXMax * lerpFactor;
     final newYMin = currentYMin + deltaYMin * lerpFactor;
     final newYMax = currentYMax + deltaYMax * lerpFactor;
 
-    // Update transform (keep xMin fixed, expand xMax and Y bounds)
+    // Update transform (slide both xMin and xMax in sliding mode)
     _transform = _transform!.copyWith(
+      dataXMin: newXMin,
       dataXMax: newXMax,
       dataYMin: newYMin,
       dataYMax: newYMax,

@@ -102,10 +102,6 @@ class Axis {
   /// If provided, used instead of default formatting.
   final String Function(double value)? labelFormatter;
 
-  /// Cached tick interval for throttling tick regeneration during streaming.
-  /// Only regenerate ticks when the interval would change significantly.
-  double? _lastTickInterval;
-
   /// Current data range (visible viewport).
   double get dataMin => scale.dataMin;
   double get dataMax => scale.dataMax;
@@ -114,10 +110,21 @@ class Axis {
   double get pixelMin => scale.pixelMin;
   double get pixelMax => scale.pixelMax;
 
+  /// Cached tick interval for throttling tick regeneration during streaming.
+  /// Only regenerate ticks when the interval would change significantly.
+  double? _lastTickInterval;
+
+  /// Cached rightmost tick value for detecting when new ticks are needed.
+  /// In expand mode, we only regenerate when data exceeds the last tick.
+  /// In scroll mode, we regenerate when viewport slides significantly.
+  double? _lastRightmostTick;
+  double? _lastLeftmostTick;
+
   /// Updates the visible data range (called when zooming/panning).
   ///
-  /// Regenerates ticks only when the tick interval would change significantly.
-  /// This throttles tick regeneration during high-frequency streaming updates.
+  /// Regenerates ticks when:
+  /// 1. The tick interval would change significantly (>25% to prevent oscillation)
+  /// 2. OR data extends beyond the rightmost/leftmost tick (need new gridlines)
   void updateDataRange(double newDataMin, double newDataMax) {
     scale = scale.copyWith(
       dataMin: newDataMin,
@@ -129,12 +136,38 @@ class Axis {
     final roughInterval = dataRange / TickGenerator.defaultTargetCount;
     final niceInterval = _makeNiceInterval(roughInterval);
 
-    // Only regenerate ticks if interval changed significantly (>10%)
-    // This throttles tick regeneration during streaming where the range
-    // changes every frame but the tick spacing remains similar
-    if (_lastTickInterval == null || (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.1) {
+    // Check if interval changed significantly (>25% to prevent oscillation)
+    // The nice number sequence is 1→2→5→10 (100%, 150%, 100% jumps)
+    // Using 25% threshold prevents flickering between adjacent nice numbers
+    final intervalChanged = _lastTickInterval == null || 
+        (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
+
+    // Check if we need new ticks because data extends beyond current tick range
+    // This works for both expand mode and scroll mode:
+    // - Expand: triggers when data grows past rightmost tick
+    // - Scroll: triggers when viewport slides past tick coverage
+    bool needsNewTicks = false;
+    if (!intervalChanged && _lastTickInterval != null && _lastRightmostTick != null) {
+      // Need new tick on the right if data extends significantly past last tick
+      // Use 0.8× interval threshold to regenerate just before hitting the edge
+      if (newDataMax > _lastRightmostTick! + _lastTickInterval! * 0.8) {
+        needsNewTicks = true;
+      }
+      // Need new tick on the left if data extends past first tick
+      if (_lastLeftmostTick != null && newDataMin < _lastLeftmostTick! - _lastTickInterval! * 0.8) {
+        needsNewTicks = true;
+      }
+    }
+
+    if (intervalChanged || needsNewTicks) {
       _lastTickInterval = niceInterval;
       ticks = _generateTicks();
+      
+      // Cache the tick range for next comparison
+      if (ticks.isNotEmpty) {
+        _lastLeftmostTick = ticks.first.value;
+        _lastRightmostTick = ticks.last.value;
+      }
     }
   }
 

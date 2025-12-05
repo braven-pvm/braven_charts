@@ -95,10 +95,8 @@ class AxisRenderer {
 
       // Draw tick label (only if axis is visible)
       if (config.showAxisLine) {
-        final textPainter = TextPainter(
-          text: TextSpan(text: tick.label, style: config.tickLabelStyle),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        // Use cached TextPainter from tick (avoids layout() every frame)
+        final textPainter = tick.getTextPainter(config.tickLabelStyle);
 
         final labelY = config.position == AxisPosition.bottom
             ? axisY + config.tickLength + config.labelPadding
@@ -192,10 +190,8 @@ class AxisRenderer {
 
       // Draw tick label (only if axis is visible)
       if (config.showAxisLine) {
-        final textPainter = TextPainter(
-          text: TextSpan(text: tick.label, style: config.tickLabelStyle),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        // Use cached TextPainter from tick (avoids layout() every frame)
+        final textPainter = tick.getTextPainter(config.tickLabelStyle);
 
         final labelX = config.position == AxisPosition.left
             ? axisX - config.tickLength - config.labelPadding - textPainter.width
