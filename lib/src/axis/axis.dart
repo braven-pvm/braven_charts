@@ -3,7 +3,7 @@
 
 // import 'package:flutter/foundation.dart' show debugPrint;
 
-import 'dart:math' show log, ln10;
+import 'dart:math' show log, ln10, pow;
 
 import '../models/axis_config.dart' as public_config;
 import 'axis_config.dart';
@@ -180,7 +180,7 @@ class Axis {
     
     // Use logarithm for correct exponent calculation (matches TickGenerator)
     final exponent = (log(roughInterval) / ln10).floor();
-    final powerOf10 = _pow10(exponent.toDouble());
+    final powerOf10 = pow(10.0, exponent).toDouble();
     
     // Normalize to [1, 10)
     final fraction = roughInterval / powerOf10;
@@ -195,17 +195,6 @@ class Axis {
                 : 10.0;
                 
     return niceFraction * powerOf10;
-  }
-
-  /// Fast power of 10 calculation.
-  double _pow10(double exp) {
-    if (exp == 0) return 1.0;
-    if (exp == 1) return 10.0;
-    if (exp == 2) return 100.0;
-    if (exp == 3) return 1000.0;
-    if (exp == -1) return 0.1;
-    if (exp == -2) return 0.01;
-    return 1.0; // Fallback
   }
 
   /// Updates the pixel range (called when layout changes).
