@@ -428,8 +428,11 @@ class LiveStreamController extends ChangeNotifier {
 
     if (_isStreaming) {
       // Streaming: add to buffer and update chart
-      _streamingBuffer.addAll(_pendingPoints);
-      _flushToRenderBox();
+      // PERFORMANCE: Only flush to RenderBox if we actually added new points
+      if (_pendingPoints.isNotEmpty) {
+        _streamingBuffer.addAll(_pendingPoints);
+        _flushToRenderBox();
+      }
     } else {
       // Paused: buffer for later
       for (final point in _pendingPoints) {
