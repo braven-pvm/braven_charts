@@ -11,6 +11,99 @@ import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../theming/components/series_theme.dart';
 
+// =============================================================================
+// Style Region for Segment Color Batching
+// =============================================================================
+
+/// Represents a continuous region of same-styled segments for batched rendering.
+///
+/// When segment colors are used, the series line is divided into regions
+/// where each region has consistent styling (color + stroke width).
+/// This enables efficient batched rendering with minimal drawPath() calls.
+class _StyleRegion {
+  const _StyleRegion({
+    required this.startIndex,
+    required this.endIndex,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  /// Index of first point in region (segment starts here).
+  final int startIndex;
+
+  /// Index of last point in region (segment ends here, inclusive).
+  final int endIndex;
+
+  /// Effective color for this region.
+  final Color color;
+
+  /// Effective stroke width for this region.
+  final double strokeWidth;
+
+  /// Number of segments in this region.
+  int get segmentCount => endIndex - startIndex;
+}
+
+/// Analyzes points to find continuous style regions for batched rendering.
+///
+/// Returns a list of regions where each region has consistent styling.
+/// Adjacent points with the same effective style are grouped together,
+/// minimizing the number of drawPath() calls needed.
+///
+/// **Performance**: O(n) single pass through points.
+List<_StyleRegion> _analyzeStyleRegions(
+  List<ChartDataPoint> points,
+  Color defaultColor,
+  double defaultStrokeWidth,
+) {
+  if (points.length < 2) return [];
+
+  final regions = <_StyleRegion>[];
+  int regionStart = 0;
+
+  // Get effective style for first segment (from first point)
+  Color currentColor = points[0].segmentStyle?.color ?? defaultColor;
+  double currentWidth = points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
+
+  // Iterate through points, detecting style changes
+  // Note: We check points[i] for segment i→i+1's style
+  for (int i = 1; i < points.length - 1; i++) {
+    final style = points[i].segmentStyle;
+    final pointColor = style?.color ?? defaultColor;
+    final pointWidth = style?.strokeWidth ?? defaultStrokeWidth;
+
+    // Check if style changed at this point
+    if (pointColor != currentColor || pointWidth != currentWidth) {
+      // Close current region (ends at point i, inclusive)
+      regions.add(_StyleRegion(
+        startIndex: regionStart,
+        endIndex: i,
+        color: currentColor,
+        strokeWidth: currentWidth,
+      ));
+
+      // Start new region from this point
+      regionStart = i;
+      currentColor = pointColor;
+      currentWidth = pointWidth;
+    }
+  }
+
+  // Close final region (always ends at last point)
+  regions.add(_StyleRegion(
+    startIndex: regionStart,
+    endIndex: points.length - 1,
+    color: currentColor,
+    strokeWidth: currentWidth,
+  ));
+
+  return regions;
+}
+
+// =============================================================================
+// Series Element
+// =============================================================================
+
 /// Wraps a ChartSeries as a ChartElement for the interaction system.
 ///
 /// **Purpose**: Bridge ChartSeries data model to ChartElement interface so
@@ -91,9 +184,16 @@ class SeriesElement implements ChartElement {
 
     // Invalidate cache only if geometry changed significantly
     if (pointCountChanged) {
-      _cachedPath = null;
-      _cachedTransformedPoints = null;
+      _invalidateAllCaches();
     }
+  }
+
+  /// Invalidates all cached rendering data.
+  /// Call when series data changes or segment styles are modified.
+  void _invalidateAllCaches() {
+    _cachedPath = null;
+    _cachedTransformedPoints = null;
+    _cachedHasSegmentOverrides = null;
   }
 
   @override
@@ -108,6 +208,9 @@ class SeriesElement implements ChartElement {
   Path? _cachedPath;
   List<Offset>? _cachedTransformedPoints;
   late ChartTransform _cachedTransform;
+
+  // Segment color caching - fast-path check result
+  bool? _cachedHasSegmentOverrides;
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   void _computeBounds() {
@@ -227,6 +330,31 @@ class SeriesElement implements ChartElement {
   }
 
   void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
+    // FAST PATH CHECK: If any segment has style overrides, use multi-style rendering
+    // This check is cached to avoid O(n) scan on every paint
+    if (_hasSegmentOverrides(series)) {
+      _paintLineSeriesMultiStyle(canvas, series, baseColor);
+      return;
+    }
+
+    // FAST PATH: Single color rendering (original optimized code)
+    _paintLineSeriesSingleColor(canvas, series, baseColor);
+  }
+
+  /// Checks if series has any segment style overrides (cached for performance).
+  bool _hasSegmentOverrides(LineChartSeries series) {
+    // Return cached value if available
+    if (_cachedHasSegmentOverrides != null) {
+      return _cachedHasSegmentOverrides!;
+    }
+
+    // O(n) scan, but only done once and cached
+    _cachedHasSegmentOverrides = series.points.any((p) => p.segmentStyle != null);
+    return _cachedHasSegmentOverrides!;
+  }
+
+  /// Original single-color line rendering (fast path).
+  void _paintLineSeriesSingleColor(Canvas canvas, LineChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
     final opacity = isSelected
         ? 1.0
@@ -309,6 +437,163 @@ class SeriesElement implements ChartElement {
       final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
       _paintDataPointMarkers(canvas, _cachedTransformedPoints!, effectiveMarkerSize, baseColor);
     }
+  }
+
+  /// Multi-style line rendering with per-segment color/width overrides.
+  ///
+  /// This method handles series with segment style overrides by:
+  /// 1. Analyzing points to find continuous style regions
+  /// 2. Batching consecutive same-style segments
+  /// 3. Rendering each region with its own path/paint
+  ///
+  /// **Performance**: Regions are cached. Bezier tangents use full point context
+  /// for smooth curves at color boundaries.
+  void _paintLineSeriesMultiStyle(Canvas canvas, LineChartSeries series, Color baseColor) {
+    final opacity = _getOpacity();
+    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+
+    // Filter to visible points (same optimization as single-color path)
+    final visiblePoints = <ChartDataPoint>[];
+    final visibleIndices = <int>[]; // Track original indices for style lookup
+    final xMin = _currentTransform.dataXMin;
+    final xMax = _currentTransform.dataXMax;
+
+    for (int i = 0; i < series.points.length; i++) {
+      final point = series.points[i];
+      if (point.x >= xMin - 1 && point.x <= xMax + 1) {
+        visiblePoints.add(point);
+        visibleIndices.add(i);
+      } else if (point.x > xMax + 1) {
+        break;
+      }
+    }
+
+    if (visiblePoints.length < 2) return;
+
+    // Pre-transform ALL visible points once
+    final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
+
+    // Analyze style regions (uses visible points, not full series)
+    final regions = _analyzeStyleRegions(visiblePoints, baseColor, effectiveStrokeWidth);
+
+    // Paint each region
+    for (final region in regions) {
+      final regionPath = _buildRegionPath(
+        transformedPoints,
+        region.startIndex,
+        region.endIndex,
+        series.interpolation,
+        series.tension,
+      );
+
+      final paint = Paint()
+        ..color = region.color.withOpacity(opacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = region.strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      canvas.drawPath(regionPath, paint);
+    }
+
+    // Draw data point markers if enabled
+    if (series.showDataPointMarkers) {
+      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
+    }
+  }
+
+  /// Builds a path for a single style region.
+  ///
+  /// Uses full [allPoints] array for bezier tangent context, but only adds
+  /// segments within [startIndex] to [endIndex] range.
+  Path _buildRegionPath(
+    List<Offset> allPoints,
+    int startIndex,
+    int endIndex,
+    LineInterpolation interpolation,
+    double tension,
+  ) {
+    final path = Path();
+
+    // Move to first point in region
+    path.moveTo(allPoints[startIndex].dx, allPoints[startIndex].dy);
+
+    // Add segments based on interpolation type
+    for (int i = startIndex; i < endIndex; i++) {
+      switch (interpolation) {
+        case LineInterpolation.linear:
+          path.lineTo(allPoints[i + 1].dx, allPoints[i + 1].dy);
+          break;
+
+        case LineInterpolation.bezier:
+          // Calculate control points using FULL context for smooth tangents
+          final (cp1, cp2) = _calculateBezierControlPoints(allPoints, i, tension);
+          path.cubicTo(
+            cp1.dx,
+            cp1.dy,
+            cp2.dx,
+            cp2.dy,
+            allPoints[i + 1].dx,
+            allPoints[i + 1].dy,
+          );
+          break;
+
+        case LineInterpolation.stepped:
+          // Horizontal then vertical
+          path.lineTo(allPoints[i + 1].dx, allPoints[i].dy);
+          path.lineTo(allPoints[i + 1].dx, allPoints[i + 1].dy);
+          break;
+
+        case LineInterpolation.monotone:
+          // Currently uses linear (monotone implementation pending)
+          path.lineTo(allPoints[i + 1].dx, allPoints[i + 1].dy);
+          break;
+      }
+    }
+
+    return path;
+  }
+
+  /// Calculates bezier control points for segment i→i+1.
+  ///
+  /// Uses Catmull-Rom to Bezier conversion with full point context
+  /// for proper tangent calculation at region boundaries.
+  (Offset cp1, Offset cp2) _calculateBezierControlPoints(
+    List<Offset> points,
+    int i,
+    double tension,
+  ) {
+    // Get 4 points for Catmull-Rom: p0, p1 (start), p2 (end), p3
+    // Clamp to array bounds for edge cases
+    final p0 = points[i > 0 ? i - 1 : 0];
+    final p1 = points[i];
+    final p2 = points[i + 1];
+    final p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
+
+    final alpha = tension;
+
+    // Catmull-Rom to cubic bezier control points
+    final cp1 = Offset(
+      p1.dx + (p2.dx - p0.dx) * alpha / 6,
+      p1.dy + (p2.dy - p0.dy) * alpha / 6,
+    );
+
+    final cp2 = Offset(
+      p2.dx - (p3.dx - p1.dx) * alpha / 6,
+      p2.dy - (p3.dy - p1.dy) * alpha / 6,
+    );
+
+    return (cp1, cp2);
+  }
+
+  /// Gets the current opacity based on selection/hover state.
+  double _getOpacity() {
+    return isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
   }
 
   void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
