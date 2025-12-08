@@ -289,6 +289,35 @@ class ScatterChartSeries extends ChartSeries {
   final double markerRadius;
 
   @override
+  ScatterChartSeries copyWith({
+    String? id,
+    String? name,
+    List<ChartDataPoint>? points,
+    Color? color,
+    SeriesStyle? style,
+    bool? isXOrdered,
+    Map<String, dynamic>? metadata,
+    List<ChartAnnotation>? annotations,
+    String? yAxisId,
+    YAxisConfig? yAxisConfig,
+    String? unit,
+    double? markerRadius,
+  }) {
+    return ScatterChartSeries(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      points: points ?? this.points,
+      color: color ?? this.color,
+      isXOrdered: isXOrdered ?? this.isXOrdered,
+      metadata: metadata ?? this.metadata,
+      yAxisId: yAxisId ?? this.yAxisId,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
+      unit: unit ?? this.unit,
+      markerRadius: markerRadius ?? this.markerRadius,
+    );
+  }
+
+  @override
   String toString() => 'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius)';
 }
 
@@ -320,6 +349,45 @@ class AreaChartSeries extends ChartSeries {
   final double dataPointMarkerRadius;
 
   @override
+  AreaChartSeries copyWith({
+    String? id,
+    String? name,
+    List<ChartDataPoint>? points,
+    Color? color,
+    SeriesStyle? style,
+    bool? isXOrdered,
+    Map<String, dynamic>? metadata,
+    List<ChartAnnotation>? annotations,
+    String? yAxisId,
+    YAxisConfig? yAxisConfig,
+    String? unit,
+    LineInterpolation? interpolation,
+    double? strokeWidth,
+    double? tension,
+    double? fillOpacity,
+    bool? showDataPointMarkers,
+    double? dataPointMarkerRadius,
+  }) {
+    return AreaChartSeries(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      points: points ?? this.points,
+      color: color ?? this.color,
+      isXOrdered: isXOrdered ?? this.isXOrdered,
+      metadata: metadata ?? this.metadata,
+      yAxisId: yAxisId ?? this.yAxisId,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
+      unit: unit ?? this.unit,
+      interpolation: interpolation ?? this.interpolation,
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+      tension: tension ?? this.tension,
+      fillOpacity: fillOpacity ?? this.fillOpacity,
+      showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
+      dataPointMarkerRadius: dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+    );
+  }
+
+  @override
   String toString() => 'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
 }
 
@@ -346,6 +414,41 @@ class BarChartSeries extends ChartSeries {
   final double? barWidthPixels; // Fixed width in data units
   final double minWidth; // Minimum bar width in data units
   final double maxWidth; // Maximum bar width in data units
+
+  @override
+  BarChartSeries copyWith({
+    String? id,
+    String? name,
+    List<ChartDataPoint>? points,
+    Color? color,
+    SeriesStyle? style,
+    bool? isXOrdered,
+    Map<String, dynamic>? metadata,
+    List<ChartAnnotation>? annotations,
+    String? yAxisId,
+    YAxisConfig? yAxisConfig,
+    String? unit,
+    double? barWidthPercent,
+    double? barWidthPixels,
+    double? minWidth,
+    double? maxWidth,
+  }) {
+    return BarChartSeries(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      points: points ?? this.points,
+      color: color ?? this.color,
+      isXOrdered: isXOrdered ?? this.isXOrdered,
+      metadata: metadata ?? this.metadata,
+      yAxisId: yAxisId ?? this.yAxisId,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
+      unit: unit ?? this.unit,
+      barWidthPercent: barWidthPercent ?? this.barWidthPercent,
+      barWidthPixels: barWidthPixels ?? this.barWidthPixels,
+      minWidth: minWidth ?? this.minWidth,
+      maxWidth: maxWidth ?? this.maxWidth,
+    );
+  }
 
   @override
   String toString() => 'BarChartSeries(id: $id, points: ${points.length}, barWidth: ${barWidthPercent ?? barWidthPixels})';

@@ -2,6 +2,12 @@
 
 ### Added
 
+- Per-segment color and style overrides for line chart series (012-segment-colors)
+  - `SegmentStyle` class with `color` and `strokeWidth` properties
+  - `segmentStyle` field on `ChartDataPoint` for per-segment styling
+  - Helper extensions: `withSegmentStyles()`, `withSegmentColors()`, `withStyleInRange()`, `withColorWhere()`
+  - Sharp color transitions at data points with smooth bezier curve continuity
+  - Performance optimized: fast-path when no overrides, batches consecutive same-style segments
 - Multi-axis Y normalization for displaying series with vastly different scales
   - Each series uses full vertical height with its own Y-axis
   - Up to 4 Y-axes supported (left, leftOuter, right, rightOuter)

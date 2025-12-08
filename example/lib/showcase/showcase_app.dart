@@ -10,6 +10,7 @@ import 'pages/live_streaming_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/scientific_page.dart';
+import 'pages/segment_styling_page.dart';
 import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
 
@@ -90,6 +91,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
       page: ChartTypesPage(),
+    ),
+    const NavDestination(
+      label: 'Segment Styling',
+      icon: Icons.format_color_fill_outlined,
+      selectedIcon: Icons.format_color_fill,
+      page: SegmentStylingPage(),
+      badge: '★', // New feature
     ),
     const NavDestination(
       label: 'Interaction',
