@@ -3,6 +3,8 @@
 
 // import 'package:flutter/foundation.dart' show debugPrint;
 
+import 'dart:math' show log, ln10;
+
 import '../models/axis_config.dart' as public_config;
 import 'axis_config.dart';
 import 'linear_scale.dart';
@@ -172,24 +174,27 @@ class Axis {
   }
 
   /// Rounds a value to a "nice" number for tick interval calculation.
-  /// Duplicated from TickGenerator to avoid creating instance just for checking.
+  /// MUST match TickGenerator._makeNice() exactly to avoid caching mismatches.
   double _makeNiceInterval(double roughInterval) {
     if (roughInterval <= 0) return 1.0;
-    final exponent = (roughInterval.abs()).toString().split('.')[0].length - 1;
-    final magnitude = _pow10(exponent.toDouble());
-    final fraction = roughInterval / magnitude;
+    
+    // Use logarithm for correct exponent calculation (matches TickGenerator)
+    final exponent = (log(roughInterval) / ln10).floor();
+    final powerOf10 = _pow10(exponent.toDouble());
+    
+    // Normalize to [1, 10)
+    final fraction = roughInterval / powerOf10;
 
-    double niceFraction;
-    if (fraction <= 1.5) {
-      niceFraction = 1.0;
-    } else if (fraction <= 3.0) {
-      niceFraction = 2.0;
-    } else if (fraction <= 7.0) {
-      niceFraction = 5.0;
-    } else {
-      niceFraction = 10.0;
-    }
-    return niceFraction * magnitude;
+    // Round to 1, 2, 5, or 10 - MUST use same thresholds as TickGenerator
+    final niceFraction = fraction <= 1.0
+        ? 1.0
+        : fraction <= 2.0
+            ? 2.0
+            : fraction <= 5.0
+                ? 5.0
+                : 10.0;
+                
+    return niceFraction * powerOf10;
   }
 
   /// Fast power of 10 calculation.
