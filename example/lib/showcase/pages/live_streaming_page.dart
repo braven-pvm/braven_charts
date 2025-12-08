@@ -66,7 +66,6 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   // Series Styling
   LineInterpolation _interpolation = LineInterpolation.bezier;
   double _strokeWidth = 2.0;
-  bool _showMarkers = false;
   Color _lineColor = Colors.blue;
 
   // Performance stats
@@ -268,8 +267,13 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     return [
-      // Standard display options
-      StandardChartOptions(controller: _optionsController),
+      // Standard display options (disable marker/lineStyle since we have custom controls)
+      StandardChartOptions(
+        controller: _optionsController,
+        showMarkerOption: false, // We have custom 'Show Data Markers' in Line Styling
+        showLineStyleOption: false, // We use interpolation setting instead
+        showLegendOption: false, // Legend not needed for single series
+      ),
 
       // LiveStreamController Configuration
       // Only show buffer settings when auto-scroll is ON
@@ -339,6 +343,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
               suffix: 'pts',
               onChanged: (v) {
                 setState(() => _viewportDataPoints = v);
+                _recreateController();
               },
             ),
           ] else ...[
@@ -440,9 +445,9 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           ),
           BoolOption(
             label: 'Show Data Markers',
-            value: _showMarkers,
+            value: _optionsController.showDataMarkers,
             subtitle: 'Display points on line',
-            onChanged: (v) => setState(() => _showMarkers = v),
+            onChanged: (v) => _optionsController.showDataMarkers = v,
           ),
           ColorOption(
             label: 'Line Color',
@@ -573,7 +578,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
                 color: effectiveColor,
                 interpolation: _interpolation,
                 strokeWidth: _strokeWidth,
-                showDataPointMarkers: _showMarkers,
+                showDataPointMarkers: _optionsController.showDataMarkers,
               ),
             ],
             // Connect LiveStreamController - this is the key!
