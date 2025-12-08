@@ -356,7 +356,6 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
           title: 'Annotated Chart',
           subtitle: 'Sine wave with interactive annotations',
           child: BravenChartPlus(
-            chartType: ChartType.line,
             lineStyle: LineStyle.smooth,
             series: [
               LineChartSeries(

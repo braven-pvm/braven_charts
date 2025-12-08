@@ -90,7 +90,6 @@ void main() {
             width: 800,
             height: 600,
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: testSeriesWithInlineConfig,
             ),
           ),
@@ -107,7 +106,6 @@ void main() {
             width: 800,
             height: 600,
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: testSeriesWithAxisIds,
               yAxes: yAxes,
             ),
@@ -125,7 +123,6 @@ void main() {
             width: 800,
             height: 600,
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: testSeriesNoBinding,
               yAxes: yAxes,
             ),

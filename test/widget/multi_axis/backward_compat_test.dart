@@ -32,7 +32,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'sales',
@@ -66,7 +65,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'data',
@@ -95,7 +93,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'data',
@@ -124,7 +121,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'data',
@@ -158,7 +154,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'series1',
@@ -195,7 +190,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.bar,
                 series: [
                   BarChartSeries(
                     id: 'sales',
@@ -226,7 +220,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.area,
                 series: [
                   AreaChartSeries(
                     id: 'usage',
@@ -255,7 +248,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.scatter,
                 series: [
                   ScatterChartSeries(
                     id: 'points',
@@ -290,7 +282,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'data',
@@ -322,7 +313,6 @@ void main() {
               width: 600,
               height: 400,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'series1',

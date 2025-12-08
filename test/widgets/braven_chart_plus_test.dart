@@ -14,7 +14,6 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: BravenChartPlus.fromJson(
-                chartType: ChartType.line,
                 seriesId: 'test_series',
                 json: json,
               ),
@@ -32,7 +31,6 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: BravenChartPlus.fromJson(
-                chartType: ChartType.line,
                 seriesId: 'test_series',
                 json: json,
               ),
@@ -48,7 +46,6 @@ void main() {
 
         expect(
           () => BravenChartPlus.fromJson(
-            chartType: ChartType.line,
             seriesId: 'test_series',
             json: json,
           ),
@@ -72,7 +69,6 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: BravenChartPlus(
-                chartType: ChartType.line,
                 series: const [],
                 onAnnotationDragged: (annotation, position) {
                   callbackCalled = true;

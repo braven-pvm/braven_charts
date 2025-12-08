@@ -214,7 +214,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
@@ -249,7 +248,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
@@ -280,7 +278,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(
@@ -311,7 +308,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(

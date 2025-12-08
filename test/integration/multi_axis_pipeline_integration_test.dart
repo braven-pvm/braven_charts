@@ -30,7 +30,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'small-range',
@@ -74,7 +73,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'range-50',
@@ -117,7 +115,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'single',
@@ -147,7 +144,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [],
                 ),
               ),
@@ -167,7 +163,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'series-a',
@@ -284,7 +279,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.scatter,
                   series: [
                     ScatterChartSeries(
                       id: 'temp',
@@ -326,7 +320,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.bar,
                   series: [
                     BarChartSeries(
                       id: 'revenue',
@@ -368,7 +361,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.area,
                   series: [
                     AreaChartSeries(
                       id: 'cpu',
@@ -412,7 +404,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'single-point',
@@ -440,7 +431,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'flat-line',
@@ -470,7 +460,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'positive',
@@ -510,7 +499,6 @@ void main() {
                 width: 800,
                 height: 600,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [
                     LineChartSeries(
                       id: 'small',

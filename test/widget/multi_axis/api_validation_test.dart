@@ -43,7 +43,6 @@ void main() {
                 width: 800,
                 height: 400,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   yAxes: validAxes,
                 ),
@@ -69,7 +68,6 @@ void main() {
         // Expect assertion error when building widget
         expect(
           () => BravenChartPlus(
-            chartType: ChartType.line,
             series: testSeries,
             yAxes: invalidAxes,
           ),
@@ -93,7 +91,6 @@ void main() {
                 width: 800,
                 height: 400,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   yAxes: validAxes,
                 ),
@@ -116,7 +113,6 @@ void main() {
         // Expect assertion error when building widget
         expect(
           () => BravenChartPlus(
-            chartType: ChartType.line,
             series: testSeries,
             yAxes: duplicateAxes,
           ),
@@ -134,7 +130,6 @@ void main() {
                 width: 800,
                 height: 400,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   // yAxes not provided (null)
                 ),
@@ -154,7 +149,6 @@ void main() {
                 width: 800,
                 height: 400,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   yAxes: const [], // Empty list
                 ),
@@ -178,7 +172,6 @@ void main() {
                 width: 800,
                 height: 400,
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: testSeries,
                   yAxes: singleAxis,
                 ),

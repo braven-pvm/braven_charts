@@ -130,7 +130,6 @@ class Task012TooltipDemo extends StatelessWidget {
           const SizedBox(height: 16),
           Expanded(
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',

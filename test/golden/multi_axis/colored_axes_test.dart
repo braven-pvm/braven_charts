@@ -35,7 +35,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'voltage',
@@ -93,7 +92,6 @@ void main() {
               width: 900,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'metric1',
@@ -170,7 +168,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'sales',
@@ -245,7 +242,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 backgroundColor: const Color(0xFF1E1E1E),
                 series: [
                   LineChartSeries(

@@ -62,7 +62,6 @@ class Task015ApiDemo extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [powerSeries, hrSeries],
                   yAxes: [
                     YAxisConfig(

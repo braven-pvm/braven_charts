@@ -9,7 +9,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
@@ -52,7 +51,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
@@ -96,7 +94,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: const [
                 // Power series has yAxisId reference
                 LineChartSeries(
@@ -159,7 +156,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: const [
                 LineChartSeries(
                   id: 'power',
@@ -188,7 +184,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: const [
                 LineChartSeries(
                   id: 'power',

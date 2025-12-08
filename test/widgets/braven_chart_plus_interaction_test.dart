@@ -30,7 +30,6 @@ void main() {
               width: 400,
               height: 300,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [series],
                 onPointHover: (point, seriesId) {
                   hoverCalled = true;
@@ -67,7 +66,6 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: [],
               autoScrollConfig: AutoScrollConfig(
                 enabled: true,

@@ -120,7 +120,6 @@ class Task013CrosshairDemo extends StatelessWidget {
               // Chart
               Expanded(
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: [powerSeries, hrSeries],
                   normalizationMode: NormalizationMode.perSeries,
                   interactionConfig: const InteractionConfig(

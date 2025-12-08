@@ -40,7 +40,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'power',
@@ -107,7 +106,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'temp',
@@ -173,7 +171,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'speed',
@@ -235,7 +232,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.area,
                 series: [
                   AreaChartSeries(
                     id: 'power',

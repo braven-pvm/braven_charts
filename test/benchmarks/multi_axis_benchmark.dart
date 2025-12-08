@@ -46,7 +46,6 @@ void main() {
               width: 1000,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'power',
@@ -148,7 +147,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'power',
@@ -255,7 +253,6 @@ void main() {
               width: 1200,
               height: 800,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: series,
                 yAxes: axes,
                 normalizationMode: NormalizationMode.perSeries,
@@ -290,7 +287,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'power',
@@ -351,7 +347,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'series1',
@@ -385,7 +380,6 @@ void main() {
               width: 800,
               height: 600,
               child: BravenChartPlus(
-                chartType: ChartType.line,
                 series: [
                   LineChartSeries(
                     id: 'series1',

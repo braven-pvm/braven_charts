@@ -63,7 +63,6 @@ import 'widgets/web_context_menu.dart';
 class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,
-    required this.chartType,
     this.lineStyle = LineStyle.straight,
     required this.series,
     this.annotations = const [],
@@ -107,7 +106,7 @@ class BravenChartPlus extends StatefulWidget {
   /// Creates a chart from a simple list of y-values.
   factory BravenChartPlus.fromValues({
     Key? key,
-    required ChartType chartType,
+    ChartType chartType = ChartType.line,
     LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required List<double> yValues,
@@ -161,7 +160,6 @@ class BravenChartPlus extends StatefulWidget {
 
     return BravenChartPlus(
       key: key,
-      chartType: chartType,
       lineStyle: lineStyle,
       series: [series],
       width: width,
@@ -192,7 +190,7 @@ class BravenChartPlus extends StatefulWidget {
   /// Creates a chart from a Map of x->y values.
   factory BravenChartPlus.fromMap({
     Key? key,
-    required ChartType chartType,
+    ChartType chartType = ChartType.line,
     LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required Map<dynamic, double> data,
@@ -248,7 +246,6 @@ class BravenChartPlus extends StatefulWidget {
 
     return BravenChartPlus(
       key: key,
-      chartType: chartType,
       lineStyle: lineStyle,
       series: [series],
       width: width,
@@ -279,7 +276,7 @@ class BravenChartPlus extends StatefulWidget {
   /// Creates a chart from a JSON string.
   factory BravenChartPlus.fromJson({
     Key? key,
-    required ChartType chartType,
+    ChartType chartType = ChartType.line,
     LineStyle lineStyle = LineStyle.straight,
     required String seriesId,
     required String json,
@@ -383,7 +380,6 @@ class BravenChartPlus extends StatefulWidget {
 
     return BravenChartPlus(
       key: key,
-      chartType: chartType,
       lineStyle: lineStyle,
       series: [series],
       width: width,
@@ -419,7 +415,6 @@ class BravenChartPlus extends StatefulWidget {
     );
   }
 
-  final ChartType chartType;
   final LineStyle lineStyle;
   final List<ChartSeries> series;
 

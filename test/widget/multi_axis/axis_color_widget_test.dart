@@ -14,7 +14,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
@@ -103,7 +102,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
@@ -162,7 +160,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: const [
                 LineChartSeries(
                   id: 'cpu',
@@ -238,7 +235,6 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              chartType: ChartType.line,
               series: const [
                 LineChartSeries(
                   id: 'power',

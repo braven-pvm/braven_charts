@@ -57,7 +57,6 @@ class _Task014DemoState extends State<Task014Demo> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: BravenChartPlus(
-                  chartType: ChartType.line,
                   series: _multiAxisMode
                       // Multi-axis mode: series with inline yAxisConfig
                       ? [

@@ -131,7 +131,6 @@ class _InteractionPageState extends State<InteractionPage> {
           title: 'Interactive Line Chart',
           subtitle: 'Random walk data',
           child: BravenChartPlus(
-            chartType: ChartType.line,
             lineStyle: LineStyle.smooth,
             series: [
               LineChartSeries(

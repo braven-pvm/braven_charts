@@ -107,7 +107,6 @@ class Task011IntegrationDemo extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(16),
       child: BravenChartPlus(
-        chartType: ChartType.line,
         series: [
           LineChartSeries(
             id: 'power',

@@ -103,7 +103,6 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
           const SizedBox(height: 16),
           Expanded(
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
@@ -189,7 +188,6 @@ BravenChartPlus(
           const SizedBox(height: 16),
           Expanded(
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 // Temperature: 20-80°C range with inline axis config
                 LineChartSeries(
@@ -266,7 +264,6 @@ BravenChartPlus(
           const SizedBox(height: 16),
           Expanded(
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'revenue',
@@ -348,7 +345,6 @@ LineChartSeries(
           const SizedBox(height: 16),
           Expanded(
             child: BravenChartPlus(
-              chartType: ChartType.line,
               series: [
                 LineChartSeries(
                   id: 'power',
