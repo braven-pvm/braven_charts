@@ -53,7 +53,7 @@ class Axis {
       invertY: config.orientation == AxisOrientation.vertical,
     );
 
-    // Generate initial ticks
+    // Generate initial ticks (skipped if axis is fully hidden)
     ticks = _generateTicks();
   }
 
@@ -133,6 +133,13 @@ class Axis {
       dataMax: newDataMax,
     );
 
+    // Skip tick generation entirely if nothing will be rendered
+    // This is a major performance optimization for hidden axes
+    if (!config.showAxisLine && !config.showGrid && !config.showTickMarks) {
+      ticks = const [];
+      return;
+    }
+
     // Calculate what the new tick interval would be
     final dataRange = newDataMax - newDataMin;
     final roughInterval = dataRange / TickGenerator.defaultTargetCount;
@@ -141,8 +148,7 @@ class Axis {
     // Check if interval changed significantly (>25% to prevent oscillation)
     // The nice number sequence is 1→2→5→10 (100%, 150%, 100% jumps)
     // Using 25% threshold prevents flickering between adjacent nice numbers
-    final intervalChanged = _lastTickInterval == null || 
-        (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
+    final intervalChanged = _lastTickInterval == null || (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
 
     // Check if we need new ticks because data extends beyond current tick range
     // This works for both expand mode and scroll mode:
@@ -164,7 +170,7 @@ class Axis {
     if (intervalChanged || needsNewTicks) {
       _lastTickInterval = niceInterval;
       ticks = _generateTicks();
-      
+
       // Cache the tick range for next comparison
       if (ticks.isNotEmpty) {
         _lastLeftmostTick = ticks.first.value;
@@ -177,11 +183,11 @@ class Axis {
   /// MUST match TickGenerator._makeNice() exactly to avoid caching mismatches.
   double _makeNiceInterval(double roughInterval) {
     if (roughInterval <= 0) return 1.0;
-    
+
     // Use logarithm for correct exponent calculation (matches TickGenerator)
     final exponent = (log(roughInterval) / ln10).floor();
     final powerOf10 = pow(10.0, exponent).toDouble();
-    
+
     // Normalize to [1, 10)
     final fraction = roughInterval / powerOf10;
 
@@ -193,7 +199,7 @@ class Axis {
             : fraction <= 5.0
                 ? 5.0
                 : 10.0;
-                
+
     return niceFraction * powerOf10;
   }
 
@@ -227,7 +233,14 @@ class Axis {
   }
 
   /// Generates ticks for the current data and pixel ranges.
+  /// Returns empty list if axis is fully hidden (no axis line, grid, or tick marks).
   List<Tick> _generateTicks() {
+    // Skip tick generation entirely if nothing will be rendered
+    // This is a major performance optimization for hidden axes
+    if (!config.showAxisLine && !config.showGrid && !config.showTickMarks) {
+      return const [];
+    }
+    
     return TickGenerator().generateTicks(
       dataMin: scale.dataMin,
       dataMax: scale.dataMax,
