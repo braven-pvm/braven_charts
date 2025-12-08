@@ -8,7 +8,7 @@ import 'segment_style.dart';
 /// ChartDataPoint is an immutable data structure representing a point
 /// in 2D space, with optional timestamp and label for rich data visualization.
 ///
-/// Equality is based on x, y, timestamp, label, and segmentStyle.
+/// Equality is based on x, y, timestamp, label, segmentStyle, and pointStyle.
 /// Metadata is excluded from equality comparisons for performance optimization.
 ///
 /// Example:
@@ -20,11 +20,18 @@ import 'segment_style.dart';
 ///   label: 'Data Point 1',
 /// );
 ///
-/// // With segment style override
-/// final highlightedPoint = ChartDataPoint(
+/// // With segment style override (for line/area charts)
+/// final linePoint = ChartDataPoint(
 ///   x: 15.0,
 ///   y: 25.0,
 ///   segmentStyle: SegmentStyle.color(Colors.red),
+/// );
+///
+/// // With point style override (for scatter/bar charts)
+/// final scatterPoint = ChartDataPoint(
+///   x: 20.0,
+///   y: 30.0,
+///   pointStyle: PointStyle.color(Colors.green),
 /// );
 /// ```
 class ChartDataPoint {
@@ -39,6 +46,7 @@ class ChartDataPoint {
     this.label,
     this.metadata,
     this.segmentStyle,
+    this.pointStyle,
   });
 
   /// X-axis value (horizontal position).
@@ -78,6 +86,28 @@ class ChartDataPoint {
   /// ```
   final SegmentStyle? segmentStyle;
 
+  /// Optional style override for this specific point.
+  ///
+  /// This affects how the point itself is rendered in scatter plots
+  /// or bar charts. Unlike [segmentStyle] which affects the line between
+  /// points, [pointStyle] affects the visual representation of this point.
+  ///
+  /// **Applies to**: [ScatterChartSeries], [BarChartSeries]
+  ///
+  /// **Performance**: Charts detect if any points have point styles.
+  /// If none do, rendering uses an optimized single-color code path.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Highlight this scatter point in red with larger size
+  /// ChartDataPoint(
+  ///   x: 5.0,
+  ///   y: 10.0,
+  ///   pointStyle: PointStyle(color: Colors.red, size: 12.0),
+  /// )
+  /// ```
+  final PointStyle? pointStyle;
+
   /// Returns true if this point has a timestamp.
   bool get hasTimestamp => timestamp != null;
 
@@ -86,6 +116,9 @@ class ChartDataPoint {
 
   /// Returns true if this point has a segment style override.
   bool get hasSegmentStyle => segmentStyle != null;
+
+  /// Returns true if this point has a point style override.
+  bool get hasPointStyle => pointStyle != null;
 
   /// Returns true if both x and y are finite numbers.
   ///
@@ -96,6 +129,7 @@ class ChartDataPoint {
   /// Creates a copy of this point with optional property overrides.
   ///
   /// Use [clearSegmentStyle] to explicitly remove a segment style.
+  /// Use [clearPointStyle] to explicitly remove a point style.
   ///
   /// Example:
   /// ```dart
@@ -111,6 +145,8 @@ class ChartDataPoint {
     Map<String, dynamic>? metadata,
     SegmentStyle? segmentStyle,
     bool clearSegmentStyle = false,
+    PointStyle? pointStyle,
+    bool clearPointStyle = false,
   }) {
     return ChartDataPoint(
       x: x ?? this.x,
@@ -119,6 +155,7 @@ class ChartDataPoint {
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,
       segmentStyle: clearSegmentStyle ? null : (segmentStyle ?? this.segmentStyle),
+      pointStyle: clearPointStyle ? null : (pointStyle ?? this.pointStyle),
     );
   }
 
@@ -131,11 +168,12 @@ class ChartDataPoint {
           y == other.y &&
           timestamp == other.timestamp &&
           label == other.label &&
-          segmentStyle == other.segmentStyle;
+          segmentStyle == other.segmentStyle &&
+          pointStyle == other.pointStyle;
   // Note: metadata is intentionally excluded from equality
 
   @override
-  int get hashCode => Object.hash(x, y, timestamp, label, segmentStyle);
+  int get hashCode => Object.hash(x, y, timestamp, label, segmentStyle, pointStyle);
 
   @override
   String toString() {
@@ -149,6 +187,9 @@ class ChartDataPoint {
     }
     if (hasSegmentStyle) {
       buffer.write(', segmentStyle: $segmentStyle');
+    }
+    if (hasPointStyle) {
+      buffer.write(', pointStyle: $pointStyle');
     }
     buffer.write(')');
     return buffer.toString();
