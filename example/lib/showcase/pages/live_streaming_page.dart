@@ -72,6 +72,10 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   int _totalPointsGenerated = 0;
   DateTime? _streamStartTime;
 
+  // Rolling rate calculation (last second)
+  int _pointsInLastSecond = 0;
+  DateTime? _lastSecondStart;
+
   @override
   void initState() {
     super.initState();
@@ -151,6 +155,8 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
     _streamStartTime = DateTime.now();
     _totalPointsGenerated = 0;
+    _pointsInLastSecond = 0;
+    _lastSecondStart = null;
 
     // Make sure streaming is resumed (unlocks viewport for auto-scroll)
     if (!(_streamController?.isStreaming ?? true)) {
@@ -168,6 +174,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     _dataTimer?.cancel();
     _dataTimer = null;
     _streamStartTime = null;
+    _lastSecondStart = null;
 
     // When stopping data flow, also lock viewport so user can pan historical data
     // This allows exploring the data that was collected
@@ -181,6 +188,16 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
     _generateAndAddPoint();
     _totalPointsGenerated++;
+
+    // Track rolling rate (last second)
+    _lastSecondStart ??= DateTime.now();
+    _pointsInLastSecond++;
+    final elapsedMs = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+    if (elapsedMs >= 1000) {
+      // Reset counter every second
+      _pointsInLastSecond = 0;
+      _lastSecondStart = DateTime.now();
+    }
 
     // Update UI periodically (not on every point to avoid interrupting animation)
     if (_pointCounter % 50 == 0) {
@@ -238,6 +255,8 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     _pointCounter = 0;
     _lastValue = 50.0;
     _totalPointsGenerated = 0;
+    _pointsInLastSecond = 0;
+    _lastSecondStart = null;
     _initializeData();
     setState(() {});
   }
@@ -617,13 +636,14 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     final isPaused = !(_streamController?.isStreaming ?? true);
     final bounds = _streamController?.bounds;
 
-    // Calculate effective rate
+    // Calculate effective rate - use rolling 1-second window for accuracy
     String effectiveRate = '$_updateRateHz Hz';
-    if (isDataFlowing && _streamStartTime != null) {
-      final elapsed = DateTime.now().difference(_streamStartTime!).inMilliseconds;
-      if (elapsed > 1000 && _totalPointsGenerated > 0) {
-        final actualHz = (_totalPointsGenerated / (elapsed / 1000)).toStringAsFixed(1);
-        effectiveRate = '$actualHz Hz';
+    if (isDataFlowing && _lastSecondStart != null) {
+      final elapsedInSecond = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+      if (elapsedInSecond > 100) {
+        // Wait at least 100ms for stable measurement
+        final instantRate = (_pointsInLastSecond / (elapsedInSecond / 1000)).toStringAsFixed(1);
+        effectiveRate = '$instantRate Hz';
       }
     }
 
