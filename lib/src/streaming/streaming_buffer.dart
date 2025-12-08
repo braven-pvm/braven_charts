@@ -85,6 +85,14 @@ class StreamingBuffer {
   /// Cleared after recalculation in [bounds] getter.
   bool _boundsNeedRecalc = false;
 
+  /// Frame counter for throttling expensive bounds recalculation.
+  /// Only recalculate every N frames to avoid stuttering during streaming.
+  int _framesSinceLastRecalc = 0;
+
+  /// Throttle interval: recalculate bounds every N frames when needed.
+  /// At 60fps, value of 10 = recalc every ~166ms (acceptable latency).
+  static const int _boundsRecalcThrottleFrames = 10;
+
   // ============================================================================
   // Public Properties
   // ============================================================================
@@ -120,8 +128,15 @@ class StreamingBuffer {
       return const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
     }
 
+    // Throttle expensive O(n) recalculation to avoid stuttering during streaming.
+    // Only recalculate every N frames when bounds are stale.
     if (_boundsNeedRecalc) {
-      _recalculateBounds();
+      _framesSinceLastRecalc++;
+      if (_framesSinceLastRecalc >= _boundsRecalcThrottleFrames) {
+        _recalculateBounds();
+        _framesSinceLastRecalc = 0;
+      }
+      // Else: use stale bounds for a few frames (acceptable for streaming UX)
     }
 
     return DataBounds(

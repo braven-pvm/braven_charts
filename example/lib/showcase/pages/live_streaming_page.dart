@@ -585,12 +585,18 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             liveStreamController: _streamController,
             theme: _optionsController.theme,
             showLegend: false,
-            showXScrollbar: _optionsController.showXScrollbar,
-            showYScrollbar: _optionsController.showYScrollbar,
+            // showXScrollbar: _optionsController.showXScrollbar,
+            // showYScrollbar: _optionsController.showYScrollbar,
+            showXScrollbar: false,
+            showYScrollbar: false,
+
             scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
-              showAxis: _optionsController.showAxisLines,
+              // showAxis: _optionsController.showAxisLines,
+              showAxis: false,
+              showTicks: false,
+              showMinorGrid: false,
             ),
             yAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
