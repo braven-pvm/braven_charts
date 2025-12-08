@@ -154,15 +154,15 @@ class Axis {
     // This works for both expand mode and scroll mode:
     // - Expand: triggers when data grows past rightmost tick
     // - Scroll: triggers when viewport slides past tick coverage
+    // Use 1.0× interval threshold to regenerate only when we've scrolled a full tick
     bool needsNewTicks = false;
     if (!intervalChanged && _lastTickInterval != null && _lastRightmostTick != null) {
-      // Need new tick on the right if data extends significantly past last tick
-      // Use 0.8× interval threshold to regenerate just before hitting the edge
-      if (newDataMax > _lastRightmostTick! + _lastTickInterval! * 0.8) {
+      // Need new tick on the right if data extends past last tick by a full interval
+      if (newDataMax > _lastRightmostTick! + _lastTickInterval!) {
         needsNewTicks = true;
       }
-      // Need new tick on the left if data extends past first tick
-      if (_lastLeftmostTick != null && newDataMin < _lastLeftmostTick! - _lastTickInterval! * 0.8) {
+      // Need new tick on the left if data extends past first tick by a full interval
+      if (_lastLeftmostTick != null && newDataMin < _lastLeftmostTick! - _lastTickInterval!) {
         needsNewTicks = true;
       }
     }
@@ -240,7 +240,7 @@ class Axis {
     if (!config.showAxisLine && !config.showGrid && !config.showTickMarks) {
       return const [];
     }
-    
+
     return TickGenerator().generateTicks(
       dataMin: scale.dataMin,
       dataMax: scale.dataMax,
