@@ -641,6 +641,57 @@ class SeriesElement implements ChartElement {
     // PRE-TRANSFORM all points ONCE
     final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
+    // Check if any segment has style overrides
+    final hasOverrides = series.points.any((p) => p.segmentStyle != null);
+
+    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    final opacity = isSelected
+        ? 1.0
+        : isHovered
+            ? 0.8
+            : 0.7;
+    // Use theme-based stroke width with selection multiplier
+    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+
+    if (!hasOverrides) {
+      // FAST PATH: Single color for both fill and stroke
+      _paintAreaSeriesSingleColor(
+        canvas,
+        series,
+        transformedPoints,
+        baseColor,
+        opacity,
+        effectiveStrokeWidth,
+      );
+    } else {
+      // STYLED PATH: Multi-color fill and stroke
+      _paintAreaSeriesMultiColor(
+        canvas,
+        series,
+        transformedPoints,
+        baseColor,
+        opacity,
+        effectiveStrokeWidth,
+      );
+    }
+
+    // Draw data point markers if enabled (reuse cached transforms!)
+    if (series.showDataPointMarkers) {
+      // Use theme marker size if available, otherwise series-specific size
+      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
+    }
+  }
+
+  /// Paints an area series with a single uniform color.
+  void _paintAreaSeriesSingleColor(
+    Canvas canvas,
+    AreaChartSeries series,
+    List<Offset> transformedPoints,
+    Color baseColor,
+    double opacity,
+    double strokeWidth,
+  ) {
     final path = Path();
     final firstPlot = transformedPoints.first;
 
@@ -671,85 +722,158 @@ class SeriesElement implements ChartElement {
     path.lineTo(lastPlot.dx, _currentTransform.plotHeight);
     path.close();
 
-    // Fill area (single color, no segment styling for fill)
+    // Fill area
     final fillPaint = Paint()
       ..color = baseColor.withValues(alpha: series.fillOpacity)
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Draw line on top - check for segment style overrides
-    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected
-        ? 1.0
-        : isHovered
-            ? 0.8
-            : 0.7;
-    // Use theme-based stroke width with selection multiplier
-    final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
+    // Draw stroke line on top
+    final linePaint = Paint()
+      ..color = baseColor.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    // Check if any segment has style overrides
-    final hasOverrides = series.points.any((p) => p.segmentStyle != null);
+    final linePath = Path();
+    linePath.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
 
-    if (!hasOverrides) {
-      // FAST PATH: Single color stroke
-      final linePaint = Paint()
-        ..color = baseColor.withValues(alpha: opacity)
+    switch (series.interpolation) {
+      case LineInterpolation.linear:
+        for (int i = 1; i < transformedPoints.length; i++) {
+          linePath.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
+      case LineInterpolation.bezier:
+        _addBezierToPath(linePath, transformedPoints, series.tension);
+        break;
+      case LineInterpolation.stepped:
+        _addSteppedToPath(linePath, transformedPoints);
+        break;
+      case LineInterpolation.monotone:
+        _addMonotoneToPath(linePath, transformedPoints);
+        break;
+    }
+
+    canvas.drawPath(linePath, linePaint);
+  }
+
+  /// Paints an area series with per-segment colors for both fill and stroke.
+  void _paintAreaSeriesMultiColor(
+    Canvas canvas,
+    AreaChartSeries series,
+    List<Offset> transformedPoints,
+    Color baseColor,
+    double opacity,
+    double strokeWidth,
+  ) {
+    // Analyze style regions (same logic as line charts)
+    final regions = _analyzeStyleRegions(series.points, baseColor, strokeWidth);
+
+    // Draw each region's fill and stroke
+    for (final region in regions) {
+      // Build the fill path for this region (closed polygon to x-axis)
+      final fillPath = _buildAreaRegionFillPath(
+        transformedPoints,
+        region.startIndex,
+        region.endIndex,
+        series.interpolation,
+        series.tension,
+      );
+
+      // Draw fill with region color
+      final fillPaint = Paint()
+        ..color = region.color.withValues(alpha: series.fillOpacity)
+        ..style = PaintingStyle.fill;
+      canvas.drawPath(fillPath, fillPaint);
+
+      // Build stroke path for this region
+      final strokePath = _buildRegionPath(
+        transformedPoints,
+        region.startIndex,
+        region.endIndex,
+        series.interpolation,
+        series.tension,
+      );
+
+      // Draw stroke with region color
+      final strokePaint = Paint()
+        ..color = region.color.withValues(alpha: opacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = effectiveStrokeWidth
+        ..strokeWidth = region.strokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(strokePath, strokePaint);
+    }
+  }
 
-      final linePath = Path();
-      linePath.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
+  /// Builds a closed fill path for an area region (line segment + down to x-axis).
+  Path _buildAreaRegionFillPath(
+    List<Offset> transformedPoints,
+    int startIndex,
+    int endIndex,
+    LineInterpolation interpolation,
+    double tension,
+  ) {
+    final path = Path();
+    final startPoint = transformedPoints[startIndex];
+    final endPoint = transformedPoints[endIndex];
+    final xAxisY = _currentTransform.plotHeight;
 
-      switch (series.interpolation) {
-        case LineInterpolation.linear:
-          for (int i = 1; i < transformedPoints.length; i++) {
-            linePath.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
-          }
-          break;
-        case LineInterpolation.bezier:
-          _addBezierToPath(linePath, transformedPoints, series.tension);
-          break;
-        case LineInterpolation.stepped:
-          _addSteppedToPath(linePath, transformedPoints);
-          break;
-        case LineInterpolation.monotone:
-          _addMonotoneToPath(linePath, transformedPoints);
-          break;
-      }
+    // Start from x-axis at the start point's X
+    path.moveTo(startPoint.dx, xAxisY);
 
-      canvas.drawPath(linePath, linePaint);
-    } else {
-      // STYLED PATH: Multi-color stroke (reuse line series logic)
-      final regions = _analyzeStyleRegions(series.points, baseColor, effectiveStrokeWidth);
+    // Go up to the start point
+    path.lineTo(startPoint.dx, startPoint.dy);
 
-      for (final region in regions) {
-        final regionPath = _buildRegionPath(
-          transformedPoints,
-          region.startIndex,
-          region.endIndex,
-          series.interpolation,
-          series.tension,
-        );
+    // Draw the line segment using the appropriate interpolation
+    switch (interpolation) {
+      case LineInterpolation.linear:
+        for (int i = startIndex + 1; i <= endIndex; i++) {
+          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
 
-        final regionPaint = Paint()
-          ..color = region.color.withValues(alpha: opacity)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = region.strokeWidth
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round;
+      case LineInterpolation.bezier:
+        // For bezier, calculate control points for each segment
+        for (int i = startIndex; i < endIndex; i++) {
+          final (cp1, cp2) = _calculateBezierControlPoints(transformedPoints, i, tension);
+          path.cubicTo(
+            cp1.dx,
+            cp1.dy,
+            cp2.dx,
+            cp2.dy,
+            transformedPoints[i + 1].dx,
+            transformedPoints[i + 1].dy,
+          );
+        }
+        break;
 
-        canvas.drawPath(regionPath, regionPaint);
-      }
+      case LineInterpolation.stepped:
+        for (int i = startIndex; i < endIndex; i++) {
+          final current = transformedPoints[i];
+          final next = transformedPoints[i + 1];
+          path.lineTo(next.dx, current.dy); // Horizontal to next X
+          path.lineTo(next.dx, next.dy); // Vertical to next Y
+        }
+        break;
+
+      case LineInterpolation.monotone:
+        // Monotone uses linear fallback (same as _buildRegionPath)
+        for (int i = startIndex + 1; i <= endIndex; i++) {
+          path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);
+        }
+        break;
     }
 
-    // Draw data point markers if enabled (reuse cached transforms!)
-    if (series.showDataPointMarkers) {
-      // Use theme marker size if available, otherwise series-specific size
-      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
-      _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
-    }
+    // Go down to x-axis at the end point's X
+    path.lineTo(endPoint.dx, xAxisY);
+
+    // Close back to start
+    path.close();
+
+    return path;
   }
 
   void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
