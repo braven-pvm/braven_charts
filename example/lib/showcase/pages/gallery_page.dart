@@ -18,37 +18,64 @@ class _GalleryPageState extends State<GalleryPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          const SliverAppBar.large(
-            title: Text('Chart Gallery'),
-            floating: true,
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 700, // Increased from 500 for bigger charts (3 per row on wide screens)
-                childAspectRatio: 1.2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+      body: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: CustomScrollView(
+          shrinkWrap: true,
+          slivers: [
+            SliverAppBar(
+              title: Padding(
+                padding: const EdgeInsets.only(top: 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chart Gallery',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        "Multitude of chart configurations",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              delegate: SliverChildListDelegate([
-                _buildMonthlyRevenueChart(isDark),
-                _buildTemperatureTrendChart(isDark),
-                _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
-                _buildNormalizedCrosshairChart(isDark), // Multi-axis normalized with crosshair tracking
-                _buildAnnotatedChart(isDark), // Chart with annotations
-                _buildMixedInterpolationChart(isDark), // Multiple interpolation types on one chart
-                _buildStockPriceChart(isDark),
-                _buildSalesComparisonChart(isDark),
-                _buildHeartRateChart(isDark),
-              ]),
+              floating: true,
             ),
-          ),
-        ],
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 750, // Increased from 500 for bigger charts (3 per row on wide screens)
+                  childAspectRatio: 1.2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                delegate: SliverChildListDelegate([
+                  _buildMonthlyRevenueChart(isDark),
+                  _buildTemperatureTrendChart(isDark),
+                  _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
+                  _buildNormalizedCrosshairChart(isDark), // Multi-axis normalized with crosshair tracking
+                  _buildAnnotatedChart(isDark), // Chart with annotations
+                  _buildMixedInterpolationChart(isDark), // Multiple interpolation types on one chart
+                  _buildStockPriceChart(isDark),
+                  _buildSalesComparisonChart(isDark),
+                  _buildHeartRateChart(isDark),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

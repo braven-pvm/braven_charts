@@ -78,7 +78,7 @@ class LegendStyle {
   /// Creates a legend style.
   const LegendStyle({
     this.position = LegendPosition.topRight,
-    this.orientation = LegendOrientation.vertical,
+    this.orientation = LegendOrientation.horizontal,
     this.textStyle = const TextStyle(
       fontSize: 11.0,
       fontWeight: FontWeight.normal,
@@ -89,10 +89,10 @@ class LegendStyle {
     this.borderWidth = 0.0,
     this.borderRadius,
     this.padding,
-    this.itemSpacing = 4.0,
-    this.markerSize = 12.0,
+    this.itemSpacing = 6.0,
+    this.markerSize = 16.0,
     this.markerShape = LegendMarkerShape.line,
-    this.markerLineWidth = 3.0,
+    this.markerLineWidth = 4.0,
     this.markerLabelSpacing = 6.0,
     this.allowDragging = true,
     this.opacity = 1.0,
@@ -182,16 +182,16 @@ class LegendStyle {
 
   /// Effective background color with default fallback.
   /// Default is semi-transparent white (85% opacity) - no border by default.
-  Color get effectiveBackgroundColor => backgroundColor ?? const Color(0xD9FFFFFF);
+  Color get effectiveBackgroundColor => backgroundColor ?? const Color.fromARGB(117, 255, 255, 255);
 
   /// Effective border color with default fallback.
-  Color get effectiveBorderColor => borderColor ?? const Color(0xFFBDBDBD);
+  Color get effectiveBorderColor => borderColor ?? const Color.fromARGB(0, 255, 255, 255);
 
   /// Effective border radius with default fallback.
-  BorderRadius get effectiveBorderRadius => borderRadius ?? BorderRadius.circular(4);
+  BorderRadius get effectiveBorderRadius => borderRadius ?? BorderRadius.circular(7);
 
   /// Effective padding with default fallback.
-  EdgeInsets get effectivePadding => padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
+  EdgeInsets get effectivePadding => padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 4);
 
   /// Creates a copy with modified properties.
   LegendStyle copyWith({

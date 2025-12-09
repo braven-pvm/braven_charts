@@ -41,7 +41,6 @@ import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
-import 'widgets/chart_legend.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
 import 'widgets/dialogs/range_annotation_dialog.dart';
@@ -2518,24 +2517,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Chart content takes available space
       children.add(Expanded(child: chartContent));
 
-      if (widget.showLegend) {
-        children.add(
-          ChartLegend(
-            series: widget.series,
-            hiddenSeriesIds: _hiddenSeriesIds,
-            onSeriesToggle: (seriesId) {
-              setState(() {
-                if (_hiddenSeriesIds.contains(seriesId)) {
-                  _hiddenSeriesIds.remove(seriesId);
-                } else {
-                  _hiddenSeriesIds.add(seriesId);
-                }
-                _rebuildElements();
-              });
-            },
-          ),
-        );
-      }
+      // Legacy ChartLegend widget removed - overlay legend (LegendAnnotation)
+      // is now used exclusively for legend rendering within the chart area.
 
       return Column(
         mainAxisSize: MainAxisSize.min,
