@@ -571,7 +571,8 @@ class SeriesElement implements ChartElement {
     final p2 = points[i + 1];
     final p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
 
-    final alpha = tension;
+    // Scale tension for visible curvature (same as _addBezierToPath)
+    final alpha = tension * 2.0;
 
     // Catmull-Rom to cubic bezier control points
     final cp1 = Offset(
@@ -966,7 +967,10 @@ class SeriesElement implements ChartElement {
   void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
     if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) return;
 
-    final alpha = tension;
+    // Scale tension for visible curvature: 0.0 = straight, 1.0 = smooth Catmull-Rom
+    // The standard Catmull-Rom formula divides by 6, but we use a stronger multiplier
+    // to make curves more pronounced at the default tension of 0.5
+    final alpha = tension * 2.0; // Amplify tension for visible curves
 
     for (int i = startIndex; i < transformedPoints.length; i++) {
       // For segment from point[i-1] to point[i], we need 4 points for Catmull-Rom:
