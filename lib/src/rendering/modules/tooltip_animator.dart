@@ -159,6 +159,10 @@ class TooltipAnimator {
     // If already at target, nothing to do
     if (delta.abs() < 0.001) {
       _opacity = target;
+      // Clear target marker when fully hidden to allow re-showing same marker
+      if (target < 0.001) {
+        _targetMarker = null;
+      }
       _safeRepaint();
       return;
     }
@@ -180,6 +184,10 @@ class TooltipAnimator {
 
       if (currentStep >= totalSteps) {
         _opacity = target;
+        // Clear target marker when fully hidden to allow re-showing same marker
+        if (target < 0.001) {
+          _targetMarker = null;
+        }
         timer.cancel();
         _safeRepaint();
       } else {

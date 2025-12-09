@@ -699,19 +699,23 @@ class _GalleryPageState extends State<GalleryPage> {
               child: BravenChartPlus(
                 series: [
                   LineChartSeries(
-                    id: 'cpu',
-                    name: 'CPU',
-                    points: List.generate(
-                      50,
-                      (i) => ChartDataPoint(
-                        x: i.toDouble(),
-                        y: 30 + (i * 1.5) % 40 + (i % 5) * 3,
+                      id: 'cpu',
+                      name: 'CPU',
+                      points: List.generate(
+                        50,
+                        (i) => ChartDataPoint(
+                          x: i.toDouble(),
+                          y: 30 + (i * 1.5) % 40 + (i % 5) * 3,
+                        ),
                       ),
-                    ),
-                    color: const Color(0xFF67E8F9),
-                    interpolation: LineInterpolation.bezier,
-                    strokeWidth: 1.5,
-                  ),
+                      color: const Color(0xFF67E8F9),
+                      interpolation: LineInterpolation.bezier,
+                      strokeWidth: 1.5,
+                      yAxisConfig: YAxisConfig(
+                        id: 'cpu',
+                        position: YAxisPosition.left,
+                        
+                      )),
                 ],
                 annotations: [
                   ThresholdAnnotation(
