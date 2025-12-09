@@ -71,6 +71,14 @@ class _GalleryPageState extends State<GalleryPage> {
                   _buildStockPriceChart(isDark),
                   _buildSalesComparisonChart(isDark),
                   _buildHeartRateChart(isDark),
+                  _buildEnergyConsumptionChart(isDark), // Energy usage pattern
+                  _buildWebTrafficChart(isDark), // Website traffic
+                  _buildProjectTimelineChart(isDark), // Project progress
+                  _buildCpuUsageChart(isDark), // Real-time CPU monitoring
+                  // Segment Colors Showcases
+                  _buildThresholdColoringChart(isDark), // Color by Y threshold
+                  _buildGradientSegmentsChart(isDark), // Rainbow gradient segments
+                  _buildStockGainLossChart(isDark), // Green/red for gain/loss
                 ]),
               ),
             ),
@@ -930,6 +938,279 @@ class _GalleryPageState extends State<GalleryPage> {
                 showLegend: true,
                 xAxis: const AxisConfig(label: 'X'),
                 yAxis: const AxisConfig(label: 'Y'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================================
+  // Segment Colors Showcases
+  // ==========================================================================
+
+  /// Threshold-based coloring: segments colored by Y value
+  Widget _buildThresholdColoringChart(bool isDark) {
+    // Generate data with varying Y values
+    final points = <ChartDataPoint>[
+      const ChartDataPoint(x: 0, y: 45),
+      const ChartDataPoint(x: 1, y: 52),
+      const ChartDataPoint(x: 2, y: 78),
+      const ChartDataPoint(x: 3, y: 85),
+      const ChartDataPoint(x: 4, y: 92),
+      const ChartDataPoint(x: 5, y: 88),
+      const ChartDataPoint(x: 6, y: 65),
+      const ChartDataPoint(x: 7, y: 55),
+      const ChartDataPoint(x: 8, y: 48),
+      const ChartDataPoint(x: 9, y: 72),
+      const ChartDataPoint(x: 10, y: 95),
+    ];
+
+    // Create series and apply threshold coloring
+    var series = LineChartSeries(
+      id: 'threshold',
+      name: 'System Load',
+      points: points,
+      color: const Color(0xFF10B981), // Green = normal
+      interpolation: LineInterpolation.bezier,
+      strokeWidth: 3.0,
+    );
+
+    // Color segments based on next point's Y value (threshold at 80)
+    series = series.withColorWhere(
+      (point) => point.y >= 80,
+      const Color(0xFFEF4444), // Red = high load
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.speed, color: Color(0xFF10B981), size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'System Load Monitor',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                const Text('Threshold Coloring', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('< 80%', style: TextStyle(fontSize: 10, color: Color(0xFF10B981))),
+                ),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('≥ 80%', style: TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BravenChartPlus(
+                series: [series],
+                theme: isDark ? ChartTheme.dark : ChartTheme.light,
+                showLegend: false,
+                xAxis: const AxisConfig(label: 'Time (s)'),
+                yAxis: const AxisConfig(label: 'Load %'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Rainbow gradient segments across the line
+  Widget _buildGradientSegmentsChart(bool isDark) {
+    // Generate smooth wave data
+    final points = List.generate(
+      20,
+      (i) => ChartDataPoint(
+        x: i.toDouble(),
+        y: 50 + 30 * sin(i * 0.5),
+      ),
+    );
+
+    // Rainbow colors for each segment
+    final rainbowColors = [
+      const Color(0xFFFF0000), // Red
+      const Color(0xFFFF7F00), // Orange
+      const Color(0xFFFFFF00), // Yellow
+      const Color(0xFF00FF00), // Green
+      const Color(0xFF0000FF), // Blue
+      const Color(0xFF4B0082), // Indigo
+      const Color(0xFF9400D3), // Violet
+    ];
+
+    // Create color map for segments
+    final colorMap = <int, Color>{};
+    for (int i = 0; i < points.length - 1; i++) {
+      colorMap[i] = rainbowColors[i % rainbowColors.length];
+    }
+
+    var series = LineChartSeries(
+      id: 'rainbow',
+      name: 'Rainbow Wave',
+      points: points,
+      color: Colors.grey, // Base color (overridden)
+      interpolation: LineInterpolation.bezier,
+      tension: 0.3,
+      strokeWidth: 4.0,
+    );
+
+    series = series.withSegmentColors(colorMap);
+
+    return Card(
+      color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.gradient, color: Color(0xFF9400D3), size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Rainbow Segments',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              'Per-segment color override',
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BravenChartPlus(
+                series: [series],
+                theme: isDark ? ChartTheme.dark : ChartTheme.light,
+                showLegend: false,
+                xAxis: const AxisConfig(showGrid: false),
+                yAxis: const AxisConfig(showGrid: true),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Stock chart with green/red for gain/loss segments
+  Widget _buildStockGainLossChart(bool isDark) {
+    // Stock price data with ups and downs
+    final points = <ChartDataPoint>[
+      const ChartDataPoint(x: 0, y: 150.0),
+      const ChartDataPoint(x: 1, y: 155.5),
+      const ChartDataPoint(x: 2, y: 152.3),
+      const ChartDataPoint(x: 3, y: 158.7),
+      const ChartDataPoint(x: 4, y: 161.2),
+      const ChartDataPoint(x: 5, y: 157.8),
+      const ChartDataPoint(x: 6, y: 163.4),
+      const ChartDataPoint(x: 7, y: 168.9),
+      const ChartDataPoint(x: 8, y: 165.2),
+      const ChartDataPoint(x: 9, y: 171.5),
+      const ChartDataPoint(x: 10, y: 169.8),
+      const ChartDataPoint(x: 11, y: 175.3),
+    ];
+
+    // Determine gain/loss color for each segment
+    final colorMap = <int, Color>{};
+    for (int i = 0; i < points.length - 1; i++) {
+      final isGain = points[i + 1].y > points[i].y;
+      colorMap[i] = isGain ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    }
+
+    var series = LineChartSeries(
+      id: 'stock',
+      name: 'TECH',
+      points: points,
+      color: Colors.grey,
+      interpolation: LineInterpolation.linear,
+      strokeWidth: 2.5,
+      showDataPointMarkers: true,
+      dataPointMarkerRadius: 3.0,
+    );
+
+    series = series.withSegmentColors(colorMap);
+
+    // Calculate overall change
+    final startPrice = points.first.y;
+    final endPrice = points.last.y;
+    final change = endPrice - startPrice;
+    final changePercent = (change / startPrice * 100);
+    final isPositive = change >= 0;
+
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'TECH Stock',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Text(
+              'Gain/Loss segment coloring',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BravenChartPlus(
+                series: [series],
+                theme: ChartTheme.dark,
+                showLegend: false,
+                xAxis: const AxisConfig(label: 'Day', showGrid: false),
+                yAxis: const AxisConfig(label: 'Price (\$)', showGrid: true),
               ),
             ),
           ],
