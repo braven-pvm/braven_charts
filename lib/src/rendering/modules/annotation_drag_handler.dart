@@ -169,6 +169,16 @@ class AnnotationDragHandler {
   double? _movePinStartY;
 
   // ==========================================================================
+  // Move State - LegendAnnotation
+  // ==========================================================================
+
+  /// LegendAnnotation currently being moved.
+  LegendAnnotationElement? _movingLegendAnnotation;
+
+  /// Position at move start.
+  Offset? _moveLegendStartPosition;
+
+  // ==========================================================================
   // Potential Drag State - Click vs Drag Detection
   // ==========================================================================
 
@@ -193,6 +203,10 @@ class AnnotationDragHandler {
   PinAnnotationElement? _potentialDragPinAnnotation;
   Offset? _potentialDragPinStartPosition;
 
+  /// Potential drag state for LegendAnnotation.
+  LegendAnnotationElement? _potentialDragLegendAnnotation;
+  Offset? _potentialDragLegendStartPosition;
+
   // ==========================================================================
   // State Queries
   // ==========================================================================
@@ -206,7 +220,8 @@ class AnnotationDragHandler {
       _movingTextAnnotation != null ||
       _movingPointAnnotation != null ||
       _movingThresholdAnnotation != null ||
-      _movingPinAnnotation != null;
+      _movingPinAnnotation != null ||
+      _movingLegendAnnotation != null;
 
   /// Whether any potential drag is pending (click started, waiting for movement).
   bool get hasPotentialDrag =>
@@ -214,7 +229,8 @@ class AnnotationDragHandler {
       _potentialDragRangeAnnotation != null ||
       _potentialDragTextAnnotation != null ||
       _potentialDragThresholdAnnotation != null ||
-      _potentialDragPinAnnotation != null;
+      _potentialDragPinAnnotation != null ||
+      _potentialDragLegendAnnotation != null;
 
   /// The resizing annotation element (if any).
   RangeAnnotationElement? get resizingAnnotation => _resizingAnnotation;
@@ -773,6 +789,62 @@ class AnnotationDragHandler {
   }
 
   // ==========================================================================
+  // Move Operations - LegendAnnotation
+  // ==========================================================================
+
+  /// Starts a move operation on a LegendAnnotation.
+  void startLegendMove(LegendAnnotationElement annotation, Offset position) {
+    _movingLegendAnnotation = annotation;
+    _moveLegendStartPosition = position;
+  }
+
+  /// Performs move operation for LegendAnnotation during drag.
+  void performLegendMove(Offset currentPosition) {
+    if (_movingLegendAnnotation == null || _moveLegendStartPosition == null) return;
+
+    final delta = currentPosition - _moveLegendStartPosition!;
+    final currentBounds = _movingLegendAnnotation!.bounds;
+    final newTopLeft = Offset(currentBounds.left + delta.dx, currentBounds.top + delta.dy);
+
+    _movingLegendAnnotation!.updateTempPosition(newTopLeft);
+    _moveLegendStartPosition = currentPosition; // Update for continuous delta
+  }
+
+  /// Finalizes LegendAnnotation move and commits the change.
+  LegendAnnotation? finalizeLegendMove() {
+    if (_movingLegendAnnotation == null) return null;
+
+    final element = _movingLegendAnnotation!;
+    final tempPosition = element.tempPosition;
+
+    if (tempPosition != null) {
+      final updatedAnnotation = element.annotation.copyWith(
+        customPosition: tempPosition,
+      );
+
+      element.clearTempPosition();
+      cancelLegendMove();
+
+      _delegate.rebuildSpatialIndex();
+      _delegate.markNeedsPaint();
+
+      return updatedAnnotation;
+    }
+
+    element.clearTempPosition();
+    cancelLegendMove();
+    _delegate.markNeedsPaint();
+    return null;
+  }
+
+  /// Cancels LegendAnnotation move without committing changes.
+  void cancelLegendMove() {
+    _movingLegendAnnotation?.clearTempPosition();
+    _movingLegendAnnotation = null;
+    _moveLegendStartPosition = null;
+  }
+
+  // ==========================================================================
   // Potential Drag State - Click vs Drag Detection
   // ==========================================================================
 
@@ -854,6 +926,21 @@ class AnnotationDragHandler {
   /// Gets potential PinAnnotation drag info.
   (PinAnnotationElement?, Offset?) get potentialPinDrag => (_potentialDragPinAnnotation, _potentialDragPinStartPosition);
 
+  /// Sets potential drag state for LegendAnnotation.
+  void setPotentialLegendDrag(LegendAnnotationElement annotation, Offset position) {
+    _potentialDragLegendAnnotation = annotation;
+    _potentialDragLegendStartPosition = position;
+  }
+
+  /// Clears potential drag state for LegendAnnotation.
+  void clearPotentialLegendDrag() {
+    _potentialDragLegendAnnotation = null;
+    _potentialDragLegendStartPosition = null;
+  }
+
+  /// Gets potential LegendAnnotation drag info.
+  (LegendAnnotationElement?, Offset?) get potentialLegendDrag => (_potentialDragLegendAnnotation, _potentialDragLegendStartPosition);
+
   /// Checks if pointer has moved beyond drag threshold.
   bool exceedsDragThreshold(Offset startPosition, Offset currentPosition) {
     return (currentPosition - startPosition).distance > dragThresholdPixels;
@@ -871,11 +958,13 @@ class AnnotationDragHandler {
     cancelTextMove();
     cancelThresholdMove();
     cancelPinMove();
+    cancelLegendMove();
     clearPotentialPointDrag();
     clearPotentialRangeDrag();
     clearPotentialTextDrag();
     clearPotentialThresholdDrag();
     clearPotentialPinDrag();
+    clearPotentialLegendDrag();
   }
 
   /// Disposes of resources.

@@ -254,6 +254,20 @@ class EventHandlerManager {
   Offset? _potentialDragPinStartPosition;
 
   // ==========================================================================
+  // LegendAnnotation Move State
+  // ==========================================================================
+
+  /// LegendAnnotation being moved.
+  LegendAnnotationElement? _movingLegendAnnotation;
+
+  /// Starting position for legend move.
+  Offset? _moveLegendStartPosition;
+
+  /// Potential LegendAnnotation drag.
+  LegendAnnotationElement? _potentialDragLegendAnnotation;
+  Offset? _potentialDragLegendStartPosition;
+
+  // ==========================================================================
   // Pan State
   // ==========================================================================
 
@@ -422,6 +436,9 @@ class EventHandlerManager {
     } else if (hitElement is PinAnnotationElement && hitElement.annotation.allowDragging) {
       _potentialDragPinAnnotation = hitElement;
       _potentialDragPinStartPosition = position;
+    } else if (hitElement is LegendAnnotationElement && hitElement.annotation.legendStyle.allowDragging) {
+      _potentialDragLegendAnnotation = hitElement;
+      _potentialDragLegendStartPosition = position;
     } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
       _potentialDragPointAnnotation = hitElement;
       _potentialDragStartPosition = position;
@@ -563,6 +580,28 @@ class EventHandlerManager {
       return true;
     }
 
+    // LegendAnnotation potential drag
+    if (_potentialDragLegendAnnotation != null && _potentialDragLegendStartPosition != null) {
+      final dragDistance = (position - _potentialDragLegendStartPosition!).distance;
+
+      if (dragDistance >= _dragThresholdPixels) {
+        final hitElement = _potentialDragLegendAnnotation!;
+        _movingLegendAnnotation = hitElement;
+        _moveLegendStartPosition = _potentialDragLegendStartPosition;
+
+        _delegate.coordinator.startInteraction(_potentialDragLegendStartPosition!, element: hitElement);
+        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+
+        _potentialDragLegendAnnotation = null;
+        _potentialDragLegendStartPosition = null;
+
+        _performLegendAnnotationMove(position);
+        _delegate.markNeedsPaint();
+        return true;
+      }
+      return true;
+    }
+
     // RangeAnnotation potential drag
     if (_potentialDragRangeAnnotation != null && _potentialDragRangeStartPosition != null && _potentialDragRangeStartBounds != null) {
       final dragDistance = (position - _potentialDragRangeStartPosition!).distance;
@@ -655,6 +694,13 @@ class EventHandlerManager {
     // Handle PinAnnotation move dragging
     if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPinAnnotation != null && _movePinStartPosition != null) {
       _performPinAnnotationMove(position);
+      _delegate.markNeedsPaint();
+      return true;
+    }
+
+    // Handle LegendAnnotation move dragging
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingLegendAnnotation != null && _moveLegendStartPosition != null) {
+      _performLegendAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
     }
@@ -1000,6 +1046,13 @@ class EventHandlerManager {
       _potentialDragPinStartPosition = null;
     }
 
+    // LegendAnnotation
+    if (_potentialDragLegendAnnotation != null) {
+      _handlePotentialDragClick(_potentialDragLegendAnnotation!, event);
+      _potentialDragLegendAnnotation = null;
+      _potentialDragLegendStartPosition = null;
+    }
+
     // RangeAnnotation (skip if just completed resize/move)
     if (_potentialDragRangeAnnotation != null && !completedResizeOrMove) {
       _handlePotentialDragClick(_potentialDragRangeAnnotation!, event);
@@ -1104,6 +1157,24 @@ class EventHandlerManager {
 
       if (_delegate.onAnnotationChanged != null && (newX != originalX || newY != originalY)) {
         final updatedAnnotation = movedAnnotation.copyWith(x: newX, y: newY);
+        _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
+      }
+    }
+
+    // LegendAnnotation
+    if (_movingLegendAnnotation != null) {
+      final originalPosition = _movingLegendAnnotation!.annotation.customPosition;
+      final tempPosition = _movingLegendAnnotation!.tempPosition;
+      final newPosition = tempPosition ?? originalPosition;
+
+      _movingLegendAnnotation!.clearTempPosition();
+      final movedAnnotation = _movingLegendAnnotation!.annotation;
+
+      _movingLegendAnnotation = null;
+      _moveLegendStartPosition = null;
+
+      if (_delegate.onAnnotationChanged != null && newPosition != originalPosition) {
+        final updatedAnnotation = movedAnnotation.copyWith(customPosition: newPosition);
         _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
       }
     }
@@ -1500,6 +1571,18 @@ class EventHandlerManager {
     final newY = _movePinStartY! + dataDelta.dy;
 
     _movingPinAnnotation!.updateTempPosition(newX, newY);
+    _delegate.markNeedsPaint();
+  }
+
+  void _performLegendAnnotationMove(Offset currentPosition) {
+    if (_movingLegendAnnotation == null || _moveLegendStartPosition == null) return;
+
+    final delta = currentPosition - _moveLegendStartPosition!;
+    final currentBounds = _movingLegendAnnotation!.bounds;
+    final newTopLeft = Offset(currentBounds.left + delta.dx, currentBounds.top + delta.dy);
+
+    _movingLegendAnnotation!.updateTempPosition(newTopLeft);
+    _moveLegendStartPosition = currentPosition; // Update for continuous delta
     _delegate.markNeedsPaint();
   }
 

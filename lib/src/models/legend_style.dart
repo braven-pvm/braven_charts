@@ -86,7 +86,7 @@ class LegendStyle {
     ),
     this.backgroundColor,
     this.borderColor,
-    this.borderWidth = 1.0,
+    this.borderWidth = 0.0,
     this.borderRadius,
     this.padding,
     this.itemSpacing = 4.0,
@@ -181,7 +181,8 @@ class LegendStyle {
   final Offset offset;
 
   /// Effective background color with default fallback.
-  Color get effectiveBackgroundColor => backgroundColor ?? const Color(0xF5FFFFFF);
+  /// Default is semi-transparent white (85% opacity) - no border by default.
+  Color get effectiveBackgroundColor => backgroundColor ?? const Color(0xD9FFFFFF);
 
   /// Effective border color with default fallback.
   Color get effectiveBorderColor => borderColor ?? const Color(0xFFBDBDBD);
@@ -233,15 +234,15 @@ class LegendStyle {
 
   /// Default light theme legend style.
   static const LegendStyle light = LegendStyle(
-    backgroundColor: Color(0xF5FFFFFF),
-    borderColor: Color(0xFFBDBDBD),
+    backgroundColor: Color(0xCCFFFFFF), // Semi-transparent white
+    borderWidth: 0.0, // No border by default
     textStyle: TextStyle(fontSize: 11, color: Colors.black87),
   );
 
   /// Default dark theme legend style.
   static const LegendStyle dark = LegendStyle(
-    backgroundColor: Color(0xF5303030),
-    borderColor: Color(0xFF616161),
+    backgroundColor: Color(0xCC303030), // Semi-transparent dark
+    borderWidth: 0.0, // No border by default
     textStyle: TextStyle(fontSize: 11, color: Colors.white70),
   );
 

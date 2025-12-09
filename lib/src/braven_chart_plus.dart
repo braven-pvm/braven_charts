@@ -712,6 +712,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   bool _normalizationNeeded = false;
   Map<String, DataRange> _seriesYRanges = {};
 
+  // Legend custom position - stored internally since legend is auto-generated
+  // and doesn't require user-provided annotationController
+  Offset? _legendCustomPosition;
+
   /// Whether multi-axis normalization is currently needed.
   ///
   /// This is automatically determined by [NormalizationDetector] based on
@@ -895,6 +899,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Called when an annotation is modified through user interaction (e.g., drag-to-resize).
   void _handleAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
+    // Special handling for internal legend - store position in state
+    if (annotationId == '__internal_legend__' && updatedAnnotation is LegendAnnotation) {
+      setState(() {
+        _legendCustomPosition = updatedAnnotation.customPosition;
+        _rebuildElements();
+      });
+      return;
+    }
+
     // Only update if we have a controller (otherwise annotations are read-only from widget.annotations)
     if (widget.annotationController != null) {
       widget.annotationController!.updateAnnotation(annotationId, updatedAnnotation);
@@ -1256,8 +1269,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Auto-generate legend overlay if showLegend is true
       if (widget.showLegend && effectiveSeries.isNotEmpty) {
         final legendAnnotation = LegendAnnotation(
+          id: '__internal_legend__', // Special ID for internal legend
           series: effectiveSeries,
           legendStyle: widget.legendStyle ?? const LegendStyle(),
+          customPosition: _legendCustomPosition,
         );
         elements.add(LegendAnnotationElement(
           annotation: legendAnnotation,

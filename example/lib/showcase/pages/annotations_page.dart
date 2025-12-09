@@ -175,6 +175,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             borderRadius: BorderRadius.circular(5)),
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
+        
       ));
 
       // Rich text annotation with formatting

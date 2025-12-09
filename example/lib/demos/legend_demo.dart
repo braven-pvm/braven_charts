@@ -77,19 +77,20 @@ class _LegendDemoPageState extends State<LegendDemoPage> {
       ),
     ];
 
+    // Use mostly defaults to demonstrate no-border, semi-transparent background
     final legendStyle = LegendStyle(
       position: _position,
       allowDragging: _allowDragging,
       opacity: _opacity,
-      backgroundColor: Colors.grey[850],
-      borderColor: Colors.grey[600],
-      borderWidth: 1.0,
-      borderRadius: BorderRadius.circular(8),
-      padding: const EdgeInsets.all(12),
+      // No backgroundColor specified - uses default semi-transparent white
+      // No borderColor specified - defaults apply
+      // borderWidth defaults to 0.0 (no border)
+      borderRadius: BorderRadius.circular(6),
+      padding: const EdgeInsets.all(10),
       markerShape: LegendMarkerShape.line,
-      markerSize: 16,
-      textStyle: const TextStyle(fontSize: 12, color: Colors.white),
-      itemSpacing: 8,
+      markerSize: 14,
+      // textStyle defaults to black87 for light background
+      itemSpacing: 6,
     );
 
     return Scaffold(
