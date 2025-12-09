@@ -255,7 +255,6 @@ class _ScientificPageState extends State<ScientificPage> {
     switch (_selectedDemo) {
       case 0: // Waves
         return BravenChartPlus(
-          lineStyle: LineStyle.smooth,
           series: [
             LineChartSeries(
               id: 'sine',
@@ -295,7 +294,6 @@ class _ScientificPageState extends State<ScientificPage> {
 
       case 1: // Gaussian
         return BravenChartPlus(
-          lineStyle: LineStyle.smooth,
           series: [
             AreaChartSeries(
               id: 'gaussian1',

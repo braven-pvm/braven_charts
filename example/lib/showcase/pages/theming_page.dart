@@ -195,7 +195,6 @@ class _ThemingPageState extends State<ThemingPage> {
           title: _selectedPreset.displayName,
           subtitle: 'Theme demonstration',
           child: BravenChartPlus(
-            lineStyle: LineStyle.smooth,
             series: [
               LineChartSeries(
                 id: 'series1',
@@ -259,7 +258,6 @@ class _ThemingPageState extends State<ThemingPage> {
           title: preset.displayName,
           padding: const EdgeInsets.all(8),
           child: BravenChartPlus(
-            lineStyle: LineStyle.smooth,
             series: [
               LineChartSeries(
                 id: 'series1',

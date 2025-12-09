@@ -9,10 +9,17 @@ export 'y_axis_position.dart';
 
 /// Style of line rendering
 ///
+/// **DEPRECATED**: Use [LineInterpolation] on individual [ChartSeries] instead.
+/// This enum was used by the widget-level lineStyle parameter which has been removed.
+/// Interpolation should now be set directly on each series for fine-grained control.
+///
+/// Kept for legacy compatibility with lib/legacy code.
+///
 /// Determines how the line connects data points:
-/// - [straight]: Direct linear connection between points
-/// - [smooth]: Smooth bezier curve through points
-/// - [stepped]: Horizontal-then-vertical steps between points
+/// - [straight]: Direct linear connection between points (use [LineInterpolation.linear])
+/// - [smooth]: Smooth bezier curve through points (use [LineInterpolation.bezier])
+/// - [stepped]: Horizontal-then-vertical steps between points (use [LineInterpolation.stepped])
+@Deprecated('Use LineInterpolation on ChartSeries instead')
 enum LineStyle {
   /// Connect points with straight line segments
   straight,

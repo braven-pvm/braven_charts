@@ -194,7 +194,6 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
           title: '${_chartType.name.toUpperCase()} Chart',
           subtitle: _getChartSubtitle(),
           child: BravenChartPlus(
-            lineStyle: _useBezier ? LineStyle.smooth : LineStyle.straight,
             series: [_buildSeries()],
             theme: _optionsController.theme,
             showLegend: _optionsController.showLegend,

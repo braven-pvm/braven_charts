@@ -195,11 +195,6 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
           title: '${_chartType.name.toUpperCase()} Chart',
           subtitle: _getChartSubtitle(),
           child: BravenChartPlus(
-            lineStyle: _interpolation == LineInterpolation.bezier
-                ? LineStyle.smooth
-                : _interpolation == LineInterpolation.stepped
-                    ? LineStyle.stepped
-                    : LineStyle.straight,
             series: _buildSeries(),
             theme: _optionsController.theme,
             showLegend: _optionsController.showLegend,

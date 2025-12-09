@@ -63,7 +63,6 @@ import 'widgets/web_context_menu.dart';
 class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,
-    this.lineStyle = LineStyle.straight,
     required this.series,
     this.annotations = const [],
     this.annotationController,
@@ -107,7 +106,7 @@ class BravenChartPlus extends StatefulWidget {
   factory BravenChartPlus.fromValues({
     Key? key,
     ChartType chartType = ChartType.line,
-    LineStyle lineStyle = LineStyle.straight,
+    LineInterpolation interpolation = LineInterpolation.linear,
     required String seriesId,
     required List<double> yValues,
     List<double>? xValues,
@@ -151,16 +150,11 @@ class BravenChartPlus extends StatefulWidget {
       name: seriesName ?? seriesId,
       points: points,
       color: seriesColor ?? Colors.blue,
-      interpolation: switch (lineStyle) {
-        LineStyle.straight => LineInterpolation.linear,
-        LineStyle.smooth => LineInterpolation.bezier,
-        LineStyle.stepped => LineInterpolation.stepped,
-      },
+      interpolation: interpolation,
     );
 
     return BravenChartPlus(
       key: key,
-      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -191,7 +185,7 @@ class BravenChartPlus extends StatefulWidget {
   factory BravenChartPlus.fromMap({
     Key? key,
     ChartType chartType = ChartType.line,
-    LineStyle lineStyle = LineStyle.straight,
+    LineInterpolation interpolation = LineInterpolation.linear,
     required String seriesId,
     required Map<dynamic, double> data,
     String? seriesName,
@@ -237,16 +231,11 @@ class BravenChartPlus extends StatefulWidget {
       name: seriesName ?? seriesId,
       points: points,
       color: seriesColor ?? Colors.blue,
-      interpolation: switch (lineStyle) {
-        LineStyle.straight => LineInterpolation.linear,
-        LineStyle.smooth => LineInterpolation.bezier,
-        LineStyle.stepped => LineInterpolation.stepped,
-      },
+      interpolation: interpolation,
     );
 
     return BravenChartPlus(
       key: key,
-      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -277,7 +266,7 @@ class BravenChartPlus extends StatefulWidget {
   factory BravenChartPlus.fromJson({
     Key? key,
     ChartType chartType = ChartType.line,
-    LineStyle lineStyle = LineStyle.straight,
+    LineInterpolation interpolation = LineInterpolation.linear,
     required String seriesId,
     required String json,
     String? seriesName,
@@ -343,11 +332,7 @@ class BravenChartPlus extends StatefulWidget {
           name: seriesName ?? seriesId,
           points: points,
           color: seriesColor ?? Colors.blue,
-          interpolation: switch (lineStyle) {
-            LineStyle.straight => LineInterpolation.linear,
-            LineStyle.smooth => LineInterpolation.bezier,
-            LineStyle.stepped => LineInterpolation.stepped,
-          },
+          interpolation: interpolation,
         );
       case ChartType.area:
         series = AreaChartSeries(
@@ -355,11 +340,7 @@ class BravenChartPlus extends StatefulWidget {
           name: seriesName ?? seriesId,
           points: points,
           color: seriesColor ?? Colors.blue,
-          interpolation: switch (lineStyle) {
-            LineStyle.straight => LineInterpolation.linear,
-            LineStyle.smooth => LineInterpolation.bezier,
-            LineStyle.stepped => LineInterpolation.stepped,
-          },
+          interpolation: interpolation,
         );
       case ChartType.bar:
         series = BarChartSeries(
@@ -380,7 +361,6 @@ class BravenChartPlus extends StatefulWidget {
 
     return BravenChartPlus(
       key: key,
-      lineStyle: lineStyle,
       series: [series],
       width: width,
       height: height,
@@ -415,7 +395,6 @@ class BravenChartPlus extends StatefulWidget {
     );
   }
 
-  final LineStyle lineStyle;
   final List<ChartSeries> series;
 
   /// **Deprecated**: Use [annotationController] for reactive annotation management.
@@ -1034,46 +1013,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
     }
 
-    // Apply widget's lineStyle to all LineChartSeries and AreaChartSeries
-    // This allows widget-level control of interpolation style
-    final targetInterpolation = switch (widget.lineStyle) {
-      LineStyle.straight => LineInterpolation.linear,
-      LineStyle.smooth => LineInterpolation.bezier,
-      LineStyle.stepped => LineInterpolation.stepped,
-    };
-    effectiveSeries = effectiveSeries.map((series) {
-      if (series is LineChartSeries) {
-        return LineChartSeries(
-          id: series.id,
-          name: series.name,
-          points: series.points,
-          color: series.color,
-          isXOrdered: series.isXOrdered,
-          metadata: series.metadata,
-          interpolation: targetInterpolation,
-          strokeWidth: series.strokeWidth,
-          tension: series.tension,
-          showDataPointMarkers: series.showDataPointMarkers,
-          dataPointMarkerRadius: series.dataPointMarkerRadius,
-        );
-      } else if (series is AreaChartSeries) {
-        return AreaChartSeries(
-          id: series.id,
-          name: series.name,
-          points: series.points,
-          color: series.color,
-          isXOrdered: series.isXOrdered,
-          metadata: series.metadata,
-          interpolation: targetInterpolation,
-          strokeWidth: series.strokeWidth,
-          tension: series.tension,
-          showDataPointMarkers: series.showDataPointMarkers,
-          dataPointMarkerRadius: series.dataPointMarkerRadius,
-          fillOpacity: series.fillOpacity,
-        );
-      }
-      return series;
-    }).toList();
+    // Series-level interpolation is now respected directly from ChartSeries.interpolation
+    // The deprecated widget-level lineStyle override has been removed.
 
     // Compute data bounds from effective series
     // FUNDAMENTAL FIX: Use locked bounds when paused to prevent visual jump

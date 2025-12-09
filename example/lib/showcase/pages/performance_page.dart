@@ -162,7 +162,6 @@ class _PerformancePageState extends State<PerformancePage> {
           title: 'Performance Test',
           subtitle: '${_dataPointCount * _seriesCount} total points',
           child: BravenChartPlus(
-            lineStyle: _useSmoothing ? LineStyle.smooth : LineStyle.straight,
             series: List.generate(_allSeriesData.length, (i) {
               return LineChartSeries(
                 id: 'series_$i',

@@ -897,7 +897,6 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             ),
           ],
           child: BravenChartPlus(
-            lineStyle: LineStyle.smooth,
             // Series defines styling, LiveStreamController provides data
             series: [
               LineChartSeries(

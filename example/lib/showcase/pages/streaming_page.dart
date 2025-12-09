@@ -222,7 +222,6 @@ class _StreamingPageState extends State<StreamingPage> {
             ),
           ],
           child: BravenChartPlus(
-            lineStyle: LineStyle.smooth,
             series: [
               LineChartSeries(
                 id: 'stream',

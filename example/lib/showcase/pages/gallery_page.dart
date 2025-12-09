@@ -630,6 +630,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     id: 'forecast',
                     name: 'Forecast Range',
                     points: [
+                      ChartDataPoint(x: 1, y: 65000),
                       ChartDataPoint(x: 2, y: 48000),
                       ChartDataPoint(x: 3, y: 52000),
                       ChartDataPoint(x: 4, y: 59000),

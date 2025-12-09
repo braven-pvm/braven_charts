@@ -405,6 +405,8 @@ class SeriesElement implements ChartElement {
       path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
 
       // Draw line with configured interpolation using cached transforms
+      // DEBUG: Print interpolation type
+      print('DEBUG: Series ${series.id} interpolation: ${series.interpolation}, tension: ${series.tension}');
       switch (series.interpolation) {
         case LineInterpolation.linear:
           for (int i = 1; i < transformedPoints.length; i++) {
@@ -412,6 +414,7 @@ class SeriesElement implements ChartElement {
           }
           break;
         case LineInterpolation.bezier:
+          print('DEBUG: Using bezier path for ${series.id} with ${transformedPoints.length} points');
           _addBezierToPath(path, transformedPoints, series.tension);
           break;
         case LineInterpolation.stepped:
@@ -971,6 +974,7 @@ class SeriesElement implements ChartElement {
     // The standard Catmull-Rom formula divides by 6, but we use a stronger multiplier
     // to make curves more pronounced at the default tension of 0.5
     final alpha = tension * 2.0; // Amplify tension for visible curves
+    print('DEBUG _addBezierToPath: ${transformedPoints.length} points, tension=$tension, alpha=$alpha');
 
     for (int i = startIndex; i < transformedPoints.length; i++) {
       // For segment from point[i-1] to point[i], we need 4 points for Catmull-Rom:
@@ -990,6 +994,13 @@ class SeriesElement implements ChartElement {
       final cp1y = p1.dy + (p2.dy - p0.dy) * alpha / 3;
       final cp2x = p2.dx - (p3.dx - p1.dx) * alpha / 3;
       final cp2y = p2.dy - (p3.dy - p1.dy) * alpha / 3;
+
+      // DEBUG: Print first segment's control points
+      if (i == startIndex) {
+        print('DEBUG Bezier segment $i: p1=$p1, p2=$p2');
+        print('DEBUG Control points: cp1=($cp1x, $cp1y), cp2=($cp2x, $cp2y)');
+        print('DEBUG Offset from linear: cp1 offset=(${cp1x - p1.dx}, ${cp1y - p1.dy}), cp2 offset=(${cp2x - p2.dx}, ${cp2y - p2.dy})');
+      }
 
       // Draw cubic bezier from current position (p1) to p2
       path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
