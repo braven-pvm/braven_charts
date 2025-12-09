@@ -78,8 +78,8 @@ class AxisRenderer {
         );
       }
 
-      // Draw tick mark
-      if (config.showTickMarks) {
+      // Draw tick mark (only if axis line is also visible)
+      if (config.showTickMarks && config.showAxisLine) {
         final axisStyle = theme?.axisStyle;
         final tickY1 = config.position == AxisPosition.bottom ? axisY : axisY - config.tickLength;
         final tickY2 = config.position == AxisPosition.bottom ? axisY + config.tickLength : axisY;
@@ -173,8 +173,8 @@ class AxisRenderer {
         );
       }
 
-      // Draw tick mark
-      if (config.showTickMarks) {
+      // Draw tick mark (only if axis line is also visible)
+      if (config.showTickMarks && config.showAxisLine) {
         final axisStyle = theme?.axisStyle;
         final tickX1 = config.position == AxisPosition.left ? axisX - config.tickLength : axisX;
         final tickX2 = config.position == AxisPosition.left ? axisX : axisX + config.tickLength;
