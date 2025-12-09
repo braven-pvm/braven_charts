@@ -6,6 +6,8 @@ import 'dart:math';
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
+import '../data/ecg_generator.dart';
+
 /// Gallery page showcasing multiple charts with different themes and complexities.
 class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
@@ -382,20 +384,47 @@ class _GalleryPageState extends State<GalleryPage> {
   }
 
   Widget _buildHeartRateChart(bool isDark) {
+    // Generate realistic ECG data
+    final generator = EcgDataGenerator(heartRateBpm: 70, samplesPerSecond: 250);
+    final ecgData = generator.generateEcgData(5.0); // 10 seconds of data
+
+    // Convert Point<double> to ChartDataPoint
+    final points = ecgData.map((p) => ChartDataPoint(x: p.x, y: p.y)).toList();
+
     return Card(
-      color: const Color(0xFFFCE4EC),
+      color: const Color(0xFF0D1117), // Dark medical monitor look
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.favorite, color: Color(0xFFC2185B), size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Heart Rate Monitor',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                const Icon(Icons.monitor_heart, color: Color(0xFF00FF00), size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'ECG Monitor',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FF00).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '70 BPM',
+                    style: TextStyle(
+                      color: Color(0xFF00FF00),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -404,46 +433,20 @@ class _GalleryPageState extends State<GalleryPage> {
               child: BravenChartPlus(
                 series: [
                   LineChartSeries(
-                    id: 'hr',
-                    name: 'BPM',
-                    points: List.generate(
-                      30,
-                      (i) => ChartDataPoint(
-                        x: i.toDouble(),
-                        y: 70 + (i % 3 == 0 ? 15 : (i % 2 == 0 ? -10 : 5)).toDouble(),
-                      ),
-                    ),
-                    color: const Color(0xFFC2185B),
-                    interpolation: LineInterpolation.bezier,
+                    id: 'ecg',
+                    name: 'ECG',
+                    points: points,
+                    color: const Color(0xFF00FF00), // Classic ECG green
+                    interpolation: LineInterpolation.linear,
                     strokeWidth: 1.5,
                   ),
                 ],
-                annotations: [
-                  ThresholdAnnotation(
-                    id: 'max-hr',
-                    axis: AnnotationAxis.y,
-                    value: 85,
-                    label: 'Max Safe',
-                    lineColor: const Color(0xFFE53935),
-                    lineWidth: 1.5,
-                    dashPattern: const [4, 2],
-                  ),
-                  ThresholdAnnotation(
-                    id: 'resting',
-                    axis: AnnotationAxis.y,
-                    value: 60,
-                    label: 'Resting',
-                    lineColor: const Color(0xFF43A047),
-                    lineWidth: 1.5,
-                    dashPattern: const [4, 2],
-                  ),
-                ],
-                theme: ChartTheme.light.copyWith(
-                  backgroundColor: const Color(0xFFFCE4EC),
+                theme: ChartTheme.dark.copyWith(
+                  backgroundColor: const Color(0xFF0D1117),
                 ),
                 showLegend: false,
-                xAxis: const AxisConfig(showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(showGrid: false, showAxis: false),
+                xAxis: const AxisConfig(label: 'Time (s)', showGrid: true, showAxis: false),
+                yAxis: const AxisConfig(label: 'mV', showGrid: true, showAxis: false),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -2006,4 +2009,3 @@ class _GalleryPageState extends State<GalleryPage> {
     );
   }
 }
-
