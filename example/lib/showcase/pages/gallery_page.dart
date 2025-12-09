@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Gallery Page
 // SPDX-License-Identifier: MIT
 
+import 'dart:math';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -622,9 +624,10 @@ class _GalleryPageState extends State<GalleryPage> {
                     ],
                     color: Color(0xFF10B981),
                     interpolation: LineInterpolation.bezier,
+                    tension: 0.25,
                     strokeWidth: 3.0,
                     showDataPointMarkers: true,
-                    dataPointMarkerRadius: 4.0,
+                    dataPointMarkerRadius: 3.0,
                   ),
                   AreaChartSeries(
                     id: 'forecast',
@@ -636,9 +639,12 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 59000),
                       ChartDataPoint(x: 5, y: 55000),
                       ChartDataPoint(x: 6, y: 64000),
+                      ChartDataPoint(x: 7, y: 48000),
                     ],
                     color: Color(0xFF3B82F6),
-                    interpolation: LineInterpolation.linear,
+                    interpolation: LineInterpolation.bezier,
+                    showDataPointMarkers: true,
+                    tension: 0.2,
                     strokeWidth: 2.0,
                     fillOpacity: 0.3,
                   ),
@@ -657,6 +663,7 @@ class _GalleryPageState extends State<GalleryPage> {
 
   /// Multi-axis normalized data with crosshair tracking mode
   Widget _buildNormalizedCrosshairChart(bool isDark) {
+    var random = Random();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -676,18 +683,21 @@ class _GalleryPageState extends State<GalleryPage> {
                     id: 'pressure',
                     name: 'Pressure',
                     points: List.generate(
-                      300, // High data point count triggers tracking mode
+                      50, // High data point count triggers tracking mode
                       (i) => ChartDataPoint(
                         x: i.toDouble(),
-                        y: 1000 + (i * 2.5) % 100 + (i % 10) * 5,
+                        y: random.nextInt(1000) + (i * 2.5) % 100 + (i % 10) * 5,
+                        // 1000 + (i * 2.5) % 100 + (i % 10) * 5,
                       ),
                     ),
-                    color: const Color(0xFFEF4444),
-                    interpolation: LineInterpolation.linear,
-                    strokeWidth: 1.5,
+                    color: Colors.red,
+                    interpolation: LineInterpolation.bezier,
+                    tension: 0.2,
+                    strokeWidth: 4.0,
                     yAxisConfig: YAxisConfig(
                       id: 'pressure-axis',
                       position: YAxisPosition.left,
+                      labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
                       label: 'Pressure',
                       unit: 'Pa',
                     ),
@@ -697,14 +707,14 @@ class _GalleryPageState extends State<GalleryPage> {
                     id: 'temperature',
                     name: 'Temperature',
                     points: List.generate(
-                      300,
+                      50,
                       (i) => ChartDataPoint(
                         x: i.toDouble(),
-                        y: 20 + (i * 0.05) % 15 + (i % 8) * 0.5,
+                        y: random.nextInt(20) + (i * 0.05) % 15 + (i % 8) * 0.5,
                       ),
                     ),
                     color: const Color(0xFFF59E0B),
-                    interpolation: LineInterpolation.linear,
+                    interpolation: LineInterpolation.bezier,
                     strokeWidth: 1.5,
                     yAxisConfig: YAxisConfig(
                       id: 'temperature-axis',
@@ -715,8 +725,8 @@ class _GalleryPageState extends State<GalleryPage> {
                     unit: '°C',
                   ),
                 ],
-                theme: ChartTheme.light,
-                showLegend: true,
+                theme: ChartTheme.dark,
+                showLegend: false,
                 normalizationMode: NormalizationMode.perSeries,
                 xAxis: const AxisConfig(label: 'Sample'),
                 interactionConfig: const InteractionConfig(
@@ -725,7 +735,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     mode: CrosshairMode.vertical,
                     snapToDataPoint: true,
                     showCoordinateLabels: true,
-                    displayMode: CrosshairDisplayMode.auto, // Will use tracking mode for 300 points
+                    displayMode: CrosshairDisplayMode.tracking, // Will use tracking mode for 300 points
                   ),
                 ),
               ),

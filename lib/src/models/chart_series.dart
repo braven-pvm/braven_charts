@@ -219,7 +219,7 @@ class LineChartSeries extends ChartSeries {
     super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
-    this.tension = 0.5,
+    this.tension = 0.25,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
   });
@@ -335,7 +335,7 @@ class AreaChartSeries extends ChartSeries {
     super.unit,
     this.interpolation = LineInterpolation.linear,
     this.strokeWidth = 2.0,
-    this.tension = 0.5,
+    this.tension = 0.25,
     this.fillOpacity = 0.3,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
