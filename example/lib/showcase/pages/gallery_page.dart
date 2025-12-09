@@ -607,7 +607,7 @@ class _GalleryPageState extends State<GalleryPage> {
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
-                series: [
+                series: const [
                   LineChartSeries(
                     id: 'actual',
                     name: 'Actual Revenue',
@@ -618,8 +618,9 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 61000),
                       ChartDataPoint(x: 5, y: 58000),
                       ChartDataPoint(x: 6, y: 67000),
+                      ChartDataPoint(x: 7, y: 71000),
                     ],
-                    color: const Color(0xFF10B981),
+                    color: Color(0xFF10B981),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 3.0,
                     showDataPointMarkers: true,
@@ -629,15 +630,16 @@ class _GalleryPageState extends State<GalleryPage> {
                     id: 'forecast',
                     name: 'Forecast Range',
                     points: [
-                      ChartDataPoint(x: 6, y: 67000),
-                      ChartDataPoint(x: 7, y: 72000),
-                      ChartDataPoint(x: 8, y: 78000),
-                      ChartDataPoint(x: 9, y: 85000),
+                      ChartDataPoint(x: 2, y: 48000),
+                      ChartDataPoint(x: 3, y: 52000),
+                      ChartDataPoint(x: 4, y: 59000),
+                      ChartDataPoint(x: 5, y: 55000),
+                      ChartDataPoint(x: 6, y: 64000),
                     ],
-                    color: const Color(0xFF3B82F6),
+                    color: Color(0xFF3B82F6),
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 2.0,
-                    fillOpacity: 0.2,
+                    fillOpacity: 0.3,
                   ),
                 ],
                 theme: ChartTheme.light,
@@ -749,7 +751,7 @@ class _GalleryPageState extends State<GalleryPage> {
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
-                series: [
+                series: const [
                   LineChartSeries(
                     id: 'metrics',
                     name: 'Performance',
@@ -763,7 +765,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 7, y: 75),
                       ChartDataPoint(x: 8, y: 88),
                     ],
-                    color: const Color(0xFF8B5CF6),
+                    color: Color(0xFF8B5CF6),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 2.5,
                   ),
@@ -827,7 +829,7 @@ class _GalleryPageState extends State<GalleryPage> {
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
-                series: [
+                series: const [
                   LineChartSeries(
                     id: 'linear',
                     name: 'Linear',
@@ -838,7 +840,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 50),
                       ChartDataPoint(x: 5, y: 40),
                     ],
-                    color: const Color(0xFF3B82F6),
+                    color: Color(0xFF3B82F6),
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 2.0,
                   ),
@@ -852,7 +854,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 60),
                       ChartDataPoint(x: 5, y: 50),
                     ],
-                    color: const Color(0xFF10B981),
+                    color: Color(0xFF10B981),
                     interpolation: LineInterpolation.bezier,
                     tension: 0.4,
                     strokeWidth: 2.0,
@@ -867,7 +869,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 70),
                       ChartDataPoint(x: 5, y: 60),
                     ],
-                    color: const Color(0xFFF59E0B),
+                    color: Color(0xFFF59E0B),
                     interpolation: LineInterpolation.stepped,
                     strokeWidth: 2.0,
                   ),
@@ -881,7 +883,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 4, y: 55),
                       ChartDataPoint(x: 5, y: 45),
                     ],
-                    color: const Color(0xFFEF4444),
+                    color: Color(0xFFEF4444),
                     interpolation: LineInterpolation.monotone,
                     strokeWidth: 2.0,
                   ),
