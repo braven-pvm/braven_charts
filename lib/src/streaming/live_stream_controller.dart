@@ -264,11 +264,37 @@ class LiveStreamController extends ChangeNotifier {
   ///   y: sensorReading,
   /// ));
   /// ```
+  // Debug: Track addPoint call rate
+  int _addPointCallCount = 0;
+  DateTime? _addPointTrackingStart;
+
   void addPoint(ChartDataPoint point) {
     if (_isDisposed) return;
 
-    _pendingPoints.add(point);
-    _scheduleFrameCallback();
+    // Debug: Track how often addPoint is called
+    _addPointCallCount++;
+    _addPointTrackingStart ??= DateTime.now();
+    if (_addPointCallCount % 100 == 0) {
+      final elapsed = DateTime.now().difference(_addPointTrackingStart!).inMilliseconds;
+      final rate = _addPointCallCount / (elapsed / 1000);
+      print('[LiveStreamController.addPoint] Called $rate Hz ($_addPointCallCount calls in ${elapsed}ms)');
+      _addPointCallCount = 0;
+      _addPointTrackingStart = DateTime.now();
+    }
+
+    // PERFORMANCE FIX: Process data immediately, don't wait for frame callback
+    // Frame callback is only for rendering optimization, not data accumulation
+    if (_isStreaming) {
+      // Streaming: add to buffer immediately
+      _streamingBuffer.add(point);
+      // Schedule render update (frame-coalesced)
+      _scheduleFrameCallback();
+    } else {
+      // Paused: buffer for later
+      _pauseBuffer.add(point);
+      // Notify listeners so UI can show buffer count (no frame needed)
+      notifyListeners();
+    }
   }
 
   /// Adds multiple data points to the stream.
@@ -288,8 +314,20 @@ class LiveStreamController extends ChangeNotifier {
   void addPoints(List<ChartDataPoint> points) {
     if (_isDisposed || points.isEmpty) return;
 
-    _pendingPoints.addAll(points);
-    _scheduleFrameCallback();
+    // PERFORMANCE FIX: Process data immediately, don't wait for frame callback
+    if (_isStreaming) {
+      // Streaming: add all to buffer immediately
+      _streamingBuffer.addAll(points);
+      // Schedule render update (frame-coalesced)
+      _scheduleFrameCallback();
+    } else {
+      // Paused: buffer all for later
+      for (final point in points) {
+        _pauseBuffer.add(point);
+      }
+      // Notify listeners so UI can show buffer count (no frame needed)
+      notifyListeners();
+    }
   }
 
   // ============================================================================
@@ -414,7 +452,7 @@ class LiveStreamController extends ChangeNotifier {
 
   /// Called once per frame to flush pending points.
   void _onFrame() {
-    if (_isDisposed || _pendingPoints.isEmpty) return;
+    if (_isDisposed) return;
 
     // Track frame rate
     _frameCount++;
@@ -426,20 +464,10 @@ class LiveStreamController extends ChangeNotifier {
       _frameCountStartTime = DateTime.now();
     }
 
-    if (_isStreaming) {
-      // Streaming: add to buffer and update chart
-      // PERFORMANCE: Only flush to RenderBox if we actually added new points
-      if (_pendingPoints.isNotEmpty) {
-        _streamingBuffer.addAll(_pendingPoints);
-        _flushToRenderBox();
-      }
-    } else {
-      // Paused: buffer for later
-      for (final point in _pendingPoints) {
-        _pauseBuffer.add(point);
-      }
-      // Notify listeners so UI can show buffer count
-      notifyListeners();
+    // PERFORMANCE FIX: Data is already in _streamingBuffer (added immediately in addPoint)
+    // This frame callback only updates the RenderBox for rendering
+    if (_isStreaming && _streamingBuffer.isNotEmpty) {
+      _flushToRenderBox();
     }
 
     _pendingPoints.clear();

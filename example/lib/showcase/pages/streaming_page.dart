@@ -131,8 +131,8 @@ class _StreamingPageState extends State<StreamingPage> {
           IntSliderOption(
             label: 'Update Rate',
             value: _updateRateMs,
-            min: 50,
-            max: 500,
+            min: 1,
+            max: 1000,
             suffix: 'ms',
             onChanged: (v) {
               setState(() => _updateRateMs = v);

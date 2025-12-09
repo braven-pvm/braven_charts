@@ -93,6 +93,10 @@ class StreamingBuffer {
   /// At 60fps, value of 10 = recalc every ~166ms (acceptable latency).
   static const int _boundsRecalcThrottleFrames = 10;
 
+  // Debug: Track add call rate
+  int _addCallCount = 0;
+  DateTime? _addTrackingStart;
+
   // ============================================================================
   // Public Properties
   // ============================================================================
@@ -159,6 +163,17 @@ class StreamingBuffer {
   ///
   /// **Performance**: O(1) always.
   void add(ChartDataPoint point) {
+    // Debug: Track add call rate
+    _addCallCount++;
+    _addTrackingStart ??= DateTime.now();
+    if (_addCallCount % 100 == 0) {
+      final elapsed = DateTime.now().difference(_addTrackingStart!).inMilliseconds;
+      final rate = _addCallCount / (elapsed / 1000);
+      print('[StreamingBuffer.add] Called $rate Hz ($_addCallCount calls in ${elapsed}ms, buffer size: $_count/$_maxSize)');
+      _addCallCount = 0;
+      _addTrackingStart = DateTime.now();
+    }
+
     // Handle eviction if buffer is full
     if (_count == _maxSize) {
       final evicted = _data[_head];

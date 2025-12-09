@@ -2,14 +2,178 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:async';
+// Only import dart:isolate on non-web platforms
+import 'dart:isolate' if (dart.library.html) 'live_streaming_page_web_stub.dart';
 import 'dart:math';
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
+
+// ============================================================================
+// Isolate-based Data Generator (Background Thread)
+// ============================================================================
+
+/// Message to control the isolate generator
+class IsolateControlMessage {
+  final String command; // 'start', 'stop', 'update_rate'
+  final int? rateHz;
+  final DataPattern? pattern;
+  final double? amplitude;
+  final double? frequency;
+
+  IsolateControlMessage({
+    required this.command,
+    this.rateHz,
+    this.pattern,
+    this.amplitude,
+    this.frequency,
+  });
+}
+
+/// Data batch sent from isolate to main
+class DataBatch {
+  final List<ChartDataPoint> points;
+  final int generatedCount;
+  final DateTime timestamp;
+
+  DataBatch({
+    required this.points,
+    required this.generatedCount,
+    required this.timestamp,
+  });
+}
+
+/// Entry point for the background isolate
+void _dataGeneratorIsolate(SendPort mainSendPort) {
+  final receivePort = ReceivePort();
+  mainSendPort.send(receivePort.sendPort);
+
+  Timer? timer;
+  int pointCounter = 0;
+  double lastValue = 50.0;
+  final random = Random();
+
+  // Current config
+  int rateHz = 20;
+  DataPattern pattern = DataPattern.randomWalk;
+  double amplitude = 30.0;
+  double frequency = 0.05;
+
+  // Batch points to reduce SendPort overhead
+  List<ChartDataPoint> pendingBatch = [];
+  const batchSize = 10; // Send 10 points at a time
+
+  void generatePoint() {
+    final y = _generateValueInIsolate(
+      pointCounter,
+      pattern,
+      amplitude,
+      frequency,
+      random,
+      lastValue,
+    );
+    lastValue = y;
+
+    pendingBatch.add(ChartDataPoint(
+      x: pointCounter.toDouble(),
+      y: y,
+    ));
+    pointCounter++;
+
+    // Send batch when full
+    if (pendingBatch.length >= batchSize) {
+      mainSendPort.send(DataBatch(
+        points: List.from(pendingBatch),
+        generatedCount: pointCounter,
+        timestamp: DateTime.now(),
+      ));
+      pendingBatch.clear();
+    }
+  }
+
+  receivePort.listen((message) {
+    if (message is IsolateControlMessage) {
+      switch (message.command) {
+        case 'start':
+          timer?.cancel();
+          if (message.rateHz != null) rateHz = message.rateHz!;
+          if (message.pattern != null) pattern = message.pattern!;
+          if (message.amplitude != null) amplitude = message.amplitude!;
+          if (message.frequency != null) frequency = message.frequency!;
+
+          final intervalMs = (1000 / rateHz).round();
+          timer = Timer.periodic(
+            Duration(milliseconds: intervalMs),
+            (_) => generatePoint(),
+          );
+          break;
+
+        case 'stop':
+          timer?.cancel();
+          timer = null;
+          // Flush remaining batch
+          if (pendingBatch.isNotEmpty) {
+            mainSendPort.send(DataBatch(
+              points: List.from(pendingBatch),
+              generatedCount: pointCounter,
+              timestamp: DateTime.now(),
+            ));
+            pendingBatch.clear();
+          }
+          break;
+
+        case 'update_rate':
+          if (message.rateHz != null) {
+            rateHz = message.rateHz!;
+            if (timer != null) {
+              timer!.cancel();
+              final intervalMs = (1000 / rateHz).round();
+              timer = Timer.periodic(
+                Duration(milliseconds: intervalMs),
+                (_) => generatePoint(),
+              );
+            }
+          }
+          break;
+      }
+    }
+  });
+}
+
+/// Generate value in isolate (no access to instance variables)
+double _generateValueInIsolate(
+  int counter,
+  DataPattern pattern,
+  double amplitude,
+  double frequency,
+  Random random,
+  double lastValue,
+) {
+  switch (pattern) {
+    case DataPattern.randomWalk:
+      final change = random.nextDouble() * amplitude * 0.1 - amplitude * 0.05;
+      return (lastValue + change).clamp(10.0, 90.0);
+
+    case DataPattern.sine:
+      return 50 + amplitude * sin(counter * frequency);
+
+    case DataPattern.sawtooth:
+      final phase = (counter * frequency) % 1.0;
+      return 50 - amplitude + (phase * amplitude * 2);
+
+    case DataPattern.noise:
+      return 50 + (random.nextDouble() * 2 - 1) * amplitude;
+
+    case DataPattern.stepFunction:
+      final stepValue = ((counter ~/ 20) % 5) * (amplitude / 2);
+      return 30 + stepValue + (random.nextDouble() * 5 - 2.5);
+  }
+}
 
 /// Data generation pattern for streaming demo.
 enum DataPattern {
@@ -43,7 +207,13 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   // LiveStreamController - the recommended high-performance streaming API
   LiveStreamController? _streamController;
 
-  // Data generation
+  // Isolate-based data generation (only available on native platforms)
+  Isolate? _generatorIsolate;
+  SendPort? _isolateSendPort;
+  ReceivePort? _isolateReceivePort;
+  bool _useIsolate = !kIsWeb; // Isolates not supported on web platform
+
+  // Legacy Timer-based generation (for comparison)
   Timer? _dataTimer;
   int _pointCounter = 0;
   double _lastValue = 50.0;
@@ -71,10 +241,15 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   // Performance stats
   int _totalPointsGenerated = 0;
   DateTime? _streamStartTime;
+  int _bufferSizeAtStart = 0;
 
   // Rolling rate calculation (last second)
   int _pointsInLastSecond = 0;
   DateTime? _lastSecondStart;
+
+  // Timer accuracy measurement
+  DateTime? _lastTimerFire;
+  final List<int> _timerIntervals = [];
 
   @override
   void initState() {
@@ -147,37 +322,120 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     if (mounted) setState(() {});
   }
 
-  void _startStreaming() {
-    if (_dataTimer != null) return;
-
-    // Calculate interval from Hz
-    final intervalMs = (1000 / _updateRateHz).round();
+  void _startStreaming() async {
+    if ((_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null)) {
+      return;
+    }
 
     _streamStartTime = DateTime.now();
     _totalPointsGenerated = 0;
     _pointsInLastSecond = 0;
     _lastSecondStart = null;
+    _lastTimerFire = null;
+    _timerIntervals.clear();
+    _bufferSizeAtStart = _streamController?.pointCount ?? 0;
 
     // Make sure streaming is resumed (unlocks viewport for auto-scroll)
     if (!(_streamController?.isStreaming ?? true)) {
       _streamController?.resume();
     }
 
-    _dataTimer = Timer.periodic(
-      Duration(milliseconds: intervalMs),
-      (_) => _generateDataPoint(),
-    );
+    if (_useIsolate && !kIsWeb) {
+      // Start isolate-based generation (native platforms only)
+      print('Starting ISOLATE-based generation: $_updateRateHz Hz');
+
+      try {
+        _isolateReceivePort = ReceivePort();
+        _generatorIsolate = await Isolate.spawn(
+          _dataGeneratorIsolate,
+          _isolateReceivePort!.sendPort,
+        );
+
+        // Wait for isolate to send back its SendPort
+        _isolateReceivePort!.listen((message) {
+          if (message is SendPort) {
+            _isolateSendPort = message;
+            // Start generation
+            _isolateSendPort!.send(IsolateControlMessage(
+              command: 'start',
+              rateHz: _updateRateHz,
+              pattern: _dataPattern,
+              amplitude: _amplitude,
+              frequency: _frequency,
+            ));
+          } else if (message is DataBatch) {
+            // Receive batch from isolate
+            _handleDataBatch(message);
+          }
+        });
+      } catch (e) {
+        print('Failed to spawn isolate: $e');
+        print('Falling back to main thread Timer');
+        _useIsolate = false;
+        setState(() {});
+      }
+    }
+
+    if (!_useIsolate || kIsWeb) {
+      // Start main-thread Timer-based generation
+      final intervalMs = (1000 / _updateRateHz).round();
+      print('Starting MAIN THREAD Timer.periodic: $_updateRateHz Hz (${intervalMs}ms interval)');
+
+      _dataTimer = Timer.periodic(
+        Duration(milliseconds: intervalMs),
+        (_) => _generateDataPoint(),
+      );
+    }
+
     setState(() {});
   }
 
+  void _handleDataBatch(DataBatch batch) {
+    if (!mounted) return;
+
+    // Add all points from batch to controller
+    for (final point in batch.points) {
+      _streamController?.addPoint(point);
+      _pointCounter++;
+      _pointsInLastSecond++;
+      _totalPointsGenerated++;
+    }
+
+    // Track rolling rate (last second)
+    _lastSecondStart ??= DateTime.now();
+    final elapsedMs = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+    if (elapsedMs >= 1000) {
+      // Reset counter every second and update UI
+      _pointsInLastSecond = 0;
+      _lastSecondStart = DateTime.now();
+      setState(() {});
+    }
+  }
+
   void _stopStreaming() {
-    _dataTimer?.cancel();
-    _dataTimer = null;
+    if (_useIsolate && !kIsWeb && _generatorIsolate != null) {
+      try {
+        _isolateSendPort?.send(IsolateControlMessage(command: 'stop'));
+        _generatorIsolate?.kill(priority: Isolate.immediate);
+      } catch (e) {
+        print('Error stopping isolate: $e');
+      }
+      _generatorIsolate = null;
+      _isolateSendPort = null;
+      _isolateReceivePort?.close();
+      _isolateReceivePort = null;
+    }
+
+    if (_dataTimer != null) {
+      _dataTimer?.cancel();
+      _dataTimer = null;
+    }
+
     _streamStartTime = null;
     _lastSecondStart = null;
+    _lastTimerFire = null;
 
     // When stopping data flow, also lock viewport so user can pan historical data
-    // This allows exploring the data that was collected
     _streamController?.pause();
 
     setState(() {});
@@ -185,6 +443,23 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
   void _generateDataPoint() {
     if (!mounted) return;
+
+    // Measure actual timer interval
+    final now = DateTime.now();
+    if (_lastTimerFire != null) {
+      final intervalMs = now.difference(_lastTimerFire!).inMilliseconds;
+      _timerIntervals.add(intervalMs);
+      if (_timerIntervals.length > 100) _timerIntervals.removeAt(0);
+
+      // Log diagnostics every 60 fires
+      if (_totalPointsGenerated % 60 == 0 && _timerIntervals.length > 10) {
+        final avg = _timerIntervals.reduce((a, b) => a + b) / _timerIntervals.length;
+        final actualHz = 1000 / avg;
+        print('Timer diagnostic: requested ${_updateRateHz}Hz (${(1000 / _updateRateHz).toStringAsFixed(1)}ms), '
+            'actual ${actualHz.toStringAsFixed(1)}Hz (${avg.toStringAsFixed(1)}ms avg over ${_timerIntervals.length} samples)');
+      }
+    }
+    _lastTimerFire = now;
 
     _generateAndAddPoint();
     _totalPointsGenerated++;
@@ -197,10 +472,9 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       // Reset counter every second
       _pointsInLastSecond = 0;
       _lastSecondStart = DateTime.now();
-    }
 
-    // Update UI periodically (not on every point to avoid interrupting animation)
-    if (_pointCounter % 50 == 0) {
+      // CRITICAL: Only update UI once per second to avoid blocking timer callbacks
+      // setState() is SYNCHRONOUS and blocks the microtask queue!
       setState(() {});
     }
   }
@@ -263,10 +537,23 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
   @override
   void dispose() {
-    _dataTimer?.cancel();
+    // CRITICAL: Remove listener BEFORE stopping stream to prevent setState() during dispose
     _streamController?.removeListener(_onStreamStateChanged);
+
+    _stopStreaming();
     _streamController?.dispose();
     _optionsController.dispose();
+
+    // Ensure isolate is killed (native platforms only)
+    if (!kIsWeb && _generatorIsolate != null) {
+      try {
+        _generatorIsolate?.kill(priority: Isolate.immediate);
+        _isolateReceivePort?.close();
+      } catch (e) {
+        print('Error cleaning up isolate in dispose: $e');
+      }
+    }
+
     super.dispose();
   }
 
@@ -282,7 +569,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   List<Widget> _buildOptionsChildren() {
-    final isDataFlowing = _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     return [
@@ -387,15 +674,38 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         title: 'Data Generation',
         icon: Icons.show_chart,
         children: [
+          BoolOption(
+            label: 'Use Background Isolate',
+            value: _useIsolate,
+            subtitle: kIsWeb
+                ? '🌐 Web platform: Isolates not supported (dart:isolate unavailable in browsers)'
+                : _useIsolate
+                    ? '✓ Isolate mode: Timer runs in background thread (true high-frequency)'
+                    : '⚠ Main thread mode: Timer shares event loop with rendering',
+            onChanged: kIsWeb
+                ? (_) {} // Disabled on web - isolates not supported
+                : (v) {
+                    final wasStreaming = (_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null);
+                    if (wasStreaming) {
+                      _stopStreaming();
+                    }
+                    setState(() => _useIsolate = v);
+                    if (wasStreaming) {
+                      _startStreaming();
+                    }
+                  },
+          ),
+          const SizedBox(height: 8),
           IntSliderOption(
             label: 'Update Rate',
             value: _updateRateHz,
             min: 1,
-            max: 100,
+            max: 1000,
             suffix: 'Hz',
             onChanged: (v) {
               setState(() => _updateRateHz = v);
-              if (isDataFlowing) {
+              final wasStreaming = (_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null);
+              if (wasStreaming) {
                 _stopStreaming();
                 _startStreaming();
               }
@@ -527,7 +837,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   Widget _buildChart() {
-    final isDataFlowing = _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     // Determine line color based on state
@@ -604,18 +914,13 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             liveStreamController: _streamController,
             theme: _optionsController.theme,
             showLegend: false,
-            // showXScrollbar: _optionsController.showXScrollbar,
-            // showYScrollbar: _optionsController.showYScrollbar,
-            showXScrollbar: false,
-            showYScrollbar: false,
+            showXScrollbar: _optionsController.showXScrollbar,
+            showYScrollbar: _optionsController.showYScrollbar,
 
             scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
-              // showAxis: _optionsController.showAxisLines,
-              showAxis: false,
-              showTicks: false,
-              showMinorGrid: false,
+              showAxis: _optionsController.showAxisLines,
             ),
             yAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
@@ -632,7 +937,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   Widget _buildStatusPanel() {
-    final isDataFlowing = _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
     final bounds = _streamController?.bounds;
 
@@ -644,6 +949,23 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         // Wait at least 100ms for stable measurement
         final instantRate = (_pointsInLastSecond / (elapsedInSecond / 1000)).toStringAsFixed(1);
         effectiveRate = '$instantRate Hz';
+      }
+    }
+
+    // Calculate ACTUAL buffer growth rate
+    String actualBufferRate = '-';
+    String expectedVsActual = '-';
+    if (isDataFlowing && _streamStartTime != null) {
+      final elapsed = DateTime.now().difference(_streamStartTime!).inSeconds;
+      if (elapsed > 0) {
+        final currentBufferSize = _streamController?.pointCount ?? 0;
+        final pointsAdded = currentBufferSize - _bufferSizeAtStart;
+        final actualRate = pointsAdded / elapsed;
+        actualBufferRate = '${actualRate.toStringAsFixed(1)} pts/s';
+
+        final expected = _updateRateHz * elapsed;
+        final percentAchieved = (pointsAdded / expected * 100).toStringAsFixed(1);
+        expectedVsActual = '$pointsAdded / $expected pts ($percentAchieved%)';
       }
     }
 
@@ -669,8 +991,22 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           color: (_streamController?.bufferedCount ?? 0) > 0 ? Colors.orange : null,
         ),
         StatusItem(
-          label: 'Rate',
+          label: 'Requested Rate',
+          value: '$_updateRateHz Hz',
+        ),
+        StatusItem(
+          label: 'Measured Rate',
           value: effectiveRate,
+        ),
+        StatusItem(
+          label: 'Buffer Growth',
+          value: actualBufferRate,
+          color: Colors.blue,
+        ),
+        StatusItem(
+          label: 'Expected vs Actual',
+          value: expectedVsActual,
+          color: Colors.purple,
         ),
         StatusItem(
           label: 'Frame Rate',
