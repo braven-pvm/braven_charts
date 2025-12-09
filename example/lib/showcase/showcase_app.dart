@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
+import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
 import 'pages/multi_axis_page.dart';
@@ -87,6 +88,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
   /// All navigation destinations in the showcase.
   static final List<NavDestination> _destinations = [
     const NavDestination(
+      label: 'Gallery',
+      icon: Icons.dashboard_outlined,
+      selectedIcon: Icons.dashboard,
+      page: GalleryPage(),
+      badge: '★', // Featured overview
+    ),
+    const NavDestination(
       label: 'Chart Types',
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
@@ -124,6 +132,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: LiveStreamingPage(),
       badge: '★', // New high-performance API
     ),
+    // const NavDestination(
+    //   label: 'Timer Test',
+    //   icon: Icons.timer_outlined,
+    //   selectedIcon: Icons.timer,
+    //   page: TimerTestPage(),
+    //   badge: 'TEST', // Standalone timer test
+    // ),
     const NavDestination(
       label: 'Theming',
       icon: Icons.palette_outlined,
