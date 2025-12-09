@@ -1894,7 +1894,7 @@ class _GalleryPageState extends State<GalleryPage> {
       interpolation: LineInterpolation.bezier,
       tension: 0.2,
       strokeWidth: 2.0,
-      showDataPointMarkers: false,
+      showDataPointMarkers: true,
       dataPointMarkerRadius: 3.0,
     );
 

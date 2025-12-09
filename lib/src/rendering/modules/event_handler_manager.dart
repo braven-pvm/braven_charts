@@ -1342,7 +1342,7 @@ class EventHandlerManager {
       _delegate.zoomChart(zoomFactor, plotCenter: plotPosition, animate: false);
 
       Future.delayed(const Duration(milliseconds: 200), () {
-        if (coordinator.currentMode == InteractionMode.zooming) {
+        if (!coordinator.isDisposed && coordinator.currentMode == InteractionMode.zooming) {
           coordinator.releaseMode();
         }
       });
@@ -1350,7 +1350,7 @@ class EventHandlerManager {
       coordinator.claimMode(InteractionMode.zooming);
 
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (coordinator.currentMode == InteractionMode.zooming) {
+        if (!coordinator.isDisposed && coordinator.currentMode == InteractionMode.zooming) {
           coordinator.releaseMode();
         }
       });

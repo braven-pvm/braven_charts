@@ -53,6 +53,12 @@ class HoveredMarkerInfo {
 /// must check if the coordinator allows that interaction based on current mode
 /// and priority levels from CONFLICT_RESOLUTION_TABLE.md.
 class ChartInteractionCoordinator extends ChangeNotifier {
+  /// Whether this coordinator has been disposed.
+  bool _isDisposed = false;
+
+  /// Returns true if this coordinator has been disposed.
+  bool get isDisposed => _isDisposed;
+
   /// Current interaction mode.
   InteractionMode _currentMode = InteractionMode.idle;
 
@@ -465,6 +471,7 @@ ChartInteractionCoordinator State:
 
   @override
   void dispose() {
+    _isDisposed = true;
     _selectedElements.clear();
     _modifierKeys.clear();
     super.dispose();
