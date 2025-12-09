@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:parchment/parchment.dart';
 
 import 'annotation_style.dart';
+import 'chart_series.dart';
 import 'enums.dart';
+import 'legend_style.dart';
 
 /// Counter for auto-generating annotation IDs.
 int _annotationIdCounter = 0;
@@ -1167,6 +1169,97 @@ class TrendAnnotation extends ChartAnnotation {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       labelMargin: labelMargin ?? this.labelMargin,
+    );
+  }
+}
+
+// =============================================================================
+// Legend Annotation
+// =============================================================================
+
+/// A draggable legend annotation that displays series information.
+///
+/// Unlike the simple `ChartLegend` widget, `LegendAnnotation` is rendered
+/// as part of the chart canvas and can be:
+/// - Dragged to any position within the chart
+/// - Styled with borders, backgrounds, and custom fonts
+/// - Positioned at standard anchor points (topLeft, topRight, etc.)
+///
+/// Example:
+/// ```dart
+/// LegendAnnotation(
+///   id: 'main-legend',
+///   series: mySeriesList,
+///   legendStyle: LegendStyle(
+///     position: LegendPosition.topRight,
+///     backgroundColor: Colors.white.withOpacity(0.9),
+///     borderColor: Colors.grey,
+///   ),
+/// )
+/// ```
+class LegendAnnotation extends ChartAnnotation {
+  /// Creates a legend annotation.
+  ///
+  /// [series] is the list of chart series to display in the legend.
+  /// [legendStyle] controls the visual appearance and position.
+  LegendAnnotation({
+    String? id,
+    super.label,
+    super.zIndex,
+    required this.series,
+    this.legendStyle = const LegendStyle(),
+    this.hiddenSeriesIds = const {},
+    this.onSeriesToggle,
+    Offset? customPosition,
+  })  : _customPosition = customPosition,
+        super(
+          id: id ?? ChartAnnotation.generateId(),
+          allowDragging: legendStyle.allowDragging,
+          allowEditing: false, // Legends don't support inline editing
+        );
+
+  /// The list of series to display in the legend.
+  final List<ChartSeries> series;
+
+  /// Visual style configuration for the legend.
+  final LegendStyle legendStyle;
+
+  /// Set of series IDs that are currently hidden/toggled off.
+  final Set<String> hiddenSeriesIds;
+
+  /// Callback when a series is toggled (clicked) in the legend.
+  final ValueChanged<String>? onSeriesToggle;
+
+  /// Custom position when legend has been dragged from its default location.
+  final Offset? _customPosition;
+
+  /// Returns the current position (custom if dragged, otherwise calculated from legendStyle.position).
+  Offset? get customPosition => _customPosition;
+
+  /// Whether the legend has been manually positioned.
+  bool get hasCustomPosition => _customPosition != null;
+
+  /// Creates a copy with modified properties.
+  LegendAnnotation copyWith({
+    String? id,
+    String? label,
+    int? zIndex,
+    List<ChartSeries>? series,
+    LegendStyle? legendStyle,
+    Set<String>? hiddenSeriesIds,
+    ValueChanged<String>? onSeriesToggle,
+    Offset? customPosition,
+    bool clearCustomPosition = false,
+  }) {
+    return LegendAnnotation(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      zIndex: zIndex ?? this.zIndex,
+      series: series ?? this.series,
+      legendStyle: legendStyle ?? this.legendStyle,
+      hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
+      onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
+      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
     );
   }
 }

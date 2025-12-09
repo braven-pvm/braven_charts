@@ -13,6 +13,7 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/enums.dart';
+import '../models/legend_style.dart';
 import 'resize_handle_element.dart';
 
 /// Position for edge value labels during range annotation resize.
@@ -2660,4 +2661,373 @@ class TrendAnnotationElement extends ChartElement {
     copy._trendPoints = _trendPoints;
     return copy;
   }
+}
+
+// =============================================================================
+// Legend Annotation Element
+// =============================================================================
+
+/// A chart element that renders a draggable legend.
+///
+/// Displays series names with color indicators, similar to professional
+/// charting software legends. The legend can be dragged to any position
+/// within the chart area.
+class LegendAnnotationElement extends ChartElement {
+  LegendAnnotationElement({
+    required this.annotation,
+    required Size chartSize,
+  })  : _chartSize = chartSize,
+        _isSelected = false,
+        _isHovered = false {
+    _calculateBounds();
+  }
+
+  final LegendAnnotation annotation;
+  Size _chartSize;
+
+  Rect? _bounds;
+  bool _isSelected;
+  bool _isHovered;
+
+  /// Temporary position during drag (null when not dragging).
+  Offset? _tempPosition;
+
+  /// Cached text painters for each series item.
+  final List<TextPainter> _textPainters = [];
+
+  /// Get the current temp position (used during drag completion).
+  Offset? get tempPosition => _tempPosition;
+
+  /// Update chart size (called when chart is resized).
+  void updateChartSize(Size newSize) {
+    if (_chartSize != newSize) {
+      _chartSize = newSize;
+      _calculateBounds();
+    }
+  }
+
+  /// Calculates legend bounds based on series items and style.
+  void _calculateBounds() {
+    final style = annotation.legendStyle;
+    final padding = style.effectivePadding;
+
+    // Clear and rebuild text painters
+    _textPainters.clear();
+
+    double maxTextWidth = 0;
+    double totalTextHeight = 0;
+
+    for (final series in annotation.series) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: series.displayName,
+          style: style.textStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      _textPainters.add(painter);
+      maxTextWidth = math.max(maxTextWidth, painter.width);
+      totalTextHeight += painter.height;
+    }
+
+    // Calculate legend size
+    final itemCount = annotation.series.length;
+    final double legendWidth;
+    final double legendHeight;
+
+    if (style.orientation == LegendOrientation.vertical) {
+      // Vertical: one item per row
+      legendWidth = padding.left + style.markerSize + style.markerLabelSpacing + maxTextWidth + padding.right;
+      legendHeight = padding.top + totalTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0) + padding.bottom;
+    } else {
+      // Horizontal: items side by side
+      double totalWidth = 0;
+      for (final painter in _textPainters) {
+        totalWidth += style.markerSize + style.markerLabelSpacing + painter.width;
+      }
+      totalWidth += (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
+      legendWidth = padding.left + totalWidth + padding.right;
+
+      final maxItemHeight = _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max);
+      legendHeight = padding.top + math.max(style.markerSize, maxItemHeight) + padding.bottom;
+    }
+
+    // Calculate position based on anchor or custom position
+    final Offset topLeft;
+    if (_tempPosition != null) {
+      topLeft = _tempPosition!;
+    } else if (annotation.hasCustomPosition) {
+      topLeft = annotation.customPosition!;
+    } else {
+      topLeft = _calculateAnchoredPosition(
+        Size(legendWidth, legendHeight),
+        style.position,
+        style.offset,
+      );
+    }
+
+    _bounds = Rect.fromLTWH(topLeft.dx, topLeft.dy, legendWidth, legendHeight);
+  }
+
+  /// Calculates position based on anchor point.
+  Offset _calculateAnchoredPosition(
+    Size legendSize,
+    LegendPosition position,
+    Offset offset,
+  ) {
+    const margin = 8.0;
+    final double x, y;
+
+    switch (position) {
+      case LegendPosition.topLeft:
+        x = margin;
+        y = margin;
+      case LegendPosition.topCenter:
+        x = (_chartSize.width - legendSize.width) / 2;
+        y = margin;
+      case LegendPosition.topRight:
+        x = _chartSize.width - legendSize.width - margin;
+        y = margin;
+      case LegendPosition.centerLeft:
+        x = margin;
+        y = (_chartSize.height - legendSize.height) / 2;
+      case LegendPosition.center:
+        x = (_chartSize.width - legendSize.width) / 2;
+        y = (_chartSize.height - legendSize.height) / 2;
+      case LegendPosition.centerRight:
+        x = _chartSize.width - legendSize.width - margin;
+        y = (_chartSize.height - legendSize.height) / 2;
+      case LegendPosition.bottomLeft:
+        x = margin;
+        y = _chartSize.height - legendSize.height - margin;
+      case LegendPosition.bottomCenter:
+        x = (_chartSize.width - legendSize.width) / 2;
+        y = _chartSize.height - legendSize.height - margin;
+      case LegendPosition.bottomRight:
+        x = _chartSize.width - legendSize.width - margin;
+        y = _chartSize.height - legendSize.height - margin;
+    }
+
+    return Offset(x + offset.dx, y + offset.dy);
+  }
+
+  @override
+  String get id => annotation.id;
+
+  @override
+  Rect get bounds => _bounds ?? Rect.zero;
+
+  @override
+  ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  int get renderOrder => RenderOrder.legend;
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  bool get isHovered => _isHovered;
+
+  @override
+  bool get isSelectable => true;
+
+  @override
+  bool get isDraggable => annotation.legendStyle.allowDragging;
+
+  @override
+  bool hitTest(Offset position) => _bounds?.contains(position) ?? false;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (_bounds == null || annotation.series.isEmpty) return;
+
+    final style = annotation.legendStyle;
+    final padding = style.effectivePadding;
+
+    // Apply opacity
+    canvas.saveLayer(
+      _bounds,
+      Paint()..color = Colors.white.withValues(alpha: style.opacity),
+    );
+
+    // Draw background
+    final bgPaint = Paint()..color = style.effectiveBackgroundColor;
+    if (_isHovered) {
+      bgPaint.color = bgPaint.color.withValues(
+        alpha: (bgPaint.color.a * 1.05).clamp(0.0, 1.0),
+      );
+    }
+
+    final rRect = RRect.fromRectAndCorners(
+      _bounds!,
+      topLeft: style.effectiveBorderRadius.topLeft,
+      topRight: style.effectiveBorderRadius.topRight,
+      bottomLeft: style.effectiveBorderRadius.bottomLeft,
+      bottomRight: style.effectiveBorderRadius.bottomRight,
+    );
+    canvas.drawRRect(rRect, bgPaint);
+
+    // Draw border
+    final borderPaint = Paint()
+      ..color = style.effectiveBorderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _isSelected ? style.borderWidth * 1.5 : style.borderWidth;
+    canvas.drawRRect(rRect, borderPaint);
+
+    // Draw legend items
+    double currentX = _bounds!.left + padding.left;
+    double currentY = _bounds!.top + padding.top;
+
+    for (int i = 0; i < annotation.series.length; i++) {
+      final series = annotation.series[i];
+      final textPainter = _textPainters[i];
+      final isHidden = annotation.hiddenSeriesIds.contains(series.id);
+
+      // Get series color
+      final seriesColor = isHidden ? Colors.grey : (series.color ?? _defaultColors[i % _defaultColors.length]);
+
+      // Draw marker
+      final markerCenter = style.orientation == LegendOrientation.vertical
+          ? Offset(
+              currentX + style.markerSize / 2,
+              currentY + textPainter.height / 2,
+            )
+          : Offset(
+              currentX + style.markerSize / 2,
+              _bounds!.top + padding.top + (_bounds!.height - padding.vertical) / 2,
+            );
+
+      _drawMarker(canvas, markerCenter, seriesColor, style);
+
+      // Draw text
+      final textX = currentX + style.markerSize + style.markerLabelSpacing;
+      final textY = style.orientation == LegendOrientation.vertical
+          ? currentY
+          : _bounds!.top + padding.top + (_bounds!.height - padding.vertical - textPainter.height) / 2;
+
+      // Apply strikethrough if hidden
+      if (isHidden) {
+        final hiddenPainter = TextPainter(
+          text: TextSpan(
+            text: series.displayName,
+            style: style.textStyle.copyWith(
+              color: Colors.grey,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        hiddenPainter.paint(canvas, Offset(textX, textY));
+      } else {
+        textPainter.paint(canvas, Offset(textX, textY));
+      }
+
+      // Move to next item position
+      if (style.orientation == LegendOrientation.vertical) {
+        currentY += textPainter.height + style.itemSpacing;
+      } else {
+        currentX += style.markerSize + style.markerLabelSpacing + textPainter.width + style.itemSpacing;
+      }
+    }
+
+    canvas.restore();
+  }
+
+  /// Draws a marker at the given position.
+  void _drawMarker(
+    Canvas canvas,
+    Offset center,
+    Color color,
+    LegendStyle style,
+  ) {
+    final paint = Paint()..color = color;
+
+    switch (style.markerShape) {
+      case LegendMarkerShape.circle:
+        canvas.drawCircle(center, style.markerSize / 2, paint);
+
+      case LegendMarkerShape.square:
+        canvas.drawRect(
+          Rect.fromCenter(center: center, width: style.markerSize, height: style.markerSize),
+          paint,
+        );
+
+      case LegendMarkerShape.line:
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.markerLineWidth
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(
+          Offset(center.dx - style.markerSize / 2, center.dy),
+          Offset(center.dx + style.markerSize / 2, center.dy),
+          paint,
+        );
+
+      case LegendMarkerShape.diamond:
+        final half = style.markerSize / 2;
+        final path = Path()
+          ..moveTo(center.dx, center.dy - half)
+          ..lineTo(center.dx + half, center.dy)
+          ..lineTo(center.dx, center.dy + half)
+          ..lineTo(center.dx - half, center.dy)
+          ..close();
+        canvas.drawPath(path, paint);
+    }
+  }
+
+  /// Update temporary position during drag.
+  void updateTempPosition(Offset newPosition) {
+    _tempPosition = newPosition;
+    _calculateBounds();
+  }
+
+  /// Clear temporary position after drag completes.
+  void clearTempPosition() {
+    _tempPosition = null;
+    _calculateBounds();
+  }
+
+  @override
+  void onSelect() => _isSelected = true;
+
+  @override
+  void onDeselect() => _isSelected = false;
+
+  @override
+  void onHoverEnter() => _isHovered = true;
+
+  @override
+  void onHoverExit() => _isHovered = false;
+
+  @override
+  int get priority => ElementPriority.forType(elementType);
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) {
+    final copy = LegendAnnotationElement(
+      annotation: annotation,
+      chartSize: _chartSize,
+    );
+    copy._isSelected = isSelected ?? _isSelected;
+    copy._isHovered = isHovered ?? _isHovered;
+    copy._bounds = _bounds;
+    copy._tempPosition = _tempPosition;
+    return copy;
+  }
+
+  /// Default color palette for series without explicit colors.
+  static const List<Color> _defaultColors = [
+    Color(0xFF2196F3), // Blue
+    Color(0xFFF44336), // Red
+    Color(0xFF4CAF50), // Green
+    Color(0xFFFF9800), // Orange
+    Color(0xFF9C27B0), // Purple
+    Color(0xFF00BCD4), // Cyan
+    Color(0xFFFFEB3B), // Yellow
+    Color(0xFFE91E63), // Pink
+    Color(0xFF009688), // Teal
+    Color(0xFF795548), // Brown
+  ];
 }

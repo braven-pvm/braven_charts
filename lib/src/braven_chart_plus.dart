@@ -32,6 +32,7 @@ import 'models/chart_type.dart';
 import 'models/data_range.dart';
 import 'models/enums.dart';
 import 'models/interaction_config.dart';
+import 'models/legend_style.dart';
 import 'models/streaming_config.dart';
 import 'rendering/chart_render_box.dart';
 import 'rendering/spatial_index.dart';
@@ -85,6 +86,7 @@ class BravenChartPlus extends StatefulWidget {
     this.title,
     this.subtitle,
     this.showLegend = true,
+    this.legendStyle,
     this.showToolbar = false,
     this.interactiveAnnotations = true,
     this.loadingWidget,
@@ -535,7 +537,34 @@ class BravenChartPlus extends StatefulWidget {
   /// Whether to show the legend.
   ///
   /// Legend displays all series with their colors and names.
+  /// When [legendStyle] is provided, an overlay legend is rendered
+  /// within the chart area (draggable, configurable styling).
+  /// When [legendStyle] is null, a simple widget legend is shown
+  /// below the chart.
   final bool showLegend;
+
+  /// Style configuration for the overlay legend.
+  ///
+  /// When provided, the legend is rendered as a draggable overlay
+  /// within the chart area, using the professional styling from
+  /// [LegendStyle]. This is the recommended approach for production
+  /// charts.
+  ///
+  /// When null, the legacy widget-based legend is shown below the chart.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   series: [...],
+  ///   showLegend: true,
+  ///   legendStyle: LegendStyle(
+  ///     position: LegendPosition.topRight,
+  ///     backgroundColor: Colors.white.withOpacity(0.9),
+  ///     markerShape: LegendMarkerShape.line,
+  ///   ),
+  /// )
+  /// ```
+  final LegendStyle? legendStyle;
 
   /// Whether to show the toolbar.
   ///
@@ -1205,6 +1234,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                 ),
                 transform: transform,
               ),
+            LegendAnnotation() => LegendAnnotationElement(
+                annotation: annotation,
+                chartSize: Size(transform.plotWidth, transform.plotHeight),
+              ),
           };
           elements.add(element);
 
@@ -1218,6 +1251,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           // Silently ignore annotation conversion errors to prevent chart crashes
           // This can occur when annotation references an invalid series or has malformed data
         }
+      }
+
+      // Auto-generate legend overlay if showLegend is true
+      if (widget.showLegend && effectiveSeries.isNotEmpty) {
+        final legendAnnotation = LegendAnnotation(
+          series: effectiveSeries,
+          legendStyle: widget.legendStyle ?? const LegendStyle(),
+        );
+        elements.add(LegendAnnotationElement(
+          annotation: legendAnnotation,
+          chartSize: Size(transform.plotWidth, transform.plotHeight),
+        ));
       }
 
       return elements;
