@@ -1994,17 +1994,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           event.logicalKey == LogicalKeyboardKey.add ||
           event.logicalKey == LogicalKeyboardKey.numpadAdd) {
         // Check if zoom is enabled
-        if (widget.interactionConfig?.enableZoom ?? true) {
+        final config = widget.interactionConfig ?? const InteractionConfig();
+        if (config.enableZoom) {
           // Removed excessive debugPrint (zoom in)
-          renderBox.zoomChart(1.1);
+          renderBox.zoomChart(1.0 + (config.keyboardZoomPercent / 100.0));
         }
       }
       // Zoom out with - or numpad -
       else if (event.logicalKey == LogicalKeyboardKey.minus || event.logicalKey == LogicalKeyboardKey.numpadSubtract) {
         // Check if zoom is enabled
-        if (widget.interactionConfig?.enableZoom ?? true) {
+        final config = widget.interactionConfig ?? const InteractionConfig();
+        if (config.enableZoom) {
           // Removed excessive debugPrint (zoom out)
-          renderBox.zoomChart(0.9);
+          renderBox.zoomChart(1.0 - (config.keyboardZoomPercent / 100.0));
         }
       }
     } else if (event is KeyUpEvent) {

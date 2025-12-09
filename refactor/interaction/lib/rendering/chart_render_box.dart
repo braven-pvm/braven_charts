@@ -1030,7 +1030,7 @@ class ChartRenderBox extends RenderBox {
       // Positive scrollDelta.dy = scroll down = zoom out
       // Negative scrollDelta.dy = scroll up = zoom in
       final double scrollAmount = event.scrollDelta.dy;
-      const double zoomSensitivity = 0.001; // Adjust for comfortable zoom speed
+      const double zoomSensitivity = 0.0011; // Adjust for comfortable zoom speed
       final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
 
       debugPrint('🔍 ZOOM: factor=$zoomFactor, scrollDelta=${event.scrollDelta.dy}');

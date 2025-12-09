@@ -99,6 +99,13 @@ abstract class EventHandlerDelegate {
   /// Sets the current transform.
   set transform(ChartTransform? value);
 
+  /// Zooms the chart with optional animation.
+  ///
+  /// [factor] is the zoom factor (> 1.0 = zoom in, < 1.0 = zoom out).
+  /// [plotCenter] is the center point in plot space (if null, uses plot center).
+  /// [animate] controls whether to animate the zoom transition.
+  void zoomChart(double factor, {Offset? plotCenter, bool animate = true});
+
   // ==================== Scrollbar Module Delegation ====================
 
   /// Checks if pointer is on scrollbar and handles the event.
@@ -1326,21 +1333,15 @@ class EventHandlerManager {
       coordinator.claimMode(InteractionMode.zooming);
 
       final double scrollAmount = event.scrollDelta.dy;
-      const double zoomSensitivity = 0.001;
+      const double zoomSensitivity = 0.0011;
       final double zoomFactor = 1.0 - (scrollAmount * zoomSensitivity);
 
       final Offset plotPosition = _delegate.widgetToPlot(position);
 
-      final tentativeTransform = _delegate.transform!.zoom(zoomFactor, plotPosition);
-      final clampedTransform = _delegate.clampZoomLevel(tentativeTransform);
+      // Mouse wheel zoom: no animation for responsive feel during rapid scrolling
+      _delegate.zoomChart(zoomFactor, plotCenter: plotPosition, animate: false);
 
-      _delegate.transform = clampedTransform;
-      _delegate.updateAxesFromTransform();
-      _delegate.rebuildElementsWithTransform();
-      _delegate.showScrollbarsAndScheduleHide();
-      _delegate.invalidateSeriesCache();
-
-      Future.delayed(const Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 200), () {
         if (coordinator.currentMode == InteractionMode.zooming) {
           coordinator.releaseMode();
         }

@@ -36,6 +36,7 @@ import 'modules/streaming_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/tooltip_renderer.dart';
 import 'modules/viewport_constraints.dart';
+import 'modules/zoom_animator.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
 
@@ -86,6 +87,10 @@ class ChartRenderBox extends RenderBox {
         assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
+    _zoomAnimator = ZoomAnimator(
+      onUpdate: _onZoomAnimationUpdate,
+      onComplete: _onZoomAnimationComplete,
+    );
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
     _initAnnotationDragHandler();
@@ -217,6 +222,13 @@ class ChartRenderBox extends RenderBox {
   /// - Hide delay: Wait before hiding tooltip when moving away
   /// - Fade animation: Smooth opacity transitions
   late final TooltipAnimator _tooltipAnimator;
+
+  /// Manages smooth zoom animations with easing.
+  ///
+  /// Provides natural transitions when zooming via:
+  /// - Keyboard shortcuts (+/-/numpad)
+  /// - Mouse wheel + Shift modifier
+  late final ZoomAnimator _zoomAnimator;
 
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
@@ -380,6 +392,7 @@ class ChartRenderBox extends RenderBox {
   void dispose() {
     _seriesCacheManager.dispose();
     _tooltipAnimator.dispose();
+    _zoomAnimator.dispose();
     _scrollbarManager.dispose();
     _streamingManager.dispose();
     _annotationDragHandler.dispose();
@@ -747,14 +760,15 @@ class ChartRenderBox extends RenderBox {
     }
   }
 
-  /// Programmatically zoom the chart.
+  /// Programmatically zoom the chart with smooth animation.
   ///
   /// **Parameters**:
   /// - `factor`: Zoom factor (> 1.0 = zoom in, < 1.0 = zoom out)
   /// - `plotCenter`: Center point in plot space (if null, uses plot center)
+  /// - `animate`: Whether to animate the zoom (default: true)
   ///
   /// Only works when using elementGenerator (for element regeneration).
-  void zoomChart(double factor, {Offset? plotCenter}) {
+  void zoomChart(double factor, {Offset? plotCenter, bool animate = true}) {
     // [DEBUG OUTPUT REMOVED] Zoom chart calls - fire on user interaction
 
     if (_transform == null || _elementGenerator == null || _originalTransform == null) {
@@ -769,24 +783,41 @@ class ChartRenderBox extends RenderBox {
     final tentativeTransform = _transform!.zoom(factor, center);
 
     // Clamp zoom to min/max levels
-    final clampedTransform = _clampZoomLevel(tentativeTransform);
+    final targetTransform = _clampZoomLevel(tentativeTransform);
 
-    // Apply clamped zoom
-    _transform = clampedTransform;
+    if (animate) {
+      // Animate to target transform
+      _zoomAnimator.animateTo(_transform!, targetTransform);
+    } else {
+      // Apply immediately without animation
+      _applyZoomTransform(targetTransform);
+      _onZoomAnimationComplete();
+    }
+  }
 
-    // Update axes to reflect new viewport
+  /// Callback invoked on each frame of zoom animation.
+  void _onZoomAnimationUpdate(ChartTransform transform) {
+    _transform = transform;
     _updateAxesFromTransform();
-
-    // Regenerate elements
-    _rebuildElementsWithTransform();
-
-    // Show scrollbars on viewport change from programmatic zoom
     _scrollbarManager.showScrollbarsAndScheduleHide();
+    markNeedsPaint();
+  }
+
+  /// Callback invoked when zoom animation completes.
+  void _onZoomAnimationComplete() {
+    // Regenerate elements at final transform
+    _rebuildElementsWithTransform();
 
     // Invalidate cache - transform changed
     _seriesCacheManager.invalidate();
+  }
 
-    // [DEBUG OUTPUT REMOVED] Keyboard zoom - fires on user interaction
+  /// Applies a zoom transform directly (used during animation and immediate mode).
+  void _applyZoomTransform(ChartTransform transform) {
+    _transform = transform;
+    _updateAxesFromTransform();
+    _scrollbarManager.showScrollbarsAndScheduleHide();
+    markNeedsPaint();
   }
 
   /// Programmatically pan the chart.
@@ -2311,6 +2342,11 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   ChartTransform clampZoomLevel(ChartTransform tentativeTransform) {
     return _renderBox._clampZoomLevel(tentativeTransform);
+  }
+
+  @override
+  void zoomChart(double factor, {Offset? plotCenter, bool animate = true}) {
+    _renderBox.zoomChart(factor, plotCenter: plotCenter, animate: animate);
   }
 
   // ============================================================================

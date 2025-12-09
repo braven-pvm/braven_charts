@@ -189,6 +189,22 @@ class CrosshairStyle {
 /// );
 /// ```
 class CrosshairConfig {
+  /// Creates a CrosshairConfig optimized for tracking mode.
+  factory CrosshairConfig.tracking({
+    bool interpolate = true,
+    bool showTooltip = true,
+    bool showMarkers = true,
+    double markerRadius = 4.0,
+  }) {
+    return CrosshairConfig(
+      displayMode: CrosshairDisplayMode.tracking,
+      interpolateValues: interpolate,
+      showTrackingTooltip: showTooltip,
+      showIntersectionMarkers: showMarkers,
+      intersectionMarkerRadius: markerRadius,
+    );
+  }
+
   /// Creates a crosshair configuration with the specified properties.
   const CrosshairConfig({
     this.enabled = true,
@@ -365,22 +381,6 @@ class CrosshairConfig {
       showIntersectionMarkers,
       intersectionMarkerRadius,
     ]);
-  }
-
-  /// Creates a CrosshairConfig optimized for tracking mode.
-  factory CrosshairConfig.tracking({
-    bool interpolate = true,
-    bool showTooltip = true,
-    bool showMarkers = true,
-    double markerRadius = 4.0,
-  }) {
-    return CrosshairConfig(
-      displayMode: CrosshairDisplayMode.tracking,
-      interpolateValues: interpolate,
-      showTrackingTooltip: showTooltip,
-      showIntersectionMarkers: showMarkers,
-      intersectionMarkerRadius: markerRadius,
-    );
   }
 }
 
@@ -918,6 +918,7 @@ class InteractionConfig {
     this.showFocusBorder = false,
     this.showXScrollbar = false,
     this.showYScrollbar = false,
+    this.keyboardZoomPercent = 25,
     // Callback functions for user interaction events (FR-007)
     this.onDataPointTap,
     this.onDataPointHover,
@@ -929,7 +930,7 @@ class InteractionConfig {
     this.onCrosshairChanged,
     this.onTooltipChanged,
     this.onKeyboardAction,
-  });
+  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100, 'keyboardZoomPercent must be between 1 and 100');
 
   /// Creates a configuration with all interaction features enabled.
   ///
@@ -959,6 +960,7 @@ class InteractionConfig {
         showFocusBorder: true,
         showXScrollbar: true,
         showYScrollbar: true,
+        keyboardZoomPercent: 25,
       );
 
   /// Creates a configuration with all interaction features disabled.
@@ -985,6 +987,7 @@ class InteractionConfig {
         showFocusBorder: false,
         showXScrollbar: false,
         showYScrollbar: false,
+        keyboardZoomPercent: 25,
       );
 
   /// Creates a default configuration (same as unnamed constructor).
@@ -1026,6 +1029,22 @@ class InteractionConfig {
 
   /// Whether to show the Y-axis scrollbar for vertical scrolling.
   final bool showYScrollbar;
+
+  /// The zoom percentage applied per keyboard zoom keypress (+/- keys).
+  ///
+  /// For zoom in, the viewport scale is multiplied by `1 + (keyboardZoomPercent / 100)`.
+  /// For zoom out, the viewport scale is multiplied by `1 - (keyboardZoomPercent / 100)`.
+  ///
+  /// Must be between 1 and 100. Default is 10 (10% zoom per keypress).
+  /// A value of 20 would be 20% zoom per keypress.
+  ///
+  /// Example:
+  /// ```dart
+  /// InteractionConfig(
+  ///   keyboardZoomPercent: 20,  // 20% zoom per keypress
+  /// )
+  /// ```
+  final int keyboardZoomPercent;
 
   // Callback functions for user interaction events (FR-007)
 
@@ -1183,6 +1202,7 @@ class InteractionConfig {
     bool? showFocusBorder,
     bool? showXScrollbar,
     bool? showYScrollbar,
+    int? keyboardZoomPercent,
     DataPointCallback? onDataPointTap,
     DataPointHoverCallback? onDataPointHover,
     DataPointLongPressCallback? onDataPointLongPress,
@@ -1206,6 +1226,7 @@ class InteractionConfig {
       showFocusBorder: showFocusBorder ?? this.showFocusBorder,
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
       showYScrollbar: showYScrollbar ?? this.showYScrollbar,
+      keyboardZoomPercent: keyboardZoomPercent ?? this.keyboardZoomPercent,
       onDataPointTap: onDataPointTap ?? this.onDataPointTap,
       onDataPointHover: onDataPointHover ?? this.onDataPointHover,
       onDataPointLongPress: onDataPointLongPress ?? this.onDataPointLongPress,
@@ -1233,7 +1254,8 @@ class InteractionConfig {
         other.enableSelection == enableSelection &&
         other.showFocusBorder == showFocusBorder &&
         other.showXScrollbar == showXScrollbar &&
-        other.showYScrollbar == showYScrollbar;
+        other.showYScrollbar == showYScrollbar &&
+        other.keyboardZoomPercent == keyboardZoomPercent;
   }
 
   @override
@@ -1249,5 +1271,6 @@ class InteractionConfig {
         showFocusBorder,
         showXScrollbar,
         showYScrollbar,
+        keyboardZoomPercent,
       );
 }
