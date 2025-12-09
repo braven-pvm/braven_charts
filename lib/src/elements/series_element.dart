@@ -575,13 +575,13 @@ class SeriesElement implements ChartElement {
 
     // Catmull-Rom to cubic bezier control points
     final cp1 = Offset(
-      p1.dx + (p2.dx - p0.dx) * alpha / 6,
-      p1.dy + (p2.dy - p0.dy) * alpha / 6,
+      p1.dx + (p2.dx - p0.dx) * alpha / 3,
+      p1.dy + (p2.dy - p0.dy) * alpha / 3,
     );
 
     final cp2 = Offset(
-      p2.dx - (p3.dx - p1.dx) * alpha / 6,
-      p2.dy - (p3.dy - p1.dy) * alpha / 6,
+      p2.dx - (p3.dx - p1.dx) * alpha / 3,
+      p2.dy - (p3.dy - p1.dy) * alpha / 3,
     );
 
     return (cp1, cp2);
@@ -982,10 +982,10 @@ class SeriesElement implements ChartElement {
       // Catmull-Rom to cubic bezier control points
       // Control point 1: 1/3 of the way from p1 toward the tangent direction
       // Control point 2: 1/3 of the way from p2 toward the tangent direction (reversed)
-      final cp1x = p1.dx + (p2.dx - p0.dx) * alpha / 6;
-      final cp1y = p1.dy + (p2.dy - p0.dy) * alpha / 6;
-      final cp2x = p2.dx - (p3.dx - p1.dx) * alpha / 6;
-      final cp2y = p2.dy - (p3.dy - p1.dy) * alpha / 6;
+      final cp1x = p1.dx + (p2.dx - p0.dx) * alpha / 3;
+      final cp1y = p1.dy + (p2.dy - p0.dy) * alpha / 3;
+      final cp2x = p2.dx - (p3.dx - p1.dx) * alpha / 3;
+      final cp2y = p2.dy - (p3.dy - p1.dy) * alpha / 3;
 
       // Draw cubic bezier from current position (p1) to p2
       path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
