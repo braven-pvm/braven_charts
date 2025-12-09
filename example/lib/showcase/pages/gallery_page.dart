@@ -1892,10 +1892,10 @@ class _GalleryPageState extends State<GalleryPage> {
       points: revenueData,
       color: const Color(0xFF10B981),
       interpolation: LineInterpolation.bezier,
-      tension: 0.45,
-      strokeWidth: 3.0,
-      showDataPointMarkers: true,
-      dataPointMarkerRadius: 4.0,
+      tension: 0.2,
+      strokeWidth: 2.0,
+      showDataPointMarkers: false,
+      dataPointMarkerRadius: 3.0,
     );
 
     // Segment coloring for growth vs decline

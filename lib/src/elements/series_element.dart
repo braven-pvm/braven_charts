@@ -465,8 +465,8 @@ class SeriesElement implements ChartElement {
 
     // Draw data point markers if enabled (use cached transforms!)
     if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
-      // Use theme marker size if available, otherwise series-specific size
-      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      // Series-specific dataPointMarkerRadius takes precedence over theme
+      final effectiveMarkerSize = series.dataPointMarkerRadius;
       _paintDataPointMarkers(canvas, _cachedTransformedPoints!, effectiveMarkerSize, baseColor);
     }
   }
@@ -530,7 +530,8 @@ class SeriesElement implements ChartElement {
 
     // Draw data point markers if enabled
     if (series.showDataPointMarkers) {
-      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      // Series-specific dataPointMarkerRadius takes precedence over theme
+      final effectiveMarkerSize = series.dataPointMarkerRadius;
       _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
     }
   }
@@ -710,8 +711,8 @@ class SeriesElement implements ChartElement {
 
     // Draw data point markers if enabled (reuse cached transforms!)
     if (series.showDataPointMarkers) {
-      // Use theme marker size if available, otherwise series-specific size
-      final effectiveMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.dataPointMarkerRadius;
+      // Series-specific dataPointMarkerRadius takes precedence over theme
+      final effectiveMarkerSize = series.dataPointMarkerRadius;
       _paintDataPointMarkers(canvas, transformedPoints, effectiveMarkerSize, baseColor);
     }
   }
