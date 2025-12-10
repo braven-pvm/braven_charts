@@ -167,7 +167,7 @@ class TooltipAnimator {
   }
 
   /// Safely requests a repaint if not disposed.
-  /// 
+  ///
   /// Schedules the repaint for the next frame to avoid calling markNeedsPaint
   /// during the paint phase, which would cause an assertion error.
   void _safeRepaint() {

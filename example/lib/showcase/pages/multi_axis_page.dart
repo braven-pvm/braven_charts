@@ -613,9 +613,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             id: 'target_power',
             name: 'Target[W]',
             points: _targetPowerData,
-            color: const Color(0xFF9E9E9E), // Gray
+            color: const Color.fromARGB(255, 107, 107, 107), // Gray
             interpolation: LineInterpolation.linear,
-            strokeWidth: 0.1,
+            strokeWidth: 0.5,
             fillOpacity: 0.075,
             yAxisConfig: YAxisConfig(
               id: 'power_axis',

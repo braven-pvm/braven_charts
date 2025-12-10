@@ -1864,7 +1864,14 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: true,
-                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle: const LegendStyle(
+                  orientation: LegendOrientation.vertical,
+                  backgroundColor: Colors.black12,
+                  textStyle: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
                 xAxis: const AxisConfig(label: 'Hour', showGrid: true),
                 yAxis: const AxisConfig(label: 'Mbps / ms', showGrid: false),
                 interactionConfig: const InteractionConfig(
