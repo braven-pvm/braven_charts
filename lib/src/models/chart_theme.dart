@@ -11,6 +11,7 @@ import '../theming/components/interaction_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import '../theming/components/series_theme.dart';
 import '../theming/components/typography_theme.dart';
+import 'legend_style.dart';
 
 /// Comprehensive chart theme with component-based styling.
 ///
@@ -23,6 +24,7 @@ import '../theming/components/typography_theme.dart';
 /// - [animationTheme]: Animation durations and curves
 /// - [annotationTheme]: Annotation styling (point, range, text, threshold, trend)
 /// - [scrollbarConfig]: Scrollbar appearance and behavior
+/// - [legendStyle]: Legend appearance (position, fonts, colors, markers)
 ///
 /// Example:
 /// ```dart
@@ -35,6 +37,7 @@ import '../theming/components/typography_theme.dart';
 ///   animationTheme: AnimationTheme.defaultLight,
 ///   annotationTheme: AnnotationTheme.defaultLight,
 ///   scrollbarConfig: ScrollbarConfig.defaultLight,
+///   legendStyle: LegendStyle.light,
 /// );
 /// ```
 class ChartTheme {
@@ -48,6 +51,7 @@ class ChartTheme {
     required this.animationTheme,
     required this.annotationTheme,
     required this.scrollbarConfig,
+    required this.legendStyle,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
     this.focusBorderRadius = 0.0,
@@ -87,6 +91,9 @@ class ChartTheme {
 
   /// Scrollbar configuration.
   final ScrollbarConfig scrollbarConfig;
+
+  /// Legend styling (position, fonts, colors, markers).
+  final LegendStyle legendStyle;
 
   /// Focus border color when chart has keyboard focus.
   final Color focusBorderColor;
@@ -128,6 +135,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.defaultLight,
     annotationTheme: AnnotationTheme.defaultLight,
     scrollbarConfig: ScrollbarConfig.defaultLight,
+    legendStyle: LegendStyle.light,
   );
 
   static final ChartTheme dark = ChartTheme(
@@ -140,6 +148,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.defaultDark,
     annotationTheme: AnnotationTheme.defaultDark,
     scrollbarConfig: ScrollbarConfig.defaultDark,
+    legendStyle: LegendStyle.dark,
   );
 
   static final ChartTheme corporateBlue = ChartTheme(
@@ -152,6 +161,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.corporateBlue,
     annotationTheme: AnnotationTheme.corporateBlue,
     scrollbarConfig: ScrollbarConfig.defaultLight,
+    legendStyle: LegendStyle.light,
   );
 
   static final ChartTheme vibrant = ChartTheme(
@@ -164,6 +174,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.vibrant,
     annotationTheme: AnnotationTheme.vibrant,
     scrollbarConfig: ScrollbarConfig.defaultLight,
+    legendStyle: LegendStyle.light,
   );
 
   static final ChartTheme minimal = ChartTheme(
@@ -176,6 +187,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.minimal,
     annotationTheme: AnnotationTheme.minimal,
     scrollbarConfig: ScrollbarConfig.defaultLight,
+    legendStyle: LegendStyle.light,
   );
 
   static final ChartTheme highContrast = ChartTheme(
@@ -188,6 +200,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.highContrast,
     annotationTheme: AnnotationTheme.highContrast,
     scrollbarConfig: ScrollbarConfig.highContrast,
+    legendStyle: LegendStyle.light,
   );
 
   static final ChartTheme colorblindFriendly = ChartTheme(
@@ -200,6 +213,7 @@ class ChartTheme {
     animationTheme: AnimationTheme.colorblindFriendly,
     annotationTheme: AnnotationTheme.colorblindFriendly,
     scrollbarConfig: ScrollbarConfig.defaultLight,
+    legendStyle: LegendStyle.light,
   );
 
   // ========== Customization ==========
@@ -214,6 +228,7 @@ class ChartTheme {
     AnimationTheme? animationTheme,
     AnnotationTheme? annotationTheme,
     ScrollbarConfig? scrollbarConfig,
+    LegendStyle? legendStyle,
     Color? focusBorderColor,
     double? focusBorderWidth,
     double? focusBorderRadius,
@@ -228,6 +243,7 @@ class ChartTheme {
       animationTheme: animationTheme ?? this.animationTheme,
       annotationTheme: annotationTheme ?? this.annotationTheme,
       scrollbarConfig: scrollbarConfig ?? this.scrollbarConfig,
+      legendStyle: legendStyle ?? this.legendStyle,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
       focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
       focusBorderRadius: focusBorderRadius ?? this.focusBorderRadius,
@@ -252,6 +268,7 @@ class ChartTheme {
         animationTheme == other.animationTheme &&
         annotationTheme == other.annotationTheme &&
         scrollbarConfig == other.scrollbarConfig &&
+        legendStyle == other.legendStyle &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
         focusBorderRadius == other.focusBorderRadius;
@@ -268,6 +285,7 @@ class ChartTheme {
         animationTheme,
         annotationTheme,
         scrollbarConfig,
+        legendStyle,
         focusBorderColor,
         focusBorderWidth,
         focusBorderRadius,

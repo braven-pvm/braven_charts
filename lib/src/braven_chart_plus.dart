@@ -1267,10 +1267,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // Auto-generate legend overlay if showLegend is true
       if (widget.showLegend && effectiveSeries.isNotEmpty) {
+        // Use widget legendStyle if provided, otherwise fall back to theme's legendStyle
+        final effectiveLegendStyle = widget.legendStyle ?? widget.theme?.legendStyle ?? const LegendStyle();
+        
         final legendAnnotation = LegendAnnotation(
           id: '__internal_legend__', // Special ID for internal legend
           series: effectiveSeries,
-          legendStyle: widget.legendStyle ?? const LegendStyle(),
+          legendStyle: effectiveLegendStyle,
           customPosition: _legendCustomPosition,
         );
         elements.add(LegendAnnotationElement(
