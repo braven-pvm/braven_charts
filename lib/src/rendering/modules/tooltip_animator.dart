@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/scheduler.dart';
+
 import '../../models/interaction_config.dart';
 
 /// Callback type for requesting a repaint.
@@ -165,9 +167,16 @@ class TooltipAnimator {
   }
 
   /// Safely requests a repaint if not disposed.
+  /// 
+  /// Schedules the repaint for the next frame to avoid calling markNeedsPaint
+  /// during the paint phase, which would cause an assertion error.
   void _safeRepaint() {
     if (!_disposed) {
-      onRepaint();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_disposed) {
+          onRepaint();
+        }
+      });
     }
   }
 
