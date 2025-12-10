@@ -711,6 +711,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   bool _normalizationNeeded = false;
   Map<String, DataRange> _seriesYRanges = {};
 
+  // Internal annotation controller - created automatically when user doesn't provide one
+  // This allows static annotations to be editable/draggable without explicit controller
+  AnnotationController? _internalAnnotationController;
+
   // Legend custom position - stored internally since legend is auto-generated
   // and doesn't require user-provided annotationController
   Offset? _legendCustomPosition;
@@ -732,6 +736,29 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   /// the min/max Y values for each series. Used for multi-axis normalization
   /// and tooltip value display.
   Map<String, DataRange> get seriesYRanges => Map.unmodifiable(_seriesYRanges);
+
+  /// Returns the effective annotation controller (user-provided or internal).
+  AnnotationController? get _effectiveAnnotationController =>
+      widget.annotationController ?? _internalAnnotationController;
+
+  /// Initializes the annotation controller.
+  ///
+  /// If user provided a controller, uses that. Otherwise creates an internal
+  /// controller populated with static annotations from widget.annotations.
+  /// This allows static annotations to be editable/draggable.
+  void _initializeAnnotationController() {
+    if (widget.annotationController != null) {
+      // User provided controller - use it directly
+      return;
+    }
+
+    // No user controller - create internal one and populate with static annotations
+    if (widget.annotations.isNotEmpty) {
+      _internalAnnotationController = AnnotationController(
+        initialAnnotations: widget.annotations,
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -756,8 +783,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Listen to controller updates (matches BravenChart pattern)
     widget.controller?.addListener(_onControllerUpdate);
 
+    // Initialize internal annotation controller if user didn't provide one
+    // This allows static annotations to be editable/draggable
+    _initializeAnnotationController();
+
     // Listen to annotation controller updates
-    widget.annotationController?.addListener(_onAnnotationControllerUpdate);
+    _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
 
     _rebuildElements();
 
@@ -795,8 +826,31 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Handle annotation controller changes
     if (widget.annotationController != oldWidget.annotationController) {
-      oldWidget.annotationController?.removeListener(_onAnnotationControllerUpdate);
-      widget.annotationController?.addListener(_onAnnotationControllerUpdate);
+      // Remove listener from old effective controller
+      final oldEffectiveController = oldWidget.annotationController ?? _internalAnnotationController;
+      oldEffectiveController?.removeListener(_onAnnotationControllerUpdate);
+
+      // Dispose internal controller if we're switching to user-provided one
+      if (widget.annotationController != null && _internalAnnotationController != null) {
+        _internalAnnotationController?.dispose();
+        _internalAnnotationController = null;
+      }
+
+      // Reinitialize controller for new widget
+      _initializeAnnotationController();
+
+      // Add listener to new effective controller
+      _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
+    }
+
+    // Handle static annotations changes when no user controller
+    if (widget.annotationController == null &&
+        widget.annotations != oldWidget.annotations) {
+      // Recreate internal controller with new annotations
+      _internalAnnotationController?.dispose();
+      _internalAnnotationController = null;
+      _initializeAnnotationController();
+      _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
     }
 
     // Handle LiveStreamController changes
@@ -834,7 +888,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _focusNode.dispose();
     _streamSubscription?.cancel();
     widget.controller?.removeListener(_onControllerUpdate);
-    widget.annotationController?.removeListener(_onAnnotationControllerUpdate);
+    _effectiveAnnotationController?.removeListener(_onAnnotationControllerUpdate);
+    _internalAnnotationController?.dispose();
     widget.liveStreamController?.detachRenderBox();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
@@ -907,9 +962,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-    // Only update if we have a controller (otherwise annotations are read-only from widget.annotations)
-    if (widget.annotationController != null) {
-      widget.annotationController!.updateAnnotation(annotationId, updatedAnnotation);
+    // Update via effective controller (user-provided or internal)
+    // Internal controller makes static annotations editable/draggable
+    if (_effectiveAnnotationController != null) {
+      _effectiveAnnotationController!.updateAnnotation(annotationId, updatedAnnotation);
     }
 
     // Call user callback
@@ -1209,8 +1265,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // Convert annotations to elements
       // Removed excessive debugPrints (annotation conversion details)
-      // Use annotation controller if provided, otherwise fall back to annotations list
-      final effectiveAnnotations = widget.annotationController?.annotations ?? widget.annotations;
+      // Use effective controller (user-provided or internal with static annotations)
+      final effectiveAnnotations = _effectiveAnnotationController?.annotations ?? [];
       for (final annotation in effectiveAnnotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -1294,9 +1350,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _onCoordinatorChanged() {
     // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen && mounted) {
-      // Only show context menu if annotationController is provided
+      // Only show context menu if we have an effective annotation controller
       // (all current menu items are annotation-related)
-      if (widget.annotationController != null) {
+      if (_effectiveAnnotationController != null) {
         if (_isShowingContextMenu) {
         } else {
           // PERFORMANCE FIX: Call immediately instead of post-frame callback
@@ -1353,8 +1409,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     final bool isSeriesLineClick = element is SeriesElement && _coordinator.hoveredMarker == null;
     final bool isExistingAnnotation = element != null && element is! SeriesElement;
 
-    // Check if annotations are supported (annotationController is provided)
-    final bool hasAnnotationController = widget.annotationController != null;
+    // Check if annotations are supported (effective controller exists)
+    final bool hasAnnotationController = _effectiveAnnotationController != null;
 
     // Build context-aware web-native menu items
     final List<WebContextMenuItem> menuItems = [
@@ -1488,7 +1544,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     } else {}
   }
 
@@ -1520,7 +1576,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     }
   }
 
@@ -1544,7 +1600,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     } else {}
   }
 
@@ -1578,7 +1634,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     } else {}
   }
 
@@ -1626,7 +1682,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _coordinator.releaseMode(force: true);
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     } else {}
   }
 
@@ -1655,7 +1711,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     if (result != null && mounted) {
-      widget.annotationController?.addAnnotation(result);
+      _effectiveAnnotationController?.addAnnotation(result);
     } else {}
   }
 
@@ -1686,7 +1742,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
     } else if (element is PointAnnotationElement) {
       final annotation = element.annotation;
@@ -1700,7 +1756,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
     } else if (element is PinAnnotationElement) {
       final annotation = element.annotation;
@@ -1715,7 +1771,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       }
     } else if (element is ThresholdAnnotationElement) {
       final annotation = element.annotation;
@@ -1725,7 +1781,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
     } else if (element is TrendAnnotationElement) {
       final annotation = element.annotation;
@@ -1739,7 +1795,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
     } else if (element is RangeAnnotationElement) {
       final annotation = element.annotation;
@@ -1749,7 +1805,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       );
 
       if (result != null && mounted) {
-        widget.annotationController?.updateAnnotation(annotation.id, result);
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
     } else {}
   }
@@ -1813,7 +1869,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Delete if confirmed
     if (confirmed == true && mounted) {
-      final wasRemoved = widget.annotationController?.removeAnnotation(annotationId) ?? false;
+      final wasRemoved = _effectiveAnnotationController?.removeAnnotation(annotationId) ?? false;
       if (wasRemoved) {
       } else {}
     } else {}
