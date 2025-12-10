@@ -4,7 +4,7 @@
 import 'dart:math';
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
 
@@ -144,7 +144,16 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.light.copyWith(
                   backgroundColor: const Color(0xFFE8F5E9),
                 ),
-                showLegend: false,
+                showLegend: true,
+                interactionConfig: const InteractionConfig(
+                    crosshair: CrosshairConfig(
+                      enabled: true,
+                    ),
+                    tooltip: TooltipConfig(
+                        enabled: true,
+                        hideDelay: Duration(milliseconds: 500),
+                        showDelay: Duration(milliseconds: 50),
+                        triggerMode: TooltipTriggerMode.hover)),
                 xAxis: const AxisConfig(label: 'Month', showGrid: true),
                 yAxis: const AxisConfig(label: 'USD', showGrid: false),
               ),
@@ -714,7 +723,10 @@ class _GalleryPageState extends State<GalleryPage> {
                       yAxisConfig: YAxisConfig(
                         id: 'cpu',
                         position: YAxisPosition.left,
-                        
+                        visible: true,
+                        labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
+                        showAxisLine: true,
+                        showCrosshairLabel: true,
                       )),
                 ],
                 annotations: [
@@ -737,17 +749,18 @@ class _GalleryPageState extends State<GalleryPage> {
                     dashPattern: const [3, 2],
                   ),
                 ],
+                normalizationMode: NormalizationMode.auto,
                 theme: ChartTheme.dark,
                 showLegend: false,
                 xAxis: const AxisConfig(showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(showGrid: false, showAxis: false),
+                yAxis: const AxisConfig(showGrid: false, showAxis: true),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
-                    enabled: true,
-                    mode: CrosshairMode.vertical,
-                    snapToDataPoint: true,
-                    displayMode: CrosshairDisplayMode.tracking,
-                  ),
+                      enabled: true,
+                      mode: CrosshairMode.vertical,
+                      snapToDataPoint: true,
+                      displayMode: CrosshairDisplayMode.tracking,
+                      showTrackingTooltip: true),
                 ),
               ),
             ),

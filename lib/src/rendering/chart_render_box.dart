@@ -1739,8 +1739,10 @@ class ChartRenderBox extends RenderBox {
       // Handle show/hide animations based on marker presence
       if (markerToShow != null) {
         // Start show animation if marker changed or newly appeared
+        // Use sameMarkerAs to compare by identity (seriesId + markerIndex) only,
+        // ignoring plotPosition to prevent flickering from floating-point differences
         final currentTarget = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
-        if (currentTarget != markerToShow) {
+        if (!markerToShow.sameMarkerAs(currentTarget)) {
           _tooltipAnimator.show(markerToShow, config);
         }
 

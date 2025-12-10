@@ -2,6 +2,7 @@
 // Tooltip Animator - Extracted from ChartRenderBox
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../../models/interaction_config.dart';
 
@@ -67,13 +68,27 @@ class TooltipAnimator {
   ///
   /// [marker] is the marker info object (stored for drawing during animations).
   /// [config] provides show delay configuration.
+  ///
+  /// If tooltip is already visible (transitioning between markers), the new
+  /// marker is shown immediately without delay to provide seamless transitions.
   void show(Object marker, TooltipConfig config) {
-    // Cancel existing timers
+    // Cancel ALL existing timers including fade animation
+    // This prevents a fade-out from clearing _targetMarker after we set it
     _showTimer?.cancel();
     _hideTimer?.cancel();
+    _fadeTimer?.cancel();
 
-    // Cache target marker to detect changes
+    // Cache target marker for drawing
     _targetMarker = marker;
+
+    // If tooltip is already visible (switching between markers), show immediately
+    // This provides seamless marker-to-marker transitions without flickering
+    if (_opacity > 0.5) {
+      // Already visible enough - just keep it visible, no animation needed
+      _opacity = 1.0;
+      _safeRepaint();
+      return;
+    }
 
     // If showDelay is zero, show immediately
     if (config.showDelay == Duration.zero) {
@@ -81,7 +96,7 @@ class TooltipAnimator {
       return;
     }
 
-    // Start show delay timer
+    // Start show delay timer (only for initial show from hidden state)
     _showTimer = Timer(config.showDelay, () {
       // Only show if still targeting same marker
       if (_targetMarker == marker) {
@@ -94,9 +109,15 @@ class TooltipAnimator {
   ///
   /// [config] provides hide delay configuration.
   /// Note: Does NOT clear the target marker immediately to allow drawing during fade-out.
+  ///
+  /// If tooltip is currently fully visible, uses a minimum hide delay to prevent
+  /// flickering from transient marker state changes during mouse movement.
   void hide(TooltipConfig config) {
     // Cancel show timer (user moved away before delay finished)
     _showTimer?.cancel();
+
+    // Cancel any existing hide timer to restart the delay
+    _hideTimer?.cancel();
 
     // If hideDelay is zero, hide immediately
     if (config.hideDelay == Duration.zero) {
@@ -104,8 +125,12 @@ class TooltipAnimator {
       return;
     }
 
+    // If tooltip is fully visible, enforce a minimum hide delay to prevent
+    // flickering from transient null states during marker-to-marker transitions
+    final effectiveHideDelay = _opacity > 0.9 ? Duration(milliseconds: math.max(config.hideDelay.inMilliseconds, 100)) : config.hideDelay;
+
     // Start hide delay timer
-    _hideTimer = Timer(config.hideDelay, () {
+    _hideTimer = Timer(effectiveHideDelay, () {
       _animateOpacity(0.0, const Duration(milliseconds: 100));
     });
   }

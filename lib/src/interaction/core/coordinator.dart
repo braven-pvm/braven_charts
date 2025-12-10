@@ -27,6 +27,15 @@ class HoveredMarkerInfo {
   /// Position of the marker in plot coordinates.
   final Offset plotPosition;
 
+  /// Checks if this marker refers to the same data point as [other].
+  ///
+  /// This compares only [seriesId] and [markerIndex], ignoring [plotPosition].
+  /// Useful for tooltip logic where we care about marker identity, not exact position.
+  bool sameMarkerAs(HoveredMarkerInfo? other) {
+    if (other == null) return false;
+    return seriesId == other.seriesId && markerIndex == other.markerIndex;
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -313,8 +322,21 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   ///
   /// Typically called after setHoveredElement() when the hovered element is
   /// a SeriesElement, to provide finer-grained hover feedback.
+  ///
+  /// Uses identity comparison (seriesId + markerIndex) to avoid spurious
+  /// notifications when only plotPosition changes slightly between frames.
   void setHoveredMarker(HoveredMarkerInfo? marker) {
-    if (_hoveredMarker == marker) return;
+    // Use identity comparison to avoid excessive notifications from plotPosition drift
+    if (_hoveredMarker != null && marker != null) {
+      if (_hoveredMarker!.sameMarkerAs(marker)) {
+        // Same marker identity - update position silently without notifying
+        _hoveredMarker = marker;
+        return;
+      }
+    } else if (_hoveredMarker == null && marker == null) {
+      return; // Both null, no change
+    }
+    // Different marker or one is null - this is a real change
     _hoveredMarker = marker;
     notifyListeners();
   }
