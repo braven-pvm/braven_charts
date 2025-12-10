@@ -738,8 +738,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   Map<String, DataRange> get seriesYRanges => Map.unmodifiable(_seriesYRanges);
 
   /// Returns the effective annotation controller (user-provided or internal).
-  AnnotationController? get _effectiveAnnotationController =>
-      widget.annotationController ?? _internalAnnotationController;
+  AnnotationController? get _effectiveAnnotationController => widget.annotationController ?? _internalAnnotationController;
 
   /// Initializes the annotation controller.
   ///
@@ -844,8 +843,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
 
     // Handle static annotations changes when no user controller
-    if (widget.annotationController == null &&
-        widget.annotations != oldWidget.annotations) {
+    if (widget.annotationController == null && widget.annotations != oldWidget.annotations) {
       // Recreate internal controller with new annotations
       _internalAnnotationController?.dispose();
       _internalAnnotationController = null;

@@ -1853,6 +1853,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 annotations: [
                   ThresholdAnnotation(
+                    allowDragging: true,
                     id: 'latency-warn',
                     axis: AnnotationAxis.y,
                     value: 50,
