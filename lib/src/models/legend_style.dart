@@ -181,8 +181,8 @@ class LegendStyle {
   final Offset offset;
 
   /// Effective background color with default fallback.
-  /// Default is semi-transparent white (85% opacity) - no border by default.
-  Color get effectiveBackgroundColor => backgroundColor ?? const Color.fromARGB(117, 255, 255, 255);
+  /// Default is semi-transparent white (~30% opacity) - no border by default.
+  Color get effectiveBackgroundColor => backgroundColor ?? const Color.fromARGB(76, 255, 255, 255);
 
   /// Effective border color with default fallback.
   Color get effectiveBorderColor => borderColor ?? const Color.fromARGB(0, 255, 255, 255);
@@ -234,14 +234,14 @@ class LegendStyle {
 
   /// Default light theme legend style.
   static const LegendStyle light = LegendStyle(
-    backgroundColor: Color(0xCCFFFFFF), // Semi-transparent white
+    backgroundColor: Color(0x99FFFFFF), // Semi-transparent white (~60% opacity)
     borderWidth: 0.0, // No border by default
     textStyle: TextStyle(fontSize: 11, color: Colors.black87),
   );
 
   /// Default dark theme legend style.
   static const LegendStyle dark = LegendStyle(
-    backgroundColor: Color(0xCC303030), // Semi-transparent dark
+    backgroundColor: Color(0x99303030), // Semi-transparent dark (~60% opacity)
     borderWidth: 0.0, // No border by default
     textStyle: TextStyle(fontSize: 11, color: Colors.white70),
   );
