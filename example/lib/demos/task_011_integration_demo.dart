@@ -116,7 +116,6 @@ class Task011IntegrationDemo extends StatelessWidget {
             strokeWidth: 2.5,
             // NEW: Inline axis configuration - no separate yAxes needed!
             yAxisConfig: YAxisConfig(
-              id: 'power-axis',
               position: YAxisPosition.left,
               label: 'Power',
               unit: 'W',
@@ -131,7 +130,6 @@ class Task011IntegrationDemo extends StatelessWidget {
             strokeWidth: 2.5,
             // NEW: Inline axis configuration
             yAxisConfig: YAxisConfig(
-              id: 'hr-axis',
               position: YAxisPosition.right,
               label: 'Heart Rate',
               unit: 'bpm',

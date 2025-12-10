@@ -351,8 +351,7 @@ void main() {
         animator.show('marker', const TooltipConfig(showDelay: Duration.zero));
 
         final effectiveAxes = [
-          YAxisConfig(
-            id: 'test-series_axis',
+          YAxisConfig.withId(id: 'test-series_axis',
             position: YAxisPosition.left,
             label: 'Test',
             unit: 'kg',

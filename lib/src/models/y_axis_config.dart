@@ -6,6 +6,8 @@ library;
 
 import 'dart:ui' show Color;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'y_axis_position.dart';
 
 /// Controls how axis labels and units are displayed on Y-axes.
@@ -79,26 +81,29 @@ typedef YAxisLabelFormatter = String Function(double value);
 
 /// Configuration for a Y-axis in a multi-axis chart.
 ///
-/// Each Y-axis needs configuration for identity, position, appearance,
-/// bounds, and formatting. Multiple Y-axes can be displayed simultaneously
-/// at different positions around the chart area.
+/// Each Y-axis needs configuration for position, appearance, bounds, and
+/// formatting. Multiple Y-axes can be displayed simultaneously at different
+/// positions around the chart area.
+///
+/// When used inline on a series via [ChartSeries.yAxisConfig], the axis ID
+/// is auto-generated from the series ID (`{seriesId}_axis`).
 ///
 /// Example:
 /// ```dart
-/// final powerAxis = YAxisConfig(
+/// // Inline on series (recommended) - ID auto-generated
+/// LineChartSeries(
 ///   id: 'power',
-///   position: YAxisPosition.left,
-///   color: Colors.blue,
-///   label: 'Power',
-///   unit: 'W',
-///   min: 0,
-///   max: 400,
-/// );
+///   yAxisConfig: YAxisConfig(
+///     position: YAxisPosition.left,
+///     label: 'Power',
+///     unit: 'W',
+///   ),
+/// )
 ///
-/// final hrAxis = YAxisConfig(
+/// // Standalone axis with explicit ID (internal use)
+/// final hrAxis = YAxisConfig._internal(
 ///   id: 'heartrate',
 ///   position: YAxisPosition.right,
-///   color: Colors.red,
 ///   label: 'Heart Rate',
 ///   unit: 'bpm',
 /// );
@@ -106,16 +111,51 @@ typedef YAxisLabelFormatter = String Function(double value);
 class YAxisConfig {
   /// Creates a Y-axis configuration.
   ///
-  /// [id] and [position] are required. All other parameters are optional
-  /// with sensible defaults.
+  /// [position] is required. All other parameters are optional with sensible
+  /// defaults. The axis ID is auto-generated internally when this config is
+  /// used inline on a series.
   ///
   /// Validation ensures:
-  /// - [id] is non-empty
   /// - [minWidth] is positive
   /// - [maxWidth] >= [minWidth]
   /// - If both [min] and [max] are provided, [min] < [max]
   /// - If [tickCount] is provided, it must be >= 2
   YAxisConfig({
+    required this.position,
+    this.color,
+    this.label,
+    this.unit,
+    this.min,
+    this.max,
+    this.visible = true,
+    this.showAxisLine = true,
+    this.showTicks = true,
+    this.showCrosshairLabel = false,
+    this.labelDisplay = AxisLabelDisplay.labelWithUnit,
+    this.minWidth = 0.0,
+    this.maxWidth = 80.0,
+    this.tickLabelPadding = 4.0,
+    this.axisLabelPadding = 5.0,
+    this.axisMargin = 8.0,
+    this.tickCount,
+    this.labelFormatter,
+  })  : id = '',
+        assert(minWidth >= 0, 'minWidth must be non-negative'),
+        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
+        assert(
+          min == null || max == null || min < max,
+          'min must be less than max',
+        ),
+        assert(
+          tickCount == null || tickCount >= 2,
+          'tickCount must be >= 2',
+        );
+
+  /// Internal constructor with explicit ID.
+  ///
+  /// Used by [MultiAxisManager] to create configs with auto-generated IDs.
+  /// Not part of the public API.
+  const YAxisConfig._internal({
     required this.id,
     required this.position,
     this.color,
@@ -135,23 +175,76 @@ class YAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
-  })  : assert(id.isNotEmpty, 'id must be non-empty'),
-        assert(minWidth >= 0, 'minWidth must be non-negative'),
-        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
-        assert(
-          min == null || max == null || min < max,
-          'min must be less than max',
-        ),
-        assert(
-          tickCount == null || tickCount >= 2,
-          'tickCount must be >= 2',
-        );
+  });
+
+  /// Creates a Y-axis configuration with an explicit ID for testing.
+  ///
+  /// This factory is provided for unit tests that need to verify axis
+  /// behavior with known IDs. In production code, use the default
+  /// constructor without an ID - the ID will be auto-generated.
+  @visibleForTesting
+  factory YAxisConfig.withId({
+    required String id,
+    required YAxisPosition position,
+    Color? color,
+    String? label,
+    String? unit,
+    double? min,
+    double? max,
+    bool visible = true,
+    bool showAxisLine = true,
+    bool showTicks = true,
+    bool showCrosshairLabel = false,
+    AxisLabelDisplay labelDisplay = AxisLabelDisplay.labelWithUnit,
+    double minWidth = 0.0,
+    double maxWidth = 80.0,
+    double tickLabelPadding = 4.0,
+    double axisLabelPadding = 5.0,
+    double axisMargin = 8.0,
+    int? tickCount,
+    YAxisLabelFormatter? labelFormatter,
+  }) {
+    // Same validations as public constructor
+    assert(id.isNotEmpty, 'id must not be empty when using withId');
+    assert(minWidth >= 0, 'minWidth must be non-negative');
+    assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth');
+    assert(
+      min == null || max == null || min < max,
+      'min must be less than max',
+    );
+    assert(
+      tickCount == null || tickCount >= 2,
+      'tickCount must be >= 2',
+    );
+    return YAxisConfig._internal(
+      id: id,
+      position: position,
+      color: color,
+      label: label,
+      unit: unit,
+      min: min,
+      max: max,
+      visible: visible,
+      showAxisLine: showAxisLine,
+      showTicks: showTicks,
+      showCrosshairLabel: showCrosshairLabel,
+      labelDisplay: labelDisplay,
+      minWidth: minWidth,
+      maxWidth: maxWidth,
+      tickLabelPadding: tickLabelPadding,
+      axisLabelPadding: axisLabelPadding,
+      axisMargin: axisMargin,
+      tickCount: tickCount,
+      labelFormatter: labelFormatter,
+    );
+  }
 
   // ========== Identity ==========
 
-  /// Unique identifier for axis binding.
+  /// Internal identifier for axis binding and map keys.
   ///
-  /// Used to associate data series with this axis. Must be non-empty.
+  /// Auto-generated from series ID when using inline yAxisConfig.
+  /// Empty string until resolved by [MultiAxisManager].
   final String id;
 
   /// Physical position of the axis relative to the chart area.
@@ -327,7 +420,7 @@ class YAxisConfig {
     int? tickCount,
     YAxisLabelFormatter? labelFormatter,
   }) {
-    return YAxisConfig(
+    return YAxisConfig._internal(
       id: id ?? this.id,
       position: position ?? this.position,
       color: color ?? this.color,

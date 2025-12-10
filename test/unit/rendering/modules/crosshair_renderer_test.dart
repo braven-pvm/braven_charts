@@ -35,7 +35,7 @@ void main() {
       plotArea = const Rect.fromLTWH(50, 50, 400, 300);
       multiAxisInfo = MultiAxisInfo(
         effectiveAxes: [
-          YAxisConfig(id: 'default', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'default', position: YAxisPosition.left),
         ],
         axisBounds: const {'default': DataRange(min: 0, max: 100)},
         axisWidths: const {'default': 50.0},
@@ -56,7 +56,7 @@ void main() {
       test('isMultiAxisMode returns false for single axis', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -71,8 +71,8 @@ void main() {
       test('isMultiAxisMode returns true for multiple axes with perSeries normalization', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig(id: 'axis2', position: YAxisPosition.right),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -90,8 +90,8 @@ void main() {
       test('isMultiAxisMode returns false for multiple axes without perSeries normalization', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig(id: 'axis2', position: YAxisPosition.right),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -109,9 +109,9 @@ void main() {
       test('getPositionWidth returns total width for position', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left, visible: true),
-            YAxisConfig(id: 'axis2', position: YAxisPosition.left, visible: true),
-            YAxisConfig(id: 'axis3', position: YAxisPosition.right, visible: true),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left, visible: true),
+            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left, visible: true),
+            YAxisConfig.withId(id: 'axis3', position: YAxisPosition.right, visible: true),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -131,8 +131,8 @@ void main() {
       test('getPositionWidth excludes invisible axes', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left, visible: true),
-            YAxisConfig(id: 'axis2', position: YAxisPosition.left, visible: false),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left, visible: true),
+            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left, visible: false),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -151,7 +151,7 @@ void main() {
         const axisColor = Color(0xFF00FF00);
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left, color: axisColor),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left, color: axisColor),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -170,7 +170,7 @@ void main() {
         const seriesColor = Color(0xFFFF0000);
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -192,7 +192,7 @@ void main() {
       test('resolveAxisColor returns default gray if no color found', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -262,8 +262,8 @@ void main() {
 
         final multiAxisInfoWithMultiple = MultiAxisInfo(
           effectiveAxes: [
-            YAxisConfig(id: 'axis1', position: YAxisPosition.left, showCrosshairLabel: true),
-            YAxisConfig(id: 'axis2', position: YAxisPosition.right, showCrosshairLabel: true),
+            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left, showCrosshairLabel: true),
+            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right, showCrosshairLabel: true),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),

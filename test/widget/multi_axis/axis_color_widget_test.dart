@@ -22,8 +22,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue, // Power is blue
-                  yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                     color: null, // Should derive blue from series
                   ),
@@ -35,8 +34,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 180),
                   ],
                   color: Colors.red, // HR is red
-                  yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.right,
                     color: null, // Should derive red from series
                   ),
@@ -64,13 +62,11 @@ void main() {
         color: Colors.red,
       );
 
-      final powerAxis = YAxisConfig(
-        id: 'power-axis',
+      final powerAxis = YAxisConfig.withId(id: 'power-axis',
         position: YAxisPosition.left,
         color: null,
       );
-      final hrAxis = YAxisConfig(
-        id: 'hr-axis',
+      final hrAxis = YAxisConfig.withId(id: 'hr-axis',
         position: YAxisPosition.right,
         color: null,
       );
@@ -110,8 +106,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue, // Series is blue
-                  yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                     color: greenColor, // Explicit green overrides blue
                   ),
@@ -134,8 +129,7 @@ void main() {
         color: Colors.blue,
       );
 
-      final powerAxisWithColor = YAxisConfig(
-        id: 'power-axis',
+      final powerAxisWithColor = YAxisConfig.withId(id: 'power-axis',
         position: YAxisPosition.left,
         color: greenColor, // Explicit color
       );
@@ -181,8 +175,7 @@ void main() {
                 ),
               ],
               yAxes: [
-                YAxisConfig(
-                  id: 'percentage-axis',
+                YAxisConfig.withId(id: 'percentage-axis',
                   position: YAxisPosition.left,
                   color: null, // Should use green (first bound series)
                 ),
@@ -209,8 +202,7 @@ void main() {
         color: Colors.purple,
       );
 
-      final sharedAxis = YAxisConfig(
-        id: 'percentage-axis',
+      final sharedAxis = YAxisConfig.withId(id: 'percentage-axis',
         position: YAxisPosition.left,
         color: null,
       );
@@ -247,8 +239,7 @@ void main() {
                 ),
               ],
               yAxes: [
-                YAxisConfig(
-                  id: 'unbound-axis',
+                YAxisConfig.withId(id: 'unbound-axis',
                   position: YAxisPosition.left,
                   color: null, // No binding, no explicit color
                 ),
@@ -264,8 +255,7 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
       // Verify AxisColorResolver behavior with unbound axis (internal API)
-      final unboundAxis = YAxisConfig(
-        id: 'unbound-axis',
+      final unboundAxis = YAxisConfig.withId(id: 'unbound-axis',
         position: YAxisPosition.left,
         color: null,
       );

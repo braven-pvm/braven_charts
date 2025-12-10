@@ -19,11 +19,7 @@ class MultiAxisDemoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Multi-Axis Demo'),
-        backgroundColor: Colors.blueGrey[800],
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Multi-Axis Demo'), backgroundColor: Colors.blueGrey[800], foregroundColor: Colors.white),
       body: Container(
         color: const Color(0xFF1E1E1E),
         padding: const EdgeInsets.all(24),
@@ -44,76 +40,34 @@ class MultiAxisDemoScreen extends StatelessWidget {
   Widget _buildTitle() {
     return const Text(
       'Multi-Axis Chart: Power, Heart Rate & Speed',
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
+      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
       textAlign: TextAlign.center,
     );
   }
 
   Widget _buildMultiAxisChart() {
     // Sample data series
-    final powerSeries = ChartSeries(
-      id: 'power',
-      name: 'Power',
-      points: _generatePowerData(),
-      color: Colors.blue,
-    );
+    final powerSeries = ChartSeries(id: 'power', name: 'Power', points: _generatePowerData(), color: Colors.blue);
 
-    final heartRateSeries = ChartSeries(
-      id: 'heartRate',
-      name: 'Heart Rate',
-      points: _generateHeartRateData(),
-      color: Colors.red,
-    );
+    final heartRateSeries = ChartSeries(id: 'heartRate', name: 'Heart Rate', points: _generateHeartRateData(), color: Colors.red);
 
-    final speedSeries = ChartSeries(
-      id: 'speed',
-      name: 'Speed',
-      points: _generateSpeedData(),
-      color: Colors.green,
-    );
+    final speedSeries = ChartSeries(id: 'speed', name: 'Speed', points: _generateSpeedData(), color: Colors.green);
 
     // Multi-axis configuration with 3 different axes
+    // Note: Using inline yAxisConfig on series is now the preferred approach
     final multiAxisConfig = const MultiAxisConfig(
       axes: [
         // Left axis: Power (0-400W) - Blue
-        YAxisConfig(
-          id: 'powerAxis',
-          position: YAxisPosition.left,
-          color: Colors.blue,
-          label: 'Power',
-          unitSuffix: 'W',
-          minValue: 0,
-          maxValue: 400,
-        ),
+        YAxisConfig(position: YAxisPosition.left, color: Colors.blue, label: 'Power', unit: 'W', min: 0, max: 400),
         // Right axis: Heart Rate (100-200 bpm) - Red
-        YAxisConfig(
-          id: 'hrAxis',
-          position: YAxisPosition.right,
-          color: Colors.red,
-          label: 'HR',
-          unitSuffix: 'bpm',
-          minValue: 100,
-          maxValue: 200,
-        ),
+        YAxisConfig(position: YAxisPosition.right, color: Colors.red, label: 'HR', unit: 'bpm', min: 100, max: 200),
         // Outer Right axis: Speed (0-50 km/h) - Green
-        YAxisConfig(
-          id: 'speedAxis',
-          position: YAxisPosition.outerRight,
-          color: Colors.green,
-          label: 'Speed',
-          unitSuffix: 'km/h',
-          minValue: 0,
-          maxValue: 50,
-        ),
+        YAxisConfig(position: YAxisPosition.rightOuter, color: Colors.green, label: 'Speed', unit: 'km/h', min: 0, max: 50),
       ],
       bindings: [
-        SeriesAxisBinding(seriesId: 'power', axisId: 'powerAxis'),
-        SeriesAxisBinding(seriesId: 'heartRate', axisId: 'hrAxis'),
-        SeriesAxisBinding(seriesId: 'speed', axisId: 'speedAxis'),
+        SeriesAxisBinding(seriesId: 'power', yAxisId: 'power_axis'),
+        SeriesAxisBinding(seriesId: 'heartRate', yAxisId: 'heartRate_axis'),
+        SeriesAxisBinding(seriesId: 'speed', yAxisId: 'speed_axis'),
       ],
       mode: NormalizationMode.always,
     );
@@ -131,11 +85,7 @@ class MultiAxisDemoScreen extends StatelessWidget {
         chartType: ChartType.line,
         lineStyle: LineStyle.smooth,
         theme: ChartTheme.defaultDark,
-        xAxis: const AxisConfig(
-          showAxis: true,
-          showLabels: true,
-          showGrid: true,
-        ),
+        xAxis: const AxisConfig(showAxis: true, showLabels: true, showGrid: true),
         yAxis: const AxisConfig(
           showAxis: false, // Disable default Y-axis, using multiAxisConfig instead
           showLabels: false,
@@ -165,19 +115,10 @@ class MultiAxisDemoScreen extends StatelessWidget {
         Container(
           width: 16,
           height: 4,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -227,4 +168,3 @@ class MultiAxisDemoScreen extends StatelessWidget {
     return phase < (period / 2) ? 1.0 : -1.0;
   }
 }
-

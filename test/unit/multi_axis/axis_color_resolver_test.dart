@@ -11,29 +11,25 @@ void main() {
   const defaultGray = Color(0xFF333333);
 
   // Axis with explicit color
-  final axisWithColor = YAxisConfig(
-    id: 'power',
+  final axisWithColor = YAxisConfig.withId(id: 'power',
     position: YAxisPosition.left,
     color: blueColor,
   );
 
   // Axis without color (should resolve from series)
-  final axisWithoutColor = YAxisConfig(
-    id: 'heartrate',
+  final axisWithoutColor = YAxisConfig.withId(id: 'heartrate',
     position: YAxisPosition.right,
     color: null,
   );
 
   // Axis with no bound series
-  final unboundAxis = YAxisConfig(
-    id: 'unbound',
+  final unboundAxis = YAxisConfig.withId(id: 'unbound',
     position: YAxisPosition.left,
     color: null,
   );
 
   // Shared axis (for multiple series)
-  final sharedAxis = YAxisConfig(
-    id: 'percentage',
+  final sharedAxis = YAxisConfig.withId(id: 'percentage',
     position: YAxisPosition.left,
     color: null,
   );

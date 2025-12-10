@@ -8,17 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Multi-Axis Zoom Constraints', () {
-    // Sample multi-axis configuration (2 axes = multi-axis mode)
-    final multiAxisConfig = [
-      YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power'),
-      YAxisConfig(id: 'heart-rate', position: YAxisPosition.right, label: 'HR'),
-    ];
-
-    // Sample single-axis configuration (1 axis = normal mode)
-    final singleAxisConfig = [
-      YAxisConfig(id: 'default', position: YAxisPosition.left),
-    ];
-
     // Sample series data with inline yAxisConfig
     final testSeriesWithInlineConfig = [
       LineChartSeries(
@@ -28,7 +17,7 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (200 + 50 * (i % 5)).toDouble()),
         ),
         color: Colors.blue,
-        yAxisConfig: YAxisConfig(id: 'power', position: YAxisPosition.left, label: 'Power'),
+        yAxisConfig: YAxisConfig.withId(id: 'power', position: YAxisPosition.left, label: 'Power'),
       ),
       LineChartSeries(
         id: 'heart-rate',
@@ -37,11 +26,11 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (120 + 20 * (i % 5)).toDouble()),
         ),
         color: Colors.red,
-        yAxisConfig: YAxisConfig(id: 'heart-rate', position: YAxisPosition.right, label: 'HR'),
+        yAxisConfig: YAxisConfig.withId(id: 'heart-rate', position: YAxisPosition.right, label: 'HR'),
       ),
     ];
 
-    // Sample series data with yAxisId references
+    // Sample series data with yAxisConfig (inline config pattern)
     final testSeriesWithAxisIds = [
       LineChartSeries(
         id: 'power',
@@ -50,7 +39,7 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (200 + 50 * (i % 5)).toDouble()),
         ),
         color: Colors.blue,
-        yAxisId: 'power',
+        yAxisConfig: YAxisConfig.withId(id: 'power', position: YAxisPosition.left, label: 'Power'),
       ),
       LineChartSeries(
         id: 'heart-rate',
@@ -59,11 +48,11 @@ void main() {
           (i) => ChartDataPoint(x: i.toDouble(), y: (120 + 20 * (i % 5)).toDouble()),
         ),
         color: Colors.red,
-        yAxisId: 'heart-rate',
+        yAxisConfig: YAxisConfig.withId(id: 'heart-rate', position: YAxisPosition.right, label: 'HR'),
       ),
     ];
 
-    // Sample series without axis binding (for single-axis mode)
+    // Sample series without axis binding (for single-axis mode, auto-generates default axis)
     final testSeriesNoBinding = [
       const LineChartSeries(
         id: 'power',
@@ -83,6 +72,28 @@ void main() {
       ),
     ];
 
+    // Sample series for single-axis mode with explicit config
+    final testSeriesSingleAxis = [
+      LineChartSeries(
+        id: 'power',
+        points: const [
+          ChartDataPoint(x: 0, y: 200),
+          ChartDataPoint(x: 10, y: 250),
+        ],
+        color: Colors.blue,
+        yAxisConfig: YAxisConfig.withId(id: 'default', position: YAxisPosition.left),
+      ),
+      LineChartSeries(
+        id: 'heart-rate',
+        points: const [
+          ChartDataPoint(x: 0, y: 120),
+          ChartDataPoint(x: 10, y: 140),
+        ],
+        color: Colors.red,
+        yAxisConfig: YAxisConfig.withId(id: 'default', position: YAxisPosition.left),
+      ),
+    ];
+
     Widget buildTestChartWithInlineConfig() {
       return MaterialApp(
         home: Scaffold(
@@ -97,9 +108,7 @@ void main() {
       );
     }
 
-    Widget buildTestChartWithAxisIds({
-      List<YAxisConfig>? yAxes,
-    }) {
+    Widget buildTestChartWithAxisIds() {
       return MaterialApp(
         home: Scaffold(
           body: SizedBox(
@@ -107,7 +116,6 @@ void main() {
             height: 600,
             child: BravenChartPlus(
               series: testSeriesWithAxisIds,
-              yAxes: yAxes,
             ),
           ),
         ),
@@ -115,7 +123,7 @@ void main() {
     }
 
     Widget buildTestChartSingleAxis({
-      List<YAxisConfig>? yAxes,
+      bool useExplicitConfig = false,
     }) {
       return MaterialApp(
         home: Scaffold(
@@ -123,8 +131,7 @@ void main() {
             width: 800,
             height: 600,
             child: BravenChartPlus(
-              series: testSeriesNoBinding,
-              yAxes: yAxes,
+              series: useExplicitConfig ? testSeriesSingleAxis : testSeriesNoBinding,
             ),
           ),
         ),
@@ -165,10 +172,8 @@ void main() {
       });
 
       testWidgets('Y-axis zoom is disabled when multiple Y-axes configured (yAxisId references)', (tester) async {
-        // Setup chart with yAxisId references + yAxes list
-        await tester.pumpWidget(buildTestChartWithAxisIds(
-          yAxes: multiAxisConfig,
-        ));
+        // Setup chart with yAxisConfig on series (inline config pattern)
+        await tester.pumpWidget(buildTestChartWithAxisIds());
         await tester.pumpAndSettle();
 
         final chartFinder = find.byType(BravenChartPlus);
@@ -217,9 +222,9 @@ void main() {
       });
 
       testWidgets('Single Y-axis mode allows Y-zoom normally', (tester) async {
-        // Setup chart with 1 Y-axis (single-axis mode)
+        // Setup chart with 1 Y-axis (single-axis mode via shared config)
         await tester.pumpWidget(buildTestChartSingleAxis(
-          yAxes: singleAxisConfig,
+          useExplicitConfig: true,
         ));
         await tester.pumpAndSettle();
 
@@ -245,10 +250,8 @@ void main() {
       });
 
       testWidgets('Null Y-axes config allows Y-zoom normally (legacy mode)', (tester) async {
-        // Setup chart without yAxes (null = legacy mode)
-        await tester.pumpWidget(buildTestChartSingleAxis(
-          yAxes: null,
-        ));
+        // Setup chart without explicit yAxisConfig (legacy mode - auto-generates default axis)
+        await tester.pumpWidget(buildTestChartSingleAxis());
         await tester.pumpAndSettle();
 
         final chartFinder = find.byType(BravenChartPlus);
@@ -321,9 +324,9 @@ void main() {
       });
 
       testWidgets('Grid lines enabled in single-axis mode', (tester) async {
-        // Setup chart with 1 Y-axis
+        // Setup chart with 1 Y-axis (single-axis mode via shared config)
         await tester.pumpWidget(buildTestChartSingleAxis(
-          yAxes: singleAxisConfig,
+          useExplicitConfig: true,
         ));
         await tester.pumpAndSettle();
 

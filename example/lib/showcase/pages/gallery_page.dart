@@ -721,8 +721,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       interpolation: LineInterpolation.bezier,
                       strokeWidth: 1.5,
                       yAxisConfig: YAxisConfig(
-                        id: 'cpu',
-                        position: YAxisPosition.left,
+              position: YAxisPosition.left,
                         visible: true,
                         labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
                         showAxisLine: true,
@@ -880,8 +879,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     tension: 0.2,
                     strokeWidth: 4.0,
                     yAxisConfig: YAxisConfig(
-                      id: 'pressure-axis',
-                      position: YAxisPosition.left,
+              position: YAxisPosition.left,
                       labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
                       label: 'Pressure',
                       unit: 'Pa',
@@ -902,8 +900,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 1.5,
                     yAxisConfig: YAxisConfig(
-                      id: 'temperature-axis',
-                      position: YAxisPosition.right,
+              position: YAxisPosition.right,
                       label: 'Temp',
                       unit: '°C',
                     ),

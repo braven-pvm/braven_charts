@@ -353,7 +353,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: 'W',
             yAxisConfig: YAxisConfig(
-              id: 'power_axis',
               position: YAxisPosition.left,
               label: 'Power',
               unit: 'W',
@@ -370,7 +369,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: 'bpm',
             yAxisConfig: YAxisConfig(
-              id: 'hr_axis',
               position: YAxisPosition.right,
               label: 'Heart Rate',
               unit: 'bpm',
@@ -387,7 +385,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: 'rpm',
             yAxisConfig: YAxisConfig(
-              id: 'cadence_axis',
               position: YAxisPosition.leftOuter,
               label: 'Cadence',
               unit: 'rpm',
@@ -437,7 +434,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: '°C',
             yAxisConfig: YAxisConfig(
-              id: 'temp_axis',
               position: YAxisPosition.left,
               label: 'Temperature',
               unit: '°C',
@@ -453,7 +449,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: 'hPa',
             yAxisConfig: YAxisConfig(
-              id: 'pressure_axis',
               position: YAxisPosition.right,
               label: 'Pressure',
               unit: 'hPa',
@@ -510,7 +505,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             unit: "RPM",
             // Inline axis configuration - no separate yAxes/axisBindings needed!
             yAxisConfig: YAxisConfig(
-              id: 'small_axis',
               position: YAxisPosition.left,
               label: 'Small',
               axisMargin: 5,
@@ -533,7 +527,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: "Watts(W)",
             yAxisConfig: YAxisConfig(
-              id: 'large_axis',
               position: YAxisPosition.leftOuter,
               label: 'Large',
               showAxisLine: true,
@@ -551,7 +544,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 2.0,
             unit: "BPM",
             yAxisConfig: YAxisConfig(
-              id: 'medium_axis',
               position: YAxisPosition.right,
               label: 'Medium',
               showAxisLine: true,
@@ -618,7 +610,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 0.5,
             fillOpacity: 0.075,
             yAxisConfig: YAxisConfig(
-              id: 'power_axis',
               position: YAxisPosition.right,
               label: 'Target',
               unit: 'W',
@@ -640,7 +631,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 1.5,
             unit: '%',
             yAxisConfig: YAxisConfig(
-              id: 'feo2_axis',
               position: YAxisPosition.rightOuter,
               label: 'FeO2',
               unit: '%',
@@ -661,7 +651,6 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             strokeWidth: 1.5,
             unit: '',
             yAxisConfig: YAxisConfig(
-              id: 'eqo2_axis',
               position: YAxisPosition.left,
               label: 'Gas Exchange',
               unit: '',

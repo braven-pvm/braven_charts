@@ -21,8 +21,7 @@ void main() {
     group('Construction', () {
       test('creates painter with single axis config', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             color: Color(0xFF2196F3),
           ),
@@ -39,23 +38,19 @@ void main() {
 
       test('creates painter with multiple axis configs', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             color: Color(0xFF2196F3),
           ),
-          const YAxisConfig(
-            id: 'heartRate',
+          YAxisConfig.withId(id: 'heartRate',
             position: YAxisPosition.right,
             color: Color(0xFFF44336),
           ),
-          const YAxisConfig(
-            id: 'cadence',
+          YAxisConfig.withId(id: 'cadence',
             position: YAxisPosition.leftOuter,
             color: Color(0xFF4CAF50),
           ),
-          const YAxisConfig(
-            id: 'speed',
+          YAxisConfig.withId(id: 'speed',
             position: YAxisPosition.rightOuter,
             color: Color(0xFFFF9800),
           ),
@@ -82,8 +77,7 @@ void main() {
     group('Axis Position Calculation', () {
       test('calculates left axis position correctly', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
           ),
         ];
@@ -100,8 +94,7 @@ void main() {
 
       test('calculates right axis position correctly', () {
         final axes = [
-          const YAxisConfig(
-            id: 'heartRate',
+          YAxisConfig.withId(id: 'heartRate',
             position: YAxisPosition.right,
           ),
         ];
@@ -118,8 +111,7 @@ void main() {
 
       test('calculates LeftOuter axis position correctly', () {
         final axes = [
-          const YAxisConfig(
-            id: 'cadence',
+          YAxisConfig.withId(id: 'cadence',
             position: YAxisPosition.leftOuter,
           ),
         ];
@@ -137,8 +129,7 @@ void main() {
 
       test('calculates RightOuter axis position correctly', () {
         final axes = [
-          const YAxisConfig(
-            id: 'speed',
+          YAxisConfig.withId(id: 'speed',
             position: YAxisPosition.rightOuter,
           ),
         ];
@@ -158,8 +149,7 @@ void main() {
     group('Tick Calculation', () {
       test('generates tick values for axis with explicit bounds', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             minValue: 0,
             maxValue: 300,
@@ -179,8 +169,7 @@ void main() {
 
       test('generates tick values with unit suffix formatting', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             minValue: 0,
             maxValue: 300,
@@ -199,8 +188,7 @@ void main() {
 
       test('generates reasonable number of ticks (5-10)', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             minValue: 0,
             maxValue: 1000,
@@ -221,8 +209,7 @@ void main() {
     group('Axis Color', () {
       test('uses axis color from config', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             color: Color(0xFF2196F3),
           ),
@@ -239,8 +226,7 @@ void main() {
 
       test('uses default color when axis config has no color', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             // No color specified
           ),
@@ -259,13 +245,11 @@ void main() {
 
       test('each axis maintains its own color', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             color: Color(0xFF2196F3), // Blue
           ),
-          const YAxisConfig(
-            id: 'heartRate',
+          YAxisConfig.withId(id: 'heartRate',
             position: YAxisPosition.right,
             color: Color(0xFFF44336), // Red
           ),
@@ -284,10 +268,10 @@ void main() {
     group('shouldRepaint', () {
       test('returns true when axes change', () {
         final axes1 = [
-          const YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final axes2 = [
-          const YAxisConfig(id: 'heartRate', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'heartRate', position: YAxisPosition.right),
         ];
 
         final painter1 = MultiAxisPainter(
@@ -304,7 +288,7 @@ void main() {
 
       test('returns true when chartRect changes', () {
         final axes = [
-          const YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
 
         final painter1 = MultiAxisPainter(
@@ -321,7 +305,7 @@ void main() {
 
       test('returns false when nothing changes', () {
         final axes = [
-          const YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final chartRect = const Rect.fromLTWH(50, 10, 300, 200);
 
@@ -335,8 +319,7 @@ void main() {
     group('Axis Label', () {
       test('includes axis label when provided', () {
         final axes = [
-          const YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             label: 'Power Output',
           ),

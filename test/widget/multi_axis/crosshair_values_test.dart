@@ -27,8 +27,8 @@ void main() {
 
     setUp(() {
       testAxes = [
-        YAxisConfig(id: 'power', position: YAxisPosition.left, unit: 'W'),
-        YAxisConfig(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
+        YAxisConfig.withId(id: 'power', position: YAxisPosition.left, unit: 'W'),
+        YAxisConfig.withId(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
       ];
 
       // Bindings used for internal resolver tests
@@ -48,7 +48,7 @@ void main() {
             ChartDataPoint(x: 100, y: 500),
           ],
           color: const Color(0xFF2196F3),
-          yAxisConfig: YAxisConfig(id: 'power', position: YAxisPosition.left, unit: 'W'),
+          yAxisConfig: YAxisConfig.withId(id: 'power', position: YAxisPosition.left, unit: 'W'),
         ),
         LineChartSeries(
           id: 'hr-series',
@@ -59,7 +59,7 @@ void main() {
             ChartDataPoint(x: 100, y: 180),
           ],
           color: const Color(0xFFF44336),
-          yAxisConfig: YAxisConfig(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
+          yAxisConfig: YAxisConfig.withId(id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
         ),
       ];
     });

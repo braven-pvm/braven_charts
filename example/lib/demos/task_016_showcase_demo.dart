@@ -112,8 +112,7 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
                   unit: 'W',
                   // NEW: inline yAxisConfig - axis auto-registered!
                   yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
-                    position: YAxisPosition.left,
+              position: YAxisPosition.left,
                     label: 'Power',
                     unit: 'W',
                     color: Colors.blue,
@@ -127,8 +126,7 @@ class _Task016ShowcaseDemoState extends State<Task016ShowcaseDemo> with TickerPr
                   unit: 'bpm',
                   // NEW: inline yAxisConfig - axis auto-registered!
                   yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
-                    position: YAxisPosition.right,
+              position: YAxisPosition.right,
                     label: 'Heart Rate',
                     unit: 'bpm',
                     color: Colors.red,
@@ -146,7 +144,6 @@ BravenChartPlus(
     LineChartSeries(
       id: 'power',
       yAxisConfig: YAxisConfig(  // NEW! Inline config
-        id: 'power-axis',
         position: YAxisPosition.left,
         ...
       ),
@@ -154,7 +151,6 @@ BravenChartPlus(
     LineChartSeries(
       id: 'hr', 
       yAxisConfig: YAxisConfig(  // NEW! Inline config
-        id: 'hr-axis',
         position: YAxisPosition.right,
         ...
       ),
@@ -197,8 +193,7 @@ BravenChartPlus(
                   color: Colors.orange,
                   unit: '°C',
                   yAxisConfig: YAxisConfig(
-                    id: 'temp-axis',
-                    position: YAxisPosition.left,
+              position: YAxisPosition.left,
                     label: 'Temperature',
                     unit: '°C',
                     color: Colors.orange,
@@ -212,8 +207,7 @@ BravenChartPlus(
                   color: Colors.purple,
                   unit: 'Pa',
                   yAxisConfig: YAxisConfig(
-                    id: 'pressure-axis',
-                    position: YAxisPosition.right,
+              position: YAxisPosition.right,
                     label: 'Pressure',
                     unit: 'Pa',
                     color: Colors.purple,
@@ -272,8 +266,7 @@ BravenChartPlus(
                   color: const Color(0xFF1E88E5), // Blue
                   unit: '\$K',
                   yAxisConfig: YAxisConfig(
-                    id: 'revenue-axis',
-                    position: YAxisPosition.left,
+              position: YAxisPosition.left,
                     label: 'Revenue',
                     unit: '\$K',
                     color: const Color(0xFF1E88E5), // Matches series!
@@ -286,8 +279,7 @@ BravenChartPlus(
                   color: const Color(0xFFD81B60), // Pink
                   unit: '',
                   yAxisConfig: YAxisConfig(
-                    id: 'users-axis',
-                    position: YAxisPosition.right,
+              position: YAxisPosition.right,
                     label: 'Users',
                     color: const Color(0xFFD81B60), // Matches series!
                   ),
@@ -298,8 +290,7 @@ BravenChartPlus(
                   points: _generateSessionsData(),
                   color: const Color(0xFF43A047), // Green
                   yAxisConfig: YAxisConfig(
-                    id: 'sessions-axis',
-                    position: YAxisPosition.rightOuter,
+              position: YAxisPosition.rightOuter,
                     label: 'Sessions',
                     color: const Color(0xFF43A047), // Matches series!
                   ),
@@ -314,8 +305,7 @@ LineChartSeries(
   id: 'revenue',
   color: Color(0xFF1E88E5),  // Series color
   yAxisConfig: YAxisConfig(
-    id: 'revenue-axis',
-    position: YAxisPosition.left,
+              position: YAxisPosition.left,
     label: 'Revenue',
     color: Color(0xFF1E88E5),  // Same color for axis!
   ),
@@ -353,8 +343,7 @@ LineChartSeries(
                   color: Colors.blue,
                   unit: 'W',
                   yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
-                    position: YAxisPosition.left,
+              position: YAxisPosition.left,
                     label: 'Power',
                     unit: 'W',
                     color: Colors.blue,
@@ -367,8 +356,7 @@ LineChartSeries(
                   color: Colors.red,
                   unit: 'bpm',
                   yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
-                    position: YAxisPosition.right,
+              position: YAxisPosition.right,
                     label: 'Heart Rate',
                     unit: 'bpm',
                     color: Colors.red,

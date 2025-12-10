@@ -17,8 +17,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 200),
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -29,8 +28,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 80),
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),
@@ -59,8 +57,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 400),
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -71,8 +68,7 @@ void main() {
                     ChartDataPoint(x: 1, y: 180),
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),
@@ -116,8 +112,8 @@ void main() {
                 ),
               ],
               yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-                YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
+                YAxisConfig.withId(id: 'power-axis', position: YAxisPosition.left),
+                YAxisConfig.withId(id: 'hr-axis', position: YAxisPosition.right),
               ],
             ),
           ),
@@ -134,8 +130,8 @@ void main() {
         SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
       ];
       final axes = [
-        YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
-        YAxisConfig(id: 'hr-axis', position: YAxisPosition.right),
+        YAxisConfig.withId(id: 'power-axis', position: YAxisPosition.left),
+        YAxisConfig.withId(id: 'hr-axis', position: YAxisPosition.right),
       ];
 
       // Power should use explicit binding
@@ -196,7 +192,7 @@ void main() {
               ],
               // Single axis - should not trigger multi-axis mode
               yAxes: [
-                YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
+                YAxisConfig.withId(id: 'power-axis', position: YAxisPosition.left),
               ],
             ),
           ),

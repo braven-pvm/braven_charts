@@ -54,15 +54,13 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'voltage-axis',
+                  YAxisConfig.withId(id: 'voltage-axis',
                     position: YAxisPosition.left,
                     label: 'Voltage',
                     unit: 'V',
                     color: Colors.deepPurple, // Explicit color matching series
                   ),
-                  YAxisConfig(
-                    id: 'current-axis',
+                  YAxisConfig.withId(id: 'current-axis',
                     position: YAxisPosition.right,
                     label: 'Current',
                     unit: 'A',
@@ -119,22 +117,19 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'axis1',
+                  YAxisConfig.withId(id: 'axis1',
                     position: YAxisPosition.left,
                     label: 'Revenue',
                     unit: '\$',
                     color: const Color(0xFF1E88E5),
                   ),
-                  YAxisConfig(
-                    id: 'axis2',
+                  YAxisConfig.withId(id: 'axis2',
                     position: YAxisPosition.right,
                     label: 'Users',
                     unit: 'K',
                     color: const Color(0xFFD81B60),
                   ),
-                  YAxisConfig(
-                    id: 'axis3',
+                  YAxisConfig.withId(id: 'axis3',
                     position: YAxisPosition.rightOuter,
                     label: 'Sessions',
                     color: const Color(0xFF43A047),
@@ -195,22 +190,19 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'sales-axis',
+                  YAxisConfig.withId(id: 'sales-axis',
                     position: YAxisPosition.left,
                     label: 'Sales',
                     unit: 'units',
                     color: okabeBlue,
                   ),
-                  YAxisConfig(
-                    id: 'profit-axis',
+                  YAxisConfig.withId(id: 'profit-axis',
                     position: YAxisPosition.right,
                     label: 'Profit',
                     unit: '\$K',
                     color: okabeOrange,
                   ),
-                  YAxisConfig(
-                    id: 'margin-axis',
+                  YAxisConfig.withId(id: 'margin-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Margin',
                     unit: '%',
@@ -262,15 +254,13 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'cpu-axis',
+                  YAxisConfig.withId(id: 'cpu-axis',
                     position: YAxisPosition.left,
                     label: 'CPU',
                     unit: '%',
                     color: Colors.lightBlueAccent,
                   ),
-                  YAxisConfig(
-                    id: 'memory-axis',
+                  YAxisConfig.withId(id: 'memory-axis',
                     position: YAxisPosition.right,
                     label: 'Memory',
                     unit: 'GB',

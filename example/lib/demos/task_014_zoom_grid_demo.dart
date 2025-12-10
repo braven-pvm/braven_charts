@@ -71,7 +71,6 @@ class _Task014DemoState extends State<Task014Demo> {
                             ),
                             color: Colors.blue,
                             yAxisConfig: YAxisConfig(
-                              id: 'power',
                               position: YAxisPosition.left,
                               label: 'Power',
                               unit: 'W',
@@ -89,7 +88,6 @@ class _Task014DemoState extends State<Task014Demo> {
                             ),
                             color: Colors.red,
                             yAxisConfig: YAxisConfig(
-                              id: 'heart-rate',
                               position: YAxisPosition.right,
                               label: 'Heart Rate',
                               unit: 'bpm',
@@ -120,14 +118,6 @@ class _Task014DemoState extends State<Task014Demo> {
                               ),
                             ),
                             color: Colors.red,
-                          ),
-                        ],
-                  yAxes: _multiAxisMode
-                      ? null // Axes auto-detected from series.yAxisConfig
-                      : [
-                          YAxisConfig(
-                            id: 'default',
-                            position: YAxisPosition.left,
                           ),
                         ],
                 ),

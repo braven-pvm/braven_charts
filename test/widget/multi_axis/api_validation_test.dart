@@ -30,10 +30,10 @@ void main() {
       testWidgets('accepts up to 4 Y-axes', (tester) async {
         // Valid configuration with exactly 4 axes
         final validAxes = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.leftOuter),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis3', position: YAxisPosition.right),
-          YAxisConfig(id: 'axis4', position: YAxisPosition.rightOuter),
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.leftOuter),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis3', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'axis4', position: YAxisPosition.rightOuter),
         ];
 
         await tester.pumpWidget(
@@ -58,11 +58,11 @@ void main() {
       testWidgets('assertion fails with 5+ Y-axes', (tester) async {
         // Invalid configuration with 5 axes (exceeds max)
         final invalidAxes = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.leftOuter),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis3', position: YAxisPosition.right),
-          YAxisConfig(id: 'axis4', position: YAxisPosition.rightOuter),
-          YAxisConfig(id: 'axis5', position: YAxisPosition.left), // 5th axis!
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.leftOuter),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis3', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'axis4', position: YAxisPosition.rightOuter),
+          YAxisConfig.withId(id: 'axis5', position: YAxisPosition.left), // 5th axis!
         ];
 
         // Expect assertion error when building widget
@@ -80,8 +80,8 @@ void main() {
       testWidgets('accepts axes at different positions', (tester) async {
         // Valid: all unique positions
         final validAxes = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
         ];
 
         await tester.pumpWidget(
@@ -106,8 +106,8 @@ void main() {
       testWidgets('assertion fails with duplicate positions', (tester) async {
         // Invalid: two axes at the same position
         final duplicateAxes = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.left), // Duplicate!
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left), // Duplicate!
         ];
 
         // Expect assertion error when building widget
@@ -162,7 +162,7 @@ void main() {
 
       testWidgets('accepts single Y-axis', (tester) async {
         final singleAxis = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
         ];
 
         await tester.pumpWidget(

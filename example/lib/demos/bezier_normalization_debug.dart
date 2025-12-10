@@ -103,8 +103,7 @@ class DebugPage extends StatelessWidget {
                               interpolation: LineInterpolation.bezier,
                               strokeWidth: 3.0,
                               yAxisConfig: YAxisConfig(
-                                id: 'pressure-axis',
-                                position: YAxisPosition.left,
+              position: YAxisPosition.left,
                               ),
                             ),
                             LineChartSeries(
@@ -122,8 +121,7 @@ class DebugPage extends StatelessWidget {
                               interpolation: LineInterpolation.bezier,
                               strokeWidth: 3.0,
                               yAxisConfig: YAxisConfig(
-                                id: 'temp-axis',
-                                position: YAxisPosition.right,
+              position: YAxisPosition.right,
                               ),
                             ),
                           ],

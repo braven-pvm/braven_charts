@@ -73,16 +73,14 @@ class ColorCodedAxesDemo extends StatelessWidget {
 
     // Axes WITHOUT explicit colors - should derive from series
     final powerAxis = YAxisConfig(
-      id: 'power-axis',
-      position: YAxisPosition.left,
+              position: YAxisPosition.left,
       color: null, // Should resolve to BLUE from powerSeries
       label: 'Power',
       unit: 'W',
     );
 
     final hrAxis = YAxisConfig(
-      id: 'hr-axis',
-      position: YAxisPosition.right,
+              position: YAxisPosition.right,
       color: null, // Should resolve to RED from hrSeries
       label: 'Heart Rate',
       unit: 'bpm',

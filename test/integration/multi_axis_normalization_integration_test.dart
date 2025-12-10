@@ -17,8 +17,8 @@ void main() {
     testWidgets('BravenChart accepts multiAxisConfig parameter', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
-          YAxisConfig(id: 'volume', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'volume', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
@@ -65,8 +65,8 @@ void main() {
     testWidgets('Chart renders with NormalizationMode.auto', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
-          YAxisConfig(id: 'volume', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'volume', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
@@ -112,8 +112,8 @@ void main() {
     testWidgets('Chart renders with NormalizationMode.none', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
-          YAxisConfig(id: 'volume', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'volume', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'power-series', axisId: 'power'),
@@ -194,14 +194,12 @@ void main() {
     testWidgets('Chart renders with explicit axis bounds', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             minValue: 0,
             maxValue: 400,
           ),
-          YAxisConfig(
-            id: 'volume',
+          YAxisConfig.withId(id: 'volume',
             position: YAxisPosition.right,
             minValue: 0,
             maxValue: 5.0,
@@ -251,8 +249,8 @@ void main() {
     testWidgets('Bar chart renders with multiAxisConfig', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'sales', position: YAxisPosition.left),
-          YAxisConfig(id: 'count', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'sales', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'count', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'revenue', axisId: 'sales'),
@@ -298,8 +296,8 @@ void main() {
     testWidgets('Scatter chart renders with multiAxisConfig', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'temp', position: YAxisPosition.left),
-          YAxisConfig(id: 'pressure', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'temp', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'pressure', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'temp-data', axisId: 'temp'),
@@ -345,8 +343,8 @@ void main() {
     testWidgets('Area chart renders with multiAxisConfig', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'cpu', position: YAxisPosition.left),
-          YAxisConfig(id: 'memory', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'cpu', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'memory', position: YAxisPosition.right),
         ],
         bindings: [
           SeriesAxisBinding(seriesId: 'cpu-usage', axisId: 'cpu'),
@@ -392,7 +390,7 @@ void main() {
     testWidgets('Series without binding uses global bounds', (tester) async {
       final config = const MultiAxisConfig(
         axes: [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ],
         bindings: [
           // Only power-series has a binding

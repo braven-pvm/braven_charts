@@ -8,8 +8,7 @@ void main() {
   group('YAxisConfig', () {
     group('construction', () {
       test('creates with required parameters only', () {
-        final config = YAxisConfig(
-          id: 'test-axis',
+        final config = YAxisConfig.withId(id: 'test-axis',
           position: YAxisPosition.left,
         );
 
@@ -20,8 +19,7 @@ void main() {
       test('creates with all parameters', () {
         String formatter(double v) => '${v.toInt()}W';
 
-        final config = YAxisConfig(
-          id: 'power',
+        final config = YAxisConfig.withId(id: 'power',
           position: YAxisPosition.right,
           color: const Color(0xFF0000FF),
           label: 'Power',
@@ -54,8 +52,7 @@ void main() {
       });
 
       test('has correct default values', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
         );
 
@@ -77,8 +74,7 @@ void main() {
     group('validation', () {
       test('throws assertion error for empty id', () {
         expect(
-          () => YAxisConfig(
-            id: '',
+          () => YAxisConfig.withId(id: '',
             position: YAxisPosition.left,
           ),
           throwsA(isA<AssertionError>()),
@@ -87,8 +83,7 @@ void main() {
 
       test('throws assertion error for negative minWidth', () {
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             minWidth: -10,
           ),
@@ -98,8 +93,7 @@ void main() {
 
       test('throws assertion error for maxWidth < minWidth', () {
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             minWidth: 50,
             maxWidth: 40,
@@ -110,8 +104,7 @@ void main() {
 
       test('throws assertion error for min >= max', () {
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             min: 100,
             max: 50,
@@ -120,8 +113,7 @@ void main() {
         );
 
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             min: 100,
             max: 100,
@@ -132,8 +124,7 @@ void main() {
 
       test('throws assertion error for tickCount < 2', () {
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             tickCount: 1,
           ),
@@ -141,8 +132,7 @@ void main() {
         );
 
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             tickCount: 0,
           ),
@@ -153,8 +143,7 @@ void main() {
       test('allows null min or max independently', () {
         // Only min specified
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             min: 100,
           ),
@@ -163,8 +152,7 @@ void main() {
 
         // Only max specified
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             max: 100,
           ),
@@ -174,8 +162,7 @@ void main() {
 
       test('allows tickCount >= 2', () {
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             tickCount: 2,
           ),
@@ -183,8 +170,7 @@ void main() {
         );
 
         expect(
-          () => YAxisConfig(
-            id: 'test',
+          () => YAxisConfig.withId(id: 'test',
             position: YAxisPosition.left,
             tickCount: 10,
           ),
@@ -195,8 +181,7 @@ void main() {
 
     group('copyWith', () {
       test('returns new instance (not same reference)', () {
-        final original = YAxisConfig(
-          id: 'test',
+        final original = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
         );
 
@@ -206,8 +191,7 @@ void main() {
       });
 
       test('changes specified values', () {
-        final original = YAxisConfig(
-          id: 'test',
+        final original = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
           label: 'Original',
@@ -225,8 +209,7 @@ void main() {
       });
 
       test('preserves unchanged values', () {
-        final original = YAxisConfig(
-          id: 'power',
+        final original = YAxisConfig.withId(id: 'power',
           position: YAxisPosition.leftOuter,
           color: const Color(0xFFFF0000),
           label: 'Power',
@@ -258,8 +241,7 @@ void main() {
       });
 
       test('can change id', () {
-        final original = YAxisConfig(
-          id: 'original-id',
+        final original = YAxisConfig.withId(id: 'original-id',
           position: YAxisPosition.left,
         );
 
@@ -269,8 +251,7 @@ void main() {
       });
 
       test('can set optional values to null via explicit null handling', () {
-        final original = YAxisConfig(
-          id: 'test',
+        final original = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
           label: 'Label',
@@ -287,15 +268,13 @@ void main() {
 
     group('equality', () {
       test('same values are equal', () {
-        final config1 = YAxisConfig(
-          id: 'test',
+        final config1 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
           label: 'Test',
         );
 
-        final config2 = YAxisConfig(
-          id: 'test',
+        final config2 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
           label: 'Test',
@@ -305,13 +284,11 @@ void main() {
       });
 
       test('different id values are not equal', () {
-        final config1 = YAxisConfig(
-          id: 'test1',
+        final config1 = YAxisConfig.withId(id: 'test1',
           position: YAxisPosition.left,
         );
 
-        final config2 = YAxisConfig(
-          id: 'test2',
+        final config2 = YAxisConfig.withId(id: 'test2',
           position: YAxisPosition.left,
         );
 
@@ -319,13 +296,11 @@ void main() {
       });
 
       test('different position values are not equal', () {
-        final config1 = YAxisConfig(
-          id: 'test',
+        final config1 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
         );
 
-        final config2 = YAxisConfig(
-          id: 'test',
+        final config2 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.right,
         );
 
@@ -333,14 +308,12 @@ void main() {
       });
 
       test('different optional values are not equal', () {
-        final config1 = YAxisConfig(
-          id: 'test',
+        final config1 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           label: 'Label 1',
         );
 
-        final config2 = YAxisConfig(
-          id: 'test',
+        final config2 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           label: 'Label 2',
         );
@@ -349,14 +322,12 @@ void main() {
       });
 
       test('hashCode is consistent with equality', () {
-        final config1 = YAxisConfig(
-          id: 'test',
+        final config1 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
         );
 
-        final config2 = YAxisConfig(
-          id: 'test',
+        final config2 = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
         );
@@ -365,8 +336,7 @@ void main() {
       });
 
       test('identical objects are equal', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
         );
 
@@ -376,32 +346,28 @@ void main() {
 
     group('all positions work', () {
       test('leftOuter position', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.leftOuter,
         );
         expect(config.position, equals(YAxisPosition.leftOuter));
       });
 
       test('left position', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.left,
         );
         expect(config.position, equals(YAxisPosition.left));
       });
 
       test('right position', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.right,
         );
         expect(config.position, equals(YAxisPosition.right));
       });
 
       test('rightOuter position', () {
-        final config = YAxisConfig(
-          id: 'test',
+        final config = YAxisConfig.withId(id: 'test',
           position: YAxisPosition.rightOuter,
         );
         expect(config.position, equals(YAxisPosition.rightOuter));

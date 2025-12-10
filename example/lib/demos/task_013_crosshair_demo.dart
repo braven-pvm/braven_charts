@@ -41,8 +41,7 @@ class Task013CrosshairDemo extends StatelessWidget {
       color: const Color(0xFF2196F3), // Blue
       strokeWidth: 2.5,
       yAxisConfig: YAxisConfig(
-        id: 'power',
-        position: YAxisPosition.left,
+              position: YAxisPosition.left,
         unit: 'W',
         min: 0,
         max: 500,
@@ -69,8 +68,7 @@ class Task013CrosshairDemo extends StatelessWidget {
       color: const Color(0xFFF44336), // Red
       strokeWidth: 2.5,
       yAxisConfig: YAxisConfig(
-        id: 'heartrate',
-        position: YAxisPosition.right,
+              position: YAxisPosition.right,
         unit: 'bpm',
         min: 60,
         max: 180,

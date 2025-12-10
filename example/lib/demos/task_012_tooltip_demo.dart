@@ -141,8 +141,7 @@ class Task012TooltipDemo extends StatelessWidget {
                   dataPointMarkerRadius: 5.0,
                   // Multi-axis with inline config
                   yAxisConfig: YAxisConfig(
-                    id: 'power-axis',
-                    position: YAxisPosition.left,
+              position: YAxisPosition.left,
                     label: 'Power',
                     unit: 'W', // Unit shown in tooltip
                   ),
@@ -157,8 +156,7 @@ class Task012TooltipDemo extends StatelessWidget {
                   dataPointMarkerRadius: 5.0,
                   // Multi-axis with inline config
                   yAxisConfig: YAxisConfig(
-                    id: 'hr-axis',
-                    position: YAxisPosition.right,
+              position: YAxisPosition.right,
                     label: 'Heart Rate',
                     unit: 'bpm', // Unit shown in tooltip
                   ),

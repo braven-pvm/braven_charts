@@ -93,29 +93,25 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.leftOuter,
                     label: 'Power',
                     unit: 'W',
                     color: Colors.blue,
                   ),
-                  YAxisConfig(
-                    id: 'hr-axis',
+                  YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.left,
                     label: 'Heart Rate',
                     unit: 'bpm',
                     color: Colors.red,
                   ),
-                  YAxisConfig(
-                    id: 'cadence-axis',
+                  YAxisConfig.withId(id: 'cadence-axis',
                     position: YAxisPosition.right,
                     label: 'Cadence',
                     unit: 'rpm',
                     color: Colors.green,
                   ),
-                  YAxisConfig(
-                    id: 'speed-axis',
+                  YAxisConfig.withId(id: 'speed-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Speed',
                     unit: 'km/h',
@@ -197,29 +193,25 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'temp-axis',
+                  YAxisConfig.withId(id: 'temp-axis',
                     position: YAxisPosition.leftOuter,
                     label: 'Temperature',
                     unit: '°C',
                     color: Colors.deepOrange,
                   ),
-                  YAxisConfig(
-                    id: 'pressure-axis',
+                  YAxisConfig.withId(id: 'pressure-axis',
                     position: YAxisPosition.left,
                     label: 'Pressure',
                     unit: 'Pa',
                     color: Colors.indigo,
                   ),
-                  YAxisConfig(
-                    id: 'flow-axis',
+                  YAxisConfig.withId(id: 'flow-axis',
                     position: YAxisPosition.right,
                     label: 'Flow Rate',
                     unit: 'L/s',
                     color: Colors.teal,
                   ),
-                  YAxisConfig(
-                    id: 'level-axis',
+                  YAxisConfig.withId(id: 'level-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Tank Level',
                     unit: '%',
@@ -284,8 +276,7 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.leftOuter,
                     label: 'Power',
                     unit: 'W',
@@ -294,8 +285,7 @@ void main() {
                     showTicks: true,
                     labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
-                  YAxisConfig(
-                    id: 'hr-axis',
+                  YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.left,
                     label: 'Heart Rate',
                     unit: 'bpm',
@@ -304,8 +294,7 @@ void main() {
                     showTicks: true,
                     labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
-                  YAxisConfig(
-                    id: 'cadence-axis',
+                  YAxisConfig.withId(id: 'cadence-axis',
                     position: YAxisPosition.right,
                     label: 'Cadence',
                     unit: 'rpm',
@@ -314,8 +303,7 @@ void main() {
                     showTicks: false, // Hidden ticks
                     labelDisplay: AxisLabelDisplay.labelWithUnit,
                   ),
-                  YAxisConfig(
-                    id: 'speed-axis',
+                  YAxisConfig.withId(id: 'speed-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Speed',
                     unit: 'km/h',
@@ -384,8 +372,7 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.leftOuter,
                     label: 'Power',
                     unit: 'W',
@@ -393,8 +380,7 @@ void main() {
                     minWidth: 35,
                     maxWidth: 55,
                   ),
-                  YAxisConfig(
-                    id: 'hr-axis',
+                  YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.left,
                     label: 'HR',
                     unit: 'bpm',
@@ -402,8 +388,7 @@ void main() {
                     minWidth: 35,
                     maxWidth: 55,
                   ),
-                  YAxisConfig(
-                    id: 'cadence-axis',
+                  YAxisConfig.withId(id: 'cadence-axis',
                     position: YAxisPosition.right,
                     label: 'Cad',
                     unit: 'rpm',
@@ -411,8 +396,7 @@ void main() {
                     minWidth: 35,
                     maxWidth: 55,
                   ),
-                  YAxisConfig(
-                    id: 'speed-axis',
+                  YAxisConfig.withId(id: 'speed-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Speed',
                     unit: 'km/h',

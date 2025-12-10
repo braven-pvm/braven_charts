@@ -9,7 +9,7 @@ void main() {
     group('computeAxisBounds', () {
       test('computes bounds from single series', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -31,7 +31,7 @@ void main() {
 
       test('computes bounds from multiple series on same axis', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -55,8 +55,8 @@ void main() {
 
       test('computes separate bounds for different axes', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
-          YAxisConfig(id: 'heartRate', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'heartRate', position: YAxisPosition.right),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'powerSeries', yAxisId: 'power'),
@@ -84,7 +84,7 @@ void main() {
 
       test('respects explicit min from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left, min: 0.0),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left, min: 0.0),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -105,7 +105,7 @@ void main() {
 
       test('respects explicit max from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left, max: 500.0),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left, max: 500.0),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -126,8 +126,7 @@ void main() {
 
       test('respects both explicit min and max from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             min: 0.0,
             max: 400.0,
@@ -152,7 +151,7 @@ void main() {
 
       test('uses data-derived bounds when config min/max are null', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -173,13 +172,11 @@ void main() {
 
       test('handles mixed explicit and auto bounds across axes', () {
         final axisConfigs = [
-          YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             min: 0.0,
           ), // explicit min only
-          YAxisConfig(
-            id: 'heartRate',
+          YAxisConfig.withId(id: 'heartRate',
             position: YAxisPosition.right,
             max: 200.0,
           ), // explicit max only
@@ -210,8 +207,8 @@ void main() {
     group('series to axis mapping', () {
       test('maps series with yAxisId to correct axis', () {
         final axisConfigs = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'seriesA', yAxisId: 'axis1'),
@@ -236,7 +233,7 @@ void main() {
 
       test('maps series without explicit binding to default axis', () {
         final axisConfigs = [
-          YAxisConfig(id: 'primary', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'primary', position: YAxisPosition.left),
         ];
         // No explicit bindings - series should use default axis
         final bindings = <SeriesAxisBinding>[];
@@ -258,7 +255,7 @@ void main() {
 
       test('handles unmapped series (no matching axis)', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(
@@ -284,7 +281,7 @@ void main() {
 
       test('uses custom default axis id', () {
         final axisConfigs = [
-          YAxisConfig(id: 'custom-default', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'custom-default', position: YAxisPosition.left),
         ];
         final bindings = <SeriesAxisBinding>[];
         final seriesYValues = {
@@ -306,7 +303,7 @@ void main() {
     group('edge cases', () {
       test('handles empty series list', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = <SeriesAxisBinding>[];
         final seriesYValues = <String, List<double>>{};
@@ -323,7 +320,7 @@ void main() {
 
       test('handles series with no data points', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'emptySeries', yAxisId: 'power'),
@@ -344,7 +341,7 @@ void main() {
 
       test('handles series with identical Y values', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'flatSeries', yAxisId: 'power'),
@@ -365,7 +362,7 @@ void main() {
 
       test('handles negative values in series', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -386,7 +383,7 @@ void main() {
 
       test('handles single data point', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -407,7 +404,7 @@ void main() {
 
       test('handles axis with no bound series', () {
         final axisConfigs = [
-          YAxisConfig(id: 'unusedAxis', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'unusedAxis', position: YAxisPosition.left),
         ];
         final bindings = <SeriesAxisBinding>[]; // No bindings
         final seriesYValues = <String, List<double>>{}; // No data
@@ -424,7 +421,7 @@ void main() {
 
       test('handles very large number of series on one axis', () {
         final axisConfigs = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
         ];
         final bindings = List.generate(
           100,
@@ -449,8 +446,7 @@ void main() {
 
       test('explicit config bounds override data even if outside data range', () {
         final axisConfigs = [
-          YAxisConfig(
-            id: 'power',
+          YAxisConfig.withId(id: 'power',
             position: YAxisPosition.left,
             min: -100.0, // Below all data
             max: 1000.0, // Above all data
@@ -477,10 +473,10 @@ void main() {
     group('multiple axes', () {
       test('handles four axes with different series', () {
         final axisConfigs = [
-          YAxisConfig(id: 'axis1', position: YAxisPosition.leftOuter),
-          YAxisConfig(id: 'axis2', position: YAxisPosition.left),
-          YAxisConfig(id: 'axis3', position: YAxisPosition.right),
-          YAxisConfig(id: 'axis4', position: YAxisPosition.rightOuter),
+          YAxisConfig.withId(id: 'axis1', position: YAxisPosition.leftOuter),
+          YAxisConfig.withId(id: 'axis2', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'axis3', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'axis4', position: YAxisPosition.rightOuter),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 's1', yAxisId: 'axis1'),

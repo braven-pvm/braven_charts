@@ -21,8 +21,13 @@ class Task015ApiDemo extends StatelessWidget {
       name: 'Power Output',
       points: _generatePowerData(),
       color: Colors.blue,
-      yAxisId: 'power-axis', // Direct binding via yAxisId
       unit: 'W',
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Power',
+        unit: 'W',
+        color: Colors.blue,
+      ),
     );
 
     final hrSeries = LineChartSeries(
@@ -30,8 +35,13 @@ class Task015ApiDemo extends StatelessWidget {
       name: 'Heart Rate',
       points: _generateHRData(),
       color: Colors.red,
-      yAxisId: 'hr-axis', // Direct binding via yAxisId
       unit: 'bpm',
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.right,
+        label: 'Heart Rate',
+        unit: 'bpm',
+        color: Colors.red,
+      ),
     );
 
     return MaterialApp(
@@ -63,23 +73,7 @@ class Task015ApiDemo extends StatelessWidget {
               Expanded(
                 child: BravenChartPlus(
                   series: [powerSeries, hrSeries],
-                  yAxes: [
-                    YAxisConfig(
-                      id: 'power-axis',
-                      position: YAxisPosition.left,
-                      label: 'Power',
-                      unit: 'W',
-                      color: Colors.blue,
-                    ),
-                    YAxisConfig(
-                      id: 'hr-axis',
-                      position: YAxisPosition.right,
-                      label: 'Heart Rate',
-                      unit: 'bpm',
-                      color: Colors.red,
-                    ),
-                  ],
-                  // Note: No axisBindings needed - yAxisId on series handles binding!
+                  // Note: Using inline yAxisConfig - no separate yAxes needed!
                 ),
               ),
               const SizedBox(height: 16),

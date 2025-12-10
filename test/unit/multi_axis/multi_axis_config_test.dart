@@ -18,8 +18,8 @@ void main() {
 
       test('creates with all parameters', () {
         final axes = [
-          YAxisConfig(id: 'power', position: YAxisPosition.left),
-          YAxisConfig(id: 'hr', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'hr', position: YAxisPosition.right),
         ];
         const bindings = [
           SeriesAxisBinding(seriesId: 'power-series', yAxisId: 'power'),
@@ -51,7 +51,7 @@ void main() {
 
     group('getAxisById', () {
       test('returns axis when found', () {
-        final powerAxis = YAxisConfig(id: 'power', position: YAxisPosition.left);
+        final powerAxis = YAxisConfig.withId(id: 'power', position: YAxisPosition.left);
         final config = MultiAxisConfig(axes: [powerAxis]);
 
         final result = config.getAxisById('power');
@@ -62,7 +62,7 @@ void main() {
 
       test('returns null when not found', () {
         final config = MultiAxisConfig(
-          axes: [YAxisConfig(id: 'power', position: YAxisPosition.left)],
+          axes: [YAxisConfig.withId(id: 'power', position: YAxisPosition.left)],
         );
 
         final result = config.getAxisById('nonexistent');
@@ -73,9 +73,9 @@ void main() {
       test('works with multiple axes', () {
         final config = MultiAxisConfig(
           axes: [
-            YAxisConfig(id: 'power', position: YAxisPosition.left),
-            YAxisConfig(id: 'hr', position: YAxisPosition.right),
-            YAxisConfig(id: 'cadence', position: YAxisPosition.rightOuter),
+            YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'hr', position: YAxisPosition.right),
+            YAxisConfig.withId(id: 'cadence', position: YAxisPosition.rightOuter),
           ],
         );
 
@@ -96,7 +96,7 @@ void main() {
       test('returns axis when binding exists', () {
         final config = MultiAxisConfig(
           axes: [
-            YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'power-axis', position: YAxisPosition.left),
           ],
           bindings: [
             const SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
@@ -112,7 +112,7 @@ void main() {
       test('returns null when no binding', () {
         final config = MultiAxisConfig(
           axes: [
-            YAxisConfig(id: 'power-axis', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'power-axis', position: YAxisPosition.left),
           ],
           bindings: [
             const SeriesAxisBinding(seriesId: 'power', yAxisId: 'power-axis'),
@@ -140,8 +140,8 @@ void main() {
       test('returns correct axis when multiple bindings exist', () {
         final config = MultiAxisConfig(
           axes: [
-            YAxisConfig(id: 'left-axis', position: YAxisPosition.left),
-            YAxisConfig(id: 'right-axis', position: YAxisPosition.right),
+            YAxisConfig.withId(id: 'left-axis', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'right-axis', position: YAxisPosition.right),
           ],
           bindings: [
             const SeriesAxisBinding(seriesId: 'power', yAxisId: 'left-axis'),
@@ -157,7 +157,7 @@ void main() {
     group('getBindingsForAxis', () {
       test('returns empty list when no bindings', () {
         final config = MultiAxisConfig(
-          axes: [YAxisConfig(id: 'power', position: YAxisPosition.left)],
+          axes: [YAxisConfig.withId(id: 'power', position: YAxisPosition.left)],
           bindings: [],
         );
 
@@ -211,7 +211,7 @@ void main() {
     group('copyWith', () {
       test('changes specified values', () {
         final original = MultiAxisConfig(
-          axes: [YAxisConfig(id: 'power', position: YAxisPosition.left)],
+          axes: [YAxisConfig.withId(id: 'power', position: YAxisPosition.left)],
           bindings: [const SeriesAxisBinding(seriesId: 'p', yAxisId: 'power')],
           mode: NormalizationMode.auto,
         );
@@ -228,8 +228,8 @@ void main() {
       test('preserves unchanged values', () {
         final original = MultiAxisConfig(
           axes: [
-            YAxisConfig(id: 'power', position: YAxisPosition.left),
-            YAxisConfig(id: 'hr', position: YAxisPosition.right),
+            YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+            YAxisConfig.withId(id: 'hr', position: YAxisPosition.right),
           ],
           bindings: [
             const SeriesAxisBinding(seriesId: 'p', yAxisId: 'power'),
@@ -238,7 +238,7 @@ void main() {
         );
 
         final modified = original.copyWith(
-          axes: [YAxisConfig(id: 'new-axis', position: YAxisPosition.leftOuter)],
+          axes: [YAxisConfig.withId(id: 'new-axis', position: YAxisPosition.leftOuter)],
         );
 
         expect(modified.axes.length, equals(1));
@@ -257,7 +257,7 @@ void main() {
 
     group('equality', () {
       test('same config is equal', () {
-        final axes = [YAxisConfig(id: 'power', position: YAxisPosition.left)];
+        final axes = [YAxisConfig.withId(id: 'power', position: YAxisPosition.left)];
         const bindings = [SeriesAxisBinding(seriesId: 'p', yAxisId: 'power')];
 
         final config1 = MultiAxisConfig(
@@ -284,10 +284,10 @@ void main() {
 
       test('different axes is not equal', () {
         final config1 = MultiAxisConfig(
-          axes: [YAxisConfig(id: 'a', position: YAxisPosition.left)],
+          axes: [YAxisConfig.withId(id: 'a', position: YAxisPosition.left)],
         );
         final config2 = MultiAxisConfig(
-          axes: [YAxisConfig(id: 'b', position: YAxisPosition.left)],
+          axes: [YAxisConfig.withId(id: 'b', position: YAxisPosition.left)],
         );
 
         expect(config1, isNot(equals(config2)));

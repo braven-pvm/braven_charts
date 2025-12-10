@@ -130,8 +130,7 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'single-axis',
+                  YAxisConfig.withId(id: 'single-axis',
                     position: YAxisPosition.left,
                   ),
                 ],
@@ -332,8 +331,8 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(id: 'axis1', position: YAxisPosition.left),
-                  YAxisConfig(id: 'axis2', position: YAxisPosition.right),
+                  YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+                  YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
                 ],
                 normalizationMode: NormalizationMode.none, // Disable normalization
               ),

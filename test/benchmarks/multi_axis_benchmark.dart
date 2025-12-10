@@ -81,29 +81,25 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.leftOuter,
                     label: 'Power',
                     unit: 'W',
                     color: Colors.blue,
                   ),
-                  YAxisConfig(
-                    id: 'hr-axis',
+                  YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.left,
                     label: 'Heart Rate',
                     unit: 'bpm',
                     color: Colors.red,
                   ),
-                  YAxisConfig(
-                    id: 'cadence-axis',
+                  YAxisConfig.withId(id: 'cadence-axis',
                     position: YAxisPosition.right,
                     label: 'Cadence',
                     unit: 'rpm',
                     color: Colors.green,
                   ),
-                  YAxisConfig(
-                    id: 'speed-axis',
+                  YAxisConfig.withId(id: 'speed-axis',
                     position: YAxisPosition.rightOuter,
                     label: 'Speed',
                     unit: 'km/h',
@@ -166,15 +162,13 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                     label: 'Power',
                     unit: 'W',
                     color: Colors.blue,
                   ),
-                  YAxisConfig(
-                    id: 'hr-axis',
+                  YAxisConfig.withId(id: 'hr-axis',
                     position: YAxisPosition.right,
                     label: 'Heart Rate',
                     unit: 'bpm',
@@ -238,8 +232,7 @@ void main() {
           yAxisId: 'axis$i',
         ));
 
-        axes.add(YAxisConfig(
-          id: 'axis$i',
+        axes.add(YAxisConfig.withId(id: 'axis$i',
           position: positions[i],
           label: 'S${i + 1}',
           color: colors[i],
@@ -305,13 +298,11 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(
-                    id: 'power-axis',
+                  YAxisConfig.withId(id: 'power-axis',
                     position: YAxisPosition.left,
                     color: Colors.blue,
                   ),
-                  YAxisConfig(
-                    id: 'micro-axis',
+                  YAxisConfig.withId(id: 'micro-axis',
                     position: YAxisPosition.right,
                     color: Colors.purple,
                   ),
@@ -395,8 +386,8 @@ void main() {
                   ),
                 ],
                 yAxes: [
-                  YAxisConfig(id: 'axis1', position: YAxisPosition.left, color: Colors.blue),
-                  YAxisConfig(id: 'axis2', position: YAxisPosition.right, color: Colors.red),
+                  YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left, color: Colors.blue),
+                  YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right, color: Colors.red),
                 ],
                 normalizationMode: NormalizationMode.perSeries,
               ),
