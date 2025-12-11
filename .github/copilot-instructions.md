@@ -40,41 +40,7 @@ Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard co
 
 <!-- MANUAL ADDITIONS START -->
 
-## 🚨 ORCHESTRATOR SCRIPT-FIRST PROTOCOL (ABSOLUTE PRIORITY) 🚨
-
-### ⛔ BEFORE ANY TASK PREPARATION - MANDATORY FIRST ACTION
-
-When user says "prepare next task", "task handover", or similar:
-
-**DO NOT:**
-
-- ❌ Read manifest.yaml
-- ❌ Read templates
-- ❌ Read SpecKit tasks.md
-- ❌ Start planning or analysis
-- ❌ Create todo lists
-
-**MUST DO FIRST:**
-
-```powershell
-# Step 1: Source environment
-. .\.orchestra\common\scripts\set-env.ps1
-
-# Step 2: Run closeout check (BLOCKING)
-.\.orchestra\orchestrator\scripts\task-closeout-check.ps1
-```
-
-**ONLY AFTER SCRIPT PASSES** can you proceed to:
-
-1. Read docs/readme.md
-2. Read manifest.yaml for next task
-3. Create handover document
-
-**WHY THIS EXISTS**: Agents repeatedly skip to reading files instead of running validation scripts. This causes missed verification steps and process drift. The script MUST be the entry point.
-
----
-
-## 🚫 YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE POLICY 🚫
+##  YOU TOUCH IT, YOU OWN IT - ZERO TOLERANCE POLICY 🚫
 
 ### ⛔ NO "PRE-EXISTING" EXCUSES - EVER
 
@@ -237,18 +203,18 @@ See comprehensive guides:
 
 ---
 
-## 📸 VISUAL VERIFICATION: Role-Based Protocols
+## 📸 VISUAL VERIFICATION Protocols
 
 Visual verification has TWO distinct phases with different tools:
 
-| Phase       | Actor        | Tool                | Purpose                            |
-| ----------- | ------------ | ------------------- | ---------------------------------- |
-| **CAPTURE** | Implementor  | `flutter_agent.py`  | Run Flutter app, take screenshot   |
-| **VIEW**    | Orchestrator | Chrome DevTools MCP | Open existing PNG, analyze content |
+| Phase       | Tool                | Purpose                            |
+| ----------- | ------------------- | ---------------------------------- |
+| **CAPTURE** | `flutter_agent.py`  | Run Flutter app, take screenshot   |
+| **VIEW**    | Chrome DevTools MCP | Open existing PNG, analyze content |
 
 ---
 
-### 🔧 IMPLEMENTOR: Screenshot Capture (flutter_agent.py)
+### 🔧 Screenshot Capture (flutter_agent.py)
 
 **Use Case**: Running Flutter apps and capturing screenshots of the running application.
 
@@ -305,7 +271,7 @@ python tools/flutter_agent/flutter_agent.py stop
 
 ---
 
-### 👁️ ORCHESTRATOR: Screenshot Viewing (Chrome DevTools MCP)
+### 👁️ Screenshot Viewing (Chrome DevTools MCP)
 
 **Use Case**: Viewing and analyzing existing screenshot files to verify visual criteria.
 
@@ -345,7 +311,7 @@ You MUST view the actual content via Chrome DevTools MCP to verify correctness.
 
 ### Key Differences: Capture vs View
 
-| Aspect      | Capture (Implementor)    | View (Orchestrator)    |
+| Aspect      | Capture                  | View                   |
 | ----------- | ------------------------ | ---------------------- |
 | **Tool**    | `flutter_agent.py`       | Chrome DevTools MCP    |
 | **Purpose** | Run app, take screenshot | View existing file     |
@@ -354,7 +320,7 @@ You MUST view the actual content via Chrome DevTools MCP to verify correctness.
 
 ### Pre-Visual-Verification Checklist
 
-**For IMPLEMENTOR (capturing):**
+**For capturing screenshots:**
 
 1. ✅ Am I using `flutter_agent.py`? (NOT terminal commands)
 2. ✅ Am I starting in a SEPARATE window via `Start-Process`?
@@ -362,7 +328,7 @@ You MUST view the actual content via Chrome DevTools MCP to verify correctness.
 4. ✅ Did I take a screenshot?
 5. ✅ Did I stop the app when done?
 
-**For ORCHESTRATOR (viewing):**
+**For viewing screenshots:**
 
 1. ✅ Did I verify the screenshot file EXISTS first?
 2. ✅ Did I use `mcp_chrome-devtoo_new_page` with `file:///` URL?
