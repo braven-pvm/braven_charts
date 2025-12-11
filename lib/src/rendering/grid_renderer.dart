@@ -1,7 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'dart:ui' show Canvas, Rect;
+import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, Rect;
 
 import '../models/chart_theme.dart';
 import '../models/grid_config.dart';
@@ -52,14 +52,38 @@ class GridRenderer {
   /// [canvas] is the drawing surface.
   /// [plotArea] defines the chart's plot area bounds.
   /// [yPositions] are the Y-coordinates where grid lines should be drawn.
-  ///
-  /// TODO: Implement in Phase 2 (Task 13)
   void paintHorizontalGrid(
     Canvas canvas,
     Rect plotArea,
     List<double> yPositions,
   ) {
-    // Implementation will be added in Phase 2
+    // Check if horizontal grid is enabled
+    final effectiveConfig = config ?? const GridConfig();
+    if (!effectiveConfig.horizontal) {
+      return;
+    }
+
+    // Determine color (config takes precedence over theme)
+    final Color gridColor = effectiveConfig.horizontalColor ??
+        theme?.gridStyle.majorColor ??
+        const Color(0xFFE0E0E0);
+
+    // Create paint for horizontal grid lines
+    final paint = Paint()
+      ..color = gridColor
+      ..strokeWidth = effectiveConfig.horizontalStrokeWidth
+      ..style = PaintingStyle.stroke;
+
+    // Draw horizontal lines
+    for (final y in yPositions) {
+      if (y >= plotArea.top && y <= plotArea.bottom) {
+        canvas.drawLine(
+          Offset(plotArea.left, y),
+          Offset(plotArea.right, y),
+          paint,
+        );
+      }
+    }
   }
 
   /// Paints vertical grid lines at specified X positions.
@@ -67,13 +91,37 @@ class GridRenderer {
   /// [canvas] is the drawing surface.
   /// [plotArea] defines the chart's plot area bounds.
   /// [xPositions] are the X-coordinates where grid lines should be drawn.
-  ///
-  /// TODO: Implement in Phase 2 (Task 14)
   void paintVerticalGrid(
     Canvas canvas,
     Rect plotArea,
     List<double> xPositions,
   ) {
-    // Implementation will be added in Phase 2
+    // Check if vertical grid is enabled
+    final effectiveConfig = config ?? const GridConfig();
+    if (!effectiveConfig.vertical) {
+      return;
+    }
+
+    // Determine color (config takes precedence over theme)
+    final Color gridColor = effectiveConfig.verticalColor ??
+        theme?.gridStyle.majorColor ??
+        const Color(0xFFE0E0E0);
+
+    // Create paint for vertical grid lines
+    final paint = Paint()
+      ..color = gridColor
+      ..strokeWidth = effectiveConfig.verticalStrokeWidth
+      ..style = PaintingStyle.stroke;
+
+    // Draw vertical lines
+    for (final x in xPositions) {
+      if (x >= plotArea.left && x <= plotArea.right) {
+        canvas.drawLine(
+          Offset(x, plotArea.top),
+          Offset(x, plotArea.bottom),
+          paint,
+        );
+      }
+    }
   }
 }
