@@ -167,9 +167,10 @@ class StreamingBuffer {
     _addCallCount++;
     _addTrackingStart ??= DateTime.now();
     if (_addCallCount % 100 == 0) {
-      final elapsed = DateTime.now().difference(_addTrackingStart!).inMilliseconds;
-      final rate = _addCallCount / (elapsed / 1000);
-      print('[StreamingBuffer.add] Called $rate Hz ($_addCallCount calls in ${elapsed}ms, buffer size: $_count/$_maxSize)');
+      // final elapsed = DateTime.now().difference(_addTrackingStart!).inMilliseconds;
+      // final rate = _addCallCount / (elapsed / 1000);
+      // Performance monitoring (disabled in production):
+      // print('[StreamingBuffer.add] Called $rate Hz ($_addCallCount calls in ${elapsed}ms, buffer size: $_count/$_maxSize)');
       _addCallCount = 0;
       _addTrackingStart = DateTime.now();
     }

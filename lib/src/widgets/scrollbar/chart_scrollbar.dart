@@ -127,7 +127,7 @@ class ChartScrollbar extends StatefulWidget {
 /// Private state for ChartScrollbar.
 ///
 /// **Constitutional Compliance**:
-/// - Uses ValueNotifier<ScrollbarState> instead of setState() for >10Hz updates
+/// - Uses `ValueNotifier<ScrollbarState>` instead of setState() for >10Hz updates
 /// - All state changes go through ValueNotifier for performance optimization
 /// - Throttles viewport updates to 60 FPS to prevent chart jank
 class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStateMixin {
@@ -481,8 +481,6 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
-
     // Extract click position based on axis
     final clickPosition = widget.axis == Axis.horizontal ? details.localPosition.dx : details.localPosition.dy;
 
@@ -497,24 +495,23 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     _resetAutoHide();
   }
 
-  /// Animation completion listener (T073).
+  /// Animation completion listener (T073) - REMOVED.
   ///
   /// PIXEL-DELTA PATTERN: Obsolete - animation handled by parent.
-  /// Kept for cleanup during transition.
-  void _onJumpAnimationComplete(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
-      // Remove animation listener
-      _jumpAnimation?.removeListener(_onJumpAnimationTick);
-
-      // Clean up animation state
-      _jumpAnimationController?.removeStatusListener(_onJumpAnimationComplete);
-
-      // Restart auto-hide timer
-      if (widget.theme.autoHide) {
-        _scheduleAutoHide();
-      }
-    }
-  }
+  // void _onJumpAnimationComplete(AnimationStatus status) {
+  //   if (status == AnimationStatus.completed) {
+  //     // Remove animation listener
+  //     _jumpAnimation?.removeListener(_onJumpAnimationTick);
+  //
+  //     // Clean up animation state
+  //     _jumpAnimationController?.removeStatusListener(_onJumpAnimationComplete);
+  //
+  //     // Restart auto-hide timer
+  //     if (widget.theme.autoHide) {
+  //       _scheduleAutoHide();
+  //     }
+  //   }
+  // }
 
   /// Jump animation tick listener (T073).
   ///

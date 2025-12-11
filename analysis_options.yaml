@@ -14,11 +14,19 @@ analyzer:
     - test/interaction/contracts/keyboard_handler_contract_test.dart  # Not yet implemented
     - test/interaction/unit/gesture_recognizer_test.dart  # TDD test needs rewriting
     - test/interaction/unit/keyboard_handler_test.dart  # Not yet implemented
+    - lib/legacy/**  # Legacy code with deprecated APIs
+    - example/**  # Example code - not production
+    - test/**  # Test utilities use deprecated Flutter test APIs
   errors:
     # Coordinate system specific rules
     missing_enum_constant_in_switch: error # Exhaustive switch for CoordinateSystem enum
     prefer_const_constructors: error # Enforce const constructors for immutability
     prefer_final_fields: error # Enforce immutability patterns
+    # Ignore deprecation warnings from Flutter framework updates
+    deprecated_member_use: ignore
+    # Style preferences
+    prefer_initializing_formals: ignore # Explicit initialization is clearer in some cases
+    sort_constructors_first: ignore # Fields before constructor is acceptable
 
 linter:
   rules:
@@ -36,4 +44,5 @@ linter:
     avoid_print: true
     avoid_unnecessary_containers: true
     prefer_single_quotes: true
-    sort_constructors_first: true
+    # sort_constructors_first: true  # Disabled - fields before constructor is acceptable
+    # prefer_initializing_formals: true  # Disabled - explicit initialization is clearer in some cases

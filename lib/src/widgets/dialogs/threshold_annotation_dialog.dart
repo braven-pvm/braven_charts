@@ -475,7 +475,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
   }
 
   Future<void> _showColorPicker() async {
-    final result = await showDialog<Color>(
+    await showDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Line Color'),

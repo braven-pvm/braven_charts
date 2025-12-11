@@ -275,9 +275,10 @@ class LiveStreamController extends ChangeNotifier {
     _addPointCallCount++;
     _addPointTrackingStart ??= DateTime.now();
     if (_addPointCallCount % 100 == 0) {
-      final elapsed = DateTime.now().difference(_addPointTrackingStart!).inMilliseconds;
-      final rate = _addPointCallCount / (elapsed / 1000);
-      print('[LiveStreamController.addPoint] Called $rate Hz ($_addPointCallCount calls in ${elapsed}ms)');
+      // final elapsed = DateTime.now().difference(_addPointTrackingStart!).inMilliseconds;
+      // final rate = _addPointCallCount / (elapsed / 1000);
+      // Performance monitoring (disabled in production):
+      // print('[LiveStreamController.addPoint] Called $rate Hz ($_addPointCallCount calls in ${elapsed}ms)');
       _addPointCallCount = 0;
       _addPointTrackingStart = DateTime.now();
     }
