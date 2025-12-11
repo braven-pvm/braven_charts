@@ -30,6 +30,7 @@ void main() {
           max: 400,
           showTicks: false,
           showAxisLine: false,
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
           labelDisplay: AxisLabelDisplay.none,
           minWidth: 50.0,
           maxWidth: 100.0,
@@ -46,6 +47,8 @@ void main() {
         expect(config.max, equals(400));
         expect(config.showTicks, isFalse);
         expect(config.showAxisLine, isFalse);
+        expect(config.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
         expect(config.shouldShowTickLabels, isFalse);
         expect(config.minWidth, equals(50.0));
         expect(config.maxWidth, equals(100.0));
@@ -71,6 +74,8 @@ void main() {
         expect(config.maxWidth, equals(80.0));
         expect(config.tickCount, isNull);
         expect(config.labelFormatter, isNull);
+        expect(config.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.overAxis));
       });
     });
 
@@ -283,6 +288,21 @@ void main() {
         expect(copy.color, equals(const Color(0xFF0000FF)));
         expect(copy.label, equals('Label'));
       });
+
+      test('can change crosshairLabelPosition', () {
+        final original = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.left,
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        final copy = original.copyWith(
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(copy.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
+      });
     });
 
     group('equality', () {
@@ -371,6 +391,22 @@ void main() {
         );
 
         expect(config, equals(config));
+      });
+
+      test('different crosshairLabelPosition values are not equal', () {
+        final config1 = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.left,
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        final config2 = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.left,
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(config1, isNot(equals(config2)));
       });
     });
 

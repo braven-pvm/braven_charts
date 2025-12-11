@@ -416,8 +416,9 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             label: Text(_labelPositionName(position)),
                             selected: _labelPosition == position,
                             onSelected: (selected) {
-                              if (selected)
+                              if (selected) {
                                 setState(() => _labelPosition = position);
+                              }
                             },
                           );
                         }).toList(),

@@ -1032,8 +1032,10 @@ class SeriesElement implements ChartElement {
   void _addBezierToPath(
       Path path, List<Offset> transformedPoints, double tension,
       {int startIndex = 1}) {
-    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length)
+    if (transformedPoints.length < 2 ||
+        startIndex >= transformedPoints.length) {
       return;
+    }
 
     // Scale tension for visible curvature: 0.0 = straight, 1.0 = smooth Catmull-Rom
     // The standard Catmull-Rom formula divides by 6, but we use a stronger multiplier
@@ -1069,8 +1071,10 @@ class SeriesElement implements ChartElement {
   /// Add stepped lines using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   void _addSteppedToPath(Path path, List<Offset> transformedPoints,
       {int startIndex = 1}) {
-    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length)
+    if (transformedPoints.length < 2 ||
+        startIndex >= transformedPoints.length) {
       return;
+    }
 
     for (int i = startIndex; i < transformedPoints.length; i++) {
       final prevPlot = transformedPoints[i - 1];
@@ -1084,8 +1088,10 @@ class SeriesElement implements ChartElement {
   /// Add monotone curves using PRE-TRANSFORMED points (currently uses linear)
   void _addMonotoneToPath(Path path, List<Offset> transformedPoints,
       {int startIndex = 1}) {
-    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length)
+    if (transformedPoints.length < 2 ||
+        startIndex >= transformedPoints.length) {
       return;
+    }
 
     for (int i = startIndex; i < transformedPoints.length; i++) {
       path.lineTo(transformedPoints[i].dx, transformedPoints[i].dy);

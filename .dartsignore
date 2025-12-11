@@ -1,0 +1,2 @@
+# Exclude spec contract files from dart format
+specs/

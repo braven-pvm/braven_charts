@@ -219,8 +219,9 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                               value: seriesId, child: Text(seriesId));
                         }).toList(),
                         onChanged: (value) {
-                          if (value != null)
+                          if (value != null) {
                             setState(() => _selectedSeriesId = value);
+                          }
                         },
                       ),
                       const SizedBox(height: 24),

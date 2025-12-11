@@ -168,6 +168,7 @@ class YAxisConfig {
     this.showAxisLine = true,
     this.showTicks = true,
     this.showCrosshairLabel = false,
+    this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 0.0,
     this.maxWidth = 80.0,
@@ -204,6 +205,7 @@ class YAxisConfig {
     this.showAxisLine = true,
     this.showTicks = true,
     this.showCrosshairLabel = false,
+    this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minWidth = 0.0,
     this.maxWidth = 80.0,
@@ -232,6 +234,8 @@ class YAxisConfig {
     bool showAxisLine = true,
     bool showTicks = true,
     bool showCrosshairLabel = false,
+    CrosshairLabelPosition crosshairLabelPosition =
+        CrosshairLabelPosition.overAxis,
     AxisLabelDisplay labelDisplay = AxisLabelDisplay.labelWithUnit,
     double minWidth = 0.0,
     double maxWidth = 80.0,
@@ -265,6 +269,7 @@ class YAxisConfig {
       showAxisLine: showAxisLine,
       showTicks: showTicks,
       showCrosshairLabel: showCrosshairLabel,
+      crosshairLabelPosition: crosshairLabelPosition,
       labelDisplay: labelDisplay,
       minWidth: minWidth,
       maxWidth: maxWidth,
@@ -370,6 +375,14 @@ class YAxisConfig {
   /// Defaults to false.
   final bool showCrosshairLabel;
 
+  /// Controls where the crosshair Y-value label appears.
+  ///
+  /// Only applicable when [showCrosshairLabel] is true.
+  /// Defaults to [CrosshairLabelPosition.overAxis].
+  ///
+  /// See [CrosshairLabelPosition] for available positions.
+  final CrosshairLabelPosition crosshairLabelPosition;
+
   /// Controls display of axis label and tick unit suffixes.
   ///
   /// Defaults to [AxisLabelDisplay.labelWithUnit] for space efficiency.
@@ -448,6 +461,7 @@ class YAxisConfig {
     bool? showAxisLine,
     bool? showTicks,
     bool? showCrosshairLabel,
+    CrosshairLabelPosition? crosshairLabelPosition,
     AxisLabelDisplay? labelDisplay,
     double? minWidth,
     double? maxWidth,
@@ -469,6 +483,8 @@ class YAxisConfig {
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
       showCrosshairLabel: showCrosshairLabel ?? this.showCrosshairLabel,
+      crosshairLabelPosition:
+          crosshairLabelPosition ?? this.crosshairLabelPosition,
       labelDisplay: labelDisplay ?? this.labelDisplay,
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
@@ -495,6 +511,7 @@ class YAxisConfig {
         other.showAxisLine == showAxisLine &&
         other.showTicks == showTicks &&
         other.showCrosshairLabel == showCrosshairLabel &&
+        other.crosshairLabelPosition == crosshairLabelPosition &&
         other.labelDisplay == labelDisplay &&
         other.minWidth == minWidth &&
         other.maxWidth == maxWidth &&
@@ -518,6 +535,7 @@ class YAxisConfig {
         showAxisLine,
         showTicks,
         showCrosshairLabel,
+        crosshairLabelPosition,
         labelDisplay,
         minWidth,
         maxWidth,
@@ -542,6 +560,7 @@ class YAxisConfig {
         'showAxisLine: $showAxisLine, '
         'showTicks: $showTicks, '
         'showCrosshairLabel: $showCrosshairLabel, '
+        'crosshairLabelPosition: $crosshairLabelPosition, '
         'labelDisplay: $labelDisplay, '
         'minWidth: $minWidth, '
         'maxWidth: $maxWidth, '

@@ -1709,8 +1709,9 @@ class EventHandlerManager {
   }
 
   void _performLegendAnnotationMove(Offset currentPosition) {
-    if (_movingLegendAnnotation == null || _moveLegendStartPosition == null)
+    if (_movingLegendAnnotation == null || _moveLegendStartPosition == null) {
       return;
+    }
 
     final delta = currentPosition - _moveLegendStartPosition!;
     final currentBounds = _movingLegendAnnotation!.bounds;
