@@ -31,6 +31,7 @@ import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
 import 'models/data_range.dart';
 import 'models/enums.dart';
+import 'models/grid_config.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/streaming_config.dart';
@@ -69,6 +70,7 @@ class BravenChartPlus extends StatefulWidget {
     this.theme,
     this.xAxis,
     this.yAxis,
+    this.grid,
     this.width,
     this.height,
     this.backgroundColor = Colors.white,
@@ -117,7 +119,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
-    AxisConfig? yAxis,
+    YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
@@ -198,7 +200,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
-    AxisConfig? yAxis,
+    YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
@@ -280,7 +282,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
-    AxisConfig? yAxis,
+    YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
     AutoScrollConfig? autoScrollConfig,
@@ -432,7 +434,8 @@ class BravenChartPlus extends StatefulWidget {
 
   final ChartTheme? theme;
   final AxisConfig? xAxis;
-  final AxisConfig? yAxis;
+  final YAxisConfig? yAxis;
+  final GridConfig? grid;
   final double? width;
   final double? height;
   final Color backgroundColor;
@@ -1253,7 +1256,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Create axes from data bounds with theme colors
     // Use user's axis config if provided, otherwise create default
     final xAxisConfig = widget.xAxis ?? const AxisConfig(label: 'X');
-    final yAxisConfig = widget.yAxis ?? const AxisConfig(label: 'Y');
+    final yAxisConfigRaw =
+        widget.yAxis ?? YAxisConfig(position: YAxisPosition.left, label: 'Y');
 
     // Merge theme colors with user config
     final xAxisWithTheme = xAxisConfig.copyWith(
@@ -1266,14 +1270,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           ),
     );
 
-    final yAxisWithTheme = yAxisConfig.copyWith(
-      axisColor: widget.theme?.axisStyle.lineColor ?? yAxisConfig.axisColor,
-      gridColor: widget.theme?.gridStyle.majorColor ?? yAxisConfig.gridColor,
-      labelStyle: yAxisConfig.labelStyle ??
-          TextStyle(
-            fontSize: 12,
-            color: widget.theme?.axisStyle.labelStyle.color ?? Colors.black87,
-          ),
+    // TODO(Task 5+): Apply theme colors to YAxisConfig once copyWith is implemented
+    // For now, convert YAxisConfig to AxisConfig for backward compatibility with existing axis renderer
+    final yAxisConfigForRenderer = AxisConfig(
+      label: yAxisConfigRaw.label ?? 'Y',
+      showGrid: true, // Default behavior
+      axisColor: yAxisConfigRaw.color ?? widget.theme?.axisStyle.lineColor,
+      gridColor: widget.theme?.gridStyle.majorColor,
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: yAxisConfigRaw.color ??
+            widget.theme?.axisStyle.labelStyle.color ??
+            Colors.black87,
+      ),
     );
 
     _xAxis = chart_axis.Axis.fromPublicConfig(
@@ -1284,7 +1293,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     _yAxis = chart_axis.Axis.fromPublicConfig(
-      config: yAxisWithTheme,
+      config: yAxisConfigForRenderer,
       isXAxis: false,
       dataMin: dataBounds.yMin,
       dataMax: dataBounds.yMax,
