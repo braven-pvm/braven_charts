@@ -28,6 +28,7 @@ export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/data_range.dart';
 export 'src/models/enums.dart';
+export 'src/models/grid_config.dart';
 export 'src/models/interaction_callbacks.dart';
 export 'src/models/interaction_config.dart';
 export 'src/models/legend_style.dart';
