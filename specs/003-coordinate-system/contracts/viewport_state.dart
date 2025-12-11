@@ -57,7 +57,8 @@ class ViewportState {
   /// Use as initial state before user interactions.
   factory ViewportState.identity() {
     return ViewportState(
-      xRange: DataRange.full(), // Placeholder - actual impl uses full data range
+      xRange:
+          DataRange.full(), // Placeholder - actual impl uses full data range
       yRange: DataRange.full(),
       zoomFactor: 1.0,
       panOffset: const Point(0.0, 0.0),

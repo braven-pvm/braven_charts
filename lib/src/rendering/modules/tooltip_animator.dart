@@ -129,7 +129,9 @@ class TooltipAnimator {
 
     // If tooltip is fully visible, enforce a minimum hide delay to prevent
     // flickering from transient null states during marker-to-marker transitions
-    final effectiveHideDelay = _opacity > 0.9 ? Duration(milliseconds: math.max(config.hideDelay.inMilliseconds, 100)) : config.hideDelay;
+    final effectiveHideDelay = _opacity > 0.9
+        ? Duration(milliseconds: math.max(config.hideDelay.inMilliseconds, 100))
+        : config.hideDelay;
 
     // Start hide delay timer
     _hideTimer = Timer(effectiveHideDelay, () {

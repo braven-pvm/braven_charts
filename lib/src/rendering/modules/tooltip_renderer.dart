@@ -66,7 +66,8 @@ class TooltipRenderer {
     // Find the series element containing this marker
     final seriesElement = elements.whereType<SeriesElement>().firstWhere(
           (e) => e.id == markerInfo.seriesId,
-          orElse: () => throw StateError('Series ${markerInfo.seriesId} not found'),
+          orElse: () =>
+              throw StateError('Series ${markerInfo.seriesId} not found'),
         );
 
     // Get the exact data point
@@ -74,7 +75,9 @@ class TooltipRenderer {
 
     // Convert data point to screen coordinates for tooltip anchor
     // If followCursor is enabled, use current cursor position instead of marker position
-    final tooltipAnchor = config.followCursor && cursorPosition != null ? cursorPosition : plotToWidget(markerInfo.plotPosition);
+    final tooltipAnchor = config.followCursor && cursorPosition != null
+        ? cursorPosition
+        : plotToWidget(markerInfo.plotPosition);
 
     // Build tooltip text with Y-value formatting including units (T023)
     final seriesName = seriesElement.series.name ?? seriesElement.id;
@@ -96,7 +99,8 @@ class TooltipRenderer {
       unit: yUnit,
     );
 
-    final tooltipText = '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY';
+    final tooltipText =
+        '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY';
 
     // Create text painter with configured style
     final textStyle = TextStyle(
@@ -119,11 +123,13 @@ class TooltipRenderer {
     // Get marker radius to offset tooltip position
     double markerRadius = 0.0;
     if (seriesElement.series is LineChartSeries) {
-      markerRadius = (seriesElement.series as LineChartSeries).dataPointMarkerRadius;
+      markerRadius =
+          (seriesElement.series as LineChartSeries).dataPointMarkerRadius;
     } else if (seriesElement.series is ScatterChartSeries) {
       markerRadius = (seriesElement.series as ScatterChartSeries).markerRadius;
     } else if (seriesElement.series is AreaChartSeries) {
-      markerRadius = (seriesElement.series as AreaChartSeries).dataPointMarkerRadius;
+      markerRadius =
+          (seriesElement.series as AreaChartSeries).dataPointMarkerRadius;
     }
 
     // Smart positioning: Respect preferredPosition, but auto-adjust to avoid clipping
@@ -169,7 +175,8 @@ class TooltipRenderer {
     // Adjust Y position to avoid clipping top/bottom edges
     if (tooltipY < edgeMargin) {
       // Would clip top - flip to bottom if in top/auto mode
-      if (config.preferredPosition == TooltipPosition.top || config.preferredPosition == TooltipPosition.auto) {
+      if (config.preferredPosition == TooltipPosition.top ||
+          config.preferredPosition == TooltipPosition.auto) {
         tooltipY = tooltipAnchor.dy + offset;
       } else {
         // Otherwise just push down
@@ -188,7 +195,8 @@ class TooltipRenderer {
     // Create tooltip path with arrow pointer
     const arrowSize = 8.0; // Height/width of arrow
 
-    final tooltipRect = Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+    final tooltipRect =
+        Rect.fromLTWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
 
     final tooltipPath = _createTooltipPath(
       tooltipRect: tooltipRect,
@@ -203,8 +211,10 @@ class TooltipRenderer {
       canvas.drawPath(
         shadowPath,
         Paint()
-          ..color = style.shadowColor.withValues(alpha: style.shadowColor.a * animator.opacity)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, style.shadowBlurRadius),
+          ..color = style.shadowColor
+              .withValues(alpha: style.shadowColor.a * animator.opacity)
+          ..maskFilter =
+              MaskFilter.blur(BlurStyle.normal, style.shadowBlurRadius),
       );
     }
 
@@ -212,7 +222,8 @@ class TooltipRenderer {
     canvas.drawPath(
       tooltipPath,
       Paint()
-        ..color = style.backgroundColor.withValues(alpha: style.backgroundColor.a * animator.opacity)
+        ..color = style.backgroundColor
+            .withValues(alpha: style.backgroundColor.a * animator.opacity)
         ..style = PaintingStyle.fill,
     );
 
@@ -221,7 +232,8 @@ class TooltipRenderer {
       canvas.drawPath(
         tooltipPath,
         Paint()
-          ..color = style.borderColor.withValues(alpha: style.borderColor.a * animator.opacity)
+          ..color = style.borderColor
+              .withValues(alpha: style.borderColor.a * animator.opacity)
           ..style = PaintingStyle.stroke
           ..strokeWidth = style.borderWidth,
       );
@@ -231,12 +243,14 @@ class TooltipRenderer {
     final textPaintWithOpacity = TextPainter(
       text: TextSpan(
         text: tooltipText,
-        style: textStyle.copyWith(color: style.textColor.withValues(alpha: animator.opacity)),
+        style: textStyle.copyWith(
+            color: style.textColor.withValues(alpha: animator.opacity)),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     )..layout();
-    textPaintWithOpacity.paint(canvas, Offset(tooltipX + padding, tooltipY + padding));
+    textPaintWithOpacity.paint(
+        canvas, Offset(tooltipX + padding, tooltipY + padding));
   }
 
   /// Gets the effective tooltip style, using theme defaults when config is not provided.
@@ -302,8 +316,10 @@ class TooltipRenderer {
 
     // Determine arrow position (prefer vertical positioning for typical top/bottom tooltips)
     final bool arrowOnTop = topDist < bottomDist && minVertDist < minHorizDist;
-    final bool arrowOnBottom = bottomDist <= topDist && minVertDist < minHorizDist;
-    final bool arrowOnLeft = !arrowOnTop && !arrowOnBottom && leftDist < rightDist;
+    final bool arrowOnBottom =
+        bottomDist <= topDist && minVertDist < minHorizDist;
+    final bool arrowOnLeft =
+        !arrowOnTop && !arrowOnBottom && leftDist < rightDist;
     // arrowOnRight is the else case
 
     // Calculate arrow offset along the edge (clamped to stay within rect with margin)
@@ -324,13 +340,17 @@ class TooltipRenderer {
       path.lineTo(tooltipRect.left + arrowX, arrowTop); // Arrow point
       path.lineTo(tooltipRect.left + arrowRight, tooltipRect.top);
       path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top,
+          tooltipRect.right, tooltipRect.top + borderRadius);
       path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom,
+          tooltipRect.right - borderRadius, tooltipRect.bottom);
       path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom,
+          tooltipRect.left, tooltipRect.bottom - borderRadius);
       path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top,
+          tooltipRect.left + borderRadius, tooltipRect.top);
     } else if (arrowOnBottom) {
       // Arrow on bottom edge pointing down to anchor
       final arrowX = (arrowAnchor.dx - tooltipRect.left).clamp(
@@ -343,16 +363,20 @@ class TooltipRenderer {
 
       path.moveTo(tooltipRect.left + borderRadius, tooltipRect.top);
       path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top,
+          tooltipRect.right, tooltipRect.top + borderRadius);
       path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom,
+          tooltipRect.right - borderRadius, tooltipRect.bottom);
       path.lineTo(tooltipRect.left + arrowRight, tooltipRect.bottom);
       path.lineTo(tooltipRect.left + arrowX, arrowBottom); // Arrow point
       path.lineTo(tooltipRect.left + arrowLeft, tooltipRect.bottom);
       path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom,
+          tooltipRect.left, tooltipRect.bottom - borderRadius);
       path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top,
+          tooltipRect.left + borderRadius, tooltipRect.top);
     } else if (arrowOnLeft) {
       // Arrow on left edge pointing left to anchor
       final arrowY = (arrowAnchor.dy - tooltipRect.top).clamp(
@@ -368,13 +392,17 @@ class TooltipRenderer {
       path.lineTo(arrowLeft, tooltipRect.top + arrowY); // Arrow point
       path.lineTo(tooltipRect.left, tooltipRect.top + arrowBottom);
       path.lineTo(tooltipRect.left, tooltipRect.bottom - borderRadius);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left + borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom,
+          tooltipRect.left + borderRadius, tooltipRect.bottom);
       path.lineTo(tooltipRect.right - borderRadius, tooltipRect.bottom);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom,
+          tooltipRect.right, tooltipRect.bottom - borderRadius);
       path.lineTo(tooltipRect.right, tooltipRect.top + borderRadius);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right - borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top,
+          tooltipRect.right - borderRadius, tooltipRect.top);
       path.lineTo(tooltipRect.left + borderRadius, tooltipRect.top);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top,
+          tooltipRect.left, tooltipRect.top + borderRadius);
     } else {
       // arrowOnRight
       // Arrow on right edge pointing right to anchor
@@ -388,16 +416,20 @@ class TooltipRenderer {
 
       path.moveTo(tooltipRect.left + borderRadius, tooltipRect.top);
       path.lineTo(tooltipRect.right - borderRadius, tooltipRect.top);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top, tooltipRect.right, tooltipRect.top + borderRadius);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.top,
+          tooltipRect.right, tooltipRect.top + borderRadius);
       path.lineTo(tooltipRect.right, tooltipRect.top + arrowTop);
       path.lineTo(arrowRight, tooltipRect.top + arrowY); // Arrow point
       path.lineTo(tooltipRect.right, tooltipRect.top + arrowBottom);
       path.lineTo(tooltipRect.right, tooltipRect.bottom - borderRadius);
-      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom, tooltipRect.right - borderRadius, tooltipRect.bottom);
+      path.quadraticBezierTo(tooltipRect.right, tooltipRect.bottom,
+          tooltipRect.right - borderRadius, tooltipRect.bottom);
       path.lineTo(tooltipRect.left + borderRadius, tooltipRect.bottom);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom, tooltipRect.left, tooltipRect.bottom - borderRadius);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.bottom,
+          tooltipRect.left, tooltipRect.bottom - borderRadius);
       path.lineTo(tooltipRect.left, tooltipRect.top + borderRadius);
-      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top, tooltipRect.left + borderRadius, tooltipRect.top);
+      path.quadraticBezierTo(tooltipRect.left, tooltipRect.top,
+          tooltipRect.left + borderRadius, tooltipRect.top);
     }
 
     path.close();

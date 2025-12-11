@@ -560,7 +560,9 @@ class YAxisConfig {
   /// - Shows label for: labelOnly, labelWithUnit, labelAndTickUnit, labelWithUnitAndTickUnit
   /// - Hides label for: tickUnitOnly, tickOnly, none
   bool get shouldShowAxisLabel {
-    return labelDisplay != AxisLabelDisplay.tickUnitOnly && labelDisplay != AxisLabelDisplay.tickOnly && labelDisplay != AxisLabelDisplay.none;
+    return labelDisplay != AxisLabelDisplay.tickUnitOnly &&
+        labelDisplay != AxisLabelDisplay.tickOnly &&
+        labelDisplay != AxisLabelDisplay.none;
   }
 
   /// Returns true if the unit should be appended to the axis label.
@@ -569,7 +571,8 @@ class YAxisConfig {
   /// - Appends unit for: labelWithUnit, labelWithUnitAndTickUnit
   /// - No unit for: labelOnly, labelAndTickUnit, tickUnitOnly, tickOnly, none
   bool get shouldAppendUnitToLabel {
-    return labelDisplay == AxisLabelDisplay.labelWithUnit || labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
+    return labelDisplay == AxisLabelDisplay.labelWithUnit ||
+        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
   }
 
   /// Returns true if the unit should be shown on tick labels.

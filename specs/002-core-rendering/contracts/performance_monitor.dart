@@ -187,7 +187,8 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
   void endFrame() => throw UnimplementedError('TDD: Test first');
 
   @override
-  PerformanceMetrics get currentMetrics => throw UnimplementedError('TDD: Test first');
+  PerformanceMetrics get currentMetrics =>
+      throw UnimplementedError('TDD: Test first');
 
   @override
   void reset() => throw UnimplementedError('TDD: Test first');

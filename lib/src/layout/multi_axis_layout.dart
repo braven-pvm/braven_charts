@@ -67,7 +67,8 @@ class MultiAxisLayoutDelegate {
       if (bounds != null) {
         // Generate representative tick values (nice round numbers) for width measurement.
         // This ensures we measure what will actually be displayed, not raw bounds.
-        final representativeTicks = _generateRepresentativeTicks(bounds.min, bounds.max);
+        final representativeTicks =
+            _generateRepresentativeTicks(bounds.min, bounds.max);
 
         double maxLabelWidth = 0.0;
         for (final tickValue in representativeTicks) {
@@ -126,7 +127,8 @@ class MultiAxisLayoutDelegate {
       // Skip invisible axes - they should not contribute to layout width
       if (!axis.visible) continue;
 
-      if (axis.position == YAxisPosition.leftOuter || axis.position == YAxisPosition.left) {
+      if (axis.position == YAxisPosition.leftOuter ||
+          axis.position == YAxisPosition.left) {
         total += widths[axis.id] ?? 0.0;
       }
     }
@@ -152,7 +154,8 @@ class MultiAxisLayoutDelegate {
       // Skip invisible axes - they should not contribute to layout width
       if (!axis.visible) continue;
 
-      if (axis.position == YAxisPosition.right || axis.position == YAxisPosition.rightOuter) {
+      if (axis.position == YAxisPosition.right ||
+          axis.position == YAxisPosition.rightOuter) {
         total += widths[axis.id] ?? 0.0;
       }
     }
@@ -300,7 +303,9 @@ class MultiAxisLayoutDelegate {
   double _measureAxisLabelHeight(YAxisConfig axis) {
     // Build label text with optional unit suffix (same logic as painter)
     String labelText = axis.label ?? '';
-    if (axis.shouldAppendUnitToLabel && axis.unit != null && axis.unit!.isNotEmpty) {
+    if (axis.shouldAppendUnitToLabel &&
+        axis.unit != null &&
+        axis.unit!.isNotEmpty) {
       labelText = '$labelText (${axis.unit})';
     }
 

@@ -47,10 +47,12 @@ class TickGenerator {
   }) {
     assert(dataMax > dataMin, 'dataMax must be greater than dataMin');
     assert(pixelRange > 0, 'pixelRange must be positive');
-    assert(targetTickCount >= minTickCount, 'targetTickCount must be at least $minTickCount');
+    assert(targetTickCount >= minTickCount,
+        'targetTickCount must be at least $minTickCount');
 
     // Clamp target count to reasonable range
-    final clampedTargetCount = targetTickCount.clamp(minTickCount, maxTickCount);
+    final clampedTargetCount =
+        targetTickCount.clamp(minTickCount, maxTickCount);
 
     // Calculate ideal tick interval
     final dataRange = dataMax - dataMin;
@@ -66,7 +68,9 @@ class TickGenerator {
     final startTick = (dataMin / niceInterval).ceil() * niceInterval;
 
     // Generate ticks up to dataMax
-    for (double value = startTick; value <= dataMax + niceInterval * 0.01; value += niceInterval) {
+    for (double value = startTick;
+        value <= dataMax + niceInterval * 0.01;
+        value += niceInterval) {
       // Skip if outside bounds (with small tolerance for floating point)
       if (value < dataMin - niceInterval * 0.01) continue;
       if (value > dataMax + niceInterval * 0.01) break;
@@ -78,8 +82,12 @@ class TickGenerator {
     // Ensure we have at least 2 ticks
     if (ticks.isEmpty || ticks.length < 2) {
       return [
-        Tick(value: dataMin, label: formatLabel?.call(dataMin) ?? _defaultFormatLabel(dataMin)),
-        Tick(value: dataMax, label: formatLabel?.call(dataMax) ?? _defaultFormatLabel(dataMax)),
+        Tick(
+            value: dataMin,
+            label: formatLabel?.call(dataMin) ?? _defaultFormatLabel(dataMin)),
+        Tick(
+            value: dataMax,
+            label: formatLabel?.call(dataMax) ?? _defaultFormatLabel(dataMax)),
       ];
     }
 

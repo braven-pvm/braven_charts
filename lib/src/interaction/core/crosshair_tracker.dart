@@ -1,4 +1,4 @@
-﻿// Copyright 2025 Braven Charts
+// Copyright 2025 Braven Charts
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -188,7 +188,8 @@ abstract final class CrosshairTracker {
       final interpolationType = _getSeriesInterpolationType(series);
 
       final interpolatedY = switch (interpolationType) {
-        TrackingInterpolation.stepped => leftPoint.y, // Step: use left point's Y
+        TrackingInterpolation.stepped =>
+          leftPoint.y, // Step: use left point's Y
         TrackingInterpolation.linear => _linearInterpolate(
             leftPoint.x,
             leftPoint.y,
@@ -276,14 +277,16 @@ abstract final class CrosshairTracker {
         LineInterpolation.stepped => TrackingInterpolation.stepped,
         LineInterpolation.linear => TrackingInterpolation.linear,
         LineInterpolation.bezier => TrackingInterpolation.bezier,
-        LineInterpolation.monotone => TrackingInterpolation.bezier, // Monotone uses same curve tracking
+        LineInterpolation.monotone =>
+          TrackingInterpolation.bezier, // Monotone uses same curve tracking
       };
     } else if (series is AreaChartSeries) {
       return switch (series.interpolation) {
         LineInterpolation.stepped => TrackingInterpolation.stepped,
         LineInterpolation.linear => TrackingInterpolation.linear,
         LineInterpolation.bezier => TrackingInterpolation.bezier,
-        LineInterpolation.monotone => TrackingInterpolation.bezier, // Monotone uses same curve tracking
+        LineInterpolation.monotone =>
+          TrackingInterpolation.bezier, // Monotone uses same curve tracking
       };
     }
     // Default to linear for other series types (e.g., BarChartSeries)
@@ -351,7 +354,10 @@ abstract final class CrosshairTracker {
     final t2 = t * t;
     final t3 = t2 * t;
 
-    return oneMinusT3 * p1.y + 3 * oneMinusT2 * t * cp1y + 3 * oneMinusT * t2 * cp2y + t3 * p2.y;
+    return oneMinusT3 * p1.y +
+        3 * oneMinusT2 * t * cp1y +
+        3 * oneMinusT * t2 * cp2y +
+        t3 * p2.y;
   }
 
   /// Linear interpolation between two points.

@@ -141,7 +141,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       children: [
         Text(
           'Text Color',
-          style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
@@ -163,7 +166,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       children: [
         Text(
           'Background Color',
-          style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
@@ -185,7 +191,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       children: [
         Text(
           'Border Color',
-          style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
@@ -258,7 +267,8 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
               onTap: () => _showCustomColorPicker(currentColor, onColorChanged),
               borderRadius: BorderRadius.circular(5),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   border: Border.all(color: Colors.grey.shade300),
@@ -268,10 +278,14 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
                   spacing: 5,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
+                    Icon(Icons.palette,
+                        size: 16, color: Colors.deepOrange.shade400),
                     const Text(
                       'Custom',
-                      style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600),
                     ),
                     Container(
                       width: 20,
@@ -304,12 +318,18 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
           children: [
             Text(
               'Text Size',
-              style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
               '${_fontSize.toInt()}px',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800]),
             ),
           ],
         ),
@@ -337,12 +357,18 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
           children: [
             Text(
               'Border Width',
-              style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
               '${_borderWidth.toStringAsFixed(1)}px',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800]),
             ),
           ],
         ),
@@ -370,12 +396,18 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
           children: [
             Text(
               'Border Radius',
-              style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
               '${_borderRadius.toInt()}px',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800]),
             ),
           ],
         ),
@@ -395,7 +427,8 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
     );
   }
 
-  void _showCustomColorPicker(Color currentColor, void Function(Color) onColorChanged) {
+  void _showCustomColorPicker(
+      Color currentColor, void Function(Color) onColorChanged) {
     Color selectedColor = currentColor;
 
     showDialog<bool>(

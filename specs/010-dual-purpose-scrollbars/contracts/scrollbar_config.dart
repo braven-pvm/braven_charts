@@ -90,8 +90,10 @@ class ScrollbarConfig {
     this.maxZoomRatio = 1.0,
   })  : assert(thickness > 0, 'Thickness must be positive'),
         assert(minHandleSize > 0, 'Min handle size must be positive'),
-        assert(edgeGripWidth > 0 && edgeGripWidth < minHandleSize / 2, 'Edge grip width must be positive and less than half min handle size'),
-        assert(minZoomRatio > 0 && minZoomRatio < maxZoomRatio, 'Min zoom ratio must be positive and less than max zoom ratio'),
+        assert(edgeGripWidth > 0 && edgeGripWidth < minHandleSize / 2,
+            'Edge grip width must be positive and less than half min handle size'),
+        assert(minZoomRatio > 0 && minZoomRatio < maxZoomRatio,
+            'Min zoom ratio must be positive and less than max zoom ratio'),
         assert(maxZoomRatio <= 1.0, 'Max zoom ratio must be <= 1.0');
 
   // === Visual Properties ===
@@ -458,7 +460,8 @@ class ScrollbarConfig {
   /// final json = {'thickness': 16.0, 'minHandleSize': 30.0, ...};
   /// final config = ScrollbarConfig.fromJson(json);
   /// ```
-  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) => ScrollbarConfig(
+  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) =>
+      ScrollbarConfig(
         thickness: json['thickness'] as double,
         minHandleSize: json['minHandleSize'] as double,
         trackColor: Color(json['trackColor'] as int),

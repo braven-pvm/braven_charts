@@ -20,13 +20,15 @@ void main() {
 
     group('Configuration Updates', () {
       test('setNormalizationMode returns true when mode changes', () {
-        expect(manager.setNormalizationMode(NormalizationMode.perSeries), isTrue);
+        expect(
+            manager.setNormalizationMode(NormalizationMode.perSeries), isTrue);
         expect(manager.normalizationMode, equals(NormalizationMode.perSeries));
       });
 
       test('setNormalizationMode returns false when mode is same', () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
-        expect(manager.setNormalizationMode(NormalizationMode.perSeries), isFalse);
+        expect(
+            manager.setNormalizationMode(NormalizationMode.perSeries), isFalse);
       });
 
       test('setSeries returns true when series changes', () {
@@ -65,7 +67,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
         expect(manager.hasMultipleYAxes(), isFalse);
@@ -77,13 +80,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
         expect(manager.hasMultipleYAxes(), isTrue);
@@ -95,13 +100,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -125,7 +132,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -140,13 +148,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
           ),
         ]);
 
@@ -160,7 +170,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -175,7 +186,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -186,7 +198,8 @@ void main() {
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -207,7 +220,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -239,7 +253,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'inline_axis', position: YAxisPosition.left),
+            yAxisConfig: YAxisConfig.withId(
+                id: 'inline_axis', position: YAxisPosition.left),
             yAxisId: 'referenced_axis',
           ),
         ]);
@@ -263,7 +278,8 @@ void main() {
             points: const [
               ChartDataPoint(x: 0, y: 50),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1',
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
               position: YAxisPosition.left,
               min: 0,
               max: 100,
@@ -287,7 +303,8 @@ void main() {
               ChartDataPoint(x: 0, y: 10),
               ChartDataPoint(x: 1, y: 90),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -304,7 +321,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -325,7 +343,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 100),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -401,7 +420,8 @@ void main() {
               ChartDataPoint(x: 0, y: 10),
               ChartDataPoint(x: 1, y: 90),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
@@ -410,7 +430,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 1000),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -431,7 +452,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -445,13 +467,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
         info = manager.buildMultiAxisInfo();
@@ -471,7 +495,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 

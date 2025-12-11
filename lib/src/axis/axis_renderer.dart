@@ -4,7 +4,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter/material.dart' show TextPainter, TextSpan, TextDirection;
+import 'package:flutter/material.dart'
+    show TextPainter, TextSpan, TextDirection;
 
 import '../models/chart_theme.dart';
 import '../models/enums.dart';
@@ -45,7 +46,8 @@ class AxisRenderer {
     final ticks = axis.ticks;
 
     // Determine Y position of axis
-    final axisY = config.position == AxisPosition.bottom ? plotArea.bottom : plotArea.top;
+    final axisY =
+        config.position == AxisPosition.bottom ? plotArea.bottom : plotArea.top;
 
     // Draw axis line
     if (config.showAxisLine) {
@@ -81,8 +83,12 @@ class AxisRenderer {
       // Draw tick mark (only if axis line is also visible)
       if (config.showTickMarks && config.showAxisLine) {
         final axisStyle = theme?.axisStyle;
-        final tickY1 = config.position == AxisPosition.bottom ? axisY : axisY - config.tickLength;
-        final tickY2 = config.position == AxisPosition.bottom ? axisY + config.tickLength : axisY;
+        final tickY1 = config.position == AxisPosition.bottom
+            ? axisY
+            : axisY - config.tickLength;
+        final tickY2 = config.position == AxisPosition.bottom
+            ? axisY + config.tickLength
+            : axisY;
 
         canvas.drawLine(
           Offset(x, tickY1),
@@ -100,7 +106,10 @@ class AxisRenderer {
 
         final labelY = config.position == AxisPosition.bottom
             ? axisY + config.tickLength + config.labelPadding
-            : axisY - config.tickLength - config.labelPadding - textPainter.height;
+            : axisY -
+                config.tickLength -
+                config.labelPadding -
+                textPainter.height;
 
         textPainter.paint(
           canvas,
@@ -120,7 +129,10 @@ class AxisRenderer {
       // For bottom axis: place after tick labels with spacing
       // For top axis: place above at top of chart
       final labelY = config.position == AxisPosition.bottom
-          ? axisY + config.tickLength + config.labelPadding + 20 // Between tick labels and scrollbar
+          ? axisY +
+              config.tickLength +
+              config.labelPadding +
+              20 // Between tick labels and scrollbar
           : 12.0; // Top of chart
 
       labelPainter.paint(
@@ -140,7 +152,8 @@ class AxisRenderer {
     final ticks = axis.ticks;
 
     // Determine X position of axis
-    final axisX = config.position == AxisPosition.left ? plotArea.left : plotArea.right;
+    final axisX =
+        config.position == AxisPosition.left ? plotArea.left : plotArea.right;
 
     // Draw axis line
     if (config.showAxisLine) {
@@ -176,8 +189,12 @@ class AxisRenderer {
       // Draw tick mark (only if axis line is also visible)
       if (config.showTickMarks && config.showAxisLine) {
         final axisStyle = theme?.axisStyle;
-        final tickX1 = config.position == AxisPosition.left ? axisX - config.tickLength : axisX;
-        final tickX2 = config.position == AxisPosition.left ? axisX : axisX + config.tickLength;
+        final tickX1 = config.position == AxisPosition.left
+            ? axisX - config.tickLength
+            : axisX;
+        final tickX2 = config.position == AxisPosition.left
+            ? axisX
+            : axisX + config.tickLength;
 
         canvas.drawLine(
           Offset(tickX1, y),
@@ -194,7 +211,10 @@ class AxisRenderer {
         final textPainter = tick.getTextPainter(config.tickLabelStyle);
 
         final labelX = config.position == AxisPosition.left
-            ? axisX - config.tickLength - config.labelPadding - textPainter.width
+            ? axisX -
+                config.tickLength -
+                config.labelPadding -
+                textPainter.width
             : axisX + config.tickLength + config.labelPadding;
 
         textPainter.paint(
@@ -208,7 +228,9 @@ class AxisRenderer {
     if (config.label.isNotEmpty) {
       canvas.save();
 
-      final labelX = (config.position == AxisPosition.left ? 12.0 : chartSize.width - 12).toDouble();
+      final labelX =
+          (config.position == AxisPosition.left ? 12.0 : chartSize.width - 12)
+              .toDouble();
       final labelY = plotArea.top + plotArea.height / 2;
 
       canvas.translate(labelX, labelY.toDouble());

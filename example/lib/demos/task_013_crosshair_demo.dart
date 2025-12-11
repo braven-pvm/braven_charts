@@ -41,7 +41,7 @@ class Task013CrosshairDemo extends StatelessWidget {
       color: const Color(0xFF2196F3), // Blue
       strokeWidth: 2.5,
       yAxisConfig: YAxisConfig(
-              position: YAxisPosition.left,
+        position: YAxisPosition.left,
         unit: 'W',
         min: 0,
         max: 500,
@@ -68,7 +68,7 @@ class Task013CrosshairDemo extends StatelessWidget {
       color: const Color(0xFFF44336), // Red
       strokeWidth: 2.5,
       yAxisConfig: YAxisConfig(
-              position: YAxisPosition.right,
+        position: YAxisPosition.right,
         unit: 'bpm',
         min: 60,
         max: 180,
@@ -106,8 +106,10 @@ class Task013CrosshairDemo extends StatelessWidget {
                       SizedBox(height: 8),
                       Text('✓ Move mouse over chart to see crosshair'),
                       Text('✓ Intersection markers appear on BOTH lines'),
-                      Text('✓ Markers are at correct Y positions (not overlapping)'),
-                      Text('✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"'),
+                      Text(
+                          '✓ Markers are at correct Y positions (not overlapping)'),
+                      Text(
+                          '✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"'),
                       Text('✓ Values are ORIGINAL (not normalized to 0-1)'),
                     ],
                   ),

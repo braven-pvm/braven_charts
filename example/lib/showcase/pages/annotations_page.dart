@@ -175,7 +175,6 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             borderRadius: BorderRadius.circular(5)),
         allowDragging: _allowDragging,
         allowEditing: _allowEditing,
-        
       ));
 
       // Rich text annotation with formatting
@@ -373,7 +372,8 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme:
+                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,

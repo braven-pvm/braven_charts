@@ -199,7 +199,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme:
+                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,
@@ -237,7 +238,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
       name: 'Styled Line',
       points: _data,
       color: Colors.blue,
-      interpolation: _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
+      interpolation:
+          _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
       strokeWidth: 2.5,
       showDataPointMarkers: _optionsController.showDataMarkers,
     );
@@ -283,7 +285,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
       name: 'Styled Area',
       points: _data,
       color: Colors.green,
-      interpolation: _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
+      interpolation:
+          _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
       strokeWidth: 2.5,
       fillOpacity: 0.3,
     );
@@ -363,7 +366,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
             size = 10.0;
           }
           if (color != null) {
-            return point.copyWith(pointStyle: PointStyle(color: color, size: size));
+            return point.copyWith(
+                pointStyle: PointStyle(color: color, size: size));
           }
           return point;
         }).toList();
@@ -445,19 +449,27 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
       StylingMode.gradient => 'Value-based colors',
     };
 
-    final styleType = (_chartType == ChartType.line || _chartType == ChartType.area) ? 'segmentStyle' : 'pointStyle';
+    final styleType =
+        (_chartType == ChartType.line || _chartType == ChartType.area)
+            ? 'segmentStyle'
+            : 'pointStyle';
 
     return '$modeDesc • Uses $styleType';
   }
 
   Widget _buildStatusPanel() {
-    final styleType = (_chartType == ChartType.line || _chartType == ChartType.area) ? 'Segment' : 'Point';
+    final styleType =
+        (_chartType == ChartType.line || _chartType == ChartType.area)
+            ? 'Segment'
+            : 'Point';
 
     return StatusPanel(
       items: [
         StatusItem(
           label: 'Data Points',
-          value: _chartType == ChartType.bar ? '${(_data.length / 4).floor()}' : '${_data.length}',
+          value: _chartType == ChartType.bar
+              ? '${(_data.length / 4).floor()}'
+              : '${_data.length}',
         ),
         StatusItem(
           label: 'Style Type',

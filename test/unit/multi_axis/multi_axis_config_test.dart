@@ -51,7 +51,8 @@ void main() {
 
     group('getAxisById', () {
       test('returns axis when found', () {
-        final powerAxis = YAxisConfig.withId(id: 'power', position: YAxisPosition.left);
+        final powerAxis =
+            YAxisConfig.withId(id: 'power', position: YAxisPosition.left);
         final config = MultiAxisConfig(axes: [powerAxis]);
 
         final result = config.getAxisById('power');
@@ -75,7 +76,8 @@ void main() {
           axes: [
             YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
             YAxisConfig.withId(id: 'hr', position: YAxisPosition.right),
-            YAxisConfig.withId(id: 'cadence', position: YAxisPosition.rightOuter),
+            YAxisConfig.withId(
+                id: 'cadence', position: YAxisPosition.rightOuter),
           ],
         );
 
@@ -124,7 +126,8 @@ void main() {
         expect(result, isNull);
       });
 
-      test('returns null when axis not found (binding exists but axis missing)', () {
+      test('returns null when axis not found (binding exists but axis missing)',
+          () {
         const config = MultiAxisConfig(
           axes: [], // No axes defined
           bindings: [
@@ -192,7 +195,8 @@ void main() {
         final result = config.getBindingsForAxis('shared-axis');
 
         expect(result.length, equals(2));
-        expect(result.map((b) => b.seriesId).toList(), containsAll(['power', 'cadence']));
+        expect(result.map((b) => b.seriesId).toList(),
+            containsAll(['power', 'cadence']));
       });
 
       test('returns empty list for non-existent axis', () {
@@ -238,7 +242,10 @@ void main() {
         );
 
         final modified = original.copyWith(
-          axes: [YAxisConfig.withId(id: 'new-axis', position: YAxisPosition.leftOuter)],
+          axes: [
+            YAxisConfig.withId(
+                id: 'new-axis', position: YAxisPosition.leftOuter)
+          ],
         );
 
         expect(modified.axes.length, equals(1));
@@ -257,7 +264,9 @@ void main() {
 
     group('equality', () {
       test('same config is equal', () {
-        final axes = [YAxisConfig.withId(id: 'power', position: YAxisPosition.left)];
+        final axes = [
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left)
+        ];
         const bindings = [SeriesAxisBinding(seriesId: 'p', yAxisId: 'power')];
 
         final config1 = MultiAxisConfig(

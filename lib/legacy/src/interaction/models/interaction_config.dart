@@ -68,7 +68,8 @@ class GestureConfig {
   }
 
   @override
-  int get hashCode => Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
+  int get hashCode =>
+      Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
 }
 
 /// Configuration for keyboard navigation.
@@ -147,7 +148,8 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys, enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys,
+      enablePlusMinusKeys, enableHomeEndKeys);
 }
 
 /// Comprehensive interaction configuration for charts.

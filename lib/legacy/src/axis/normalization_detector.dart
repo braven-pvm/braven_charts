@@ -57,7 +57,10 @@ class SeriesRange {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SeriesRange && other.seriesId == seriesId && other.min == min && other.max == max;
+    return other is SeriesRange &&
+        other.seriesId == seriesId &&
+        other.min == min &&
+        other.max == max;
   }
 
   @override

@@ -62,10 +62,12 @@ class AnnotationContextMenu {
     void Function(PointAnnotation)? onSavePointAnnotation,
     void Function(RangeAnnotation)? onSaveRangeAnnotation,
     void Function(String annotationId)? onDeleteTextAnnotation,
-    void Function(String seriesId, String annotationId)? onDeletePointAnnotation,
+    void Function(String seriesId, String annotationId)?
+        onDeletePointAnnotation,
     void Function(String annotationId)? onDeleteRangeAnnotation,
   }) async {
-    final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    final RenderBox? overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
     if (overlay == null) return;
 
     final RelativeRect menuPosition = RelativeRect.fromRect(
@@ -74,7 +76,9 @@ class AnnotationContextMenu {
     );
 
     // Determine if we're editing or adding
-    final isEditMode = existingTextAnnotation != null || existingPointAnnotation != null || existingRangeAnnotation != null;
+    final isEditMode = existingTextAnnotation != null ||
+        existingPointAnnotation != null ||
+        existingRangeAnnotation != null;
 
     final result = await showMenu<String>(
       context: context,
@@ -91,7 +95,9 @@ class AnnotationContextMenu {
         minWidth: 140,
         maxWidth: 180,
       ),
-      items: isEditMode ? _buildEditMenuItems(context, contextType) : _buildAddMenuItems(context, contextType),
+      items: isEditMode
+          ? _buildEditMenuItems(context, contextType)
+          : _buildAddMenuItems(context, contextType),
     );
 
     if (!context.mounted) return;
@@ -106,7 +112,9 @@ class AnnotationContextMenu {
         );
         break;
       case 'add_point':
-        if (seriesId != null && dataPointIndex != null && onSavePointAnnotation != null) {
+        if (seriesId != null &&
+            dataPointIndex != null &&
+            onSavePointAnnotation != null) {
           await _showAddPointDialog(
             context: context,
             seriesId: seriesId,
@@ -131,13 +139,15 @@ class AnnotationContextMenu {
             availableSeriesIds: availableSeriesIds,
             onSave: onSaveTextAnnotation,
           );
-        } else if (existingPointAnnotation != null && onSavePointAnnotation != null) {
+        } else if (existingPointAnnotation != null &&
+            onSavePointAnnotation != null) {
           await _showEditPointDialog(
             context: context,
             annotation: existingPointAnnotation,
             onSave: onSavePointAnnotation,
           );
-        } else if (existingRangeAnnotation != null && onSaveRangeAnnotation != null) {
+        } else if (existingRangeAnnotation != null &&
+            onSaveRangeAnnotation != null) {
           await _showEditRangeDialog(
             context: context,
             annotation: existingRangeAnnotation,
@@ -148,16 +158,20 @@ class AnnotationContextMenu {
       case 'delete':
         if (existingTextAnnotation != null && onDeleteTextAnnotation != null) {
           onDeleteTextAnnotation(existingTextAnnotation.id);
-        } else if (existingPointAnnotation != null && onDeletePointAnnotation != null) {
-          onDeletePointAnnotation(existingPointAnnotation.seriesId, existingPointAnnotation.id);
-        } else if (existingRangeAnnotation != null && onDeleteRangeAnnotation != null) {
+        } else if (existingPointAnnotation != null &&
+            onDeletePointAnnotation != null) {
+          onDeletePointAnnotation(
+              existingPointAnnotation.seriesId, existingPointAnnotation.id);
+        } else if (existingRangeAnnotation != null &&
+            onDeleteRangeAnnotation != null) {
           onDeleteRangeAnnotation(existingRangeAnnotation.id);
         }
         break;
     }
   }
 
-  static List<PopupMenuEntry<String>> _buildAddMenuItems(BuildContext context, AnnotationContextType contextType) {
+  static List<PopupMenuEntry<String>> _buildAddMenuItems(
+      BuildContext context, AnnotationContextType contextType) {
     if (contextType == AnnotationContextType.pointAnnotation) {
       // Point annotation context - only show point option
       return [
@@ -245,7 +259,8 @@ class AnnotationContextMenu {
     }
   }
 
-  static List<PopupMenuEntry<String>> _buildEditMenuItems(BuildContext context, AnnotationContextType contextType) {
+  static List<PopupMenuEntry<String>> _buildEditMenuItems(
+      BuildContext context, AnnotationContextType contextType) {
     String editLabel;
     if (contextType == AnnotationContextType.pointAnnotation) {
       editLabel = 'Edit Point Annotation';

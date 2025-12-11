@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Auto-Detection Widget Tests', () {
-    testWidgets('detects normalization need for >10x range difference', (tester) async {
+    testWidgets('detects normalization need for >10x range difference',
+        (tester) async {
       // Power: 0-4000W range = 4000
       // Heart rate: 60-180bpm range = 120
       // Ratio: 4000/120 = 33x (>10x threshold for auto-detection)
@@ -21,7 +22,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 4000), // Large range: 0-4000
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -32,7 +34,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 180), // Small range: 60-180
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),
@@ -68,7 +71,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 200), // Small range: 100-200
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -79,7 +83,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 180), // Similar range: 60-180
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),
@@ -112,7 +117,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 4000), // Large range: 0-4000
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -123,7 +129,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 180), // Small range: 60-180
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),
@@ -141,7 +148,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('respects NormalizationMode.perSeries override', (tester) async {
+    testWidgets('respects NormalizationMode.perSeries override',
+        (tester) async {
       // Force normalization even with similar ranges
 
       await tester.pumpWidget(
@@ -156,7 +164,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 200), // Small range
                   ],
                   color: Colors.blue,
-                  yAxisConfig: YAxisConfig.withId(id: 'power-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'power-axis',
                     position: YAxisPosition.left,
                   ),
                 ),
@@ -167,7 +176,8 @@ void main() {
                     ChartDataPoint(x: 1, y: 180), // Similar range
                   ],
                   color: Colors.red,
-                  yAxisConfig: YAxisConfig.withId(id: 'hr-axis',
+                  yAxisConfig: YAxisConfig.withId(
+                    id: 'hr-axis',
                     position: YAxisPosition.right,
                   ),
                 ),

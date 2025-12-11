@@ -54,11 +54,12 @@ class YAxisConfig {
     this.maxWidth = 80.0,
     this.tickCount,
     this.labelFormatter,
-  }) : assert(id.isNotEmpty, 'id must be non-empty'),
-       assert(minWidth > 0, 'minWidth must be positive'),
-       assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
-       assert(min == null || max == null || min < max, 'min must be less than max'),
-       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
+  })  : assert(id.isNotEmpty, 'id must be non-empty'),
+        assert(minWidth > 0, 'minWidth must be positive'),
+        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
+        assert(min == null || max == null || min < max,
+            'min must be less than max'),
+        assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 
   /// Unique identifier for axis binding.
   ///

@@ -13,7 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// - MUST work for both horizontal and vertical scrollbars
 void main() {
   group('ScrollbarHitTest - CONTRACT', () {
-    test('MUST detect left edge zone when hit within first edgeGripWidth pixels', () {
+    test(
+        'MUST detect left edge zone when hit within first edgeGripWidth pixels',
+        () {
       // ARRANGE: Handle at position 100-200px, edgeGripWidth=8px
       const handleStart = 100.0;
       const handleEnd = 200.0;
@@ -23,11 +25,14 @@ void main() {
       const hitPosition = 105.0;
 
       // ASSERT: Should detect leftEdge zone
-      final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
+      final zone =
+          _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.leftEdge));
     });
 
-    test('MUST detect right edge zone when hit within last edgeGripWidth pixels', () {
+    test(
+        'MUST detect right edge zone when hit within last edgeGripWidth pixels',
+        () {
       // ARRANGE: Handle at position 100-200px, edgeGripWidth=8px
       const handleStart = 100.0;
       const handleEnd = 200.0;
@@ -37,7 +42,8 @@ void main() {
       const hitPosition = 195.0;
 
       // ASSERT: Should detect rightEdge zone
-      final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
+      final zone =
+          _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.rightEdge));
     });
 
@@ -51,11 +57,14 @@ void main() {
       const hitPosition = 150.0;
 
       // ASSERT: Should detect center zone
-      final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
+      final zone =
+          _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.center));
     });
 
-    test('MUST prioritize left edge over center when hit is exactly at boundary', () {
+    test(
+        'MUST prioritize left edge over center when hit is exactly at boundary',
+        () {
       // ARRANGE: Handle at position 100-200px, edgeGripWidth=8px
       const handleStart = 100.0;
       const handleEnd = 200.0;
@@ -65,11 +74,14 @@ void main() {
       const hitPosition = 108.0;
 
       // ASSERT: Should detect leftEdge (inclusive boundary)
-      final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
+      final zone =
+          _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.leftEdge));
     });
 
-    test('MUST prioritize right edge over center when hit is exactly at boundary', () {
+    test(
+        'MUST prioritize right edge over center when hit is exactly at boundary',
+        () {
       // ARRANGE: Handle at position 100-200px, edgeGripWidth=8px
       const handleStart = 100.0;
       const handleEnd = 200.0;
@@ -79,7 +91,8 @@ void main() {
       const hitPosition = 192.0;
 
       // ASSERT: Should detect rightEdge (inclusive boundary)
-      final zone = _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
+      final zone =
+          _detectHitZone(hitPosition, handleStart, handleEnd, edgeGripWidth);
       expect(zone, equals(HitTestZone.rightEdge));
     });
 
@@ -91,13 +104,16 @@ void main() {
       const edgeGripWidth = 8.0;
 
       // ACT & ASSERT: Left edge zone (100-108)
-      expect(_detectHitZone(105.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.leftEdge));
+      expect(_detectHitZone(105.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.leftEdge));
 
       // ACT & ASSERT: Small center zone (108-112)
-      expect(_detectHitZone(110.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.center));
+      expect(_detectHitZone(110.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.center));
 
       // ACT & ASSERT: Right edge zone (112-120)
-      expect(_detectHitZone(115.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.rightEdge));
+      expect(_detectHitZone(115.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.rightEdge));
     });
 
     test('MUST return none when hit is outside handle bounds', () {
@@ -107,10 +123,12 @@ void main() {
       const edgeGripWidth = 8.0;
 
       // ACT & ASSERT: Hit before handle start
-      expect(_detectHitZone(50.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.none));
+      expect(_detectHitZone(50.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.none));
 
       // ACT & ASSERT: Hit after handle end
-      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.none));
+      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.none));
     });
 
     test('MUST work for vertical scrollbar (hit on Y-axis)', () {
@@ -121,14 +139,19 @@ void main() {
 
       // ACT & ASSERT: Top edge (leftEdge in horizontal becomes topEdge in vertical)
       expect(
-          _detectHitZone(205.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.leftEdge)); // "leftEdge" represents "topEdge" for vertical
+          _detectHitZone(205.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone
+              .leftEdge)); // "leftEdge" represents "topEdge" for vertical
 
       // ACT & ASSERT: Bottom edge
-      expect(_detectHitZone(295.0, handleStart, handleEnd, edgeGripWidth),
-          equals(HitTestZone.rightEdge)); // "rightEdge" represents "bottomEdge" for vertical
+      expect(
+          _detectHitZone(295.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone
+              .rightEdge)); // "rightEdge" represents "bottomEdge" for vertical
 
       // ACT & ASSERT: Center
-      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth), equals(HitTestZone.center));
+      expect(_detectHitZone(250.0, handleStart, handleEnd, edgeGripWidth),
+          equals(HitTestZone.center));
     });
   });
 }

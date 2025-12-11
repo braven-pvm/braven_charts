@@ -333,7 +333,8 @@ class PointAnnotationDefaults {
     ),
   );
 
-  static const PointAnnotationDefaults colorblindFriendly = PointAnnotationDefaults(
+  static const PointAnnotationDefaults colorblindFriendly =
+      PointAnnotationDefaults(
     markerShape: MarkerShape.diamond,
     markerSize: 9.0,
     normalColor: Color(0xFF0173B2), // Blue (Okabe-Ito)
@@ -603,7 +604,8 @@ class RangeAnnotationDefaults {
     ),
   );
 
-  static const RangeAnnotationDefaults colorblindFriendly = RangeAnnotationDefaults(
+  static const RangeAnnotationDefaults colorblindFriendly =
+      RangeAnnotationDefaults(
     normalFillColor: Color(0x33DE8F05), // 20% orange (Okabe-Ito)
     selectedFillColor: Color(0x4DDE8F05), // 30% orange
     hoveredFillColor: Color(0x40F0A030), // 25% light orange
@@ -799,7 +801,8 @@ class TextAnnotationDefaults {
     padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
   );
 
-  static const TextAnnotationDefaults colorblindFriendly = TextAnnotationDefaults(
+  static const TextAnnotationDefaults colorblindFriendly =
+      TextAnnotationDefaults(
     textStyle: TextStyle(
       fontSize: 14.0,
       fontFamily: 'Roboto',
@@ -880,7 +883,8 @@ class ThresholdAnnotationDefaults {
     );
   }
 
-  static const ThresholdAnnotationDefaults defaultLight = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults defaultLight =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFF44336), // Red
     lineWidth: 2.0,
     dashPattern: [5.0, 3.0],
@@ -899,7 +903,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults defaultDark = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults defaultDark =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFEF5350), // Light red
     lineWidth: 2.0,
     dashPattern: [5.0, 3.0],
@@ -918,7 +923,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults corporateBlue = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults corporateBlue =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFD32F2F), // Dark red
     lineWidth: 2.5,
     dashPattern: [6.0, 3.0],
@@ -937,7 +943,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults vibrant = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults vibrant =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFFF5722), // Deep orange
     lineWidth: 3.0,
     dashPattern: [8.0, 4.0],
@@ -956,7 +963,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults minimal = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults minimal =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFF757575), // Grey
     lineWidth: 1.5,
     dashPattern: [4.0, 2.0],
@@ -975,7 +983,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults highContrast = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults highContrast =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFFF0000), // Pure red
     lineWidth: 4.0,
     dashPattern: [],
@@ -994,7 +1003,8 @@ class ThresholdAnnotationDefaults {
     ),
   );
 
-  static const ThresholdAnnotationDefaults colorblindFriendly = ThresholdAnnotationDefaults(
+  static const ThresholdAnnotationDefaults colorblindFriendly =
+      ThresholdAnnotationDefaults(
     lineColor: Color(0xFFCC78BC), // Pink (Okabe-Ito)
     lineWidth: 2.5,
     dashPattern: [6.0, 3.0],
@@ -1210,7 +1220,8 @@ class TrendAnnotationDefaults {
     ),
   );
 
-  static const TrendAnnotationDefaults colorblindFriendly = TrendAnnotationDefaults(
+  static const TrendAnnotationDefaults colorblindFriendly =
+      TrendAnnotationDefaults(
     lineColor: Color(0xFF029E73), // Teal (Okabe-Ito)
     lineWidth: 2.5,
     dashPattern: [6.0, 4.0],
@@ -1244,7 +1255,8 @@ class TrendAnnotationDefaults {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       confidenceBandColor: confidenceBandColor ?? this.confidenceBandColor,
-      confidenceBandOpacity: confidenceBandOpacity ?? this.confidenceBandOpacity,
+      confidenceBandOpacity:
+          confidenceBandOpacity ?? this.confidenceBandOpacity,
       labelStyle: labelStyle ?? this.labelStyle,
     );
   }

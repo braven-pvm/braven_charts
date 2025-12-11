@@ -1,7 +1,8 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Axis System
 
-import 'package:flutter/material.dart' show TextPainter, TextSpan, TextStyle, TextDirection;
+import 'package:flutter/material.dart'
+    show TextPainter, TextSpan, TextStyle, TextDirection;
 
 /// Represents a tick mark on an axis.
 ///
@@ -53,7 +54,11 @@ class Tick {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Tick && runtimeType == other.runtimeType && value == other.value && label == other.label && isMajor == other.isMajor;
+      other is Tick &&
+          runtimeType == other.runtimeType &&
+          value == other.value &&
+          label == other.label &&
+          isMajor == other.isMajor;
 
   @override
   int get hashCode => Object.hash(value, label, isMajor);

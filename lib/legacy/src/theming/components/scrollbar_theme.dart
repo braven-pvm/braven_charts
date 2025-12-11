@@ -75,7 +75,10 @@ class ScrollbarTheme {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is ScrollbarTheme && xAxisScrollbar == other.xAxisScrollbar && yAxisScrollbar == other.yAxisScrollbar;
+      identical(this, other) ||
+      other is ScrollbarTheme &&
+          xAxisScrollbar == other.xAxisScrollbar &&
+          yAxisScrollbar == other.yAxisScrollbar;
 
   @override
   int get hashCode => Object.hash(xAxisScrollbar, yAxisScrollbar);

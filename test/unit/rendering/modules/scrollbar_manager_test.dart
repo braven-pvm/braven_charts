@@ -223,7 +223,9 @@ void main() {
         expect(manager.scrollbarsVisible, isTrue);
       });
 
-      test('setScrollbarTheme with autoHide true respects viewport modification', () {
+      test(
+          'setScrollbarTheme with autoHide true respects viewport modification',
+          () {
         // First set up a modified viewport
         delegate.setTransform(defaultTransform.copyWith(dataXMin: 10));
         manager.setScrollbarsVisible(false);
@@ -235,7 +237,9 @@ void main() {
         expect(manager.scrollbarsVisible, isTrue);
       });
 
-      test('setScrollbarTheme with autoHide true hides if viewport not modified', () {
+      test(
+          'setScrollbarTheme with autoHide true hides if viewport not modified',
+          () {
         // Viewport matches original - not modified
         manager.setScrollbarsVisible(true);
 

@@ -58,7 +58,8 @@ class ChartTheme {
     // Deprecated fields for backward compatibility
     @Deprecated('Use gridStyle.majorColor instead') Color? gridColor,
     @Deprecated('Use axisStyle.lineColor instead') Color? axisColor,
-    @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead') Color? textColor,
+    @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead')
+    Color? textColor,
     @Deprecated('Use seriesTheme.colors instead') List<Color>? seriesColors,
   })  : _gridColor = gridColor,
         _axisColor = axisColor,
@@ -118,7 +119,8 @@ class ChartTheme {
   Color get axisColor => _axisColor ?? axisStyle.lineColor;
 
   @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead')
-  Color get textColor => _textColor ?? axisStyle.labelStyle.color ?? Colors.black87;
+  Color get textColor =>
+      _textColor ?? axisStyle.labelStyle.color ?? Colors.black87;
 
   @Deprecated('Use seriesTheme.colors instead')
   List<Color> get seriesColors => _seriesColors ?? seriesTheme.colors;

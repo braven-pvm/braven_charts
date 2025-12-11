@@ -97,7 +97,8 @@ class SimulatedSeries extends ChartElement {
 
   @override
   bool hitTest(Offset position) {
-    return LineHitStrategy(points: points, tolerance: hitTolerance).test(position);
+    return LineHitStrategy(points: points, tolerance: hitTolerance)
+        .test(position);
   }
 
   @override
@@ -110,7 +111,8 @@ class SimulatedSeries extends ChartElement {
         : isHovered
             ? color.withOpacity(0.8)
             : color.withOpacity(0.6);
-    final lineWidth = (isSelected || isHovered) ? strokeWidth + 1.0 : strokeWidth;
+    final lineWidth =
+        (isSelected || isHovered) ? strokeWidth + 1.0 : strokeWidth;
 
     final paint = Paint()
       ..color = lineColor

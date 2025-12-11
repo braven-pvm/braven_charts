@@ -184,7 +184,8 @@ class RenderOrder {
   static const int textAnnotation = 1;
 
   /// Pin annotations (coordinate-based markers, render on top of text).
-  static const int pinAnnotation = 5; // Same as text - both are foreground labels
+  static const int pinAnnotation =
+      5; // Same as text - both are foreground labels
 
   // ============================================================================
   // CONTROLS (6-7) - UI controls always on top

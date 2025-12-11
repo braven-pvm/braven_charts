@@ -135,7 +135,8 @@ class ViewportBounds {
     required this.yRange,
   });
 
-  bool contains(ChartDataPoint point) => xRange.contains(point.x) && yRange.contains(point.y);
+  bool contains(ChartDataPoint point) =>
+      xRange.contains(point.x) && yRange.contains(point.y);
 }
 
 /// BatchProcessor Contract (FR-002.3)
@@ -234,7 +235,8 @@ class _BatchProcessorImpl<T, K> implements BatchProcessor<T, K> {
   int get batchSize => throw UnimplementedError('Contract only');
 
   @override
-  Map<K, List<T>> batch(List<T> items) => throw UnimplementedError('Contract only');
+  Map<K, List<T>> batch(List<T> items) =>
+      throw UnimplementedError('Contract only');
 
   @override
   void processBatches(

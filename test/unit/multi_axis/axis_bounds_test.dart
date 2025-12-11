@@ -84,7 +84,8 @@ void main() {
 
       test('respects explicit min from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'power', position: YAxisPosition.left, min: 0.0),
+          YAxisConfig.withId(
+              id: 'power', position: YAxisPosition.left, min: 0.0),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -105,7 +106,8 @@ void main() {
 
       test('respects explicit max from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'power', position: YAxisPosition.left, max: 500.0),
+          YAxisConfig.withId(
+              id: 'power', position: YAxisPosition.left, max: 500.0),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -126,7 +128,8 @@ void main() {
 
       test('respects both explicit min and max from YAxisConfig', () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'power',
+          YAxisConfig.withId(
+            id: 'power',
             position: YAxisPosition.left,
             min: 0.0,
             max: 400.0,
@@ -172,11 +175,13 @@ void main() {
 
       test('handles mixed explicit and auto bounds across axes', () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'power',
+          YAxisConfig.withId(
+            id: 'power',
             position: YAxisPosition.left,
             min: 0.0,
           ), // explicit min only
-          YAxisConfig.withId(id: 'heartRate',
+          YAxisConfig.withId(
+            id: 'heartRate',
             position: YAxisPosition.right,
             max: 200.0,
           ), // explicit max only
@@ -281,7 +286,8 @@ void main() {
 
       test('uses custom default axis id', () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'custom-default', position: YAxisPosition.left),
+          YAxisConfig.withId(
+              id: 'custom-default', position: YAxisPosition.left),
         ];
         final bindings = <SeriesAxisBinding>[];
         final seriesYValues = {
@@ -444,9 +450,11 @@ void main() {
         expect(bounds['power']!.max, equals(199.0)); // series99 max
       });
 
-      test('explicit config bounds override data even if outside data range', () {
+      test('explicit config bounds override data even if outside data range',
+          () {
         final axisConfigs = [
-          YAxisConfig.withId(id: 'power',
+          YAxisConfig.withId(
+            id: 'power',
             position: YAxisPosition.left,
             min: -100.0, // Below all data
             max: 1000.0, // Above all data

@@ -60,8 +60,13 @@ class AxisStyle {
   static const AxisStyle defaultLight = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 1.0,
-    textStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
-    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
+    textStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
+    titleStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF000000)),
     tickLength: 6.0,
     tickColor: Color(0xFF000000),
     tickWidth: 1.0,
@@ -70,8 +75,13 @@ class AxisStyle {
   static const AxisStyle defaultDark = AxisStyle(
     lineColor: Color(0xFFFFFFFF),
     lineWidth: 1.0,
-    textStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
-    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFFFFFFFF)),
+    textStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
+    titleStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFFFFFFFF)),
     tickLength: 6.0,
     tickColor: Color(0xFFFFFFFF),
     tickWidth: 1.0,
@@ -80,8 +90,13 @@ class AxisStyle {
   static const AxisStyle corporateBlue = AxisStyle(
     lineColor: Color(0xFF37474F),
     lineWidth: 1.0,
-    textStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
-    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF1976D2)),
+    textStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
+    titleStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF1976D2)),
     tickLength: 6.0,
     tickColor: Color(0xFF37474F),
     tickWidth: 1.0,
@@ -90,8 +105,16 @@ class AxisStyle {
   static const AxisStyle vibrant = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 2.0,
-    textStyle: TextStyle(fontSize: 13.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
-    titleStyle: TextStyle(fontSize: 16.0, fontFamily: 'Roboto', fontWeight: FontWeight.bold, color: Color(0xFF000000)),
+    textStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF000000)),
+    titleStyle: TextStyle(
+        fontSize: 16.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF000000)),
     tickLength: 8.0,
     tickColor: Color(0xFF000000),
     tickWidth: 1.5,
@@ -100,8 +123,13 @@ class AxisStyle {
   static const AxisStyle minimal = AxisStyle(
     lineColor: Color(0xFF9E9E9E),
     lineWidth: 0.5,
-    textStyle: TextStyle(fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
-    titleStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', fontWeight: FontWeight.w400, color: Color(0xFF424242)),
+    textStyle: TextStyle(
+        fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
+    titleStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w400,
+        color: Color(0xFF424242)),
     tickLength: 4.0,
     tickColor: Color(0xFF9E9E9E),
     tickWidth: 0.5,
@@ -110,8 +138,16 @@ class AxisStyle {
   static const AxisStyle highContrast = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 2.0,
-    textStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF000000)),
-    titleStyle: TextStyle(fontSize: 16.0, fontFamily: 'Roboto', fontWeight: FontWeight.bold, color: Color(0xFF000000)),
+    textStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF000000)),
+    titleStyle: TextStyle(
+        fontSize: 16.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF000000)),
     tickLength: 8.0,
     tickColor: Color(0xFF000000),
     tickWidth: 2.0,
@@ -120,8 +156,16 @@ class AxisStyle {
   static const AxisStyle colorblindFriendly = AxisStyle(
     lineColor: Color(0xFF000000),
     lineWidth: 1.5,
-    textStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
-    titleStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF000000)),
+    textStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF000000)),
+    titleStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF000000)),
     tickLength: 6.0,
     tickColor: Color(0xFF000000),
     tickWidth: 1.0,
@@ -158,13 +202,17 @@ class AxisStyle {
       'textStyle': {
         'fontSize': textStyle.fontSize,
         'fontFamily': textStyle.fontFamily,
-        'color': textStyle.color != null ? '#${textStyle.color!.value.toRadixString(16).padLeft(8, '0')}' : null,
+        'color': textStyle.color != null
+            ? '#${textStyle.color!.value.toRadixString(16).padLeft(8, '0')}'
+            : null,
         'fontWeight': textStyle.fontWeight?.toString(),
       },
       'titleStyle': {
         'fontSize': titleStyle.fontSize,
         'fontFamily': titleStyle.fontFamily,
-        'color': titleStyle.color != null ? '#${titleStyle.color!.value.toRadixString(16).padLeft(8, '0')}' : null,
+        'color': titleStyle.color != null
+            ? '#${titleStyle.color!.value.toRadixString(16).padLeft(8, '0')}'
+            : null,
         'fontWeight': titleStyle.fontWeight?.toString(),
       },
       'tickLength': tickLength,
@@ -176,12 +224,16 @@ class AxisStyle {
   static AxisStyle fromJson(Map<String, dynamic> json) {
     return AxisStyle(
       lineColor: _parseColor(json['lineColor']) ?? defaultLight.lineColor,
-      lineWidth: (json['lineWidth'] as num?)?.toDouble() ?? defaultLight.lineWidth,
+      lineWidth:
+          (json['lineWidth'] as num?)?.toDouble() ?? defaultLight.lineWidth,
       textStyle: _parseTextStyle(json['textStyle']) ?? defaultLight.textStyle,
-      titleStyle: _parseTextStyle(json['titleStyle']) ?? defaultLight.titleStyle,
-      tickLength: (json['tickLength'] as num?)?.toDouble() ?? defaultLight.tickLength,
+      titleStyle:
+          _parseTextStyle(json['titleStyle']) ?? defaultLight.titleStyle,
+      tickLength:
+          (json['tickLength'] as num?)?.toDouble() ?? defaultLight.tickLength,
       tickColor: _parseColor(json['tickColor']) ?? defaultLight.tickColor,
-      tickWidth: (json['tickWidth'] as num?)?.toDouble() ?? defaultLight.tickWidth,
+      tickWidth:
+          (json['tickWidth'] as num?)?.toDouble() ?? defaultLight.tickWidth,
     );
   }
 

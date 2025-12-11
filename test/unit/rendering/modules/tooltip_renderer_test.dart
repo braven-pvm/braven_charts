@@ -364,7 +364,8 @@ void main() {
         ];
 
         const effectiveBindings = [
-          SeriesAxisBinding(seriesId: 'test-series', yAxisId: 'test-series_axis'),
+          SeriesAxisBinding(
+              seriesId: 'test-series', yAxisId: 'test-series_axis'),
         ];
 
         expect(

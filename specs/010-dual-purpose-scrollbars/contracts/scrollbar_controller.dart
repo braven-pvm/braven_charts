@@ -390,7 +390,9 @@ class ScrollbarController {
     switch (zone) {
       case HitTestZone.leftEdge:
       case HitTestZone.rightEdge:
-        return axis == Axis.horizontal ? SystemMouseCursors.resizeColumn : SystemMouseCursors.resizeRow;
+        return axis == Axis.horizontal
+            ? SystemMouseCursors.resizeColumn
+            : SystemMouseCursors.resizeRow;
       case HitTestZone.topEdge:
       case HitTestZone.bottomEdge:
         return SystemMouseCursors.resizeRow;

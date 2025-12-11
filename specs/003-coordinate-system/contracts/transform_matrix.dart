@@ -159,10 +159,14 @@ class TransformMatrix {
     final yVec = Float32x4(points[0].y, points[1].y, points[2].y, points[3].y);
 
     // Apply matrix in parallel: x' = x * m00 + y * m01 + m02
-    final xPrime = xVec.scale(_values[0]) + yVec.scale(_values[3]) + Float32x4.splat(_values[6]);
+    final xPrime = xVec.scale(_values[0]) +
+        yVec.scale(_values[3]) +
+        Float32x4.splat(_values[6]);
 
     // y' = x * m10 + y * m11 + m12
-    final yPrime = xVec.scale(_values[1]) + yVec.scale(_values[4]) + Float32x4.splat(_values[7]);
+    final yPrime = xVec.scale(_values[1]) +
+        yVec.scale(_values[4]) +
+        Float32x4.splat(_values[7]);
 
     // Extract results
     return [
@@ -190,7 +194,8 @@ class TransformMatrix {
 
     final det = a * d - b * c;
     if (det == 0.0) {
-      throw ArgumentError('Matrix is singular (determinant = 0), cannot invert');
+      throw ArgumentError(
+          'Matrix is singular (determinant = 0), cannot invert');
     }
 
     final invDet = 1.0 / det;

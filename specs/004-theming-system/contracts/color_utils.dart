@@ -96,7 +96,9 @@ class ColorUtils {
   static Color autoContrastText(Color background) {
     final whiteContrast = contrastRatio(const Color(0xFFFFFFFF), background);
     final blackContrast = contrastRatio(const Color(0xFF000000), background);
-    return whiteContrast > blackContrast ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
+    return whiteContrast > blackContrast
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFF000000);
   }
 
   // ========== Colorblind Simulation ==========

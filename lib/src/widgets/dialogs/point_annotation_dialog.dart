@@ -80,7 +80,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
         backgroundColor: pointDefaults.labelStyle.backgroundColor,
         borderColor: pointDefaults.labelStyle.borderColor,
         borderWidth: pointDefaults.labelStyle.borderWidth,
-        borderRadius: BorderRadius.circular(pointDefaults.labelStyle.borderRadius),
+        borderRadius:
+            BorderRadius.circular(pointDefaults.labelStyle.borderRadius),
         padding: pointDefaults.labelStyle.padding,
       );
     } else {
@@ -162,7 +163,9 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      isEditMode ? 'Edit Point Annotation' : 'Add Point Annotation',
+                      isEditMode
+                          ? 'Edit Point Annotation'
+                          : 'Add Point Annotation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -230,7 +233,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
                     FilledButton(
                       onPressed: _handleSave,
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       child: Text(isEditMode ? 'Update' : 'Add'),
                     ),
@@ -310,7 +314,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           ),
           maxLines: 1,
         ),
@@ -354,12 +359,15 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? colorScheme.primary : Colors.grey.shade100,
+                  color:
+                      isSelected ? colorScheme.primary : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: isSelected ? colorScheme.primary : Colors.grey.shade300,
+                    color:
+                        isSelected ? colorScheme.primary : Colors.grey.shade300,
                   ),
                 ),
                 child: Row(
@@ -533,7 +541,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
               onTap: _showCustomColorPicker,
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   border: Border.all(color: Colors.grey.shade300),
@@ -542,11 +551,13 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.palette, size: 16, color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.palette,
+                        size: 16, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 4),
                     const Text(
                       'Custom',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -625,13 +636,17 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
     );
   }
 
-  Widget _buildOffsetField(String label, double value, void Function(double) onChanged) {
+  Widget _buildOffsetField(
+      String label, double value, void Function(double) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+          style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 4),
         TextFormField(
@@ -641,11 +656,13 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             isDense: true,
           ),
           style: const TextStyle(fontSize: 12),
-          keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+          keyboardType: const TextInputType.numberWithOptions(
+              signed: true, decimal: true),
           onChanged: (text) {
             final parsed = double.tryParse(text);
             if (parsed != null) {
@@ -742,7 +759,8 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
     final label = _labelController.text.trim();
 
     final annotation = PointAnnotation(
-      id: widget.annotation?.id ?? 'point_${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.annotation?.id ??
+          'point_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
       style: _currentStyle,
       seriesId: widget.seriesId,

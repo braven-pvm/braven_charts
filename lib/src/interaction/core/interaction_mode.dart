@@ -68,17 +68,22 @@ enum InteractionMode {
 extension InteractionModeExtensions on InteractionMode {
   /// Returns true if this mode blocks other interactions (modal states).
   bool get isModal {
-    return this == InteractionMode.contextMenuOpen || this == InteractionMode.editingAnnotation || this == InteractionMode.rangeAnnotationCreation;
+    return this == InteractionMode.contextMenuOpen ||
+        this == InteractionMode.editingAnnotation ||
+        this == InteractionMode.rangeAnnotationCreation;
   }
 
   /// Returns true if this mode represents an active drag operation.
   bool get isDragging {
-    return this == InteractionMode.draggingDataPoint || this == InteractionMode.draggingAnnotation || this == InteractionMode.resizingAnnotation;
+    return this == InteractionMode.draggingDataPoint ||
+        this == InteractionMode.draggingAnnotation ||
+        this == InteractionMode.resizingAnnotation;
   }
 
   /// Returns true if this mode represents a selection operation.
   bool get isSelecting {
-    return this == InteractionMode.selecting || this == InteractionMode.boxSelecting;
+    return this == InteractionMode.selecting ||
+        this == InteractionMode.boxSelecting;
   }
 
   /// Returns true if this mode is passive (doesn't claim interactions).

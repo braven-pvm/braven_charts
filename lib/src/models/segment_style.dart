@@ -96,7 +96,11 @@ class SegmentStyle {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is SegmentStyle && runtimeType == other.runtimeType && color == other.color && strokeWidth == other.strokeWidth;
+      identical(this, other) ||
+      other is SegmentStyle &&
+          runtimeType == other.runtimeType &&
+          color == other.color &&
+          strokeWidth == other.strokeWidth;
 
   @override
   int get hashCode => Object.hash(color, strokeWidth);
@@ -195,7 +199,11 @@ class PointStyle {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is PointStyle && runtimeType == other.runtimeType && color == other.color && size == other.size;
+      identical(this, other) ||
+      other is PointStyle &&
+          runtimeType == other.runtimeType &&
+          color == other.color &&
+          size == other.size;
 
   @override
   int get hashCode => Object.hash(color, size);
@@ -291,7 +299,8 @@ extension SegmentColorExtensions on LineChartSeries {
   /// // Highlight X=10 to X=20 in red
   /// series.withStyleInRange(10.0, 20.0, SegmentStyle.color(Colors.red));
   /// ```
-  LineChartSeries withStyleInRange(double xStart, double xEnd, SegmentStyle style) {
+  LineChartSeries withStyleInRange(
+      double xStart, double xEnd, SegmentStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -370,7 +379,8 @@ extension SegmentColorExtensions on LineChartSeries {
   ///
   /// Returns a copy with all points having null segmentStyle.
   LineChartSeries clearSegmentStyles() {
-    final newPoints = points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
+    final newPoints =
+        points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -409,7 +419,8 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
   }
 
   /// Creates a copy with all segments in X-range styled.
-  AreaChartSeries withStyleInRange(double xStart, double xEnd, SegmentStyle style) {
+  AreaChartSeries withStyleInRange(
+      double xStart, double xEnd, SegmentStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -442,7 +453,8 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
 
   /// Clears all segment style overrides from the series.
   AreaChartSeries clearSegmentStyles() {
-    final newPoints = points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
+    final newPoints =
+        points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -489,7 +501,8 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
   }
 
   /// Creates a copy with all points in X-range styled.
-  ScatterChartSeries withStyleInRange(double xStart, double xEnd, PointStyle style) {
+  ScatterChartSeries withStyleInRange(
+      double xStart, double xEnd, PointStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -518,7 +531,8 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
 
   /// Clears all point style overrides from the series.
   ScatterChartSeries clearPointStyles() {
-    final newPoints = points.map((p) => p.copyWith(clearPointStyle: true)).toList();
+    final newPoints =
+        points.map((p) => p.copyWith(clearPointStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -565,7 +579,8 @@ extension BarPointStyleExtensions on BarChartSeries {
   }
 
   /// Creates a copy with all bars in X-range styled.
-  BarChartSeries withStyleInRange(double xStart, double xEnd, PointStyle style) {
+  BarChartSeries withStyleInRange(
+      double xStart, double xEnd, PointStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -600,7 +615,8 @@ extension BarPointStyleExtensions on BarChartSeries {
 
   /// Clears all point style overrides from the series.
   BarChartSeries clearPointStyles() {
-    final newPoints = points.map((p) => p.copyWith(clearPointStyle: true)).toList();
+    final newPoints =
+        points.map((p) => p.copyWith(clearPointStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }

@@ -45,7 +45,8 @@ void main() {
       test('respects YAxisConfig.minWidth', () {
         const minWidth = 60.0;
         final axes = [
-          YAxisConfig.withId(id: 'test',
+          YAxisConfig.withId(
+            id: 'test',
             position: YAxisPosition.left,
             minWidth: minWidth,
           ),
@@ -66,7 +67,8 @@ void main() {
       test('respects YAxisConfig.maxWidth', () {
         const maxWidth = 50.0;
         final axes = [
-          YAxisConfig.withId(id: 'test',
+          YAxisConfig.withId(
+            id: 'test',
             position: YAxisPosition.left,
             maxWidth: maxWidth,
           ),
@@ -86,13 +88,15 @@ void main() {
 
       test('includes space for unit suffix', () {
         final axesWithUnit = [
-          YAxisConfig.withId(id: 'withUnit',
+          YAxisConfig.withId(
+            id: 'withUnit',
             position: YAxisPosition.left,
             unit: 'W',
           ),
         ];
         final axesWithoutUnit = [
-          YAxisConfig.withId(id: 'withoutUnit',
+          YAxisConfig.withId(
+            id: 'withoutUnit',
             position: YAxisPosition.left,
           ),
         ];
@@ -119,7 +123,8 @@ void main() {
 
       test('accounts for tick marks width', () {
         final axes = [
-          YAxisConfig.withId(id: 'test',
+          YAxisConfig.withId(
+            id: 'test',
             position: YAxisPosition.left,
           ),
         ];
@@ -197,7 +202,8 @@ void main() {
 
     group('getAxisRect', () {
       test('positions leftOuter axis at far left', () {
-        final axis = YAxisConfig.withId(id: 'lo', position: YAxisPosition.leftOuter);
+        final axis =
+            YAxisConfig.withId(id: 'lo', position: YAxisPosition.leftOuter);
         final allAxes = [
           axis,
           YAxisConfig.withId(id: 'l', position: YAxisPosition.left),
@@ -216,7 +222,8 @@ void main() {
       });
 
       test('positions left axis inside leftOuter', () {
-        final leftAxis = YAxisConfig.withId(id: 'l', position: YAxisPosition.left);
+        final leftAxis =
+            YAxisConfig.withId(id: 'l', position: YAxisPosition.left);
         final allAxes = [
           YAxisConfig.withId(id: 'lo', position: YAxisPosition.leftOuter),
           leftAxis,
@@ -258,7 +265,8 @@ void main() {
       });
 
       test('positions rightOuter axis outside right', () {
-        final axis = YAxisConfig.withId(id: 'ro', position: YAxisPosition.rightOuter);
+        final axis =
+            YAxisConfig.withId(id: 'ro', position: YAxisPosition.rightOuter);
         final allAxes = [
           YAxisConfig.withId(id: 'r', position: YAxisPosition.right),
           axis,
@@ -279,7 +287,8 @@ void main() {
 
       test('handles single axis at each position', () {
         // Test single left axis
-        final leftAxis = YAxisConfig.withId(id: 'l', position: YAxisPosition.left);
+        final leftAxis =
+            YAxisConfig.withId(id: 'l', position: YAxisPosition.left);
         final widths = {'l': 50.0};
 
         final rect = manager.getAxisRect(
@@ -411,12 +420,14 @@ void main() {
         // Ticks should be "nice" round numbers
         for (final tick in ticks) {
           // Nice ticks are typically divisible by 1, 2, 5, or 10
-          expect(tick % 1, equals(0.0), reason: 'Tick $tick should be a whole number');
+          expect(tick % 1, equals(0.0),
+              reason: 'Tick $tick should be a whole number');
         }
       });
 
       test('respects explicit min/max from YAxisConfig', () {
-        final axis = YAxisConfig.withId(id: 'test',
+        final axis = YAxisConfig.withId(
+          id: 'test',
           position: YAxisPosition.left,
           min: 10.0,
           max: 90.0,
@@ -452,13 +463,17 @@ void main() {
         // Ticks should span the actual data range
         expect(ticks.first, greaterThanOrEqualTo(0.0));
         expect(ticks.last, lessThanOrEqualTo(1000.0));
-        expect(ticks.any((t) => t >= 100), isTrue, reason: 'Should have tick values in hundreds for 0-1000 range');
+        expect(ticks.any((t) => t >= 100), isTrue,
+            reason: 'Should have tick values in hundreds for 0-1000 range');
       });
     });
 
     group('formatTickLabel', () {
-      test('formats tick value with unit suffix when labelDisplay shows tick unit', () {
-        final axis = YAxisConfig.withId(id: 'power',
+      test(
+          'formats tick value with unit suffix when labelDisplay shows tick unit',
+          () {
+        final axis = YAxisConfig.withId(
+          id: 'power',
           position: YAxisPosition.left,
           unit: 'W',
           labelDisplay: AxisLabelDisplay.labelAndTickUnit,
@@ -474,8 +489,10 @@ void main() {
         expect(label, contains('W'));
       });
 
-      test('formats tick value without unit suffix with default labelDisplay', () {
-        final axis = YAxisConfig.withId(id: 'power',
+      test('formats tick value without unit suffix with default labelDisplay',
+          () {
+        final axis = YAxisConfig.withId(
+          id: 'power',
           position: YAxisPosition.left,
           unit: 'W',
           // Default: labelDisplay: AxisLabelDisplay.labelWithUnit
@@ -493,7 +510,8 @@ void main() {
       });
 
       test('formats decimal values appropriately with tick unit', () {
-        final axis = YAxisConfig.withId(id: 'percentage',
+        final axis = YAxisConfig.withId(
+          id: 'percentage',
           position: YAxisPosition.left,
           unit: '%',
           labelDisplay: AxisLabelDisplay.labelAndTickUnit,
@@ -510,7 +528,8 @@ void main() {
       });
 
       test('uses custom labelFormatter when provided', () {
-        final axis = YAxisConfig.withId(id: 'test',
+        final axis = YAxisConfig.withId(
+          id: 'test',
           position: YAxisPosition.left,
           labelFormatter: (value) => '${value.toInt()}★',
         );
@@ -539,7 +558,8 @@ void main() {
 
       test('uses axis color from YAxisConfig', () {
         const axisColor = Color(0xFF0000FF);
-        final axis = YAxisConfig.withId(id: 'test',
+        final axis = YAxisConfig.withId(
+          id: 'test',
           position: YAxisPosition.left,
           color: axisColor,
         );
@@ -557,12 +577,14 @@ void main() {
   group('Acceptance Scenarios', () {
     test('renders 2 axes - one left, one right', () {
       final axes = [
-        YAxisConfig.withId(id: 'power',
+        YAxisConfig.withId(
+          id: 'power',
           position: YAxisPosition.left,
           color: const Color(0xFF0000FF),
           unit: 'W',
         ),
-        YAxisConfig.withId(id: 'heartrate',
+        YAxisConfig.withId(
+          id: 'heartrate',
           position: YAxisPosition.right,
           color: const Color(0xFFFF0000),
           unit: 'bpm',
@@ -609,12 +631,14 @@ void main() {
     });
 
     test('each axis shows original scale values', () {
-      final powerAxis = YAxisConfig.withId(id: 'power',
+      final powerAxis = YAxisConfig.withId(
+        id: 'power',
         position: YAxisPosition.left,
         unit: 'W',
         labelDisplay: AxisLabelDisplay.labelAndTickUnit,
       );
-      final hrAxis = YAxisConfig.withId(id: 'heartrate',
+      final hrAxis = YAxisConfig.withId(
+        id: 'heartrate',
         position: YAxisPosition.right,
         unit: 'bpm',
         labelDisplay: AxisLabelDisplay.labelAndTickUnit,

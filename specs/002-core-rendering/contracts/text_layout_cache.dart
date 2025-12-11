@@ -205,10 +205,12 @@ class LinkedHashMapTextLayoutCache implements TextLayoutCache {
   int get maxSize => throw UnimplementedError('TDD: Test first');
 
   @override
-  TextPainter? get(String text, TextStyle style) => throw UnimplementedError('TDD: Test first');
+  TextPainter? get(String text, TextStyle style) =>
+      throw UnimplementedError('TDD: Test first');
 
   @override
-  void put(String text, TextStyle style, TextPainter painter) => throw UnimplementedError('TDD: Test first');
+  void put(String text, TextStyle style, TextPainter painter) =>
+      throw UnimplementedError('TDD: Test first');
 
   @override
   void clear() => throw UnimplementedError('TDD: Test first');

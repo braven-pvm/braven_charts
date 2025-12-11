@@ -44,7 +44,8 @@ void main() {
       const axis = Axis.horizontal;
       const handleStart = 100.0;
       const handleEnd = 200.0;
-      const mousePosition = 196.0; // Within 8px of right edge (200-8=192, 196>192)
+      const mousePosition =
+          196.0; // Within 8px of right edge (200-8=192, 196>192)
       const edgeZoneWidth = 8.0;
 
       // ACT: Get cursor for position
@@ -107,7 +108,8 @@ void main() {
       const axis = Axis.vertical;
       const handleStart = 50.0;
       const handleEnd = 150.0;
-      const mousePosition = 146.0; // Within 8px of bottom edge (150-8=142, 146>142)
+      const mousePosition =
+          146.0; // Within 8px of bottom edge (150-8=142, 146>142)
       const edgeZoneWidth = 8.0;
 
       // ACT: Get cursor for position
@@ -185,10 +187,12 @@ void main() {
       );
 
       // ASSERT: Cursor transitions correctly
-      expect(cursor7_9, equals(SystemMouseCursors.resizeLeftRight)); // Left edge
+      expect(
+          cursor7_9, equals(SystemMouseCursors.resizeLeftRight)); // Left edge
       expect(cursor8_1, equals(SystemMouseCursors.grab)); // Center
       expect(cursor91_9, equals(SystemMouseCursors.grab)); // Center
-      expect(cursor92_1, equals(SystemMouseCursors.resizeLeftRight)); // Right edge
+      expect(
+          cursor92_1, equals(SystemMouseCursors.resizeLeftRight)); // Right edge
     });
   });
 }
@@ -209,12 +213,16 @@ MouseCursor _getCursorForPosition({
 
   // Check if in left/top edge zone
   if (positionInHandle < edgeZoneWidth) {
-    return axis == Axis.horizontal ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.resizeUpDown;
+    return axis == Axis.horizontal
+        ? SystemMouseCursors.resizeLeftRight
+        : SystemMouseCursors.resizeUpDown;
   }
 
   // Check if in right/bottom edge zone
   if (positionInHandle > handleSize - edgeZoneWidth) {
-    return axis == Axis.horizontal ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.resizeUpDown;
+    return axis == Axis.horizontal
+        ? SystemMouseCursors.resizeLeftRight
+        : SystemMouseCursors.resizeUpDown;
   }
 
   // In center zone - use grab cursor for panning

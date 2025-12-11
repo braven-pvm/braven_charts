@@ -218,7 +218,8 @@ class LiveStreamController extends ChangeNotifier {
   /// Returns 0 if no frames have been rendered yet.
   double get measuredFrameRate {
     if (_frameCountStartTime == null || _frameCount == 0) return 0;
-    final elapsed = DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    final elapsed =
+        DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
     if (elapsed < 100) return 0; // Need at least 100ms of data
     return _frameCount / (elapsed / 1000);
   }
@@ -459,7 +460,8 @@ class LiveStreamController extends ChangeNotifier {
     _frameCount++;
     _frameCountStartTime ??= DateTime.now();
     // Reset counter every second for rolling average
-    final elapsed = DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    final elapsed =
+        DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
     if (elapsed > 1000) {
       _frameCount = 1;
       _frameCountStartTime = DateTime.now();

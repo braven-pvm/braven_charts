@@ -103,8 +103,7 @@ class StreamingController extends ChangeNotifier {
     if (_isStreaming != isStreaming) {
       _isStreaming = isStreaming;
       notifyListeners();
-    } else {
-    }
+    } else {}
   }
 
   /// Manually resumes streaming.
@@ -129,8 +128,7 @@ class StreamingController extends ChangeNotifier {
       _viewportMode = ViewportMode.followLatest;
       _resumeStreamingCallback?.call(); // Call widget callback FIRST
       notifyListeners(); // Notify AFTER callback
-    } else {
-    }
+    } else {}
   }
 
   /// Manually pauses streaming.
@@ -151,10 +149,10 @@ class StreamingController extends ChangeNotifier {
     if (_isStreaming) {
       _isStreaming = false; // Update state immediately
       _viewportMode = ViewportMode.explore;
-      _pauseStreamingCallback?.call(); // Call widget callback FIRST (sets _preserveAxesOnRebuild flag)
+      _pauseStreamingCallback
+          ?.call(); // Call widget callback FIRST (sets _preserveAxesOnRebuild flag)
       notifyListeners(); // Notify AFTER callback so flag is already set
-    } else {
-    }
+    } else {}
   }
 
   /// Clears all accumulated streaming data.

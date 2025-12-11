@@ -182,16 +182,20 @@ class LegendStyle {
 
   /// Effective background color with default fallback.
   /// Default is semi-transparent white (~30% opacity) - no border by default.
-  Color get effectiveBackgroundColor => backgroundColor ?? const Color.fromARGB(76, 255, 255, 255);
+  Color get effectiveBackgroundColor =>
+      backgroundColor ?? const Color.fromARGB(76, 255, 255, 255);
 
   /// Effective border color with default fallback.
-  Color get effectiveBorderColor => borderColor ?? const Color.fromARGB(0, 255, 255, 255);
+  Color get effectiveBorderColor =>
+      borderColor ?? const Color.fromARGB(0, 255, 255, 255);
 
   /// Effective border radius with default fallback.
-  BorderRadius get effectiveBorderRadius => borderRadius ?? BorderRadius.circular(7);
+  BorderRadius get effectiveBorderRadius =>
+      borderRadius ?? BorderRadius.circular(7);
 
   /// Effective padding with default fallback.
-  EdgeInsets get effectivePadding => padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 4);
+  EdgeInsets get effectivePadding =>
+      padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 4);
 
   /// Creates a copy with modified properties.
   LegendStyle copyWith({

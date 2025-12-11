@@ -13,7 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// - Handle position must adjust to keep viewport representation accurate
 void main() {
   group('ScrollbarMinHandleSize - CONTRACT', () {
-    test('MUST use calculated size when viewport ratio yields handle >= minHandleSize', () {
+    test(
+        'MUST use calculated size when viewport ratio yields handle >= minHandleSize',
+        () {
       // ARRANGE: Track 400px, viewport 20% of data, minHandleSize 20px
       const trackLength = 400.0;
       const viewportRatio = 0.2; // 20% of data visible
@@ -30,7 +32,9 @@ void main() {
       expect(handleSize, equals(80.0)); // 400 * 0.2 = 80px
     });
 
-    test('MUST clamp to minHandleSize when viewport ratio yields handle < minHandleSize', () {
+    test(
+        'MUST clamp to minHandleSize when viewport ratio yields handle < minHandleSize',
+        () {
       // ARRANGE: Track 400px, viewport 1% of data, minHandleSize 20px
       const trackLength = 400.0;
       const viewportRatio = 0.01; // 1% of data visible (extreme zoom)
@@ -61,7 +65,8 @@ void main() {
       );
 
       // ASSERT: Clamped to minHandleSize (20px) instead of calculated 2px
-      expect(handleSize, equals(20.0)); // max(400 * 0.005, 20) = max(2, 20) = 20
+      expect(
+          handleSize, equals(20.0)); // max(400 * 0.005, 20) = max(2, 20) = 20
     });
 
     test('MUST adjust handle position when clamped to minHandleSize', () {

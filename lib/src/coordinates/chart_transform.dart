@@ -241,14 +241,20 @@ class ChartTransform {
   /// }
   /// ```
   bool isDataPointVisible(double dataX, double dataY) {
-    return dataX >= dataXMin && dataX <= dataXMax && dataY >= dataYMin && dataY <= dataYMax;
+    return dataX >= dataXMin &&
+        dataX <= dataXMax &&
+        dataY >= dataYMin &&
+        dataY <= dataYMax;
   }
 
   /// Checks if a data rect intersects the visible viewport.
   ///
   /// **Use Case**: Culling annotations or large elements.
   bool isDataRectVisible(Rect dataRect) {
-    return dataRect.left <= dataXMax && dataRect.right >= dataXMin && dataRect.top <= dataYMax && dataRect.bottom >= dataYMin;
+    return dataRect.left <= dataXMax &&
+        dataRect.right >= dataXMin &&
+        dataRect.top <= dataYMax &&
+        dataRect.bottom >= dataYMin;
   }
 
   // ============================================================================
@@ -287,9 +293,11 @@ class ChartTransform {
 
     // Calculate new bounds preserving center proportion
     final newDataXMin = dataCenterX - (newDataXRange * centerProportionX);
-    final newDataXMax = dataCenterX + (newDataXRange * (1.0 - centerProportionX));
+    final newDataXMax =
+        dataCenterX + (newDataXRange * (1.0 - centerProportionX));
     final newDataYMin = dataCenterY - (newDataYRange * centerProportionY);
-    final newDataYMax = dataCenterY + (newDataYRange * (1.0 - centerProportionY));
+    final newDataYMax =
+        dataCenterY + (newDataYRange * (1.0 - centerProportionY));
 
     return ChartTransform(
       dataXMin: newDataXMin,

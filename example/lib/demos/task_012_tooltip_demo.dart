@@ -141,7 +141,7 @@ class Task012TooltipDemo extends StatelessWidget {
                   dataPointMarkerRadius: 5.0,
                   // Multi-axis with inline config
                   yAxisConfig: YAxisConfig(
-              position: YAxisPosition.left,
+                    position: YAxisPosition.left,
                     label: 'Power',
                     unit: 'W', // Unit shown in tooltip
                   ),
@@ -156,7 +156,7 @@ class Task012TooltipDemo extends StatelessWidget {
                   dataPointMarkerRadius: 5.0,
                   // Multi-axis with inline config
                   yAxisConfig: YAxisConfig(
-              position: YAxisPosition.right,
+                    position: YAxisPosition.right,
                     label: 'Heart Rate',
                     unit: 'bpm', // Unit shown in tooltip
                   ),
@@ -186,8 +186,16 @@ class Task012TooltipDemo extends StatelessWidget {
     // Demonstrate the MultiAxisValueFormatter directly
     final examples = [
       ('250.0', 'W', MultiAxisValueFormatter.format(value: 250.0, unit: 'W')),
-      ('145.678', 'bpm', MultiAxisValueFormatter.format(value: 145.678, unit: 'bpm')),
-      ('0.00456', 'L', MultiAxisValueFormatter.format(value: 0.00456, unit: 'L')),
+      (
+        '145.678',
+        'bpm',
+        MultiAxisValueFormatter.format(value: 145.678, unit: 'bpm')
+      ),
+      (
+        '0.00456',
+        'L',
+        MultiAxisValueFormatter.format(value: 0.00456, unit: 'L')
+      ),
       ('-50.5', 'W', MultiAxisValueFormatter.format(value: -50.5, unit: 'W')),
       ('1234.5', null, MultiAxisValueFormatter.format(value: 1234.5)),
       (
@@ -233,15 +241,18 @@ class Task012TooltipDemo extends StatelessWidget {
                 children: [
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Input Value', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text('Input Value',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Unit', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text('Unit',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Output', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text('Output',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -249,11 +260,13 @@ class Task012TooltipDemo extends StatelessWidget {
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(e.$1, style: const TextStyle(color: Colors.white70)),
+                        child: Text(e.$1,
+                            style: const TextStyle(color: Colors.white70)),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(e.$2 ?? '(none)', style: const TextStyle(color: Colors.white70)),
+                        child: Text(e.$2 ?? '(none)',
+                            style: const TextStyle(color: Colors.white70)),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(8),

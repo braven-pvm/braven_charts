@@ -70,7 +70,8 @@ class LinearScale {
   /// If [invertY] is true, inverts the mapping so lower pixel positions
   /// (top of screen) map to higher data values.
   double pixelToData(double pixelValue) {
-    final adjustedPixel = invertY ? pixelMax - (pixelValue - pixelMin) : pixelValue;
+    final adjustedPixel =
+        invertY ? pixelMax - (pixelValue - pixelMin) : pixelValue;
 
     final normalizedPixel = (adjustedPixel - pixelMin) / pixelRange;
     return dataMin + normalizedPixel * dataRange;

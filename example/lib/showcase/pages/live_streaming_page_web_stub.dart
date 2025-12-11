@@ -12,9 +12,11 @@ class ReceivePort {
 }
 
 class Isolate {
-  static Future<Isolate> spawn<T>(void Function(T) entryPoint, T message) async {
+  static Future<Isolate> spawn<T>(
+      void Function(T) entryPoint, T message) async {
     throw UnsupportedError('Isolates are not supported on web platform');
   }
+
   void kill({int priority = 0}) {}
   static const int immediate = 0;
 }

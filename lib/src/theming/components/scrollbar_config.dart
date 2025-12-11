@@ -7,17 +7,26 @@ import 'package:flutter/material.dart';
 @immutable
 class ScrollbarConfig {
   /// Deserialize from JSON.
-  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) => ScrollbarConfig(
+  factory ScrollbarConfig.fromJson(Map<String, dynamic> json) =>
+      ScrollbarConfig(
         thickness: json['thickness'] as double,
         minHandleSize: json['minHandleSize'] as double,
         trackColor: Color(json['trackColor'] as int),
         handleColor: Color(json['handleColor'] as int),
         handleHoverColor: Color(json['handleHoverColor'] as int),
-        edgeZoneColor: json['edgeZoneColor'] != null ? Color(json['edgeZoneColor'] as int) : const Color(0xFFD0D0D0),
-        edgeHoverColor: json['edgeHoverColor'] != null ? Color(json['edgeHoverColor'] as int) : const Color(0xFF2196F3),
+        edgeZoneColor: json['edgeZoneColor'] != null
+            ? Color(json['edgeZoneColor'] as int)
+            : const Color(0xFFD0D0D0),
+        edgeHoverColor: json['edgeHoverColor'] != null
+            ? Color(json['edgeHoverColor'] as int)
+            : const Color(0xFF2196F3),
         handleActiveColor: Color(json['handleActiveColor'] as int),
-        handleDisabledColor: json['handleDisabledColor'] != null ? Color(json['handleDisabledColor'] as int) : const Color(0xFFEEEEEE),
-        trackHoverColor: json['trackHoverColor'] != null ? Color(json['trackHoverColor'] as int) : const Color(0xFFE0E0E0),
+        handleDisabledColor: json['handleDisabledColor'] != null
+            ? Color(json['handleDisabledColor'] as int)
+            : const Color(0xFFEEEEEE),
+        trackHoverColor: json['trackHoverColor'] != null
+            ? Color(json['trackHoverColor'] as int)
+            : const Color(0xFFE0E0E0),
         borderRadius: json['borderRadius'] as double,
         edgeGripWidth: json['edgeGripWidth'] as double,
         showGripIndicator: json['showGripIndicator'] as bool,
@@ -211,7 +220,8 @@ class ScrollbarConfig {
     trackColor: Color(0xFF212121), // Dark background
     handleColor: Color(0xFF616161), // Medium grey
     handleHoverColor: Color(0xFF757575), // Lighter grey
-    edgeHoverColor: Color(0xFF64B5F6), // Material Blue 300 (lighter for dark theme)
+    edgeHoverColor:
+        Color(0xFF64B5F6), // Material Blue 300 (lighter for dark theme)
     handleActiveColor: Color(0xFF9E9E9E), // Light grey
     handleDisabledColor: Color(0xFF424242), // Dark grey
     trackHoverColor: Color(0xFF303030), // Slightly lighter dark

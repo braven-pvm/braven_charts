@@ -50,7 +50,8 @@ class TestAnnotationDragDelegate implements AnnotationDragDelegate {
   }
 
   @override
-  void notifyAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
+  void notifyAnnotationChanged(
+      String annotationId, ChartAnnotation updatedAnnotation) {
     annotationChanges.add((annotationId, updatedAnnotation));
   }
 
@@ -291,7 +292,8 @@ void main() {
 
       test('performResize respects minimum size constraint', () {
         handler.startResize(element, ResizeDirection.right);
-        final startPosition = Offset(element.bounds.right, element.bounds.center.dy);
+        final startPosition =
+            Offset(element.bounds.right, element.bounds.center.dy);
 
         // Try to shrink way below minimum
         handler.performResize(
@@ -316,8 +318,10 @@ void main() {
 
       test('finalizeResize returns updated annotation', () {
         handler.startResize(element, ResizeDirection.right);
-        final startPosition = Offset(element.bounds.right, element.bounds.center.dy);
-        handler.performResize(startPosition + const Offset(50, 0), startPosition);
+        final startPosition =
+            Offset(element.bounds.right, element.bounds.center.dy);
+        handler.performResize(
+            startPosition + const Offset(50, 0), startPosition);
 
         final result = handler.finalizeResize();
 
@@ -436,7 +440,8 @@ void main() {
         handler.performThresholdMove(const Offset(100, 100)); // Move up
 
         expect(element.tempValue, isNotNull);
-        expect(element.tempValue!, greaterThan(50)); // Moving up increases Y value
+        expect(
+            element.tempValue!, greaterThan(50)); // Moving up increases Y value
       });
 
       test('finalizeThresholdMove returns updated annotation', () {

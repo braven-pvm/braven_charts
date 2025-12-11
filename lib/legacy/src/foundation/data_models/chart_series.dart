@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:braven_charts/legacy/src/foundation/data_models/chart_data_point.dart';
-import 'package:braven_charts/legacy/src/foundation/data_models/data_range.dart' as dr;
+import 'package:braven_charts/legacy/src/foundation/data_models/data_range.dart'
+    as dr;
 import 'package:braven_charts/legacy/src/foundation/type_system/chart_error.dart';
 import 'package:braven_charts/legacy/src/foundation/type_system/chart_result.dart';
 import 'package:braven_charts/legacy/src/widgets/annotations/chart_annotation.dart';

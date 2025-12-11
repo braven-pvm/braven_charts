@@ -133,7 +133,8 @@ class QuadTree {
       ),
       // Bottom-right
       QuadTree(
-        bounds: Rect.fromLTWH(x + halfWidth, y + halfHeight, halfWidth, halfHeight),
+        bounds:
+            Rect.fromLTWH(x + halfWidth, y + halfHeight, halfWidth, halfHeight),
         maxElementsPerNode: maxElementsPerNode,
         maxDepth: maxDepth,
         depth: depth + 1,
@@ -227,7 +228,8 @@ class QuadTree {
       final elementCenter = element.bounds.center;
       final distance = (position - elementCenter).distance;
 
-      if (distance < nearestDistance && (maxDistance == null || distance <= maxDistance)) {
+      if (distance < nearestDistance &&
+          (maxDistance == null || distance <= maxDistance)) {
         nearest = element;
         nearestDistance = distance;
       }
@@ -397,7 +399,8 @@ class QuadTree {
     final buffer = StringBuffer();
     final prefix = '  ' * indent;
 
-    buffer.writeln('${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)');
+    buffer.writeln(
+        '${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)');
 
     if (isSplit) {
       for (int i = 0; i < _children!.length; i++) {

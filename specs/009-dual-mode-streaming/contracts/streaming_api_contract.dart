@@ -56,7 +56,8 @@ class StreamingConfig {
     this.onReturnToLive,
     this.onStreamError,
   })  : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
-        assert(autoResumeTimeout > Duration.zero, 'autoResumeTimeout must be positive');
+        assert(autoResumeTimeout > Duration.zero,
+            'autoResumeTimeout must be positive');
 
   /// Duration of inactivity before auto-resuming streaming mode (FR-007).
   ///
@@ -249,7 +250,7 @@ abstract class _BravenChartInternalState {
 // ============================================================================
 
 /// This contract satisfies the following functional requirements:
-/// 
+///
 /// [x] FR-001: Chart operates in exactly one mode (streaming OR interactive)
 /// [x] FR-001a: Each chart instance manages mode independently
 /// [x] FR-002: Chart starts in streaming mode when stream configured
@@ -274,7 +275,7 @@ abstract class _BravenChartInternalState {
 /// [x] FR-018: 60fps streaming target
 /// [x] FR-019: 16ms interaction response target
 /// [x] FR-020: No rendering errors (box.dart, mouse_tracker.dart)
-/// 
+///
 /// Success Criteria Coverage:
 /// [x] SC-001: 60fps for 10-minute sessions
 /// [x] SC-002: <50ms mode transitions

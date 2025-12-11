@@ -118,7 +118,8 @@ class _WebContextMenuItemWidget extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_WebContextMenuItemWidget> createState() => _WebContextMenuItemWidgetState();
+  State<_WebContextMenuItemWidget> createState() =>
+      _WebContextMenuItemWidgetState();
 }
 
 class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
@@ -146,7 +147,9 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: _isHovered && isEnabled ? const Color(0xFFF5F5F5) : Colors.transparent,
+            color: _isHovered && isEnabled
+                ? const Color(0xFFF5F5F5)
+                : Colors.transparent,
           ),
           child: Row(
             children: [

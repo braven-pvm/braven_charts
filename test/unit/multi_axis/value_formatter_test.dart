@@ -39,13 +39,15 @@ void main() {
 
       test('cleans trailing zeros after decimal', () {
         // 10.500 should become "10.5", not "10.500"
-        final result = MultiAxisValueFormatter.format(value: 10.5, precision: 3);
+        final result =
+            MultiAxisValueFormatter.format(value: 10.5, precision: 3);
         expect(result, equals('10.5'));
       });
 
       test('removes decimal point when all decimals are zero', () {
         // 100.00 should become "100", not "100."
-        final result = MultiAxisValueFormatter.format(value: 100.0, precision: 2);
+        final result =
+            MultiAxisValueFormatter.format(value: 100.0, precision: 2);
         expect(result, equals('100'));
       });
 
@@ -55,7 +57,8 @@ void main() {
       });
 
       test('formats very small values with unit', () {
-        final result = MultiAxisValueFormatter.format(value: 0.00123, unit: 'L');
+        final result =
+            MultiAxisValueFormatter.format(value: 0.00123, unit: 'L');
         expect(result, equals('0.0012 L'));
       });
     });
@@ -179,7 +182,8 @@ void main() {
 
     group('edge cases', () {
       test('handles very large values without scientific notation', () {
-        final result = MultiAxisValueFormatter.format(value: 999999.0, unit: 'W');
+        final result =
+            MultiAxisValueFormatter.format(value: 999999.0, unit: 'W');
         expect(result, equals('999999 W'));
       });
 

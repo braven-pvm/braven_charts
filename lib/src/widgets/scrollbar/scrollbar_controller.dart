@@ -306,12 +306,16 @@ class ScrollbarController {
     // (e.g., when handle size < 2 * threshold)
     if (distanceFromStart <= safeThreshold) {
       // Return axis-specific start edge
-      return axis == Axis.horizontal ? HitTestZone.leftEdge : HitTestZone.topEdge;
+      return axis == Axis.horizontal
+          ? HitTestZone.leftEdge
+          : HitTestZone.topEdge;
     }
 
     if (distanceFromEnd <= safeThreshold) {
       // Return axis-specific end edge
-      return axis == Axis.horizontal ? HitTestZone.rightEdge : HitTestZone.bottomEdge;
+      return axis == Axis.horizontal
+          ? HitTestZone.rightEdge
+          : HitTestZone.bottomEdge;
     }
 
     // Default: On handle body (not near edges)
@@ -344,7 +348,9 @@ class ScrollbarController {
 
       case HitTestZone.center:
         // Show grabbing cursor when actively dragging, grab when hovering
-        return isDragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab;
+        return isDragging
+            ? SystemMouseCursors.grabbing
+            : SystemMouseCursors.grab;
 
       case HitTestZone.leftEdge:
       case HitTestZone.rightEdge:

@@ -77,7 +77,8 @@ class _StreamingPageState extends State<StreamingPage> {
 
     setState(() {
       // Random walk for realistic streaming data
-      final change = (DateTime.now().millisecondsSinceEpoch % 2 == 0 ? 1 : -1) * (1 + DateTime.now().millisecondsSinceEpoch % 5).toDouble();
+      final change = (DateTime.now().millisecondsSinceEpoch % 2 == 0 ? 1 : -1) *
+          (1 + DateTime.now().millisecondsSinceEpoch % 5).toDouble();
       _lastValue = (_lastValue + change).clamp(10.0, 90.0);
 
       _streamingData.add(ChartDataPoint(
@@ -237,7 +238,8 @@ class _StreamingPageState extends State<StreamingPage> {
             showLegend: false,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme:
+                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,

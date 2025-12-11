@@ -42,7 +42,8 @@ class DebugPage extends StatelessWidget {
                     children: [
                       const Text('Chart 1: Bezier WITHOUT normalization',
                           style: TextStyle(fontWeight: FontWeight.bold)),
-                      const Text('Expected: Smooth curves', style: TextStyle(fontSize: 12)),
+                      const Text('Expected: Smooth curves',
+                          style: TextStyle(fontSize: 12)),
                       const SizedBox(height: 8),
                       Expanded(
                         child: BravenChartPlus(
@@ -81,9 +82,11 @@ class DebugPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Chart 2: Bezier WITH NormalizationMode.perSeries',
+                      const Text(
+                          'Chart 2: Bezier WITH NormalizationMode.perSeries',
                           style: TextStyle(fontWeight: FontWeight.bold)),
-                      const Text('Expected: Smooth curves (if working)', style: TextStyle(fontSize: 12)),
+                      const Text('Expected: Smooth curves (if working)',
+                          style: TextStyle(fontSize: 12)),
                       const SizedBox(height: 8),
                       Expanded(
                         child: BravenChartPlus(
@@ -103,7 +106,7 @@ class DebugPage extends StatelessWidget {
                               interpolation: LineInterpolation.bezier,
                               strokeWidth: 3.0,
                               yAxisConfig: YAxisConfig(
-              position: YAxisPosition.left,
+                                position: YAxisPosition.left,
                               ),
                             ),
                             LineChartSeries(
@@ -121,7 +124,7 @@ class DebugPage extends StatelessWidget {
                               interpolation: LineInterpolation.bezier,
                               strokeWidth: 3.0,
                               yAxisConfig: YAxisConfig(
-              position: YAxisPosition.right,
+                                position: YAxisPosition.right,
                               ),
                             ),
                           ],

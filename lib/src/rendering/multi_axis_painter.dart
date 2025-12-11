@@ -145,7 +145,8 @@ class MultiAxisPainter {
       ..style = PaintingStyle.stroke;
 
     // Determine if this is a left-side or right-side axis
-    final isLeftSide = axis.position == YAxisPosition.left || axis.position == YAxisPosition.leftOuter;
+    final isLeftSide = axis.position == YAxisPosition.left ||
+        axis.position == YAxisPosition.leftOuter;
 
     // Paint axis line
     if (axis.showAxisLine) {
@@ -159,7 +160,9 @@ class MultiAxisPainter {
 
     // Paint axis label (rotated 90°, centered on axis)
     // Uses shouldShowAxisLabel helper to check labelDisplay mode
-    if (axis.label != null && axis.label!.isNotEmpty && axis.shouldShowAxisLabel) {
+    if (axis.label != null &&
+        axis.label!.isNotEmpty &&
+        axis.shouldShowAxisLabel) {
       _paintAxisLabel(canvas, axis, axisRect, plotArea, isLeftSide, axisColor);
     }
 
@@ -171,7 +174,8 @@ class MultiAxisPainter {
 
       for (final tickValue in ticks) {
         // Convert tick value to Y position using shared normalizer
-        final normalizedY = MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
+        final normalizedY =
+            MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
         // Invert Y because screen coordinates go down
         final screenY = plotArea.bottom - (normalizedY * plotArea.height);
 
@@ -182,7 +186,8 @@ class MultiAxisPainter {
           }
 
           if (axis.shouldShowTickLabels) {
-            _paintTickLabel(canvas, axis, axisRect, screenY, tickValue, isLeftSide);
+            _paintTickLabel(
+                canvas, axis, axisRect, screenY, tickValue, isLeftSide);
           }
         }
       }
@@ -208,7 +213,9 @@ class MultiAxisPainter {
   ) {
     // Build label text with optional unit suffix
     String labelText = axis.label!;
-    if (axis.shouldAppendUnitToLabel && axis.unit != null && axis.unit!.isNotEmpty) {
+    if (axis.shouldAppendUnitToLabel &&
+        axis.unit != null &&
+        axis.unit!.isNotEmpty) {
       labelText = '$labelText (${axis.unit})';
     }
 
@@ -232,8 +239,9 @@ class MultiAxisPainter {
     // Position horizontally within the axis strip
     // The text is rotated 90°, so textPainter.height is the effective width
     // axisMargin provides space from the outer edge
-    final labelX =
-        isLeftSide ? axisRect.left + axis.axisMargin + (textPainter.height / 2) : axisRect.right - axis.axisMargin - (textPainter.height / 2);
+    final labelX = isLeftSide
+        ? axisRect.left + axis.axisMargin + (textPainter.height / 2)
+        : axisRect.right - axis.axisMargin - (textPainter.height / 2);
 
     canvas.translate(labelX, centerY);
 
@@ -303,7 +311,10 @@ class MultiAxisPainter {
     if (isLeftSide) {
       // Right-align labels on left-side axes, positioned from axis line inward
       // Layout: [margin][axisLabel][axisLabelPadding][tickLabels][tickLabelPadding][tickMark][axisLine]
-      labelX = axisRect.right - _tickLength - axis.tickLabelPadding - textPainter.width;
+      labelX = axisRect.right -
+          _tickLength -
+          axis.tickLabelPadding -
+          textPainter.width;
     } else {
       // Left-align labels on right-side axes, positioned from axis line inward
       labelX = axisRect.left + _tickLength + axis.tickLabelPadding;

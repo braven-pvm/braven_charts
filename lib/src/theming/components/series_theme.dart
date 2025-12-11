@@ -39,9 +39,12 @@ class SeriesTheme {
     required this.markerSizes,
     required this.markerShapes,
   })  : assert(colors.isNotEmpty, 'colors must have at least 1 element'),
-        assert(lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
-        assert(markerSizes.isNotEmpty, 'markerSizes must have at least 1 element'),
-        assert(markerShapes.isNotEmpty, 'markerShapes must have at least 1 element');
+        assert(
+            lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
+        assert(
+            markerSizes.isNotEmpty, 'markerSizes must have at least 1 element'),
+        assert(markerShapes.isNotEmpty,
+            'markerShapes must have at least 1 element');
 
   /// Colors for series. Cycles when series count exceeds list length.
   final List<Color> colors;
@@ -107,7 +110,11 @@ class SeriesTheme {
     ],
     lineWidths: const [2.5],
     markerSizes: const [8.0],
-    markerShapes: const [MarkerShape.circle, MarkerShape.square, MarkerShape.triangle],
+    markerShapes: const [
+      MarkerShape.circle,
+      MarkerShape.square,
+      MarkerShape.triangle
+    ],
   );
 
   static final SeriesTheme minimal = SeriesTheme(
@@ -164,7 +171,8 @@ class SeriesTheme {
   double markerSizeAt(int index) => markerSizes[index % markerSizes.length];
 
   /// Get marker shape at index with cycling.
-  MarkerShape markerShapeAt(int index) => markerShapes[index % markerShapes.length];
+  MarkerShape markerShapeAt(int index) =>
+      markerShapes[index % markerShapes.length];
 
   // ========== Customization ==========
 
@@ -186,7 +194,9 @@ class SeriesTheme {
 
   Map<String, dynamic> toJson() {
     return {
-      'colors': colors.map((c) => '#${c.value.toRadixString(16).padLeft(8, '0')}').toList(),
+      'colors': colors
+          .map((c) => '#${c.value.toRadixString(16).padLeft(8, '0')}')
+          .toList(),
       'lineWidths': lineWidths,
       'markerSizes': markerSizes,
       'markerShapes': markerShapes.map((s) => s.name).toList(),
@@ -195,11 +205,24 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)?.map((c) => _parseColor(c)).whereType<Color>().toList() ?? defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)?.map((w) => (w as num).toDouble()).toList() ?? defaultLight.lineWidths,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)?.map((s) => (s as num).toDouble()).toList() ?? defaultLight.markerSizes,
-      markerShapes:
-          (json['markerShapes'] as List<dynamic>?)?.map((s) => _parseMarkerShape(s)).whereType<MarkerShape>().toList() ?? defaultLight.markerShapes,
+      colors: (json['colors'] as List<dynamic>?)
+              ?.map((c) => _parseColor(c))
+              .whereType<Color>()
+              .toList() ??
+          defaultLight.colors,
+      lineWidths: (json['lineWidths'] as List<dynamic>?)
+              ?.map((w) => (w as num).toDouble())
+              .toList() ??
+          defaultLight.lineWidths,
+      markerSizes: (json['markerSizes'] as List<dynamic>?)
+              ?.map((s) => (s as num).toDouble())
+              .toList() ??
+          defaultLight.markerSizes,
+      markerShapes: (json['markerShapes'] as List<dynamic>?)
+              ?.map((s) => _parseMarkerShape(s))
+              .whereType<MarkerShape>()
+              .toList() ??
+          defaultLight.markerShapes,
     );
   }
 

@@ -199,13 +199,18 @@ class ScrollbarTheme {
   /// final theme = ScrollbarTheme.fromJson(json);
   /// ```
   factory ScrollbarTheme.fromJson(Map<String, dynamic> json) => ScrollbarTheme(
-        xAxisScrollbar: ScrollbarConfig.fromJson(json['xAxisScrollbar'] as Map<String, dynamic>),
-        yAxisScrollbar: ScrollbarConfig.fromJson(json['yAxisScrollbar'] as Map<String, dynamic>),
+        xAxisScrollbar: ScrollbarConfig.fromJson(
+            json['xAxisScrollbar'] as Map<String, dynamic>),
+        yAxisScrollbar: ScrollbarConfig.fromJson(
+            json['yAxisScrollbar'] as Map<String, dynamic>),
       );
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is ScrollbarTheme && xAxisScrollbar == other.xAxisScrollbar && yAxisScrollbar == other.yAxisScrollbar;
+      identical(this, other) ||
+      other is ScrollbarTheme &&
+          xAxisScrollbar == other.xAxisScrollbar &&
+          yAxisScrollbar == other.yAxisScrollbar;
 
   @override
   int get hashCode => Object.hash(xAxisScrollbar, yAxisScrollbar);

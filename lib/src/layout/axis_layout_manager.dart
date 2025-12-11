@@ -121,7 +121,8 @@ class AxisLayoutManager {
     }
 
     final totalLeftWidth = _layoutDelegate.getTotalLeftWidth(axes, axisWidths);
-    final totalRightWidth = _layoutDelegate.getTotalRightWidth(axes, axisWidths);
+    final totalRightWidth =
+        _layoutDelegate.getTotalRightWidth(axes, axisWidths);
 
     return Rect.fromLTRB(
       chartArea.left + totalLeftWidth,

@@ -158,7 +158,9 @@ class _OptionSectionState extends State<OptionSection> {
             children: widget.children,
           ),
           secondChild: const SizedBox.shrink(),
-          crossFadeState: _isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          crossFadeState: _isExpanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
           duration: const Duration(milliseconds: 200),
         ),
         const SizedBox(height: 8),
@@ -188,7 +190,9 @@ class BoolOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile(
       title: Text(label, style: const TextStyle(fontSize: 14)),
-      subtitle: subtitle != null ? Text(subtitle!, style: const TextStyle(fontSize: 11)) : null,
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: const TextStyle(fontSize: 11))
+          : null,
       value: value,
       onChanged: onChanged,
       contentPadding: EdgeInsets.zero,
@@ -416,7 +420,9 @@ class ColorOption extends StatelessWidget {
                   color: color,
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.withOpacity(0.3),
                     width: isSelected ? 2 : 1,
                   ),
                   boxShadow: isSelected
@@ -433,7 +439,9 @@ class ColorOption extends StatelessWidget {
                     ? Icon(
                         Icons.check,
                         size: 16,
-                        color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                        color: color.computeLuminance() > 0.5
+                            ? Colors.black
+                            : Colors.white,
                       )
                     : null,
               ),
@@ -515,7 +523,8 @@ class TextOption extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             hintText: hint,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: const OutlineInputBorder(),
           ),
           style: const TextStyle(fontSize: 13),
@@ -590,10 +599,26 @@ class InfoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = switch (type) {
-      InfoBoxType.info => (Colors.blue.shade50, Colors.blue.shade200, Colors.blue.shade900),
-      InfoBoxType.warning => (Colors.orange.shade50, Colors.orange.shade200, Colors.orange.shade900),
-      InfoBoxType.success => (Colors.green.shade50, Colors.green.shade200, Colors.green.shade900),
-      InfoBoxType.error => (Colors.red.shade50, Colors.red.shade200, Colors.red.shade900),
+      InfoBoxType.info => (
+          Colors.blue.shade50,
+          Colors.blue.shade200,
+          Colors.blue.shade900
+        ),
+      InfoBoxType.warning => (
+          Colors.orange.shade50,
+          Colors.orange.shade200,
+          Colors.orange.shade900
+        ),
+      InfoBoxType.success => (
+          Colors.green.shade50,
+          Colors.green.shade200,
+          Colors.green.shade900
+        ),
+      InfoBoxType.error => (
+          Colors.red.shade50,
+          Colors.red.shade200,
+          Colors.red.shade900
+        ),
     };
 
     final icon = switch (type) {

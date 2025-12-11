@@ -42,7 +42,9 @@ import '../models/chart_annotation.dart';
 /// ```
 class AnnotationController extends ChangeNotifier {
   /// Creates an [AnnotationController] with an optional initial list of annotations.
-  AnnotationController({List<ChartAnnotation>? initialAnnotations}) : _annotations = initialAnnotations != null ? List.from(initialAnnotations) : [];
+  AnnotationController({List<ChartAnnotation>? initialAnnotations})
+      : _annotations =
+            initialAnnotations != null ? List.from(initialAnnotations) : [];
 
   // Private state
   List<ChartAnnotation> _annotations;
@@ -81,7 +83,8 @@ class AnnotationController extends ChangeNotifier {
   /// Throws [ArgumentError] if an annotation with the same ID already exists.
   void addAnnotation(ChartAnnotation annotation) {
     if (_annotations.any((a) => a.id == annotation.id)) {
-      throw ArgumentError('Annotation with id "${annotation.id}" already exists');
+      throw ArgumentError(
+          'Annotation with id "${annotation.id}" already exists');
     }
     _annotations.add(annotation);
     notifyListeners();
@@ -164,7 +167,8 @@ class AnnotationController extends ChangeNotifier {
     // Validate no conflicts with existing annotations
     for (final annotation in annotations) {
       if (_annotations.any((a) => a.id == annotation.id)) {
-        throw ArgumentError('Annotation with id "${annotation.id}" already exists');
+        throw ArgumentError(
+            'Annotation with id "${annotation.id}" already exists');
       }
     }
 
@@ -223,7 +227,8 @@ class AnnotationController extends ChangeNotifier {
     final removedCount = initialLength - _annotations.length;
     if (removedCount > 0) {
       // Clear selection if it was in the removed set
-      if (_selectedAnnotationId != null && ids.contains(_selectedAnnotationId)) {
+      if (_selectedAnnotationId != null &&
+          ids.contains(_selectedAnnotationId)) {
         _selectedAnnotationId = null;
       }
       notifyListeners();

@@ -232,9 +232,12 @@ void main() {
       );
 
       expect(styled.points[0].segmentStyle, isNull); // x=0, outside
-      expect(styled.points[1].segmentStyle?.color, const Color(0xFFFF0000)); // x=5
-      expect(styled.points[2].segmentStyle?.color, const Color(0xFFFF0000)); // x=10
-      expect(styled.points[3].segmentStyle, isNull); // x=15, excluded (half-open)
+      expect(
+          styled.points[1].segmentStyle?.color, const Color(0xFFFF0000)); // x=5
+      expect(styled.points[2].segmentStyle?.color,
+          const Color(0xFFFF0000)); // x=10
+      expect(
+          styled.points[3].segmentStyle, isNull); // x=15, excluded (half-open)
       expect(styled.points[4].segmentStyle, isNull); // x=20, outside
     });
 

@@ -26,7 +26,8 @@ import 'context_aware_recognizer.dart';
 ///   onTapCancel: () => clearSelection(),
 /// );
 /// ```
-class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGestureRecognizer> {
+class PriorityTapGestureRecognizer
+    extends ContextAwareGestureRecognizer<TapGestureRecognizer> {
   PriorityTapGestureRecognizer({
     required super.coordinator,
     this.onTapDown,
@@ -122,7 +123,8 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
       // Moved too far - check if coordinator has claimed a higher priority mode
       // If dragging/resizing annotation (priority 8-9), let it continue
       // Otherwise cancel tap (might be drag/box-select)
-      if (!coordinator.currentMode.isDragging && coordinator.currentMode != InteractionMode.resizingAnnotation) {
+      if (!coordinator.currentMode.isDragging &&
+          coordinator.currentMode != InteractionMode.resizingAnnotation) {
         _cancel();
       } else {
         // Higher priority drag in progress - silently cleanup without releasing mode
@@ -238,5 +240,6 @@ class PriorityTapGestureRecognizer extends ContextAwareGestureRecognizer<TapGest
   }
 
   @override
-  String get debugDescription => 'priority tap recognizer (left-click selection)';
+  String get debugDescription =>
+      'priority tap recognizer (left-click selection)';
 }

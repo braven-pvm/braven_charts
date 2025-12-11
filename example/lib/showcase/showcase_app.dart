@@ -216,7 +216,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
             },
-            labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+            labelType: extended
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: extended

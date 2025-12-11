@@ -202,7 +202,8 @@ class ChartSeries {
   }
 
   @override
-  String toString() => 'ChartSeries(id: $id, points: ${points.length}, yAxisId: $yAxisId, unit: $unit)';
+  String toString() =>
+      'ChartSeries(id: $id, points: ${points.length}, yAxisId: $yAxisId, unit: $unit)';
 }
 
 /// Line chart series with configurable interpolation.
@@ -226,7 +227,8 @@ class LineChartSeries extends ChartSeries {
 
   final LineInterpolation interpolation;
   final double strokeWidth;
-  final double tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
+  final double
+      tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
 
@@ -263,12 +265,14 @@ class LineChartSeries extends ChartSeries {
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
-      dataPointMarkerRadius: dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointMarkerRadius:
+          dataPointMarkerRadius ?? this.dataPointMarkerRadius,
     );
   }
 
   @override
-  String toString() => 'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+  String toString() =>
+      'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
 }
 
 /// Scatter plot series with configurable marker size.
@@ -318,7 +322,8 @@ class ScatterChartSeries extends ChartSeries {
   }
 
   @override
-  String toString() => 'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius)';
+  String toString() =>
+      'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius)';
 }
 
 /// Area chart series with fill and interpolation.
@@ -383,12 +388,14 @@ class AreaChartSeries extends ChartSeries {
       tension: tension ?? this.tension,
       fillOpacity: fillOpacity ?? this.fillOpacity,
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
-      dataPointMarkerRadius: dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointMarkerRadius:
+          dataPointMarkerRadius ?? this.dataPointMarkerRadius,
     );
   }
 
   @override
-  String toString() => 'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+  String toString() =>
+      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
 }
 
 /// Bar chart series with configurable width.
@@ -407,10 +414,15 @@ class BarChartSeries extends ChartSeries {
     this.barWidthPixels,
     this.minWidth = 4.0,
     this.maxWidth = 100.0,
-  })  : assert(barWidthPercent != null || barWidthPixels != null, 'Must specify either barWidthPercent or barWidthPixels'),
-        assert(barWidthPercent == null || (barWidthPercent >= 0.0 && barWidthPercent <= 1.0), 'barWidthPercent must be between 0.0 and 1.0');
+  })  : assert(barWidthPercent != null || barWidthPixels != null,
+            'Must specify either barWidthPercent or barWidthPixels'),
+        assert(
+            barWidthPercent == null ||
+                (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
+            'barWidthPercent must be between 0.0 and 1.0');
 
-  final double? barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
+  final double?
+      barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
   final double? barWidthPixels; // Fixed width in data units
   final double minWidth; // Minimum bar width in data units
   final double maxWidth; // Maximum bar width in data units
@@ -451,5 +463,6 @@ class BarChartSeries extends ChartSeries {
   }
 
   @override
-  String toString() => 'BarChartSeries(id: $id, points: ${points.length}, barWidth: ${barWidthPercent ?? barWidthPixels})';
+  String toString() =>
+      'BarChartSeries(id: $id, points: ${points.length}, barWidth: ${barWidthPercent ?? barWidthPixels})';
 }

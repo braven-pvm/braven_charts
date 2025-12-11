@@ -89,13 +89,21 @@ class DataConverter {
     final xPadding = (xMax - xMin) * 0.05;
     final yPadding = (yMax - yMin) * 0.05;
 
-    return DataBounds(xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding);
+    return DataBounds(
+        xMin: xMin - xPadding,
+        xMax: xMax + xPadding,
+        yMin: yMin - yPadding,
+        yMax: yMax + yPadding);
   }
 }
 
 /// Data bounds for chart viewport setup.
 class DataBounds {
-  const DataBounds({required this.xMin, required this.xMax, required this.yMin, required this.yMax});
+  const DataBounds(
+      {required this.xMin,
+      required this.xMax,
+      required this.yMin,
+      required this.yMax});
 
   final double xMin;
   final double xMax;

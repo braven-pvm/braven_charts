@@ -45,7 +45,8 @@ class InternalAxisConfig {
     required bool isXAxis,
   }) {
     // Determine orientation based on axis type
-    final orientation = isXAxis ? AxisOrientation.horizontal : AxisOrientation.vertical;
+    final orientation =
+        isXAxis ? AxisOrientation.horizontal : AxisOrientation.vertical;
 
     // Determine position from public config or use default based on axis type
     final position = _mapAxisPosition(config.axisPosition, isXAxis);
@@ -54,8 +55,10 @@ class InternalAxisConfig {
       label: config.label ?? '',
       orientation: orientation,
       position: position,
-      labelStyle: config.labelStyle ?? const TextStyle(fontSize: 12, color: Colors.black87),
-      tickLabelStyle: config.labelStyle ?? const TextStyle(fontSize: 10, color: Colors.black54),
+      labelStyle: config.labelStyle ??
+          const TextStyle(fontSize: 12, color: Colors.black87),
+      tickLabelStyle: config.labelStyle ??
+          const TextStyle(fontSize: 10, color: Colors.black54),
       axisColor: config.axisColor ?? Colors.black87,
       gridColor: config.gridColor ?? const Color(0xFFE0E0E0),
       showGrid: config.showGrid,
@@ -67,17 +70,20 @@ class InternalAxisConfig {
   }
 
   /// Maps public AxisPosition to internal AxisPosition with sensible defaults.
-  static AxisPosition _mapAxisPosition(AxisPosition publicPosition, bool isXAxis) {
+  static AxisPosition _mapAxisPosition(
+      AxisPosition publicPosition, bool isXAxis) {
     // The public AxisPosition uses the same enum as internal,
     // but we need to validate the position makes sense for the axis type
     if (isXAxis) {
       // X-axis should be top or bottom
-      if (publicPosition == AxisPosition.left || publicPosition == AxisPosition.right) {
+      if (publicPosition == AxisPosition.left ||
+          publicPosition == AxisPosition.right) {
         return AxisPosition.bottom; // Default for X-axis
       }
     } else {
       // Y-axis should be left or right
-      if (publicPosition == AxisPosition.top || publicPosition == AxisPosition.bottom) {
+      if (publicPosition == AxisPosition.top ||
+          publicPosition == AxisPosition.bottom) {
         return AxisPosition.left; // Default for Y-axis
       }
     }

@@ -161,7 +161,8 @@ class ChartLegend extends StatelessWidget {
                   color: isHidden ? Colors.grey : seriesColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isHidden ? Colors.grey : seriesColor.withOpacity(0.5),
+                    color:
+                        isHidden ? Colors.grey : seriesColor.withOpacity(0.5),
                     width: 1.5,
                   ),
                 ),

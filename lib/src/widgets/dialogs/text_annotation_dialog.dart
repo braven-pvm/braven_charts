@@ -179,7 +179,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      isEditMode ? 'Edit Text Annotation' : 'Add Text Annotation',
+                      isEditMode
+                          ? 'Edit Text Annotation'
+                          : 'Add Text Annotation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -223,7 +225,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                     FilledButton(
                       onPressed: _handleSave,
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       child: Text(isEditMode ? 'Update' : 'Add'),
                     ),
@@ -258,7 +261,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
         ),
         const SizedBox(height: 8),
         // Show either simple or rich text editor based on mode
-        if (_editMode == TextEditMode.simple) _buildSimpleTextEditor() else _buildRichTextEditor(),
+        if (_editMode == TextEditMode.simple)
+          _buildSimpleTextEditor()
+        else
+          _buildRichTextEditor(),
       ],
     );
   }
@@ -371,13 +377,15 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.blue.shade800, width: 0.8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         isDense: true,
       ),
       style: const TextStyle(fontSize: 13),
       maxLines: 3,
       validator: (value) {
-        if (_editMode == TextEditMode.simple && (value == null || value.trim().isEmpty)) {
+        if (_editMode == TextEditMode.simple &&
+            (value == null || value.trim().isEmpty)) {
           return 'Text is required';
         }
         return null;
@@ -398,7 +406,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[50],
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(7)),
               border: Border(
                 bottom: BorderSide(color: Colors.grey[300]!),
               ),
@@ -486,12 +495,17 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey[100],
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[300]!,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey[300]!,
                     width: 1,
                   ),
                 ),
@@ -604,7 +618,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       }
     }
 
-    final id = widget.annotation?.id ?? 'text_${DateTime.now().millisecondsSinceEpoch}';
+    final id = widget.annotation?.id ??
+        'text_${DateTime.now().millisecondsSinceEpoch}';
 
     TextAnnotation annotation;
 

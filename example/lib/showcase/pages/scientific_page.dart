@@ -222,7 +222,8 @@ class _ScientificPageState extends State<ScientificPage> {
       // Info
       InfoBox(
         message: switch (_selectedDemo) {
-          0 => 'Sine wave with configurable harmonics for Fourier-like synthesis',
+          0 =>
+            'Sine wave with configurable harmonics for Fourier-like synthesis',
           1 => 'Gaussian/Normal distributions with different parameters',
           _ => 'Scatter plot with linear regression trend line',
         },
@@ -241,7 +242,8 @@ class _ScientificPageState extends State<ScientificPage> {
             _ => 'Scatter Plot with Trend',
           },
           subtitle: switch (_selectedDemo) {
-            0 => 'f=${_frequency.toStringAsFixed(2)}, A=${_amplitude.toStringAsFixed(0)}, harmonics=$_harmonics',
+            0 =>
+              'f=${_frequency.toStringAsFixed(2)}, A=${_amplitude.toStringAsFixed(0)}, harmonics=$_harmonics',
             1 => 'Normal distributions',
             _ => 'Linear regression',
           },
@@ -277,7 +279,8 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme:
+              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
             showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,
@@ -318,7 +321,8 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme:
+              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
             showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,
@@ -357,7 +361,8 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme:
+              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
             showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,

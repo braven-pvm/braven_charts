@@ -13,7 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// - MUST enforce maxZoomRatio (100% maximum visible data)
 void main() {
   group('ScrollbarRightEdgeResize - CONTRACT', () {
-    test('MUST decrease viewportMax when right edge dragged LEFT (zoom in)', () {
+    test('MUST decrease viewportMax when right edge dragged LEFT (zoom in)',
+        () {
       // ARRANGE: Initial viewport 0-50 on dataRange 0-100
       const dataMin = 0.0;
       const dataMax = 100.0;
@@ -39,7 +40,8 @@ void main() {
       expect(newViewport.span, equals(40.0)); // Reduced from 50 (zoomed in)
     });
 
-    test('MUST increase viewportMax when right edge dragged RIGHT (zoom out)', () {
+    test('MUST increase viewportMax when right edge dragged RIGHT (zoom out)',
+        () {
       // ARRANGE: Initial viewport 0-50 on dataRange 0-100
       const dataMin = 0.0;
       const dataMax = 100.0;
@@ -113,7 +115,8 @@ void main() {
 
       expect(newViewport.min, equals(0.0)); // Unchanged
       expect(newViewport.max, equals(1.0)); // Clamped to leave 1 unit visible
-      expect(newViewport.span, greaterThanOrEqualTo(1.0)); // At least 1% visible
+      expect(
+          newViewport.span, greaterThanOrEqualTo(1.0)); // At least 1% visible
     });
 
     test('MUST enforce maxZoomRatio (100% maximum visible data)', () {
@@ -142,7 +145,8 @@ void main() {
       // viewportMax should clamp to 150 (50 + 100 = 150), but also clamp to dataMax=100
       expect(newViewport.min, equals(50.0)); // Unchanged
       expect(newViewport.max, equals(100.0)); // Clamped at dataMax
-      expect(newViewport.span, lessThanOrEqualTo(100.0)); // At most 100% visible
+      expect(
+          newViewport.span, lessThanOrEqualTo(100.0)); // At most 100% visible
     });
 
     test('MUST keep viewportMin anchored during all right edge drags', () {
@@ -224,7 +228,8 @@ ViewportRange _calculateRightEdgeResize({
   required double dataMax,
   required double currentViewportMin,
   required double currentViewportMax,
-  required double delta, // Positive = rightward (zoom out), negative = leftward (zoom in)
+  required double
+      delta, // Positive = rightward (zoom out), negative = leftward (zoom in)
   required double minZoomRatio, // e.g., 0.01 = 1% minimum visible
   required double maxZoomRatio, // e.g., 1.0 = 100% maximum visible
 }) {

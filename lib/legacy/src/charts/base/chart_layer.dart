@@ -7,7 +7,8 @@
 // - Must achieve <16ms frame time for specified data sizes (Performance First)
 // - TDD: Contract tests written first (test/charts/contract/chart_layer_contract_test.dart)
 
-import 'package:braven_charts/legacy/src/foundation/foundation.dart' show ChartSeries;
+import 'package:braven_charts/legacy/src/foundation/foundation.dart'
+    show ChartSeries;
 import 'package:braven_charts/legacy/src/rendering/render_context.dart';
 import 'package:braven_charts/legacy/src/rendering/render_layer.dart';
 

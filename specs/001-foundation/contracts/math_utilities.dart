@@ -34,11 +34,13 @@ abstract class StatisticalFunctions {
   /// Calculate median (middle value).
   /// Empty list returns NaN.
   /// Performance: O(n) average with quickselect
-  static double median(List<double> values) => throw UnimplementedError('Contract only');
+  static double median(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   /// Calculate mode (most frequent value).
   /// Returns NaN if no clear mode.
-  static double mode(List<double> values) => throw UnimplementedError('Contract only');
+  static double mode(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   // Dispersion
 
@@ -62,36 +64,43 @@ abstract class StatisticalFunctions {
 
   /// Calculate range (max - min).
   /// Empty list returns NaN.
-  static double range(List<double> values) => throw UnimplementedError('Contract only');
+  static double range(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   // Quantiles
 
   /// Calculate percentile (0-100).
   /// Empty list returns NaN.
   /// p=50 is equivalent to median.
-  static double percentile(List<double> values, double p) => throw UnimplementedError('Contract only');
+  static double percentile(List<double> values, double p) =>
+      throw UnimplementedError('Contract only');
 
   /// Calculate quartiles (Q1, Q2, Q3).
   /// Empty list returns all NaN.
-  static Quartiles quartiles(List<double> values) => throw UnimplementedError('Contract only');
+  static Quartiles quartiles(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   /// Calculate interquartile range (Q3 - Q1).
   /// Empty list returns NaN.
-  static double iqr(List<double> values) => throw UnimplementedError('Contract only');
+  static double iqr(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   // Extremes
 
   /// Find minimum value.
   /// Empty list returns double.infinity.
-  static double min(List<double> values) => throw UnimplementedError('Contract only');
+  static double min(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   /// Find maximum value.
   /// Empty list returns double.negativeInfinity.
-  static double max(List<double> values) => throw UnimplementedError('Contract only');
+  static double max(List<double> values) =>
+      throw UnimplementedError('Contract only');
 
   /// Find min and max in single pass.
   /// More efficient than calling min() and max() separately.
-  static MinMax minMax(List<double> values) => throw UnimplementedError('Contract only');
+  static MinMax minMax(List<double> values) =>
+      throw UnimplementedError('Contract only');
 }
 
 /// Mean type options
@@ -150,11 +159,13 @@ abstract class InterpolationFunctions {
   /// Linear interpolate between a and b.
   /// t should be in [0, 1] range.
   /// t=0 returns a, t=1 returns b.
-  static double lerp(double a, double b, double t) => throw UnimplementedError('Contract only');
+  static double lerp(double a, double b, double t) =>
+      throw UnimplementedError('Contract only');
 
   /// Inverse linear interpolation.
   /// Find t such that lerp(a, b, t) == value.
-  static double lerpInverse(double a, double b, double value) => throw UnimplementedError('Contract only');
+  static double lerpInverse(double a, double b, double value) =>
+      throw UnimplementedError('Contract only');
 
   // Cubic spline
 
@@ -201,7 +212,8 @@ abstract class InterpolationFunctions {
   /// controlPoints: list of control point values
   /// t: parameter in [0, 1]
   /// Uses De Casteljau's algorithm.
-  static double bezier(List<double> controlPoints, double t) => throw UnimplementedError('Contract only');
+  static double bezier(List<double> controlPoints, double t) =>
+      throw UnimplementedError('Contract only');
 
   /// Quadratic Bezier curve (3 control points).
   /// More efficient than generic bezier() for degree 2.
@@ -245,7 +257,8 @@ abstract class CurveFittingFunctions {
   /// Returns coefficients [a, b] (intercept, slope).
   /// Requires at least 2 points.
   /// Performance: <5ms for 10k points
-  static FitResult linearFit(List<ChartDataPoint> points) => throw UnimplementedError('Contract only');
+  static FitResult linearFit(List<ChartDataPoint> points) =>
+      throw UnimplementedError('Contract only');
 
   /// Polynomial regression (y = a₀ + a₁×x + a₂×x² + ... + aₙ×xⁿ).
   /// Returns coefficients [a₀, a₁, ..., aₙ].
@@ -262,13 +275,15 @@ abstract class CurveFittingFunctions {
   /// Returns coefficients [a, b].
   /// Requires all y > 0 (transforms to linear via ln).
   /// Performance: <50ms (FR-005.6)
-  static FitResult exponentialFit(List<ChartDataPoint> points) => throw UnimplementedError('Contract only');
+  static FitResult exponentialFit(List<ChartDataPoint> points) =>
+      throw UnimplementedError('Contract only');
 
   /// Logarithmic regression (y = a + b×ln(x)).
   /// Returns coefficients [a, b].
   /// Requires all x > 0.
   /// Performance: <50ms (FR-005.6)
-  static FitResult logarithmicFit(List<ChartDataPoint> points) => throw UnimplementedError('Contract only');
+  static FitResult logarithmicFit(List<ChartDataPoint> points) =>
+      throw UnimplementedError('Contract only');
 }
 
 /// Curve fitting result
@@ -302,7 +317,8 @@ class FitResult {
   }
 
   @override
-  String toString() => 'FitResult(equation: $equation, R²: ${rSquared.toStringAsFixed(4)}, RMSE: ${rmse.toStringAsFixed(4)})';
+  String toString() =>
+      'FitResult(equation: $equation, R²: ${rSquared.toStringAsFixed(4)}, RMSE: ${rmse.toStringAsFixed(4)})';
 }
 
 // Supporting types

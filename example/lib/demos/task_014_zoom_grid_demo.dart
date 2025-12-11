@@ -83,7 +83,9 @@ class _Task014DemoState extends State<Task014Demo> {
                               50,
                               (i) => ChartDataPoint(
                                 x: i.toDouble(),
-                                y: 100 + 40 * ((i + 3) % 10 / 10) + 20 * (i ~/ 10),
+                                y: 100 +
+                                    40 * ((i + 3) % 10 / 10) +
+                                    20 * (i ~/ 10),
                               ),
                             ),
                             color: Colors.red,
@@ -114,7 +116,9 @@ class _Task014DemoState extends State<Task014Demo> {
                               50,
                               (i) => ChartDataPoint(
                                 x: i.toDouble(),
-                                y: 100 + 40 * ((i + 3) % 10 / 10) + 20 * (i ~/ 10),
+                                y: 100 +
+                                    40 * ((i + 3) % 10 / 10) +
+                                    20 * (i ~/ 10),
                               ),
                             ),
                             color: Colors.red,
@@ -131,7 +135,9 @@ class _Task014DemoState extends State<Task014Demo> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _multiAxisMode ? '✓ Multi-axis mode active:' : '✓ Single-axis mode active:',
+                    _multiAxisMode
+                        ? '✓ Multi-axis mode active:'
+                        : '✓ Single-axis mode active:',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

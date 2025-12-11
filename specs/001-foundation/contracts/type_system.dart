@@ -74,10 +74,12 @@ final class Success<T> extends ChartResult<T> {
   T getOrElseGet(T Function(ChartError) onFailure) => value;
 
   @override
-  ChartResult<R> map<R>(R Function(T value) transform) => Success(transform(value));
+  ChartResult<R> map<R>(R Function(T value) transform) =>
+      Success(transform(value));
 
   @override
-  ChartResult<R> flatMap<R>(ChartResult<R> Function(T value) transform) => transform(value);
+  ChartResult<R> flatMap<R>(ChartResult<R> Function(T value) transform) =>
+      transform(value);
 
   @override
   R fold<R>({
@@ -93,7 +95,8 @@ final class Success<T> extends ChartResult<T> {
   bool get isFailure => false;
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is Success<T> && value == other.value;
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Success<T> && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
@@ -125,7 +128,8 @@ final class Failure<T> extends ChartResult<T> {
   ChartResult<R> map<R>(R Function(T value) transform) => Failure(error);
 
   @override
-  ChartResult<R> flatMap<R>(ChartResult<R> Function(T value) transform) => Failure(error);
+  ChartResult<R> flatMap<R>(ChartResult<R> Function(T value) transform) =>
+      Failure(error);
 
   @override
   R fold<R>({
@@ -141,7 +145,8 @@ final class Failure<T> extends ChartResult<T> {
   bool get isFailure => true;
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is Failure<T> && error == other.error;
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Failure<T> && error == other.error;
 
   @override
   int get hashCode => error.hashCode;
@@ -233,7 +238,11 @@ class ChartError {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ChartError && type == other.type && severity == other.severity && message == other.message && code == other.code;
+      other is ChartError &&
+          type == other.type &&
+          severity == other.severity &&
+          message == other.message &&
+          code == other.code;
 
   @override
   int get hashCode => Object.hash(type, severity, message, code);
@@ -293,7 +302,8 @@ abstract class ValidationUtils {
       throw UnimplementedError('Contract only');
 
   // NaN/Infinity detection
-  static bool isFiniteNumber(double value) => throw UnimplementedError('Contract only');
+  static bool isFiniteNumber(double value) =>
+      throw UnimplementedError('Contract only');
 
   static ChartResult<double> validateFinite(
     double value, {

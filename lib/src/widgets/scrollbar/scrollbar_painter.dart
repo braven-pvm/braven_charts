@@ -293,7 +293,8 @@ class ScrollbarPainter extends CustomPainter {
     // Calculate edge zone rect based on hover zone
     final Rect edgeRect;
 
-    if (state.hoverZone == HitTestZone.leftEdge || state.hoverZone == HitTestZone.topEdge) {
+    if (state.hoverZone == HitTestZone.leftEdge ||
+        state.hoverZone == HitTestZone.topEdge) {
       // Left/Top edge: First edgeGripWidth pixels
       if (isHorizontal) {
         edgeRect = Rect.fromLTWH(
@@ -352,7 +353,8 @@ class ScrollbarPainter extends CustomPainter {
   Color _getHandleColor() {
     // Priority order: disabled > active > hover > default
     final interactionState = ScrollbarController.getInteractionState(
-      isHovering: state.hoverZone != null && state.hoverZone != HitTestZone.track,
+      isHovering:
+          state.hoverZone != null && state.hoverZone != HitTestZone.track,
       isActive: state.isDragging,
       isEnabled: true, // TODO: Wire to InteractionConfig.enablePan/enableZoom
     );
@@ -439,7 +441,9 @@ class ScrollbarPainter extends CustomPainter {
         state.hoverZone == HitTestZone.topEdge ||
         state.hoverZone == HitTestZone.bottomEdge;
 
-    final effectiveColor = isHoveringEdge ? Colors.white.withOpacity(0.8 * opacity) : config.gripIndicatorColor.withOpacity(0.5 * opacity);
+    final effectiveColor = isHoveringEdge
+        ? Colors.white.withOpacity(0.8 * opacity)
+        : config.gripIndicatorColor.withOpacity(0.5 * opacity);
 
     final gripPaint = Paint()
       ..color = effectiveColor
@@ -462,7 +466,9 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw left edge grips
       final leftEdgeCenter = handleRect.left + config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetX = leftEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        final offsetX = leftEdgeCenter -
+            (lineCount - 1) * lineSpacing / 2.0 +
+            i * lineSpacing;
         canvas.drawLine(
           Offset(offsetX, lineTop),
           Offset(offsetX, lineBottom),
@@ -473,7 +479,9 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw right edge grips
       final rightEdgeCenter = handleRect.right - config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetX = rightEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        final offsetX = rightEdgeCenter -
+            (lineCount - 1) * lineSpacing / 2.0 +
+            i * lineSpacing;
         canvas.drawLine(
           Offset(offsetX, lineTop),
           Offset(offsetX, lineBottom),
@@ -489,7 +497,9 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw top edge grips
       final topEdgeCenter = handleRect.top + config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetY = topEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        final offsetY = topEdgeCenter -
+            (lineCount - 1) * lineSpacing / 2.0 +
+            i * lineSpacing;
         canvas.drawLine(
           Offset(lineLeft, offsetY),
           Offset(lineRight, offsetY),
@@ -500,7 +510,9 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw bottom edge grips
       final bottomEdgeCenter = handleRect.bottom - config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetY = bottomEdgeCenter - (lineCount - 1) * lineSpacing / 2.0 + i * lineSpacing;
+        final offsetY = bottomEdgeCenter -
+            (lineCount - 1) * lineSpacing / 2.0 +
+            i * lineSpacing;
         canvas.drawLine(
           Offset(lineLeft, offsetY),
           Offset(lineRight, offsetY),

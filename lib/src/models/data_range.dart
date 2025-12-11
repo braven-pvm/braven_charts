@@ -128,7 +128,11 @@ class DataRange {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is DataRange && runtimeType == other.runtimeType && min == other.min && max == other.max && padding == other.padding;
+      other is DataRange &&
+          runtimeType == other.runtimeType &&
+          min == other.min &&
+          max == other.max &&
+          padding == other.padding;
 
   @override
   int get hashCode => Object.hash(min, max, padding);

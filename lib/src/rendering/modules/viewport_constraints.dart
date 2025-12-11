@@ -68,8 +68,10 @@ class ViewportConstraints {
     final currentZoomY = originalYRange / currentYRange;
 
     // Check if clamping needed
-    final bool needsClampX = currentZoomX < minZoomLevel || currentZoomX > maxZoomLevel;
-    final bool needsClampY = currentZoomY < minZoomLevel || currentZoomY > maxZoomLevel;
+    final bool needsClampX =
+        currentZoomX < minZoomLevel || currentZoomX > maxZoomLevel;
+    final bool needsClampY =
+        currentZoomY < minZoomLevel || currentZoomY > maxZoomLevel;
 
     if (!needsClampX && !needsClampY) {
       return transform; // No clamping needed
@@ -138,7 +140,8 @@ class ViewportConstraints {
     final dataPerPixelY = currentTransform.dataPerPixelY;
     final requestedDataDx = requestedPlotDx * dataPerPixelX;
     final requestedDataDy = currentTransform.invertY
-        ? -requestedPlotDy * dataPerPixelY // Invert Y movement (match pan() logic)
+        ? -requestedPlotDy *
+            dataPerPixelY // Invert Y movement (match pan() logic)
         : requestedPlotDy * dataPerPixelY;
 
     // 2. Calculate tentative new viewport position in data space
@@ -149,25 +152,35 @@ class ViewportConstraints {
     // At 1x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange / plotWidth) = originalRange * 0.1
     // At 2x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange/2 / plotWidth) = originalRange * 0.05
     // This ensures 10% whitespace in VIEWPORT, which scales correctly with zoom
-    final maxWhitespaceDataX = currentTransform.plotWidth * maxWhitespaceFraction * dataPerPixelX;
-    final maxWhitespaceDataY = currentTransform.plotHeight * maxWhitespaceFraction * dataPerPixelY;
+    final maxWhitespaceDataX =
+        currentTransform.plotWidth * maxWhitespaceFraction * dataPerPixelX;
+    final maxWhitespaceDataY =
+        currentTransform.plotHeight * maxWhitespaceFraction * dataPerPixelY;
 
     // 4. Calculate allowed bounds for viewport position using constraint transform
     // Viewport left edge (dataXMin) can range from:
     //   - Minimum: constraintDataXMin - maxWhitespace (show whitespace on left)
     //   - Maximum: constraintDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
-    final minAllowedDataXMin = constraintTransform.dataXMin - maxWhitespaceDataX;
-    final maxAllowedDataXMin = constraintTransform.dataXMax - currentTransform.dataXRange + maxWhitespaceDataX;
+    final minAllowedDataXMin =
+        constraintTransform.dataXMin - maxWhitespaceDataX;
+    final maxAllowedDataXMin = constraintTransform.dataXMax -
+        currentTransform.dataXRange +
+        maxWhitespaceDataX;
 
-    final minAllowedDataYMin = constraintTransform.dataYMin - maxWhitespaceDataY;
-    final maxAllowedDataYMin = constraintTransform.dataYMax - currentTransform.dataYRange + maxWhitespaceDataY;
+    final minAllowedDataYMin =
+        constraintTransform.dataYMin - maxWhitespaceDataY;
+    final maxAllowedDataYMin = constraintTransform.dataYMax -
+        currentTransform.dataYRange +
+        maxWhitespaceDataY;
 
     // 5. Clamp tentative viewport position to allowed bounds
     // Defensive: If min > max (viewport larger than constraint range), allow full movement
-    final clampedDataXMin =
-        minAllowedDataXMin <= maxAllowedDataXMin ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin) : tentativeDataXMin;
-    final clampedDataYMin =
-        minAllowedDataYMin <= maxAllowedDataYMin ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin) : tentativeDataYMin;
+    final clampedDataXMin = minAllowedDataXMin <= maxAllowedDataXMin
+        ? tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin)
+        : tentativeDataXMin;
+    final clampedDataYMin = minAllowedDataYMin <= maxAllowedDataYMin
+        ? tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin)
+        : tentativeDataYMin;
 
     // 6. Calculate actual movement allowed and convert back to plot space
     // CRITICAL: Reverse the inversion applied in step 1!

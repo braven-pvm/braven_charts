@@ -73,20 +73,28 @@ class MultiAxisState {
   bool get isMultiAxisActive => axisConfigs.length > 1;
 
   /// Axes positioned on the left side (leftOuter, left).
-  List<YAxisConfig> get leftAxes =>
-      axisConfigs.values.where((a) => a.position == YAxisPosition.leftOuter || a.position == YAxisPosition.left).toList()
-        ..sort((a, b) => a.position.index.compareTo(b.position.index));
+  List<YAxisConfig> get leftAxes => axisConfigs.values
+      .where((a) =>
+          a.position == YAxisPosition.leftOuter ||
+          a.position == YAxisPosition.left)
+      .toList()
+    ..sort((a, b) => a.position.index.compareTo(b.position.index));
 
   /// Axes positioned on the right side (right, rightOuter).
-  List<YAxisConfig> get rightAxes =>
-      axisConfigs.values.where((a) => a.position == YAxisPosition.right || a.position == YAxisPosition.rightOuter).toList()
-        ..sort((a, b) => a.position.index.compareTo(b.position.index));
+  List<YAxisConfig> get rightAxes => axisConfigs.values
+      .where((a) =>
+          a.position == YAxisPosition.right ||
+          a.position == YAxisPosition.rightOuter)
+      .toList()
+    ..sort((a, b) => a.position.index.compareTo(b.position.index));
 
   /// Total width of left-side axes in pixels.
-  double get totalLeftWidth => leftAxes.fold(0.0, (sum, axis) => sum + (axisWidths[axis.id] ?? 0));
+  double get totalLeftWidth =>
+      leftAxes.fold(0.0, (sum, axis) => sum + (axisWidths[axis.id] ?? 0));
 
   /// Total width of right-side axes in pixels.
-  double get totalRightWidth => rightAxes.fold(0.0, (sum, axis) => sum + (axisWidths[axis.id] ?? 0));
+  double get totalRightWidth =>
+      rightAxes.fold(0.0, (sum, axis) => sum + (axisWidths[axis.id] ?? 0));
 
   /// Get the axis configuration for a series.
   ///
@@ -131,8 +139,7 @@ class MultiAxisState {
   }
 
   @override
-  String toString() =>
-      'MultiAxisState('
+  String toString() => 'MultiAxisState('
       'axes: ${axisConfigs.length}, '
       'series: ${seriesAxisMap.length}, '
       'active: $isMultiAxisActive)';

@@ -29,8 +29,10 @@ void main() {
         const largeRange = DataRange(min: 0.0, max: 100.0);
 
         // Order shouldn't matter - ratio is always >= 1
-        final ratio1 = RangeRatioCalculator.calculateRatio(smallRange, largeRange);
-        final ratio2 = RangeRatioCalculator.calculateRatio(largeRange, smallRange);
+        final ratio1 =
+            RangeRatioCalculator.calculateRatio(smallRange, largeRange);
+        final ratio2 =
+            RangeRatioCalculator.calculateRatio(largeRange, smallRange);
 
         expect(ratio1, equals(10.0));
         expect(ratio2, equals(10.0));
@@ -41,7 +43,8 @@ void main() {
         const normalRange = DataRange(min: 0.0, max: 100.0);
 
         // Should handle gracefully (return infinity or very large number)
-        final ratio = RangeRatioCalculator.calculateRatio(zeroRange, normalRange);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(zeroRange, normalRange);
 
         expect(ratio, equals(double.infinity));
       });
@@ -51,7 +54,8 @@ void main() {
         const zeroRange2 = DataRange(min: 100.0, max: 100.0);
 
         // Two zero ranges have ratio 1.0 (identical span)
-        final ratio = RangeRatioCalculator.calculateRatio(zeroRange1, zeroRange2);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(zeroRange1, zeroRange2);
 
         expect(ratio, equals(1.0));
       });
@@ -60,7 +64,8 @@ void main() {
         const negativeRange = DataRange(min: -100.0, max: -50.0); // span = 50
         const positiveRange = DataRange(min: 0.0, max: 100.0); // span = 100
 
-        final ratio = RangeRatioCalculator.calculateRatio(negativeRange, positiveRange);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(negativeRange, positiveRange);
 
         expect(ratio, equals(2.0));
       });
@@ -69,7 +74,8 @@ void main() {
         const crossingRange = DataRange(min: -50.0, max: 50.0); // span = 100
         const positiveRange = DataRange(min: 0.0, max: 50.0); // span = 50
 
-        final ratio = RangeRatioCalculator.calculateRatio(crossingRange, positiveRange);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(crossingRange, positiveRange);
 
         expect(ratio, equals(2.0));
       });
@@ -87,7 +93,8 @@ void main() {
         const smallRange = DataRange(min: 0.0, max: 1.0);
         const largeRange = DataRange(min: 0.0, max: 1000000.0);
 
-        final ratio = RangeRatioCalculator.calculateRatio(smallRange, largeRange);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(smallRange, largeRange);
 
         expect(ratio, equals(1000000.0));
       });
@@ -133,7 +140,8 @@ void main() {
       test('uses default threshold of 10x', () {
         final seriesRanges = {
           'series1': const DataRange(min: 0.0, max: 10.0),
-          'series2': const DataRange(min: 0.0, max: 99.0), // 9.9x - below threshold
+          'series2':
+              const DataRange(min: 0.0, max: 99.0), // 9.9x - below threshold
         };
 
         final result = NormalizationDetector.shouldNormalize(seriesRanges);
@@ -303,7 +311,9 @@ void main() {
         expect(ratio, equals(2.0));
       });
 
-      test('US2-3: respects explicit config (not implemented here, but ratio is calculated)', () {
+      test(
+          'US2-3: respects explicit config (not implemented here, but ratio is calculated)',
+          () {
         // This test documents the expected behavior:
         // Even if shouldNormalize returns true, explicit config takes precedence
         // The detector just provides the recommendation

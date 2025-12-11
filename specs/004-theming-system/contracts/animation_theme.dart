@@ -116,10 +116,13 @@ class AnimationTheme {
 
   static AnimationTheme fromJson(Map<String, dynamic> json) {
     return AnimationTheme(
-      dataUpdateDuration: Duration(milliseconds: json['dataUpdateDuration'] as int? ?? 300),
+      dataUpdateDuration:
+          Duration(milliseconds: json['dataUpdateDuration'] as int? ?? 300),
       dataUpdateCurve: _parseCurve(json['dataUpdateCurve']) ?? Curves.easeInOut,
-      themeSwitchDuration: Duration(milliseconds: json['themeSwitchDuration'] as int? ?? 200),
-      themeSwitchCurve: _parseCurve(json['themeSwitchCurve']) ?? Curves.easeInOut,
+      themeSwitchDuration:
+          Duration(milliseconds: json['themeSwitchDuration'] as int? ?? 200),
+      themeSwitchCurve:
+          _parseCurve(json['themeSwitchCurve']) ?? Curves.easeInOut,
     );
   }
 

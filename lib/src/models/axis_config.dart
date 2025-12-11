@@ -31,7 +31,8 @@ class AxisRange {
   /// Creates an axis range with the specified min and max values.
   ///
   /// Throws [AssertionError] if min >= max.
-  const AxisRange(this.min, this.max) : assert(min < max, 'Axis range min must be less than max');
+  const AxisRange(this.min, this.max)
+      : assert(min < max, 'Axis range min must be less than max');
 
   /// The minimum value of the axis range.
   final double min;

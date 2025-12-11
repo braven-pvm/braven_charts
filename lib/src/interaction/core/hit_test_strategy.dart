@@ -96,7 +96,8 @@ class LineHitStrategy implements HitTestStrategy {
     double minDistance = double.infinity;
 
     for (int i = 0; i < points.length - 1; i++) {
-      final distance = _distanceToLineSegment(position, points[i], points[i + 1]);
+      final distance =
+          _distanceToLineSegment(position, points[i], points[i + 1]);
       if (distance < minDistance) {
         minDistance = distance;
       }
@@ -116,7 +117,8 @@ class LineHitStrategy implements HitTestStrategy {
     }
 
     // Parameter t represents position along segment (0 = start, 1 = end)
-    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) / (dx * dx + dy * dy);
+    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
+        (dx * dx + dy * dy);
 
     // Clamp t to [0, 1] to stay on segment
     final tClamped = t.clamp(0.0, 1.0);
@@ -184,10 +186,14 @@ class RectangleHitStrategy implements HitTestStrategy {
     }
 
     // Calculate perpendicular distances from each edge
-    final distFromLeft = position.dx - bounds.left; // Positive when inside/right of left edge
-    final distFromRight = bounds.right - position.dx; // Positive when inside/left of right edge
-    final distFromTop = position.dy - bounds.top; // Positive when inside/below top edge
-    final distFromBottom = bounds.bottom - position.dy; // Positive when inside/above bottom edge
+    final distFromLeft =
+        position.dx - bounds.left; // Positive when inside/right of left edge
+    final distFromRight =
+        bounds.right - position.dx; // Positive when inside/left of right edge
+    final distFromTop =
+        position.dy - bounds.top; // Positive when inside/below top edge
+    final distFromBottom =
+        bounds.bottom - position.dy; // Positive when inside/above bottom edge
 
     // Position is on edge if it's within edgeWidth of ANY edge
     // This creates a band around the perimeter
@@ -195,7 +201,8 @@ class RectangleHitStrategy implements HitTestStrategy {
     final nearLeft = distFromLeft >= -edgeWidth && distFromLeft <= edgeWidth;
     final nearRight = distFromRight >= -edgeWidth && distFromRight <= edgeWidth;
     final nearTop = distFromTop >= -edgeWidth && distFromTop <= edgeWidth;
-    final nearBottom = distFromBottom >= -edgeWidth && distFromBottom <= edgeWidth;
+    final nearBottom =
+        distFromBottom >= -edgeWidth && distFromBottom <= edgeWidth;
 
     return nearLeft || nearRight || nearTop || nearBottom;
   }
@@ -245,9 +252,11 @@ class RectangleHitStrategy implements HitTestStrategy {
     final distFromBottom = bottom - position.dy;
 
     final isNearLeft = distFromLeft >= -edgeWidth && distFromLeft < edgeWidth;
-    final isNearRight = distFromRight >= -edgeWidth && distFromRight < edgeWidth;
+    final isNearRight =
+        distFromRight >= -edgeWidth && distFromRight < edgeWidth;
     final isNearTop = distFromTop >= -edgeWidth && distFromTop < edgeWidth;
-    final isNearBottom = distFromBottom >= -edgeWidth && distFromBottom < edgeWidth;
+    final isNearBottom =
+        distFromBottom >= -edgeWidth && distFromBottom < edgeWidth;
 
     // Corners take precedence (smaller hit-zones, more specific)
     if (isNearTop && isNearLeft) return ResizeDirection.topLeft;

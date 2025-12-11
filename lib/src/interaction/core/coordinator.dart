@@ -39,7 +39,10 @@ class HoveredMarkerInfo {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is HoveredMarkerInfo && other.seriesId == seriesId && other.markerIndex == markerIndex && other.plotPosition == plotPosition;
+    return other is HoveredMarkerInfo &&
+        other.seriesId == seriesId &&
+        other.markerIndex == markerIndex &&
+        other.plotPosition == plotPosition;
   }
 
   @override
@@ -116,7 +119,8 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   Set<ChartElement> get selectedElements => Set.unmodifiable(_selectedElements);
 
   /// Elements in preview selection (during box drag, before commit).
-  Set<ChartElement> get previewSelectedElements => Set.unmodifiable(_previewSelection);
+  Set<ChartElement> get previewSelectedElements =>
+      Set.unmodifiable(_previewSelection);
 
   /// Currently hovered element.
   ChartElement? get hoveredElement => _hoveredElement;
@@ -125,7 +129,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   HoveredMarkerInfo? get hoveredMarker => _hoveredMarker;
 
   /// Whether Ctrl/Command modifier is pressed.
-  bool get isCtrlPressed => _modifierKeys.contains(LogicalKeyboardKey.control) || _modifierKeys.contains(LogicalKeyboardKey.meta);
+  bool get isCtrlPressed =>
+      _modifierKeys.contains(LogicalKeyboardKey.control) ||
+      _modifierKeys.contains(LogicalKeyboardKey.meta);
 
   /// Whether Shift modifier is pressed.
   bool get isShiftPressed => _modifierKeys.contains(LogicalKeyboardKey.shift);

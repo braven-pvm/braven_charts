@@ -33,8 +33,12 @@ class LabelStyle {
       borderWidth: (json['borderWidth'] as num).toDouble(),
       borderRadius: (json['borderRadius'] as num).toDouble(),
       padding: _parsePadding(json['padding'] as Map<String, dynamic>),
-      shadowColor: json['shadowColor'] != null ? _parseColor(json['shadowColor'] as String) : null,
-      shadowBlurRadius: json['shadowBlurRadius'] != null ? (json['shadowBlurRadius'] as num).toDouble() : null,
+      shadowColor: json['shadowColor'] != null
+          ? _parseColor(json['shadowColor'] as String)
+          : null,
+      shadowBlurRadius: json['shadowBlurRadius'] != null
+          ? (json['shadowBlurRadius'] as num).toDouble()
+          : null,
     );
   }
   const LabelStyle({
@@ -100,12 +104,15 @@ class LabelStyle {
   Map<String, dynamic> toJson() {
     return {
       'textStyle': _textStyleToJson(textStyle),
-      'backgroundColor': '#${backgroundColor.value.toRadixString(16).padLeft(8, '0')}',
+      'backgroundColor':
+          '#${backgroundColor.value.toRadixString(16).padLeft(8, '0')}',
       'borderColor': '#${borderColor.value.toRadixString(16).padLeft(8, '0')}',
       'borderWidth': borderWidth,
       'borderRadius': borderRadius,
       'padding': _paddingToJson(padding),
-      if (shadowColor != null) 'shadowColor': '#${shadowColor!.value.toRadixString(16).padLeft(8, '0')}',
+      if (shadowColor != null)
+        'shadowColor':
+            '#${shadowColor!.value.toRadixString(16).padLeft(8, '0')}',
       if (shadowBlurRadius != null) 'shadowBlurRadius': shadowBlurRadius,
     };
   }
@@ -145,16 +152,22 @@ class LabelStyle {
 
   static TextStyle _parseTextStyle(Map<String, dynamic> json) {
     return TextStyle(
-      color: json['color'] != null ? _parseColor(json['color'] as String) : null,
-      fontSize: json['fontSize'] != null ? (json['fontSize'] as num).toDouble() : null,
-      fontWeight: json['fontWeight'] != null ? FontWeight.values[json['fontWeight'] as int] : null,
+      color:
+          json['color'] != null ? _parseColor(json['color'] as String) : null,
+      fontSize: json['fontSize'] != null
+          ? (json['fontSize'] as num).toDouble()
+          : null,
+      fontWeight: json['fontWeight'] != null
+          ? FontWeight.values[json['fontWeight'] as int]
+          : null,
       fontFamily: json['fontFamily'] as String?,
     );
   }
 
   static Map<String, dynamic> _textStyleToJson(TextStyle style) {
     return {
-      if (style.color != null) 'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
+      if (style.color != null)
+        'color': '#${style.color!.value.toRadixString(16).padLeft(8, '0')}',
       if (style.fontSize != null) 'fontSize': style.fontSize,
       if (style.fontWeight != null) 'fontWeight': style.fontWeight!.index,
       if (style.fontFamily != null) 'fontFamily': style.fontFamily,
@@ -174,7 +187,9 @@ class LabelStyle {
   }
 
   static Map<String, dynamic> _paddingToJson(EdgeInsets padding) {
-    if (padding.left == padding.top && padding.top == padding.right && padding.right == padding.bottom) {
+    if (padding.left == padding.top &&
+        padding.top == padding.right &&
+        padding.right == padding.bottom) {
       return {'all': padding.left};
     }
     return {

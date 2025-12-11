@@ -19,7 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Multi-Axis Pipeline Integration', () {
     group('BravenChartPlus with multi-scale data', () {
-      testWidgets('renders chart with 100x range difference without error', (tester) async {
+      testWidgets('renders chart with 100x range difference without error',
+          (tester) async {
         // Create chart with series having 100x range difference
         // Series A: 0-10
         // Series B: 0-1000
@@ -62,7 +63,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('renders chart with similar ranges without error', (tester) async {
+      testWidgets('renders chart with similar ranges without error',
+          (tester) async {
         // Create chart with series having 2x range difference (below 10x threshold)
         // Series A: 0-50
         // Series B: 0-100
@@ -154,7 +156,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('multi-series with similar ranges works unchanged', (tester) async {
+      testWidgets('multi-series with similar ranges works unchanged',
+          (tester) async {
         // Series with similar ranges should render normally
         await tester.pumpWidget(
           const MaterialApp(
@@ -255,7 +258,8 @@ void main() {
         final smallRange = const DataRange(min: 0.0, max: 10.0);
         final largeRange = const DataRange(min: 0.0, max: 100.0);
 
-        final ratio = RangeRatioCalculator.calculateRatio(smallRange, largeRange);
+        final ratio =
+            RangeRatioCalculator.calculateRatio(smallRange, largeRange);
         expect(ratio, equals(10.0));
       });
 

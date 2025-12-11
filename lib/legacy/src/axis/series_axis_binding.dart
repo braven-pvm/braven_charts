@@ -56,12 +56,15 @@ class SeriesAxisBinding {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is SeriesAxisBinding && other.seriesId == seriesId && other.axisId == axisId;
+    return other is SeriesAxisBinding &&
+        other.seriesId == seriesId &&
+        other.axisId == axisId;
   }
 
   @override
   int get hashCode => Object.hash(seriesId, axisId);
 
   @override
-  String toString() => 'SeriesAxisBinding(seriesId: $seriesId, axisId: $axisId)';
+  String toString() =>
+      'SeriesAxisBinding(seriesId: $seriesId, axisId: $axisId)';
 }

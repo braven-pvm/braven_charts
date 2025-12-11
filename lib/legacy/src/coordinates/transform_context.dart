@@ -9,7 +9,8 @@ library;
 import 'dart:math' show Point;
 import 'dart:ui' show Size, Rect;
 
-import 'package:braven_charts/legacy/braven_charts.dart' show DataRange, ChartSeries;
+import 'package:braven_charts/legacy/braven_charts.dart'
+    show DataRange, ChartSeries;
 
 import '../rendering/render_context.dart';
 import 'viewport_state.dart';

@@ -26,7 +26,8 @@ import 'context_aware_recognizer.dart';
 ///   onPanEnd: (details) => print('Pan ended'),
 /// );
 /// ```
-class PriorityPanGestureRecognizer extends ContextAwareGestureRecognizer<PanGestureRecognizer> {
+class PriorityPanGestureRecognizer
+    extends ContextAwareGestureRecognizer<PanGestureRecognizer> {
   PriorityPanGestureRecognizer({
     required super.coordinator,
     this.onPanStart,
@@ -111,7 +112,11 @@ class PriorityPanGestureRecognizer extends ContextAwareGestureRecognizer<PanGest
 
     if (_hasClaimedMode) {
       onPanUpdate?.call(
-        DragUpdateDetails(sourceTimeStamp: event.timeStamp, delta: event.delta, globalPosition: event.position, localPosition: event.localPosition),
+        DragUpdateDetails(
+            sourceTimeStamp: event.timeStamp,
+            delta: event.delta,
+            globalPosition: event.position,
+            localPosition: event.localPosition),
       );
     }
   }
@@ -119,7 +124,8 @@ class PriorityPanGestureRecognizer extends ContextAwareGestureRecognizer<PanGest
   void _handlePointerEnd(PointerEvent event) {
     if (_hasClaimedMode) {
       if (event is PointerUpEvent) {
-        onPanEnd?.call(DragEndDetails(velocity: Velocity.zero, primaryVelocity: 0.0));
+        onPanEnd?.call(
+            DragEndDetails(velocity: Velocity.zero, primaryVelocity: 0.0));
       } else {
         onPanCancel?.call();
       }
@@ -158,7 +164,10 @@ class PriorityPanGestureRecognizer extends ContextAwareGestureRecognizer<PanGest
     if (claimed) {
       _hasClaimedMode = true;
       onPanStart?.call(
-        DragStartDetails(sourceTimeStamp: null, globalPosition: _startPosition ?? Offset.zero, localPosition: _startPosition ?? Offset.zero),
+        DragStartDetails(
+            sourceTimeStamp: null,
+            globalPosition: _startPosition ?? Offset.zero,
+            localPosition: _startPosition ?? Offset.zero),
       );
     }
   }

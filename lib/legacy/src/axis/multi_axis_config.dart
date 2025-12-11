@@ -116,7 +116,8 @@ class MultiAxisConfig {
       axes: axes ?? this.axes,
       bindings: bindings ?? this.bindings,
       mode: mode ?? this.mode,
-      autoDetectionThreshold: autoDetectionThreshold ?? this.autoDetectionThreshold,
+      autoDetectionThreshold:
+          autoDetectionThreshold ?? this.autoDetectionThreshold,
     );
   }
 
@@ -132,7 +133,8 @@ class MultiAxisConfig {
     for (var i = 0; i < bindings.length; i++) {
       if (bindings[i] != other.bindings[i]) return false;
     }
-    return mode == other.mode && autoDetectionThreshold == other.autoDetectionThreshold;
+    return mode == other.mode &&
+        autoDetectionThreshold == other.autoDetectionThreshold;
   }
 
   @override

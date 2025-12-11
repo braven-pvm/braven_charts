@@ -73,14 +73,14 @@ class ColorCodedAxesDemo extends StatelessWidget {
 
     // Axes WITHOUT explicit colors - should derive from series
     final powerAxis = YAxisConfig(
-              position: YAxisPosition.left,
+      position: YAxisPosition.left,
       color: null, // Should resolve to BLUE from powerSeries
       label: 'Power',
       unit: 'W',
     );
 
     final hrAxis = YAxisConfig(
-              position: YAxisPosition.right,
+      position: YAxisPosition.right,
       color: null, // Should resolve to RED from hrSeries
       label: 'Heart Rate',
       unit: 'bpm',
@@ -308,7 +308,8 @@ class _MultiAxisDemoPainter extends CustomPainter {
       if (s.points.isEmpty) continue;
 
       // Find the axis for this series
-      final binding = config.bindings.where((b) => b.seriesId == s.id).firstOrNull;
+      final binding =
+          config.bindings.where((b) => b.seriesId == s.id).firstOrNull;
       if (binding == null) continue;
 
       final bounds = axisBounds[binding.yAxisId];

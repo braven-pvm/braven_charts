@@ -209,7 +209,8 @@ class ScrollbarPainter extends CustomPainter {
     // Calculate edge zone rect based on hover zone
     final Rect edgeRect;
 
-    if (state.hoverZone == HitTestZone.leftEdge || state.hoverZone == HitTestZone.topEdge) {
+    if (state.hoverZone == HitTestZone.leftEdge ||
+        state.hoverZone == HitTestZone.topEdge) {
       // Left/Top edge: First edgeGripWidth pixels
       if (isHorizontal) {
         edgeRect = Rect.fromLTWH(
@@ -268,7 +269,8 @@ class ScrollbarPainter extends CustomPainter {
   Color _getHandleColor() {
     // Priority order: disabled > active > hover > default
     final interactionState = ScrollbarController.getInteractionState(
-      isHovering: state.hoverZone != null && state.hoverZone != HitTestZone.track,
+      isHovering:
+          state.hoverZone != null && state.hoverZone != HitTestZone.track,
       isActive: state.isDragging,
       isEnabled: true, // TODO: Wire to InteractionConfig.enablePan/enableZoom
     );

@@ -113,7 +113,8 @@ class ChartScrollbar extends StatefulWidget {
   /// - Keyboard navigation - immediate
   ///
   /// See: docs/architecture/SCROLLBAR_ARCHITECTURE_ANALYSIS.md
-  final void Function(Offset pixelDelta, ScrollbarInteraction interaction) onPixelDeltaChanged;
+  final void Function(Offset pixelDelta, ScrollbarInteraction interaction)
+      onPixelDeltaChanged;
 
   /// Optional callback fired when pan gesture completes (T071).
   ///
@@ -159,7 +160,8 @@ class ChartScrollbar extends StatefulWidget {
 /// - Uses ValueNotifier<ScrollbarState> instead of setState() for >10Hz updates
 /// - All state changes go through ValueNotifier for performance optimization
 /// - Throttles viewport updates to 60 FPS to prevent chart jank
-class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStateMixin {
+class _ChartScrollbarState extends State<ChartScrollbar>
+    with TickerProviderStateMixin {
   /// Reactive state management (Constitutional requirement: ValueNotifier for >10Hz events).
   late ValueNotifier<ScrollbarState> _stateNotifier;
 
@@ -223,11 +225,13 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     // Create flash opacity animation: 0.8 → 0.4 → 0.8 (T091A)
     _flashOpacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.8, end: 0.4).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 0.8, end: 0.4)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50.0,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.4, end: 0.8).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 0.4, end: 0.8)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50.0,
       ),
     ]).animate(_flashAnimationController);
@@ -243,7 +247,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     super.didUpdateWidget(oldWidget);
 
     // Sync scrollbar visibility when viewport changes externally (T048)
-    if (oldWidget.viewportRange != widget.viewportRange || oldWidget.dataRange != widget.dataRange || oldWidget.axis != widget.axis) {
+    if (oldWidget.viewportRange != widget.viewportRange ||
+        oldWidget.dataRange != widget.dataRange ||
+        oldWidget.axis != widget.axis) {
       // Make scrollbar visible when viewport changes
       _stateNotifier.value = _stateNotifier.value.copyWith(isVisible: true);
 
@@ -284,7 +290,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Calculate track length based on orientation
-          final trackLength = widget.axis == Axis.horizontal ? constraints.maxWidth : constraints.maxHeight;
+          final trackLength = widget.axis == Axis.horizontal
+              ? constraints.maxWidth
+              : constraints.maxHeight;
 
           // Calculate handle size using ScrollbarController (T046)
           final handleSize = ScrollbarController.calculateHandleSize(
@@ -309,7 +317,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
           // Update state with calculated handle geometry (needed for hit testing in T086)
           // Update synchronously so gesture handlers have correct values immediately
-          if (_stateNotifier.value.handleSize != handleSize || _stateNotifier.value.handlePosition != handlePosition) {
+          if (_stateNotifier.value.handleSize != handleSize ||
+              _stateNotifier.value.handlePosition != handlePosition) {
             _stateNotifier.value = _stateNotifier.value.copyWith(
               handleSize: handleSize,
               handlePosition: handlePosition,
@@ -328,8 +337,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
                   // When not flashing, flash opacity is at rest (0.8), so final = 1.0 * 0.8 = 0.8
                   // During flash: 0.8 → 0.4 → 0.8 creates visible flash effect
                   final baseOpacity = state.isVisible ? 1.0 : 0.0;
-                  final flashOpacity =
-                      _flashAnimationController.isAnimating ? _flashOpacityAnimation.value : 1.0; // No flash effect when not animating
+                  final flashOpacity = _flashAnimationController.isAnimating
+                      ? _flashOpacityAnimation.value
+                      : 1.0; // No flash effect when not animating
                   final finalOpacity = baseOpacity * flashOpacity;
 
                   // Create ScrollbarPainter with current state and configuration
@@ -341,17 +351,25 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
                     ),
                     isHorizontal: widget.axis == Axis.horizontal,
                     trackLength: trackLength,
-                    isTrackHovered: false, // TODO: Phase 4 (User Story 2) will add hover detection
-                    opacity: finalOpacity, // Apply flash animation opacity (T091A)
+                    isTrackHovered:
+                        false, // TODO: Phase 4 (User Story 2) will add hover detection
+                    opacity:
+                        finalOpacity, // Apply flash animation opacity (T091A)
                   );
 
                   // Render scrollbar using CustomPaint wrapped in MouseRegion for hover detection (T084)
                   return SizedBox(
-                    width: widget.axis == Axis.horizontal ? trackLength : widget.theme.thickness,
-                    height: widget.axis == Axis.vertical ? trackLength : widget.theme.thickness,
+                    width: widget.axis == Axis.horizontal
+                        ? trackLength
+                        : widget.theme.thickness,
+                    height: widget.axis == Axis.vertical
+                        ? trackLength
+                        : widget.theme.thickness,
                     child: MouseRegion(
-                      cursor: _getCursorForZone(state.hoverZone), // T093: Dynamic cursor based on hover zone
-                      onHover: _onHover, // T084: Detect edge zones and update hoverZone
+                      cursor: _getCursorForZone(state
+                          .hoverZone), // T093: Dynamic cursor based on hover zone
+                      onHover:
+                          _onHover, // T084: Detect edge zones and update hoverZone
                       onExit: (_) => _onExit(), // T084: Clear hoverZone on exit
                       child: GestureDetector(
                         onTapUp: _onTrackClick, // T073: Track click to jump
@@ -420,7 +438,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+    final trackLength = widget.axis == Axis.horizontal
+        ? renderBox.size.width
+        : renderBox.size.height;
 
     // Calculate handle geometry from current state
     final currentState = _stateNotifier.value;
@@ -476,7 +496,10 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
     // T091B: Show 'not-allowed' cursor when at zoom limit during edge resize
     if (_isAtZoomLimit &&
-        (zone == HitTestZone.leftEdge || zone == HitTestZone.rightEdge || zone == HitTestZone.topEdge || zone == HitTestZone.bottomEdge)) {
+        (zone == HitTestZone.leftEdge ||
+            zone == HitTestZone.rightEdge ||
+            zone == HitTestZone.topEdge ||
+            zone == HitTestZone.bottomEdge)) {
       return SystemMouseCursors.forbidden;
     }
 
@@ -487,7 +510,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
         return SystemMouseCursors.grab;
       case HitTestZone.leftEdge:
       case HitTestZone.rightEdge:
-        return SystemMouseCursors.resizeColumn; // T094: Horizontal scrollbar edges
+        return SystemMouseCursors
+            .resizeColumn; // T094: Horizontal scrollbar edges
       case HitTestZone.topEdge:
       case HitTestZone.bottomEdge:
         return SystemMouseCursors.resizeRow; // T095: Vertical scrollbar edges
@@ -510,14 +534,20 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+    final trackLength = widget.axis == Axis.horizontal
+        ? renderBox.size.width
+        : renderBox.size.height;
 
     // Extract click position based on axis
-    final clickPosition = widget.axis == Axis.horizontal ? details.localPosition.dx : details.localPosition.dy;
+    final clickPosition = widget.axis == Axis.horizontal
+        ? details.localPosition.dx
+        : details.localPosition.dy;
 
     // PIXEL-DELTA PATTERN: Report pixel offset for track click
     // Parent will convert to data position and handle jump/animation
-    final pixelOffset = widget.axis == Axis.horizontal ? Offset(clickPosition, 0.0) : Offset(0.0, clickPosition);
+    final pixelOffset = widget.axis == Axis.horizontal
+        ? Offset(clickPosition, 0.0)
+        : Offset(0.0, clickPosition);
 
     // Report track click to parent with pixel position
     widget.onPixelDeltaChanged(pixelOffset, ScrollbarInteraction.trackClick);
@@ -592,7 +622,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox != null && widget.theme.enableResizeHandles) {
       // Edge resize enabled - detect which zone was clicked
-      final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+      final trackLength = widget.axis == Axis.horizontal
+          ? renderBox.size.width
+          : renderBox.size.height;
       final currentState = _stateNotifier.value;
 
       // Use ScrollbarController to detect which zone was clicked
@@ -642,7 +674,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
       // Detect drag zone
       final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
       if (renderBox != null && widget.theme.enableResizeHandles) {
-        final trackLength = widget.axis == Axis.horizontal ? renderBox.size.width : renderBox.size.height;
+        final trackLength = widget.axis == Axis.horizontal
+            ? renderBox.size.width
+            : renderBox.size.height;
         final currentState = _stateNotifier.value;
 
         _dragZone = ScrollbarController.getHitTestZone(
@@ -674,7 +708,8 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
     final dragDelta = currentPosition - _dragStartPosition!;
 
     // Extract relevant coordinate based on axis
-    final pixelDelta = widget.axis == Axis.horizontal ? dragDelta.dx : dragDelta.dy;
+    final pixelDelta =
+        widget.axis == Axis.horizontal ? dragDelta.dx : dragDelta.dy;
 
     // Determine interaction type based on drag zone
     ScrollbarInteraction interactionType;
@@ -701,7 +736,9 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
 
     // PIXEL-DELTA PATTERN: Report pixel delta to parent (parent converts to data delta)
     // Create Offset with appropriate axis coordinate
-    final pixelDeltaOffset = widget.axis == Axis.horizontal ? Offset(pixelDelta, 0.0) : Offset(0.0, pixelDelta);
+    final pixelDeltaOffset = widget.axis == Axis.horizontal
+        ? Offset(pixelDelta, 0.0)
+        : Offset(0.0, pixelDelta);
 
     // Report to parent - parent will convert to data delta and update viewport
     widget.onPixelDeltaChanged(pixelDeltaOffset, interactionType);
@@ -714,11 +751,13 @@ class _ChartScrollbarState extends State<ChartScrollbar> with TickerProviderStat
   void _onPanEnd(DragEndDetails details) {
     // PIXEL-DELTA PATTERN: Signal drag end to parent by sending Offset.zero
     // This tells parent to clear its drag start baseline
-    final lastInteraction = _dragZone == HitTestZone.leftEdge || _dragZone == HitTestZone.topEdge
-        ? ScrollbarInteraction.zoomLeftOrTop
-        : _dragZone == HitTestZone.rightEdge || _dragZone == HitTestZone.bottomEdge
-            ? ScrollbarInteraction.zoomRightOrBottom
-            : ScrollbarInteraction.pan;
+    final lastInteraction =
+        _dragZone == HitTestZone.leftEdge || _dragZone == HitTestZone.topEdge
+            ? ScrollbarInteraction.zoomLeftOrTop
+            : _dragZone == HitTestZone.rightEdge ||
+                    _dragZone == HitTestZone.bottomEdge
+                ? ScrollbarInteraction.zoomRightOrBottom
+                : ScrollbarInteraction.pan;
 
     widget.onPixelDeltaChanged(Offset.zero, lastInteraction);
 

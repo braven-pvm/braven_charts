@@ -129,7 +129,10 @@ class MultiAxisConfig {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is MultiAxisConfig && listEquals(other.axes, axes) && listEquals(other.bindings, bindings) && other.mode == mode;
+    return other is MultiAxisConfig &&
+        listEquals(other.axes, axes) &&
+        listEquals(other.bindings, bindings) &&
+        other.mode == mode;
   }
 
   @override

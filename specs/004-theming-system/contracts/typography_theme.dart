@@ -30,10 +30,12 @@ class TypographyTheme {
     required this.labelFontSize,
     required this.fontWeight,
     this.scaleFactor = 1.0,
-  })  : assert(baseFontSize >= 8.0, 'baseFontSize must be >= 8.0 (minimum readable)'),
+  })  : assert(baseFontSize >= 8.0,
+            'baseFontSize must be >= 8.0 (minimum readable)'),
         assert(titleFontSize >= 10.0, 'titleFontSize must be >= 10.0'),
         assert(labelFontSize >= 8.0, 'labelFontSize must be >= 8.0'),
-        assert(scaleFactor >= 0.5 && scaleFactor <= 2.0, 'scaleFactor must be 0.5-2.0');
+        assert(scaleFactor >= 0.5 && scaleFactor <= 2.0,
+            'scaleFactor must be 0.5-2.0');
 
   /// Font family name. Should be available on target platform.
   final String fontFamily;
@@ -84,15 +86,18 @@ class TypographyTheme {
 
   /// Gets effective base font size (with scale factor applied).
   /// Minimum 8.0px enforced.
-  double get effectiveBaseFontSize => (baseFontSize * scaleFactor).clamp(8.0, double.infinity);
+  double get effectiveBaseFontSize =>
+      (baseFontSize * scaleFactor).clamp(8.0, double.infinity);
 
   /// Gets effective title font size (with scale factor applied).
   /// Minimum 10.0px enforced.
-  double get effectiveTitleFontSize => (titleFontSize * scaleFactor).clamp(10.0, double.infinity);
+  double get effectiveTitleFontSize =>
+      (titleFontSize * scaleFactor).clamp(10.0, double.infinity);
 
   /// Gets effective label font size (with scale factor applied).
   /// Minimum 8.0px enforced.
-  double get effectiveLabelFontSize => (labelFontSize * scaleFactor).clamp(8.0, double.infinity);
+  double get effectiveLabelFontSize =>
+      (labelFontSize * scaleFactor).clamp(8.0, double.infinity);
 
   // ========== Predefined Themes ==========
 
@@ -195,11 +200,16 @@ class TypographyTheme {
   static TypographyTheme fromJson(Map<String, dynamic> json) {
     return TypographyTheme(
       fontFamily: json['fontFamily'] as String? ?? defaultLight.fontFamily,
-      baseFontSize: (json['baseFontSize'] as num?)?.toDouble() ?? defaultLight.baseFontSize,
-      titleFontSize: (json['titleFontSize'] as num?)?.toDouble() ?? defaultLight.titleFontSize,
-      labelFontSize: (json['labelFontSize'] as num?)?.toDouble() ?? defaultLight.labelFontSize,
-      fontWeight: _parseFontWeight(json['fontWeight']) ?? defaultLight.fontWeight,
-      scaleFactor: (json['scaleFactor'] as num?)?.toDouble() ?? defaultLight.scaleFactor,
+      baseFontSize: (json['baseFontSize'] as num?)?.toDouble() ??
+          defaultLight.baseFontSize,
+      titleFontSize: (json['titleFontSize'] as num?)?.toDouble() ??
+          defaultLight.titleFontSize,
+      labelFontSize: (json['labelFontSize'] as num?)?.toDouble() ??
+          defaultLight.labelFontSize,
+      fontWeight:
+          _parseFontWeight(json['fontWeight']) ?? defaultLight.fontWeight,
+      scaleFactor:
+          (json['scaleFactor'] as num?)?.toDouble() ?? defaultLight.scaleFactor,
     );
   }
 

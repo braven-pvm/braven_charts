@@ -28,7 +28,8 @@ import '../core/coordinator.dart';
 ///   }
 /// }
 /// ```
-abstract class ContextAwareGestureRecognizer<T extends GestureRecognizer> extends OneSequenceGestureRecognizer {
+abstract class ContextAwareGestureRecognizer<T extends GestureRecognizer>
+    extends OneSequenceGestureRecognizer {
   ContextAwareGestureRecognizer({
     required this.coordinator,
     super.debugOwner,

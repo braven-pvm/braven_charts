@@ -37,7 +37,8 @@ class InteractionTheme {
     required this.selectionOpacity,
   })  : assert(crosshairWidth >= 0.0, 'crosshairWidth must be >= 0'),
         assert(tooltipBorderWidth >= 0.0, 'tooltipBorderWidth must be >= 0'),
-        assert(selectionOpacity >= 0.0 && selectionOpacity <= 1.0, 'selectionOpacity must be 0.0-1.0');
+        assert(selectionOpacity >= 0.0 && selectionOpacity <= 1.0,
+            'selectionOpacity must be 0.0-1.0');
 
   /// Color of crosshair lines.
   final Color crosshairColor;
@@ -73,7 +74,8 @@ class InteractionTheme {
     crosshairWidth: 1.0,
     crosshairDashPattern: [5.0, 5.0],
     tooltipBackground: Color(0xFFFFFFFF),
-    tooltipTextStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF000000)),
     tooltipBorderColor: Color(0xFF757575),
     tooltipBorderWidth: 1.0,
     selectionColor: Color(0xFF1976D2),
@@ -85,7 +87,8 @@ class InteractionTheme {
     crosshairWidth: 1.0,
     crosshairDashPattern: [5.0, 5.0],
     tooltipBackground: Color(0xFF424242),
-    tooltipTextStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFFFFFFFF)),
     tooltipBorderColor: Color(0xFF757575),
     tooltipBorderWidth: 1.0,
     selectionColor: Color(0xFF42A5F5),
@@ -97,7 +100,8 @@ class InteractionTheme {
     crosshairWidth: 1.0,
     crosshairDashPattern: [5.0, 5.0],
     tooltipBackground: Color(0xFFFAFAFA),
-    tooltipTextStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 12.0, fontFamily: 'Roboto', color: Color(0xFF37474F)),
     tooltipBorderColor: Color(0xFF1976D2),
     tooltipBorderWidth: 2.0,
     selectionColor: Color(0xFF1976D2),
@@ -109,7 +113,11 @@ class InteractionTheme {
     crosshairWidth: 1.5,
     crosshairDashPattern: [8.0, 4.0],
     tooltipBackground: Color(0xFFFFFFFF),
-    tooltipTextStyle: TextStyle(fontSize: 13.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 13.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF000000)),
     tooltipBorderColor: Color(0xFFE91E63),
     tooltipBorderWidth: 2.0,
     selectionColor: Color(0xFFE91E63),
@@ -121,7 +129,8 @@ class InteractionTheme {
     crosshairWidth: 0.5,
     crosshairDashPattern: [5.0, 5.0],
     tooltipBackground: Color(0xFFFAFAFA),
-    tooltipTextStyle: TextStyle(fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 11.0, fontFamily: 'Roboto', color: Color(0xFF616161)),
     tooltipBorderColor: Color(0xFFE0E0E0),
     tooltipBorderWidth: 0.5,
     selectionColor: Color(0xFF9E9E9E),
@@ -133,7 +142,11 @@ class InteractionTheme {
     crosshairWidth: 2.0,
     crosshairDashPattern: null, // Solid for max visibility
     tooltipBackground: Color(0xFFFFFFFF),
-    tooltipTextStyle: TextStyle(fontSize: 14.0, fontFamily: 'Roboto', fontWeight: FontWeight.w600, color: Color(0xFF000000)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 14.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF000000)),
     tooltipBorderColor: Color(0xFF000000),
     tooltipBorderWidth: 2.0,
     selectionColor: Color(0xFF000000),
@@ -145,7 +158,11 @@ class InteractionTheme {
     crosshairWidth: 1.5,
     crosshairDashPattern: [6.0, 4.0],
     tooltipBackground: Color(0xFFFFFFFF),
-    tooltipTextStyle: TextStyle(fontSize: 12.0, fontFamily: 'Roboto', fontWeight: FontWeight.w500, color: Color(0xFF000000)),
+    tooltipTextStyle: TextStyle(
+        fontSize: 12.0,
+        fontFamily: 'Roboto',
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF000000)),
     tooltipBorderColor: Color(0xFF0173B2), // Blue from colorblind-safe palette
     tooltipBorderWidth: 1.5,
     selectionColor: Color(0xFF0173B2),
@@ -182,34 +199,50 @@ class InteractionTheme {
 
   Map<String, dynamic> toJson() {
     return {
-      'crosshairColor': '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
+      'crosshairColor':
+          '#${crosshairColor.value.toRadixString(16).padLeft(8, '0')}',
       'crosshairWidth': crosshairWidth,
       'crosshairDashPattern': crosshairDashPattern,
-      'tooltipBackground': '#${tooltipBackground.value.toRadixString(16).padLeft(8, '0')}',
+      'tooltipBackground':
+          '#${tooltipBackground.value.toRadixString(16).padLeft(8, '0')}',
       'tooltipTextStyle': {
         'fontSize': tooltipTextStyle.fontSize,
         'fontFamily': tooltipTextStyle.fontFamily,
-        'color': tooltipTextStyle.color != null ? '#${tooltipTextStyle.color!.value.toRadixString(16).padLeft(8, '0')}' : null,
+        'color': tooltipTextStyle.color != null
+            ? '#${tooltipTextStyle.color!.value.toRadixString(16).padLeft(8, '0')}'
+            : null,
         'fontWeight': tooltipTextStyle.fontWeight?.toString(),
       },
-      'tooltipBorderColor': '#${tooltipBorderColor.value.toRadixString(16).padLeft(8, '0')}',
+      'tooltipBorderColor':
+          '#${tooltipBorderColor.value.toRadixString(16).padLeft(8, '0')}',
       'tooltipBorderWidth': tooltipBorderWidth,
-      'selectionColor': '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
+      'selectionColor':
+          '#${selectionColor.value.toRadixString(16).padLeft(8, '0')}',
       'selectionOpacity': selectionOpacity,
     };
   }
 
   static InteractionTheme fromJson(Map<String, dynamic> json) {
     return InteractionTheme(
-      crosshairColor: _parseColor(json['crosshairColor']) ?? defaultLight.crosshairColor,
-      crosshairWidth: (json['crosshairWidth'] as num?)?.toDouble() ?? defaultLight.crosshairWidth,
-      crosshairDashPattern: (json['crosshairDashPattern'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
-      tooltipBackground: _parseColor(json['tooltipBackground']) ?? defaultLight.tooltipBackground,
-      tooltipTextStyle: _parseTextStyle(json['tooltipTextStyle']) ?? defaultLight.tooltipTextStyle,
-      tooltipBorderColor: _parseColor(json['tooltipBorderColor']) ?? defaultLight.tooltipBorderColor,
-      tooltipBorderWidth: (json['tooltipBorderWidth'] as num?)?.toDouble() ?? defaultLight.tooltipBorderWidth,
-      selectionColor: _parseColor(json['selectionColor']) ?? defaultLight.selectionColor,
-      selectionOpacity: (json['selectionOpacity'] as num?)?.toDouble() ?? defaultLight.selectionOpacity,
+      crosshairColor:
+          _parseColor(json['crosshairColor']) ?? defaultLight.crosshairColor,
+      crosshairWidth: (json['crosshairWidth'] as num?)?.toDouble() ??
+          defaultLight.crosshairWidth,
+      crosshairDashPattern: (json['crosshairDashPattern'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
+      tooltipBackground: _parseColor(json['tooltipBackground']) ??
+          defaultLight.tooltipBackground,
+      tooltipTextStyle: _parseTextStyle(json['tooltipTextStyle']) ??
+          defaultLight.tooltipTextStyle,
+      tooltipBorderColor: _parseColor(json['tooltipBorderColor']) ??
+          defaultLight.tooltipBorderColor,
+      tooltipBorderWidth: (json['tooltipBorderWidth'] as num?)?.toDouble() ??
+          defaultLight.tooltipBorderWidth,
+      selectionColor:
+          _parseColor(json['selectionColor']) ?? defaultLight.selectionColor,
+      selectionOpacity: (json['selectionOpacity'] as num?)?.toDouble() ??
+          defaultLight.selectionOpacity,
     );
   }
 
