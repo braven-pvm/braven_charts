@@ -16,70 +16,74 @@ import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
 import 'package:braven_charts/src/rendering/modules/tooltip_animator.dart';
 import 'package:braven_charts/src/rendering/modules/tooltip_renderer.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  // Initialize Flutter test binding for SchedulerBinding
+  TestWidgetsFlutterBinding.ensureInitialized();
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
 
-/// Creates a test transform for series elements.
-ChartTransform createTestTransform() {
-  return const ChartTransform(
-    dataXMin: 0,
-    dataXMax: 100,
-    dataYMin: 0,
-    dataYMax: 100,
-    plotWidth: 200,
-    plotHeight: 200,
-    invertY: true,
-  );
-}
+  /// Creates a test transform for series elements.
+  ChartTransform createTestTransform() {
+    return const ChartTransform(
+      dataXMin: 0,
+      dataXMax: 100,
+      dataYMin: 0,
+      dataYMax: 100,
+      plotWidth: 200,
+      plotHeight: 200,
+      invertY: true,
+    );
+  }
 
-/// Creates a test series element for tooltip tests.
-SeriesElement createTestSeriesElement({
-  String id = 'test-series',
-  String? name,
-  List<ChartDataPoint>? points,
-  Color color = const Color(0xFF0000FF),
-  double markerRadius = 4.0,
-}) {
-  final series = LineChartSeries(
-    id: id,
-    name: name,
-    points: points ??
-        const [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 50, y: 100),
-          ChartDataPoint(x: 100, y: 50),
-        ],
-    color: color,
-    dataPointMarkerRadius: markerRadius,
-  );
+  /// Creates a test series element for tooltip tests.
+  SeriesElement createTestSeriesElement({
+    String id = 'test-series',
+    String? name,
+    List<ChartDataPoint>? points,
+    Color color = const Color(0xFF0000FF),
+    double markerRadius = 4.0,
+  }) {
+    final series = LineChartSeries(
+      id: id,
+      name: name,
+      points: points ??
+          const [
+            ChartDataPoint(x: 0, y: 0),
+            ChartDataPoint(x: 50, y: 100),
+            ChartDataPoint(x: 100, y: 50),
+          ],
+      color: color,
+      dataPointMarkerRadius: markerRadius,
+    );
 
-  return SeriesElement(
-    series: series,
-    transform: createTestTransform(),
-  );
-}
+    return SeriesElement(
+      series: series,
+      transform: createTestTransform(),
+    );
+  }
 
-/// Creates a mock HoveredMarkerInfo for testing.
-HoveredMarkerInfo createTestMarkerInfo({
-  String seriesId = 'test-series',
-  int markerIndex = 0,
-  Offset plotPosition = const Offset(100, 100),
-}) {
-  return HoveredMarkerInfo(
-    seriesId: seriesId,
-    markerIndex: markerIndex,
-    plotPosition: plotPosition,
-  );
-}
+  /// Creates a mock HoveredMarkerInfo for testing.
+  HoveredMarkerInfo createTestMarkerInfo({
+    String seriesId = 'test-series',
+    int markerIndex = 0,
+    Offset plotPosition = const Offset(100, 100),
+  }) {
+    return HoveredMarkerInfo(
+      seriesId: seriesId,
+      markerIndex: markerIndex,
+      plotPosition: plotPosition,
+    );
+  }
 
 // =============================================================================
 // Tests
 // =============================================================================
 
-void main() {
   group('TooltipRenderer', () {
     late TooltipRenderer renderer;
     late TooltipAnimator animator;
@@ -351,7 +355,8 @@ void main() {
         animator.show('marker', const TooltipConfig(showDelay: Duration.zero));
 
         final effectiveAxes = [
-          YAxisConfig.withId(id: 'test-series_axis',
+          YAxisConfig.withId(
+            id: 'test-series_axis',
             position: YAxisPosition.left,
             label: 'Test',
             unit: 'kg',

@@ -10,6 +10,43 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'y_axis_position.dart';
 
+/// Controls where crosshair Y-value labels appear when hovering over the chart.
+///
+/// This enum determines the positioning of the label that displays the Y-axis
+/// value when the crosshair is active (user hovers over the chart).
+///
+/// Example:
+/// ```dart
+/// // Label appears in the axis strip area outside the plot (default)
+/// YAxisConfig(
+///   crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+/// )
+///
+/// // Label appears inside the plot area near the axis edge
+/// YAxisConfig(
+///   crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+/// )
+/// ```
+enum CrosshairLabelPosition {
+  /// Label appears in the axis strip area outside the plot area.
+  ///
+  /// This is the default and traditional behavior where the crosshair
+  /// Y-value label is rendered in the Y-axis strip (the area containing
+  /// tick labels), positioned outside the main plot area.
+  ///
+  /// Use when: Standard layout with clear separation between axis and plot.
+  overAxis,
+
+  /// Label appears inside the plot area near the axis edge.
+  ///
+  /// The crosshair Y-value label is rendered inside the plot area,
+  /// positioned near the corresponding Y-axis edge. This can be useful
+  /// for space-constrained layouts or when the axis strip is narrow.
+  ///
+  /// Use when: Axis strip is too narrow or space-efficient layout needed.
+  insidePlot,
+}
+
 /// Controls how axis labels and units are displayed on Y-axes.
 ///
 /// This enum provides fine-grained control over the display of axis titles
