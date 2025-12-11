@@ -9,6 +9,7 @@ import '../../models/chart_series.dart';
 import '../../models/normalization_mode.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/y_axis_config.dart';
+import '../../models/y_axis_position.dart';
 import '../multi_axis_normalizer.dart';
 import '../multi_axis_painter.dart';
 import 'crosshair_renderer.dart';
@@ -51,9 +52,6 @@ class MultiAxisManager {
   /// Current series list for axis/binding resolution.
   List<ChartSeries> _series = const [];
 
-  /// Cached effective Y-axes (invalidated by setSeries).
-  List<YAxisConfig>? _cachedEffectiveYAxes;
-
   /// Cached effective bindings (invalidated by setSeries).
   List<SeriesAxisBinding>? _cachedEffectiveBindings;
 
@@ -92,12 +90,11 @@ class MultiAxisManager {
     return true;
   }
 
-  /// Invalidates cached effective axes and bindings.
+  /// Invalidates cached effective bindings.
   ///
   /// Called automatically by [setSeries], but can be called manually
   /// if series properties change without replacing the list.
   void invalidateCache() {
-    _cachedEffectiveYAxes = null;
     _cachedEffectiveBindings = null;
   }
 
@@ -124,20 +121,29 @@ class MultiAxisManager {
   // Effective Axes Resolution
   // ============================================================================
 
-  /// Gets effective Y-axes from inline yAxisConfig on series.
+  /// Gets effective Y-axes from primary axis and inline yAxisConfig on series.
   ///
-  /// Auto-generates axis ID as "{seriesId}_axis" if the config doesn't have an ID.
+  /// Priority:
+  /// 1. Inline yAxisConfig from series (auto-generates ID as "{seriesId}_axis" if empty)
+  /// 2. Primary Y-axis parameter (auto-generates ID as "primary_axis" if empty)
+  /// 3. Default Y-axis (created when both above are absent)
+  ///
+  /// The [primaryYAxis] parameter allows the chart widget to provide a primary
+  /// Y-axis configuration that will be included in the returned list unless an
+  /// axis with the same ID already exists from inline series configs.
+  ///
+  /// If neither primaryYAxis nor any series has a Y-axis config, a default
+  /// left Y-axis is auto-created to ensure the chart always has a Y-axis.
   ///
   /// Results are cached for performance. Cache is invalidated when
-  /// [setSeries] is called.
-  List<YAxisConfig> getEffectiveYAxes() {
-    // Return cached if available
-    if (_cachedEffectiveYAxes != null) return _cachedEffectiveYAxes!;
-
+  /// [setSeries] is called. Note: primaryYAxis is NOT cached; it must be
+  /// provided on each call to ensure correctness.
+  List<YAxisConfig> getEffectiveYAxes({YAxisConfig? primaryYAxis}) {
+    // Start with list from cache or rebuild
     final effectiveAxes = <YAxisConfig>[];
     final axisIds = <String>{};
 
-    // Add inline yAxisConfig from series
+    // Step 1: Add inline yAxisConfig from series
     for (final series in _series) {
       if (series.yAxisConfig != null) {
         // Generate axis ID: use config's ID if set, otherwise derive from series ID
@@ -158,8 +164,31 @@ class MultiAxisManager {
       }
     }
 
-    // Cache and return
-    _cachedEffectiveYAxes = effectiveAxes;
+    // Step 2: Add primary Y-axis if provided
+    if (primaryYAxis != null) {
+      // Auto-generate ID if empty
+      final primaryId =
+          primaryYAxis.id.isNotEmpty ? primaryYAxis.id : 'primary_axis';
+
+      // Only add if not already present (no duplication)
+      if (!axisIds.contains(primaryId)) {
+        final resolvedPrimary = primaryYAxis.id.isEmpty
+            ? primaryYAxis.copyWith(id: primaryId)
+            : primaryYAxis;
+
+        effectiveAxes.add(resolvedPrimary);
+        axisIds.add(primaryId);
+      }
+    }
+
+    // Step 3: Auto-create default Y-axis if still empty
+    if (effectiveAxes.isEmpty) {
+      final defaultAxis = YAxisConfig(
+        position: YAxisPosition.left,
+      ).copyWith(id: 'default');
+      effectiveAxes.add(defaultAxis);
+    }
+
     return effectiveAxes;
   }
 
