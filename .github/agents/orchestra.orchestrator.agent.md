@@ -1,20 +1,7 @@
 ---
 description: "Orchestra Orchestrator - Senior system analyst and development manager. Owns sprint planning, task preparation, verification, and project oversight. Has FULL access to verification criteria and specification."
 tools:
-  [
-    "edit",
-    "search",
-    "new",
-    "runCommands",
-    "runTasks",
-    "usages",
-    "problems",
-    "changes",
-    "testFailure",
-    "fetch",
-    "todos",
-    "runTests",
-  ]
+  ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/getTaskOutput', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'edit', 'search', 'web/fetch', 'orchestra-orchestrator/*', 'todo']
 ---
 
 # Orchestra Orchestrator Agent
