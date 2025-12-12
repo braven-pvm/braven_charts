@@ -43,7 +43,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('left position is default when not specified', (tester) async {
+      testWidgets('left position is default when not specified',
+          (tester) async {
         // Arrange: Chart without explicit position
         await tester.pumpWidget(
           const MaterialApp(
@@ -194,7 +195,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('leftOuter position works in multi-axis layout', (tester) async {
+      testWidgets('leftOuter position works in multi-axis layout',
+          (tester) async {
         // Arrange: Chart with both left and leftOuter axes
         await tester.pumpWidget(
           MaterialApp(
@@ -278,7 +280,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('rightOuter position works in multi-axis layout', (tester) async {
+      testWidgets('rightOuter position works in multi-axis layout',
+          (tester) async {
         // Arrange: Chart with both right and rightOuter axes
         await tester.pumpWidget(
           MaterialApp(
@@ -327,7 +330,8 @@ void main() {
     });
 
     group('All Four Positions Together', () {
-      testWidgets('renders chart with all four Y-axis positions', (tester) async {
+      testWidgets('renders chart with all four Y-axis positions',
+          (tester) async {
         // Arrange: Chart with all four axis positions
         await tester.pumpWidget(
           MaterialApp(
@@ -405,7 +409,8 @@ void main() {
   });
 
   group('Unit Display on Single Y-Axis', () {
-    testWidgets('displays unit with AxisLabelDisplay.labelWithUnit', (tester) async {
+    testWidgets('displays unit with AxisLabelDisplay.labelWithUnit',
+        (tester) async {
       // Arrange: Chart with unit and labelWithUnit display
       await tester.pumpWidget(
         MaterialApp(
@@ -442,7 +447,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('displays unit with AxisLabelDisplay.labelAndTickUnit', (tester) async {
+    testWidgets('displays unit with AxisLabelDisplay.labelAndTickUnit',
+        (tester) async {
       // Arrange: Chart with unit on ticks
       await tester.pumpWidget(
         MaterialApp(
@@ -479,7 +485,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('displays unit with AxisLabelDisplay.labelWithUnitAndTickUnit', (tester) async {
+    testWidgets('displays unit with AxisLabelDisplay.labelWithUnitAndTickUnit',
+        (tester) async {
       // Arrange: Chart with unit on both label and ticks
       await tester.pumpWidget(
         MaterialApp(
@@ -516,7 +523,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('displays no unit with AxisLabelDisplay.labelOnly', (tester) async {
+    testWidgets('displays no unit with AxisLabelDisplay.labelOnly',
+        (tester) async {
       // Arrange: Chart with label only, no unit display
       await tester.pumpWidget(
         MaterialApp(
@@ -553,7 +561,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('displays only tick unit with AxisLabelDisplay.none', (tester) async {
+    testWidgets('displays only tick unit with AxisLabelDisplay.none',
+        (tester) async {
       // Arrange: Chart with no axis label, only tick unit
       await tester.pumpWidget(
         MaterialApp(
@@ -599,10 +608,12 @@ void main() {
       );
 
       // Assert: Default should be overAxis
-      expect(config.crosshairLabelPosition, equals(CrosshairLabelPosition.overAxis));
+      expect(config.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis));
     });
 
-    testWidgets('CrosshairLabelPosition.overAxis works in chart', (tester) async {
+    testWidgets('CrosshairLabelPosition.overAxis works in chart',
+        (tester) async {
       // Arrange: Chart with overAxis crosshair label
       await tester.pumpWidget(
         MaterialApp(
@@ -638,7 +649,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('CrosshairLabelPosition.insidePlot works in chart', (tester) async {
+    testWidgets('CrosshairLabelPosition.insidePlot works in chart',
+        (tester) async {
       // Arrange: Chart with insidePlot crosshair label
       await tester.pumpWidget(
         MaterialApp(
@@ -674,7 +686,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('CrosshairLabelPosition works with different axis positions', (tester) async {
+    testWidgets('CrosshairLabelPosition works with different axis positions',
+        (tester) async {
       // Arrange: Multiple axes with different crosshair positions
       await tester.pumpWidget(
         MaterialApp(
@@ -723,7 +736,8 @@ void main() {
   });
 
   group('Integration Tests', () {
-    testWidgets('right axis with unit and crosshair label works together', (tester) async {
+    testWidgets('right axis with unit and crosshair label works together',
+        (tester) async {
       // Arrange: Comprehensive test combining multiple features
       await tester.pumpWidget(
         MaterialApp(
@@ -767,7 +781,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('multiple series with different positions and units', (tester) async {
+    testWidgets('multiple series with different positions and units',
+        (tester) async {
       // Arrange: Complex multi-axis scenario
       await tester.pumpWidget(
         MaterialApp(
@@ -824,7 +839,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('single axis without position explicitly defaults to left', (tester) async {
+    testWidgets('single axis without position explicitly defaults to left',
+        (tester) async {
       // Arrange: Simple chart relying on defaults
       await tester.pumpWidget(
         const MaterialApp(
