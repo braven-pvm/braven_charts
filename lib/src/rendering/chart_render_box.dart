@@ -7,7 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../axis/axis.dart' as chart_axis;
-import '../axis/axis_renderer.dart';
+import '../axis/x_axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/resize_handle_element.dart';
@@ -1866,15 +1866,15 @@ class ChartRenderBox extends RenderBox {
 
       // Still paint X-axis using standard renderer
       if (_xAxis != null) {
-        AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+        XAxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
       }
     } else {
       // Single-axis mode: use standard axis renderers
       if (_xAxis != null) {
-        AxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+        XAxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
       }
       if (_yAxis != null) {
-        AxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
+        XAxisRenderer(_yAxis!, theme: _theme).paint(canvas, size, _plotArea);
       }
     }
 
