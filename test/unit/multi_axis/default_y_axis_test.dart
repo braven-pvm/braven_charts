@@ -17,7 +17,9 @@ void main() {
     });
 
     group('FR-005: Auto-create default Y-axis when no Y-axis configured', () {
-      test('creates default left Y-axis when primaryYAxis is null and no series have yAxisConfig', () {
+      test(
+          'creates default left Y-axis when primaryYAxis is null and no series have yAxisConfig',
+          () {
         // Arrange: Empty series list, no primary axis
         manager.setSeries([]);
 
@@ -30,7 +32,9 @@ void main() {
         expect(effectiveAxes[0].id, equals('default'));
       });
 
-      test('creates default left Y-axis when primaryYAxis is null and series have no yAxisConfig', () {
+      test(
+          'creates default left Y-axis when primaryYAxis is null and series have no yAxisConfig',
+          () {
         // Arrange: Series without yAxisConfig
         final series = [
           const ChartSeries(
@@ -70,7 +74,8 @@ void main() {
         manager.setSeries([]);
 
         // Act
-        final effectiveAxes = manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes =
+            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
 
         // Assert: Should use the primary axis
         expect(effectiveAxes.length, equals(1));
@@ -156,14 +161,16 @@ void main() {
         manager.setSeries([]);
 
         // Act
-        final effectiveAxes = manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes =
+            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
 
         // Assert: ID should be auto-generated
         expect(effectiveAxes[0].id, isNotEmpty);
         expect(effectiveAxes[0].id, equals('primary_axis'));
       });
 
-      test('system auto-generates id for series yAxisConfig when not provided', () {
+      test('system auto-generates id for series yAxisConfig when not provided',
+          () {
         // Arrange: Series with yAxisConfig without explicit id
         final series = [
           ChartSeries(
@@ -262,7 +269,9 @@ void main() {
     });
 
     group('Auto-Scaling', () {
-      test('default axis uses data range for auto-scaling when no explicit min/max', () {
+      test(
+          'default axis uses data range for auto-scaling when no explicit min/max',
+          () {
         // Arrange: Series with varying data
         final series = [
           const ChartSeries(
@@ -304,7 +313,8 @@ void main() {
         manager.setSeries(series);
 
         // Act
-        final effectiveAxes = manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes =
+            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
 
         // Assert: Should preserve explicit bounds
         expect(effectiveAxes[0].min, equals(0));
@@ -367,7 +377,8 @@ void main() {
         manager.setSeries(series);
 
         // Act
-        final effectiveAxes = manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes =
+            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
 
         // Assert: Should have both axes
         expect(effectiveAxes.length, equals(2));
