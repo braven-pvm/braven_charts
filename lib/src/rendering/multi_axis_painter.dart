@@ -90,6 +90,25 @@ class MultiAxisPainter {
   /// Cached axis widths.
   Map<String, double>? _cachedWidths;
 
+  /// Cache for tick label TextPainters.
+  ///
+  /// Structure: `Map<axisId, Map<tickValue, TextPainter>>`
+  /// This allows efficient reuse of pre-laid-out TextPainters during
+  /// subsequent paint cycles, avoiding expensive layout() calls.
+  final Map<String, Map<double, TextPainter>> _tickLabelCache = {};
+
+  /// Cache for axis label TextPainters.
+  ///
+  /// Structure: `Map<axisId, TextPainter>`
+  /// Caches the rotated axis title labels (e.g., "Power (W)").
+  final Map<String, TextPainter> _axisLabelCache = {};
+
+  /// Previous axis bounds for cache invalidation detection.
+  Map<String, DataRange>? _previousAxisBounds;
+
+  /// Previous label style for cache invalidation detection.
+  TextStyle? _previousLabelStyle;
+
   /// Paints all configured axes on the canvas.
   ///
   /// [canvas] is the canvas to draw on.
@@ -97,6 +116,9 @@ class MultiAxisPainter {
   /// [plotArea] is the data rendering area (axes align to this).
   void paint(Canvas canvas, Rect chartArea, Rect plotArea) {
     if (axes.isEmpty) return;
+
+    // Invalidate caches if axis bounds or label style changed
+    _invalidateCachesIfNeeded();
 
     // Filter to only visible axes for rendering
     final visibleAxes = axes.where((axis) => axis.visible).toList();
@@ -124,6 +146,45 @@ class MultiAxisPainter {
 
       _paintAxis(canvas, axis, axisRect, plotArea, bounds);
     }
+  }
+
+  /// Invalidates caches when axis bounds or label style change.
+  ///
+  /// This method detects changes by comparing current parameters with
+  /// previously stored values. When changes are detected:
+  /// - If axisBounds changed: Clear tick label cache (tick values changed)
+  /// - If labelStyle changed: Clear both caches (text measurements changed)
+  void _invalidateCachesIfNeeded() {
+    // Check if label style changed
+    if (_previousLabelStyle != labelStyle) {
+      // Label style affects both tick labels and axis labels
+      _tickLabelCache.clear();
+      _axisLabelCache.clear();
+      _previousLabelStyle = labelStyle;
+    }
+
+    // Check if axis bounds changed
+    if (_previousAxisBounds != null) {
+      // Check if any axis bounds differ
+      bool boundsChanged = false;
+      for (final entry in axisBounds.entries) {
+        final prevBounds = _previousAxisBounds![entry.key];
+        if (prevBounds == null ||
+            prevBounds.min != entry.value.min ||
+            prevBounds.max != entry.value.max) {
+          boundsChanged = true;
+          break;
+        }
+      }
+
+      if (boundsChanged) {
+        // Bounds change affects tick values, so clear tick label cache
+        _tickLabelCache.clear();
+      }
+    }
+
+    // Store current values for next comparison
+    _previousAxisBounds = Map.from(axisBounds);
   }
 
   /// Paints a single axis.
@@ -219,17 +280,28 @@ class MultiAxisPainter {
       labelText = '$labelText (${axis.unit})';
     }
 
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: labelText,
-        style: TextStyle(
-          color: axisColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
+    // Check cache first
+    TextPainter textPainter;
+    if (_axisLabelCache.containsKey(axis.id)) {
+      // Cache hit - reuse existing TextPainter
+      textPainter = _axisLabelCache[axis.id]!;
+    } else {
+      // Cache miss - create and layout new TextPainter
+      textPainter = TextPainter(
+        text: TextSpan(
+          text: labelText,
+          style: TextStyle(
+            color: axisColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Store in cache for future reuse
+      _axisLabelCache[axis.id] = textPainter;
+    }
 
     canvas.save();
 
@@ -299,13 +371,26 @@ class MultiAxisPainter {
       series,
     );
 
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: labelStyle.copyWith(color: labelColor),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    // Check cache first
+    final axisCache = _tickLabelCache.putIfAbsent(axis.id, () => {});
+    TextPainter textPainter;
+
+    if (axisCache.containsKey(value)) {
+      // Cache hit - reuse existing TextPainter
+      textPainter = axisCache[value]!;
+    } else {
+      // Cache miss - create and layout new TextPainter
+      textPainter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: labelStyle.copyWith(color: labelColor),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Store in cache for future reuse
+      axisCache[value] = textPainter;
+    }
 
     double labelX;
     if (isLeftSide) {
