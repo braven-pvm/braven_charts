@@ -556,23 +556,33 @@ class CrosshairRenderer {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Calculate label X position based on axis position
+      // Calculate label X position based on axis position and crosshairLabelPosition
       final double labelX;
       final isLeftAxis = axis.position == YAxisPosition.left ||
           axis.position == YAxisPosition.leftOuter;
 
-      if (isLeftAxis) {
-        final axisLineX = axis.position == YAxisPosition.left
-            ? plotArea.left
-            : plotArea.left -
-                multiAxisInfo.getPositionWidth(YAxisPosition.left);
-        labelX = axisLineX - textPainter.width - labelPadding * 2;
+      if (axis.crosshairLabelPosition == CrosshairLabelPosition.insidePlot) {
+        // Position inside the plot area near the axis edge
+        if (isLeftAxis) {
+          labelX = plotArea.left + labelPadding;
+        } else {
+          labelX = plotArea.right - textPainter.width - labelPadding;
+        }
       } else {
-        final axisLineX = axis.position == YAxisPosition.right
-            ? plotArea.right
-            : plotArea.right +
-                multiAxisInfo.getPositionWidth(YAxisPosition.right);
-        labelX = axisLineX + labelPadding * 2;
+        // Default overAxis behavior: position outside plot area in axis strip
+        if (isLeftAxis) {
+          final axisLineX = axis.position == YAxisPosition.left
+              ? plotArea.left
+              : plotArea.left -
+                  multiAxisInfo.getPositionWidth(YAxisPosition.left);
+          labelX = axisLineX - textPainter.width - labelPadding * 2;
+        } else {
+          final axisLineX = axis.position == YAxisPosition.right
+              ? plotArea.right
+              : plotArea.right +
+                  multiAxisInfo.getPositionWidth(YAxisPosition.right);
+          labelX = axisLineX + labelPadding * 2;
+        }
       }
 
       final labelY = (cursorPosition.dy - textPainter.height / 2).clamp(
