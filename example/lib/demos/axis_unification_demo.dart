@@ -155,8 +155,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate sine wave data
-  List<ChartDataPoint> _generateSineData(int count,
-      {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
+  List<ChartDataPoint> _generateSineData(int count, {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.sin(x * frequency);
@@ -165,8 +164,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate cosine wave data
-  List<ChartDataPoint> _generateCosineData(int count,
-      {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
+  List<ChartDataPoint> _generateCosineData(int count, {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.cos(x * frequency);
@@ -297,8 +295,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
           label: 'Temperature',
           unit: '°C',
           color: Colors.teal,
-          labelDisplay: AxisLabelDisplay
-              .labelWithUnit, // "Temperature (°C)" label, "25", "50" ticks
+          labelDisplay: AxisLabelDisplay.labelWithUnit, // "Temperature (°C)" label, "25", "50" ticks
           showAxisLine: true,
         ),
       ),
@@ -313,8 +310,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
           label: 'Humidity',
           unit: '%',
           color: Colors.indigo,
-          labelDisplay:
-              AxisLabelDisplay.tickUnitOnly, // No label, "75 %", "80 %" ticks
+          labelDisplay: AxisLabelDisplay.tickUnitOnly, // No label, "75 %", "80 %" ticks
           showAxisLine: true,
         ),
       ),
