@@ -320,6 +320,83 @@ ElevatedButton(
 **[📖 Streaming Examples](example/lib/)** - Basic, Advanced, and Buffer Status examples  
 **[📖 Streaming Specification](specs/009-dual-mode-streaming/)** - Complete technical specification
 
+### Multi-Axis Configuration ✨ NEW
+The unified axis configuration system provides flexible multi-axis charts with independent Y-axes and grid control:
+
+- **YAxisConfig**: Configure multiple Y-axes at different positions (left, right, leftOuter, rightOuter)
+- **GridConfig**: Independent control of horizontal and vertical grid lines
+- **CrosshairLabelPosition**: Choose where crosshair Y-value labels appear (overAxis vs insidePlot)
+- **AxisLabelDisplay**: Control axis label and tick unit display (labelWithUnit, tickUnitOnly, etc.)
+
+**Performance**: Supports up to 8 Y-axes with independent scaling and <20ms render time.
+
+#### YAxisConfig Example
+```dart
+import 'package:braven_charts/braven_charts.dart';
+
+// Multi-axis chart with different Y-axes
+BravenChartPlus(
+  series: [
+    LineChartSeries(
+      id: 'power',
+      name: 'Power (W)',
+      points: powerData,
+      color: Colors.blue,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Power',
+        unit: 'W',
+        color: Colors.blue,
+        showAxisLine: true,
+        crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        labelDisplay: AxisLabelDisplay.labelWithUnit, // "Power (W)" label
+      ),
+    ),
+    LineChartSeries(
+      id: 'heart_rate',
+      name: 'Heart Rate (bpm)',
+      points: heartRateData,
+      color: Colors.red,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.right,
+        label: 'Heart Rate',
+        unit: 'bpm',
+        color: Colors.red,
+        showAxisLine: true,
+        crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        labelDisplay: AxisLabelDisplay.tickUnitOnly, // No label, "150 bpm" ticks
+      ),
+    ),
+  ],
+)
+```
+
+#### GridConfig Example
+```dart
+// Custom grid configuration with horizontal-only lines
+BravenChartPlus(
+  series: seriesList,
+  grid: GridConfig(
+    horizontal: true,          // Show horizontal grid lines
+    vertical: false,            // Hide vertical grid lines
+    horizontalColor: Colors.blue.withValues(alpha: 0.3),
+    horizontalStrokeWidth: 1.0,
+  ),
+)
+
+// Disable all grids
+BravenChartPlus(
+  series: seriesList,
+  grid: GridConfig(
+    horizontal: false,
+    vertical: false,
+  ),
+)
+```
+
+**[📖 Axis Unification Demo](example/lib/demos/axis_unification_demo.dart)** - Complete demo with all features  
+**[📖 Multi-Axis Showcase](example/lib/showcase/pages/multi_axis_page.dart)** - Advanced multi-axis examples
+
 ### For Users
 - [Getting Started Guide](docs/README.md) - Basic usage and examples
 - [Chart Types](docs/architecture/features/) - Available chart types
