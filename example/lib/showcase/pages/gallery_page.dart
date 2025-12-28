@@ -196,16 +196,17 @@ class _GalleryPageState extends State<GalleryPage> {
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
-                series: const [
+                series: [
                   LineChartSeries(
                     id: 'high',
                     name: 'High',
+                    unit: "°C",
                     points: [
                       ChartDataPoint(x: 0, y: 28),
                       ChartDataPoint(x: 1, y: 31),
                       ChartDataPoint(x: 2, y: 29),
                       ChartDataPoint(x: 3, y: 33),
-                      ChartDataPoint(x: 4, y: 35),
+                      ChartDataPoint(x: 4, y: 38),
                       ChartDataPoint(x: 5, y: 32),
                       ChartDataPoint(x: 6, y: 30),
                     ],
@@ -218,6 +219,7 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'low',
                     name: 'Low',
+                    unit: "°C",
                     points: [
                       ChartDataPoint(x: 0, y: 18),
                       ChartDataPoint(x: 1, y: 20),
@@ -227,8 +229,9 @@ class _GalleryPageState extends State<GalleryPage> {
                       ChartDataPoint(x: 5, y: 21),
                       ChartDataPoint(x: 6, y: 19),
                     ],
-                    color: Colors.blue,
+                    color: Colors.green,
                     interpolation: LineInterpolation.bezier,
+                    // yAxisConfig: YAxisConfig(position: YAxisPosition.left),
                     strokeWidth: 3.5,
                     showDataPointMarkers: true,
                     dataPointMarkerRadius: 4.0,
@@ -236,10 +239,19 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
+                normalizationMode: NormalizationMode.perSeries,
                 legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
                 xAxis: const AxisConfig(showAxis: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
+                  labelDisplay: AxisLabelDisplay.labelWithUnit,
+                  // label: "Temperature",
+                  unit: "°C",
+                  axisLabelPadding: 10,
+                  axisMargin: 10,
+                  tickLabelPadding: 10,
+                  color: Colors.red,
+                  // crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
                 ),
               ),
             ),
@@ -576,7 +588,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     points: [
                       ChartDataPoint(x: 1, y: 1200),
                       ChartDataPoint(x: 2, y: 1850),
-                      ChartDataPoint(x: 3, y: 1600),
+                      ChartDataPoint(x: 3, y: 7500),
                       ChartDataPoint(x: 4, y: 2200),
                       ChartDataPoint(x: 5, y: 2800),
                       ChartDataPoint(x: 6, y: 2400),
@@ -608,15 +620,18 @@ class _GalleryPageState extends State<GalleryPage> {
                   ),
                 ],
                 theme: ChartTheme.light.copyWith(
-                  backgroundColor: const Color(0xFFE3F2FD),
-                ),
+                    // backgroundColor: const Color(0xFFE3F2FD),
+                    ),
                 showLegend: true,
                 legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
                 xAxis: const AxisConfig(
                   label: 'Day',
                 ),
-                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  showAxisLine: true,
+                ),
               ),
             ),
           ],

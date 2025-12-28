@@ -240,6 +240,16 @@ class ChartRenderBox extends RenderBox {
   /// Y-axis for the chart (optional).
   chart_axis.Axis? _yAxis;
 
+  /// Primary Y-axis configuration from the widget (NEW multi-axis YAxisConfig type).
+  ///
+  /// This is passed to [MultiAxisManager.getEffectiveYAxes] as the `primaryYAxis`
+  /// parameter so the multi-axis system knows about widget-level axis configuration.
+  /// This ensures:
+  /// - Widget-level `showCrosshairLabel` setting is respected
+  /// - No duplicate axes are created (widget-level + auto-generated)
+  /// - Proper axis positioning without gaps
+  YAxisConfig? _primaryYAxisConfig;
+
   /// Last axes range values for change detection.
   /// Only update axes when these values actually change to avoid unnecessary tick regeneration.
   double? _lastXMin;
@@ -588,6 +598,19 @@ class ChartRenderBox extends RenderBox {
     markNeedsLayout();
   }
 
+  /// Sets the primary Y-axis configuration from the widget.
+  ///
+  /// This is the NEW [YAxisConfig] type from the multi-axis system, NOT the legacy
+  /// [chart_axis.Axis] type. It's passed to [MultiAxisManager] so the multi-axis
+  /// system respects widget-level axis configuration (e.g., color, showCrosshairLabel,
+  /// padding, position).
+  void setPrimaryYAxisConfig(YAxisConfig? config) {
+    if (_primaryYAxisConfig == config) return;
+    _primaryYAxisConfig = config;
+    _multiAxisManager.setPrimaryYAxisConfig(config);
+    markNeedsLayout();
+  }
+
   /// Sets the theme for the chart.
   ///
   /// Updates colors for background, grid, axes, etc.
@@ -638,8 +661,9 @@ class ChartRenderBox extends RenderBox {
   /// Gets effective Y-axes from inline yAxisConfig on series.
   ///
   /// Delegates to [MultiAxisManager.getEffectiveYAxes].
+  /// Passes [_primaryYAxisConfig] so widget-level axis config is respected.
   List<YAxisConfig> _getEffectiveYAxes() {
-    return _multiAxisManager.getEffectiveYAxes();
+    return _multiAxisManager.getEffectiveYAxes(primaryYAxis: _primaryYAxisConfig);
   }
 
   /// Paints multiple Y-axes using [MultiAxisPainter].
@@ -1209,20 +1233,16 @@ class ChartRenderBox extends RenderBox {
     // Track right axis width separately for scrollbar positioning
     double rightAxisWidth = 0;
 
-    // Reserve space for Y-axis (left side) - only if axis is visible
-    if (_yAxis != null && _yAxis!.config.showAxisLine) {
-      leftMargin = 60; // Space for Y-axis labels + axis label + padding
-    }
-
     // Reserve space for X-axis (bottom) - only if axis is visible
     if (_xAxis != null && _xAxis!.config.showAxisLine) {
       bottomMargin = 50 + bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
     }
 
-    // MULTI-AXIS: Reserve additional space for right-side Y-axes
-    // When multi-axis mode is active, compute axis widths and reserve space accordingly
+    // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
+    // This ensures consistent layout whether using single or multiple axes.
+    // Previously, single-axis mode used hardcoded 60px margin which caused gaps.
     final effectiveAxes = _getEffectiveYAxes();
-    if (effectiveAxes.length > 1) {
+    if (effectiveAxes.isNotEmpty) {
       final axisBounds = _computeAxisBounds();
       final axisWidths = _multiAxisManager.computeAxisWidths(axisBounds: axisBounds);
 
@@ -1230,9 +1250,8 @@ class ChartRenderBox extends RenderBox {
       final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(axisWidths);
       rightAxisWidth = _multiAxisManager.getTotalRightAxisWidth(axisWidths);
 
-      // CRITICAL: In multi-axis mode, use the computed axis widths directly
-      // (not the hardcoded single-axis margin of 60px) so that the plot area
-      // aligns exactly with where MultiAxisPainter draws the axis lines.
+      // Use the computed axis widths directly so that the plot area aligns
+      // exactly with where MultiAxisPainter draws the axis lines.
       // This prevents gaps between Y-axis lines and X-axis lines.
       leftMargin = totalLeftWidth > 0 ? totalLeftWidth : leftMargin;
 
@@ -1240,6 +1259,9 @@ class ChartRenderBox extends RenderBox {
       if (rightAxisWidth > 0) {
         rightMargin = rightAxisWidth + rightReserved;
       }
+    } else if (_yAxis != null && _yAxis!.config.showAxisLine) {
+      // Fallback for legacy mode (no multi-axis config at all)
+      leftMargin = 60; // Space for Y-axis labels + axis label + padding
     }
 
     // Calculate plot area (chart canvas excluding axes and scrollbars)

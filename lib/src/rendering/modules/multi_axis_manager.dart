@@ -52,6 +52,13 @@ class MultiAxisManager {
   /// Current series list for axis/binding resolution.
   List<ChartSeries> _series = const [];
 
+  /// Primary Y-axis configuration from the widget.
+  ///
+  /// This is the widget-level `yAxis` parameter (YAxisConfig type).
+  /// When set, it is included in `getEffectiveYAxes()` results, ensuring
+  /// widget-level axis configuration is respected for rendering, crosshair, etc.
+  YAxisConfig? _primaryYAxisConfig;
+
   /// Cached effective bindings (invalidated by setSeries).
   List<SeriesAxisBinding>? _cachedEffectiveBindings;
 
@@ -87,6 +94,19 @@ class MultiAxisManager {
     if (_series == newSeries) return false;
     _series = newSeries;
     invalidateCache();
+    return true;
+  }
+
+  /// Sets the primary Y-axis configuration from the widget.
+  ///
+  /// This is the widget-level `yAxis` parameter (YAxisConfig type).
+  /// When set, it will be included in all `getEffectiveYAxes()` calls
+  /// throughout the render cycle (layout, paint, crosshair, etc.).
+  ///
+  /// Returns true if the config changed, false otherwise.
+  bool setPrimaryYAxisConfig(YAxisConfig? config) {
+    if (_primaryYAxisConfig == config) return false;
+    _primaryYAxisConfig = config;
     return true;
   }
 
@@ -131,6 +151,9 @@ class MultiAxisManager {
   /// Y-axis configuration that will be included in the returned list unless an
   /// axis with the same ID already exists from inline series configs.
   ///
+  /// If [primaryYAxis] is not provided, uses the internally stored
+  /// [_primaryYAxisConfig] (set via [setPrimaryYAxisConfig]).
+  ///
   /// If neither primaryYAxis nor any series has a Y-axis config, a default
   /// left Y-axis is auto-created to ensure the chart always has a Y-axis.
   ///
@@ -138,6 +161,9 @@ class MultiAxisManager {
   /// [setSeries] is called. Note: primaryYAxis is NOT cached; it must be
   /// provided on each call to ensure correctness.
   List<YAxisConfig> getEffectiveYAxes({YAxisConfig? primaryYAxis}) {
+    // Use stored config if parameter not provided
+    final effectivePrimaryYAxis = primaryYAxis ?? _primaryYAxisConfig;
+
     // Start with list from cache or rebuild
     final effectiveAxes = <YAxisConfig>[];
     final axisIds = <String>{};
@@ -159,25 +185,25 @@ class MultiAxisManager {
       }
     }
 
-    // Step 2: Add primary Y-axis if provided
-    if (primaryYAxis != null) {
+    // Step 2: Add primary Y-axis ONLY if no inline yAxisConfigs were found
+    // When series have inline yAxisConfig, the widget-level yAxis is ignored
+    // to prevent duplicate/overlapping axes
+    if (effectiveAxes.isEmpty && effectivePrimaryYAxis != null) {
       // Auto-generate ID if empty
-      final primaryId = primaryYAxis.id.isNotEmpty ? primaryYAxis.id : 'primary_axis';
+      final primaryId = effectivePrimaryYAxis.id.isNotEmpty ? effectivePrimaryYAxis.id : 'primary_axis';
 
-      // Only add if not already present (no duplication)
-      if (!axisIds.contains(primaryId)) {
-        final resolvedPrimary = primaryYAxis.id.isEmpty ? primaryYAxis.copyWith(id: primaryId) : primaryYAxis;
+      final resolvedPrimary = effectivePrimaryYAxis.id.isEmpty ? effectivePrimaryYAxis.copyWith(id: primaryId) : effectivePrimaryYAxis;
 
-        effectiveAxes.add(resolvedPrimary);
-        axisIds.add(primaryId);
-      }
+      effectiveAxes.add(resolvedPrimary);
+      axisIds.add(primaryId);
     }
 
     // Step 3: Auto-create default Y-axis if still empty
+    // Use 'primary_axis' ID to match what getEffectiveBindings() uses for unbound series
     if (effectiveAxes.isEmpty) {
       final defaultAxis = YAxisConfig(
         position: YAxisPosition.left,
-      ).copyWith(id: 'default');
+      ).copyWith(id: 'primary_axis');
       effectiveAxes.add(defaultAxis);
     }
 
@@ -193,7 +219,7 @@ class MultiAxisManager {
   /// Priority:
   /// 1. series.yAxisConfig (inline config) → generates binding with auto ID
   /// 2. series.yAxisId (explicit reference) → generates binding with that ID
-  /// 3. Series without yAxisConfig or yAxisId remain unbound
+  /// 3. Series without yAxisConfig or yAxisId → auto-bind to default/primary axis
   ///
   /// Results are cached for performance. Cache is invalidated when
   /// [setSeries] is called.
@@ -222,7 +248,16 @@ class MultiAxisManager {
           seriesId: series.id,
           yAxisId: series.yAxisId!,
         ));
+        continue;
       }
+
+      // Priority 3: Auto-bind to primary/default axis
+      // Series without explicit axis config should use the default axis
+      // to ensure axis bounds are computed from series data
+      effectiveBindings.add(SeriesAxisBinding(
+        seriesId: series.id,
+        yAxisId: 'primary_axis', // Matches the ID generated for widget-level yAxis
+      ));
     }
 
     // Cache and return
@@ -269,18 +304,26 @@ class MultiAxisManager {
     final t = transform;
     final ot = originalTransform;
 
+    // Check if series have multi-axis config (inline yAxisConfig or yAxisId)
+    // This determines whether the transform is in normalized (0-1) or actual data space
+    final hasMultiAxisConfig = _series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+
     // For non-normalized modes (none/auto), the transform's Y range IS the actual
     // data viewport. When zoomed, we can use it directly as axis bounds.
+    // ALSO: For perSeries WITHOUT multi-axis config, the transform contains actual
+    // data values (not normalized 0-1), so use transform bounds directly.
     final isNonNormalizedMode = _normalizationMode != NormalizationMode.perSeries;
+    final transformHasRealDataValues = isNonNormalizedMode || (_normalizationMode == NormalizationMode.perSeries && !hasMultiAxisConfig);
     final useTransformYBounds =
-        !forceFullBounds && isNonNormalizedMode && t != null && ot != null && (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
+        !forceFullBounds && transformHasRealDataValues && t != null && ot != null && (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
 
     // Check if viewport Y range differs from original (zoom or pan in perSeries mode)
-    // In perSeries mode, normalized Y range is 0-1, so if transform differs, we need
-    // to adjust axis labels to show visible data range
+    // In perSeries mode WITH multi-axis config, normalized Y range is 0-1, so if
+    // transform differs, we need to adjust axis labels to show visible data range
     // Skip viewport transformation if forceFullBounds is true (for series painting)
     final isViewportTransformed = !forceFullBounds &&
         _normalizationMode == NormalizationMode.perSeries &&
+        hasMultiAxisConfig && // Only when transform is in normalized space
         t != null &&
         ot != null &&
         (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
