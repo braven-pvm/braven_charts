@@ -222,12 +222,11 @@ class _ThemingPageState extends State<ThemingPage> {
             scrollbarTheme:
                 ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
-              showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,
             ),
-            yAxis: AxisConfig(
-              showGrid: _optionsController.showGrid,
-              showAxis: _optionsController.showAxisLines,
+            yAxis: YAxisConfig(
+              position: YAxisPosition.left,
+              showAxisLine: _optionsController.showAxisLines,
             ),
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
@@ -272,8 +271,10 @@ class _ThemingPageState extends State<ThemingPage> {
             ],
             theme: preset.theme,
             showLegend: false,
-            xAxis: const AxisConfig(showGrid: true),
-            yAxis: const AxisConfig(showGrid: true),
+            xAxis: const AxisConfig(),
+            yAxis: YAxisConfig(
+              position: YAxisPosition.left,
+            ),
           ),
         );
       },

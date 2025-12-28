@@ -241,12 +241,11 @@ class _StreamingPageState extends State<StreamingPage> {
             scrollbarTheme:
                 ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
-              showGrid: _optionsController.showGrid,
               showAxis: _optionsController.showAxisLines,
             ),
-            yAxis: AxisConfig(
-              showGrid: _optionsController.showGrid,
-              showAxis: _optionsController.showAxisLines,
+            yAxis: YAxisConfig(
+              position: YAxisPosition.left,
+              showAxisLine: _optionsController.showAxisLines,
             ),
             autoScrollConfig: _autoScroll
                 ? const AutoScrollConfig(

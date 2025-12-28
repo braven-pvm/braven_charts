@@ -58,8 +58,7 @@ class _GalleryPageState extends State<GalleryPage> {
               padding: const EdgeInsets.all(16),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent:
-                      750, // Increased from 500 for bigger charts (3 per row on wide screens)
+                  maxCrossAxisExtent: 750, // Increased from 500 for bigger charts (3 per row on wide screens)
                   childAspectRatio: 1.2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
@@ -67,13 +66,10 @@ class _GalleryPageState extends State<GalleryPage> {
                 delegate: SliverChildListDelegate([
                   _buildMonthlyRevenueChart(isDark),
                   _buildTemperatureTrendChart(isDark),
-                  _buildMixedSeriesTypeChart(
-                      isDark), // Line + Area on same chart
-                  _buildNormalizedCrosshairChart(
-                      isDark), // Multi-axis normalized with crosshair tracking
+                  _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
+                  _buildNormalizedCrosshairChart(isDark), // Multi-axis normalized with crosshair tracking
                   _buildAnnotatedChart(isDark), // Chart with annotations
-                  _buildMixedInterpolationChart(
-                      isDark), // Multiple interpolation types on one chart
+                  _buildMixedInterpolationChart(isDark), // Multiple interpolation types on one chart
                   _buildStockPriceChart(isDark),
                   _buildSalesComparisonChart(isDark),
                   _buildHeartRateChart(isDark),
@@ -83,18 +79,14 @@ class _GalleryPageState extends State<GalleryPage> {
                   _buildCpuUsageChart(isDark), // Real-time CPU monitoring
                   // Segment Colors Showcases - Lines
                   _buildThresholdColoringChart(isDark), // Color by Y threshold
-                  _buildGradientSegmentsChart(
-                      isDark), // Rainbow gradient segments
+                  _buildGradientSegmentsChart(isDark), // Rainbow gradient segments
                   _buildStockGainLossChart(isDark), // Green/red for gain/loss
                   // Segment Colors Showcases - Areas
-                  _buildTemperatureZonesAreaChart(
-                      isDark), // Area with hot/cold zones
-                  _buildProfitLossAreaChart(
-                      isDark), // Area with profit/loss coloring
+                  _buildTemperatureZonesAreaChart(isDark), // Area with hot/cold zones
+                  _buildProfitLossAreaChart(isDark), // Area with profit/loss coloring
                   // Multi-Series Mixed Charts
                   _buildMultiLayerAnalyticsChart(isDark), // 3 areas + 2 lines
-                  _buildNetworkTrafficChart(
-                      isDark), // Upload/download areas + latency line
+                  _buildNetworkTrafficChart(isDark), // Upload/download areas + latency line
                   _buildFinancialDashboardChart(isDark), // Multiple indicators
                 ]),
               ),
@@ -162,8 +154,13 @@ class _GalleryPageState extends State<GalleryPage> {
                         hideDelay: Duration(milliseconds: 500),
                         showDelay: Duration(milliseconds: 50),
                         triggerMode: TooltipTriggerMode.hover)),
-                xAxis: const AxisConfig(label: 'Month', showGrid: true),
-                yAxis: const AxisConfig(label: 'USD', showGrid: false),
+                xAxis: const AxisConfig(
+                  label: 'Month',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'USD',
+                ),
               ),
             ),
           ],
@@ -187,8 +184,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFE0B2),
                     borderRadius: BorderRadius.circular(12),
@@ -240,10 +236,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                legendStyle:
-                    const LegendStyle(orientation: LegendOrientation.vertical),
-                xAxis: const AxisConfig(showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(showGrid: true),
+                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                xAxis: const AxisConfig(showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                ),
               ),
             ),
           ],
@@ -272,8 +269,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2E7D32),
                     borderRadius: BorderRadius.circular(4),
@@ -315,8 +311,10 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(showGrid: false),
+                xAxis: const AxisConfig(showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -393,8 +391,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(label: 'Month', showGrid: true),
-                yAxis: const AxisConfig(label: 'Sales', showGrid: true),
+                xAxis: const AxisConfig(
+                  label: 'Month',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Sales',
+                ),
               ),
             ),
           ],
@@ -420,8 +423,7 @@ class _GalleryPageState extends State<GalleryPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.monitor_heart,
-                    color: Color(0xFF00FF00), size: 20),
+                const Icon(Icons.monitor_heart, color: Color(0xFF00FF00), size: 20),
                 const SizedBox(width: 8),
                 const Text(
                   'ECG Monitor',
@@ -433,8 +435,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFF00FF00).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
@@ -467,10 +468,8 @@ class _GalleryPageState extends State<GalleryPage> {
                   backgroundColor: const Color(0xFF0D1117),
                 ),
                 showLegend: false,
-                xAxis: const AxisConfig(
-                    label: 'Time (s)', showGrid: true, showAxis: false),
-                yAxis: const AxisConfig(
-                    label: 'mV', showGrid: true, showAxis: false),
+                xAxis: const AxisConfig(label: 'Time (s)', showAxis: false),
+                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'mV'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -540,8 +539,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Hour', showGrid: true),
-                yAxis: const AxisConfig(label: 'kWh', showGrid: false),
+                xAxis: const AxisConfig(
+                  label: 'Hour',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'kWh',
+                ),
               ),
             ),
           ],
@@ -607,11 +611,12 @@ class _GalleryPageState extends State<GalleryPage> {
                   backgroundColor: const Color(0xFFE3F2FD),
                 ),
                 showLegend: true,
-                legendStyle:
-                    const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
-                xAxis: const AxisConfig(label: 'Day', showGrid: true),
-                yAxis: const AxisConfig(showGrid: false, showAxis: false),
+                xAxis: const AxisConfig(
+                  label: 'Day',
+                ),
+                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: false),
               ),
             ),
           ],
@@ -680,9 +685,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(
-                    label: 'Week', showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(label: '% Complete', showGrid: false),
+                xAxis: const AxisConfig(label: 'Week', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: '% Complete',
+                ),
               ),
             ),
           ],
@@ -768,8 +775,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 normalizationMode: NormalizationMode.auto,
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(showGrid: false, showAxis: true),
+                xAxis: const AxisConfig(showAxis: false),
+                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: true),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                       enabled: true,
@@ -798,8 +805,7 @@ class _GalleryPageState extends State<GalleryPage> {
               'Revenue & Forecast',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Text('Line + Area Chart',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Line + Area Chart', style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -845,11 +851,12 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                legendStyle:
-                    const LegendStyle(orientation: LegendOrientation.vertical),
-                xAxis: const AxisConfig(
-                    label: 'Month', showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(label: 'Revenue (\$)', showGrid: true),
+                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Revenue (\$)',
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -878,8 +885,7 @@ class _GalleryPageState extends State<GalleryPage> {
               'Multi-Sensor Monitoring',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Text('Normalized + Crosshair Tracking',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Normalized + Crosshair Tracking', style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -891,9 +897,7 @@ class _GalleryPageState extends State<GalleryPage> {
                       50, // High data point count triggers tracking mode
                       (i) => ChartDataPoint(
                         x: i.toDouble(),
-                        y: random.nextInt(1000) +
-                            (i * 2.5) % 100 +
-                            (i % 10) * 5,
+                        y: random.nextInt(1000) + (i * 2.5) % 100 + (i % 10) * 5,
                         // 1000 + (i * 2.5) % 100 + (i % 10) * 5,
                       ),
                     ),
@@ -940,8 +944,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     mode: CrosshairMode.vertical,
                     snapToDataPoint: true,
                     showCoordinateLabels: true,
-                    displayMode: CrosshairDisplayMode
-                        .tracking, // Will use tracking mode for 300 points
+                    displayMode: CrosshairDisplayMode.tracking, // Will use tracking mode for 300 points
                   ),
                 ),
               ),
@@ -964,8 +967,7 @@ class _GalleryPageState extends State<GalleryPage> {
               'Annotated Analysis',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Text('Point, Range & Threshold',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Point, Range & Threshold', style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1022,7 +1024,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.light,
                 showLegend: false,
                 xAxis: const AxisConfig(label: 'Week'),
-                yAxis: const AxisConfig(label: 'Score'),
+                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Score'),
               ),
             ),
           ],
@@ -1043,8 +1045,7 @@ class _GalleryPageState extends State<GalleryPage> {
               'Interpolation Showcase',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Text('Linear, Bezier, Stepped, Monotone',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Linear, Bezier, Stepped, Monotone', style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1117,9 +1118,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(
-                    label: 'X', showGrid: true, showAxis: false),
-                yAxis: const AxisConfig(label: 'Y', showGrid: true),
+                xAxis: const AxisConfig(label: 'X', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Y',
+                ),
               ),
             ),
           ],
@@ -1183,29 +1186,24 @@ class _GalleryPageState extends State<GalleryPage> {
             ),
             Row(
               children: [
-                const Text('Threshold Coloring',
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text('Threshold Coloring', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('< 80%',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF10B981))),
+                  child: const Text('< 80%', style: TextStyle(fontSize: 10, color: Color(0xFF10B981))),
                 ),
                 const SizedBox(width: 4),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('≥ 80%',
-                      style: TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+                  child: const Text('≥ 80%', style: TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
                 ),
               ],
             ),
@@ -1226,8 +1224,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Time (s)', showGrid: true),
-                yAxis: const AxisConfig(label: 'Load %', showGrid: false),
+                xAxis: const AxisConfig(
+                  label: 'Time (s)',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Load %',
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -1307,8 +1310,7 @@ class _GalleryPageState extends State<GalleryPage> {
             ),
             Text(
               'Per-segment color override',
-              style: TextStyle(
-                  fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -1316,8 +1318,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 series: [series],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(showGrid: true, showAxis: false),
-                yAxis: const AxisConfig(showGrid: false, showAxis: false),
+                xAxis: const AxisConfig(showAxis: false),
+                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: false),
               ),
             ),
           ],
@@ -1390,12 +1392,9 @@ class _GalleryPageState extends State<GalleryPage> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isPositive
-                        ? const Color(0xFF10B981)
-                        : const Color(0xFFEF4444),
+                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -1419,9 +1418,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 series: [series],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(
-                    label: 'Day', showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(label: 'Price (\$)', showGrid: true),
+                xAxis: const AxisConfig(label: 'Day', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Price (\$)',
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -1513,9 +1514,7 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 Text(
                   'Area with zone coloring',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.grey[400] : Colors.grey),
+                  style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey),
                 ),
                 const Spacer(),
                 _buildLegendChip('Cold', const Color(0xFF3B82F6)),
@@ -1547,8 +1546,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Hour', showGrid: true),
-                yAxis: const AxisConfig(label: '°C', showGrid: false),
+                xAxis: const AxisConfig(
+                  label: 'Hour',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: '°C',
+                ),
               ),
             ),
           ],
@@ -1568,8 +1572,7 @@ class _GalleryPageState extends State<GalleryPage> {
       ),
       child: Text(
         label,
-        style:
-            TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w500),
+        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -1659,9 +1662,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(
-                    label: 'Month', showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(label: 'USD', showGrid: true),
+                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'USD',
+                ),
               ),
             ),
           ],
@@ -1785,12 +1790,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                legendStyle:
-                    const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
-                xAxis: const AxisConfig(
-                    label: 'Month', showGrid: false, showAxis: false),
-                yAxis: const AxisConfig(label: 'Value', showGrid: true),
+                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Value',
+                ),
               ),
             ),
           ],
@@ -1913,8 +1919,13 @@ class _GalleryPageState extends State<GalleryPage> {
                     fontSize: 11,
                   ),
                 ),
-                xAxis: const AxisConfig(label: 'Hour', showGrid: true),
-                yAxis: const AxisConfig(label: 'Mbps / ms', showGrid: false),
+                xAxis: const AxisConfig(
+                  label: 'Hour',
+                ),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Mbps / ms',
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -2023,8 +2034,7 @@ class _GalleryPageState extends State<GalleryPage> {
             ),
             Text(
               'Revenue line (growth/decline) + Expense area (alert when high)',
-              style: TextStyle(
-                  fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
+              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -2059,9 +2069,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(
-                    label: 'Month', showGrid: true, showAxis: false),
-                yAxis: const AxisConfig(label: 'K USD', showGrid: false),
+                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'K USD',
+                ),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,

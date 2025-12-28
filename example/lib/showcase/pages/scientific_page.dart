@@ -282,12 +282,11 @@ class _ScientificPageState extends State<ScientificPage> {
           scrollbarTheme:
               ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,
           ),
-          yAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
-            showAxis: _optionsController.showAxisLines,
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: _optionsController.showAxisLines,
           ),
           interactionConfig: InteractionConfig(
             enableZoom: _optionsController.enableZoom,
@@ -324,12 +323,11 @@ class _ScientificPageState extends State<ScientificPage> {
           scrollbarTheme:
               ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,
           ),
-          yAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
-            showAxis: _optionsController.showAxisLines,
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: _optionsController.showAxisLines,
           ),
           interactionConfig: InteractionConfig(
             enableZoom: _optionsController.enableZoom,
@@ -364,12 +362,11 @@ class _ScientificPageState extends State<ScientificPage> {
           scrollbarTheme:
               ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
             showAxis: _optionsController.showAxisLines,
           ),
-          yAxis: AxisConfig(
-            showGrid: _optionsController.showGrid,
-            showAxis: _optionsController.showAxisLines,
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: _optionsController.showAxisLines,
           ),
           interactionConfig: InteractionConfig(
             enableZoom: _optionsController.enableZoom,

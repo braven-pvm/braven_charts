@@ -400,12 +400,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
         xAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
         ),
-        yAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
-          showAxis: _optionsController.showAxisLines,
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          showAxisLine: _optionsController.showAxisLines,
         ),
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,
@@ -465,12 +464,11 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
         xAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
         ),
-        yAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
-          showAxis: _optionsController.showAxisLines,
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          showAxisLine: _optionsController.showAxisLines,
         ),
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,
@@ -561,13 +559,12 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
         xAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
           label: "Time(M)",
         ),
-        yAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
-          showAxis: _optionsController.showAxisLines,
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          showAxisLine: _optionsController.showAxisLines,
           label: "Y-axis",
         ),
         // No yAxes or axisBindings needed - all defined inline on series!
@@ -671,13 +668,12 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
         xAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
           showAxis: _optionsController.showAxisLines,
           label: '',
         ),
-        yAxis: AxisConfig(
-          showGrid: _optionsController.showGrid,
-          showAxis: _optionsController.showAxisLines,
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          showAxisLine: _optionsController.showAxisLines,
         ),
         normalizationMode: NormalizationMode.perSeries,
         interactionConfig: InteractionConfig(
