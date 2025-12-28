@@ -47,9 +47,11 @@ void main() {
       // Create axis bounds that will generate ~20 ticks each
       final axisBounds = {
         'power': const DataRange(min: 0.0, max: 400.0), // 0, 20, 40, ..., 400
-        'heartrate': const DataRange(min: 100.0, max: 200.0), // 100, 105, ..., 200
+        'heartrate':
+            const DataRange(min: 100.0, max: 200.0), // 100, 105, ..., 200
         'cadence': const DataRange(min: 60.0, max: 120.0), // 60, 63, ..., 120
-        'elevation': const DataRange(min: 0.0, max: 2000.0), // 0, 100, ..., 2000
+        'elevation':
+            const DataRange(min: 0.0, max: 2000.0), // 0, 100, ..., 2000
       };
 
       // Create painter
@@ -93,8 +95,10 @@ void main() {
       print('MultiAxisPainter benchmark (cached):');
       print('  Axes: ${axes.length}');
       print('  Approximate ticks per axis: ~20');
-      print('  Total labels: ~${axes.length * 20 + axes.length} (ticks + axis labels)');
-      print('  Average paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
+      print(
+          '  Total labels: ~${axes.length * 20 + axes.length} (ticks + axis labels)');
+      print(
+          '  Average paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
       print('  Target: <16.67ms (60fps)');
 
       // Assert 60fps performance (16.67ms frame budget)
@@ -263,7 +267,8 @@ void main() {
       final averageMilliseconds = averageMicroseconds / 1000;
 
       print('MultiAxisPainter benchmark (cold cache):');
-      print('  Average cold paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
+      print(
+          '  Average cold paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
 
       // Cold cache should still be reasonable (allow more time than cached)
       expect(

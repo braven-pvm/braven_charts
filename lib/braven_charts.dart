@@ -20,6 +20,8 @@ export 'src/layout/multi_axis_layout.dart';
 // Models
 export 'src/models/annotation_style.dart';
 export 'src/models/auto_scroll_config.dart';
+// AxisConfig: General axis configuration (used for X-axis).
+// For Y-axis configuration, prefer YAxisConfig (see y_axis_config.dart).
 export 'src/models/axis_config.dart';
 export 'src/models/chart_annotation.dart';
 export 'src/models/chart_data_point.dart';
