@@ -30,8 +30,6 @@ class _PerformancePageState extends State<PerformancePage> {
 
   // Performance metrics
   int _lastRenderTimeMs = 0;
-  int _renderCount = 0;
-  Stopwatch? _renderStopwatch;
 
   // Generated data
   List<List<ChartDataPoint>> _allSeriesData = [];
@@ -56,7 +54,6 @@ class _PerformancePageState extends State<PerformancePage> {
     stopwatch.stop();
     setState(() {
       _lastRenderTimeMs = stopwatch.elapsedMilliseconds;
-      _renderCount++;
     });
   }
 

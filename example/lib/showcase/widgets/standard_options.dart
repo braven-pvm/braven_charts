@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Standard Chart Options Widget
 // SPDX-License-Identifier: MIT
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 

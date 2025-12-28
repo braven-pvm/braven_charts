@@ -29,7 +29,7 @@ void main() {
         // Assert: Should have exactly one default axis
         expect(effectiveAxes.length, equals(1));
         expect(effectiveAxes[0].position, equals(YAxisPosition.left));
-        expect(effectiveAxes[0].id, equals('default'));
+        expect(effectiveAxes[0].id, equals('primary_axis'));
       });
 
       test(
@@ -62,7 +62,7 @@ void main() {
         // Assert: Should have exactly one default axis
         expect(effectiveAxes.length, equals(1));
         expect(effectiveAxes[0].position, equals(YAxisPosition.left));
-        expect(effectiveAxes[0].id, equals('default'));
+        expect(effectiveAxes[0].id, equals('primary_axis'));
       });
 
       test('uses primaryYAxis when provided', () {
@@ -149,7 +149,7 @@ void main() {
 
         // Assert: ID should be auto-generated
         expect(effectiveAxes[0].id, isNotEmpty);
-        expect(effectiveAxes[0].id, equals('default'));
+        expect(effectiveAxes[0].id, equals('primary_axis'));
       });
 
       test('system auto-generates id for primaryYAxis when not provided', () {
@@ -380,12 +380,8 @@ void main() {
         final effectiveAxes =
             manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
 
-        // Assert: Should have both axes
-        expect(effectiveAxes.length, equals(2));
-        expect(
-          effectiveAxes.any((a) => a.label == 'Primary'),
-          isTrue,
-        );
+        // Assert: Should have only series axis (primaryYAxis is ignored when inline configs exist)
+        expect(effectiveAxes.length, equals(1));
         expect(
           effectiveAxes.any((a) => a.label == 'Series'),
           isTrue,

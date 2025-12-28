@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Options Panel Widgets
 // SPDX-License-Identifier: MIT
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 /// A panel for displaying configuration options.

@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Live Streaming Page
 // SPDX-License-Identifier: MIT
 
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 // Only import dart:isolate on non-web platforms
 import 'dart:isolate'

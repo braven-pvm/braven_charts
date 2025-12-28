@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts - Chart Options Controller
 // SPDX-License-Identifier: MIT
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -173,18 +175,17 @@ class ChartOptionsController extends ChangeNotifier {
 
 /// Available theme presets.
 enum ThemePreset {
-  light('Light', null), // null = use default light
-  dark('Dark', null),
-  corporateBlue('Corporate Blue', null),
-  vibrant('Vibrant', null),
-  minimal('Minimal', null),
-  highContrast('High Contrast', null),
-  colorblindFriendly('Colorblind Friendly', null);
+  light('Light'),
+  dark('Dark'),
+  corporateBlue('Corporate Blue'),
+  vibrant('Vibrant'),
+  minimal('Minimal'),
+  highContrast('High Contrast'),
+  colorblindFriendly('Colorblind Friendly');
 
-  const ThemePreset(this.displayName, this._theme);
+  const ThemePreset(this.displayName);
 
   final String displayName;
-  final ChartTheme? _theme;
 
   /// Gets the ChartTheme for this preset.
   ChartTheme get theme {

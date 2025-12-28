@@ -31,7 +31,6 @@ class _InteractionPageState extends State<InteractionPage> {
   // State
   ChartDataPoint? _hoveredPoint;
   ChartDataPoint? _tappedPoint;
-  String? _hoveredSeriesId;
 
   // Generated data
   late List<ChartDataPoint> _data;
@@ -173,7 +172,6 @@ class _InteractionPageState extends State<InteractionPage> {
             onPointHover: (point, seriesId) {
               setState(() {
                 _hoveredPoint = point;
-                _hoveredSeriesId = seriesId;
               });
             },
           ),

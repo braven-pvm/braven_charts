@@ -122,7 +122,9 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
     final seriesList = _buildSeriesList();
     final gridConfig = _buildGridConfig();
     // Use global normalization for single-axis demo, per-series for multi-axis demos
-    final normMode = _selectedDemo == 'single-axis' ? NormalizationMode.none : NormalizationMode.perSeries;
+    final normMode = _selectedDemo == 'single-axis'
+        ? NormalizationMode.none
+        : NormalizationMode.perSeries;
 
     return BravenChartPlus(
       series: seriesList,
@@ -169,7 +171,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate sine wave data
-  List<ChartDataPoint> _generateSineData(int count, {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
+  List<ChartDataPoint> _generateSineData(int count,
+      {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.sin(x * frequency);
@@ -178,7 +181,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate cosine wave data
-  List<ChartDataPoint> _generateCosineData(int count, {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
+  List<ChartDataPoint> _generateCosineData(int count,
+      {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.cos(x * frequency);
@@ -193,7 +197,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points: _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.08),
+        points:
+            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.08),
         color: Colors.blue,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -208,7 +213,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'heart_rate',
         name: 'Heart Rate (bpm)',
-        points: _generateSineData(100, amplitude: 20, offset: 150, frequency: 0.12),
+        points:
+            _generateSineData(100, amplitude: 20, offset: 150, frequency: 0.12),
         color: Colors.red,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -310,7 +316,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
           label: 'Temperature',
           unit: '°C',
           color: Colors.teal,
-          labelDisplay: AxisLabelDisplay.labelWithUnit, // "Temperature (°C)" label, "25", "50" ticks
+          labelDisplay: AxisLabelDisplay
+              .labelWithUnit, // "Temperature (°C)" label, "25", "50" ticks
           showAxisLine: true,
         ),
       ),
@@ -325,7 +332,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
           label: 'Humidity',
           unit: '%',
           color: Colors.indigo,
-          labelDisplay: AxisLabelDisplay.tickUnitOnly, // No label, "75 %", "80 %" ticks
+          labelDisplay:
+              AxisLabelDisplay.tickUnitOnly, // No label, "75 %", "80 %" ticks
           showAxisLine: true,
         ),
       ),
@@ -338,7 +346,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points: _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.1),
+        points:
+            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.1),
         color: Colors.blue,
         strokeWidth: 2.5,
         showDataPointMarkers: true,
