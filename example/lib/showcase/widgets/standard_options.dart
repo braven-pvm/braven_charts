@@ -337,10 +337,8 @@ class StatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bgColor =
-        color ?? (highlighted ? Colors.green.shade50 : Colors.grey.shade100);
-    final borderColor =
-        highlighted ? Colors.green.shade300 : theme.dividerColor;
+    final bgColor = color ?? (highlighted ? Colors.green.shade50 : Colors.grey.shade100);
+    final borderColor = highlighted ? Colors.green.shade300 : theme.dividerColor;
 
     return Container(
       padding: const EdgeInsets.all(12),

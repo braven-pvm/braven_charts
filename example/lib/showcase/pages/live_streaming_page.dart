@@ -5,8 +5,7 @@
 
 import 'dart:async';
 // Only import dart:isolate on non-web platforms
-import 'dart:isolate'
-    if (dart.library.html) 'live_streaming_page_web_stub.dart';
+import 'dart:isolate' if (dart.library.html) 'live_streaming_page_web_stub.dart';
 import 'dart:math';
 
 import 'package:braven_charts/braven_charts.dart';
@@ -228,8 +227,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   double _autoScrollMarginPercent = 5.0;
   int _pauseBufferSize = 5000;
   int _viewportDataPoints = 100; // How many points to show in viewport
-  int _maxVisiblePoints =
-      1000; // Max points before expand mode switches to sliding
+  int _maxVisiblePoints = 1000; // Max points before expand mode switches to sliding
 
   // Data Generation Configuration
   int _updateRateHz = 20;
@@ -302,8 +300,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     _createStreamController();
 
     // Re-add preserved points (up to new maxPoints limit)
-    final startIdx =
-        oldPoints.length > _maxPoints ? oldPoints.length - _maxPoints : 0;
+    final startIdx = oldPoints.length > _maxPoints ? oldPoints.length - _maxPoints : 0;
     for (var i = startIdx; i < oldPoints.length; i++) {
       _streamController!.addPoint(oldPoints[i]);
     }
@@ -328,8 +325,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   void _startStreaming() async {
-    if ((_useIsolate && _generatorIsolate != null) ||
-        (!_useIsolate && _dataTimer != null)) {
+    if ((_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null)) {
       return;
     }
 
@@ -385,8 +381,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     if (!_useIsolate || kIsWeb) {
       // Start main-thread Timer-based generation
       final intervalMs = (1000 / _updateRateHz).round();
-      print(
-          'Starting MAIN THREAD Timer.periodic: $_updateRateHz Hz (${intervalMs}ms interval)');
+      print('Starting MAIN THREAD Timer.periodic: $_updateRateHz Hz (${intervalMs}ms interval)');
 
       _dataTimer = Timer.periodic(
         Duration(milliseconds: intervalMs),
@@ -410,8 +405,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
     // Track rolling rate (last second)
     _lastSecondStart ??= DateTime.now();
-    final elapsedMs =
-        DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+    final elapsedMs = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
     if (elapsedMs >= 1000) {
       // Reset counter every second and update UI
       _pointsInLastSecond = 0;
@@ -461,11 +455,9 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
       // Log diagnostics every 60 fires
       if (_totalPointsGenerated % 60 == 0 && _timerIntervals.length > 10) {
-        final avg =
-            _timerIntervals.reduce((a, b) => a + b) / _timerIntervals.length;
+        final avg = _timerIntervals.reduce((a, b) => a + b) / _timerIntervals.length;
         final actualHz = 1000 / avg;
-        print(
-            'Timer diagnostic: requested ${_updateRateHz}Hz (${(1000 / _updateRateHz).toStringAsFixed(1)}ms), '
+        print('Timer diagnostic: requested ${_updateRateHz}Hz (${(1000 / _updateRateHz).toStringAsFixed(1)}ms), '
             'actual ${actualHz.toStringAsFixed(1)}Hz (${avg.toStringAsFixed(1)}ms avg over ${_timerIntervals.length} samples)');
       }
     }
@@ -477,8 +469,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     // Track rolling rate (last second)
     _lastSecondStart ??= DateTime.now();
     _pointsInLastSecond++;
-    final elapsedMs =
-        DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+    final elapsedMs = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
     if (elapsedMs >= 1000) {
       // Reset counter every second
       _pointsInLastSecond = 0;
@@ -505,8 +496,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   double _generateValue() {
     switch (_dataPattern) {
       case DataPattern.randomWalk:
-        final change =
-            _random.nextDouble() * _amplitude * 0.1 - _amplitude * 0.05;
+        final change = _random.nextDouble() * _amplitude * 0.1 - _amplitude * 0.05;
         _lastValue = (_lastValue + change).clamp(10.0, 90.0);
         return _lastValue;
 
@@ -573,8 +563,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   Widget build(BuildContext context) {
     return ChartPageLayout(
       title: 'Live Streaming (High-Performance)',
-      subtitle:
-          'Using LiveStreamController - Frame-coalesced, direct RenderBox path',
+      subtitle: 'Using LiveStreamController - Frame-coalesced, direct RenderBox path',
       optionsChildren: _buildOptionsChildren(),
       chart: _buildChart(),
       bottomPanel: _buildStatusPanel(),
@@ -582,16 +571,14 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   List<Widget> _buildOptionsChildren() {
-    final isDataFlowing =
-        _useIsolate ? _generatorIsolate != null : _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     return [
       // Standard display options (disable marker/lineStyle since we have custom controls)
       StandardChartOptions(
         controller: _optionsController,
-        showMarkerOption:
-            false, // We have custom 'Show Data Markers' in Line Styling
+        showMarkerOption: false, // We have custom 'Show Data Markers' in Line Styling
         showLineStyleOption: false, // We use interpolation setting instead
         showLegendOption: false, // Legend not needed for single series
       ),
@@ -637,9 +624,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           BoolOption(
             label: 'Auto-Scroll Mode',
             value: _autoScroll,
-            subtitle: _autoScroll
-                ? 'Following latest data (sliding window)'
-                : 'Expand Mode: Viewport grows until $_maxVisiblePoints pts',
+            subtitle: _autoScroll ? 'Following latest data (sliding window)' : 'Expand Mode: Viewport grows until $_maxVisiblePoints pts',
             onChanged: (v) {
               setState(() => _autoScroll = v);
               _recreateController();
@@ -702,9 +687,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             onChanged: kIsWeb
                 ? (_) {} // Disabled on web - isolates not supported
                 : (v) {
-                    final wasStreaming =
-                        (_useIsolate && _generatorIsolate != null) ||
-                            (!_useIsolate && _dataTimer != null);
+                    final wasStreaming = (_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null);
                     if (wasStreaming) {
                       _stopStreaming();
                     }
@@ -723,8 +706,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             suffix: 'Hz',
             onChanged: (v) {
               setState(() => _updateRateHz = v);
-              final wasStreaming = (_useIsolate && _generatorIsolate != null) ||
-                  (!_useIsolate && _dataTimer != null);
+              final wasStreaming = (_useIsolate && _generatorIsolate != null) || (!_useIsolate && _dataTimer != null);
               if (wasStreaming) {
                 _stopStreaming();
                 _startStreaming();
@@ -753,8 +735,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             decimalPlaces: 0,
             onChanged: (v) => setState(() => _amplitude = v),
           ),
-          if (_dataPattern == DataPattern.sine ||
-              _dataPattern == DataPattern.sawtooth)
+          if (_dataPattern == DataPattern.sine || _dataPattern == DataPattern.sawtooth)
             SliderOption(
               label: 'Frequency',
               value: _frequency,
@@ -852,31 +833,24 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
                 'Click Resume to apply buffered data.'
             : 'Using LiveStreamController for high-performance streaming. '
                 'Data flows directly to RenderBox without widget rebuilds!',
-        type: isPaused
-            ? InfoBoxType.warning
-            : (isDataFlowing ? InfoBoxType.success : InfoBoxType.info),
+        type: isPaused ? InfoBoxType.warning : (isDataFlowing ? InfoBoxType.success : InfoBoxType.info),
       ),
     ];
   }
 
   Widget _buildChart() {
-    final isDataFlowing =
-        _useIsolate ? _generatorIsolate != null : _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     // Determine line color based on state
-    final effectiveColor = isPaused
-        ? Colors.orange
-        : (isDataFlowing ? _lineColor : _lineColor.withValues(alpha: 0.7));
+    final effectiveColor = isPaused ? Colors.orange : (isDataFlowing ? _lineColor : _lineColor.withValues(alpha: 0.7));
 
     return ListenableBuilder(
       listenable: _optionsController,
       builder: (context, _) {
         return ChartCard(
           title: 'Live Data Stream',
-          subtitle: isPaused
-              ? 'Paused (buffering...)'
-              : (isDataFlowing ? 'Streaming at $_updateRateHz Hz' : 'Stopped'),
+          subtitle: isPaused ? 'Paused (buffering...)' : (isDataFlowing ? 'Streaming at $_updateRateHz Hz' : 'Stopped'),
           actions: [
             // Buffered count badge
             if (isPaused && (_streamController?.bufferedCount ?? 0) > 0)
@@ -900,20 +874,14 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isPaused
-                    ? Colors.orange
-                    : (isDataFlowing ? Colors.green : Colors.grey),
+                color: isPaused ? Colors.orange : (isDataFlowing ? Colors.green : Colors.grey),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isPaused
-                        ? Icons.pause
-                        : (isDataFlowing
-                            ? Icons.fiber_manual_record
-                            : Icons.stop),
+                    isPaused ? Icons.pause : (isDataFlowing ? Icons.fiber_manual_record : Icons.stop),
                     size: 12,
                     color: Colors.white,
                   ),
@@ -950,8 +918,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
 
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showAxis: _optionsController.showAxisLines,
             ),
@@ -970,20 +937,17 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   Widget _buildStatusPanel() {
-    final isDataFlowing =
-        _useIsolate ? _generatorIsolate != null : _dataTimer != null;
+    final isDataFlowing = _useIsolate ? _generatorIsolate != null : _dataTimer != null;
     final isPaused = !(_streamController?.isStreaming ?? true);
     final bounds = _streamController?.bounds;
 
     // Calculate effective rate - use rolling 1-second window for accuracy
     String effectiveRate = '$_updateRateHz Hz';
     if (isDataFlowing && _lastSecondStart != null) {
-      final elapsedInSecond =
-          DateTime.now().difference(_lastSecondStart!).inMilliseconds;
+      final elapsedInSecond = DateTime.now().difference(_lastSecondStart!).inMilliseconds;
       if (elapsedInSecond > 100) {
         // Wait at least 100ms for stable measurement
-        final instantRate =
-            (_pointsInLastSecond / (elapsedInSecond / 1000)).toStringAsFixed(1);
+        final instantRate = (_pointsInLastSecond / (elapsedInSecond / 1000)).toStringAsFixed(1);
         effectiveRate = '$instantRate Hz';
       }
     }
@@ -1000,27 +964,22 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         actualBufferRate = '${actualRate.toStringAsFixed(1)} pts/s';
 
         final expected = _updateRateHz * elapsed;
-        final percentAchieved =
-            (pointsAdded / expected * 100).toStringAsFixed(1);
+        final percentAchieved = (pointsAdded / expected * 100).toStringAsFixed(1);
         expectedVsActual = '$pointsAdded / $expected pts ($percentAchieved%)';
       }
     }
 
     // Get measured frame rate from controller
     final frameRate = _streamController?.measuredFrameRate ?? 0;
-    final frameRateStr =
-        frameRate > 0 ? '${frameRate.toStringAsFixed(1)} fps' : '-';
+    final frameRateStr = frameRate > 0 ? '${frameRate.toStringAsFixed(1)} fps' : '-';
 
     return StatusPanel(
       highlighted: isDataFlowing && !isPaused,
       items: [
         StatusItem(
           label: 'Status',
-          value:
-              isPaused ? 'Paused' : (isDataFlowing ? 'Streaming' : 'Stopped'),
-          color: isPaused
-              ? Colors.orange
-              : (isDataFlowing ? Colors.green : Colors.grey),
+          value: isPaused ? 'Paused' : (isDataFlowing ? 'Streaming' : 'Stopped'),
+          color: isPaused ? Colors.orange : (isDataFlowing ? Colors.green : Colors.grey),
         ),
         StatusItem(
           label: 'Points',
@@ -1029,9 +988,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         StatusItem(
           label: 'Buffered',
           value: '${_streamController?.bufferedCount ?? 0}',
-          color: (_streamController?.bufferedCount ?? 0) > 0
-              ? Colors.orange
-              : null,
+          color: (_streamController?.bufferedCount ?? 0) > 0 ? Colors.orange : null,
         ),
         StatusItem(
           label: 'Requested Rate',
@@ -1054,9 +1011,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         StatusItem(
           label: 'Frame Rate',
           value: frameRateStr,
-          color: frameRate > 50
-              ? Colors.green
-              : (frameRate > 30 ? Colors.orange : Colors.red),
+          color: frameRate > 50 ? Colors.green : (frameRate > 30 ? Colors.orange : Colors.red),
         ),
         StatusItem(
           label: 'Pattern',
@@ -1064,15 +1019,11 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
         ),
         StatusItem(
           label: 'X Range',
-          value: bounds != null
-              ? '${bounds.xMin.toInt()}-${bounds.xMax.toInt()}'
-              : '-',
+          value: bounds != null ? '${bounds.xMin.toInt()}-${bounds.xMax.toInt()}' : '-',
         ),
         StatusItem(
           label: 'Y Range',
-          value: bounds != null
-              ? '${bounds.yMin.toStringAsFixed(1)}-${bounds.yMax.toStringAsFixed(1)}'
-              : '-',
+          value: bounds != null ? '${bounds.yMin.toStringAsFixed(1)}-${bounds.yMax.toStringAsFixed(1)}' : '-',
         ),
         StatusItem(
           label: 'Latest',
