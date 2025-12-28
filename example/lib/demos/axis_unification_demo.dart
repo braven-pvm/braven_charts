@@ -24,7 +24,7 @@ class AxisUnificationDemo extends StatefulWidget {
 }
 
 class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
-  String _selectedDemo = 'multi-axis';
+  String _selectedDemo = 'single-axis';
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +51,10 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
               const PopupMenuItem(
                 value: 'label-display',
                 child: Text('Axis Label Display'),
+              ),
+              const PopupMenuItem(
+                value: 'single-axis',
+                child: Text('Single Axis (Non-Normalized)'),
               ),
             ],
           ),
@@ -90,6 +94,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
         return 'Independent Grid Configuration';
       case 'label-display':
         return 'Axis Label Display Options';
+      case 'single-axis':
+        return 'Single Axis (Non-Normalized)';
       default:
         return 'Axis Unification';
     }
@@ -105,6 +111,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
         return 'GridConfig provides independent control of horizontal and vertical grid lines with custom colors and visibility.';
       case 'label-display':
         return 'AxisLabelDisplay options control how axis labels and tick units are displayed: labelWithUnit (default), tickUnitOnly, labelOnly, etc.';
+      case 'single-axis':
+        return 'Single Y-axis without per-series normalization. Standard chart with one series for testing crosshair coordinate alignment.';
       default:
         return '';
     }
@@ -113,15 +121,19 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   Widget _buildChart() {
     final seriesList = _buildSeriesList();
     final gridConfig = _buildGridConfig();
+    // Use global normalization for single-axis demo, per-series for multi-axis demos
+    final normMode = _selectedDemo == 'single-axis' ? NormalizationMode.none : NormalizationMode.perSeries;
 
     return BravenChartPlus(
       series: seriesList,
       grid: gridConfig,
       showLegend: true,
+      normalizationMode: normMode,
       interactionConfig: const InteractionConfig(
         enableZoom: true,
         enablePan: true,
         crosshair: CrosshairConfig(enabled: true),
+        tooltip: TooltipConfig(enabled: true),
       ),
     );
   }
@@ -131,7 +143,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
     if (_selectedDemo == 'grid-config') {
       return GridConfig(
         horizontal: true,
-        vertical: false, // Vertical grid disabled
+        vertical: true, // Vertical grid disabled
         horizontalColor: Colors.blue.withValues(alpha: 0.3),
         horizontalStrokeWidth: 1.0,
       );
@@ -149,6 +161,8 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
         return _buildGridConfigDemo();
       case 'label-display':
         return _buildLabelDisplayDemo();
+      case 'single-axis':
+        return _buildSingleAxisDemo();
       default:
         return _buildMultiAxisDemo();
     }
@@ -174,11 +188,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
 
   List<ChartSeries> _buildMultiAxisDemo() {
     // Demonstrate multiple Y-axes at different positions
+    // Use different frequencies to ensure lines don't overlap when normalized
     return [
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points: _generateSineData(100, amplitude: 50, offset: 200),
+        points: _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.08),
         color: Colors.blue,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -193,7 +208,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'heart_rate',
         name: 'Heart Rate (bpm)',
-        points: _generateSineData(100, amplitude: 20, offset: 150),
+        points: _generateSineData(100, amplitude: 20, offset: 150, frequency: 0.12),
         color: Colors.red,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -312,6 +327,31 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
           color: Colors.indigo,
           labelDisplay: AxisLabelDisplay.tickUnitOnly, // No label, "75 %", "80 %" ticks
           showAxisLine: true,
+        ),
+      ),
+    ];
+  }
+
+  List<ChartSeries> _buildSingleAxisDemo() {
+    // Single axis, non-normalized - for testing crosshair alignment
+    return [
+      LineChartSeries(
+        id: 'power',
+        name: 'Power (W)',
+        points: _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.1),
+        color: Colors.blue,
+        strokeWidth: 2.5,
+        showDataPointMarkers: true,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.leftOuter,
+          label: 'Power',
+          unit: 'W',
+          color: Colors.blue,
+          showAxisLine: true,
+          showCrosshairLabel: true,
+          labelDisplay: AxisLabelDisplay.labelOnly,
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+          visible: true,
         ),
       ),
     ];

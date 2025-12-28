@@ -55,9 +55,10 @@ class MultiAxisInfo {
   final List<ChartSeries> series;
 
   /// Whether multi-axis mode is active.
-  bool get isMultiAxisMode =>
-      effectiveAxes.length > 1 &&
-      normalizationMode == NormalizationMode.perSeries;
+  ///
+  /// Returns true when there are multiple axes AND using perSeries normalization.
+  /// This determines whether per-axis crosshair labels are rendered.
+  bool get isMultiAxisMode => effectiveAxes.length > 1 && normalizationMode == NormalizationMode.perSeries;
 
   /// Gets the total width of axes at a specific position.
   double getPositionWidth(YAxisPosition position) {
@@ -135,8 +136,7 @@ class CrosshairRenderer {
     // Check if tracking mode should be used
     final seriesList = seriesElements.map((e) => e.series).toList();
     final totalDataPoints = CrosshairTracker.getTotalPointCount(seriesList);
-    final useTrackingMode =
-        crosshairConfig.shouldUseTrackingMode(totalDataPoints);
+    final useTrackingMode = crosshairConfig.shouldUseTrackingMode(totalDataPoints);
 
     if (useTrackingMode) {
       _paintTrackingMode(
@@ -181,8 +181,7 @@ class CrosshairRenderer {
     final crosshairColor = isRangeCreationMode
         ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF))
         : (interactionTheme?.crosshairColor ?? const Color(0x80666666));
-    final crosshairWidth =
-        isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
+    final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
 
     final crosshairPaint = Paint()
       ..color = crosshairColor
@@ -197,34 +196,24 @@ class CrosshairRenderer {
       double lineRight = plotArea.right;
 
       // Extend line to outer axes with crosshair labels
-      if (multiAxisInfo.isMultiAxisMode &&
-          multiAxisInfo.effectiveAxes.length > 1) {
+      if (multiAxisInfo.isMultiAxisMode && multiAxisInfo.effectiveAxes.length > 1) {
         // Extend left for leftOuter axes with showCrosshairLabel
         final hasLeftOuterLabels = multiAxisInfo.effectiveAxes.any(
-          (a) =>
-              a.position == YAxisPosition.leftOuter &&
-              a.visible &&
-              a.showCrosshairLabel,
+          (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
         );
         if (hasLeftOuterLabels) {
-          final leftOuterWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.leftOuter);
+          final leftOuterWidth = multiAxisInfo.getPositionWidth(YAxisPosition.leftOuter);
           final leftWidth = multiAxisInfo.getPositionWidth(YAxisPosition.left);
           lineLeft = plotArea.left - leftWidth - leftOuterWidth;
         }
 
         // Extend right for rightOuter axes with showCrosshairLabel
         final hasRightOuterLabels = multiAxisInfo.effectiveAxes.any(
-          (a) =>
-              a.position == YAxisPosition.rightOuter &&
-              a.visible &&
-              a.showCrosshairLabel,
+          (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
         );
         if (hasRightOuterLabels) {
-          final rightOuterWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.rightOuter);
-          final rightWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.right);
+          final rightOuterWidth = multiAxisInfo.getPositionWidth(YAxisPosition.rightOuter);
+          final rightWidth = multiAxisInfo.getPositionWidth(YAxisPosition.right);
           lineRight = plotArea.right + rightWidth + rightOuterWidth;
         }
       }
@@ -269,8 +258,7 @@ class CrosshairRenderer {
     required List<SeriesElement> seriesElements,
   }) {
     final interactionTheme = theme?.interactionTheme;
-    final crosshairColor =
-        interactionTheme?.crosshairColor ?? const Color(0x80666666);
+    final crosshairColor = interactionTheme?.crosshairColor ?? const Color(0x80666666);
     final crosshairWidth = interactionTheme?.crosshairWidth ?? 1.0;
 
     final crosshairPaint = Paint()
@@ -294,32 +282,22 @@ class CrosshairRenderer {
       double lineLeft = plotArea.left;
       double lineRight = plotArea.right;
 
-      if (multiAxisInfo.isMultiAxisMode &&
-          multiAxisInfo.effectiveAxes.length > 1) {
+      if (multiAxisInfo.isMultiAxisMode && multiAxisInfo.effectiveAxes.length > 1) {
         final hasLeftOuterLabels = multiAxisInfo.effectiveAxes.any(
-          (a) =>
-              a.position == YAxisPosition.leftOuter &&
-              a.visible &&
-              a.showCrosshairLabel,
+          (a) => a.position == YAxisPosition.leftOuter && a.visible && a.showCrosshairLabel,
         );
         if (hasLeftOuterLabels) {
-          final leftOuterWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.leftOuter);
+          final leftOuterWidth = multiAxisInfo.getPositionWidth(YAxisPosition.leftOuter);
           final leftWidth = multiAxisInfo.getPositionWidth(YAxisPosition.left);
           lineLeft = plotArea.left - leftWidth - leftOuterWidth;
         }
 
         final hasRightOuterLabels = multiAxisInfo.effectiveAxes.any(
-          (a) =>
-              a.position == YAxisPosition.rightOuter &&
-              a.visible &&
-              a.showCrosshairLabel,
+          (a) => a.position == YAxisPosition.rightOuter && a.visible && a.showCrosshairLabel,
         );
         if (hasRightOuterLabels) {
-          final rightOuterWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.rightOuter);
-          final rightWidth =
-              multiAxisInfo.getPositionWidth(YAxisPosition.right);
+          final rightOuterWidth = multiAxisInfo.getPositionWidth(YAxisPosition.rightOuter);
+          final rightWidth = multiAxisInfo.getPositionWidth(YAxisPosition.right);
           lineRight = plotArea.right + rightWidth + rightOuterWidth;
         }
       }
@@ -358,8 +336,7 @@ class CrosshairRenderer {
     }
 
     // Draw tracking tooltip
-    if (crosshairConfig.showTrackingTooltip &&
-        trackingState.seriesValues.isNotEmpty) {
+    if (crosshairConfig.showTrackingTooltip && trackingState.seriesValues.isNotEmpty) {
       _paintTrackingTooltip(
         canvas: canvas,
         cursorPosition: cursorPosition,
@@ -381,22 +358,46 @@ class CrosshairRenderer {
       );
     }
 
-    // Draw Y label (per-axis in multi-axis mode)
+    // Draw Y label (per-axis if any axis has showCrosshairLabel)
     if (mode == CrosshairMode.horizontal || mode == CrosshairMode.both) {
-      if (multiAxisInfo.isMultiAxisMode) {
-        final dataY =
-            transform.plotToData(cursorPosition.dx, cursorPosition.dy).dy;
-        _paintPerAxisCrosshairLabels(
-          canvas: canvas,
-          cursorPosition: cursorPosition,
-          plotArea: plotArea,
-          theme: theme,
-          normalizedY: dataY,
-          multiAxisInfo: multiAxisInfo,
-        );
+      // Check if any axis wants a styled crosshair label
+      final hasAxisWithCrosshairLabel = multiAxisInfo.effectiveAxes.any((a) => a.showCrosshairLabel && a.visible);
+      final isPerSeriesMode = multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+
+      if (hasAxisWithCrosshairLabel) {
+        if (isPerSeriesMode) {
+          // For perSeries normalization, calculate normalized Y from screen position
+          // This matches the inverse of how the axis renderer positions ticks:
+          // Axis: screenY = plotArea.bottom - (normalizedY * plotArea.height)
+          // Inverse: normalizedY = (plotArea.bottom - cursorY) / plotArea.height
+          final normalizedY = (plotArea.bottom - cursorPosition.dy) / plotArea.height;
+          _paintPerAxisCrosshairLabels(
+            canvas: canvas,
+            cursorPosition: cursorPosition,
+            plotArea: plotArea,
+            theme: theme,
+            yValue: normalizedY,
+            multiAxisInfo: multiAxisInfo,
+            isNormalized: true,
+          );
+        } else {
+          // For non-normalized modes (none/auto), get actual data Y from transform
+          final plotY = cursorPosition.dy - plotArea.top;
+          final dataY = transform.plotToData(0, plotY).dy;
+          _paintPerAxisCrosshairLabels(
+            canvas: canvas,
+            cursorPosition: cursorPosition,
+            plotArea: plotArea,
+            theme: theme,
+            yValue: dataY,
+            multiAxisInfo: multiAxisInfo,
+            isNormalized: false,
+          );
+        }
       } else {
-        final dataY =
-            transform.plotToData(cursorPosition.dx, cursorPosition.dy).dy;
+        // No axis has showCrosshairLabel - use generic Y label
+        final plotY = cursorPosition.dy - plotArea.top;
+        final dataY = transform.plotToData(0, plotY).dy;
         _paintTrackingYLabel(
           canvas: canvas,
           cursorPosition: cursorPosition,
@@ -427,10 +428,8 @@ class CrosshairRenderer {
 
     final interactionTheme = theme?.interactionTheme;
     final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ??
-        const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor =
-        labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
     final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
     final borderWidth = labelStyle?.borderWidth ?? 1.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
@@ -472,16 +471,35 @@ class CrosshairRenderer {
     }
     xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
 
-    // Y coordinate label (single-axis mode) or per-axis labels (multi-axis mode)
-    if (multiAxisInfo.isMultiAxisMode) {
-      _paintPerAxisCrosshairLabels(
-        canvas: canvas,
-        cursorPosition: cursorPosition,
-        plotArea: plotArea,
-        theme: theme,
-        normalizedY: dataY,
-        multiAxisInfo: multiAxisInfo,
-      );
+    // Y coordinate label: use per-axis styling if any axis has showCrosshairLabel
+    final hasAxisWithCrosshairLabel = multiAxisInfo.effectiveAxes.any((a) => a.showCrosshairLabel && a.visible);
+    final isPerSeriesMode = multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+
+    if (hasAxisWithCrosshairLabel) {
+      if (isPerSeriesMode) {
+        // For perSeries, calculate normalized Y from screen position
+        final normalizedY = (plotArea.bottom - cursorPosition.dy) / plotArea.height;
+        _paintPerAxisCrosshairLabels(
+          canvas: canvas,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          yValue: normalizedY,
+          multiAxisInfo: multiAxisInfo,
+          isNormalized: true,
+        );
+      } else {
+        // For non-normalized, use dataY directly
+        _paintPerAxisCrosshairLabels(
+          canvas: canvas,
+          cursorPosition: cursorPosition,
+          plotArea: plotArea,
+          theme: theme,
+          yValue: dataY,
+          multiAxisInfo: multiAxisInfo,
+          isNormalized: false,
+        );
+      }
     } else {
       final yDisplayValue = _formatDataValue(dataY);
       final yTextPainter = TextPainter(
@@ -513,24 +531,26 @@ class CrosshairRenderer {
     }
   }
 
-  /// Paints per-axis crosshair labels for multi-axis mode.
+  /// Paints per-axis crosshair labels.
+  ///
+  /// When [isNormalized] is true, [yValue] is in 0-1 range and will be
+  /// denormalized using axis bounds. When false, [yValue] is already
+  /// the data Y value and will be used directly.
   void _paintPerAxisCrosshairLabels({
     required Canvas canvas,
     required Offset cursorPosition,
     required Rect plotArea,
     required ChartTheme? theme,
-    required double normalizedY,
+    required double yValue,
     required MultiAxisInfo multiAxisInfo,
+    required bool isNormalized,
   }) {
-    final axesWithLabels = multiAxisInfo.effectiveAxes
-        .where((a) => a.showCrosshairLabel && a.visible)
-        .toList();
+    final axesWithLabels = multiAxisInfo.effectiveAxes.where((a) => a.showCrosshairLabel && a.visible).toList();
     if (axesWithLabels.isEmpty) return;
 
     final interactionTheme = theme?.interactionTheme;
     final labelStyleConfig = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyleConfig?.textStyle ??
-        const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final textStyle = labelStyleConfig?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
     final labelPadding = labelStyleConfig?.padding.left ?? 4.0;
     final borderRadius = labelStyleConfig?.borderRadius ?? 3.0;
 
@@ -538,18 +558,16 @@ class CrosshairRenderer {
       final bounds = multiAxisInfo.axisBounds[axis.id];
       if (bounds == null) continue;
 
-      // Denormalize the Y value for this axis
-      final denormalizedY =
-          MultiAxisNormalizer.denormalize(normalizedY, bounds.min, bounds.max);
+      // For normalized mode: denormalize 0-1 value using axis bounds
+      // For non-normalized mode: use the value directly (it's already data Y)
+      final displayY = isNormalized ? MultiAxisNormalizer.denormalize(yValue, bounds.min, bounds.max) : yValue;
 
       final axisColor = multiAxisInfo.resolveAxisColor(axis);
 
       // Format value with unit if configured
       final displayValue = axis.shouldShowTickUnit
-          ? MultiAxisValueFormatter.formatFixed(
-              value: denormalizedY, unit: axis.unit)
-          : MultiAxisValueFormatter.formatFixed(
-              value: denormalizedY, unit: null);
+          ? MultiAxisValueFormatter.formatFixed(value: displayY, unit: axis.unit)
+          : MultiAxisValueFormatter.formatFixed(value: displayY, unit: null);
 
       final textPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle),
@@ -558,8 +576,7 @@ class CrosshairRenderer {
 
       // Calculate label X position based on axis position and crosshairLabelPosition
       final double labelX;
-      final isLeftAxis = axis.position == YAxisPosition.left ||
-          axis.position == YAxisPosition.leftOuter;
+      final isLeftAxis = axis.position == YAxisPosition.left || axis.position == YAxisPosition.leftOuter;
 
       if (axis.crosshairLabelPosition == CrosshairLabelPosition.insidePlot) {
         // Position inside the plot area near the axis edge
@@ -571,16 +588,11 @@ class CrosshairRenderer {
       } else {
         // Default overAxis behavior: position outside plot area in axis strip
         if (isLeftAxis) {
-          final axisLineX = axis.position == YAxisPosition.left
-              ? plotArea.left
-              : plotArea.left -
-                  multiAxisInfo.getPositionWidth(YAxisPosition.left);
+          final axisLineX = axis.position == YAxisPosition.left ? plotArea.left : plotArea.left - multiAxisInfo.getPositionWidth(YAxisPosition.left);
           labelX = axisLineX - textPainter.width - labelPadding * 2;
         } else {
-          final axisLineX = axis.position == YAxisPosition.right
-              ? plotArea.right
-              : plotArea.right +
-                  multiAxisInfo.getPositionWidth(YAxisPosition.right);
+          final axisLineX =
+              axis.position == YAxisPosition.right ? plotArea.right : plotArea.right + multiAxisInfo.getPositionWidth(YAxisPosition.right);
           labelX = axisLineX + labelPadding * 2;
         }
       }
@@ -633,8 +645,7 @@ class CrosshairRenderer {
           multiAxisInfo.effectiveBindings,
           multiAxisInfo.effectiveAxes,
         );
-        final seriesAxisBounds =
-            axisConfig != null ? multiAxisInfo.axisBounds[axisConfig.id] : null;
+        final seriesAxisBounds = axisConfig != null ? multiAxisInfo.axisBounds[axisConfig.id] : null;
 
         if (seriesAxisBounds != null) {
           screenY = CrosshairTracker.dataToScreenYForAxis(
@@ -695,8 +706,7 @@ class CrosshairRenderer {
     final interactionTheme = theme?.interactionTheme;
     final tooltipTheme = interactionTheme?.tooltipStyle;
 
-    final backgroundColor =
-        tooltipTheme?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final backgroundColor = tooltipTheme?.backgroundColor ?? const Color(0xF0FFFFFF);
     final textColor = tooltipTheme?.textStyle.color ?? const Color(0xFF333333);
     final fontSize = tooltipTheme?.textStyle.fontSize ?? 12.0;
     final borderColor = tooltipTheme?.borderColor ?? const Color(0xFFBDBDBD);
@@ -723,8 +733,7 @@ class CrosshairRenderer {
         yUnit = axisConfig?.unit;
       }
 
-      final displayY =
-          MultiAxisValueFormatter.format(value: value.y, unit: yUnit);
+      final displayY = MultiAxisValueFormatter.format(value: value.y, unit: yUnit);
       final label = '${value.seriesName}: $displayY';
       final tp = TextPainter(
         text: TextSpan(
@@ -799,10 +808,8 @@ class CrosshairRenderer {
   }) {
     final interactionTheme = theme?.interactionTheme;
     final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ??
-        const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor =
-        labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
     final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
     final borderWidth = labelStyle?.borderWidth ?? 1.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
@@ -854,10 +861,8 @@ class CrosshairRenderer {
   }) {
     final interactionTheme = theme?.interactionTheme;
     final labelStyle = interactionTheme?.crosshairLabelStyle;
-    final textStyle = labelStyle?.textStyle ??
-        const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor =
-        labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
+    final textStyle = labelStyle?.textStyle ?? const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final backgroundColor = labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
     final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
     final borderWidth = labelStyle?.borderWidth ?? 1.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
