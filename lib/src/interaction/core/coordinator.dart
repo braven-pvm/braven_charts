@@ -195,6 +195,13 @@ class ChartInteractionCoordinator extends ChangeNotifier {
       return false;
     }
 
+    // Clear hovered marker when entering zoom/pan modes
+    // This prevents stale marker positions from being used after zoom/pan completes
+    if (requestedMode == InteractionMode.zooming ||
+        requestedMode == InteractionMode.panning) {
+      _hoveredMarker = null;
+    }
+
     // Allow mode claim
     _setMode(requestedMode, element: element);
     return true;
