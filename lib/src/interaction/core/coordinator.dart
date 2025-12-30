@@ -159,6 +159,16 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// Per conflict resolution scenario 12: Tooltips should be suspended while panning.
   bool get isPanning => _currentMode == InteractionMode.panning;
 
+  /// Whether chart is currently zooming.
+  ///
+  /// Tooltips should be hidden during zoom operations.
+  bool get isZooming => _currentMode == InteractionMode.zooming;
+
+  /// Whether chart is actively panning or zooming.
+  ///
+  /// Tooltips and crosshair labels should be hidden during these operations.
+  bool get isPanningOrZooming => isPanning || isZooming;
+
   /// Whether chart is currently in a selecting state.
   bool get isSelecting => _currentMode.isSelecting;
 

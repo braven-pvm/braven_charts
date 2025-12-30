@@ -171,7 +171,8 @@ class TooltipAnimator {
   /// Safely requests a repaint if not disposed.
   ///
   /// Schedules the repaint for the next frame to avoid calling markNeedsPaint
-  /// during the paint phase, which would cause an assertion error.
+  /// during the paint phase (show() can be called from paint), which would
+  /// cause an assertion error.
   void _safeRepaint() {
     if (!_disposed) {
       SchedulerBinding.instance.addPostFrameCallback((_) {

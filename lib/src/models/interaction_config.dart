@@ -568,7 +568,7 @@ class TooltipConfig {
     this.enabled = true,
     this.triggerMode = TooltipTriggerMode.hover,
     this.preferredPosition = TooltipPosition.auto,
-    this.showDelay = const Duration(milliseconds: 100),
+    this.showDelay = Duration.zero,
     this.hideDelay = const Duration(milliseconds: 200),
     this.followCursor = false,
     this.offsetFromPoint = 8.0,

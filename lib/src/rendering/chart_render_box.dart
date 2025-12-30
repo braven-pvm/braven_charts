@@ -1807,7 +1807,7 @@ class ChartRenderBox extends RenderBox {
 
     // Draw tooltip for hovered/tapped marker (if any)
     // Show based on tooltip trigger mode configuration with animations
-    if (_tooltipsEnabled && !coordinator.isPanning) {
+    if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
       HoveredMarkerInfo? markerToShow;
 
