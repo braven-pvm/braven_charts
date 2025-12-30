@@ -222,10 +222,8 @@ class CrosshairConfig {
     this.showIntersectionMarkers = true,
     this.intersectionMarkerRadius = 4.0,
   })  : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
-        assert(trackingModeThreshold > 0,
-            'trackingModeThreshold must be positive'),
-        assert(intersectionMarkerRadius > 0,
-            'intersectionMarkerRadius must be positive');
+        assert(trackingModeThreshold > 0, 'trackingModeThreshold must be positive'),
+        assert(intersectionMarkerRadius > 0, 'intersectionMarkerRadius must be positive');
 
   /// Creates a default crosshair configuration.
   ///
@@ -338,14 +336,11 @@ class CrosshairConfig {
       coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
       style: style ?? this.style,
       displayMode: displayMode ?? this.displayMode,
-      trackingModeThreshold:
-          trackingModeThreshold ?? this.trackingModeThreshold,
+      trackingModeThreshold: trackingModeThreshold ?? this.trackingModeThreshold,
       interpolateValues: interpolateValues ?? this.interpolateValues,
       showTrackingTooltip: showTrackingTooltip ?? this.showTrackingTooltip,
-      showIntersectionMarkers:
-          showIntersectionMarkers ?? this.showIntersectionMarkers,
-      intersectionMarkerRadius:
-          intersectionMarkerRadius ?? this.intersectionMarkerRadius,
+      showIntersectionMarkers: showIntersectionMarkers ?? this.showIntersectionMarkers,
+      intersectionMarkerRadius: intersectionMarkerRadius ?? this.intersectionMarkerRadius,
     );
   }
 
@@ -746,8 +741,7 @@ class GestureConfig {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
+  int get hashCode => Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
 }
 
 // ==============================================================================
@@ -830,8 +824,7 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys,
-      enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys, enablePlusMinusKeys, enableHomeEndKeys);
 }
 
 // ==============================================================================
@@ -937,8 +930,7 @@ class InteractionConfig {
     this.onCrosshairChanged,
     this.onTooltipChanged,
     this.onKeyboardAction,
-  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100,
-            'keyboardZoomPercent must be between 1 and 100');
+  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100, 'keyboardZoomPercent must be between 1 and 100');
 
   /// Creates a configuration with all interaction features enabled.
   ///

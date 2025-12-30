@@ -4,12 +4,37 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../models/interaction_config.dart';
 
 /// Callback type for requesting a repaint.
 typedef RepaintCallback = void Function();
+
+/// Pre-warms text rendering infrastructure to eliminate first-tooltip latency.
+///
+/// Call this once during chart initialization to avoid the ~100-200ms delay
+/// that occurs when the first tooltip is rendered (due to font loading,
+/// glyph caching, and shader compilation).
+void prewarmTooltipRendering() {
+  // Create and layout a TextPainter with typical tooltip content.
+  // This forces Flutter to load fonts and compile text shaders.
+  final painter = TextPainter(
+    text: const TextSpan(
+      text: 'Series 1\nX: 100.00\nY: 100.00',
+      style: TextStyle(
+        color: Color(0xFF333333),
+        fontSize: 12.0,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+  )..layout();
+  // Dispose immediately - we just needed to trigger the caching
+  painter.dispose();
+}
 
 /// Manages tooltip show/hide animations with configurable delays.
 ///
@@ -129,9 +154,7 @@ class TooltipAnimator {
 
     // If tooltip is fully visible, enforce a minimum hide delay to prevent
     // flickering from transient null states during marker-to-marker transitions
-    final effectiveHideDelay = _opacity > 0.9
-        ? Duration(milliseconds: math.max(config.hideDelay.inMilliseconds, 100))
-        : config.hideDelay;
+    final effectiveHideDelay = _opacity > 0.9 ? Duration(milliseconds: math.max(config.hideDelay.inMilliseconds, 100)) : config.hideDelay;
 
     // Start hide delay timer
     _hideTimer = Timer(effectiveHideDelay, () {
