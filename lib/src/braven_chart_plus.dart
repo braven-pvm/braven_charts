@@ -2066,6 +2066,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
+  /// Releases interaction mode after a short delay.
+  ///
+  /// Used for keyboard pan/zoom to ensure tooltip hide takes effect
+  /// before returning to idle mode.
+  void _releaseModeLater() {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!_coordinator.isDisposed && !_coordinator.currentMode.isPassive) {
+        _coordinator.releaseMode();
+      }
+    });
+  }
+
   void _handleKeyEvent(KeyEvent event) {
     // Removed excessive debugPrint (key event)
 
@@ -2103,26 +2115,30 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
-          // Removed excessive debugPrint (arrow left)
+          _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(-20.0, 0.0);
+          _releaseModeLater();
         }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
-          // Removed excessive debugPrint (arrow right)
+          _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(20.0, 0.0);
+          _releaseModeLater();
         }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
-          // Removed excessive debugPrint (arrow up)
+          _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(0.0, -20.0);
+          _releaseModeLater();
         }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
-          // Removed excessive debugPrint (arrow down)
+          _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(0.0, 20.0);
+          _releaseModeLater();
         }
       }
       // Zoom in with + or = or numpad +
@@ -2132,8 +2148,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         // Check if zoom is enabled
         final config = widget.interactionConfig ?? const InteractionConfig();
         if (config.enableZoom) {
-          // Removed excessive debugPrint (zoom in)
+          _coordinator.claimMode(InteractionMode.zooming);
           renderBox.zoomChart(1.0 + (config.keyboardZoomPercent / 100.0));
+          _releaseModeLater();
         }
       }
       // Zoom out with - or numpad -
@@ -2142,8 +2159,9 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         // Check if zoom is enabled
         final config = widget.interactionConfig ?? const InteractionConfig();
         if (config.enableZoom) {
-          // Removed excessive debugPrint (zoom out)
+          _coordinator.claimMode(InteractionMode.zooming);
           renderBox.zoomChart(1.0 - (config.keyboardZoomPercent / 100.0));
+          _releaseModeLater();
         }
       }
     } else if (event is KeyUpEvent) {
