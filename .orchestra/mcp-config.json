@@ -1,21 +1,21 @@
 {
   "mcpServers": {
-    "orchestra-orchestrator": {
+    "orchestra-orc": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
+        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.0\\dist\\mcp-server\\index.js",
         "--role=orchestrator"
       ],
       "env": {
         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
       }
     },
-    "orchestra-implementor": {
+    "orchestra-imp": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
+        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.0\\dist\\mcp-server\\index.js",
         "--role=implementor"
       ],
       "env": {
@@ -24,6 +24,6 @@
     }
   },
   "generatedBy": "Orchestra VS Code Extension",
-  "version": "0.2.4",
-  "timestamp": "2025-12-28T12:18:07.177Z"
+  "version": "0.4.0",
+  "timestamp": "2026-01-14T18:27:07.161Z"
 }

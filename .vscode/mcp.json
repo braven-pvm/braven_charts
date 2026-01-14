@@ -1,26 +1,48 @@
-{
-  "servers": {
-    "orchestra-orchestrator": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
-        "--role=orchestrator"
-      ],
-      "env": {
-        "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
-      }
-    },
-    "orchestra-implementor": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
-        "--role=implementor"
-      ],
-      "env": {
-        "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
-      }
-    }
-  }
-}
+// {
+//   "servers": {
+//     "orchestra-orchestrator": {
+//       "type": "stdio",
+//       "command": "node",
+//       "args": [
+//         "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
+//         "--role=orchestrator"
+//       ],
+//       "env": {
+//         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
+//       }
+//     },
+//     "orchestra-implementor": {
+//       "type": "stdio",
+//       "command": "node",
+//       "args": [
+//         "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.2.4\\dist\\mcp-server\\index.js",
+//         "--role=implementor"
+//       ],
+//       "env": {
+//         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
+//       }
+//     },
+//     "orchestra-orc": {
+//       "type": "stdio",
+//       "command": "node",
+//       "args": [
+//         "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.0\\dist\\mcp-server\\index.js",
+//         "--role=orchestrator"
+//       ],
+//       "env": {
+//         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
+//       }
+//     },
+//     "orchestra-imp": {
+//       "type": "stdio",
+//       "command": "node",
+//       "args": [
+//         "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.0\\dist\\mcp-server\\index.js",
+//         "--role=implementor"
+//       ],
+//       "env": {
+//         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
+//       }
+//     }
+//   }
+// }
