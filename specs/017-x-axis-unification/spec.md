@@ -158,6 +158,7 @@ Sprint 013 successfully unified Y-axis rendering through `MultiAxisPainter` with
 - **Custom label formatter**: Custom formatters should override unit suffix behavior
 - **Zero-width data range**: When min == max on X-axis, sensible tick generation should still work
 - **Cache invalidation**: TextPainter cache MUST invalidate when XAxisConfig changes, data range changes, or theme changes
+- **No-op paint detection** *(Added post-mortem 2026-01-16)*: Any `paint()` method that does not call `canvas.drawLine()`, `canvas.drawRect()`, or `TextPainter.paint()` is INVALID and MUST fail verification - stub/placeholder implementations are NOT acceptable for renderer tasks
 
 ---
 
@@ -181,12 +182,21 @@ Sprint 013 successfully unified Y-axis rendering through `MultiAxisPainter` with
 #### Renderer
 
 - **FR-011**: System MUST provide `XAxisPainter` class following `MultiAxisPainter` architecture
+- **FR-011a**: `XAxisPainter.paint()` MUST draw axis line via `canvas.drawLine()` when `showAxisLine` is true *(Added post-mortem 2026-01-16: Explicit canvas draw requirement)*
+- **FR-011b**: `XAxisPainter.paint()` MUST draw tick marks via `canvas.drawLine()` when `showTicks` is true *(Added post-mortem 2026-01-16)*
+- **FR-011c**: `XAxisPainter.paint()` MUST draw tick labels via `TextPainter.paint()` *(Added post-mortem 2026-01-16)*
 - **FR-012**: `XAxisPainter` MUST implement TextPainter caching with automatic invalidation
 - **FR-013**: `XAxisPainter` MUST use `AxisColorResolver` for color resolution
 - **FR-014**: `XAxisPainter` MUST support unit suffix formatting in tick labels
 - **FR-015**: `XAxisPainter` MUST use "nice numbers" algorithm for readable tick values
 - **FR-016**: `XAxisPainter` MUST use configuration properties for spacing (no hardcoded offsets)
 - **FR-017**: `XAxisPainter` MUST support crosshair value label rendering
+
+#### Pipeline Integration *(Added post-mortem 2026-01-16)*
+
+- **FR-031**: `chart_render_box.dart` MUST use `XAxisPainter` (not legacy `XAxisRenderer`) when `xAxisConfig` is provided
+- **FR-032**: Legacy `XAxisRenderer` MUST be marked `@Deprecated` with migration guidance to `XAxisPainter`
+- **FR-033**: When `xAxisConfig` is provided, the X-axis MUST be visually rendered using the new painter (not silently ignored)
 
 #### Color Resolution
 
@@ -241,6 +251,17 @@ Sprint 013 successfully unified Y-axis rendering through `MultiAxisPainter` with
 | SC-008 | Example app renders correctly after upgrade | Visual inspection shows no regressions |
 | SC-009 | Per-series xAxisConfig overrides chart-level config | Widget test verifies series-level config precedence |
 | SC-010 | Backward compatibility with AxisConfig maintained | Existing code using old API renders identically |
+| **SC-011** | **X-axis is visually rendered by XAxisPainter** | **Demo app with xAxisConfig shows visible X-axis with line, ticks, labels** *(Added post-mortem 2026-01-16)* |
+| **SC-012** | **XAxisPainter replaces XAxisRenderer in pipeline** | **grep for XAxisRenderer in chart_render_box.dart returns 0 matches (excluding comments)** *(Added post-mortem 2026-01-16)* |
+
+### Visual Verification Requirements *(Added post-mortem 2026-01-16)*
+
+The following visual verification is MANDATORY for any renderer implementation:
+
+1. **Demo App Test**: A demo app using the new API MUST be run and produce visible output
+2. **Screenshot Comparison**: Before/after screenshots MUST show the new renderer is active
+3. **No-Op Detection**: Any `paint()` method containing only comments or no canvas operations MUST fail verification
+4. **Pipeline Check**: The render pipeline file MUST be verified to call the new renderer
 
 ---
 

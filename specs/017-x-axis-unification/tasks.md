@@ -67,6 +67,15 @@
 - [ ] T009 [US1] Implement `copyWith` method on `XAxisConfig` in `lib/src/models/x_axis_config.dart`
 - [ ] T010 [US1] Write failing unit tests for `XAxisPainter` basic rendering (axis line, ticks, labels, nice numbers) in `test/unit/rendering/x_axis_painter_test.dart`
 - [ ] T011 [US1] Implement basic paint method in `XAxisPainter` with nice numbers algorithm (FR-015) in `lib/src/rendering/x_axis_painter.dart`
+  - **MANDATORY VERIFICATION** *(Added post-mortem 2026-01-16)*:
+    - `paint()` MUST call `canvas.drawLine()` for axis line (pattern: `canvas\.drawLine`)
+    - `paint()` MUST call `canvas.drawLine()` for tick marks (min 2 matches for axis + ticks)
+    - `paint()` MUST call `textPainter.paint()` or `.paint(canvas` for labels
+    - NO-OP REJECTION: If `paint()` contains only comments or no canvas draw calls, task FAILS
+- [ ] T011a [US1] Wire `XAxisPainter` into `chart_render_box.dart` to replace `XAxisRenderer` *(Added post-mortem 2026-01-16)*
+  - **MANDATORY VERIFICATION**:
+    - `chart_render_box.dart` MUST contain `XAxisPainter` (pattern: `XAxisPainter`)
+    - `chart_render_box.dart` MUST NOT use `XAxisRenderer` for painting (excluding deprecation comments)
 
 ---
 
@@ -258,11 +267,72 @@ Phase 8 (US4: Cross) ───┘
 
 | Checkpoint | Tasks | Deliverable |
 |------------|-------|-------------|
-| Alpha | T001-T011 | XAxisConfig + XAxisPainter skeleton working |
+| Alpha | T001-T011a | XAxisConfig + XAxisPainter **fully functional and wired** *(Updated post-mortem)* |
 | Beta | T012-T018 | Visual parity + backward compatibility |
 | RC1 | T019-T026 | Unit suffixes + color resolution |
 | RC2 | T027-T034 | Crosshair + per-series config |
 | Release | T035-T039 | Documentation + full validation |
+
+---
+
+## Verification Guidelines *(Added post-mortem 2026-01-16)*
+
+### Renderer Task Verification Requirements
+
+Any task that implements a `paint()` method MUST include these verification checks:
+
+#### Structural Checks (BLOCKING)
+
+```yaml
+- description: "Painter calls canvas.drawLine for axis/ticks"
+  path: "lib/src/rendering/<painter>.dart"
+  pattern: "canvas\\.drawLine"
+  min_matches: 2  # axis line + at least one tick
+
+- description: "Painter calls TextPainter.paint for labels"
+  path: "lib/src/rendering/<painter>.dart"  
+  pattern: "\\.paint\\(canvas|textPainter\\.paint"
+  min_matches: 1
+```
+
+#### Anti-Pattern Checks (BLOCKING)
+
+```yaml
+- description: "paint() is NOT a no-op stub"
+  path: "lib/src/rendering/<painter>.dart"
+  pattern: "void paint.*\\{[^}]*canvas\\.(draw|paint)"  
+  min_matches: 1
+  rationale: "Rejects paint() methods that only contain comments"
+```
+
+#### Pipeline Wiring Checks (BLOCKING)
+
+```yaml
+- description: "New painter is used in render pipeline"
+  path: "lib/src/rendering/chart_render_box.dart"
+  pattern: "<NewPainter>"
+  min_matches: 1
+
+- description: "Old renderer is NOT used (excluding deprecation comments)"
+  command: "grep -v '//' chart_render_box.dart | grep '<OldRenderer>(' | wc -l"
+  expect_output: "0"
+```
+
+### Visual Verification (MANDATORY for UI tasks)
+
+1. Run demo app with new API
+2. Capture screenshot
+3. Verify visual output matches expected behavior
+4. Compare before/after if replacing existing renderer
+
+### Amendment Restrictions
+
+When amending verification criteria:
+
+- **REMOVING a BLOCKING check** requires explicit spec reference showing the check was incorrect
+- **"Handover said X"** is NOT valid justification for removing a check
+- **Only "Spec says X"** is valid justification
+- All amendments removing safety checks must be escalated to human review
 
 ---
 

@@ -226,17 +226,144 @@ For TDD work, declare **red-green task pairs** with `tdd_relationships` in `conf
 }
 ```
 
+### ⚠️ ENFORCED: tdd_relationships Required for Red-Phase Tasks
+
+**If any task has `tdd_red_phase: true`, you MUST provide a `tdd_relationships` entry.**
+
+This is enforced at `configure_sprint` validation time. The system will reject your sprint configuration with an error if:
+
+- A task has `tdd_red_phase: true` but no entry in `tdd_relationships`
+- The `red_task_id` equals `green_task_id` (must be different tasks)
+- The referenced task IDs don't exist
+
+**Error you'll see if you forget:**
+
+```
+Task 1 has tdd_red_phase=true but no entry in tdd_relationships.
+TDD red-phase tasks MUST have a corresponding green task declared.
+Add an entry to tdd_relationships: { red_task_id: 1, green_task_id: <green_task_id> }
+```
+
 **TDD Workflow**:
 
-1. **Red phase** (Task 1): Implementor writes failing tests, registers them with `register_tdd_red_test`
-2. **Validation**: System verifies test markers exist in codebase
-3. **Green phase** (Task 2): Implementor implements feature, removes markers, makes tests pass
-4. **Closeout gate**: Sprint cannot close until all tests are GREEN
+1. **Red phase** (Task 1): Implementor writes failing tests WITH TDD markers (see format below)
+2. **Automatic registration**: On `signal_completion`, system scans workspace for ALL TDD markers and updates registry
+3. **Validation**: For `tdd_red_phase: true` tasks, system verifies markers exist for that task ID
+4. **Green phase** (Task 2): Implementor implements feature, removes markers, makes tests pass
+5. **Completion gate**: `complete_task` requires ALL registry entries have `green_task_id` assigned before ANY task can complete
+6. **Closeout gate**: Sprint cannot close until all TDD relationships have `completed_at` set
+
+**TDD Scanner Behavior (Scan-on-Signal):**
+
+On EVERY `signal_completion` call (not just TDD tasks), the system:
+
+1. Scans the entire workspace for TDD markers (`@Tags(['tdd-red'])` or `[tdd-red]`) with `// @orchestra-task: N` annotations
+2. **Deletes ALL existing registry entries** for the sprint (fresh snapshot)
+3. **Repopulates registry** with all markers found, grouped by task ID from annotations
+4. If the signaling task has `tdd_red_phase: true`, validates it has markers in the registry
+
+This ensures the registry is always a **current snapshot** of what's in the codebase, not stale state.
+
+**TDD Marker Format (TWO-PART SYSTEM):**
+
+TDD markers have TWO separate concerns:
+
+1. **Test runner filtering**: `@Tags(['tdd-red'])` or `[tdd-red]` - allows running just TDD tests
+2. **Task linking**: `// @orchestra-task: N` - associates tests with a specific task ID
+
+| Language    | Filtering Tag                      | Task Annotation                | Example                                                          |
+| ----------- | ---------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| TypeScript  | `[tdd-red]` in test/describe name  | `// @orchestra-task: N` at top | `// @orchestra-task: 3`<br>`it('[tdd-red] should work', ...)`    |
+| Dart file   | `@Tags(['tdd-red'])` before main() | `// @orchestra-task: N` at top | `// @orchestra-task: 3`<br>`@Tags(['tdd-red'])`                  |
+| Dart inline | `tags: ['tdd-red']` in test() call | `// @orchestra-task: N` at top | `// @orchestra-task: 3`<br>`test('x', () {}, tags: ['tdd-red'])` |
+
+**⚠️ OLD FORMAT NO LONGER SUPPORTED:**
+
+- ❌ `@Tags(['tdd-red-task-N'])` (single-token with task ID embedded)
+- ❌ `[tdd-red-task-N]` (single-token with task ID embedded)
+- ❌ `tags: ['tdd-red', 'task-N']` (two tokens for one concept)
+- ❌ `test/tdd-red/` directories
+- ❌ `it.skip`, `test.skip`, `xit` (skip markers)
 
 **Key fields**:
 
-- `tdd_red_phase: true` - Marks task as red phase (required for `register_tdd_red_test`)
-- `tdd_relationships` - Declares which green task will make which red task's tests pass
+- `tdd_red_phase: true` - Marks task as red phase (REQUIRES corresponding `tdd_relationships` entry)
+- `tdd_relationships` - **REQUIRED** for any red-phase task. Declares which green task will make which red task's tests pass
+
+### ⚠️ CRITICAL: TDD Red and Green MUST Be Separate Tasks
+
+**NEVER combine red phase (write tests) and green phase (implement) in one task.**
+
+| ❌ WRONG                                                                                                | ✅ CORRECT                                                               |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Single task with `tdd_red_phase: true` that says "Write failing tests THEN implement to make them pass" | Two separate tasks: Task 1 (red) writes tests, Task 2 (green) implements |
+| Instructing implementor to remove TDD markers after implementation in same task                         | Red task keeps markers; Green task removes them                          |
+| "TDD task" that does everything in one go                                                               | Clear separation with `tdd_relationships` linking them                   |
+| Omitting `tdd_relationships` when using `tdd_red_phase: true`                                           | **REQUIRED**: Always provide `tdd_relationships`                         |
+
+**Why this matters:**
+
+When a task has `tdd_red_phase: true`, the system scans for TDD markers on `signal_completion`. If you tell the implementor to write tests AND implement AND remove markers all in one task:
+
+1. Implementor writes tests with markers ✓
+2. Implementor implements feature ✓
+3. Implementor removes markers (per instructions) ✓
+4. Implementor signals completion
+5. System scans for markers → **NONE FOUND** → Task fails
+
+**The markers must still exist when red-phase task signals completion.**
+
+**Correct pattern in handover:**
+
+```
+Red Task (tdd_red_phase: true):
+  "Write failing tests with TDD markers (two-part system):
+
+   1. Add task ID annotation at TOP of file:
+      // @orchestra-task: N  (where N is the task ID)
+
+   2. Add [tdd-red] markers to tests:
+      - TypeScript: [tdd-red] in test/describe name
+      - Dart: @Tags(['tdd-red']) before main() OR tags: ['tdd-red'] in test()
+
+   DO NOT implement the feature. Tests should FAIL.
+   Keep the markers AND task annotation in place.
+
+   Verify locally:
+   - Dart: flutter test --tags tdd-red (should FAIL)
+   - Dart: flutter test --exclude-tags tdd-red (should PASS)
+   - TS: npm test -- --testNamePattern=\"\\[tdd-red\\]\" (should FAIL)"
+
+Green Task (depends on red task):
+  "Implement the feature to make tests pass.
+   Remove the [tdd-red] markers and // @orchestra-task: N annotation.
+   All tests should now PASS."
+```
+
+### complete_task Gate Check for TDD
+
+**CRITICAL**: `complete_task` has a gate check that blocks completion if ANY registry entries lack a `green_task_id` assignment.
+
+When you call `complete_task`, the system checks:
+
+1. Are there ANY entries in `tdd_red_registry` for this sprint?
+2. Do ALL of those entries have a corresponding `green_task_id` in `tdd_task_relationships`?
+
+If any registry entry is orphaned (no green task assigned), `complete_task` **fails for ALL tasks** with:
+
+```
+INCOMPLETE TDD WORKFLOW:
+
+The following red-phase tasks have markers in the codebase but no green task assigned:
+  - Task 1
+  - Task 3
+
+Orchestrator must call complete_task with green_task_id parameter for each red-phase task before any task can be completed.
+
+Example: complete_task({ task_id: 1, green_task_id: <green_task_id> })
+```
+
+**Resolution**: Call `complete_task` with `green_task_id` parameter for each red-phase task before completing any task.
 
 **Check TDD status** via `get_sprint_status`:
 
@@ -266,12 +393,14 @@ When a specification has many granular tasks (e.g., 45+ checklist items):
 
 ### Anti-Patterns to Avoid
 
-| Anti-Pattern                      | Why It's Bad                            | Better Approach                     |
-| --------------------------------- | --------------------------------------- | ----------------------------------- |
-| One task per test case            | 4 tests = 4 prepare/verify cycles       | One task for all tests in a feature |
-| "Add constant X" as separate task | Trivial, massive overhead               | Include in implementation task      |
-| "Run tests and verify" as task    | That's what verification phase does     | Remove - it's automatic             |
-| Matching spec granularity 1:1     | Spec is for traceability, not execution | Consolidate for execution           |
+| Anti-Pattern                      | Why It's Bad                            | Better Approach                        |
+| --------------------------------- | --------------------------------------- | -------------------------------------- |
+| One task per test case            | 4 tests = 4 prepare/verify cycles       | One task for all tests in a feature    |
+| "Add constant X" as separate task | Trivial, massive overhead               | Include in implementation task         |
+| "Run tests and verify" as task    | That's what verification phase does     | Remove - it's automatic                |
+| Matching spec granularity 1:1     | Spec is for traceability, not execution | Consolidate for execution              |
+| **TDD red+green in one task**     | **Markers removed before scan → FAIL**  | **Separate red and green tasks**       |
+| **Missing tdd_relationships**     | **configure_sprint will REJECT**        | **Always provide for red-phase tasks** |
 
 ## CRITICAL: Information Extraction
 
@@ -484,32 +613,22 @@ After submitting a FAIL judgment, determine next steps:
 
 ### If Verification Fails Due to SPEC ERROR
 
-**IMPORTANT**: If verification checks fail due to a specification error (e.g., incorrect path, missing pattern, wrong check configuration) rather than an implementation problem, you CANNOT:
+**IMPORTANT**: If verification checks fail due to a specification error (e.g., incorrect path, missing pattern, wrong check configuration) rather than an implementation problem:
 
-- Submit a PASS judgment (blocked by JVC-2)
-- Update verification criteria (blocked during GATE_CHECK state)
+**You own the verification criteria and can fix them directly.**
 
-**You MUST escalate the task first:**
+**Spec Error Correction Workflow:**
 
-1. Call `escalate_task` with reason explaining the spec error
-2. After escalation, call `update_verification` to fix the criteria
-3. Run verification again
-4. Then submit judgment
+1. Call `update_verification` to fix the criteria (provide rationale for audit trail)
+2. Call `run_verification_checks` again
+3. Submit judgment and complete
 
 ```json
-// Step 1: Escalate due to spec error
-// Call: escalate_task
-{
-  "task_id": 6,
-  "reason": "Verification check spec error: quality check missing required 'path' and 'pattern' properties",
-  "attempts_summary": "Implementation correct but check configuration incomplete"
-}
-
-// Step 2: Fix verification (now allowed after escalation)
+// Step 1: Fix verification criteria
 // Call: update_verification
 {
   "task_id": 6,
-  "rationale": "Adding missing path and pattern to quality check",
+  "rationale": "Spec error: quality check missing required 'path' and 'pattern' properties",
   "verification": {
     "quality_checks": [{
       "description": "Uses VS Code CSS variables",
@@ -520,19 +639,36 @@ After submitting a FAIL judgment, determine next steps:
     }]
   }
 }
+
+// Step 2: Re-run verification
+// Call: run_verification_checks with task_id: 6
+
+// Step 3: Submit judgment
+// Call: submit_verification_judgment with task_id: 6
 ```
+
+**No escalation needed for spec errors** - you own the verification criteria.
 
 ## ⛔ CRITICAL: ESCALATED = FULL STOP
 
-**When a task is ESCALATED, you MUST STOP ALL ACTIVITY on that task.**
+**Escalation is for implementation blockers, NOT spec errors.**
 
 ### What ESCALATED Means
 
-`ESCALATED` is not a bug or error state to fix. It is a **deliberate handoff of authority to the Human Supervisor**.
+`ESCALATED` is a **deliberate handoff of authority to the Human Supervisor**.
 
 When you call `escalate_task`, you are saying:
 
 > "This task requires human judgment. I cannot proceed autonomously."
+
+**When to escalate:**
+
+| Situation                   | Action                                      |
+| --------------------------- | ------------------------------------------- |
+| **Spec error in criteria**  | ❌ Do NOT escalate - fix with `update_verification` |
+| **Implementor stuck**       | ✅ Escalate after max retries               |
+| **External dependency**     | ✅ Escalate - need human intervention       |
+| **Scope change needed**     | ✅ Escalate - need human decision           |
 
 ### MANDATORY Behavior After Escalation
 
@@ -541,33 +677,30 @@ After calling `escalate_task`:
 1. ✅ **Report** the escalation to the user
 2. ✅ **Explain** what blocked progress
 3. ✅ **Wait** for explicit human direction
-4. ❌ **DO NOT** attempt to de-escalate
-5. ❌ **DO NOT** search for workarounds or scripts
-6. ❌ **DO NOT** manipulate database state
-7. ❌ **DO NOT** continue the verification workflow
+4. ❌ **DO NOT** attempt to de-escalate yourself
+5. ❌ **DO NOT** run verification checks while ESCALATED
+6. ❌ **DO NOT** submit judgments while ESCALATED
+7. ❌ **DO NOT** complete the task while ESCALATED
 
 ### Example: Correct Post-Escalation Behavior
 
 ```
 ✅ CORRECT:
-"I've escalated Task 3 due to a specification error in the verification
-criteria. The quality check is missing required 'path' and 'pattern'
-properties.
+"I've escalated Task 3 because the implementor is blocked by a missing
+API endpoint that requires backend team involvement.
 
-This task now requires Human Supervisor intervention. I cannot proceed
+This task requires Human Supervisor intervention. I cannot proceed
 until you provide direction."
 
 [STOP. Wait for human response.]
 
 ❌ INCORRECT:
-"I've escalated Task 3 due to a spec error. Let me run the de-escalate
-script to fix this..."
-[Attempts to manipulate database]
+"I've escalated Task 3. Let me run the de-escalate script to fix this..."
+[Attempts to de-escalate yourself]
 
 ❌ INCORRECT:
-"I've escalated the task. Now let me update the verification criteria
-and re-run checks..."
-[Ignores ESCALATED state]
+"I've escalated the task. Now let me run verification checks..."
+[Ignores ESCALATED state - verification blocked while escalated]
 ```
 
 ### Why This Constraint Exists
