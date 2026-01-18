@@ -250,6 +250,13 @@ class ChartRenderBox extends RenderBox {
   /// X-axis for the chart (optional).
   chart_axis.Axis? _xAxis;
 
+  /// Modern X-axis configuration using [XAxisConfig] type.
+  ///
+  /// When provided, this is used directly by CrosshairRenderer and other
+  /// components that need access to X-axis configuration like crosshairLabelPosition.
+  /// This is the NEW [XAxisConfig] type, NOT the legacy [chart_axis.Axis].
+  XAxisConfig? _xAxisConfig;
+
   /// Y-axis for the chart (optional).
   chart_axis.Axis? _yAxis;
 
@@ -622,6 +629,21 @@ class ChartRenderBox extends RenderBox {
     _primaryYAxisConfig = config;
     _multiAxisManager.setPrimaryYAxisConfig(config);
     markNeedsLayout();
+  }
+
+  /// Sets the X-axis configuration (NEW XAxisConfig type).
+  ///
+  /// This is the modern [XAxisConfig] type with full feature support including
+  /// crosshairLabelPosition. It's used directly by rendering components like
+  /// CrosshairRenderer, bypassing legacy conversion.
+  ///
+  /// When both legacy xAxis (chart_axis.Axis) and xAxisConfig are provided,
+  /// xAxisConfig takes precedence for configuration properties.
+  void setXAxisConfig(XAxisConfig? config) {
+    if (_xAxisConfig == config) return;
+    _xAxisConfig = config;
+    // No layout needed - config is used during paint for crosshair labels
+    markNeedsPaint();
   }
 
   /// Sets the theme for the chart.

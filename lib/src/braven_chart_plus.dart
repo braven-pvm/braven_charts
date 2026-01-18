@@ -35,6 +35,7 @@ import 'models/grid_config.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/streaming_config.dart';
+import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
 import 'rendering/spatial_index.dart';
 import 'streaming/buffer_manager.dart';
@@ -69,6 +70,7 @@ class BravenChartPlus extends StatefulWidget {
     this.annotationController,
     this.theme,
     this.xAxis,
+    this.xAxisConfig,
     this.yAxis,
     this.grid,
     this.width,
@@ -119,6 +121,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
+    XAxisConfig? xAxisConfig,
     YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
@@ -166,6 +169,7 @@ class BravenChartPlus extends StatefulWidget {
       height: height,
       theme: theme,
       xAxis: xAxis,
+      xAxisConfig: xAxisConfig,
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
@@ -200,6 +204,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
+    XAxisConfig? xAxisConfig,
     YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
@@ -248,6 +253,7 @@ class BravenChartPlus extends StatefulWidget {
       height: height,
       theme: theme,
       xAxis: xAxis,
+      xAxisConfig: xAxisConfig,
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
@@ -282,6 +288,7 @@ class BravenChartPlus extends StatefulWidget {
     double? height,
     ChartTheme? theme,
     AxisConfig? xAxis,
+    XAxisConfig? xAxisConfig,
     YAxisConfig? yAxis,
     List<ChartAnnotation> annotations = const [],
     ChartController? controller,
@@ -375,6 +382,7 @@ class BravenChartPlus extends StatefulWidget {
       height: height,
       theme: theme,
       xAxis: xAxis,
+      xAxisConfig: xAxisConfig,
       yAxis: yAxis,
       annotations: annotations,
       controller: controller,
@@ -434,6 +442,25 @@ class BravenChartPlus extends StatefulWidget {
 
   final ChartTheme? theme;
   final AxisConfig? xAxis;
+
+  /// Modern X-axis configuration using XAxisConfig.
+  ///
+  /// Provides full access to X-axis features including crosshairLabelPosition.
+  /// When provided, takes precedence over legacy [xAxis] parameter.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   xAxisConfig: XAxisConfig(
+  ///     label: 'Time',
+  ///     unit: 's',
+  ///     showCrosshairLabel: true,
+  ///     crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+  ///   ),
+  /// )
+  /// ```
+  final XAxisConfig? xAxisConfig;
+
   final YAxisConfig? yAxis;
   final GridConfig? grid;
   final double? width;
@@ -2613,6 +2640,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                         elementGenerator: _elementGenerator,
                         elementGeneratorVersion: _elementGeneratorVersion,
                         xAxis: _xAxis,
+                        xAxisConfig: widget.xAxisConfig,
                         yAxis: _yAxis,
                         primaryYAxisConfig: widget.yAxis,
                         theme: widget.theme,
@@ -2735,6 +2763,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.elementGenerator,
     required this.elementGeneratorVersion,
     this.xAxis,
+    this.xAxisConfig,
     this.yAxis,
     this.primaryYAxisConfig,
     this.theme,
@@ -2757,6 +2786,13 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final List<ChartElement> Function(ChartTransform)? elementGenerator;
   final int elementGeneratorVersion;
   final chart_axis.Axis? xAxis;
+
+  /// Modern X-axis configuration using [XAxisConfig].
+  ///
+  /// When provided, this is passed to ChartRenderBox for direct use in rendering,
+  /// including crosshair label positioning.
+  final XAxisConfig? xAxisConfig;
+
   final chart_axis.Axis? yAxis;
 
   /// The NEW [YAxisConfig] type from the widget for multi-axis system integration.
@@ -2796,6 +2832,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       onRangeCreationComplete: onRangeCreationComplete,
     )
       ..setXAxis(xAxis)
+      ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
       ..setPrimaryYAxisConfig(primaryYAxisConfig);
   }
@@ -2805,6 +2842,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     renderObject
       ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
+      ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
       ..setTheme(theme)
