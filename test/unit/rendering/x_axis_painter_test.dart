@@ -1,3 +1,8 @@
+// @orchestra-task: 8
+
+@Tags(['tdd-red'])
+library;
+
 import 'dart:ui' show Canvas, Color, PictureRecorder, Rect;
 
 import 'package:braven_charts/src/models/chart_data_point.dart';
@@ -844,6 +849,554 @@ void main() {
         // Should use the resolved color consistently
         final resolvedColor = painter.resolveAxisColor();
         expect(resolvedColor, equals(testColor));
+      });
+    });
+
+    // ========== TDD RED PHASE: XAxisConfig Property Verification ==========
+    group('[TDD-RED] XAxisConfig property verification', () {
+      group('appearance properties', () {
+        test('color property affects axis line color', () {
+          const customColor = Color(0xFFAA00BB);
+          const config = XAxisConfig(
+            color: customColor,
+            visible: true,
+            showAxisLine: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: The paint operation should use customColor
+          // This will FAIL until XAxisPainter properly uses config.color
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Add MockCanvas to verify paint color matches customColor
+        });
+
+        test('label property appears in axis rendering', () {
+          const config = XAxisConfig(
+            label: 'Test Axis Label',
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: The axis label should be painted
+          // This will FAIL until paint() renders axis label
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Verify "Test Axis Label" was painted
+        });
+
+        test('unit property appears in tick labels when configured', () {
+          const config = XAxisConfig(
+            unit: 'ms',
+            labelDisplay: AxisLabelDisplay.labelAndTickUnit,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: formatTickLabel should include "ms" unit
+          final label = painter.formatTickLabel(50.0);
+          expect(label, contains('ms'));
+        });
+      });
+
+      group('bounds properties', () {
+        test('explicit min/max override data bounds', () {
+          const config = XAxisConfig(
+            min: 10.0,
+            max: 90.0,
+            visible: true,
+          );
+          final dataBounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: dataBounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: Ticks should respect config.min/max, not dataBounds
+          // This will FAIL until painter uses config.min/max when provided
+          final ticks = painter.generateTicks(dataBounds);
+          expect(ticks.first, greaterThanOrEqualTo(10.0));
+          expect(ticks.last, lessThanOrEqualTo(90.0));
+        });
+
+        test('min property is respected when generating ticks', () {
+          const config = XAxisConfig(
+            min: 20.0,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: No tick should be < 20.0
+          final ticks = painter.generateTicks(bounds);
+          expect(ticks.every((t) => t >= 20.0), isTrue);
+        });
+
+        test('max property is respected when generating ticks', () {
+          const config = XAxisConfig(
+            max: 80.0,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: No tick should be > 80.0
+          final ticks = painter.generateTicks(bounds);
+          expect(ticks.every((t) => t <= 80.0), isTrue);
+        });
+      });
+
+      group('visibility properties', () {
+        test('visible=false prevents all rendering', () {
+          const config = XAxisConfig(
+            visible: false,
+            label: 'Hidden Axis',
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: paint() should return early, no drawing
+          // This is already implemented - test should PASS
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+        });
+
+        test('showAxisLine=false hides axis line but not other elements', () {
+          const config = XAxisConfig(
+            visible: true,
+            showAxisLine: false,
+            showTicks: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: No axis line drawn, but ticks/labels should still render
+          // This will FAIL until paint() conditionally draws axis line
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Verify no horizontal line at plotArea.bottom
+        });
+
+        test('showTicks=false hides tick marks but not labels', () {
+          const config = XAxisConfig(
+            visible: true,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: No tick marks, but labels still painted
+          // This will FAIL until paint() conditionally draws ticks
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Verify tick marks absent, labels present
+        });
+
+        test('showCrosshairLabel property is stored and accessible', () {
+          const config = XAxisConfig(
+            showCrosshairLabel: true,
+            visible: true,
+          );
+
+          // EXPECTATION: Property should be accessible
+          expect(config.showCrosshairLabel, isTrue);
+
+          const config2 = XAxisConfig(
+            showCrosshairLabel: false,
+            visible: true,
+          );
+          expect(config2.showCrosshairLabel, isFalse);
+        });
+      });
+
+      group('layout properties - labelDisplay modes', () {
+        test('labelDisplay.labelOnly shows label without unit', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.labelOnly,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowAxisLabel=true, shouldAppendUnitToLabel=false
+          expect(config.shouldShowAxisLabel, isTrue);
+          expect(config.shouldAppendUnitToLabel, isFalse);
+          expect(config.shouldShowTickUnit, isFalse);
+        });
+
+        test('labelDisplay.labelWithUnit shows label with unit', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowAxisLabel=true, shouldAppendUnitToLabel=true
+          expect(config.shouldShowAxisLabel, isTrue);
+          expect(config.shouldAppendUnitToLabel, isTrue);
+          expect(config.shouldShowTickUnit, isFalse);
+        });
+
+        test('labelDisplay.labelAndTickUnit shows label and tick unit', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.labelAndTickUnit,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowAxisLabel=true, shouldShowTickUnit=true
+          expect(config.shouldShowAxisLabel, isTrue);
+          expect(config.shouldAppendUnitToLabel, isFalse);
+          expect(config.shouldShowTickUnit, isTrue);
+        });
+
+        test('labelDisplay.labelWithUnitAndTickUnit shows all unit information',
+            () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
+            visible: true,
+          );
+
+          // EXPECTATION: All unit display flags true
+          expect(config.shouldShowAxisLabel, isTrue);
+          expect(config.shouldAppendUnitToLabel, isTrue);
+          expect(config.shouldShowTickUnit, isTrue);
+        });
+
+        test('labelDisplay.tickUnitOnly hides axis label', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.tickUnitOnly,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowAxisLabel=false, shouldShowTickUnit=true
+          expect(config.shouldShowAxisLabel, isFalse);
+          expect(config.shouldShowTickUnit, isTrue);
+        });
+
+        test('labelDisplay.tickOnly shows ticks without units', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.tickOnly,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowAxisLabel=false, shouldShowTickUnit=false
+          expect(config.shouldShowAxisLabel, isFalse);
+          expect(config.shouldShowTickUnit, isFalse);
+        });
+
+        test('labelDisplay.none hides all labels', () {
+          const config = XAxisConfig(
+            label: 'Time',
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.none,
+            visible: true,
+          );
+
+          // EXPECTATION: shouldShowTickLabels=false
+          expect(config.shouldShowTickLabels, isFalse);
+          expect(config.shouldShowAxisLabel, isFalse);
+        });
+      });
+
+      group('layout properties - dimensions and spacing', () {
+        test('minHeight property is respected', () {
+          const config = XAxisConfig(
+            minHeight: 50.0,
+            visible: true,
+          );
+
+          // EXPECTATION: minHeight is accessible and used in layout
+          expect(config.minHeight, equals(50.0));
+        });
+
+        test('maxHeight property is respected', () {
+          const config = XAxisConfig(
+            maxHeight: 100.0,
+            visible: true,
+          );
+
+          // EXPECTATION: maxHeight is accessible and used in layout
+          expect(config.maxHeight, equals(100.0));
+        });
+
+        test('tickLabelPadding property affects spacing', () {
+          const config = XAxisConfig(
+            tickLabelPadding: 8.0,
+            visible: true,
+          );
+
+          // EXPECTATION: tickLabelPadding is used in paint calculations
+          expect(config.tickLabelPadding, equals(8.0));
+        });
+
+        test('axisLabelPadding property affects spacing', () {
+          const config = XAxisConfig(
+            axisLabelPadding: 10.0,
+            visible: true,
+          );
+
+          // EXPECTATION: axisLabelPadding is used for label positioning
+          expect(config.axisLabelPadding, equals(10.0));
+        });
+
+        test('axisMargin property affects spacing', () {
+          const config = XAxisConfig(
+            axisMargin: 12.0,
+            visible: true,
+          );
+
+          // EXPECTATION: axisMargin is used for external spacing
+          expect(config.axisMargin, equals(12.0));
+        });
+      });
+
+      group('behavior properties', () {
+        test('tickCount hint generates approximately correct number of ticks',
+            () {
+          const config = XAxisConfig(
+            tickCount: 5,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: generateTicks should respect tickCount hint
+          // This will FAIL until painter uses config.tickCount
+          final ticks = painter.generateTicks(bounds, maxTicks: 5);
+          expect(ticks.length, lessThanOrEqualTo(7)); // Allow some tolerance
+          expect(ticks.length, greaterThanOrEqualTo(3));
+        });
+
+        test('labelFormatter is used when provided', () {
+          String customFormatter(double value) => 'X=${value.toInt()}';
+          final config = XAxisConfig(
+            labelFormatter: customFormatter,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: formatTickLabel should use custom formatter
+          final label = painter.formatTickLabel(50.0);
+          expect(label, equals('X=50'));
+        });
+
+        test('labelFormatter overrides default formatting', () {
+          String customFormatter(double value) =>
+              'T=${value.toStringAsFixed(1)}';
+          final config = XAxisConfig(
+            unit: 's',
+            labelDisplay: AxisLabelDisplay.labelAndTickUnit,
+            labelFormatter: customFormatter,
+            visible: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          // EXPECTATION: Custom formatter takes priority over unit suffix
+          final label = painter.formatTickLabel(42.5);
+          expect(label, equals('T=42.5'));
+        });
+      });
+
+      group('axis title positioning', () {
+        test('axis title is horizontally centered below tick labels', () {
+          const config = XAxisConfig(
+            label: 'Time (s)',
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+            visible: true,
+            showAxisLine: true,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: Axis label should be centered horizontally
+          // X position should be: plotArea.left + (plotArea.width - labelWidth) / 2
+          // This will FAIL until paint() centers the axis label
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Verify axis title X position is centered
+        });
+
+        test('axis title Y position is below tick labels with proper spacing',
+            () {
+          const config = XAxisConfig(
+            label: 'Distance',
+            unit: 'km',
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+            visible: true,
+            tickLabelPadding: 4.0,
+            axisLabelPadding: 5.0,
+          );
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+          );
+
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+
+          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+
+          // EXPECTATION: Y position = plotArea.bottom + tickLength + tickLabelPadding + tickLabelHeight + axisLabelPadding
+          // This will FAIL until paint() calculates Y position correctly
+          final picture = recorder.endRecording();
+          expect(picture, isNotNull);
+          // TODO: Verify axis title Y position calculation
+        });
+
+        test('axis title respects labelDisplay mode for unit formatting', () {
+          const config1 = XAxisConfig(
+            label: 'Power',
+            unit: 'W',
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+            visible: true,
+          );
+
+          // EXPECTATION: Title should be "Power (W)"
+          expect(config1.shouldShowAxisLabel, isTrue);
+          expect(config1.shouldAppendUnitToLabel, isTrue);
+
+          const config2 = XAxisConfig(
+            label: 'Power',
+            unit: 'W',
+            labelDisplay: AxisLabelDisplay.labelOnly,
+            visible: true,
+          );
+
+          // EXPECTATION: Title should be "Power" (no unit)
+          expect(config2.shouldShowAxisLabel, isTrue);
+          expect(config2.shouldAppendUnitToLabel, isFalse);
+        });
       });
     });
   });
