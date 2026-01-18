@@ -1,9 +1,6 @@
-// @orchestra-task: 1
-
-@Tags(['tdd-red'])
 library;
 
-import 'dart:ui' show Canvas, Color, Rect;
+import 'dart:ui' show Canvas, Color, PictureRecorder, Rect;
 
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/data_range.dart';

@@ -1,6 +1,3 @@
-// @orchestra-task: 1
-
-@Tags(['tdd-red'])
 library;
 
 import 'dart:ui' show Color;
@@ -103,7 +100,7 @@ void main() {
     group('validation', () {
       test('throws assertion error for negative minHeight', () {
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             minHeight: -10.0,
           ),
           throwsA(isA<AssertionError>()),
@@ -112,7 +109,7 @@ void main() {
 
       test('throws assertion error for maxHeight < minHeight', () {
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             minHeight: 50.0,
             maxHeight: 40.0,
           ),
@@ -122,7 +119,7 @@ void main() {
 
       test('throws assertion error for min >= max when both specified', () {
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             min: 100.0,
             max: 50.0,
           ),
@@ -130,7 +127,7 @@ void main() {
         );
 
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             min: 50.0,
             max: 50.0,
           ),
@@ -140,14 +137,14 @@ void main() {
 
       test('throws assertion error for tickCount < 2', () {
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             tickCount: 1,
           ),
           throwsA(isA<AssertionError>()),
         );
 
         expect(
-          () => const XAxisConfig(
+          () => XAxisConfig(
             tickCount: 0,
           ),
           throwsA(isA<AssertionError>()),
@@ -359,7 +356,8 @@ void main() {
 
         for (final mode in modes) {
           final config = XAxisConfig(labelDisplay: mode);
-          expect(config.shouldShowTickLabels, isTrue, reason: 'shouldShowTickLabels should be true for $mode');
+          expect(config.shouldShowTickLabels, isTrue,
+              reason: 'shouldShowTickLabels should be true for $mode');
         }
       });
 
