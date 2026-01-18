@@ -23,7 +23,6 @@ class XAxisRenderingDemo extends StatelessWidget {
       showTicks: true,
       showLabels: true,
       axisColor: Colors.blue,
-      
     );
 
     return MaterialApp(
