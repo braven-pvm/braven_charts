@@ -330,9 +330,7 @@ void main() {
         expect(color, equals(testColor));
       });
 
-      test(
-          'resolveAxisColor returns first series color when config color is null',
-          () {
+      test('resolveAxisColor returns first series color when config color is null', () {
         const config = XAxisConfig(color: null);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
@@ -357,9 +355,7 @@ void main() {
         expect(color, equals(seriesColor));
       });
 
-      test(
-          'resolveAxisColor returns default color when config color is null and no series',
-          () {
+      test('resolveAxisColor returns default color when config color is null and no series', () {
         const config = XAxisConfig(color: null);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
@@ -376,9 +372,7 @@ void main() {
         expect(color, equals(const Color(0xFF333333)));
       });
 
-      test(
-          'resolveAxisColor returns default color when config color is null and series is empty',
-          () {
+      test('resolveAxisColor returns default color when config color is null and series is empty', () {
         const config = XAxisConfig(color: null);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
@@ -396,9 +390,7 @@ void main() {
         expect(color, equals(const Color(0xFF333333)));
       });
 
-      test(
-          'resolveAxisColor returns default color when series[0].color is null',
-          () {
+      test('resolveAxisColor returns default color when series[0].color is null', () {
         const config = XAxisConfig(color: null);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
@@ -447,8 +439,7 @@ void main() {
         // Check values are "nice" - should be multiples of 1, 2, 5, 10, 20, 50, etc.
         for (final tick in ticks) {
           expect(tick >= testBounds.min && tick <= testBounds.max, isTrue,
-              reason:
-                  'Tick $tick should be within bounds ${testBounds.min} to ${testBounds.max}');
+              reason: 'Tick $tick should be within bounds ${testBounds.min} to ${testBounds.max}');
         }
       });
 
@@ -1137,8 +1128,7 @@ void main() {
           expect(config.shouldShowTickUnit, isTrue);
         });
 
-        test('labelDisplay.labelWithUnitAndTickUnit shows all unit information',
-            () {
+        test('labelDisplay.labelWithUnitAndTickUnit shows all unit information', () {
           const config = XAxisConfig(
             label: 'Time',
             unit: 's',
@@ -1245,8 +1235,7 @@ void main() {
       });
 
       group('behavior properties', () {
-        test('tickCount hint generates approximately correct number of ticks',
-            () {
+        test('tickCount hint generates approximately correct number of ticks', () {
           const config = XAxisConfig(
             tickCount: 5,
             visible: true,
@@ -1288,8 +1277,7 @@ void main() {
         });
 
         test('labelFormatter overrides default formatting', () {
-          String customFormatter(double value) =>
-              'T=${value.toStringAsFixed(1)}';
+          String customFormatter(double value) => 'T=${value.toStringAsFixed(1)}';
           final config = XAxisConfig(
             unit: 's',
             labelDisplay: AxisLabelDisplay.labelAndTickUnit,
@@ -1342,8 +1330,7 @@ void main() {
           // TODO: Verify axis title X position is centered
         });
 
-        test('axis title Y position is below tick labels with proper spacing',
-            () {
+        test('axis title Y position is below tick labels with proper spacing', () {
           const config = XAxisConfig(
             label: 'Distance',
             unit: 'km',

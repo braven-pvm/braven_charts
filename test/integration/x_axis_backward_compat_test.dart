@@ -26,27 +26,16 @@ void main() {
         const defaultConfig = XAxisConfig();
 
         // Verify defaults are sensible for backward compatibility
-        expect(defaultConfig.visible, isTrue,
-            reason: 'Axis should be visible by default');
-        expect(defaultConfig.showAxisLine, isTrue,
-            reason: 'Axis line should show by default');
-        expect(defaultConfig.showTicks, isTrue,
-            reason: 'Tick marks should show by default');
-        expect(defaultConfig.showCrosshairLabel, isTrue,
-            reason: 'Crosshair label should show by default');
-        expect(
-            defaultConfig.labelDisplay, equals(AxisLabelDisplay.labelWithUnit),
-            reason: 'Default should be space-efficient labelWithUnit mode');
-        expect(defaultConfig.minHeight, equals(0.0),
-            reason: 'Should allow axis to shrink to content');
-        expect(defaultConfig.maxHeight, equals(60.0),
-            reason: 'Should have reasonable max height');
-        expect(defaultConfig.tickLabelPadding, equals(4.0),
-            reason: 'Should have default tick label padding');
-        expect(defaultConfig.axisLabelPadding, equals(5.0),
-            reason: 'Should have default axis label padding');
-        expect(defaultConfig.axisMargin, equals(8.0),
-            reason: 'Should have default margin');
+        expect(defaultConfig.visible, isTrue, reason: 'Axis should be visible by default');
+        expect(defaultConfig.showAxisLine, isTrue, reason: 'Axis line should show by default');
+        expect(defaultConfig.showTicks, isTrue, reason: 'Tick marks should show by default');
+        expect(defaultConfig.showCrosshairLabel, isTrue, reason: 'Crosshair label should show by default');
+        expect(defaultConfig.labelDisplay, equals(AxisLabelDisplay.labelWithUnit), reason: 'Default should be space-efficient labelWithUnit mode');
+        expect(defaultConfig.minHeight, equals(0.0), reason: 'Should allow axis to shrink to content');
+        expect(defaultConfig.maxHeight, equals(60.0), reason: 'Should have reasonable max height');
+        expect(defaultConfig.tickLabelPadding, equals(4.0), reason: 'Should have default tick label padding');
+        expect(defaultConfig.axisLabelPadding, equals(5.0), reason: 'Should have default axis label padding');
+        expect(defaultConfig.axisMargin, equals(8.0), reason: 'Should have default margin');
       });
 
       test('XAxisPainter works with default XAxisConfig', () {
@@ -66,8 +55,7 @@ void main() {
 
         // EXPECTATION: Should render without errors
         expect(
-          () => painter.paint(
-              canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea),
+          () => painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea),
           returnsNormally,
         );
 
@@ -89,8 +77,7 @@ void main() {
         // EXPECTATION: Should generate ticks even with default config
         final ticks = painter.generateTicks(bounds);
         expect(ticks, isNotEmpty, reason: 'Should generate some ticks');
-        expect(ticks.length, greaterThan(1),
-            reason: 'Should have multiple ticks');
+        expect(ticks.length, greaterThan(1), reason: 'Should have multiple ticks');
         expect(ticks.first, greaterThanOrEqualTo(bounds.min));
         expect(ticks.last, lessThanOrEqualTo(bounds.max));
       });
@@ -123,8 +110,7 @@ void main() {
 
         // EXPECTATION: resolveAxisColor should return first series color
         final resolvedColor = painter.resolveAxisColor();
-        expect(resolvedColor, equals(seriesColor),
-            reason: 'Should use first series color when config.color is null');
+        expect(resolvedColor, equals(seriesColor), reason: 'Should use first series color when config.color is null');
       });
 
       test('explicit XAxisConfig.color takes priority over series color', () {
@@ -154,8 +140,7 @@ void main() {
 
         // EXPECTATION: resolveAxisColor should return config color
         final resolvedColor = painter.resolveAxisColor();
-        expect(resolvedColor, equals(configColor),
-            reason: 'Explicit config.color should take priority');
+        expect(resolvedColor, equals(configColor), reason: 'Explicit config.color should take priority');
       });
 
       test('uses default color when no config color and no series', () {
@@ -172,8 +157,7 @@ void main() {
 
         // EXPECTATION: resolveAxisColor should return default color
         final resolvedColor = painter.resolveAxisColor();
-        expect(resolvedColor, equals(const Color(0xFF333333)),
-            reason: 'Should use default color when no other color available');
+        expect(resolvedColor, equals(const Color(0xFF333333)), reason: 'Should use default color when no other color available');
       });
 
       test('uses default color when series list is empty', () {
@@ -190,8 +174,7 @@ void main() {
 
         // EXPECTATION: resolveAxisColor should return default color
         final resolvedColor = painter.resolveAxisColor();
-        expect(resolvedColor, equals(const Color(0xFF333333)),
-            reason: 'Should use default color when series list is empty');
+        expect(resolvedColor, equals(const Color(0xFF333333)), reason: 'Should use default color when series list is empty');
       });
 
       test('uses default color when first series has null color', () {
@@ -219,8 +202,7 @@ void main() {
 
         // EXPECTATION: resolveAxisColor should return default color
         final resolvedColor = painter.resolveAxisColor();
-        expect(resolvedColor, equals(const Color(0xFF333333)),
-            reason: 'Should use default color when series color is null');
+        expect(resolvedColor, equals(const Color(0xFF333333)), reason: 'Should use default color when series color is null');
       });
     });
 
@@ -237,9 +219,7 @@ void main() {
         // For now, we document the expectation.
 
         // TODO: Add grep-based verification or AST analysis
-        expect(true, isTrue,
-            reason:
-                'Placeholder - verify XAxisRenderer not imported in XAxisPainter');
+        expect(true, isTrue, reason: 'Placeholder - verify XAxisRenderer not imported in XAxisPainter');
       });
 
       test('paint operation does not call XAxisRenderer methods', () {
@@ -263,8 +243,7 @@ void main() {
 
         // EXPECTATION: paint() should complete without calling XAxisRenderer
         expect(
-          () => painter.paint(
-              canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea),
+          () => painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea),
           returnsNormally,
           reason: 'Should render using XAxisPainter only, not XAxisRenderer',
         );
@@ -275,8 +254,7 @@ void main() {
     });
 
     group('API parity with YAxisConfig', () {
-      test('XAxisConfig has equivalent appearance properties to YAxisConfig',
-          () {
+      test('XAxisConfig has equivalent appearance properties to YAxisConfig', () {
         // Both should have: color, label, unit properties
         const xConfig = XAxisConfig(
           color: Color(0xFF000000),
@@ -292,8 +270,7 @@ void main() {
         // This test documents the expected parity
       });
 
-      test('XAxisConfig has equivalent visibility properties to YAxisConfig',
-          () {
+      test('XAxisConfig has equivalent visibility properties to YAxisConfig', () {
         // Both should have: visible, showAxisLine, showTicks, showCrosshairLabel
         const xConfig = XAxisConfig(
           visible: true,
@@ -331,13 +308,11 @@ void main() {
 
         for (final mode in allModes) {
           final config = XAxisConfig(labelDisplay: mode);
-          expect(config.labelDisplay, equals(mode),
-              reason: 'XAxisConfig should support $mode');
+          expect(config.labelDisplay, equals(mode), reason: 'XAxisConfig should support $mode');
         }
       });
 
-      test('XAxisConfig has equivalent dimension properties to YAxisConfig',
-          () {
+      test('XAxisConfig has equivalent dimension properties to YAxisConfig', () {
         // XAxisConfig has minHeight/maxHeight, YAxisConfig has minWidth/maxWidth
         // Both have padding and margin properties
         const xConfig = XAxisConfig(
