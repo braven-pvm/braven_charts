@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 //
 // X-Axis Rendering Demo
-// Demonstrates the new XAxisConfig-based rendering pipeline with
-// per-series axis configuration and crosshair labeling.
+// Demonstrates XAxisConfig features including label/unit display,
+// color customization, and crosshair integration.
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
@@ -15,23 +15,14 @@ class XAxisRenderingDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeAxis = XAxisConfig(
-      id: 'time-bottom',
-      position: XAxisPosition.bottom,
-      label: 'Time',
-      unit: 's',
-      showCrosshairLabel: true,
-      labelDisplay: AxisLabelDisplay.labelWithUnit,
-      color: Colors.red,
-    );
-
-    final phaseAxis = XAxisConfig(
-      id: 'phase-top',
-      position: XAxisPosition.top,
-      label: 'Phase',
-      unit: 'deg',
-      showCrosshairLabel: true,
-      labelDisplay: AxisLabelDisplay.labelWithUnit,
+    // Note: XAxisConfig is used by XAxisPainter internally.
+    // The BravenChartPlus widget currently uses AxisConfig for xAxis parameter.
+    final xAxisConfig = const AxisConfig(
+      label: 'Time (s)',
+      showAxis: true,
+      showTicks: true,
+      showLabels: true,
+      axisColor: Colors.blue,
     );
 
     return MaterialApp(
@@ -52,13 +43,13 @@ class XAxisRenderingDemo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'New XAxisConfig pipeline with per-series axis selection',
+                'X-Axis Configuration Demo',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Blue series uses the bottom time axis. Green series binds to\n'
-                'the top phase axis to demonstrate multi-axis X rendering.',
+                'Demonstrates X-axis with custom label, color, and styling.\n'
+                'Blue axis line matches the velocity series color.',
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -70,20 +61,19 @@ class XAxisRenderingDemo extends StatelessWidget {
                       points: _velocitySeries(),
                       color: Colors.blue,
                       unit: 'm/s',
-                      xAxisConfig: timeAxis,
                     ),
                     LineChartSeries(
-                      id: 'phase',
-                      name: 'Phase',
-                      points: _phaseSeries(),
+                      id: 'acceleration',
+                      name: 'Acceleration',
+                      points: _accelerationSeries(),
                       color: Colors.green,
-                      unit: 'deg',
-                      xAxisConfig: phaseAxis,
+                      unit: 'm/s²',
                     ),
                   ],
-                  xAxisConfig: timeAxis,
+                  xAxis: xAxisConfig,
                   yAxis: YAxisConfig(
                     position: YAxisPosition.left,
+                    crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
                     color: Colors.orange,
                   ),
                   normalizationMode: NormalizationMode.none,
@@ -105,22 +95,22 @@ class XAxisRenderingDemo extends StatelessWidget {
     );
   }
 
-  List<ChartDataPoint> _velocitySeries() {
+  static List<ChartDataPoint> _velocitySeries() {
     return List.generate(
       60,
       (i) => ChartDataPoint(
         x: i.toDouble(),
-        y: 20 + 8 * (i % 12) / 12,
+        y: 10 + 5 * (i % 10) / 10,
       ),
     );
   }
 
-  List<ChartDataPoint> _phaseSeries() {
+  static List<ChartDataPoint> _accelerationSeries() {
     return List.generate(
       60,
       (i) => ChartDataPoint(
         x: i.toDouble(),
-        y: (i * 6).toDouble(),
+        y: 2 + 1.5 * (i % 8) / 8,
       ),
     );
   }
