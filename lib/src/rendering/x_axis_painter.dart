@@ -163,31 +163,40 @@ class XAxisPainter {
   /// [maxTicks] is the optional maximum number of ticks to generate.
   ///
   /// Returns a list of tick values within the bounds.
+  ///
+  /// If [config.min] or [config.max] are set, they override the bounds.
+  /// If [config.tickCount] is set, it overrides maxTicks.
   List<double> generateTicks(DataRange bounds, {int? maxTicks}) {
-    maxTicks ??= 10;
+    // Use config.tickCount if provided, otherwise use maxTicks parameter
+    maxTicks = config.tickCount ?? maxTicks ?? 10;
 
-    if (bounds.span == 0) {
-      return [bounds.min];
+    // Override bounds with config.min/max if provided
+    final effectiveMin = config.min ?? bounds.min;
+    final effectiveMax = config.max ?? bounds.max;
+    final effectiveBounds = DataRange(min: effectiveMin, max: effectiveMax);
+
+    if (effectiveBounds.span == 0) {
+      return [effectiveBounds.min];
     }
 
-    final range = bounds.span;
+    final range = effectiveBounds.span;
     final roughStep = range / (maxTicks - 1);
     final nicedStep = _niceNum(roughStep, round: true);
 
-    final niceMin = (bounds.min / nicedStep).floor() * nicedStep;
-    final niceMax = (bounds.max / nicedStep).ceil() * nicedStep;
+    final niceMin = (effectiveBounds.min / nicedStep).floor() * nicedStep;
+    final niceMax = (effectiveBounds.max / nicedStep).ceil() * nicedStep;
 
     final ticks = <double>[];
     for (var tick = niceMin; tick <= niceMax; tick += nicedStep) {
-      if (tick >= bounds.min && tick <= bounds.max) {
+      if (tick >= effectiveBounds.min && tick <= effectiveBounds.max) {
         ticks.add(_roundToDecimals(tick, 10));
       }
     }
 
     if (ticks.isEmpty) {
-      ticks.add(bounds.min);
-      if (bounds.min != bounds.max) {
-        ticks.add(bounds.max);
+      ticks.add(effectiveBounds.min);
+      if (effectiveBounds.min != effectiveBounds.max) {
+        ticks.add(effectiveBounds.max);
       }
     }
 

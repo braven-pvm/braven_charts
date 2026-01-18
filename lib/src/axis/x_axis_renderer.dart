@@ -22,6 +22,31 @@ import 'axis.dart';
 ///
 /// **Note**: Grid lines are now rendered by GridRenderer (Task 6).
 /// Y-axes are rendered by MultiAxisPainter.
+///
+/// **DEPRECATED**: This class is deprecated and will be removed in a future
+/// version. Use [XAxisPainter] from `package:braven_charts/src/rendering/x_axis_painter.dart`
+/// instead. XAxisPainter provides the same functionality with better
+/// configurability via [XAxisConfig] and improved rendering performance.
+///
+/// Migration:
+/// ```dart
+/// // OLD (deprecated):
+/// final renderer = XAxisRenderer(axis, theme: chartTheme);
+/// renderer.paint(canvas, chartSize, plotArea);
+///
+/// // NEW (recommended):
+/// final painter = XAxisPainter(
+///   config: xAxisConfig,
+///   axisBounds: DataRange(min: minValue, max: maxValue),
+///   labelStyle: TextStyle(fontSize: 12),
+///   series: seriesList, // optional
+/// );
+/// painter.paint(canvas, chartArea, plotArea);
+/// ```
+@Deprecated(
+  'Use XAxisPainter from package:braven_charts/src/rendering/x_axis_painter.dart instead. '
+  'XAxisPainter provides better configurability and performance.',
+)
 class XAxisRenderer {
   XAxisRenderer(this.axis, {this.theme});
   final Axis axis;
