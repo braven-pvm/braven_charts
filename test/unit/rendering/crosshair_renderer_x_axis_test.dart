@@ -1,9 +1,5 @@
-// @orchestra-task: 6
 // Copyright (c) 2025 braven_charts. All rights reserved.
-// TDD RED PHASE: Failing tests for themed crosshair X-value label
-
-@Tags(['tdd-red'])
-library;
+// Tests for themed crosshair X-value label
 
 import 'dart:typed_data';
 import 'dart:ui';
@@ -230,7 +226,12 @@ void main() {
       plotArea = const Rect.fromLTWH(50, 50, 400, 300);
       multiAxisInfo = MultiAxisInfo(
         effectiveAxes: [
-          YAxisConfig.withId(id: 'default', position: YAxisPosition.left),
+          YAxisConfig.withId(
+            id: 'default',
+            position: YAxisPosition.left,
+            showCrosshairLabel:
+                false, // Disable Y-axis crosshair label for X-label testing
+          ),
         ],
         axisBounds: const {'default': DataRange(min: 0, max: 100)},
         axisWidths: const {'default': 50.0},
@@ -295,7 +296,7 @@ void main() {
       final bgOperations = mockCanvas.operations.where((op) =>
           op.type == 'drawRRect' &&
           op.paint != null &&
-          op.paint!.color == expectedBgColor &&
+          op.paint!.color.value == expectedBgColor.value &&
           op.paint!.style == PaintingStyle.fill);
 
       expect(
@@ -331,7 +332,7 @@ void main() {
       final borderOperations = mockCanvas.operations.where((op) =>
           op.type == 'drawRRect' &&
           op.paint != null &&
-          op.paint!.color == expectedBorderColor &&
+          op.paint!.color.value == expectedBorderColor.value &&
           op.paint!.style == PaintingStyle.stroke);
 
       expect(
@@ -517,7 +518,7 @@ void main() {
       final bgOperations = mockCanvas.operations.where((op) =>
           op.type == 'drawRRect' &&
           op.paint != null &&
-          op.paint!.color == expectedBgColor);
+          op.paint!.color.value == expectedBgColor.value);
 
       expect(
         bgOperations.isNotEmpty,

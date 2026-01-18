@@ -15,6 +15,7 @@ import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
 import '../../models/normalization_mode.dart';
 import '../../models/series_axis_binding.dart';
+import '../../models/x_axis_config.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
 import '../multi_axis_normalizer.dart';
@@ -134,6 +135,7 @@ class CrosshairRenderer {
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
     required bool isRangeCreationMode,
+    XAxisConfig? xAxisConfig,
   }) {
     // Check if tracking mode should be used
     final seriesList = seriesElements.map((e) => e.series).toList();
@@ -152,6 +154,7 @@ class CrosshairRenderer {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: seriesElements,
+        xAxisConfig: xAxisConfig,
       );
     } else {
       _paintStandardMode(
@@ -164,6 +167,7 @@ class CrosshairRenderer {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         isRangeCreationMode: isRangeCreationMode,
+        xAxisConfig: xAxisConfig,
       );
     }
   }
@@ -179,6 +183,7 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required bool isRangeCreationMode,
+    XAxisConfig? xAxisConfig,
   }) {
     final interactionTheme = theme?.interactionTheme;
     final crosshairColor = isRangeCreationMode
@@ -256,6 +261,7 @@ class CrosshairRenderer {
       transform: transform,
       theme: theme,
       multiAxisInfo: multiAxisInfo,
+      xAxisConfig: xAxisConfig,
     );
   }
 
@@ -270,6 +276,7 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
+    XAxisConfig? xAxisConfig,
   }) {
     final interactionTheme = theme?.interactionTheme;
     final crosshairColor =
@@ -381,6 +388,7 @@ class CrosshairRenderer {
         plotArea: plotArea,
         theme: theme,
         dataX: trackingState.dataX,
+        xAxisConfig: xAxisConfig,
       );
     }
 
@@ -446,6 +454,7 @@ class CrosshairRenderer {
     required ChartTransform transform,
     required ChartTheme? theme,
     required MultiAxisInfo multiAxisInfo,
+    XAxisConfig? xAxisConfig,
   }) {
     // Convert widget space cursor to data coordinates
     // Note: cursorPosition is already in widget space, we need to offset by plotArea
@@ -459,48 +468,65 @@ class CrosshairRenderer {
     final labelStyle = interactionTheme?.crosshairLabelStyle;
     final textStyle = labelStyle?.textStyle ??
         const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor =
-        labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = labelStyle?.borderWidth ?? 1.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
     final labelPadding = labelStyle?.padding.left ?? 4.0;
 
-    final labelBackgroundPaint = Paint()..color = backgroundColor;
-    final labelBorderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth;
+    // X coordinate label - only render if axis is visible and showCrosshairLabel is true
+    if (xAxisConfig?.visible != false &&
+        xAxisConfig?.showCrosshairLabel != false) {
+      // Get axis color or use default gray
+      final axisColor = xAxisConfig?.color ?? const Color(0xFF666666);
 
-    // X coordinate label
-    final xDisplayValue = _formatDataValue(dataX);
-    final xTextPainter = TextPainter(
-      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
+      // Apply custom formatter if provided, otherwise use default formatting
+      final String displayValue;
+      if (xAxisConfig?.labelFormatter != null) {
+        displayValue = xAxisConfig!.labelFormatter!(dataX);
+      } else {
+        final formattedValue = _formatDataValue(dataX);
+        // Append unit suffix if configured
+        displayValue = xAxisConfig?.unit != null
+            ? '$formattedValue ${xAxisConfig!.unit}'
+            : formattedValue;
+      }
 
-    var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
-    final xLabelY = plotArea.bottom - xTextPainter.height - 8;
+      final xTextPainter = TextPainter(
+        text: TextSpan(text: displayValue, style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
 
-    xLabelX = xLabelX.clamp(
-      plotArea.left + labelPadding,
-      plotArea.right - xTextPainter.width - labelPadding,
-    );
+      var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
+      final xLabelY = plotArea.bottom - xTextPainter.height - 8;
 
-    final xBgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        xLabelX - labelPadding,
-        xLabelY - labelPadding,
-        xTextPainter.width + labelPadding * 2,
-        xTextPainter.height + labelPadding * 2,
-      ),
-      Radius.circular(borderRadius),
-    );
-    canvas.drawRRect(xBgRect, labelBackgroundPaint);
-    if (borderWidth > 0) {
-      canvas.drawRRect(xBgRect, labelBorderPaint);
+      xLabelX = xLabelX.clamp(
+        plotArea.left + labelPadding,
+        plotArea.right - xTextPainter.width - labelPadding,
+      );
+
+      // Use themed colors with appropriate alpha values
+      final backgroundColor = axisColor.withValues(alpha: 0.15);
+      final borderColor = axisColor.withValues(alpha: 0.6);
+
+      final bgPaint = Paint()
+        ..color = backgroundColor
+        ..style = PaintingStyle.fill;
+      final borderPaint = Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+
+      final xBgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          xLabelX - labelPadding,
+          xLabelY - labelPadding,
+          xTextPainter.width + labelPadding * 2,
+          xTextPainter.height + labelPadding * 2,
+        ),
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(xBgRect, bgPaint);
+      canvas.drawRRect(xBgRect, borderPaint);
+      xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
     }
-    xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
 
     // Y coordinate label: use per-axis styling if any axis has showCrosshairLabel
     final hasAxisWithCrosshairLabel = multiAxisInfo.effectiveAxes
@@ -534,35 +560,9 @@ class CrosshairRenderer {
           isNormalized: false,
         );
       }
-    } else {
-      final yDisplayValue = _formatDataValue(dataY);
-      final yTextPainter = TextPainter(
-        text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      final yLabelX = plotArea.left + 8;
-      var yLabelY = cursorPosition.dy - yTextPainter.height / 2;
-      yLabelY = yLabelY.clamp(
-        plotArea.top + labelPadding,
-        plotArea.bottom - yTextPainter.height - labelPadding,
-      );
-
-      final yBgRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          yLabelX - labelPadding,
-          yLabelY - labelPadding,
-          yTextPainter.width + labelPadding * 2,
-          yTextPainter.height + labelPadding * 2,
-        ),
-        Radius.circular(borderRadius),
-      );
-      canvas.drawRRect(yBgRect, labelBackgroundPaint);
-      if (borderWidth > 0) {
-        canvas.drawRRect(yBgRect, labelBorderPaint);
-      }
-      yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
     }
+    // Note: No fallback Y-label when no axis has showCrosshairLabel enabled
+    // This respects the axis configuration intent
   }
 
   /// Paints per-axis crosshair labels.
@@ -854,21 +854,38 @@ class CrosshairRenderer {
     required Rect plotArea,
     required ChartTheme? theme,
     required double dataX,
+    XAxisConfig? xAxisConfig,
   }) {
+    // Skip if axis is not visible or showCrosshairLabel is false
+    if (xAxisConfig?.visible == false ||
+        xAxisConfig?.showCrosshairLabel == false) {
+      return;
+    }
+
     final interactionTheme = theme?.interactionTheme;
     final labelStyle = interactionTheme?.crosshairLabelStyle;
     final textStyle = labelStyle?.textStyle ??
         const TextStyle(color: Color(0xFF000000), fontSize: 10);
-    final backgroundColor =
-        labelStyle?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final borderColor = labelStyle?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = labelStyle?.borderWidth ?? 1.0;
-    final borderRadius = labelStyle?.borderRadius ?? 3.0;
     final labelPadding = labelStyle?.padding.left ?? 4.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
 
-    final xDisplayValue = _formatDataValue(dataX);
+    // Get axis color or use default gray
+    final axisColor = xAxisConfig?.color ?? const Color(0xFF666666);
+
+    // Apply custom formatter if provided, otherwise use default formatting
+    final String displayValue;
+    if (xAxisConfig?.labelFormatter != null) {
+      displayValue = xAxisConfig!.labelFormatter!(dataX);
+    } else {
+      final formattedValue = _formatDataValue(dataX);
+      // Append unit suffix if configured
+      displayValue = xAxisConfig?.unit != null
+          ? '$formattedValue ${xAxisConfig!.unit}'
+          : formattedValue;
+    }
+
     final xTextPainter = TextPainter(
-      text: TextSpan(text: 'X: $xDisplayValue', style: textStyle),
+      text: TextSpan(text: displayValue, style: textStyle),
       textDirection: TextDirection.ltr,
     )..layout();
 
@@ -880,6 +897,18 @@ class CrosshairRenderer {
       plotArea.right - xTextPainter.width - labelPadding,
     );
 
+    // Use themed colors with appropriate alpha values
+    final backgroundColor = axisColor.withValues(alpha: 0.15);
+    final borderColor = axisColor.withValues(alpha: 0.6);
+
+    final bgPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.fill;
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
     final xBgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         xLabelX - labelPadding,
@@ -889,16 +918,8 @@ class CrosshairRenderer {
       ),
       Radius.circular(borderRadius),
     );
-    canvas.drawRRect(xBgRect, Paint()..color = backgroundColor);
-    if (borderWidth > 0) {
-      canvas.drawRRect(
-        xBgRect,
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth,
-      );
-    }
+    canvas.drawRRect(xBgRect, bgPaint);
+    canvas.drawRRect(xBgRect, borderPaint);
     xTextPainter.paint(canvas, Offset(xLabelX, xLabelY));
   }
 

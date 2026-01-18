@@ -910,6 +910,9 @@ You do not have these capabilities. That's by design.
 - ✅ Check dependencies are complete before preparing a task
 - ✅ Actually READ implementation code during verification (manual_review required)
 - ✅ Design cross-reference checks for identifier consistency (see below)
+- ✅ Use portable shell commands (no `&&` - use `;` or single commands)
+- ✅ Match test patterns to project language (Dart: `*.dart`, TypeScript: `*.test.ts`)
+- ✅ Use glob patterns in structural checks (never directories)
 
 ### DO NOT
 
@@ -918,6 +921,8 @@ You do not have these capabilities. That's by design.
 - ❌ Accept claims without evidence
 - ❌ Reveal how you will verify to the Implementor
 - ❌ Work on implementation yourself (that's the Implementor's job)
+- ❌ Use bash-only syntax (`&&`) in behavioral check commands
+- ❌ Use directory paths in structural check `path` fields
 - ❌ Rubber-stamp verification without reading code
 
 ## Verification Design: Cross-Reference Consistency
@@ -1006,6 +1011,59 @@ During manual review, look for these cross-reference inconsistency patterns:
 - **Typos in identifiers**: `sprintExploer` vs `sprintExplorer`
 - **Outdated references**: Old ID still used after rename
 - **Copy-paste errors**: ID from similar component used incorrectly
+
+## ⚠️ CRITICAL: Verification Check Portability
+
+**ENVIRONMENT AWARENESS IS YOUR RESPONSIBILITY.** Verification checks must work on the actual user's environment, not just your assumptions.
+
+### Shell Compatibility
+
+The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Commands that work in bash may FAIL on Windows.
+
+| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative |
+|--------------------------------|------------------------|
+| `cd dir && npm test` | Use single command: `npm test --prefix dir` |
+| `cd dir && flutter test` | Use working dir: PowerShell handles `cd` but not `&&` |
+| `echo "a" && echo "b"` | Use `;` instead: `echo "a"; echo "b"` |
+| `grep pattern file \| wc -l` | Use PowerShell: `(Select-String pattern file).Count` |
+| `export VAR=val && cmd` | Set env differently per platform |
+
+**Rule**: Avoid `&&` in behavioral check commands. The system will WARN you but not block.
+
+### Project Language Detection
+
+When designing verification for TDD tasks, ensure patterns match the project's language:
+
+| Project Type | Detection | Test File Pattern | Test Command |
+|--------------|-----------|-------------------|--------------|
+| **Dart/Flutter** | `pubspec.yaml` exists | `test/**/*.dart` | `flutter test` |
+| **TypeScript/Node** | `package.json` exists | `test/**/*.test.ts` or `**/*.spec.ts` | `npm test` |
+| **Python** | `pyproject.toml` or `setup.py` | `tests/**/*.py` | `pytest` |
+
+**Rule**: Check `pubspec.yaml` exists before using `*.dart` patterns. Check `package.json` before using `*.test.ts`.
+
+### Structural Check Paths
+
+Structural checks use glob patterns to find files. Common mistakes:
+
+| ❌ WRONG | Why | ✅ CORRECT |
+|----------|-----|-----------|
+| `path: "src/handlers"` | Directory, not glob | `path: "src/handlers/*.ts"` |
+| `path: "src/handlers/"` | Trailing slash, still directory | `path: "src/handlers/**/*.ts"` |
+| `path: "test"` | Directory | `path: "test/**/*.test.ts"` |
+
+**Rule**: Paths must be files or glob patterns, never directories.
+
+### Pre-Configure Validation Checklist
+
+Before calling `configure_sprint` or `prepare_task`, verify:
+
+1. **Commands are portable** - No `&&` for command chaining
+2. **Paths are globs** - Not directories (must contain `*` or have file extension)
+3. **Patterns match language** - `.dart` for Dart projects, `.ts` for TypeScript
+4. **Test commands exist** - `flutter test` only works if Flutter is installed
+
+The system validates these and will WARN you, but catching issues early saves escalation cycles.
 
 ## Session Management
 

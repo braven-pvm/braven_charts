@@ -22,6 +22,7 @@ import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/series_axis_binding.dart';
+import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -40,7 +41,6 @@ import 'modules/zoom_animator.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
 import 'x_axis_painter.dart';
-import '../models/x_axis_config.dart';
 
 /// Callback for generating chart elements based on current transform.
 /// Used for zoom/pan to regenerate elements from original data coordinates.
@@ -1802,6 +1802,18 @@ class ChartRenderBox extends RenderBox {
       // Build multi-axis info for crosshair rendering
       final multiAxisInfo = _buildMultiAxisInfo();
 
+      // Create X-axis config for crosshair label styling
+      final xAxisConfig = _xAxis != null
+          ? XAxisConfig(
+              visible: _xAxis!.config.showAxisLine,
+              showAxisLine: _xAxis!.config.showAxisLine,
+              showTicks: _xAxis!.config.showTickMarks,
+              showCrosshairLabel: true, // Enable crosshair label by default
+              color: _xAxis!.config.axisColor,
+              label: _xAxis!.config.label,
+            )
+          : null;
+
       // Delegate to CrosshairRenderer module
       _crosshairRenderer.paint(
         canvas: canvas,
@@ -1815,6 +1827,7 @@ class ChartRenderBox extends RenderBox {
         seriesElements: _elements.whereType<SeriesElement>().toList(),
         isRangeCreationMode:
             coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
+        xAxisConfig: xAxisConfig,
       );
     }
 
