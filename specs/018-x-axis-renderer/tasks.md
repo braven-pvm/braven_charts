@@ -8,6 +8,84 @@
 **TDD Compliance**: This task list follows Test-First Development per Constitution Principle I.
 Tests are written FIRST, verified to FAIL, then implementation makes them pass.
 
+**Task Count**: 52 tasks (13 [TEST] tasks, 39 implementation tasks)
+
+---
+
+## 🔧 Gap Remediation Log (2026-01-18)
+
+This task list was updated based on deep-dive analysis against Y-axis implementation.
+The following gaps were identified and remediated:
+
+| Gap ID | Severity | Issue | Remediation |
+|--------|----------|-------|-------------|
+| GAP-001 | 🔴 CRITICAL | CrosshairRenderer.paint() signature missing xAxisConfig | T027 updated to modify paint() params, not constructor |
+| GAP-002 | 🔴 CRITICAL | AxisColorResolver not reused | T012, T017 updated to require AxisColorResolver reuse |
+| GAP-003 | 🔴 CRITICAL | CrosshairRenderer is const (no state storage) | T027 clarified: add to paint() method, NOT constructor |
+| GAP-004 | 🟡 HIGH | Missing _invalidateCachesIfNeeded() pattern | T021 updated with exact cache invalidation pattern |
+| GAP-005 | 🟡 HIGH | Computed property logic not documented | T006, T009 updated with exact logic from YAxisConfig |
+| GAP-006 | 🟠 MEDIUM | crosshairLabelPosition not in XAxisConfig | DESIGN DECISION: Not needed - X-axis always below plot |
+| GAP-007 | 🟠 MEDIUM | _niceNum() algorithm not documented | T018 updated with full algorithm from MultiAxisPainter |
+| GAP-008 | 🟠 MEDIUM | Missing crosshair integration test | T026a added for crosshair theming flow verification |
+| GAP-010 | 🟢 LOW | Missing operator==/hashCode | T006, T009 updated with equality requirements |
+| GAP-011 | 🟢 LOW | Missing toString() | T006, T009 updated with toString() requirement |
+
+### Design Decisions from Gap Analysis
+
+**DD-GAP-006**: XAxisConfig does NOT need `crosshairLabelPosition` property.
+- Rationale: X-axis is always at bottom, crosshair label always appears below plot area
+- Y-axis needs this because axes can be left/right with labels inside/outside plot
+- Simplifies API without losing functionality
+
+---
+
+## 🎯 Critical Patterns to Follow (MANDATORY)
+
+These patterns were extracted from Y-axis implementation and MUST be followed exactly:
+
+### Pattern 1: Color Resolution (from AxisColorResolver)
+```dart
+// Reference: lib/src/rendering/axis_color_resolver.dart lines 46-80
+// Priority: config.color → first series color → defaultAxisColor (0xFF333333)
+static const Color defaultAxisColor = Color(0xFF333333);
+```
+
+### Pattern 2: Cache Invalidation (from MultiAxisPainter)
+```dart
+// Reference: lib/src/rendering/multi_axis_painter.dart
+void _invalidateCachesIfNeeded() {
+  if (_previousAxisBounds != axisBounds || _previousLabelStyle != labelStyle) {
+    _tickLabelCache.clear();
+    _axisLabelCache = null;
+    _previousAxisBounds = axisBounds;
+    _previousLabelStyle = labelStyle;
+  }
+}
+```
+
+### Pattern 3: Crosshair Label Theming (from CrosshairRenderer)
+```dart
+// Reference: lib/src/rendering/modules/crosshair_renderer.dart lines 647-655
+final bgColor = axisColor.withValues(alpha: 0.15);  // Semi-transparent background
+final borderPaint = Paint()
+  ..color = axisColor.withValues(alpha: 0.6)        // Themed border
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1.0;
+```
+
+### Pattern 4: Computed Properties (from YAxisConfig)
+```dart
+// Reference: lib/src/models/y_axis_config.dart lines 571-600
+bool get shouldShowAxisLabel => labelDisplay != AxisLabelDisplay.tickUnitOnly &&
+    labelDisplay != AxisLabelDisplay.tickOnly && labelDisplay != AxisLabelDisplay.none;
+bool get shouldAppendUnitToLabel => labelDisplay == AxisLabelDisplay.labelWithUnit ||
+    labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
+bool get shouldShowTickUnit => labelDisplay == AxisLabelDisplay.labelAndTickUnit ||
+    labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit ||
+    labelDisplay == AxisLabelDisplay.tickUnitOnly;
+bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
+```
+
 ## Format: `[ID] [P?] [Story] Description`
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
@@ -50,10 +128,17 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
   - Test validation: minHeight >= 0, maxHeight >= minHeight
   - Test validation: if min and max set, min < max
   - Test validation: if tickCount set, tickCount >= 2
-  - Test computed properties: shouldShowAxisLabel, shouldShowTickLabels, shouldShowTickUnit, shouldAppendUnitToLabel
+  - Test computed properties with EXACT logic from YAxisConfig:
+    - `shouldShowAxisLabel`: true unless labelDisplay is tickUnitOnly, tickOnly, or none
+    - `shouldShowTickLabels`: true unless labelDisplay is none
+    - `shouldShowTickUnit`: true if labelDisplay is labelAndTickUnit, labelWithUnitAndTickUnit, or tickUnitOnly
+    - `shouldAppendUnitToLabel`: true if labelDisplay is labelWithUnit or labelWithUnitAndTickUnit
   - Test copyWith() preserves unchanged values
-  - Test edge case: min > max should throw or swap values
-  - Test edge case: tickCount = 0 or 1 should enforce minimum of 2
+  - Test operator== and hashCode (compare all 17 properties)
+  - Test toString() returns readable debug string
+  - Test edge case: min > max should throw AssertionError
+  - Test edge case: tickCount = 0 or 1 should throw AssertionError
+  - **Reference**: Copy computed property logic from `lib/src/models/y_axis_config.dart` lines 571-600
   - **Run tests - they MUST FAIL (class not implemented)**
 
 - [ ] T007 [TEST] Write unit tests for `XAxisLabelFormatter` typedef in `test/unit/models/x_axis_config_test.dart`
@@ -70,10 +155,27 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
 
 - [ ] T009 Implement `XAxisConfig` class with all 17 properties in `lib/src/models/x_axis_config.dart`
   - Properties: color, label, unit, min, max, visible, showAxisLine, showTicks, showCrosshairLabel, labelDisplay, minHeight, maxHeight, tickLabelPadding, axisLabelPadding, axisMargin, tickCount, labelFormatter
-  - Validation: minHeight >= 0, maxHeight >= minHeight, min < max, tickCount >= 2
-  - Computed properties: shouldShowAxisLabel, shouldShowTickLabels, shouldShowTickUnit, shouldAppendUnitToLabel
-  - copyWith() method for immutability
-  - Edge case handling: Swap min/max if min > max, enforce tickCount >= 2
+  - Validation via asserts (matching YAxisConfig pattern):
+    - `assert(minHeight >= 0, 'minHeight must be non-negative')`
+    - `assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight')`
+    - `assert(min == null || max == null || min < max, 'min must be less than max')`
+    - `assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2')`
+  - Computed properties - COPY EXACT LOGIC from `lib/src/models/y_axis_config.dart` lines 571-600:
+    ```dart
+    bool get shouldShowAxisLabel => labelDisplay != AxisLabelDisplay.tickUnitOnly &&
+        labelDisplay != AxisLabelDisplay.tickOnly && labelDisplay != AxisLabelDisplay.none;
+    bool get shouldAppendUnitToLabel => labelDisplay == AxisLabelDisplay.labelWithUnit ||
+        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit;
+    bool get shouldShowTickUnit => labelDisplay == AxisLabelDisplay.labelAndTickUnit ||
+        labelDisplay == AxisLabelDisplay.labelWithUnitAndTickUnit ||
+        labelDisplay == AxisLabelDisplay.tickUnitOnly;
+    bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
+    ```
+  - copyWith() method for immutability (copy pattern from YAxisConfig)
+  - operator== comparing all 17 properties (copy pattern from YAxisConfig line 509-532)
+  - hashCode using Object.hash() for all 17 properties
+  - toString() for debug output
+  - **REUSE** `AxisLabelDisplay` enum from y_axis_config.dart (import, don't duplicate)
   - **Run T006 tests - they MUST PASS**
   
 - [ ] T010 Define `XAxisLabelFormatter` typedef in `lib/src/models/x_axis_config.dart`
@@ -99,8 +201,11 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
 ### Tests for User Story 1 (Write FIRST - Must FAIL)
 
 - [ ] T012 [TEST] [P] [US1] Write unit tests for `resolveAxisColor()` in `test/unit/rendering/x_axis_painter_test.dart`
-  - Test priority: config.color → first series color → theme default → Colors.grey
-  - Test edge case: no series present → use theme default color (not crash)
+  - Test priority: config.color → first series color → defaultAxisColor (0xFF333333)
+  - Test matches `AxisColorResolver.resolveAxisColor()` behavior from `lib/src/rendering/axis_color_resolver.dart`
+  - Test edge case: no series present → use defaultAxisColor (0xFF333333), not crash
+  - Test edge case: series present but series.color is null → use defaultAxisColor
+  - **CRITICAL**: Tests should verify XAxisPainter REUSES AxisColorResolver or matches its exact logic
   - **Run tests - they MUST FAIL**
 
 - [ ] T013 [TEST] [P] [US1] Write unit tests for `generateTicks()` in `test/unit/rendering/x_axis_painter_test.dart`
@@ -134,15 +239,42 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
 ### Implementation for User Story 1 (Make Tests PASS)
 
 - [ ] T017 [US1] Implement `resolveAxisColor()` in `lib/src/rendering/x_axis_painter.dart`
-  - Priority: config.color → first series color → theme default → Colors.grey
-  - Match MultiAxisPainter pattern for consistency
-  - Edge case: handle null/empty series list gracefully
+  - **REUSE** `AxisColorResolver` from `lib/src/rendering/axis_color_resolver.dart`
+  - Option A (preferred): Create static method `AxisColorResolver.resolveXAxisColor()` mirroring Y-axis pattern
+  - Option B: Inline same logic but match exactly:
+    - Priority: config.color → first series color → defaultAxisColor (0xFF333333)
+    - Reference: `AxisColorResolver.resolveAxisColor()` lines 46-80
+  - **DO NOT** reinvent color resolution - reuse existing AxisColorResolver pattern
+  - Edge case: handle null/empty series list → return defaultAxisColor
   - **Run T012 tests - they MUST PASS**
 
 - [ ] T018 [US1] Implement `generateTicks()` in `lib/src/rendering/x_axis_painter.dart`
-  - Use nice-number algorithm from MultiAxisPainter (reference: `lib/src/rendering/multi_axis_painter.dart`)
+  - **COPY** nice-number algorithm from `lib/src/rendering/multi_axis_painter.dart`
+  - Key methods to copy:
+    - `_niceNum(double range, {bool round = false})` - lines ~280-300
+    - `generateTicks(DataRange bounds, {int? maxTicks})` - lines ~250-280
+  - Algorithm summary (for reference):
+    ```dart
+    double _niceNum(double range, {bool round = false}) {
+      final exponent = (range > 0 ? log(range) / ln10 : 0).floor();
+      final fraction = range / pow(10, exponent);
+      double niceFraction;
+      if (round) {
+        if (fraction < 1.5) niceFraction = 1;
+        else if (fraction < 3) niceFraction = 2;
+        else if (fraction < 7) niceFraction = 5;
+        else niceFraction = 10;
+      } else {
+        if (fraction <= 1) niceFraction = 1;
+        else if (fraction <= 2) niceFraction = 2;
+        else if (fraction <= 5) niceFraction = 5;
+        else niceFraction = 10;
+      }
+      return niceFraction * pow(10, exponent);
+    }
+    ```
   - Accept bounds and optional maxTicks parameter
-  - Return List<double> of human-readable tick values
+  - Return List<double> of human-readable tick values within bounds
   - **Run T013 tests - they MUST PASS**
 
 - [ ] T019 [US1] Implement `formatTickLabel()` in `lib/src/rendering/x_axis_painter.dart`
@@ -162,9 +294,23 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
   - **Run T015 tests - they MUST PASS**
 
 - [ ] T021 [US1] Implement TextPainter caching in `lib/src/rendering/x_axis_painter.dart`
-  - Cache tick label TextPainters by value
-  - Cache axis title TextPainter
-  - Invalidate on axisBounds or labelStyle change
+  - Cache tick label TextPainters by value: `Map<double, TextPainter> _tickLabelCache`
+  - Cache axis title TextPainter: `TextPainter? _axisLabelCache`
+  - Store previous state for change detection:
+    - `DataRange? _previousAxisBounds`
+    - `TextStyle? _previousLabelStyle`
+  - **COPY** `_invalidateCachesIfNeeded()` pattern from `lib/src/rendering/multi_axis_painter.dart`:
+    ```dart
+    void _invalidateCachesIfNeeded() {
+      if (_previousAxisBounds != axisBounds || _previousLabelStyle != labelStyle) {
+        _tickLabelCache.clear();
+        _axisLabelCache = null;
+        _previousAxisBounds = axisBounds;
+        _previousLabelStyle = labelStyle;
+      }
+    }
+    ```
+  - Call `_invalidateCachesIfNeeded()` at start of paint() method
 
 - [ ] T022 [US1] Add `xAxisConfig` parameter to `BravenChartPlus` widget in `lib/src/widgets/braven_chart_plus.dart`
   - Parameter type: XAxisConfig?
@@ -202,19 +348,40 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
 ### Tests for User Story 2 (Write FIRST - Must FAIL)
 
 - [ ] T026 [TEST] [P] [US2] Write unit tests for CrosshairRenderer XAxisConfig support in `test/unit/rendering/crosshair_renderer_test.dart`
-  - Test accepts xAxisConfig parameter
-  - Test X-value label uses semi-transparent background (alpha 0.15)
-  - Test X-value label has themed border (alpha 0.6)
+  - Test `paint()` method accepts xAxisConfig parameter (NOT constructor - see T027)
+  - Test X-value label uses semi-transparent background: `axisColor.withValues(alpha: 0.15)`
+  - Test X-value label has themed border: `axisColor.withValues(alpha: 0.6)`
   - Test X-value displays value only (no ""X: "" prefix)
   - Test showCrosshairLabel=false skips X-value label entirely
   - Test labelFormatter is applied to crosshair X-value
+  - Test visible=false in XAxisConfig → crosshair label should NOT appear (even if showCrosshairLabel=true)
+  - **Reference**: Y-axis crosshair label pattern in `_paintPerAxisCrosshairLabels()` lines 575-670
+  - **Run tests - they MUST FAIL**
+
+- [ ] T026a [TEST] [US2] Write integration test for CrosshairRenderer XAxisConfig flow in `test/widget/x_axis_integration_test.dart`
+  - Test XAxisConfig is passed from ChartRenderBox to CrosshairRenderer.paint()
+  - Test hover over chart shows themed X-value label (not white box)
+  - Test XAxisConfig(color: Colors.blue) produces blue-tinted crosshair label
   - **Run tests - they MUST FAIL**
 
 ### Implementation for User Story 2 (Make Tests PASS)
 
-- [ ] T027 [US2] Modify `CrosshairRenderer` to accept `XAxisConfig` in `lib/src/rendering/modules/crosshair_renderer.dart`
-  - Add xAxisConfig parameter to constructor
-  - Store for use in X-value label painting
+- [ ] T027 [US2] Modify `CrosshairRenderer.paint()` signature to accept `XAxisConfig` in `lib/src/rendering/modules/crosshair_renderer.dart`
+  - **CRITICAL**: CrosshairRenderer is `static const` in ChartRenderBox (line 346) - CANNOT store state
+  - Add `XAxisConfig? xAxisConfig` parameter to `paint()` method signature (line 126-142)
+  - **DO NOT** add to constructor - the class is const and stateless
+  - Pass xAxisConfig through to `_paintCrosshairLabels()` and `_paintStandardMode()`
+  - Current signature to modify:
+    ```dart
+    void paint({
+      required Canvas canvas,
+      required Size size,
+      required Offset cursorPosition,
+      ...
+      required bool isRangeCreationMode,
+      XAxisConfig? xAxisConfig,  // ← ADD THIS
+    })
+    ```
   - **Run T026 tests - partial pass**
 
 - [ ] T028 [US2] Update X-value label background in `CrosshairRenderer`
@@ -233,9 +400,21 @@ Tests are written FIRST, verified to FAIL, then implementation makes them pass.
   - Default to true when not configured
   - Edge case: visible=false but showCrosshairLabel=true → crosshair label should NOT appear
 
-- [ ] T031 [US2] Pass `XAxisConfig` from `ChartRenderBox` to `CrosshairRenderer`
-  - Update CrosshairRenderer instantiation in ChartRenderBox
-  - Ensure config flows through paint pipeline
+- [ ] T031 [US2] Pass `XAxisConfig` from `ChartRenderBox` to `CrosshairRenderer.paint()`
+  - **Location**: `lib/src/rendering/chart_render_box.dart` lines 1739-1748
+  - Update the existing `_crosshairRenderer.paint()` call to include `xAxisConfig` parameter:
+    ```dart
+    _crosshairRenderer.paint(
+      canvas: canvas,
+      size: size,
+      cursorPosition: cursorPos,
+      ...
+      isRangeCreationMode: coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
+      xAxisConfig: _xAxisConfig,  // ← ADD THIS
+    );
+    ```
+  - Ensure `_xAxisConfig` field exists on ChartRenderBox (added in T023)
+  - **Run T026a tests - they MUST PASS**
 
 - [ ] T032 [US2] Update demo to verify crosshair styling in `example/lib/demos/x_axis_theming_demo.dart`
   - Add instructions to hover over chart
@@ -483,11 +662,14 @@ After Phase 3 (US1) completion, verify:
 
 | Edge Case | Covered In | Implementation |
 |-----------|------------|----------------|
-| No series present | T012, T017 | Use theme default color |
-| labelFormatter throws | T014, T019 | Try-catch, fallback to default |
-| min > max | T006, T009 | Swap values or throw |
-| tickCount < 2 | T006, T009 | Enforce minimum of 2 |
-| visible=false + showCrosshairLabel=true | T030 | Crosshair label hidden |
+| No series present | T012, T017 | Use defaultAxisColor (0xFF333333) |
+| Series with null color | T012, T017 | Use defaultAxisColor (0xFF333333) |
+| labelFormatter throws | T014, T019 | Try-catch, fallback to default formatting |
+| min > max | T006, T009 | AssertionError thrown (matching YAxisConfig) |
+| tickCount < 2 | T006, T009 | AssertionError thrown (matching YAxisConfig) |
+| visible=false + showCrosshairLabel=true | T026, T030 | Crosshair label hidden |
+| Empty axisBounds (min == max) | T013, T018 | Generate single tick at value |
+| Cache invalidation on style change | T021 | _invalidateCachesIfNeeded() pattern |
 
 ---
 

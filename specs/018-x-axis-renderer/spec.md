@@ -6,7 +6,7 @@
 **Input**: Unify X-axis rendering to match Y-axis theming and styling  
 **Design Document**: [X_AXIS_RENDERING_UNIFICATION.md](../../docs/design/X_AXIS_RENDERING_UNIFICATION.md)
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Themed X-Axis Rendering (Priority: P1)
 
@@ -83,7 +83,7 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 - What happens when tickCount is 0 or 1? Should enforce minimum of 2 ticks.
 - What happens when visible=false but showCrosshairLabel=true? Crosshair label should still not appear.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -117,7 +117,7 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 
 - **XAxisPainter**: Rendering component responsible for painting the X-axis. Receives XAxisConfig and DataRange, draws axis line, tick marks, tick labels, and axis title using themed colors.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -137,6 +137,7 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 - Only one X-axis is ever needed (no multi-axis X support required)
 - The AxisLabelDisplay enum from YAxisConfig can be reused for XAxisConfig
 - The nice-number tick generation algorithm from MultiAxisPainter can be reused
+- AxisColorResolver pattern can be reused for X-axis color resolution
 
 ## Constraints
 
@@ -144,10 +145,36 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 - Must maintain backward compatibility with existing chart configurations
 - X-axis is single-axis only (no multi-axis support needed)
 - Position is fixed at bottom (no configurability needed)
+- CrosshairRenderer is `static const` - cannot store XAxisConfig as field (must pass via paint() params)
+
+## Design Decisions (from Gap Analysis 2026-01-18)
+
+### DD-001: No crosshairLabelPosition for XAxisConfig
+**Decision**: XAxisConfig does NOT include `crosshairLabelPosition` property.
+**Rationale**: 
+- X-axis is always at bottom of chart
+- Crosshair X-value label always appears below plot area (no inside/outside choice needed)
+- YAxisConfig needs this because Y-axes can be left/right with labels inside or outside plot
+- Simplifies API without losing functionality
+
+### DD-002: Default color is 0xFF333333 (not theme lookup)
+**Decision**: When no color is specified and no series is present, default to `Color(0xFF333333)`.
+**Rationale**:
+- Matches `AxisColorResolver.defaultAxisColor` constant
+- Consistent with existing Y-axis behavior
+- No theme lookup needed - simpler implementation
+
+### DD-003: Validation throws AssertionError (not silent swap)
+**Decision**: Invalid configurations (min > max, tickCount < 2) throw AssertionError.
+**Rationale**:
+- Matches YAxisConfig behavior exactly
+- Fails fast during development
+- Consistent with Flutter's validation patterns
 
 ## Dependencies
 
 - Depends on existing MultiAxisPainter implementation as reference
+- Depends on existing AxisColorResolver for color resolution pattern
 - Depends on existing CrosshairRenderer for crosshair label integration
 - Depends on ChartRenderBox for integration point
 - Depends on BravenChartPlus widget for API surface
