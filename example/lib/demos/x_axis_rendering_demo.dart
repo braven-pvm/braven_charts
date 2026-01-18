@@ -70,9 +70,12 @@ class XAxisRenderingDemo extends StatelessWidget {
                       unit: 'm/s²',
                     ),
                   ],
-                  // xAxis: xAxisConfig,
+                  xAxis: xAxisConfig,
                   xAxisConfig: XAxisConfig(
-                      crosshairLabelPosition: CrosshairLabelPosition.overAxis),
+                    crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+                    label: 'Time (s)',
+                    color: Colors.blue,
+                  ),
                   yAxis: YAxisConfig(
                     position: YAxisPosition.left,
                     crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
