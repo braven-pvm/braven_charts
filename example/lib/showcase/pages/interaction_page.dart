@@ -145,7 +145,8 @@ class _InteractionPageState extends State<InteractionPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme:
+                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxis: AxisConfig(
               showAxis: _optionsController.showAxisLines,
             ),
@@ -156,8 +157,12 @@ class _InteractionPageState extends State<InteractionPage> {
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
               enablePan: _optionsController.enablePan,
-              crosshair: _enableCrosshair ? const CrosshairConfig(enabled: true) : const CrosshairConfig(enabled: false),
-              tooltip: _enableTooltips ? const TooltipConfig(enabled: true) : const TooltipConfig(enabled: false),
+              crosshair: _enableCrosshair
+                  ? const CrosshairConfig(enabled: true)
+                  : const CrosshairConfig(enabled: false),
+              tooltip: _enableTooltips
+                  ? const TooltipConfig(enabled: true)
+                  : const TooltipConfig(enabled: false),
             ),
             onPointTap: (point, seriesId) {
               setState(() {
@@ -194,7 +199,8 @@ class _InteractionPageState extends State<InteractionPage> {
     if (_hoveredPoint != null) {
       items.add(StatusItem(
         label: 'Hover',
-        value: '(${_hoveredPoint!.x.toStringAsFixed(1)}, ${_hoveredPoint!.y.toStringAsFixed(1)})',
+        value:
+            '(${_hoveredPoint!.x.toStringAsFixed(1)}, ${_hoveredPoint!.y.toStringAsFixed(1)})',
         color: Colors.blue,
       ));
     }
@@ -202,7 +208,8 @@ class _InteractionPageState extends State<InteractionPage> {
     if (_tappedPoint != null) {
       items.add(StatusItem(
         label: 'Selected',
-        value: '(${_tappedPoint!.x.toStringAsFixed(1)}, ${_tappedPoint!.y.toStringAsFixed(1)})',
+        value:
+            '(${_tappedPoint!.x.toStringAsFixed(1)}, ${_tappedPoint!.y.toStringAsFixed(1)})',
         color: Colors.green,
       ));
     }

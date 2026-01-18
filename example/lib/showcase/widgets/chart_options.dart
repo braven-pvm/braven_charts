@@ -87,7 +87,8 @@ class ChartOptions {
   }
 
   /// Gets the effective background color from theme or override.
-  Color get effectiveBackgroundColor => backgroundColor ?? theme?.backgroundColor ?? Colors.white;
+  Color get effectiveBackgroundColor =>
+      backgroundColor ?? theme?.backgroundColor ?? Colors.white;
 
   /// Creates InteractionConfig with current options applied.
   InteractionConfig get interactionConfig => InteractionConfig(
@@ -100,7 +101,8 @@ class ChartOptions {
 
 /// Controller for managing chart options with change notifications.
 class ChartOptionsController extends ChangeNotifier {
-  ChartOptionsController([ChartOptions? initial]) : _options = initial ?? const ChartOptions();
+  ChartOptionsController([ChartOptions? initial])
+      : _options = initial ?? const ChartOptions();
 
   ChartOptions _options;
 
