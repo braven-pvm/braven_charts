@@ -332,6 +332,45 @@ When preparing a handover with `prepare_task`:
 | Different user stories                          | ❌ No - keep separate                          |
 | Integration/cross-cutting concerns              | ❌ No - higher risk needs scrutiny             |
 
+### ⚠️ REQUIRED: Environment Configuration
+
+**Every sprint MUST specify its testing environment.** The `environment` field is REQUIRED in `configure_sprint`.
+
+```json
+{
+  "sprint": { "id": "sprint-001", "name": "Feature Sprint" },
+  "environment": {
+    "test_command": "npm test",
+    "test_file_pattern": "test/**/*.test.ts",
+    "source_base_dir": "src"
+  },
+  "phases": [...],
+  "tasks": [...]
+}
+```
+
+| Field | Required | Description | Examples |
+|-------|----------|-------------|----------|
+| `test_command` | ✅ | Command to run tests | `npm test`, `flutter test`, `pytest`, `cargo test` |
+| `test_file_pattern` | ✅ | Glob pattern for test files | `test/**/*.test.ts`, `test/**/*_test.dart` |
+| `source_base_dir` | ✅ | Base directory for source code | `src`, `lib`, `extension/src` |
+
+**Why this is required:**
+
+- Eliminates guessing about test frameworks
+- TDD verification checks use these values directly
+- Prevents spec errors from wrong file patterns or commands
+- Cross-platform consistency (Windows/Unix)
+
+**Common configurations by language:**
+
+| Language | test_command | test_file_pattern | source_base_dir |
+|----------|--------------|-------------------|-----------------|
+| TypeScript | `npm test` | `test/**/*.test.ts` | `src` |
+| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib` |
+| Python | `pytest` | `tests/**/*.py` | `src` |
+| Rust | `cargo test` | `tests/**/*.rs` | `src` |
+
 ### TDD Task Pattern
 
 For TDD work, declare **red-green task pairs** with `tdd_relationships` in `configure_sprint`:
@@ -339,6 +378,11 @@ For TDD work, declare **red-green task pairs** with `tdd_relationships` in `conf
 ```json
 {
   "sprint": { "id": "sprint-001", "name": "Feature Sprint" },
+  "environment": {
+    "test_command": "npm test",
+    "test_file_pattern": "test/**/*.test.ts",
+    "source_base_dir": "src"
+  },
   "tasks": [
     {
       "task_id": 1,
@@ -1028,19 +1072,18 @@ The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Com
 | `grep pattern file \| wc -l` | Use PowerShell: `(Select-String pattern file).Count` |
 | `export VAR=val && cmd` | Set env differently per platform |
 
-**Rule**: Avoid `&&` in behavioral check commands. The system will WARN you but not block.
+**Rule**: Avoid `&&` in behavioral check commands. The system will ERROR if `&&` is used.
 
-### Project Language Detection
+### Environment Configuration (Replaces Auto-Detection)
 
-When designing verification for TDD tasks, ensure patterns match the project's language:
+**Previously**, the system tried to auto-detect project type. **Now**, you MUST specify the environment explicitly in `configure_sprint`. The system uses your declared configuration, not guesses.
 
-| Project Type | Detection | Test File Pattern | Test Command |
-|--------------|-----------|-------------------|--------------|
-| **Dart/Flutter** | `pubspec.yaml` exists | `test/**/*.dart` | `flutter test` |
-| **TypeScript/Node** | `package.json` exists | `test/**/*.test.ts` or `**/*.spec.ts` | `npm test` |
-| **Python** | `pyproject.toml` or `setup.py` | `tests/**/*.py` | `pytest` |
+For TDD red-phase tasks, verification checks are generated using your `environment` settings:
+- `test_command` → Used in behavioral checks to run tests
+- `test_file_pattern` → Used in structural checks to find test files
+- `source_base_dir` → Used in quality checks to find source files
 
-**Rule**: Check `pubspec.yaml` exists before using `*.dart` patterns. Check `package.json` before using `*.test.ts`.
+**Fallback behavior** (backwards compatibility): If `environment` is not set (legacy sprints), the system falls back to file-based detection (`pubspec.yaml` → Dart, `package.json` → TypeScript). New sprints should always specify `environment`.
 
 ### Structural Check Paths
 
@@ -1056,14 +1099,15 @@ Structural checks use glob patterns to find files. Common mistakes:
 
 ### Pre-Configure Validation Checklist
 
-Before calling `configure_sprint` or `prepare_task`, verify:
+Before calling `configure_sprint`, verify:
 
-1. **Commands are portable** - No `&&` for command chaining
-2. **Paths are globs** - Not directories (must contain `*` or have file extension)
-3. **Patterns match language** - `.dart` for Dart projects, `.ts` for TypeScript
-4. **Test commands exist** - `flutter test` only works if Flutter is installed
+1. **Environment is specified** - `environment` field with `test_command`, `test_file_pattern`, `source_base_dir` is REQUIRED
+2. **Commands are portable** - No `&&` for command chaining (use `;` or single commands)
+3. **Paths are globs** - Not directories (must contain `*` or have file extension)
+4. **Patterns match environment** - Use values from your `environment` config, not guesses
+5. **Test command matches project** - `npm test` for Node, `flutter test` for Flutter, etc.
 
-The system validates these and will WARN you, but catching issues early saves escalation cycles.
+The system validates these and will BLOCK you if environment is missing or return WARNINGS for other issues. Catching issues early saves escalation cycles.
 
 ## Session Management
 
