@@ -105,9 +105,11 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 
 ### Non-Functional Requirements
 
-- **NFR-001**: X-axis rendering performance MUST NOT degrade compared to legacy renderer
+- **NFR-001**: X-axis rendering performance MUST NOT degrade compared to legacy renderer (paint() completes within 2ms for typical axis)
 - **NFR-002**: XAxisConfig API MUST be consistent with YAxisConfig API (similar property names and behavior)
 - **NFR-003**: Implementation MUST NOT break existing charts that don't use XAxisConfig
+- **NFR-004**: Implementation MUST follow TDD methodology per Constitution Principle I (tests written before implementation)
+- **NFR-005**: labelFormatter exception handling MUST fall back to default number formatting gracefully
 
 ### Key Entities
 
