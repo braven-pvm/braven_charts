@@ -39,6 +39,7 @@ export 'src/models/normalization_mode.dart';
 export 'src/models/segment_style.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';
+export 'src/models/x_axis_config.dart';
 export 'src/models/y_axis_config.dart';
 export 'src/models/y_axis_position.dart';
 // Rendering
