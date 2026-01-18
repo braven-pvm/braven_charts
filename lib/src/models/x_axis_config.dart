@@ -45,6 +45,7 @@ class XAxisConfig {
     this.showAxisLine = true,
     this.showTicks = true,
     this.showCrosshairLabel = true,
+    this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minHeight = 0.0,
     this.maxHeight = 60.0,
@@ -120,6 +121,14 @@ class XAxisConfig {
   ///
   /// Defaults to true.
   final bool showCrosshairLabel;
+
+  /// Controls where the crosshair X-value label appears.
+  ///
+  /// Only applicable when [showCrosshairLabel] is true.
+  /// Defaults to [CrosshairLabelPosition.overAxis].
+  ///
+  /// See [CrosshairLabelPosition] for available positions.
+  final CrosshairLabelPosition crosshairLabelPosition;
 
   // ========== Layout ==========
 
@@ -215,6 +224,7 @@ class XAxisConfig {
     bool? showAxisLine,
     bool? showTicks,
     bool? showCrosshairLabel,
+    CrosshairLabelPosition? crosshairLabelPosition,
     AxisLabelDisplay? labelDisplay,
     double? minHeight,
     double? maxHeight,
@@ -234,6 +244,8 @@ class XAxisConfig {
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
       showCrosshairLabel: showCrosshairLabel ?? this.showCrosshairLabel,
+      crosshairLabelPosition:
+          crosshairLabelPosition ?? this.crosshairLabelPosition,
       labelDisplay: labelDisplay ?? this.labelDisplay,
       minHeight: minHeight ?? this.minHeight,
       maxHeight: maxHeight ?? this.maxHeight,
@@ -259,6 +271,7 @@ class XAxisConfig {
           showAxisLine == other.showAxisLine &&
           showTicks == other.showTicks &&
           showCrosshairLabel == other.showCrosshairLabel &&
+          crosshairLabelPosition == other.crosshairLabelPosition &&
           labelDisplay == other.labelDisplay &&
           minHeight == other.minHeight &&
           maxHeight == other.maxHeight &&
@@ -279,6 +292,7 @@ class XAxisConfig {
         showAxisLine,
         showTicks,
         showCrosshairLabel,
+        crosshairLabelPosition,
         labelDisplay,
         minHeight,
         maxHeight,
@@ -301,6 +315,7 @@ class XAxisConfig {
         'showAxisLine: $showAxisLine, '
         'showTicks: $showTicks, '
         'showCrosshairLabel: $showCrosshairLabel, '
+        'crosshairLabelPosition: $crosshairLabelPosition, '
         'labelDisplay: $labelDisplay, '
         'minHeight: $minHeight, '
         'maxHeight: $maxHeight, '

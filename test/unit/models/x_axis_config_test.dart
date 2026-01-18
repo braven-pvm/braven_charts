@@ -1,10 +1,7 @@
-// @orchestra-task: 11
-@Tags(['tdd-red'])
 library;
 
 import 'dart:ui' show Color;
 
-import 'package:braven_charts/src/models/data_range.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';

@@ -495,7 +495,17 @@ class CrosshairRenderer {
       )..layout();
 
       var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
-      final xLabelY = plotArea.bottom - xTextPainter.height - 8;
+
+      // Position label based on crosshairLabelPosition setting
+      final double xLabelY;
+      if (xAxisConfig?.crosshairLabelPosition ==
+          CrosshairLabelPosition.insidePlot) {
+        // Inside plot: near bottom edge
+        xLabelY = plotArea.bottom - xTextPainter.height - labelPadding;
+      } else {
+        // Over axis (default): below plot in axis strip
+        xLabelY = plotArea.bottom + labelPadding;
+      }
 
       xLabelX = xLabelX.clamp(
         plotArea.left + labelPadding,
