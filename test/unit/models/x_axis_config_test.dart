@@ -1,3 +1,5 @@
+// @orchestra-task: 11
+@Tags(['tdd-red'])
 library;
 
 import 'dart:ui' show Color;
@@ -5,6 +7,7 @@ import 'dart:ui' show Color;
 import 'package:braven_charts/src/models/data_range.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/models/y_axis_position.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -644,6 +647,99 @@ void main() {
         // Should contain some property values for debugging
         expect(str, isNotEmpty);
         expect(str.length, greaterThan(10));
+      });
+    });
+
+    group('crosshairLabelPosition', () {
+      test('has default value CrosshairLabelPosition.overAxis', () {
+        const config = XAxisConfig();
+
+        expect(config.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.overAxis));
+      });
+
+      test('can be set in constructor', () {
+        const config = XAxisConfig(
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(config.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
+      });
+
+      test('can be changed via copyWith', () {
+        const original = XAxisConfig(
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        final copy = original.copyWith(
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(copy.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
+        // Original should be unchanged
+        expect(original.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.overAxis));
+      });
+
+      test('different crosshairLabelPosition values are not equal', () {
+        const config1 = XAxisConfig(
+          label: 'Time',
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        const config2 = XAxisConfig(
+          label: 'Time',
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(config1, isNot(equals(config2)));
+      });
+
+      test('same crosshairLabelPosition values have same hashCode', () {
+        const config1 = XAxisConfig(
+          label: 'Time',
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        const config2 = XAxisConfig(
+          label: 'Time',
+          crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+        );
+
+        expect(config1.hashCode, equals(config2.hashCode));
+      });
+
+      test('API parity with YAxisConfig.crosshairLabelPosition', () {
+        // Verify XAxisConfig has the same crosshairLabelPosition property
+        // as YAxisConfig (same type, same default, same enum values)
+        const xConfig = XAxisConfig();
+        final yConfig = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.left,
+        );
+
+        // Both should have CrosshairLabelPosition.overAxis as default
+        expect(xConfig.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.overAxis));
+        expect(yConfig.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.overAxis));
+
+        // Both should support the same enum values
+        const xConfigInside = XAxisConfig(
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+        final yConfigInside = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.left,
+          crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+        );
+
+        expect(xConfigInside.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
+        expect(yConfigInside.crosshairLabelPosition,
+            equals(CrosshairLabelPosition.insidePlot));
       });
     });
 

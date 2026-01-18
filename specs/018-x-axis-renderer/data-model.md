@@ -24,6 +24,7 @@ Configuration object for X-axis appearance and behavior.
 | `showAxisLine`       | `bool`                 | true                  | Show horizontal axis line          |
 | `showTicks`          | `bool`                 | true                  | Show tick marks                    |
 | `showCrosshairLabel` | `bool`                 | true                  | Show crosshair X-value label       |
+| `crosshairLabelPosition` | `CrosshairLabelPosition` | overAxis           | Where to position crosshair label  |
 | `labelDisplay`       | `AxisLabelDisplay`     | labelWithUnit         | How to display label/unit          |
 | `minHeight`          | `double`               | 0.0                   | Minimum height of X-axis area      |
 | `maxHeight`          | `double`               | 60.0                  | Maximum height of X-axis area      |
@@ -68,8 +69,8 @@ bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
 
 **Equality & Hashing** (matching YAxisConfig pattern):
 
-- `operator==` must compare all 17 properties
-- `hashCode` must use `Object.hash()` for all 17 properties
+- `operator==` must compare all 18 properties
+- `hashCode` must use `Object.hash()` for all 18 properties
 - `toString()` must return readable debug string
 
 ### XAxisPainter

@@ -18,6 +18,7 @@ class XAxisConfig {
     this.showAxisLine = true,
     this.showTicks = true,
     this.showCrosshairLabel = true,
+    this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
     this.minHeight = 0.0,
     this.maxHeight = 60.0,
@@ -37,6 +38,7 @@ class XAxisConfig {
   final bool showAxisLine;
   final bool showTicks;
   final bool showCrosshairLabel;
+  final CrosshairLabelPosition crosshairLabelPosition;
   final AxisLabelDisplay labelDisplay;
   final double minHeight;
   final double maxHeight;

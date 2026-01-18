@@ -149,15 +149,24 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 
 ## Design Decisions (from Gap Analysis 2026-01-18)
 
-### DD-001: No crosshairLabelPosition for XAxisConfig
+### DD-001: crosshairLabelPosition INCLUDED in XAxisConfig (AMENDED)
 
-**Decision**: XAxisConfig does NOT include `crosshairLabelPosition` property.
-**Rationale**:
+**Decision**: XAxisConfig INCLUDES `crosshairLabelPosition` property.
+**Original Rationale (INCORRECT)**:
 
 - X-axis is always at bottom of chart
 - Crosshair X-value label always appears below plot area (no inside/outside choice needed)
-- YAxisConfig needs this because Y-axes can be left/right with labels inside or outside plot
-- Simplifies API without losing functionality
+
+**Amendment (2026-01-18)**: The original rationale conflated axis position with label position.
+
+**Corrected Rationale**:
+
+- While X-axis position is fixed (bottom), the crosshair label can still be positioned:
+  - `overAxis`: Below the plot in the X-axis strip (outside plot area)
+  - `insidePlot`: Inside the plot near the bottom edge
+- This mirrors the Y-axis behavior where labels can be in axis strip or inside plot
+- API parity with YAxisConfig is important for consistency
+- Users may want labels inside plot to avoid overlap with scrollbars or other UI elements
 
 ### DD-002: Default color is 0xFF333333 (not theme lookup)
 
