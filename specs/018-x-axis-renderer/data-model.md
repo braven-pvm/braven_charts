@@ -13,27 +13,28 @@ Configuration object for X-axis appearance and behavior.
 
 **Properties**:
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `color` | `Color?` | null (→ first series) | Themed color for all axis elements |
-| `label` | `String?` | null | Axis title text (e.g., ""Time"") |
-| `unit` | `String?` | null | Unit suffix (e.g., ""s"", ""km"") |
-| `min` | `double?` | null (→ data min) | Explicit minimum X value |
-| `max` | `double?` | null (→ data max) | Explicit maximum X value |
-| `visible` | `bool` | true | Whether to render the axis |
-| `showAxisLine` | `bool` | true | Show horizontal axis line |
-| `showTicks` | `bool` | true | Show tick marks |
-| `showCrosshairLabel` | `bool` | true | Show crosshair X-value label |
-| `labelDisplay` | `AxisLabelDisplay` | labelWithUnit | How to display label/unit |
-| `minHeight` | `double` | 0.0 | Minimum height of X-axis area |
-| `maxHeight` | `double` | 60.0 | Maximum height of X-axis area |
-| `tickLabelPadding` | `double` | 4.0 | Gap between tick and label |
-| `axisLabelPadding` | `double` | 5.0 | Gap between labels and title |
-| `axisMargin` | `double` | 8.0 | Margin from plot area |
-| `tickCount` | `int?` | null (→ auto) | Preferred tick count |
-| `labelFormatter` | `XAxisLabelFormatter?` | null | Custom value formatter |
+| Property             | Type                   | Default               | Description                        |
+| -------------------- | ---------------------- | --------------------- | ---------------------------------- |
+| `color`              | `Color?`               | null (→ first series) | Themed color for all axis elements |
+| `label`              | `String?`              | null                  | Axis title text (e.g., ""Time"")   |
+| `unit`               | `String?`              | null                  | Unit suffix (e.g., ""s"", ""km"")  |
+| `min`                | `double?`              | null (→ data min)     | Explicit minimum X value           |
+| `max`                | `double?`              | null (→ data max)     | Explicit maximum X value           |
+| `visible`            | `bool`                 | true                  | Whether to render the axis         |
+| `showAxisLine`       | `bool`                 | true                  | Show horizontal axis line          |
+| `showTicks`          | `bool`                 | true                  | Show tick marks                    |
+| `showCrosshairLabel` | `bool`                 | true                  | Show crosshair X-value label       |
+| `labelDisplay`       | `AxisLabelDisplay`     | labelWithUnit         | How to display label/unit          |
+| `minHeight`          | `double`               | 0.0                   | Minimum height of X-axis area      |
+| `maxHeight`          | `double`               | 60.0                  | Maximum height of X-axis area      |
+| `tickLabelPadding`   | `double`               | 4.0                   | Gap between tick and label         |
+| `axisLabelPadding`   | `double`               | 5.0                   | Gap between labels and title       |
+| `axisMargin`         | `double`               | 8.0                   | Margin from plot area              |
+| `tickCount`          | `int?`                 | null (→ auto)         | Preferred tick count               |
+| `labelFormatter`     | `XAxisLabelFormatter?` | null                  | Custom value formatter             |
 
 **Validation Rules** (matching YAxisConfig asserts):
+
 ```dart
 assert(minHeight >= 0, 'minHeight must be non-negative');
 assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight');
@@ -42,6 +43,7 @@ assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 ```
 
 **Computed Properties** (EXACT logic from YAxisConfig lines 571-600):
+
 ```dart
 /// Returns true if the axis label should be displayed.
 bool get shouldShowAxisLabel =>
@@ -65,6 +67,7 @@ bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
 ```
 
 **Equality & Hashing** (matching YAxisConfig pattern):
+
 - `operator==` must compare all 17 properties
 - `hashCode` must use `Object.hash()` for all 17 properties
 - `toString()` must return readable debug string
@@ -77,23 +80,24 @@ Rendering component for X-axis painting.
 
 **Properties**:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `config` | `XAxisConfig` | Configuration for rendering |
-| `axisBounds` | `DataRange` | Min/max X values for tick generation |
-| `series` | `List<ChartSeries>?` | For color resolution |
-| `labelStyle` | `TextStyle` | Text style for tick labels |
+| Property     | Type                 | Description                          |
+| ------------ | -------------------- | ------------------------------------ |
+| `config`     | `XAxisConfig`        | Configuration for rendering          |
+| `axisBounds` | `DataRange`          | Min/max X values for tick generation |
+| `series`     | `List<ChartSeries>?` | For color resolution                 |
+| `labelStyle` | `TextStyle`          | Text style for tick labels           |
 
 **Methods**:
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `paint(canvas, chartArea, plotArea)` | void | Main paint method |
-| `generateTicks(bounds, {maxTicks})` | `List<double>` | Nice-number tick generation |
-| `formatTickLabel(value)` | `String` | Format tick value with optional unit |
-| `resolveAxisColor()` | `Color` | Resolve color from config/series/theme |
+| Method                               | Returns        | Description                            |
+| ------------------------------------ | -------------- | -------------------------------------- |
+| `paint(canvas, chartArea, plotArea)` | void           | Main paint method                      |
+| `generateTicks(bounds, {maxTicks})`  | `List<double>` | Nice-number tick generation            |
+| `formatTickLabel(value)`             | `String`       | Format tick value with optional unit   |
+| `resolveAxisColor()`                 | `Color`        | Resolve color from config/series/theme |
 
 **Internal Methods**:
+
 - `_paintAxisLine(canvas, plotArea, color)`
 - `_paintTickMark(canvas, plotArea, x, color)`
 - `_paintTickLabel(canvas, plotArea, x, value, color)`
@@ -102,6 +106,7 @@ Rendering component for X-axis painting.
 - `_invalidateCachesIfNeeded()` - COPY from MultiAxisPainter
 
 **Color Resolution** (REUSE AxisColorResolver pattern):
+
 ```dart
 // Reference: lib/src/rendering/axis_color_resolver.dart
 // Priority: config.color → first series color → defaultAxisColor (0xFF333333)
@@ -115,6 +120,7 @@ Color resolveAxisColor() {
 ```
 
 **Caching** (COPY from MultiAxisPainter):
+
 ```dart
 final Map<double, TextPainter> _tickLabelCache = {};
 TextPainter? _axisLabelCache;
@@ -135,30 +141,29 @@ void _invalidateCachesIfNeeded() {
 
 Represents a min/max range for axis values.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `min` | `double` | Minimum value |
-| `max` | `double` | Maximum value |
-| `span` | `double` | Computed: max - min |
+| Property | Type     | Description         |
+| -------- | -------- | ------------------- |
+| `min`    | `double` | Minimum value       |
+| `max`    | `double` | Maximum value       |
+| `span`   | `double` | Computed: max - min |
 
 ### AxisLabelDisplay (Existing - Reused)
 
 Enum controlling how axis labels and units are displayed.
 
-| Value | Axis Label | Tick Labels |
-|-------|------------|-------------|
-| `labelOnly` | ""Power"" | ""250"", ""500"" |
-| `labelWithUnit` | ""Power (W)"" | ""250"", ""500"" |
-| `labelAndTickUnit` | ""Power"" | ""250 W"", ""500 W"" |
+| Value                      | Axis Label    | Tick Labels          |
+| -------------------------- | ------------- | -------------------- |
+| `labelOnly`                | ""Power""     | ""250"", ""500""     |
+| `labelWithUnit`            | ""Power (W)"" | ""250"", ""500""     |
+| `labelAndTickUnit`         | ""Power""     | ""250 W"", ""500 W"" |
 | `labelWithUnitAndTickUnit` | ""Power (W)"" | ""250 W"", ""500 W"" |
-| `tickUnitOnly` | (none) | ""250 W"", ""500 W"" |
-| `tickOnly` | (none) | ""250"", ""500"" |
-| `none` | (none) | ""250"", ""500"" |
+| `tickUnitOnly`             | (none)        | ""250 W"", ""500 W"" |
+| `tickOnly`                 | (none)        | ""250"", ""500""     |
+| `none`                     | (none)        | ""250"", ""500""     |
 
 ## Relationships
 
-`
-BravenChartPlus
+`BravenChartPlus
     │
     ├── xAxisConfig: XAxisConfig?
     │
@@ -169,12 +174,12 @@ BravenChartPlus
             │
             └─▶ CrosshairRenderer
                     │
-                    └── xAxisConfig: XAxisConfig?
-`
+                    └── xAxisConfig: XAxisConfig?`
 
 ## State Transitions
 
 XAxisConfig is immutable. State changes are handled by:
+
 1. Widget rebuild with new XAxisConfig
 2. ChartRenderBox detects change and updates painter
 3. Painter invalidates caches if bounds/style changed

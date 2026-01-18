@@ -150,23 +150,29 @@ As a developer with existing charts, I want the new X-axis renderer to work with
 ## Design Decisions (from Gap Analysis 2026-01-18)
 
 ### DD-001: No crosshairLabelPosition for XAxisConfig
+
 **Decision**: XAxisConfig does NOT include `crosshairLabelPosition` property.
-**Rationale**: 
+**Rationale**:
+
 - X-axis is always at bottom of chart
 - Crosshair X-value label always appears below plot area (no inside/outside choice needed)
 - YAxisConfig needs this because Y-axes can be left/right with labels inside or outside plot
 - Simplifies API without losing functionality
 
 ### DD-002: Default color is 0xFF333333 (not theme lookup)
+
 **Decision**: When no color is specified and no series is present, default to `Color(0xFF333333)`.
 **Rationale**:
+
 - Matches `AxisColorResolver.defaultAxisColor` constant
 - Consistent with existing Y-axis behavior
 - No theme lookup needed - simpler implementation
 
 ### DD-003: Validation throws AssertionError (not silent swap)
+
 **Decision**: Invalid configurations (min > max, tickCount < 2) throw AssertionError.
 **Rationale**:
+
 - Matches YAxisConfig behavior exactly
 - Fails fast during development
 - Consistent with Flutter's validation patterns
