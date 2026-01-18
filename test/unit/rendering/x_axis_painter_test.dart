@@ -1,8 +1,3 @@
-// @orchestra-task: 3
-
-@Tags(['tdd-red'])
-library;
-
 import 'dart:ui' show Canvas, Color, PictureRecorder, Rect;
 
 import 'package:braven_charts/src/models/chart_data_point.dart';

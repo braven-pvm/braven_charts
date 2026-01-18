@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../axis/axis.dart' as chart_axis;
-import '../axis/x_axis_renderer.dart';
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
 import '../elements/resize_handle_element.dart';
@@ -40,6 +39,8 @@ import 'modules/viewport_constraints.dart';
 import 'modules/zoom_animator.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
+import 'x_axis_painter.dart';
+import '../models/x_axis_config.dart';
 
 /// Callback for generating chart elements based on current transform.
 /// Used for zoom/pan to regenerate elements from original data coordinates.
@@ -1915,9 +1916,22 @@ class ChartRenderBox extends RenderBox {
     // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
     _paintMultipleYAxes(canvas);
 
-    // Paint X-axis using XAxisRenderer
+    // Paint X-axis using XAxisPainter (unified approach)
     if (_xAxis != null) {
-      XAxisRenderer(_xAxis!, theme: _theme).paint(canvas, size, _plotArea);
+      final xAxisPainter = XAxisPainter(
+        config: XAxisConfig(
+          visible: _xAxis!.config.showAxisLine,
+          showAxisLine: _xAxis!.config.showAxisLine,
+          showTicks: _xAxis!.config.showTickMarks,
+          color: _xAxis!.config.axisColor,
+          label: _xAxis!.config.label,
+        ),
+        axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+        labelStyle: _xAxis!.config.tickLabelStyle,
+        series: _multiAxisManager.series,
+      );
+      xAxisPainter.paint(
+          canvas, Rect.fromLTWH(0, 0, size.width, size.height), _plotArea);
     }
 
     // ==========================================================================
