@@ -359,8 +359,7 @@ void main() {
 
         for (final mode in modes) {
           final config = XAxisConfig(labelDisplay: mode);
-          expect(config.shouldShowTickLabels, isTrue,
-              reason: 'shouldShowTickLabels should be true for $mode');
+          expect(config.shouldShowTickLabels, isTrue, reason: 'shouldShowTickLabels should be true for $mode');
         }
       });
 
