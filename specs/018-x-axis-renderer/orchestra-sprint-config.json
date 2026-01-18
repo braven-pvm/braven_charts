@@ -1,0 +1,201 @@
+{
+  "$schema": "Orchestra Sprint Configuration",
+  "$comment": "Use this JSON with mcp_orchestra-orc_configure_sprint",
+  
+  "sprint": {
+    "id": "018-x-axis-renderer",
+    "name": "X-Axis Renderer Unification",
+    "description": "Unify X-axis rendering to match Y-axis theming and styling. This sprint addresses the visual inconsistency where X-axis has plain black ticks/labels while Y-axis uses themed colors from series.",
+    "specification_path": "specs/018-x-axis-renderer/spec.md",
+    "feature_branch": "018-x-axis-renderer"
+  },
+
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Setup & Foundational",
+      "description": "Create file stubs, test infrastructure, and foundational XAxisConfig/XAxisPainter classes with TDD"
+    },
+    {
+      "id": "phase-2", 
+      "name": "US1: Themed X-Axis Rendering (P1 MVP)",
+      "description": "Core deliverable - X-axis renders with same visual styling as Y-axis"
+    },
+    {
+      "id": "phase-3",
+      "name": "US2: Themed Crosshair X-Value Label (P1)",
+      "description": "Crosshair X-value label matches Y-axis label styling"
+    },
+    {
+      "id": "phase-4",
+      "name": "US3 & US4: Config API + Integration (P2)",
+      "description": "Full XAxisConfig API and backward compatibility verification"
+    },
+    {
+      "id": "phase-5",
+      "name": "Polish & Verification",
+      "description": "Final quality gates, visual verification, documentation"
+    }
+  ],
+
+  "tasks": [
+    {
+      "task_id": 1,
+      "phase_id": "phase-1",
+      "title": "RED: Write failing tests for XAxisConfig and XAxisPainter foundation",
+      "description": "Write comprehensive unit tests for XAxisConfig (17 properties, validation, computed properties) and XAxisPainter structure. Tests MUST FAIL.",
+      "tdd_red_phase": true,
+      "speckit_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008"],
+      "priority": "P0"
+    },
+    {
+      "task_id": 2,
+      "phase_id": "phase-1",
+      "title": "GREEN: Implement XAxisConfig and XAxisPainter foundation",
+      "description": "Implement XAxisConfig with all 17 properties matching YAxisConfig pattern. Implement XAxisPainter shell with stub methods.",
+      "dependencies": [1],
+      "speckit_tasks": ["T009", "T010", "T011"],
+      "priority": "P0"
+    },
+    {
+      "task_id": 3,
+      "phase_id": "phase-2",
+      "title": "RED: Write failing tests for themed X-axis rendering",
+      "description": "Write unit tests for resolveAxisColor(), generateTicks(), formatTickLabel(), paint() methods. Write integration test verifying XAxisPainter.paint() is called from ChartRenderBox. Tests MUST FAIL.",
+      "tdd_red_phase": true,
+      "dependencies": [2],
+      "speckit_tasks": ["T012", "T013", "T014", "T015", "T016"],
+      "priority": "P1"
+    },
+    {
+      "task_id": 4,
+      "phase_id": "phase-2",
+      "title": "GREEN: Implement themed X-axis rendering (MVP)",
+      "description": "Implement resolveAxisColor() using AxisColorResolver pattern, generateTicks() with nice-number algorithm, formatTickLabel(), paint() with actual canvas drawing. Wire XAxisPainter into ChartRenderBox and bypass legacy XAxisRenderer.",
+      "dependencies": [3],
+      "speckit_tasks": ["T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024"],
+      "priority": "P1"
+    },
+    {
+      "task_id": 5,
+      "phase_id": "phase-2",
+      "title": "US1 Visual Verification Demo",
+      "description": "Create x_axis_theming_demo.dart showing themed X-axis matching Y-axis styling. Run and capture screenshot for visual verification.",
+      "dependencies": [4],
+      "speckit_tasks": ["T025"],
+      "priority": "P1"
+    },
+    {
+      "task_id": 6,
+      "phase_id": "phase-3",
+      "title": "RED: Write failing tests for themed crosshair X-value label",
+      "description": "Write unit tests for CrosshairRenderer accepting xAxisConfig, themed background (alpha 0.15), themed border (alpha 0.6), value-only format. Write integration test for config flow. Tests MUST FAIL.",
+      "tdd_red_phase": true,
+      "dependencies": [4],
+      "speckit_tasks": ["T026", "T026a"],
+      "priority": "P1"
+    },
+    {
+      "task_id": 7,
+      "phase_id": "phase-3",
+      "title": "GREEN: Implement themed crosshair X-value label",
+      "description": "Modify CrosshairRenderer.paint() signature to accept xAxisConfig (NOT constructor - it's const). Update X-value label styling to match Y-axis pattern. Pass XAxisConfig from ChartRenderBox.",
+      "dependencies": [6],
+      "speckit_tasks": ["T027", "T028", "T029", "T030", "T031", "T032"],
+      "priority": "P1"
+    },
+    {
+      "task_id": 8,
+      "phase_id": "phase-4",
+      "title": "RED: Write failing tests for XAxisConfig API and backward compatibility",
+      "description": "Write property verification tests for all 17 properties affecting rendering. Write backward compatibility tests for charts without XAxisConfig. Tests MUST FAIL.",
+      "tdd_red_phase": true,
+      "dependencies": [7],
+      "speckit_tasks": ["T033", "T040"],
+      "priority": "P2"
+    },
+    {
+      "task_id": 9,
+      "phase_id": "phase-4",
+      "title": "GREEN: Implement full XAxisConfig API and ensure backward compatibility",
+      "description": "Verify all 17 properties are documented and affect rendering. Implement axis title with labelDisplay modes. Handle missing XAxisConfig gracefully. Deprecate legacy XAxisRenderer.",
+      "dependencies": [8],
+      "speckit_tasks": ["T034", "T035", "T036", "T037", "T038", "T039", "T041", "T042", "T043", "T044", "T045"],
+      "priority": "P2"
+    },
+    {
+      "task_id": 10,
+      "phase_id": "phase-5",
+      "title": "Final Quality Gates and Documentation",
+      "description": "Run flutter analyze on all modified files. Verify integration requirements (paint() called, no legacy renderer). Run all tests. Visual verification with screenshot. Update CHANGELOG.md.",
+      "dependencies": [9],
+      "speckit_tasks": ["T046", "T047", "T048", "T049", "T050", "T051"],
+      "priority": "P2"
+    }
+  ],
+
+  "tdd_relationships": [
+    { "red_task_id": 1, "green_task_id": 2 },
+    { "red_task_id": 3, "green_task_id": 4 },
+    { "red_task_id": 6, "green_task_id": 7 },
+    { "red_task_id": 8, "green_task_id": 9 }
+  ],
+
+  "context_files": [
+    "lib/src/models/y_axis_config.dart",
+    "lib/src/rendering/multi_axis_painter.dart",
+    "lib/src/rendering/axis_color_resolver.dart",
+    "lib/src/rendering/chart_render_box.dart",
+    "lib/src/rendering/modules/crosshair_renderer.dart",
+    "lib/src/axis/x_axis_renderer.dart",
+    "docs/design/X_AXIS_RENDERING_UNIFICATION.md"
+  ],
+
+  "critical_integration_checks": {
+    "$comment": "These checks prevent the Sprint 017 failure mode",
+    "checks": [
+      {
+        "id": "INT-001",
+        "description": "XAxisPainter.paint() is called from ChartRenderBox",
+        "command": "grep -r '_xAxisPainter.paint' lib/src/rendering/chart_render_box.dart",
+        "expect": "at least 1 match"
+      },
+      {
+        "id": "INT-002", 
+        "description": "XAxisPainter.paint() contains actual drawing code",
+        "command": "grep -E 'canvas\\.draw|TextPainter.*paint' lib/src/rendering/x_axis_painter.dart",
+        "expect": "at least 3 matches"
+      },
+      {
+        "id": "INT-003",
+        "description": "Legacy XAxisRenderer not used for rendering",
+        "command": "grep -E 'XAxisRenderer.*paint|_xAxisRenderer\\.paint' lib/src/rendering/chart_render_box.dart",
+        "expect": "0 matches or commented out"
+      },
+      {
+        "id": "INT-004",
+        "description": "XAxisConfig passed to CrosshairRenderer.paint()",
+        "command": "grep 'xAxisConfig' lib/src/rendering/chart_render_box.dart",
+        "expect": "at least 1 match in _crosshairRenderer.paint() call"
+      }
+    ]
+  },
+
+  "success_criteria": [
+    "SC-001: X-axis visually matches Y-axis styling (same color, same label box style)",
+    "SC-002: Crosshair X-value label shows value-only format (no 'X:' prefix)",
+    "SC-003: Crosshair X-value label has semi-transparent themed background",
+    "SC-004: All 17 XAxisConfig properties affect rendering",
+    "SC-005: Existing charts render correctly without code changes",
+    "SC-006: XAxisPainter.paint() is called from ChartRenderBox (integration test)",
+    "SC-007: Legacy XAxisRenderer is not used for rendering"
+  ],
+
+  "notes": [
+    "Sprint 017 failed 5 times because XAxisPainter was created but paint() was never called",
+    "This sprint has explicit integration checks (INT-001 to INT-004) to prevent that failure",
+    "CrosshairRenderer is static const - cannot store state, must pass xAxisConfig via paint() params",
+    "Reuse AxisColorResolver pattern for color resolution - do not reinvent",
+    "Copy _niceNum() and cache invalidation patterns from MultiAxisPainter"
+  ]
+}
