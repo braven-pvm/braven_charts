@@ -13,26 +13,26 @@ Configuration object for X-axis appearance and behavior.
 
 **Properties**:
 
-| Property             | Type                   | Default               | Description                        |
-| -------------------- | ---------------------- | --------------------- | ---------------------------------- |
-| `color`              | `Color?`               | null (→ first series) | Themed color for all axis elements |
-| `label`              | `String?`              | null                  | Axis title text (e.g., ""Time"")   |
-| `unit`               | `String?`              | null                  | Unit suffix (e.g., ""s"", ""km"")  |
-| `min`                | `double?`              | null (→ data min)     | Explicit minimum X value           |
-| `max`                | `double?`              | null (→ data max)     | Explicit maximum X value           |
-| `visible`            | `bool`                 | true                  | Whether to render the axis         |
-| `showAxisLine`       | `bool`                 | true                  | Show horizontal axis line          |
-| `showTicks`          | `bool`                 | true                  | Show tick marks                    |
-| `showCrosshairLabel` | `bool`                 | true                  | Show crosshair X-value label       |
-| `crosshairLabelPosition` | `CrosshairLabelPosition` | overAxis           | Where to position crosshair label  |
-| `labelDisplay`       | `AxisLabelDisplay`     | labelWithUnit         | How to display label/unit          |
-| `minHeight`          | `double`               | 0.0                   | Minimum height of X-axis area      |
-| `maxHeight`          | `double`               | 60.0                  | Maximum height of X-axis area      |
-| `tickLabelPadding`   | `double`               | 4.0                   | Gap between tick and label         |
-| `axisLabelPadding`   | `double`               | 5.0                   | Gap between labels and title       |
-| `axisMargin`         | `double`               | 8.0                   | Margin from plot area              |
-| `tickCount`          | `int?`                 | null (→ auto)         | Preferred tick count               |
-| `labelFormatter`     | `XAxisLabelFormatter?` | null                  | Custom value formatter             |
+| Property                 | Type                     | Default               | Description                        |
+| ------------------------ | ------------------------ | --------------------- | ---------------------------------- |
+| `color`                  | `Color?`                 | null (→ first series) | Themed color for all axis elements |
+| `label`                  | `String?`                | null                  | Axis title text (e.g., ""Time"")   |
+| `unit`                   | `String?`                | null                  | Unit suffix (e.g., ""s"", ""km"")  |
+| `min`                    | `double?`                | null (→ data min)     | Explicit minimum X value           |
+| `max`                    | `double?`                | null (→ data max)     | Explicit maximum X value           |
+| `visible`                | `bool`                   | true                  | Whether to render the axis         |
+| `showAxisLine`           | `bool`                   | true                  | Show horizontal axis line          |
+| `showTicks`              | `bool`                   | true                  | Show tick marks                    |
+| `showCrosshairLabel`     | `bool`                   | true                  | Show crosshair X-value label       |
+| `crosshairLabelPosition` | `CrosshairLabelPosition` | overAxis              | Where to position crosshair label  |
+| `labelDisplay`           | `AxisLabelDisplay`       | labelWithUnit         | How to display label/unit          |
+| `minHeight`              | `double`                 | 0.0                   | Minimum height of X-axis area      |
+| `maxHeight`              | `double`                 | 60.0                  | Maximum height of X-axis area      |
+| `tickLabelPadding`       | `double`                 | 4.0                   | Gap between tick and label         |
+| `axisLabelPadding`       | `double`                 | 5.0                   | Gap between labels and title       |
+| `axisMargin`             | `double`                 | 8.0                   | Margin from plot area              |
+| `tickCount`              | `int?`                   | null (→ auto)         | Preferred tick count               |
+| `labelFormatter`         | `XAxisLabelFormatter?`   | null                  | Custom value formatter             |
 
 **Validation Rules** (matching YAxisConfig asserts):
 
