@@ -5,7 +5,8 @@ import 'dart:math' as math;
 import 'dart:ui'
     show Canvas, Color, Offset, Paint, PaintingStyle, Rect, TextDirection;
 
-import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
+import 'package:flutter/painting.dart'
+    show FontWeight, TextPainter, TextSpan, TextStyle;
 
 import '../models/chart_series.dart';
 import '../models/data_range.dart';
@@ -114,6 +115,43 @@ class XAxisPainter {
         Offset(
           x - textPainter.width / 2,
           plotArea.bottom + tickLength + config.tickLabelPadding,
+        ),
+      );
+    }
+
+    // Draw axis label if configured
+    if (config.shouldShowAxisLabel && config.label != null) {
+      final axisLabelText =
+          config.shouldAppendUnitToLabel && config.unit != null
+              ? '${config.label} (${config.unit})'
+              : config.label!;
+
+      final axisLabelPainter = TextPainter(
+        text: TextSpan(
+          text: axisLabelText,
+          style: labelStyle.copyWith(
+            color: axisColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      // Position the axis label centered below the tick labels
+      const tickLength = 6.0;
+      // Estimate tick label height (approximately fontSize * 1.2)
+      final tickLabelHeight = labelStyle.fontSize ?? 12.0 * 1.2;
+      final axisLabelY = plotArea.bottom +
+          tickLength +
+          config.tickLabelPadding +
+          tickLabelHeight +
+          config.axisLabelPadding;
+
+      axisLabelPainter.paint(
+        canvas,
+        Offset(
+          plotArea.left + (plotArea.width - axisLabelPainter.width) / 2,
+          axisLabelY,
         ),
       );
     }
