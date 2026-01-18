@@ -5,7 +5,8 @@
 
 import 'dart:math' show log, ln10, pow;
 
-import '../models/axis_config.dart' as public_config;
+import '../models/x_axis_config.dart';
+import '../models/y_axis_config.dart';
 import 'axis_config.dart';
 import 'linear_scale.dart';
 import 'tick.dart';
@@ -18,9 +19,8 @@ import 'tick_generator.dart';
 ///
 /// **Usage**:
 /// ```dart
-/// final xAxis = Axis.fromPublicConfig(
-///   config: AxisConfig(label: 'Time'),
-///   isXAxis: true,
+/// final xAxis = Axis.fromXAxisConfig(
+///   config: XAxisConfig(label: 'Time'),
 ///   dataMin: 0,
 ///   dataMax: 100,
 /// );
@@ -34,8 +34,9 @@ import 'tick_generator.dart';
 class Axis {
   /// Creates an axis from an internal configuration.
   ///
-  /// **Prefer [Axis.fromPublicConfig]** for creating axes from the public API.
-  /// This constructor is for internal use when you already have an [InternalAxisConfig].
+  /// **Prefer [Axis.fromXAxisConfig]** or [Axis.fromYAxisConfig] for creating
+  /// axes from the public API. This constructor is for internal use when you
+  /// already have an [InternalAxisConfig].
   Axis({
     required this.config,
     required double dataMin,
@@ -57,23 +58,20 @@ class Axis {
     ticks = _generateTicks();
   }
 
-  /// Creates an axis from the public AxisConfig API.
+  /// Creates an axis from the public XAxisConfig API.
   ///
-  /// This is the recommended way to create axes from widget parameters.
-  /// The [isXAxis] parameter determines orientation and default position.
+  /// This is the recommended way to create X-axes from widget parameters.
   ///
   /// Example:
   /// ```dart
-  /// final xAxis = Axis.fromPublicConfig(
-  ///   config: AxisConfig(label: 'Time', showGrid: true),
-  ///   isXAxis: true,
+  /// final xAxis = Axis.fromXAxisConfig(
+  ///   config: XAxisConfig(label: 'Time'),
   ///   dataMin: 0,
   ///   dataMax: 100,
   /// );
   /// ```
-  factory Axis.fromPublicConfig({
-    required public_config.AxisConfig config,
-    required bool isXAxis,
+  factory Axis.fromXAxisConfig({
+    required XAxisConfig config,
     required double dataMin,
     required double dataMax,
     double pixelMin = 0,
@@ -81,7 +79,29 @@ class Axis {
     String Function(double value)? labelFormatter,
   }) {
     return Axis(
-      config: InternalAxisConfig.fromPublicConfig(config, isXAxis: isXAxis),
+      config: InternalAxisConfig.fromXAxisConfig(config),
+      dataMin: dataMin,
+      dataMax: dataMax,
+      pixelMin: pixelMin,
+      pixelMax: pixelMax,
+      labelFormatter: labelFormatter,
+    );
+  }
+
+  /// Creates an axis from the public YAxisConfig API.
+  ///
+  /// This is used for internal transform calculations when a single
+  /// primary Y-axis is needed.
+  factory Axis.fromYAxisConfig({
+    required YAxisConfig config,
+    required double dataMin,
+    required double dataMax,
+    double pixelMin = 0,
+    double pixelMax = 100,
+    String Function(double value)? labelFormatter,
+  }) {
+    return Axis(
+      config: InternalAxisConfig.fromYAxisConfig(config),
       dataMin: dataMin,
       dataMax: dataMax,
       pixelMin: pixelMin,
@@ -148,8 +168,7 @@ class Axis {
     // Check if interval changed significantly (>25% to prevent oscillation)
     // The nice number sequence is 1→2→5→10 (100%, 150%, 100% jumps)
     // Using 25% threshold prevents flickering between adjacent nice numbers
-    final intervalChanged = _lastTickInterval == null ||
-        (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
+    final intervalChanged = _lastTickInterval == null || (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
 
     // Check if we need new ticks because data extends beyond current tick range
     // This works for both expand mode and scroll mode:
@@ -157,16 +176,13 @@ class Axis {
     // - Scroll: triggers when viewport slides past tick coverage
     // Use 1.0× interval threshold to regenerate only when we've scrolled a full tick
     bool needsNewTicks = false;
-    if (!intervalChanged &&
-        _lastTickInterval != null &&
-        _lastRightmostTick != null) {
+    if (!intervalChanged && _lastTickInterval != null && _lastRightmostTick != null) {
       // Need new tick on the right if data extends past last tick by a full interval
       if (newDataMax > _lastRightmostTick! + _lastTickInterval!) {
         needsNewTicks = true;
       }
       // Need new tick on the left if data extends past first tick by a full interval
-      if (_lastLeftmostTick != null &&
-          newDataMin < _lastLeftmostTick! - _lastTickInterval!) {
+      if (_lastLeftmostTick != null && newDataMin < _lastLeftmostTick! - _lastTickInterval!) {
         needsNewTicks = true;
       }
     }

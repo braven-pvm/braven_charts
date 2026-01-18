@@ -41,12 +41,11 @@ void main() {
             child: SizedBox(
               width: 800,
               height: 600,
-              child: BravenChart(
-                chartType: ChartType.line,
+              child: BravenChartPlus(
                 series: [series],
                 theme: ChartTheme.defaultLight,
-                xAxis: AxisConfig.defaults(),
-                yAxis: AxisConfig.defaults(),
+                xAxisConfig: const XAxisConfig(),
+                yAxis: YAxisConfig(position: YAxisPosition.left),
                 interactionConfig: const InteractionConfig(
                   keyboard: KeyboardConfig(enabled: true),
                   enableZoom: true,
@@ -123,4 +122,3 @@ void main() {
     expect(true, true);
   });
 }
-

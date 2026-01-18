@@ -15,14 +15,14 @@ class XAxisRenderingDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Note: XAxisConfig is used by XAxisPainter internally.
-    // The BravenChartPlus widget currently uses AxisConfig for xAxis parameter.
-    final xAxisConfig = const AxisConfig(
+    final xAxisConfig = const XAxisConfig(
       label: 'Time (s)',
-      showAxis: true,
+      color: Colors.orange,
+      showAxisLine: true,
       showTicks: true,
-      showLabels: true,
-      axisColor: Colors.blue,
+      labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
+      crosshairLabelPosition: CrosshairLabelPosition.overAxis,
+      showCrosshairLabel: false,
     );
 
     return MaterialApp(
@@ -70,15 +70,10 @@ class XAxisRenderingDemo extends StatelessWidget {
                       unit: 'm/s²',
                     ),
                   ],
-                  xAxis: xAxisConfig,
-                  xAxisConfig: XAxisConfig(
-                      crosshairLabelPosition: CrosshairLabelPosition.overAxis,
-                      label: 'Time (s)',
-                      color: Colors.blue,
-                      labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit),
+                  xAxisConfig: xAxisConfig,
                   yAxis: YAxisConfig(
                     position: YAxisPosition.left,
-                    crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
+                    crosshairLabelPosition: CrosshairLabelPosition.overAxis,
                     color: Colors.orange,
                   ),
                   normalizationMode: NormalizationMode.none,

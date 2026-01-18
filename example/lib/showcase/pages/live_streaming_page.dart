@@ -952,8 +952,8 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
 
             scrollbarTheme:
                 ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-            xAxis: AxisConfig(
-              showAxis: _optionsController.showAxisLines,
+            xAxisConfig: XAxisConfig(
+              showAxisLine: _optionsController.showAxisLines,
             ),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,

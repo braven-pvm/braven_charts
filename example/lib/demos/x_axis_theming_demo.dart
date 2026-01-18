@@ -17,13 +17,12 @@ class XAxisThemingDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     // Define themed X-axis configuration with explicit color
     // This demonstrates X-axis now supports the same theming as Y-axis
-    const xAxisConfig = AxisConfig(
+    const xAxisConfig = XAxisConfig(
       label: 'Time (s)',
-      axisColor: Colors.blue, // Themed color for X-axis
-      showAxis: true,
+      color: Colors.blue, // Themed color for X-axis
+      showAxisLine: true,
       showTicks: true,
-      showLabels: true,
-      tickColor: Colors.blue,
+      labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
     );
 
     return MaterialApp(
@@ -70,7 +69,7 @@ class XAxisThemingDemo extends StatelessWidget {
                       unit: '°C',
                     ),
                   ],
-                  xAxis: xAxisConfig,
+                  xAxisConfig: xAxisConfig,
                   // Y-axis with contrasting themed color for visual comparison
                   yAxis: YAxisConfig(
                     position: YAxisPosition.left,

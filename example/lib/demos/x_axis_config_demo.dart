@@ -5,8 +5,7 @@
 // Demonstrates XAxisConfig features through XAxisPainter.
 //
 // Note: This demo focuses on XAxisPainter functionality which uses XAxisConfig.
-// The BravenChartPlus widget uses the older AxisConfig. Future integration
-// will connect XAxisConfig to the main chart widget.
+// BravenChartPlus now accepts XAxisConfig directly.
 
 import 'package:braven_charts/src/models/data_range.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
@@ -213,8 +212,7 @@ class _XAxisDemoPainter extends CustomPainter {
     );
 
     // Paint the axis
-    painter.paint(
-        canvas, Rect.fromLTWH(0, 0, size.width, size.height), plotArea);
+    painter.paint(canvas, Rect.fromLTWH(0, 0, size.width, size.height), plotArea);
   }
 
   @override

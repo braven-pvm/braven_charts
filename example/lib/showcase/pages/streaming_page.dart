@@ -240,8 +240,8 @@ class _StreamingPageState extends State<StreamingPage> {
             showYScrollbar: _optionsController.showYScrollbar,
             scrollbarTheme:
                 ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-            xAxis: AxisConfig(
-              showAxis: _optionsController.showAxisLines,
+            xAxisConfig: XAxisConfig(
+              showAxisLine: _optionsController.showAxisLines,
             ),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,

@@ -342,8 +342,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Athletic Performance',
       subtitle: 'Power (W), Heart Rate (bpm), Cadence (rpm)',
       child: BravenChartPlus(
-        key:
-            const ValueKey('athletic'), // Prevent RenderBox reuse across charts
+        key: const ValueKey('athletic'), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'power',
@@ -399,8 +398,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxis: AxisConfig(
-          showAxis: _optionsController.showAxisLines,
+        xAxisConfig: XAxisConfig(
+          showAxisLine: _optionsController.showAxisLines,
         ),
         yAxis: YAxisConfig(
           position: YAxisPosition.left,
@@ -423,8 +422,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Environmental Monitoring',
       subtitle: 'Temperature (°C) and Pressure (hPa)',
       child: BravenChartPlus(
-        key: const ValueKey(
-            'scientific'), // Prevent RenderBox reuse across charts
+        key: const ValueKey('scientific'), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'temperature',
@@ -463,8 +461,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxis: AxisConfig(
-          showAxis: _optionsController.showAxisLines,
+        xAxisConfig: XAxisConfig(
+          showAxisLine: _optionsController.showAxisLines,
         ),
         yAxis: YAxisConfig(
           position: YAxisPosition.left,
@@ -558,8 +556,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxis: AxisConfig(
-          showAxis: _optionsController.showAxisLines,
+        xAxisConfig: XAxisConfig(
+          showAxisLine: _optionsController.showAxisLines,
           label: "Time(M)",
         ),
         yAxis: YAxisConfig(
@@ -574,8 +572,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           enablePan: _optionsController.enablePan,
           crosshair: const CrosshairConfig(
             enabled: true,
-            displayMode: CrosshairDisplayMode
-                .tracking, // Force tracking mode for unified tooltip
+            displayMode: CrosshairDisplayMode.tracking, // Force tracking mode for unified tooltip
           ),
           tooltip: const TooltipConfig(enabled: true),
         ),
@@ -667,8 +664,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxis: AxisConfig(
-          showAxis: _optionsController.showAxisLines,
+        xAxisConfig: XAxisConfig(
+          showAxisLine: _optionsController.showAxisLines,
           label: '',
         ),
         yAxis: YAxisConfig(
@@ -691,9 +688,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
   Widget _buildStatusPanel() {
     final annotationCount = _annotationController.annotations.length;
-    final annotationStatus = _showAnnotations
-        ? '$annotationCount visible'
-        : '$annotationCount hidden';
+    final annotationStatus = _showAnnotations ? '$annotationCount visible' : '$annotationCount hidden';
 
     if (_selectedDemo == 0) {
       return StatusPanel(
@@ -869,8 +864,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       ChartDataPoint(x: 11.25, y: 300), // Jump to VT2 phase 2 at minute 11.25
       ChartDataPoint(x: 12.5, y: 300), // Jump to VO2 max phase 1 at minute 12.5
       ChartDataPoint(x: 12.5, y: 325), // Jump to VO2 max phase 1 at minute 12.5
-      ChartDataPoint(
-          x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
+      ChartDataPoint(x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
 
       ChartDataPoint(x: 15.0, y: 325), // End point (maintains last level)
     ];

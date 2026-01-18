@@ -2,19 +2,20 @@
 // Phase 0 Prototype - Axis System
 //
 // INTERNAL USE ONLY - This class is for internal axis rendering.
-// For public API, use AxisConfig from models/axis_config.dart
+// For public API, use XAxisConfig or YAxisConfig.
 
 import 'package:flutter/material.dart';
 
-import '../models/axis_config.dart' as public_config;
 import '../models/enums.dart';
+import '../models/x_axis_config.dart';
 
 /// Internal configuration for axis rendering.
 ///
 /// **INTERNAL USE ONLY** - This class is used by the axis rendering system.
-/// For public API configuration, use [public_config.AxisConfig] from models/axis_config.dart.
+/// For public API configuration, use [XAxisConfig] or [YAxisConfig].
 ///
-/// This class is created from the public AxisConfig via [fromPublicConfig].
+/// This class is created from public configs via [fromXAxisConfig] or
+/// [fromYAxisConfig].
 class InternalAxisConfig {
   const InternalAxisConfig({
     this.label = '',
@@ -31,63 +32,62 @@ class InternalAxisConfig {
     this.labelPadding = 8,
   });
 
-  /// Creates an internal config from the public AxisConfig.
+  /// Creates an internal config from the public XAxisConfig.
   ///
   /// Maps public API properties to internal rendering properties:
-  /// - [public_config.AxisConfig.showAxis] → [showAxisLine]
-  /// - [public_config.AxisConfig.showTicks] → [showTickMarks]
-  /// - [public_config.AxisConfig.axisPosition] → [position]
-  /// - [public_config.AxisConfig.tickLength] → [tickLength]
-  ///
-  /// The [isXAxis] parameter determines the axis orientation and default position.
-  factory InternalAxisConfig.fromPublicConfig(
-    public_config.AxisConfig config, {
-    required bool isXAxis,
-  }) {
-    // Determine orientation based on axis type
-    final orientation =
-        isXAxis ? AxisOrientation.horizontal : AxisOrientation.vertical;
-
-    // Determine position from public config or use default based on axis type
-    final position = _mapAxisPosition(config.axisPosition, isXAxis);
-
+  /// - [XAxisConfig.showAxisLine] → [showAxisLine]
+  /// - [XAxisConfig.showTicks] → [showTickMarks]
+  /// - [XAxisConfig.visible] → [showAxisLine]/[showTickMarks] gating
+  factory InternalAxisConfig.fromXAxisConfig(XAxisConfig config) {
     return InternalAxisConfig(
       label: config.label ?? '',
-      orientation: orientation,
-      position: position,
-      labelStyle: config.labelStyle ??
-          const TextStyle(fontSize: 12, color: Colors.black87),
-      tickLabelStyle: config.labelStyle ??
-          const TextStyle(fontSize: 10, color: Colors.black54),
-      axisColor: config.axisColor ?? Colors.black87,
-      gridColor: config.gridColor ?? const Color(0xFFE0E0E0),
-      showGrid: config.showGrid,
-      showAxisLine: config.showAxis,
-      showTickMarks: config.showTicks,
-      tickLength: config.tickLength,
-      labelPadding: 8, // Not exposed in public API, use default
+      orientation: AxisOrientation.horizontal,
+      position: AxisPosition.bottom,
+      labelStyle: const TextStyle(fontSize: 12, color: Colors.black87),
+      tickLabelStyle: const TextStyle(fontSize: 10, color: Colors.black54),
+      axisColor: config.color ?? Colors.black87,
+      gridColor: const Color(0xFFE0E0E0),
+      showGrid: false,
+      showAxisLine: config.visible && config.showAxisLine,
+      showTickMarks: config.visible && config.showTicks,
+      tickLength: 6,
+      labelPadding: 8,
     );
   }
 
-  /// Maps public AxisPosition to internal AxisPosition with sensible defaults.
-  static AxisPosition _mapAxisPosition(
-      AxisPosition publicPosition, bool isXAxis) {
-    // The public AxisPosition uses the same enum as internal,
-    // but we need to validate the position makes sense for the axis type
-    if (isXAxis) {
-      // X-axis should be top or bottom
-      if (publicPosition == AxisPosition.left ||
-          publicPosition == AxisPosition.right) {
-        return AxisPosition.bottom; // Default for X-axis
-      }
-    } else {
-      // Y-axis should be left or right
-      if (publicPosition == AxisPosition.top ||
-          publicPosition == AxisPosition.bottom) {
-        return AxisPosition.left; // Default for Y-axis
-      }
+  /// Creates an internal config from the public YAxisConfig.
+  ///
+  /// Maps public API properties to internal rendering properties:
+  /// - [YAxisConfig.showAxisLine] → [showAxisLine]
+  /// - [YAxisConfig.showTicks] → [showTickMarks]
+  /// - [YAxisConfig.visible] → [showAxisLine]/[showTickMarks] gating
+  factory InternalAxisConfig.fromYAxisConfig(YAxisConfig config) {
+    return InternalAxisConfig(
+      label: config.label ?? '',
+      orientation: AxisOrientation.vertical,
+      position: _mapYAxisPosition(config.position),
+      labelStyle: const TextStyle(fontSize: 12, color: Colors.black87),
+      tickLabelStyle: const TextStyle(fontSize: 10, color: Colors.black54),
+      axisColor: config.color ?? Colors.black87,
+      gridColor: const Color(0xFFE0E0E0),
+      showGrid: false,
+      showAxisLine: config.visible && config.showAxisLine,
+      showTickMarks: config.visible && config.showTicks,
+      tickLength: 6,
+      labelPadding: 8,
+    );
+  }
+
+  /// Maps YAxisPosition to internal AxisPosition with sensible defaults.
+  static AxisPosition _mapYAxisPosition(YAxisPosition position) {
+    switch (position) {
+      case YAxisPosition.right:
+      case YAxisPosition.rightOuter:
+        return AxisPosition.right;
+      case YAxisPosition.left:
+      case YAxisPosition.leftOuter:
+        return AxisPosition.left;
     }
-    return publicPosition;
   }
 
   /// Label for the entire axis (e.g., "Time", "Price").

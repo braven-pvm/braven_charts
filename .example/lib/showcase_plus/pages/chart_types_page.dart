@@ -251,19 +251,14 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       chartType: _isLineChart ? ChartType.line : ChartType.bar,
       lineStyle: _lineStyle,
       series: series,
-      xAxis: AxisConfig(
-        orientation: AxisOrientation.horizontal,
-        position: AxisPosition.bottom,
-        showGrid: _showGrid,
+      xAxisConfig: XAxisConfig(
         showAxisLine: _showAxis,
-        showTickMarks: _showAxis,
+        showTicks: _showAxis,
       ),
-      yAxis: AxisConfig(
-        orientation: AxisOrientation.vertical,
-        position: AxisPosition.left,
-        showGrid: _showGrid,
+      yAxis: YAxisConfig(
+        position: YAxisPosition.left,
         showAxisLine: _showAxis,
-        showTickMarks: _showAxis,
+        showTicks: _showAxis,
       ),
       interactionConfig: InteractionConfig(
         tooltip: TooltipConfig(enabled: _showTooltip),
@@ -294,4 +289,3 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
     return chart;
   }
 }
-

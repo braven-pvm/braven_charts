@@ -120,18 +120,15 @@ class _StreamingPageState extends State<StreamingPage> {
     );
 
     // Create axis configs
-    final xAxis = AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
+    final xAxis = XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
     );
 
-    final yAxis = AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
+    final yAxis = YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
     );
 
     return Row(
@@ -163,7 +160,7 @@ class _StreamingPageState extends State<StreamingPage> {
                     dataStream: _dataStreamController.stream,
                     streamingConfig: streamingConfig,
                     streamingController: _streamingController,
-                    xAxis: xAxis,
+                    xAxisConfig: xAxis,
                     yAxis: yAxis,
                     showLegend: false,
                     backgroundColor: Colors.white,
@@ -177,9 +174,7 @@ class _StreamingPageState extends State<StreamingPage> {
                       animation: _streamingController,
                       builder: (context, _) {
                         return ElevatedButton.icon(
-                          onPressed: _streamingController.isStreaming
-                              ? _streamingController.pauseStreaming
-                              : _streamingController.resumeStreaming,
+                          onPressed: _streamingController.isStreaming ? _streamingController.pauseStreaming : _streamingController.resumeStreaming,
                           icon: Icon(
                             _streamingController.isStreaming ? Icons.pause : Icons.play_arrow,
                           ),
@@ -305,4 +300,3 @@ class _StreamingPageState extends State<StreamingPage> {
     );
   }
 }
-

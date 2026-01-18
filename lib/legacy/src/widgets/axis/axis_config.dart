@@ -23,8 +23,7 @@ class AxisRange {
   /// Creates an axis range with the specified min and max values.
   ///
   /// Throws [AssertionError] if min >= max.
-  const AxisRange(this.min, this.max)
-      : assert(min < max, 'Axis range min must be less than max');
+  const AxisRange(this.min, this.max) : assert(min < max, 'Axis range min must be less than max');
 
   /// The minimum value of the axis range.
   final double min;
@@ -53,32 +52,32 @@ class AxisRange {
 /// Example:
 /// ```dart
 /// // Standard axis with all components
-/// AxisConfig.defaults()
+/// LegacyAxisConfig.defaults()
 ///
 /// // Hidden axis for sparklines
-/// AxisConfig.hidden()
+/// LegacyAxisConfig.hidden()
 ///
 /// // Custom axis
-/// AxisConfig(
+/// LegacyAxisConfig(
 ///   label: 'Temperature (°C)',
 ///   range: AxisRange(-10, 50),
 ///   labelFormatter: (value) => '${value.toInt()}°C',
 ///   gridColor: Colors.grey.shade300,
 /// )
 /// ```
-class AxisConfig {
+class LegacyAxisConfig {
   // ========== Factory Constructors ==========
 
   /// Creates a standard axis configuration with all components visible.
-  factory AxisConfig.defaults() {
-    return const AxisConfig();
+  factory LegacyAxisConfig.defaults() {
+    return const LegacyAxisConfig();
   }
 
   /// Creates a hidden axis configuration (for sparklines, embedded charts).
   ///
   /// All axis components are hidden: axis line, grid, ticks, and labels.
-  factory AxisConfig.hidden() {
-    return const AxisConfig(
+  factory LegacyAxisConfig.hidden() {
+    return const LegacyAxisConfig(
       showAxis: false,
       showGrid: false,
       showTicks: false,
@@ -89,8 +88,8 @@ class AxisConfig {
   /// Creates a minimal axis configuration with grid lines only.
   ///
   /// Hides axis line, ticks, and labels but shows grid for reference.
-  factory AxisConfig.minimal() {
-    return const AxisConfig(
+  factory LegacyAxisConfig.minimal() {
+    return const LegacyAxisConfig(
       showAxis: false,
       showTicks: false,
       showLabels: false,
@@ -101,8 +100,8 @@ class AxisConfig {
   /// Creates a grid-only configuration.
   ///
   /// Shows only grid lines, hiding axis line, ticks, and labels.
-  factory AxisConfig.gridOnly() {
-    return const AxisConfig(
+  factory LegacyAxisConfig.gridOnly() {
+    return const LegacyAxisConfig(
       showAxis: false,
       showGrid: true,
       showTicks: false,
@@ -114,7 +113,7 @@ class AxisConfig {
   ///
   /// All parameters are optional with sensible defaults.
   /// Validation ensures positive widths and valid rotation angles.
-  const AxisConfig({
+  const LegacyAxisConfig({
     // Visibility
     this.showAxis = true,
     this.showGrid = true,
@@ -274,7 +273,7 @@ class AxisConfig {
   ///
   /// Example:
   /// ```dart
-  /// AxisConfig(
+  /// LegacyAxisConfig(
   ///   reservedSize: 60.0,  // Reserve 60px for labels
   /// )
   /// ```
@@ -300,7 +299,7 @@ class AxisConfig {
   // ========== Methods ==========
 
   /// Creates a copy of this configuration with specified properties overridden.
-  AxisConfig copyWith({
+  LegacyAxisConfig copyWith({
     // Visibility
     bool? showAxis,
     bool? showGrid,
@@ -340,7 +339,7 @@ class AxisConfig {
     bool? logarithmic,
     bool? inverted,
   }) {
-    return AxisConfig(
+    return LegacyAxisConfig(
       // Visibility
       showAxis: showAxis ?? this.showAxis,
       showGrid: showGrid ?? this.showGrid,
@@ -385,7 +384,7 @@ class AxisConfig {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is AxisConfig &&
+    return other is LegacyAxisConfig &&
         other.showAxis == showAxis &&
         other.showGrid == showGrid &&
         other.showTicks == showTicks &&

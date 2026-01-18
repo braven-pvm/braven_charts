@@ -524,7 +524,8 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
               width: 400,
               height: 300,
               theme: ChartTheme.defaultLight,
-              yAxis: AxisConfig.defaults().copyWith(
+              yAxis: YAxisConfig(
+                position: YAxisPosition.left,
                 label: 'Value',
               ),
               interactionConfig: InteractionConfig.defaultConfig(),
@@ -825,4 +826,3 @@ class _AdvancedFeaturesScreenState extends State<AdvancedFeaturesScreen> {
     );
   }
 }
-

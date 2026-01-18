@@ -155,36 +155,36 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
         const SizedBox(height: 16),
         _buildAxisPositionCard(
           'Default (Bottom + Left)',
-          'Standard positioning - X-axis at bottom, Y-axis on left',
-          AxisConfig.defaults(), // Bottom position (default)
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left),
+          'Standard positioning - X-axis bottom, Y-axis left',
+          const XAxisConfig(),
+          const YAxisConfig(position: YAxisPosition.left),
           Icons.south_west,
           Colors.blue,
         ),
         const SizedBox(height: 16),
         _buildAxisPositionCard(
-          'Top + Left',
-          'X-axis at top, Y-axis on left',
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.top),
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left),
+          'Alternate Left Axis',
+          'Y-axis left with alternate styling',
+          const XAxisConfig(),
+          const YAxisConfig(position: YAxisPosition.left),
           Icons.north_west,
           Colors.purple,
         ),
         const SizedBox(height: 16),
         _buildAxisPositionCard(
           'Bottom + Right',
-          'X-axis at bottom, Y-axis on right',
-          AxisConfig.defaults(), // Bottom position (default)
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.right),
+          'X-axis bottom, Y-axis right',
+          const XAxisConfig(),
+          const YAxisConfig(position: YAxisPosition.right),
           Icons.south_east,
           Colors.orange,
         ),
         const SizedBox(height: 16),
         _buildAxisPositionCard(
-          'Top + Right',
-          'X-axis at top, Y-axis on right',
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.top),
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.right),
+          'Bottom + Right (Alt)',
+          'Alternate styling for right Y-axis',
+          const XAxisConfig(),
+          const YAxisConfig(position: YAxisPosition.right),
           Icons.north_east,
           Colors.green,
         ),
@@ -195,8 +195,8 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
   Widget _buildAxisPositionCard(
     String title,
     String description,
-    AxisConfig xAxis,
-    AxisConfig yAxis,
+    XAxisConfig xAxis,
+    YAxisConfig yAxis,
     IconData icon,
     Color color,
   ) {
@@ -229,10 +229,10 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            BravenChart(
+            BravenChartPlus(
               chartType: ChartType.line,
               series: _series,
-              xAxis: xAxis,
+              xAxisConfig: xAxis,
               yAxis: yAxis,
               width: 400,
               height: 250,
@@ -247,8 +247,8 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'xAxis: AxisConfig.defaults()${xAxis.axisPosition == AxisPosition.top ? '.copyWith(\n  axisPosition: AxisPosition.top,\n)' : ''},\n'
-                'yAxis: AxisConfig.defaults()${yAxis.axisPosition == AxisPosition.right ? '.copyWith(\n  axisPosition: AxisPosition.right,\n)' : '.copyWith(\n  axisPosition: AxisPosition.left,\n)'},',
+                'xAxisConfig: XAxisConfig(),\n'
+                'yAxis: YAxisConfig(position: ${yAxis.position.name}),',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
@@ -277,38 +277,76 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
           ),
         ),
         _buildAxisPresetCard(
-          'defaults()',
+          'Default',
           'Full axes with labels and grid',
-          AxisConfig.defaults(),
-          AxisConfig.defaults().copyWith(axisPosition: AxisPosition.left),
+          const XAxisConfig(
+            showAxisLine: true,
+            showTicks: true,
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+          ),
+          const YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: true,
+            showTicks: true,
+            labelDisplay: AxisLabelDisplay.labelWithUnit,
+          ),
           Icons.grid_on,
           Colors.blue,
         ),
         const SizedBox(height: 16),
         _buildAxisPresetCard(
-          'hidden()',
+          'Hidden',
           'Perfect for sparklines - no axes shown',
-          AxisConfig.hidden(),
-          AxisConfig.hidden(),
+          const XAxisConfig(
+            visible: false,
+            showAxisLine: false,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
+          const YAxisConfig(
+            position: YAxisPosition.left,
+            visible: false,
+            showAxisLine: false,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
           Icons.visibility_off,
           Colors.purple,
           height: 120,
         ),
         const SizedBox(height: 16),
         _buildAxisPresetCard(
-          'minimal()',
+          'Minimal',
           'Only axis lines, no labels or grid',
-          AxisConfig.minimal(),
-          AxisConfig.minimal().copyWith(axisPosition: AxisPosition.left),
+          const XAxisConfig(
+            showAxisLine: true,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
+          const YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: true,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
           Icons.remove,
           Colors.orange,
         ),
         const SizedBox(height: 16),
         _buildAxisPresetCard(
-          'gridOnly()',
+          'Grid only',
           'Grid without axis lines',
-          AxisConfig.gridOnly(),
-          AxisConfig.gridOnly().copyWith(axisPosition: AxisPosition.left),
+          const XAxisConfig(
+            showAxisLine: false,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
+          const YAxisConfig(
+            position: YAxisPosition.left,
+            showAxisLine: false,
+            showTicks: false,
+            labelDisplay: AxisLabelDisplay.none,
+          ),
           Icons.grid_4x4,
           Colors.green,
         ),
@@ -319,8 +357,8 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
   Widget _buildAxisPresetCard(
     String title,
     String description,
-    AxisConfig xAxis,
-    AxisConfig yAxis,
+    XAxisConfig xAxis,
+    YAxisConfig yAxis,
     IconData icon,
     Color color, {
     double height = 250,
@@ -354,10 +392,10 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            BravenChart(
+            BravenChartPlus(
               chartType: ChartType.line,
               series: _series,
-              xAxis: xAxis,
+              xAxisConfig: xAxis,
               yAxis: yAxis,
               width: 400,
               height: height,
@@ -372,7 +410,7 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'xAxis: AxisConfig.$title,\nyAxis: AxisConfig.$title,',
+                'xAxisConfig: $title preset\nyAxis: $title preset',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 12,
@@ -415,20 +453,22 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            BravenChart(
+            BravenChartPlus(
               chartType: ChartType.area,
               series: _series,
               title: 'Custom Axes',
-              xAxis: const AxisConfig(
+              xAxisConfig: const XAxisConfig(
                 label: 'Time (seconds)',
-                showAxis: true,
-                showLabels: true,
-                showGrid: true,
-                axisPosition: AxisPosition.bottom,
+                showAxisLine: true,
+                showTicks: true,
+                labelDisplay: AxisLabelDisplay.labelWithUnit,
               ),
-              yAxis: AxisConfig.gridOnly().copyWith(
+              yAxis: YAxisConfig(
+                position: YAxisPosition.left,
                 label: 'Temperature (°C)',
-                axisPosition: AxisPosition.left,
+                showAxisLine: false,
+                showTicks: false,
+                labelDisplay: AxisLabelDisplay.none,
               ),
               width: 400,
               height: 300,
@@ -444,15 +484,19 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
               ),
               child: const Text(
                 '// Create from scratch\n'
-                'xAxis: AxisConfig(\n'
+                'xAxisConfig: XAxisConfig(\n'
                 '  label: \'Time (seconds)\',\n'
-                '  showAxis: true,\n'
-                '  showLabels: true,\n'
-                '  showGrid: true,\n'
+                '  showAxisLine: true,\n'
+                '  showTicks: true,\n'
+                '  labelDisplay: AxisLabelDisplay.labelWithUnit,\n'
                 '),\n\n'
-                '// Modify preset with copyWith()\n'
-                'yAxis: AxisConfig.gridOnly().copyWith(\n'
+                '// Configure a Y axis\n'
+                'yAxis: YAxisConfig(\n'
+                '  position: YAxisPosition.left,\n'
                 '  label: \'Temperature (°C)\',\n'
+                '  showAxisLine: false,\n'
+                '  showTicks: false,\n'
+                '  labelDisplay: AxisLabelDisplay.none,\n'
                 '),',
                 style: TextStyle(
                   fontFamily: 'monospace',
@@ -676,4 +720,3 @@ class _AxisAndThemingScreenState extends State<AxisAndThemingScreen> {
     );
   }
 }
-

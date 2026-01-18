@@ -162,7 +162,7 @@ class _GalleryPageState extends State<GalleryPage> {
                         hideDelay: Duration(milliseconds: 500),
                         showDelay: Duration(milliseconds: 50),
                         triggerMode: TooltipTriggerMode.hover)),
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Month',
                 ),
                 yAxis: YAxisConfig(
@@ -251,7 +251,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 normalizationMode: NormalizationMode.perSeries,
                 legendStyle:
                     const LegendStyle(orientation: LegendOrientation.vertical),
-                xAxis: const AxisConfig(showAxis: false),
+                xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   labelDisplay: AxisLabelDisplay.labelWithUnit,
@@ -334,7 +334,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(showAxis: false),
+                xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                 ),
@@ -414,7 +414,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Month',
                 ),
                 yAxis: YAxisConfig(
@@ -493,7 +493,8 @@ class _GalleryPageState extends State<GalleryPage> {
                   backgroundColor: const Color(0xFF0D1117),
                 ),
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Time (s)', showAxis: false),
+                xAxisConfig:
+                  const XAxisConfig(label: 'Time (s)', showAxisLine: false),
                 yAxis: YAxisConfig(position: YAxisPosition.left, label: 'mV'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
@@ -564,7 +565,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Hour',
                 ),
                 yAxis: YAxisConfig(
@@ -639,7 +640,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 legendStyle:
                     const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Day',
                 ),
                 yAxis: YAxisConfig(
@@ -714,7 +715,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(label: 'Week', showAxis: false),
+                xAxisConfig: const XAxisConfig(label: 'Week', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: '% Complete',
@@ -804,7 +805,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 normalizationMode: NormalizationMode.auto,
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(showAxis: false),
+                xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(
                     position: YAxisPosition.left, showAxisLine: true),
                 interactionConfig: const InteractionConfig(
@@ -884,7 +885,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 showLegend: true,
                 legendStyle:
                     const LegendStyle(orientation: LegendOrientation.vertical),
-                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                xAxisConfig:
+                  const XAxisConfig(label: 'Month', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'Revenue (\$)',
@@ -972,7 +974,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.dark,
                 showLegend: false,
                 normalizationMode: NormalizationMode.perSeries,
-                xAxis: const AxisConfig(label: 'Sample'),
+                xAxisConfig: const XAxisConfig(label: 'Sample'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -1060,7 +1062,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Week'),
+                xAxisConfig: const XAxisConfig(label: 'Week'),
                 yAxis:
                     YAxisConfig(position: YAxisPosition.left, label: 'Score'),
               ),
@@ -1157,7 +1159,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(label: 'X', showAxis: false),
+                xAxisConfig: const XAxisConfig(label: 'X', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'Y',
@@ -1268,7 +1270,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Time (s)',
                 ),
                 yAxis: YAxisConfig(
@@ -1363,7 +1365,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 series: [series],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(showAxis: false),
+                xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(
                     position: YAxisPosition.left, showAxisLine: false),
               ),
@@ -1467,7 +1469,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 series: [series],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Day', showAxis: false),
+                xAxisConfig: const XAxisConfig(label: 'Day', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'Price (\$)',
@@ -1597,7 +1599,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Hour',
                 ),
                 yAxis: YAxisConfig(
@@ -1714,7 +1716,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                xAxisConfig:
+                  const XAxisConfig(label: 'Month', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'USD',
@@ -1845,7 +1848,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 legendStyle:
                     const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
-                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                xAxisConfig:
+                  const XAxisConfig(label: 'Month', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'Value',
@@ -1972,7 +1976,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     fontSize: 11,
                   ),
                 ),
-                xAxis: const AxisConfig(
+                xAxisConfig: const XAxisConfig(
                   label: 'Hour',
                 ),
                 yAxis: YAxisConfig(
@@ -2123,7 +2127,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxis: const AxisConfig(label: 'Month', showAxis: false),
+                xAxisConfig:
+                  const XAxisConfig(label: 'Month', showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'K USD',

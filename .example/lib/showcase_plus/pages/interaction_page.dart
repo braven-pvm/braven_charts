@@ -124,18 +124,15 @@ class _InteractionPageState extends State<InteractionPage> {
     );
 
     // Create axis configs
-    final xAxis = const AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
+    final xAxis = const XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
     );
 
-    final yAxis = const AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
+    final yAxis = const YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
     );
 
     return Row(
@@ -164,7 +161,7 @@ class _InteractionPageState extends State<InteractionPage> {
                   child: BravenChartPlus(
                     chartType: ChartType.line,
                     series: series,
-                    xAxis: xAxis,
+                    xAxisConfig: xAxis,
                     yAxis: yAxis,
                     interactionConfig: interactionConfig.copyWith(
                       showFocusBorder: false,
@@ -315,4 +312,3 @@ class _InteractionPageState extends State<InteractionPage> {
     );
   }
 }
-

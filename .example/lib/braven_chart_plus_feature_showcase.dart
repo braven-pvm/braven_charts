@@ -1084,16 +1084,11 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
               chartType: ChartType.line,
               showXScrollbar: true,
               showYScrollbar: true,
-              xAxis: const AxisConfig(
-                orientation: AxisOrientation.horizontal,
-                position: AxisPosition.bottom,
+              xAxisConfig: const XAxisConfig(
                 label: "This is the X Label",
-                axisColor: Colors.blue,
-                gridColor: Colors.orange,
-                tickLength: 50,
-                showTickMarks: true,
-                showGrid: true,
+                color: Colors.blue,
                 showAxisLine: true,
+                showTicks: true,
               ),
               series: const [
                 LineChartSeries(
@@ -3175,4 +3170,3 @@ class _FeatureShowcasePageState extends State<FeatureShowcasePage> {
     });
   }
 }
-

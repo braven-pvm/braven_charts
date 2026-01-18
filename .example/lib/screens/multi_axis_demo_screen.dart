@@ -46,30 +46,53 @@ class MultiAxisDemoScreen extends StatelessWidget {
   }
 
   Widget _buildMultiAxisChart() {
-    // Sample data series
-    final powerSeries = ChartSeries(id: 'power', name: 'Power', points: _generatePowerData(), color: Colors.blue);
+    // Sample data series with inline Y-axis configs
+    final powerSeries = ChartSeries(
+      id: 'power',
+      name: 'Power',
+      points: _generatePowerData(),
+      color: Colors.blue,
+      yAxisConfig: const YAxisConfig(
+        position: YAxisPosition.left,
+        color: Colors.blue,
+        label: 'Power',
+        unit: 'W',
+        min: 0,
+        max: 400,
+        visible: true,
+      ),
+    );
 
-    final heartRateSeries = ChartSeries(id: 'heartRate', name: 'Heart Rate', points: _generateHeartRateData(), color: Colors.red);
+    final heartRateSeries = ChartSeries(
+      id: 'heartRate',
+      name: 'Heart Rate',
+      points: _generateHeartRateData(),
+      color: Colors.red,
+      yAxisConfig: const YAxisConfig(
+        position: YAxisPosition.right,
+        color: Colors.red,
+        label: 'HR',
+        unit: 'bpm',
+        min: 100,
+        max: 200,
+        visible: true,
+      ),
+    );
 
-    final speedSeries = ChartSeries(id: 'speed', name: 'Speed', points: _generateSpeedData(), color: Colors.green);
-
-    // Multi-axis configuration with 3 different axes
-    // Note: Using inline yAxisConfig on series is now the preferred approach
-    final multiAxisConfig = const MultiAxisConfig(
-      axes: [
-        // Left axis: Power (0-400W) - Blue
-        YAxisConfig(position: YAxisPosition.left, color: Colors.blue, label: 'Power', unit: 'W', min: 0, max: 400),
-        // Right axis: Heart Rate (100-200 bpm) - Red
-        YAxisConfig(position: YAxisPosition.right, color: Colors.red, label: 'HR', unit: 'bpm', min: 100, max: 200),
-        // Outer Right axis: Speed (0-50 km/h) - Green
-        YAxisConfig(position: YAxisPosition.rightOuter, color: Colors.green, label: 'Speed', unit: 'km/h', min: 0, max: 50),
-      ],
-      bindings: [
-        SeriesAxisBinding(seriesId: 'power', yAxisId: 'power_axis'),
-        SeriesAxisBinding(seriesId: 'heartRate', yAxisId: 'heartRate_axis'),
-        SeriesAxisBinding(seriesId: 'speed', yAxisId: 'speed_axis'),
-      ],
-      mode: NormalizationMode.always,
+    final speedSeries = ChartSeries(
+      id: 'speed',
+      name: 'Speed',
+      points: _generateSpeedData(),
+      color: Colors.green,
+      yAxisConfig: const YAxisConfig(
+        position: YAxisPosition.rightOuter,
+        color: Colors.green,
+        label: 'Speed',
+        unit: 'km/h',
+        min: 0,
+        max: 50,
+        visible: true,
+      ),
     );
 
     return Container(
@@ -79,17 +102,21 @@ class MultiAxisDemoScreen extends StatelessWidget {
         border: Border.all(color: Colors.grey[700]!),
       ),
       padding: const EdgeInsets.all(16),
-      child: BravenChart(
+      child: BravenChartPlus(
         series: [powerSeries, heartRateSeries, speedSeries],
-        multiAxisConfig: multiAxisConfig,
         chartType: ChartType.line,
-        lineStyle: LineStyle.smooth,
         theme: ChartTheme.defaultDark,
-        xAxis: const AxisConfig(showAxis: true, showLabels: true, showGrid: true),
-        yAxis: const AxisConfig(
-          showAxis: false, // Disable default Y-axis, using multiAxisConfig instead
-          showLabels: false,
-          showGrid: true,
+        normalizationMode: NormalizationMode.perSeries,
+        xAxisConfig: const XAxisConfig(
+          showAxisLine: true,
+          showTicks: true,
+        ),
+        yAxis: const YAxisConfig(
+          position: YAxisPosition.left,
+          visible: false,
+          showAxisLine: false,
+          showTicks: false,
+          labelDisplay: AxisLabelDisplay.none,
         ),
       ),
     );

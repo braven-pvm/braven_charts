@@ -83,18 +83,15 @@ class _PerformancePageState extends State<PerformancePage> {
     });
 
     // Create axis configs
-    final xAxis = AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: _showGrid,
+    final xAxis = XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
     );
 
-    final yAxis = AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: _showGrid,
+    final yAxis = YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
     );
 
     final totalPoints = _dataPointCount * _seriesCount;
@@ -125,7 +122,7 @@ class _PerformancePageState extends State<PerformancePage> {
                   child: BravenChartPlus(
                     chartType: ChartType.line,
                     series: series,
-                    xAxis: xAxis,
+                    xAxisConfig: xAxis,
                     yAxis: yAxis,
                     showLegend: _seriesCount <= 5,
                     backgroundColor: Colors.white,
@@ -371,4 +368,3 @@ class _PerformancePageState extends State<PerformancePage> {
     });
   }
 }
-

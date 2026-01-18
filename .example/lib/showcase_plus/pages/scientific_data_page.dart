@@ -222,19 +222,16 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
                     showDataPointMarkers: false,
                   ),
                 ],
-                xAxis: const AxisConfig(
-                  orientation: AxisOrientation.horizontal,
-                  position: AxisPosition.bottom,
+                xAxisConfig: const XAxisConfig(
                   label: 'Time (hours)',
-                  showGrid: true,
                   showAxisLine: true,
+                  showTicks: true,
                 ),
-                yAxis: const AxisConfig(
-                  orientation: AxisOrientation.vertical,
-                  position: AxisPosition.left,
+                yAxis: const YAxisConfig(
+                  position: YAxisPosition.left,
                   label: 'Watts',
-                  showGrid: true,
                   showAxisLine: true,
+                  showTicks: true,
                 ),
                 theme: theme,
                 annotationController: _annotationController,
@@ -306,4 +303,3 @@ class _ScientificDataPageState extends State<ScientificDataPage> {
     );
   }
 }
-

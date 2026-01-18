@@ -153,9 +153,7 @@ class _ThemingPageState extends State<ThemingPage> {
           const SizedBox(height: 4),
           Row(
             children: [
-              for (var i = 0;
-                  i < 4 && i < theme.seriesTheme.colors.length;
-                  i++) ...[
+              for (var i = 0; i < 4 && i < theme.seriesTheme.colors.length; i++) ...[
                 if (i > 0) const SizedBox(width: 4),
                 _colorSwatch('S${i + 1}', theme.seriesTheme.colors[i]),
               ],
@@ -219,10 +217,9 @@ class _ThemingPageState extends State<ThemingPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-            xAxis: AxisConfig(
-              showAxis: _optionsController.showAxisLines,
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            xAxisConfig: XAxisConfig(
+              showAxisLine: _optionsController.showAxisLines,
             ),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,
@@ -271,7 +268,7 @@ class _ThemingPageState extends State<ThemingPage> {
             ],
             theme: preset.theme,
             showLegend: false,
-            xAxis: const AxisConfig(),
+            xAxisConfig: const XAxisConfig(),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,
             ),

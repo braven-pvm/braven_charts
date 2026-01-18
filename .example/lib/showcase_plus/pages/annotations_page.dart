@@ -320,18 +320,15 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     ];
 
     // Create axis configs
-    final xAxis = const AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
+    final xAxis = const XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
     );
 
-    final yAxis = const AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
+    final yAxis = const YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
     );
 
     return Row(
@@ -361,7 +358,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                       chartType: ChartType.line,
                       series: series,
                       annotationController: _annotationController,
-                      xAxis: xAxis,
+                      xAxisConfig: xAxis,
                       yAxis: yAxis,
                       interactiveAnnotations: _allowDragging || _allowEditing,
                       showLegend: true,
@@ -598,4 +595,3 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
     );
   }
 }
-

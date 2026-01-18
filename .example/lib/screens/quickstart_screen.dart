@@ -238,12 +238,23 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
             const Text('Step 4a: Sparkline (Hidden Axes)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Text('Compact chart for dashboards', style: TextStyle(fontSize: 14, color: Colors.grey)),
             const SizedBox(height: 16),
-            BravenChart.fromValues(
+            BravenChartPlus.fromValues(
               chartType: ChartType.line,
               seriesId: 'sales',
               yValues: const [10000, 15000, 12000, 18000, 22000, 25000],
-              xAxis: AxisConfig.hidden(),
-              yAxis: AxisConfig.hidden(),
+              xAxisConfig: const XAxisConfig(
+                visible: false,
+                showAxisLine: false,
+                showTicks: false,
+                labelDisplay: AxisLabelDisplay.none,
+              ),
+              yAxis: const YAxisConfig(
+                position: YAxisPosition.left,
+                visible: false,
+                showAxisLine: false,
+                showTicks: false,
+                labelDisplay: AxisLabelDisplay.none,
+              ),
               width: 200,
               height: 60,
             ),
@@ -263,12 +274,21 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
             const Text('Step 4b: Grid Only Style', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Text('Show grid without axis lines', style: TextStyle(fontSize: 14, color: Colors.grey)),
             const SizedBox(height: 16),
-            BravenChart.fromValues(
+            BravenChartPlus.fromValues(
               chartType: ChartType.line,
               seriesId: 'sales',
               yValues: const [10000, 15000, 12000, 18000, 22000, 25000],
-              xAxis: AxisConfig.gridOnly(),
-              yAxis: AxisConfig.gridOnly(),
+              xAxisConfig: const XAxisConfig(
+                showAxisLine: false,
+                showTicks: false,
+                labelDisplay: AxisLabelDisplay.none,
+              ),
+              yAxis: const YAxisConfig(
+                position: YAxisPosition.left,
+                showAxisLine: false,
+                showTicks: false,
+                labelDisplay: AxisLabelDisplay.none,
+              ),
               width: 400,
               height: 300,
             ),
@@ -341,4 +361,3 @@ class _QuickstartScreenState extends State<QuickstartScreen> {
     );
   }
 }
-

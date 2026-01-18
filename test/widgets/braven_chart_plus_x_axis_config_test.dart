@@ -15,7 +15,6 @@
 library;
 
 import 'package:braven_charts/src/braven_chart_plus.dart';
-import 'package:braven_charts/src/models/axis_config.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
@@ -86,8 +85,7 @@ void main() {
       expect(renderBox, isNotNull);
     });
 
-    testWidgets('crosshairLabelPosition.insidePlot affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.insidePlot affects rendering', (tester) async {
       const xAxisConfig = XAxisConfig(
         label: 'X-Axis',
         showCrosshairLabel: true,
@@ -130,8 +128,7 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('crosshairLabelPosition.overAxis affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.overAxis affects rendering', (tester) async {
       const xAxisConfig = XAxisConfig(
         label: 'Data Points',
         showCrosshairLabel: true,
@@ -171,68 +168,6 @@ void main() {
       await tester.pump();
 
       // Verify crosshair label position is applied
-      expect(find.byType(BravenChartPlus), findsOneWidget);
-    });
-
-    testWidgets('xAxisConfig properties override legacy xAxis', (tester) async {
-      // This test verifies that when both xAxis (legacy) and xAxisConfig are
-      // provided, xAxisConfig takes precedence
-      const xAxisConfig = XAxisConfig(
-        label: 'Modern Config',
-        unit: 'units',
-        showCrosshairLabel: true,
-        crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
-      );
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'test',
-                  points: [],
-                ),
-              ],
-              // Both legacy and new config provided
-              xAxis: AxisConfig(
-                label: 'Legacy Config',
-                showAxis: true,
-              ),
-              xAxisConfig: xAxisConfig,
-            ),
-          ),
-        ),
-      );
-
-      // xAxisConfig should take precedence
-      expect(find.byType(BravenChartPlus), findsOneWidget);
-    });
-
-    testWidgets('xAxisConfig null falls back to legacy xAxis', (tester) async {
-      // This test verifies backward compatibility: when xAxisConfig is null,
-      // the chart should still work with legacy xAxis
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'test',
-                  points: [],
-                ),
-              ],
-              xAxis: AxisConfig(
-                label: 'Legacy Only',
-                showAxis: true,
-              ),
-              xAxisConfig:
-                  null, // Explicit null for backward compatibility test
-            ),
-          ),
-        ),
-      );
-
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
   });

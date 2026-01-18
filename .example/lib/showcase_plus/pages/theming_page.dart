@@ -309,18 +309,15 @@ class _ThemingPageState extends State<ThemingPage> {
   /// Build comprehensive chart showing ALL elements: mixed chart types, annotations, markers, tooltips
   Widget _buildComprehensiveChart() {
     final series = _generateMixedSeries();
-    final xAxis = const AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
+    final xAxis = const XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
       label: 'Time (samples)',
     );
-    final yAxis = const AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
+    final yAxis = const YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
       label: 'Value',
     );
 
@@ -338,7 +335,7 @@ class _ThemingPageState extends State<ThemingPage> {
           series: series,
           annotationController: _showAnnotations ? _annotationController : null,
           theme: _currentTheme,
-          xAxis: xAxis,
+          xAxisConfig: xAxis,
           yAxis: yAxis,
           showLegend: _showLegend,
           backgroundColor: _currentTheme.backgroundColor,
@@ -482,17 +479,14 @@ class _ThemingPageState extends State<ThemingPage> {
 
   Widget _buildMiniChart(ChartType type, String title) {
     final series = _generateSeries(_currentTheme, type, mini: true);
-    final xAxis = const AxisConfig(
-      orientation: AxisOrientation.horizontal,
-      position: AxisPosition.bottom,
-      showGrid: true,
+    final xAxis = const XAxisConfig(
       showAxisLine: true,
+      showTicks: true,
     );
-    final yAxis = const AxisConfig(
-      orientation: AxisOrientation.vertical,
-      position: AxisPosition.left,
-      showGrid: true,
+    final yAxis = const YAxisConfig(
+      position: YAxisPosition.left,
       showAxisLine: true,
+      showTicks: true,
     );
 
     return Card(
@@ -522,7 +516,7 @@ class _ThemingPageState extends State<ThemingPage> {
                 chartType: type,
                 series: series,
                 theme: _currentTheme,
-                xAxis: xAxis,
+                xAxisConfig: xAxis,
                 yAxis: yAxis,
                 showLegend: false,
                 backgroundColor: _currentTheme.backgroundColor,
@@ -764,4 +758,3 @@ class _ThemingPageState extends State<ThemingPage> {
     }
   }
 }
-
