@@ -1,7 +1,7 @@
 {
   "$schema": "Orchestra Sprint Configuration",
   "$comment": "Use this JSON with mcp_orchestra-orc_configure_sprint",
-  
+
   "sprint": {
     "id": "018-x-axis-renderer",
     "name": "X-Axis Renderer Unification",
@@ -17,7 +17,7 @@
       "description": "Create file stubs, test infrastructure, and foundational XAxisConfig/XAxisPainter classes with TDD"
     },
     {
-      "id": "phase-2", 
+      "id": "phase-2",
       "name": "US1: Themed X-Axis Rendering (P1 MVP)",
       "description": "Core deliverable - X-axis renders with same visual styling as Y-axis"
     },
@@ -45,7 +45,16 @@
       "title": "RED: Write failing tests for XAxisConfig and XAxisPainter foundation",
       "description": "Write comprehensive unit tests for XAxisConfig (17 properties, validation, computed properties) and XAxisPainter structure. Tests MUST FAIL.",
       "tdd_red_phase": true,
-      "speckit_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008"],
+      "speckit_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008"
+      ],
       "priority": "P0"
     },
     {
@@ -73,7 +82,16 @@
       "title": "GREEN: Implement themed X-axis rendering (MVP)",
       "description": "Implement resolveAxisColor() using AxisColorResolver pattern, generateTicks() with nice-number algorithm, formatTickLabel(), paint() with actual canvas drawing. Wire XAxisPainter into ChartRenderBox and bypass legacy XAxisRenderer.",
       "dependencies": [3],
-      "speckit_tasks": ["T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024"],
+      "speckit_tasks": [
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024"
+      ],
       "priority": "P1"
     },
     {
@@ -120,7 +138,19 @@
       "title": "GREEN: Implement full XAxisConfig API and ensure backward compatibility",
       "description": "Verify all 17 properties are documented and affect rendering. Implement axis title with labelDisplay modes. Handle missing XAxisConfig gracefully. Deprecate legacy XAxisRenderer.",
       "dependencies": [8],
-      "speckit_tasks": ["T034", "T035", "T036", "T037", "T038", "T039", "T041", "T042", "T043", "T044", "T045"],
+      "speckit_tasks": [
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045"
+      ],
       "priority": "P2"
     },
     {
@@ -161,7 +191,7 @@
         "expect": "at least 1 match"
       },
       {
-        "id": "INT-002", 
+        "id": "INT-002",
         "description": "XAxisPainter.paint() contains actual drawing code",
         "command": "grep -E 'canvas\\.draw|TextPainter.*paint' lib/src/rendering/x_axis_painter.dart",
         "expect": "at least 3 matches"

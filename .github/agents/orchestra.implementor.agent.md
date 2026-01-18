@@ -118,6 +118,8 @@ You operate within a strict information boundary:
 The `context_files` in your handover lists files you MAY read. However:
 
 - **ONLY read files explicitly listed** - don't explore related files
+- **Exception**: You may read source/test files needed to fix build/test/lint/typecheck failures that occur after your changes.
+- **Never** read spec/ or orchestrator-only files, even when fixing failures.
 - **If a listed file contains task lists** → STOP, escalate (Orchestrator error)
 - **If curious about other tasks** → Don't look. Trust the handover.
 - **If dependency task referenced** → Trust it's complete. Check the actual code.
@@ -226,7 +228,6 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
 2. **Mark tests with TDD markers** using the **TWO-PART SYSTEM**:
 
    TDD markers have TWO separate concerns:
-
    - **Task linking**: `// @orchestra-task: N` at file top - associates tests with task ID
    - **Test filtering**: `[tdd-red]` or `@Tags(['tdd-red'])` - allows running just TDD tests
 
@@ -268,7 +269,6 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
    ```
 
    **⚠️ OLD FORMAT NO LONGER SUPPORTED:**
-
    - ❌ `@Tags(['tdd-red-task-N'])` (single-token with embedded task ID)
    - ❌ `[tdd-red-task-N]` (single-token with embedded task ID)
    - ❌ `tags: ['tdd-red', 'task-N']` (two tokens for one concept)

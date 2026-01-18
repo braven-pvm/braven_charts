@@ -4,7 +4,7 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.9\\dist\\mcp-server\\index.js",
+        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.5.2\\dist\\mcp-server\\index.js",
         "--role=orchestrator"
       ],
       "env": {
@@ -15,8 +15,19 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.4.9\\dist\\mcp-server\\index.js",
+        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.5.2\\dist\\mcp-server\\index.js",
         "--role=implementor"
+      ],
+      "env": {
+        "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
+      }
+    },
+    "orchestra-ctl": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "c:\\Users\\Marius\\.vscode\\extensions\\forcegage.orchestra-extension-0.5.2\\dist\\mcp-server\\index.js",
+        "--role=controller"
       ],
       "env": {
         "ORCHESTRA_WORKSPACE": "x:\\Cloud Storage\\Dropbox\\Repositories\\Flutter\\braven_chart_plus"
@@ -24,6 +35,6 @@
     }
   },
   "generatedBy": "Orchestra VS Code Extension",
-  "version": "0.4.9",
-  "timestamp": "2026-01-17T06:13:02.085Z"
+  "version": "0.5.2",
+  "timestamp": "2026-01-17T19:09:15.032Z"
 }
