@@ -1,18 +1,12 @@
-
-
 # Implementation Plan: Theming System# Implementation Plan: [FEATURE]
-
-
 
 **Branch**: `004-theming-system` | **Date**: 2025-10-06 | **Spec**: [spec.md](spec.md)**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 
 **Input**: Feature specification from `/specs/004-theming-system/spec.md`**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-
-
 ## Execution Flow (/plan command scope)## Execution Flow (/plan command scope)
 
-``````
+````
 
 1. Load feature spec from Input path1. Load feature spec from Input path
 
@@ -38,7 +32,7 @@
 
 5. Execute Phase 0 → research.md   → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
 
-   ✓ Completed - theme architecture, accessibility standards, and serialization patterns documented6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code, or `AGENTS.md` for all other agents).
+   ✓ Completed - theme architecture, accessibility standards, and serialization patterns documented6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `claude.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `gemini.md` for Gemini CLI, `qwen.md` for Qwen Code, or `agents.md` for all other agents).
 
 6. Execute Phase 1 → contracts, data-model.md, quickstart.md7. Re-evaluate Constitution Check section
 
@@ -70,21 +64,21 @@
 
 ## Technical Context
 
-The Theming System provides **comprehensive visual control** over all chart components through a layered, cascading style architecture. It includes 7 professionally designed themes and full customization capabilities, ensuring consistent visual design while maintaining <100ms theme switching performance and WCAG 2.1 AA/AAA accessibility compliance.**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+The Theming System provides **comprehensive visual control** over all chart components through a layered, cascading style architecture. It includes 7 professionally designed themes and full customization capabilities, ensuring consistent visual design while maintaining <100ms theme switching performance and WCAG 2.1 AA/AAA accessibility compliance.**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 
-**Technical Approach** (from research):**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Technical Approach** (from research):**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
-- Immutable theme data structures with `copyWith()` patterns**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+- Immutable theme data structures with `copyWith()` patterns**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
 
 - CSS-like cascading style resolution with inheritance and caching**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
 
-- Fluent ChartThemeBuilder API for custom theme creation**Project Type**: [single/web/mobile - determines source structure]  
+- Fluent ChartThemeBuilder API for custom theme creation**Project Type**: [single/web/mobile - determines source structure]
 
-- JSON serialization with versioned schema for persistence**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+- JSON serialization with versioned schema for persistence**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
 
-- WCAG 2.1 color contrast utilities and colorblind simulation**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+- WCAG 2.1 color contrast utilities and colorblind simulation**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
 
 - Theme diffing and caching for performance-neutral theme switching**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
@@ -98,11 +92,11 @@ The Theming System provides **comprehensive visual control** over all chart comp
 
 **Language/Version**: Dart 3.10.0-227.0.dev  [Gates determined based on constitution file]
 
-**Primary Dependencies**: Flutter SDK 3.37.0-1.0.pre-216, Standard Dart libraries (dart:ui, dart:math, dart:convert for JSON)  
+**Primary Dependencies**: Flutter SDK 3.37.0-1.0.pre-216, Standard Dart libraries (dart:ui, dart:math, dart:convert for JSON)
 
 **Storage**: JSON serialization for theme persistence (optional)  ## Project Structure
 
-**Testing**: Flutter test framework, contract tests, accessibility compliance tests, colorblind simulation tests  
+**Testing**: Flutter test framework, contract tests, accessibility compliance tests, colorblind simulation tests
 
 **Target Platform**: Flutter Web (primary), iOS/Android (secondary)  ### Documentation (this feature)
 
@@ -340,7 +334,7 @@ lib/   - Output OpenAPI/GraphQL schema to `/contracts/`
 
 test/- Each contract → contract test task [P]
 
-├── contract/- Each entity → model creation task [P] 
+├── contract/- Each entity → model creation task [P]
 
 │   └── theming/- Each user story → integration test task
 
@@ -350,7 +344,7 @@ test/- Each contract → contract test task [P]
 
 │       ├── axis_style_contract_test.dart**Ordering Strategy**:
 
-│       ├── series_theme_contract_test.dart- TDD order: Tests before implementation 
+│       ├── series_theme_contract_test.dart- TDD order: Tests before implementation
 
 │       ├── interaction_theme_contract_test.dart- Dependency order: Models before services before UI
 
@@ -372,9 +366,9 @@ test/- Each contract → contract test task [P]
 
 │       ├── theme_serialization_test.dart
 
-│       ├── color_utils_test.dart**Phase 3**: Task execution (/tasks command creates tasks.md)  
+│       ├── color_utils_test.dart**Phase 3**: Task execution (/tasks command creates tasks.md)
 
-│       ├── style_cache_test.dart**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+│       ├── style_cache_test.dart**Phase 4**: Implementation (execute tasks.md following constitutional principles)
 
 │       └── responsive_typography_test.dart**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
@@ -524,8 +518,8 @@ All design artifacts created. See above Project Structure section for complete f
 ## Phase 3+: Future Implementation
 *These phases are beyond the scope of the /plan command*
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)  
-**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+**Phase 3**: Task execution (/tasks command creates tasks.md)
+**Phase 4**: Implementation (execute tasks.md following constitutional principles)
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
@@ -556,3 +550,4 @@ All design artifacts created. See above Project Structure section for complete f
 3. Create contracts/ directory with 8 interface files
 4. Create quickstart.md with 5 executable test examples
 5. Run `/tasks` command to generate tasks.md
+````

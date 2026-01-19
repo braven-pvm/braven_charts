@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "010-scrollbars - Detail of new feature is here: `docs\specs\010-scrollbars\research.md`"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Navigate Large Dataset with Visual Feedback (Priority: P1)
 
@@ -91,6 +91,7 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 1. **Given** chart uses ChartTheme.defaultDark theme, **When** scrollbar renders, **Then** scrollbar track uses dark background color and handle uses light contrasting color (minimum 4.5:1 contrast ratio)
 2. **Given** chart uses ChartTheme.highContrast theme, **When** user hovers over scrollbar handle, **Then** handle color changes to high-contrast hover state (minimum 3:1 contrast vs normal state)
 3. **Given** developer specifies custom ScrollbarTheme with thickness: 12.0, **When** scrollbar renders, **Then** scrollbar width (for vertical) or height (for horizontal) is exactly 12.0 pixels
+
 - **Given** chart uses ChartTheme.minimal theme, **When** scrollbar renders, **Then** scrollbar track has 0.1 opacity (nearly transparent) showing only on hover, handle uses theme primary color
 
 ---
@@ -121,7 +122,7 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 - **What happens when InteractionConfig.enablePan is false but scrollbar is configured?**  
   Scrollbar renders in read-only mode - handle shows current position/zoom but is not draggable. Only resize interactions (zoom) are enabled if enableZoom is true.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -250,7 +251,7 @@ A UI designer creating a dashboard wants scrollbars to match the visual theme of
 
 - **DataRange**: (Existing entity) Represents a numeric range with min and max values. Used for both full data range (unchanging) and viewport range (changes with zoom/pan). Scrollbar calculates handle position/size from ratio of viewport DataRange to data DataRange.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -323,4 +324,3 @@ The following are explicitly excluded from this feature specification:
 - **Accessibility Priority**: All interactions must have keyboard equivalents. Screen reader support is mandatory, not optional, from initial release.
 - **Integration Pattern**: Scrollbar is a widget that wraps or is placed alongside chart canvas, not painted into chart coordinate system. This preserves coordinate system independence.
 - **Testing Approach**: Unit tests for position calculations, widget tests for rendering/gestures, integration tests for scrollbar+chart updates, performance benchmarks for drag smoothness.
-

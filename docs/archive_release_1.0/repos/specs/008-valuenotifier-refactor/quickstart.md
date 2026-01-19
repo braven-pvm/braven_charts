@@ -17,10 +17,11 @@
 ## Quick Reference
 
 ### Before (Broken setState Pattern)
+
 ```dart
 class _BravenChartState extends State<BravenChart> {
   InteractionState _interactionState = InteractionState.initial();
-  
+
   void _onHover(PointerHoverEvent event) {
     setState(() {  // ❌ Causes 100+ rebuilds/second → crashes
       _interactionState = _interactionState.copyWith(
@@ -29,7 +30,7 @@ class _BravenChartState extends State<BravenChart> {
       );
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return CustomPaint(...);  // Entire widget rebuilds
@@ -38,16 +39,17 @@ class _BravenChartState extends State<BravenChart> {
 ```
 
 ### After (ValueNotifier Pattern)
+
 ```dart
 class _BravenChartState extends State<BravenChart> {
   late ValueNotifier<InteractionState> _interactionStateNotifier;
-  
+
   @override
   void initState() {
     super.initState();
     _interactionStateNotifier = ValueNotifier(InteractionState.initial());
   }
-  
+
   void _onHover(PointerHoverEvent event) {
     // ✅ Direct notifier update, zero rebuilds
     _interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(
@@ -55,7 +57,7 @@ class _BravenChartState extends State<BravenChart> {
       crosshairPosition: localPosition,
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -72,7 +74,7 @@ class _BravenChartState extends State<BravenChart> {
       ],
     );
   }
-  
+
   @override
   void dispose() {
     _interactionStateNotifier.dispose();  // Prevent memory leaks
@@ -88,6 +90,7 @@ class _BravenChartState extends State<BravenChart> {
 ### Root Cause
 
 **Timeline**:
+
 1. User moves mouse over chart (100+ events/second)
 2. Each event triggers `setState(() => _interactionState = ...)`
 3. setState invalidates entire widget tree
@@ -95,6 +98,7 @@ class _BravenChartState extends State<BravenChart> {
 5. **CRASH**: RenderBox coordinates invalid mid-calculation (box.dart:3345)
 
 **Why 6+ Fix Attempts Failed**:
+
 - `addPostFrameCallback()`: Still runs during mouse tracking frame
 - `scheduleMicrotask()`: Still within frame boundaries
 - Double post-frame callbacks: Pointer events are continuous (keep coming)
@@ -103,6 +107,7 @@ class _BravenChartState extends State<BravenChart> {
 ### The Solution
 
 **ValueNotifier Pattern**:
+
 - `ValueNotifier<T>`: Observable value that notifies listeners without rebuilding widgets
 - `ValueListenableBuilder`: Rebuilds only specific subtree when value changes
 - `RepaintBoundary`: Isolates overlay repaints from base chart
@@ -170,29 +175,34 @@ class _BravenChartState extends State<BravenChart> {
 ### Component Responsibilities
 
 **InteractionState** (existing model):
+
 - Immutable value object holding all interaction data
 - Fields: crosshair, tooltip, pan, zoom, keyboard state
 - Updated via `copyWith()` method
 - **No changes required** (already perfect for ValueNotifier)
 
 **ValueNotifier<InteractionState>** (new core):
+
 - Observable wrapper around InteractionState
 - Created in `initState()`, disposed in `dispose()`
 - Updated directly by event handlers (no setState)
 - Notifies ValueListenableBuilder on changes
 
 **ValueListenableBuilder** (new rendering):
+
 - Listens to notifier
 - Rebuilds only interactive overlays (not base chart)
 - Wrapped in RepaintBoundary for isolation
 - Added to `build()` method
 
 **Event Handlers** (refactored):
+
 - 11+ handlers: `_onHover`, `_onExit`, `_onPointerDown`, etc.
 - Changed from `setState(() => ...)` to `_interactionStateNotifier.value = ...`
 - No other logic changes
 
 **Animation Listeners** (refactored):
+
 - Zoom/pan animation listeners
 - Changed from `setState(() => ...)` to `_interactionStateNotifier.value = ...`
 - No other logic changes
@@ -206,6 +216,7 @@ class _BravenChartState extends State<BravenChart> {
 **File**: `lib/src/widgets/braven_chart.dart`
 
 **Changes**:
+
 1. Add `late ValueNotifier<InteractionState> _interactionStateNotifier;` field
 2. Initialize in `initState()`:
    ```dart
@@ -218,6 +229,7 @@ class _BravenChartState extends State<BravenChart> {
    ```
 
 **Testing**:
+
 ```bash
 flutter test test/unit/widgets/braven_chart_state_test.dart
 ```
@@ -245,10 +257,12 @@ void _onHover(PointerHoverEvent event) {
 ```
 
 **Search & Replace Pattern**:
+
 - Search: `setState(() {\n\s*_interactionState = _interactionState.copyWith(`
 - Replace: `_interactionStateNotifier.value = _interactionStateNotifier.value.copyWith(`
 
 **Testing**:
+
 ```bash
 flutter test test/unit/widgets/event_handlers_test.dart
 ```
@@ -278,6 +292,7 @@ _zoomAnimationController = AnimationController(...)
 ```
 
 **Testing**:
+
 ```bash
 flutter test test/unit/widgets/animation_integration_test.dart
 ```
@@ -311,7 +326,7 @@ Widget build(BuildContext context) {
     children: [
       // Base chart (never rebuilds)
       CustomPaint(painter: _ChartPainter(...)),
-      
+
       // Interactive overlays (only these rebuild)
       RepaintBoundary(
         child: ValueListenableBuilder<InteractionState>(
@@ -335,6 +350,7 @@ Widget build(BuildContext context) {
 ```
 
 **Testing**:
+
 ```bash
 flutter test test/unit/widgets/rendering_test.dart
 flutter test test/performance/interaction_performance_test.dart
@@ -345,6 +361,7 @@ flutter test test/performance/interaction_performance_test.dart
 ### Phase 5: Cleanup & Testing (30 minutes)
 
 **Changes**:
+
 1. Delete `_safeSetState()` method (no longer used)
 2. Remove all `_interactionState` field references (replaced by notifier)
 3. Run full test suite
@@ -352,11 +369,12 @@ flutter test test/performance/interaction_performance_test.dart
 5. Profile with Flutter DevTools (verify zero rebuilds)
 
 **Commands**:
+
 ```bash
 # Unit tests
 flutter test
 
-# Integration tests  
+# Integration tests
 flutter drive --target=integration_test/interaction_stability_test.dart
 
 # Coverage report
@@ -416,12 +434,12 @@ ValueListenableBuilder<InteractionState>(
     if (!state.isCrosshairVisible) {
       return const SizedBox.shrink();
     }
-    
+
     // Null-safe rendering
     if (state.crosshairPosition == null) {
       return const SizedBox.shrink();
     }
-    
+
     // Render with state
     return CustomPaint(
       painter: _CrosshairPainter(state.crosshairPosition!),
@@ -460,24 +478,25 @@ void _onHover(PointerHoverEvent event) {
 ### Unit Testing
 
 **Test Structure**:
+
 ```dart
 // test/unit/widgets/braven_chart_interaction_test.dart
 
 testWidgets('Notifier updates without setState', (tester) async {
   await tester.pumpWidget(BravenChart(...));
   final state = tester.state<_BravenChartState>(find.byType(BravenChart));
-  
+
   // Track rebuilds
   int buildCount = 0;
   state.addListener(() => buildCount++);
-  
+
   // Trigger event
   await tester.sendEventToBinding(PointerHoverEvent(...));
   await tester.pump();
-  
+
   // Verify notifier updated
   expect(state._interactionStateNotifier.value.isCrosshairVisible, isTrue);
-  
+
   // Verify zero rebuilds
   expect(buildCount, equals(0));
 });
@@ -486,6 +505,7 @@ testWidgets('Notifier updates without setState', (tester) async {
 **Coverage Target**: 90% for all refactored code
 
 **Run Tests**:
+
 ```bash
 flutter test test/unit/widgets/
 ```
@@ -501,7 +521,7 @@ flutter test test/unit/widgets/
 
 testWidgets('Continuous hover does not crash', (tester) async {
   await tester.pumpWidget(BravenChart(...));
-  
+
   // Simulate 1000 mouse movements
   for (int i = 0; i < 1000; i++) {
     await tester.sendEventToBinding(PointerHoverEvent(
@@ -509,13 +529,14 @@ testWidgets('Continuous hover does not crash', (tester) async {
     ));
     await tester.pump(const Duration(milliseconds: 5));
   }
-  
+
   // Verify zero crashes
   expect(tester.takeException(), isNull);
 });
 ```
 
 **Run Tests**:
+
 ```bash
 flutter drive --target=integration_test/interaction_stability_test.dart
 ```
@@ -531,27 +552,28 @@ flutter drive --target=integration_test/interaction_stability_test.dart
 
 testWidgets('Maintains 60fps during hover', (tester) async {
   final frameTimes = <Duration>[];
-  
+
   WidgetsBinding.instance.addTimingsCallback((timings) {
     for (final timing in timings) {
       frameTimes.add(timing.totalSpan);
     }
   });
-  
+
   await tester.pumpWidget(BravenChart(...));
-  
+
   // Simulate continuous hover
   for (int i = 0; i < 1000; i++) {
     await tester.sendEventToBinding(PointerHoverEvent(...));
     await tester.pump(const Duration(milliseconds: 5));
   }
-  
+
   // Assert all frames < 16ms (60fps)
   expect(frameTimes.every((t) => t.inMilliseconds <= 16), isTrue);
 });
 ```
 
 **Run Tests**:
+
 ```bash
 flutter test test/performance/
 ```
@@ -563,6 +585,7 @@ flutter test test/performance/
 ### Verify ValueNotifier Working
 
 **Add temporary logging**:
+
 ```dart
 _interactionStateNotifier.addListener(() {
   debugPrint('State updated: ${_interactionStateNotifier.value}');
@@ -576,6 +599,7 @@ _interactionStateNotifier.addListener(() {
 ### Verify Zero Widget Rebuilds
 
 **Use Flutter DevTools**:
+
 1. Open DevTools
 2. Enable "Track Widget Rebuilds" in Performance tab
 3. Hover over chart
@@ -586,6 +610,7 @@ _interactionStateNotifier.addListener(() {
 ### Verify Repaint Boundaries
 
 **Use Flutter DevTools**:
+
 1. Open DevTools
 2. Enable "Repaint Rainbow" in Performance tab
 3. Hover over chart
@@ -596,6 +621,7 @@ _interactionStateNotifier.addListener(() {
 ### Verify No Memory Leaks
 
 **Use Flutter DevTools**:
+
 1. Open DevTools Memory tab
 2. Run stress test (create/dispose 1000 times)
 3. Click "GC" button
@@ -698,17 +724,20 @@ A: Follow same pattern: Create in initState(), dispose in dispose(), use ValueLi
 ## Additional Resources
 
 **Documentation**:
+
 - [architecture_refactor_plan.md](../../../architecture_refactor_plan.md) - Full technical analysis
 - [spec.md](../spec.md) - Feature specification with requirements
 - [research.md](../research.md) - Research findings and decisions
 - [data-model.md](../data-model.md) - Data structures and flow
 
 **Contracts** (internal behavior specifications):
+
 - [event-handlers.md](../contracts/event-handlers.md) - Event handler refactor contracts
 - [animation-integration.md](../contracts/animation-integration.md) - Animation listener contracts
 - [disposal-cleanup.md](../contracts/disposal-cleanup.md) - Memory management contracts
 
 **Flutter Documentation**:
+
 - [ValueNotifier](https://api.flutter.dev/flutter/foundation/ValueNotifier-class.html)
 - [ValueListenableBuilder](https://api.flutter.dev/flutter/widgets/ValueListenableBuilder-class.html)
 - [RepaintBoundary](https://api.flutter.dev/flutter/widgets/RepaintBoundary-class.html)
@@ -723,6 +752,6 @@ A: Follow same pattern: Create in initState(), dispose in dispose(), use ValueLi
 **Impact**: Internal only, zero breaking changes, 10-100x performance gain  
 **Effort**: ~3 hours implementation + testing  
 **Key Files**: `lib/src/widgets/braven_chart.dart` (~150 lines changed)  
-**Testing**: 90% coverage, zero crashes, 60fps verified  
+**Testing**: 90% coverage, zero crashes, 60fps verified
 
 **Ready to implement? Follow the 5 phases above. Questions? Check contracts/ directory for detailed specifications.**

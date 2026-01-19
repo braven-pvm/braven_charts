@@ -26,11 +26,13 @@ Attempted to fix annotation handle mouse event issues by moving the annotation o
 **Theory**: Move annotation overlay from INSIDE interaction system to SIBLING layer so it receives events FIRST.
 
 **Implementation**:
+
 - **Deleted**: Lines 1884-1912 (annotation overlay from inside chart widget)
 - **Inserted**: Same 29 lines AFTER line 2145 (after interaction system wrapping)
 - **Goal**: Make annotations a sibling to MouseRegion instead of child
 
 **Expected Widget Tree**:
+
 ```
 Stack (root)
   ├─ MouseRegion (chart, sibling 1) ← Processes events SECOND
@@ -92,6 +94,7 @@ Stack (root)
 ### What Broke When We Moved It
 
 **Before (Working - Annotations INSIDE chart widget)**:
+
 ```
 Stack (contains title + chart)
   ├─ Column (title/subtitle)                      ← titleOffset.dy = this height
@@ -104,6 +107,7 @@ Stack (contains title + chart)
 ```
 
 **After (BROKEN - Annotations OUTSIDE as sibling)**:
+
 ```
 Stack (outer - NEW coordinate context)
   ├─ Stack (inner - contains title + chart)
@@ -118,17 +122,20 @@ Stack (outer - NEW coordinate context)
 ### Why This Causes The Specific Failures
 
 **1. Invisible Handles**:
+
 - Handle positions calculated using `chartRect` from inner Stack
 - Positioned in outer Stack coordinate space
 - End up at coordinates that may be off-screen or clipped
 
 **2. Misaligned Annotation**:
+
 - Annotation positioned using `titleOffset` + `chartRect`
 - These values are in inner Stack space (0,0 = inner Stack origin)
 - Rendered in outer Stack space (0,0 = outer Stack origin)
 - **Result**: Annotation drawn at wrong absolute position
 
 **3. No Handle Events**:
+
 - Handles positioned incorrectly, so mouse hovers don't hit them
 - Only the visible part of the misaligned annotation receives events
 
@@ -139,6 +146,7 @@ Stack (outer - NEW coordinate context)
 ### Missed Assumptions
 
 The plan assumed:
+
 - ✅ Moving code to different location is "simple"
 - ❌ **WRONG**: Coordinate transformations are location-independent
 - ❌ **WRONG**: chartRect and titleOffset work in any Stack context
@@ -148,11 +156,13 @@ The plan assumed:
 ### Dependencies We Underestimated
 
 **chartRect**:
+
 - ❌ Not just a "rectangle" - it's a rectangle in a specific coordinate space
 - ❌ Calculated by CustomPaint painter in CustomPaint's local space
 - ❌ Cannot be directly used in a different Stack layer
 
 **titleOffset**:
+
 - ❌ Not just a "Y offset" - it's offset between two specific widgets in a Stack
 - ❌ Only meaningful in the Stack where title and chart coexist
 - ❌ Meaningless in a parent/sibling Stack
@@ -166,6 +176,7 @@ The plan assumed:
 **Mistake**: Assumed we could pass `chartRect` and `titleOffset` to overlay in different Stack and it would "just work"
 
 **Reality**: These values are bound to their coordinate context. Moving to a different widget layer requires:
+
 - Recalculating boundaries in new coordinate space
 - Transforming all position values using `localToGlobal()` / `globalToLocal()`
 - Maintaining awareness of which coordinate space each value belongs to
@@ -175,6 +186,7 @@ The plan assumed:
 **Mistake**: Treated this as "just moving 29 lines"
 
 **Reality**: Those 29 lines rely on:
+
 - Coordinate calculations from sibling widgets
 - Layout constraints from parent Stack
 - Clipping behavior from ancestor widgets
@@ -187,6 +199,7 @@ The plan assumed:
 **Mistake**: Implemented without incremental testing during code movement
 
 **Correct Approach**:
+
 1. Move code
 2. **IMMEDIATELY** hot reload and check visual rendering
 3. Add debug logging for coordinate values
@@ -196,6 +209,7 @@ The plan assumed:
 ### 4. The 11 Previous Attempts Were Not Wasted
 
 **User's skepticism was 100% justified.** The previous 11 hitTestBehavior attempts failed, but they taught us:
+
 - Event handling in Flutter is complex
 - Widget tree structure matters for event routing
 - Simple fixes often have hidden dependencies
@@ -213,16 +227,19 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **Idea**: Keep annotations in current location, but change event handling behavior
 
 **Approaches**:
+
 - Use `Listener` widget with `behavior: HitTestBehavior.opaque` on handles
 - Add `IgnorePointer` around chart interaction handlers when hovering handles
 - Create custom gesture recognizer that prioritizes handle gestures
 
 **Pros**:
+
 - No coordinate space changes
 - Annotations stay in working location
 - Only event routing changes
 
 **Cons**:
+
 - Requires deep Flutter gesture system understanding
 - May conflict with chart interaction system
 
@@ -231,15 +248,18 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **Idea**: Use Flutter's gesture arena to let handles "win" over chart interactions
 
 **Approaches**:
+
 - Wrap handles in `RawGestureDetector` with custom gesture recognizers
 - Set higher priority for handle gestures
 - Let gesture arena resolve conflicts
 
 **Pros**:
+
 - Leverages Flutter's built-in gesture resolution
 - No coordinate changes needed
 
 **Cons**:
+
 - Complex gesture recognizer implementation
 - May still lose to MouseRegion (it's not part of gesture arena)
 
@@ -248,15 +268,18 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **Idea**: Keep sibling layer approach but FIX coordinate transformations
 
 **Approaches**:
+
 - Calculate global coordinates for chartRect using `RenderBox.localToGlobal()`
 - Transform all annotation positions to outer Stack coordinate space
 - Recalculate titleOffset relative to outer Stack origin
 
 **Pros**:
+
 - Achieves original goal (annotations receive events first)
 - Theoretically possible with correct math
 
 **Cons**:
+
 - **EXTREMELY COMPLEX** - coordinate math is error-prone
 - Requires maintaining two coordinate systems
 - Easy to introduce subtle bugs (as we just saw)
@@ -267,15 +290,18 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **Idea**: Redesign the whole widget tree so annotations and chart are natural siblings
 
 **Approaches**:
+
 - Don't use Stack for title + chart
 - Use Column with explicit layout
 - Make all overlays (annotations, crosshair, tooltip) siblings from the start
 
 **Pros**:
+
 - Clean architecture from the start
 - No coordinate transformation hacks
 
 **Cons**:
+
 - **MASSIVE REFACTOR** - would affect entire chart rendering
 - High risk of breaking existing features
 - Weeks of work, not hours
@@ -285,15 +311,18 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **Idea**: Document that interactive annotations work but appear below chart overlays
 
 **Approaches**:
+
 - Keep current architecture
 - Document z-order behavior
 - Provide `annotationLayer: AnnotationLayer.top` option for users who need handles on top
 
 **Pros**:
+
 - No code changes
 - Zero risk
 
 **Cons**:
+
 - Doesn't solve the original problem
 - User expectations not met
 
@@ -306,6 +335,7 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 **RECOMMENDED**: **Option 1** - Fix event routing without moving code.
 
 **Next Steps**:
+
 1. Research Flutter `Listener` widget with `HitTestBehavior.translucent`
 2. Test wrapping handles in `Listener` that captures events before MouseRegion
 3. Consider `GestureDetector` with `behavior: HitTestBehavior.opaque` on handles
@@ -316,11 +346,13 @@ Since the "sibling layer" approach failed, we need fundamentally different solut
 ## Rollback Details
 
 **Commands Executed**:
+
 ```bash
 git reset --hard 1e23dc9  # Reset to refactor plan commit (before code changes)
 ```
 
 **Current State**:
+
 - ✅ Code restored to working state (commit 72f7186 base + documentation commits)
 - ✅ All documentation preserved (problem analysis + refactor plan + this failure analysis)
 - ✅ No broken code in repository

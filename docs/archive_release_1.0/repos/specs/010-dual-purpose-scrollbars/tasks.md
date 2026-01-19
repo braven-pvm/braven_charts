@@ -11,11 +11,13 @@
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `- [ ] [ID] [P?] [Story] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
 ## Path Conventions
+
 - **lib/src/**: Source code for chart library
 - **test/**: All test files (contract/, unit/, integration/, golden/)
 - All paths relative to repository root: `E:\cloud services\Dropbox\Repositories\Flutter\braven_charts_v2.0\`
@@ -26,10 +28,10 @@
 
 **Purpose**: Project initialization and basic structure for scrollbar feature
 
-- [X] T001 Verify Flutter SDK 3.37.0-1.0.pre-216 and Dart 3.10.0-227.0.dev installation
-- [X] T002 [P] Create scrollbar directory structure in lib/src/widgets/
-- [X] T003 [P] Create scrollbar theming directory structure in lib/src/theming/components/
-- [X] T004 [P] Create test directory structure for scrollbar tests in test/
+- [x] T001 Verify Flutter SDK 3.37.0-1.0.pre-216 and Dart 3.10.0-227.0.dev installation
+- [x] T002 [P] Create scrollbar directory structure in lib/src/widgets/
+- [x] T003 [P] Create scrollbar theming directory structure in lib/src/theming/components/
+- [x] T004 [P] Create test directory structure for scrollbar tests in test/
 
 ---
 
@@ -41,69 +43,69 @@
 
 ### Foundational Entities (Data Model)
 
-- [X] T005 [P] Create HitTestZone enum in lib/src/widgets/scrollbar/hit_test_zone.dart
-- [X] T006 [P] Create ScrollbarState immutable data class in lib/src/widgets/scrollbar/scrollbar_state.dart
-- [X] T007 [P] Create ScrollbarConfig data class with 16 properties in lib/src/theming/components/scrollbar_config.dart
-- [X] T008 Create ScrollbarTheme component theme in lib/src/theming/components/scrollbar_theme.dart (depends on T007)
+- [x] T005 [P] Create HitTestZone enum in lib/src/widgets/scrollbar/hit_test_zone.dart
+- [x] T006 [P] Create ScrollbarState immutable data class in lib/src/widgets/scrollbar/scrollbar_state.dart
+- [x] T007 [P] Create ScrollbarConfig data class with 16 properties in lib/src/theming/components/scrollbar_config.dart
+- [x] T008 Create ScrollbarTheme component theme in lib/src/theming/components/scrollbar_theme.dart (depends on T007)
 
 ### Foundational Contract Tests (TDD - Write Tests FIRST) ⚠️
 
 **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation per Constitution I**
 
-- [X] T009 [P] Contract test for ScrollbarController.calculateHandleSize() in test/contract/widgets/scrollbar_controller_handle_size_test.dart
-- [X] T010 [P] Contract test for ScrollbarController.calculateHandlePosition() in test/contract/widgets/scrollbar_controller_position_test.dart
-- [X] T011 [P] Contract test for ScrollbarController.handleToDataRange() inverse transform in test/contract/widgets/scrollbar_controller_inverse_test.dart
-- [X] T012 [P] Contract test for ScrollbarController.dataRangeToHandle() in test/contract/widgets/scrollbar_controller_forward_test.dart
-- [X] T013 [P] Contract test for ScrollbarConfig immutability and copyWith() in test/contract/theming/scrollbar_config_test.dart
-- [X] T014 [P] Contract test for ScrollbarTheme integration with ChartTheme in test/contract/theming/scrollbar_theme_test.dart
+- [x] T009 [P] Contract test for ScrollbarController.calculateHandleSize() in test/contract/widgets/scrollbar_controller_handle_size_test.dart
+- [x] T010 [P] Contract test for ScrollbarController.calculateHandlePosition() in test/contract/widgets/scrollbar_controller_position_test.dart
+- [x] T011 [P] Contract test for ScrollbarController.handleToDataRange() inverse transform in test/contract/widgets/scrollbar_controller_inverse_test.dart
+- [x] T012 [P] Contract test for ScrollbarController.dataRangeToHandle() in test/contract/widgets/scrollbar_controller_forward_test.dart
+- [x] T013 [P] Contract test for ScrollbarConfig immutability and copyWith() in test/contract/theming/scrollbar_config_test.dart
+- [x] T014 [P] Contract test for ScrollbarTheme integration with ChartTheme in test/contract/theming/scrollbar_theme_test.dart
 
 ### Foundational Controllers (Pure Functions)
 
 **NOTE: Implement AFTER contract tests T009-T014 pass (TDD Red-Green-Refactor)**
 
-- [X] T015 [P] Implement ScrollbarController.calculateHandleSize() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T016 [P] Implement ScrollbarController.calculateHandlePosition() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T017 Implement ScrollbarController.handleToDataRange() in lib/src/widgets/scrollbar/scrollbar_controller.dart (depends on T015, T016)
-- [X] T018 [P] Implement ScrollbarController.dataRangeToHandle() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T019 [P] Implement ScrollbarController.getHitTestZone() with 8.0px edge zones (FR-008/009 enhanced) in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T020 [P] Implement ScrollbarController.getCursorForZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T020A Implement ScrollbarController.getInteractionState() to determine current state (default/hover/active/disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
-- [X] T020B Implement ScrollbarController.calculateTouchHitTestPadding() for 44x44 minimum touch targets (FR-024A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T015 [P] Implement ScrollbarController.calculateHandleSize() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T016 [P] Implement ScrollbarController.calculateHandlePosition() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T017 Implement ScrollbarController.handleToDataRange() in lib/src/widgets/scrollbar/scrollbar_controller.dart (depends on T015, T016)
+- [x] T018 [P] Implement ScrollbarController.dataRangeToHandle() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T019 [P] Implement ScrollbarController.getHitTestZone() with 8.0px edge zones (FR-008/009 enhanced) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T020 [P] Implement ScrollbarController.getCursorForZone() in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T020A Implement ScrollbarController.getInteractionState() to determine current state (default/hover/active/disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
+- [x] T020B Implement ScrollbarController.calculateTouchHitTestPadding() for 44x44 minimum touch targets (FR-024A) in lib/src/widgets/scrollbar/scrollbar_controller.dart
 
 ### Foundational Rendering
 
-- [X] T021 Create ScrollbarPainter CustomPainter in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T022 Implement ScrollbarPainter.paint() method for track rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T023 Implement ScrollbarPainter handle rendering with border radius in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T024 Implement ScrollbarPainter grip indicator rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T024A Implement ScrollbarPainter interaction state rendering (default, hover, active, disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T024B Implement ScrollbarPainter track hover state rendering (opacity 0.2 → 0.3 per FR-021B) in lib/src/widgets/scrollbar/scrollbar_painter.dart
-- [X] T024C Implement ScrollbarPainter corner overlap rendering for multi-axis (0.5 opacity blend per FR-015A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T021 Create ScrollbarPainter CustomPainter in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T022 Implement ScrollbarPainter.paint() method for track rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T023 Implement ScrollbarPainter handle rendering with border radius in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T024 Implement ScrollbarPainter grip indicator rendering in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T024A Implement ScrollbarPainter interaction state rendering (default, hover, active, disabled per FR-021A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T024B Implement ScrollbarPainter track hover state rendering (opacity 0.2 → 0.3 per FR-021B) in lib/src/widgets/scrollbar/scrollbar_painter.dart
+- [x] T024C Implement ScrollbarPainter corner overlap rendering for multi-axis (0.5 opacity blend per FR-015A) in lib/src/widgets/scrollbar/scrollbar_painter.dart
 
 ### Foundational Widget Structure
 
-- [X] T025 Create ChartScrollbar StatefulWidget skeleton in lib/src/widgets/chart_scrollbar.dart
-- [X] T026 Create _ChartScrollbarState class with ValueNotifier<ScrollbarState> in lib/src/widgets/chart_scrollbar.dart
-- [X] T027 Implement _ChartScrollbarState.initState() with ScrollbarState initialization in lib/src/widgets/chart_scrollbar.dart
-- [X] T028 Implement _ChartScrollbarState.dispose() with ValueNotifier cleanup in lib/src/widgets/chart_scrollbar.dart
+- [x] T025 Create ChartScrollbar StatefulWidget skeleton in lib/src/widgets/chart_scrollbar.dart
+- [x] T026 Create \_ChartScrollbarState class with ValueNotifier<ScrollbarState> in lib/src/widgets/chart_scrollbar.dart
+- [x] T027 Implement \_ChartScrollbarState.initState() with ScrollbarState initialization in lib/src/widgets/chart_scrollbar.dart
+- [x] T028 Implement \_ChartScrollbarState.dispose() with ValueNotifier cleanup in lib/src/widgets/chart_scrollbar.dart
 
 ### Foundational Theme Integration
 
-- [X] T029 Modify ChartTheme to add scrollbarTheme field in lib/src/theming/chart_theme.dart
-- [X] T030 Update ChartTheme.copyWith() to include scrollbarTheme in lib/src/theming/chart_theme.dart
-- [X] T031 Update ChartTheme.toJson() and fromJson() to serialize scrollbarTheme in lib/src/theming/chart_theme.dart
-- [X] T032 [P] Add ScrollbarTheme.defaultLight predefined theme with FR-025 colors (track 0x33000000, handle 0x99000000) in lib/src/theming/components/scrollbar_theme.dart
-- [X] T033 [P] Add ScrollbarTheme.defaultDark predefined theme with FR-025 colors (track 0x33FFFFFF, handle 0x99FFFFFF) in lib/src/theming/components/scrollbar_theme.dart
-- [X] T034 [P] Add ScrollbarTheme.highContrast predefined theme with FR-025 colors (track solid black/white, handle yellow/cyan, 7:1 contrast) in lib/src/theming/components/scrollbar_theme.dart
-- [X] T034A Add ScrollbarConfig.forcedColorsMode support for Windows High Contrast (FR-024B) in lib/src/theming/components/scrollbar_config.dart
-- [X] T034B Add ScrollbarConfig.prefersReducedMotion support (FR-024C - disables animations when true) in lib/src/theming/components/scrollbar_config.dart
+- [x] T029 Modify ChartTheme to add scrollbarTheme field in lib/src/theming/chart_theme.dart
+- [x] T030 Update ChartTheme.copyWith() to include scrollbarTheme in lib/src/theming/chart_theme.dart
+- [x] T031 Update ChartTheme.toJson() and fromJson() to serialize scrollbarTheme in lib/src/theming/chart_theme.dart
+- [x] T032 [P] Add ScrollbarTheme.defaultLight predefined theme with FR-025 colors (track 0x33000000, handle 0x99000000) in lib/src/theming/components/scrollbar_theme.dart
+- [x] T033 [P] Add ScrollbarTheme.defaultDark predefined theme with FR-025 colors (track 0x33FFFFFF, handle 0x99FFFFFF) in lib/src/theming/components/scrollbar_theme.dart
+- [x] T034 [P] Add ScrollbarTheme.highContrast predefined theme with FR-025 colors (track solid black/white, handle yellow/cyan, 7:1 contrast) in lib/src/theming/components/scrollbar_theme.dart
+- [x] T034A Add ScrollbarConfig.forcedColorsMode support for Windows High Contrast (FR-024B) in lib/src/theming/components/scrollbar_config.dart
+- [x] T034B Add ScrollbarConfig.prefersReducedMotion support (FR-024C - disables animations when true) in lib/src/theming/components/scrollbar_config.dart
 
 ### Foundational InteractionConfig Modifications
 
-- [X] T035 Add showXScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
-- [X] T036 Add showYScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
-- [X] T037 Update InteractionConfig.copyWith() to include scrollbar flags in lib/src/interaction/interaction_config.dart
-- [X] T038 Update InteractionConfig.toJson() and fromJson() to serialize scrollbar flags in lib/src/interaction/interaction_config.dart
+- [x] T035 Add showXScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
+- [x] T036 Add showYScrollbar boolean field to InteractionConfig in lib/src/interaction/interaction_config.dart
+- [x] T037 Update InteractionConfig.copyWith() to include scrollbar flags in lib/src/interaction/interaction_config.dart
+- [x] T038 Update InteractionConfig.toJson() and fromJson() to serialize scrollbar flags in lib/src/interaction/interaction_config.dart
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -116,6 +118,7 @@
 **Independent Test**: Zoom into any chart until viewport shows <100% of data. Verify scrollbar appears with handle size = (viewport / data) ratio. Test passes if handle occupies 10% of track when viewing 10% of data.
 
 **Constitutional Requirements**:
+
 - ✅ Test-First Development: Contract tests written before implementation
 - ✅ Performance First: ValueNotifier pattern for >10Hz pointer events (no setState)
 - ✅ Architectural Integrity: Scrollbar layout independent of TransformContext
@@ -124,32 +127,32 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [X] T039 [P] [US1] Contract test for ChartScrollbar widget rendering in test/contract/widgets/chart_scrollbar_render_test.dart
-- [X] T040 [P] [US1] Contract test for handle size calculation accuracy in test/contract/widgets/scrollbar_handle_size_accuracy_test.dart
-- [X] T041 [P] [US1] Contract test for handle position calculation accuracy in test/contract/widgets/scrollbar_handle_position_accuracy_test.dart
-- [X] T042 [P] [US1] Golden test for scrollbar visual appearance (horizontal) in test/golden/scrollbar_horizontal_visual_test.dart
-- [X] T043 [P] [US1] Golden test for scrollbar visual appearance (vertical) in test/golden/scrollbar_vertical_visual_test.dart
+- [x] T039 [P] [US1] Contract test for ChartScrollbar widget rendering in test/contract/widgets/chart_scrollbar_render_test.dart
+- [x] T040 [P] [US1] Contract test for handle size calculation accuracy in test/contract/widgets/scrollbar_handle_size_accuracy_test.dart
+- [x] T041 [P] [US1] Contract test for handle position calculation accuracy in test/contract/widgets/scrollbar_handle_position_accuracy_test.dart
+- [x] T042 [P] [US1] Golden test for scrollbar visual appearance (horizontal) in test/golden/scrollbar_horizontal_visual_test.dart
+- [x] T043 [P] [US1] Golden test for scrollbar visual appearance (vertical) in test/golden/scrollbar_vertical_visual_test.dart
 
 ### Implementation for User Story 1
 
-- [X] T044 [US1] Implement ChartScrollbar.build() with ValueListenableBuilder in lib/src/widgets/chart_scrollbar.dart
-- [X] T045 [US1] Wire ScrollbarPainter into CustomPaint widget in lib/src/widgets/chart_scrollbar.dart
-- [X] T046 [US1] Calculate handle size using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
-- [X] T047 [US1] Calculate handle position using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
-- [X] T048 [US1] Implement didUpdateWidget() to sync handle with external viewport changes in lib/src/widgets/chart_scrollbar.dart
-- [X] T049 [US1] Add RepaintBoundary wrapper around ChartScrollbar in lib/src/widgets/chart_scrollbar.dart
-- [X] T050 [US1] Modify BravenChart to conditionally render X scrollbar based on InteractionConfig.showXScrollbar in lib/src/widgets/braven_chart.dart
-- [X] T051 [US1] Modify BravenChart to conditionally render Y scrollbar based on InteractionConfig.showYScrollbar in lib/src/widgets/braven_chart.dart
-- [X] T052 [US1] Implement BravenChart layout structure (Column/Row) to position scrollbars outside chart canvas in lib/src/widgets/braven_chart.dart
-- [X] T053 [US1] Wire ChartScrollbar.dataRange from BravenChart's full data range in lib/src/widgets/braven_chart.dart
-- [X] T054 [US1] Wire ChartScrollbar.viewportRange from BravenChart's ViewportState in lib/src/widgets/braven_chart.dart
-- [X] T055 [US1] Wire ChartScrollbar.theme from ChartTheme.scrollbarTheme in lib/src/widgets/braven_chart.dart
+- [x] T044 [US1] Implement ChartScrollbar.build() with ValueListenableBuilder in lib/src/widgets/chart_scrollbar.dart
+- [x] T045 [US1] Wire ScrollbarPainter into CustomPaint widget in lib/src/widgets/chart_scrollbar.dart
+- [x] T046 [US1] Calculate handle size using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
+- [x] T047 [US1] Calculate handle position using ScrollbarController in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
+- [x] T048 [US1] Implement didUpdateWidget() to sync handle with external viewport changes in lib/src/widgets/chart_scrollbar.dart
+- [x] T049 [US1] Add RepaintBoundary wrapper around ChartScrollbar in lib/src/widgets/chart_scrollbar.dart
+- [x] T050 [US1] Modify BravenChart to conditionally render X scrollbar based on InteractionConfig.showXScrollbar in lib/src/widgets/braven_chart.dart
+- [x] T051 [US1] Modify BravenChart to conditionally render Y scrollbar based on InteractionConfig.showYScrollbar in lib/src/widgets/braven_chart.dart
+- [x] T052 [US1] Implement BravenChart layout structure (Column/Row) to position scrollbars outside chart canvas in lib/src/widgets/braven_chart.dart
+- [x] T053 [US1] Wire ChartScrollbar.dataRange from BravenChart's full data range in lib/src/widgets/braven_chart.dart
+- [x] T054 [US1] Wire ChartScrollbar.viewportRange from BravenChart's ViewportState in lib/src/widgets/braven_chart.dart
+- [x] T055 [US1] Wire ChartScrollbar.theme from ChartTheme.scrollbarTheme in lib/src/widgets/braven_chart.dart
 
 ### Integration Tests for User Story 1
 
-- [X] T056 [US1] Integration test: Zoom in to 10% → verify scrollbar appears with 10% handle size in test/integration/scrollbar_zoom_visual_feedback_test.dart
-- [X] T057 [US1] Integration test: Viewport at 100% → verify scrollbar hidden in test/integration/scrollbar_auto_hide_full_viewport_test.dart
-- [X] T058 [US1] Integration test: Viewport at 30% position → verify handle at 30% track position in test/integration/scrollbar_position_accuracy_test.dart
+- [x] T056 [US1] Integration test: Zoom in to 10% → verify scrollbar appears with 10% handle size in test/integration/scrollbar_zoom_visual_feedback_test.dart
+- [x] T057 [US1] Integration test: Viewport at 100% → verify scrollbar hidden in test/integration/scrollbar_auto_hide_full_viewport_test.dart
+- [x] T058 [US1] Integration test: Viewport at 30% position → verify handle at 30% track position in test/integration/scrollbar_position_accuracy_test.dart
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - scrollbar displays with correct handle size/position reflecting viewport state
 
@@ -162,44 +165,45 @@
 **Independent Test**: Drag scrollbar handle from left edge to center. Verify chart viewport pans to show middle section of data. Zoom level remains constant (handle size unchanged).
 
 **Constitutional Requirements**:
+
 - ✅ Performance First: 60 FPS during drag (viewport updates throttled to 16ms, <16.67ms frame time)
 - ✅ Test-First Development: Widget tests for gesture handling before implementation
 
 ### Contract Tests for User Story 2 (TDD - Write FIRST) ⚠️
 
-- [X] T059 [P] [US2] Contract test for GestureDetector onPanStart handling in test/contract/widgets/scrollbar_gesture_pan_start_test.dart
-- [X] T060 [P] [US2] Contract test for GestureDetector onPanUpdate handling in test/contract/widgets/scrollbar_gesture_pan_update_test.dart
-- [X] T061 [P] [US2] Contract test for GestureDetector onPanEnd handling in test/contract/widgets/scrollbar_gesture_pan_end_test.dart
-- [X] T062 [US2] Contract test for viewport update throttling (60 FPS) in test/contract/widgets/scrollbar_throttle_test.dart
+- [x] T059 [P] [US2] Contract test for GestureDetector onPanStart handling in test/contract/widgets/scrollbar_gesture_pan_start_test.dart
+- [x] T060 [P] [US2] Contract test for GestureDetector onPanUpdate handling in test/contract/widgets/scrollbar_gesture_pan_update_test.dart
+- [x] T061 [P] [US2] Contract test for GestureDetector onPanEnd handling in test/contract/widgets/scrollbar_gesture_pan_end_test.dart
+- [x] T062 [US2] Contract test for viewport update throttling (60 FPS) in test/contract/widgets/scrollbar_throttle_test.dart
 
 ### Implementation for User Story 2
 
-- [X] T063 [US2] Add GestureDetector wrapper in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
-- [X] T064 [US2] Implement _onPanStart() to detect drag zone (center vs edges) in lib/src/widgets/chart_scrollbar.dart
-- [X] T065 [US2] Implement _onPanUpdate() for handle drag (center zone) in lib/src/widgets/chart_scrollbar.dart
-- [X] T066 [US2] Update ScrollbarState.handlePosition via ValueNotifier in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
-- [X] T067 [US2] Implement viewport update throttling (16ms timer) in _onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
-- [X] T068 [US2] Convert handle position delta to DataRange delta using ScrollbarController.handleToDataRange() in lib/src/widgets/chart_scrollbar.dart
-- [X] T069 [US2] Fire onViewportChanged callback with new DataRange in lib/src/widgets/chart_scrollbar.dart
-- [X] T070 [US2] Implement _onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
-- [X] T071 [US2] Fire InteractionConfig.onPanChanged callback in _onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
-- [X] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
-- [X] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
-- [X] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
-- [X] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
+- [x] T063 [US2] Add GestureDetector wrapper in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
+- [x] T064 [US2] Implement \_onPanStart() to detect drag zone (center vs edges) in lib/src/widgets/chart_scrollbar.dart
+- [x] T065 [US2] Implement \_onPanUpdate() for handle drag (center zone) in lib/src/widgets/chart_scrollbar.dart
+- [x] T066 [US2] Update ScrollbarState.handlePosition via ValueNotifier in \_onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
+- [x] T067 [US2] Implement viewport update throttling (16ms timer) in \_onPanUpdate() in lib/src/widgets/chart_scrollbar.dart
+- [x] T068 [US2] Convert handle position delta to DataRange delta using ScrollbarController.handleToDataRange() in lib/src/widgets/chart_scrollbar.dart
+- [x] T069 [US2] Fire onViewportChanged callback with new DataRange in lib/src/widgets/chart_scrollbar.dart
+- [x] T070 [US2] Implement \_onPanEnd() to ensure final viewport sync in lib/src/widgets/chart_scrollbar.dart
+- [x] T071 [US2] Fire InteractionConfig.onPanChanged callback in \_onPanEnd() with delta offset in lib/src/widgets/chart_scrollbar.dart
+- [x] T072 [US2] Add boundary clamping (no overscroll beyond dataRange) in lib/src/widgets/chart_scrollbar.dart
+- [x] T073 [US2] Implement track click (onTapUp) to jump viewport to click position with 300ms ease-out animation (Curves.easeOut per FR-007 enhanced) in lib/src/widgets/chart_scrollbar.dart
+- [x] T073A [US2] Implement state transition animations using 150ms ease-in-out curve (Curves.easeInOut per FR-007 enhanced) for hover/active/focus states in lib/src/widgets/chart_scrollbar.dart
+- [x] T073B [US2] Implement animation cancellation for concurrent interactions (FR-048 enhanced) - new interaction cancels active animation immediately in lib/src/widgets/chart_scrollbar.dart
 
 ### Integration Tests for User Story 2
 
-- [X] T074 [US2] Integration test: Drag handle from 0% to 50% → verify viewport pans to middle in test/integration/scrollbar_drag_pan_test.dart
-- [X] T075 [US2] Integration test: Drag beyond data boundaries → verify clamping (no overscroll) in test/integration/scrollbar_boundary_clamp_test.dart
-- [X] T076 [US2] Integration test: Click track at 70% → verify handle animates to 70% over 300ms in test/integration/scrollbar_track_click_jump_test.dart
-- [X] T077 [US2] Integration test: Rapid drag → verify 60 FPS throttling (max 1 update per 16ms) in test/integration/scrollbar_throttle_performance_test.dart
-- [X] T078 [US2] Integration test: Pan drag completes → verify onPanChanged callback fired with delta in test/integration/scrollbar_pan_callback_test.dart
+- [x] T074 [US2] Integration test: Drag handle from 0% to 50% → verify viewport pans to middle in test/integration/scrollbar_drag_pan_test.dart
+- [x] T075 [US2] Integration test: Drag beyond data boundaries → verify clamping (no overscroll) in test/integration/scrollbar_boundary_clamp_test.dart
+- [x] T076 [US2] Integration test: Click track at 70% → verify handle animates to 70% over 300ms in test/integration/scrollbar_track_click_jump_test.dart
+- [x] T077 [US2] Integration test: Rapid drag → verify 60 FPS throttling (max 1 update per 16ms) in test/integration/scrollbar_throttle_performance_test.dart
+- [x] T078 [US2] Integration test: Pan drag completes → verify onPanChanged callback fired with delta in test/integration/scrollbar_pan_callback_test.dart
 
 ### Performance Tests for User Story 2
 
-- [X] T079 [US2] Benchmark ScrollbarController calculations (<0.1ms) in test/performance/scrollbar_calculation_benchmark.dart
-- [X] T080 [US2] Benchmark frame time during drag (target <16.67ms) in test/performance/scrollbar_drag_frame_time_test.dart
+- [x] T079 [US2] Benchmark ScrollbarController calculations (<0.1ms) in test/performance/scrollbar_calculation_benchmark.dart
+- [x] T080 [US2] Benchmark frame time during drag (target <16.67ms) in test/performance/scrollbar_drag_frame_time_test.dart
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently - scrollbar displays AND pans viewport on drag
 
@@ -212,42 +216,43 @@
 **Independent Test**: Drag right edge of handle leftward. Verify chart zooms in (shows less data) with left boundary fixed at original position. Handle size shrinks to match new viewport ratio.
 
 **Constitutional Requirements**:
+
 - ✅ Performance First: Edge drag same performance as center drag (60 FPS, throttled updates)
 - ✅ Architectural Integrity: Zoom updates ViewportState via withRanges(), no direct coordinate system modification
 
 ### Contract Tests for User Story 3 (TDD - Write FIRST) ⚠️
 
-- [X] T079 [P] [US3] Contract test for HitTestZone detection (leftEdge/rightEdge) in test/contract/widgets/scrollbar_hit_test_edge_detection_test.dart
-- [X] T080 [P] [US3] Contract test for left edge drag (adjusts viewportMin) in test/contract/widgets/scrollbar_left_edge_resize_test.dart
-- [X] T081 [P] [US3] Contract test for right edge drag (adjusts viewportMax) in test/contract/widgets/scrollbar_right_edge_resize_test.dart
-- [X] T082 [P] [US3] Contract test for minimum handle size clamping in test/contract/widgets/scrollbar_min_handle_size_test.dart
-- [X] T083 [P] [US3] Golden test for edge resize cursors (↔) in test/golden/scrollbar_edge_cursor_test.dart
+- [x] T079 [P] [US3] Contract test for HitTestZone detection (leftEdge/rightEdge) in test/contract/widgets/scrollbar_hit_test_edge_detection_test.dart
+- [x] T080 [P] [US3] Contract test for left edge drag (adjusts viewportMin) in test/contract/widgets/scrollbar_left_edge_resize_test.dart
+- [x] T081 [P] [US3] Contract test for right edge drag (adjusts viewportMax) in test/contract/widgets/scrollbar_right_edge_resize_test.dart
+- [x] T082 [P] [US3] Contract test for minimum handle size clamping in test/contract/widgets/scrollbar_min_handle_size_test.dart
+- [x] T083 [P] [US3] Golden test for edge resize cursors (↔) in test/golden/scrollbar_edge_cursor_test.dart
 
 ### Implementation for User Story 3
 
-- [X] T084 [US3] Implement _onHover() to detect edge zones and update cursor in lib/src/widgets/chart_scrollbar.dart
-- [X] T085 [US3] Store hover zone in ScrollbarState.hoverZone via ValueNotifier in lib/src/widgets/chart_scrollbar.dart
-- [X] T086 [US3] Modify _onPanStart() to detect leftEdge/rightEdge zones in lib/src/widgets/chart_scrollbar.dart
-- [X] T087 [US3] Implement _onPanUpdate() for left edge drag (resize viewport min) in lib/src/widgets/chart_scrollbar.dart
-- [X] T088 [US3] Implement _onPanUpdate() for right edge drag (resize viewport max) in lib/src/widgets/chart_scrollbar.dart
-- [X] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart
-- [X] T090 [US3] Enforce minZoomRatio (1% minimum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
-- [X] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
-- [X] T091A [US3] Implement zoom limit feedback: flash animation (opacity 0.8 → 0.4 → 0.8 over 200ms per FR-011 enhanced) when zoom limit reached in lib/src/widgets/chart_scrollbar.dart
-- [X] T091B [US3] Implement zoom limit feedback: cursor changes to 'not-allowed' when dragging beyond zoom limits (FR-011 enhanced) in lib/src/widgets/chart_scrollbar.dart
-- [X] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize _onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
-- [X] T093 [US3] Update cursor via MouseRegion based on hoverZone in lib/src/widgets/chart_scrollbar.dart
-- [X] T094 [US3] Implement SystemMouseCursors.resizeColumn for horizontal scrollbar edges in lib/src/widgets/chart_scrollbar.dart
-- [X] T095 [US3] Implement SystemMouseCursors.resizeRow for vertical scrollbar edges in lib/src/widgets/chart_scrollbar.dart
+- [x] T084 [US3] Implement \_onHover() to detect edge zones and update cursor in lib/src/widgets/chart_scrollbar.dart
+- [x] T085 [US3] Store hover zone in ScrollbarState.hoverZone via ValueNotifier in lib/src/widgets/chart_scrollbar.dart
+- [x] T086 [US3] Modify \_onPanStart() to detect leftEdge/rightEdge zones in lib/src/widgets/chart_scrollbar.dart
+- [x] T087 [US3] Implement \_onPanUpdate() for left edge drag (resize viewport min) in lib/src/widgets/chart_scrollbar.dart
+- [x] T088 [US3] Implement \_onPanUpdate() for right edge drag (resize viewport max) in lib/src/widgets/chart_scrollbar.dart
+- [x] T089 [US3] Calculate new viewport min/max using ScrollbarController edge formulas in lib/src/widgets/chart_scrollbar.dart
+- [x] T090 [US3] Enforce minZoomRatio (1% minimum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
+- [x] T091 [US3] Enforce maxZoomRatio (100% maximum visible) from ScrollbarConfig in lib/src/widgets/chart_scrollbar.dart
+- [x] T091A [US3] Implement zoom limit feedback: flash animation (opacity 0.8 → 0.4 → 0.8 over 200ms per FR-011 enhanced) when zoom limit reached in lib/src/widgets/chart_scrollbar.dart
+- [x] T091B [US3] Implement zoom limit feedback: cursor changes to 'not-allowed' when dragging beyond zoom limits (FR-011 enhanced) in lib/src/widgets/chart_scrollbar.dart
+- [x] T092 [US3] Fire InteractionConfig.onZoomChanged callback in edge resize \_onPanEnd() with zoom ratio change in lib/src/widgets/chart_scrollbar.dart
+- [x] T093 [US3] Update cursor via MouseRegion based on hoverZone in lib/src/widgets/chart_scrollbar.dart
+- [x] T094 [US3] Implement SystemMouseCursors.resizeColumn for horizontal scrollbar edges in lib/src/widgets/chart_scrollbar.dart
+- [x] T095 [US3] Implement SystemMouseCursors.resizeRow for vertical scrollbar edges in lib/src/widgets/chart_scrollbar.dart
 
 ### Integration Tests for User Story 3
 
-- [X] T096 [US3] Integration test: Drag right edge left → verify zoom in with left edge anchored in test/integration/scrollbar_right_edge_zoom_test.dart (SKIPPED - edge zoom feature not working yet, see t096_test_findings.md)
-- [X] T097 [US3] Integration test: Drag left edge right → verify zoom in with right edge anchored in test/integration/scrollbar_left_edge_zoom_test.dart (SKIPPED - pending edge zoom feature fix)
-- [X] T098 [US3] Integration test: Zoom to min handle size → verify clamping at 1% visible in test/integration/scrollbar_min_handle_size_test.dart (SKIPPED - pending edge zoom feature fix)
-- [X] T099 [US3] Integration test: Hover over edge → verify cursor changes to ↔ in test/integration/scrollbar_cursor_hover_test.dart (SKIPPED - cursor testing requires MouseRegion inspection)
-- [X] T100 [US3] Integration test: enableZoom=false → verify edges not draggable in test/integration/scrollbar_enable_zoom_false_test.dart (SKIPPED - pending edge zoom feature fix)
-- [X] T101 [US3] Integration test: Edge resize completes → verify onZoomChanged callback fired with zoom ratio in test/integration/scrollbar_on_zoom_changed_test.dart (SKIPPED - pending edge zoom feature fix)
+- [x] T096 [US3] Integration test: Drag right edge left → verify zoom in with left edge anchored in test/integration/scrollbar_right_edge_zoom_test.dart (SKIPPED - edge zoom feature not working yet, see t096_test_findings.md)
+- [x] T097 [US3] Integration test: Drag left edge right → verify zoom in with right edge anchored in test/integration/scrollbar_left_edge_zoom_test.dart (SKIPPED - pending edge zoom feature fix)
+- [x] T098 [US3] Integration test: Zoom to min handle size → verify clamping at 1% visible in test/integration/scrollbar_min_handle_size_test.dart (SKIPPED - pending edge zoom feature fix)
+- [x] T099 [US3] Integration test: Hover over edge → verify cursor changes to ↔ in test/integration/scrollbar_cursor_hover_test.dart (SKIPPED - cursor testing requires MouseRegion inspection)
+- [x] T100 [US3] Integration test: enableZoom=false → verify edges not draggable in test/integration/scrollbar_enable_zoom_false_test.dart (SKIPPED - pending edge zoom feature fix)
+- [x] T101 [US3] Integration test: Edge resize completes → verify onZoomChanged callback fired with zoom ratio in test/integration/scrollbar_on_zoom_changed_test.dart (SKIPPED - pending edge zoom feature fix)
 
 **Checkpoint**: User Stories 1, 2, AND 3 should all work independently - scrollbar displays, pans, AND zooms
 
@@ -260,6 +265,7 @@
 **Independent Test**: Using only keyboard: Tab to focus scrollbar → press Right Arrow 5 times → verify viewport pans right by 25% (5 × 5% increments). No mouse required.
 
 **Constitutional Requirements**:
+
 - ✅ Architectural Integrity: Accessibility mandatory (WCAG 2.1 AA compliance, keyboard navigation)
 - ✅ API Consistency: Follow Flutter FocusNode and KeyboardListener patterns
 
@@ -274,13 +280,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T106 [US4] Add FocusNode to _ChartScrollbarState in lib/src/widgets/chart_scrollbar.dart
+- [ ] T106 [US4] Add FocusNode to \_ChartScrollbarState in lib/src/widgets/chart_scrollbar.dart
 - [ ] T107 [US4] Initialize FocusNode in initState() in lib/src/widgets/chart_scrollbar.dart
 - [ ] T108 [US4] Dispose FocusNode in dispose() in lib/src/widgets/chart_scrollbar.dart
 - [ ] T109 [US4] Add Focus widget wrapper in ChartScrollbar.build() in lib/src/widgets/chart_scrollbar.dart
 - [ ] T110 [US4] Implement onFocusChange callback to update ScrollbarState.isFocused in lib/src/widgets/chart_scrollbar.dart
 - [ ] T111 [US4] Add KeyboardListener for key events in lib/src/widgets/chart_scrollbar.dart
-- [ ] T112 [US4] Implement _onKeyEvent() to route key presses to handlers in lib/src/widgets/chart_scrollbar.dart
+- [ ] T112 [US4] Implement \_onKeyEvent() to route key presses to handlers in lib/src/widgets/chart_scrollbar.dart
 - [ ] T113 [US4] Implement arrow key handler (pan 5% of viewport) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T114 [US4] Implement Shift+arrow key handler (pan 25% of viewport) in lib/src/widgets/chart_scrollbar.dart
 - [ ] T115 [US4] Implement Ctrl+arrow key handler (zoom ±10%) in lib/src/widgets/chart_scrollbar.dart
@@ -307,6 +313,7 @@
 **Independent Test**: Apply ChartTheme.defaultDark to chart. Verify scrollbar uses dark theme colors (light handle on dark track). Change to ChartTheme.highContrast → verify high contrast colors (21:1 ratio).
 
 **Constitutional Requirements**:
+
 - ✅ API Consistency: Theme integration follows existing ChartTheme patterns
 - ✅ Documentation Discipline: dartdoc comments for all ScrollbarConfig properties
 
@@ -423,15 +430,18 @@
 ### User Story Dependencies
 
 **Parallel Opportunities** (can start together after Foundational):
+
 - **US1 (Visual Feedback)**: No dependencies after Foundational ✅
 - **US4 (Keyboard)**: No dependencies after Foundational ✅
 - **US5 (Theming)**: No dependencies after Foundational ✅
 
 **Sequential Requirements**:
+
 - **US2 (Pan)**: MUST complete US1 first (needs widget rendering)
 - **US3 (Zoom)**: MUST complete US2 first (shares gesture detection logic)
 
 **Dependency Graph**:
+
 ```
 Phase 2 (Foundational)
     ├─→ US1 (Visual) ─→ US2 (Pan) ─→ US3 (Zoom)
@@ -454,6 +464,7 @@ Phase 2 (Foundational)
 ### Parallel Opportunities
 
 **Phase 2 Foundational** (all marked [P] can run in parallel):
+
 ```bash
 # Core data structures (independent files):
 T005: HitTestZone enum
@@ -477,6 +488,7 @@ T033-T038: All foundational contract tests
 ```
 
 **User Story 1** (tests in parallel):
+
 ```bash
 T039: ChartScrollbar render test
 T040: Handle size accuracy test
@@ -486,6 +498,7 @@ T043: Vertical golden test
 ```
 
 **User Story 2** (tests in parallel):
+
 ```bash
 T059: Pan start test
 T060: Pan update test
@@ -494,6 +507,7 @@ T062: Throttle test
 ```
 
 **User Story 3** (tests in parallel):
+
 ```bash
 T079: Edge detection test
 T080: Left edge resize test
@@ -503,16 +517,19 @@ T083: Edge cursor golden test
 ```
 
 **User Story 4** (all keyboard tests in parallel):
+
 ```bash
 T100-T105: All keyboard navigation contract tests
 ```
 
 **User Story 5** (all theme tests in parallel):
+
 ```bash
 T124-T130: All theme contract and golden tests
 ```
 
 **Phase 9 Polish** (documentation in parallel):
+
 ```bash
 T154: ChartScrollbar dartdoc
 T155: ScrollbarController dartdoc
@@ -553,6 +570,7 @@ Task: "Implement ScrollbarController.getCursorForZone()"
 6. Deploy/demo scrollbar with visual feedback + pan (covers 80% of use cases)
 
 **Why This MVP**:
+
 - Visual feedback (US1) answers "where am I in my data?" (core value)
 - Pan capability (US2) enables navigation (core interaction)
 - Combined: Delivers production-ready scrollbar for most use cases
@@ -590,6 +608,7 @@ With 3 developers after Foundational phase completes:
 **CRITICAL**: Write contract tests BEFORE implementation per Constitution I
 
 **TDD Workflow**:
+
 1. Write contract test for feature (e.g., T033: calculateHandleSize test)
 2. Run test → verify it FAILS (red)
 3. Implement feature (e.g., T009: calculateHandleSize method)
@@ -598,15 +617,15 @@ With 3 developers after Foundational phase completes:
 
 **Test Categories**:
 
-| Type | Purpose | Example | Phase |
-|------|---------|---------|-------|
-| **Contract Tests** | Verify API contracts (inputs → outputs) | ScrollbarController.calculateHandleSize() with edge cases | Foundational, All User Stories |
-| **Unit Tests** | Verify isolated component behavior | ScrollbarState.copyWith() immutability | Foundational |
-| **Widget Tests** | Verify widget rendering and gestures | ChartScrollbar renders handle correctly | US1, US2, US3 |
-| **Golden Tests** | Verify visual appearance (regression prevention) | Scrollbar appearance in defaultLight theme | US1, US5 |
-| **Integration Tests** | Verify user story end-to-end flows | Drag scrollbar → chart viewport updates | All User Stories |
-| **Performance Tests** | Verify <0.1ms calculations, 60 FPS, <100KB memory | Benchmark calculations, frame time, memory profiler | US2 (drag), Phase 9 |
-| **Accessibility Tests** | Verify WCAG 2.1 AA compliance | Screen reader announcements, contrast ratios | US4, US5, Phase 8 |
+| Type                    | Purpose                                           | Example                                                   | Phase                          |
+| ----------------------- | ------------------------------------------------- | --------------------------------------------------------- | ------------------------------ |
+| **Contract Tests**      | Verify API contracts (inputs → outputs)           | ScrollbarController.calculateHandleSize() with edge cases | Foundational, All User Stories |
+| **Unit Tests**          | Verify isolated component behavior                | ScrollbarState.copyWith() immutability                    | Foundational                   |
+| **Widget Tests**        | Verify widget rendering and gestures              | ChartScrollbar renders handle correctly                   | US1, US2, US3                  |
+| **Golden Tests**        | Verify visual appearance (regression prevention)  | Scrollbar appearance in defaultLight theme                | US1, US5                       |
+| **Integration Tests**   | Verify user story end-to-end flows                | Drag scrollbar → chart viewport updates                   | All User Stories               |
+| **Performance Tests**   | Verify <0.1ms calculations, 60 FPS, <100KB memory | Benchmark calculations, frame time, memory profiler       | US2 (drag), Phase 9            |
+| **Accessibility Tests** | Verify WCAG 2.1 AA compliance                     | Screen reader announcements, contrast ratios              | US4, US5, Phase 8              |
 
 **Test Coverage Target**: 100% for core scrollbar logic (ScrollbarController, ChartScrollbar gestures)
 
@@ -616,14 +635,14 @@ With 3 developers after Foundational phase completes:
 
 **From Constitution II (Performance First) and SC-003 through SC-013**:
 
-| Metric | Target | Validation | Task |
-|--------|--------|------------|------|
-| Handle calculation | <0.1ms | Benchmark with 1M iterations | T165 |
-| Scrollbar render | <1ms | CustomPainter profiling | T166 |
-| Viewport update | <16ms | Full chart re-render with 10K points | T166 |
-| Frame time during drag | <16.67ms (60 FPS) | Flutter DevTools performance overlay | T166 |
-| Memory overhead | <100KB | Both X+Y scrollbars, DevTools memory profiler | T167 |
-| Jank rate | 0% | 1000-frame drag session, no dropped frames | T168 |
+| Metric                 | Target            | Validation                                    | Task |
+| ---------------------- | ----------------- | --------------------------------------------- | ---- |
+| Handle calculation     | <0.1ms            | Benchmark with 1M iterations                  | T165 |
+| Scrollbar render       | <1ms              | CustomPainter profiling                       | T166 |
+| Viewport update        | <16ms             | Full chart re-render with 10K points          | T166 |
+| Frame time during drag | <16.67ms (60 FPS) | Flutter DevTools performance overlay          | T166 |
+| Memory overhead        | <100KB            | Both X+Y scrollbars, DevTools memory profiler | T167 |
+| Jank rate              | 0%                | 1000-frame drag session, no dropped frames    | T168 |
 
 **Performance Validation**: All targets verified in Phase 9 before declaring feature complete
 
@@ -633,13 +652,13 @@ With 3 developers after Foundational phase completes:
 
 **WCAG 2.1 AA Compliance** (Constitutional requirement per Architectural Integrity):
 
-| Guideline | Requirement | Implementation | Tasks |
-|-----------|-------------|----------------|-------|
-| **2.1.1 Keyboard** | All functionality via keyboard | Arrow keys (pan), Ctrl+arrow (zoom), Tab (focus) | T106-T118 (US4) |
-| **1.4.3 Contrast (Minimum)** | 4.5:1 for text/critical UI | Handle vs track: 4.5:1+ in all themes | T131-T133 (US5) |
-| **1.4.11 Non-text Contrast** | 3:1 for UI components | Track vs background: 3:1+, hover/active: 3:1+ | T131-T133 (US5) |
-| **4.1.3 Status Messages** | Screen reader announcements | Semantics widget with value updates | T147-T152 (Phase 8) |
-| **2.4.7 Focus Visible** | Visible focus indicator | 2px solid focus ring, high contrast | T119 (US4) |
+| Guideline                    | Requirement                    | Implementation                                   | Tasks               |
+| ---------------------------- | ------------------------------ | ------------------------------------------------ | ------------------- |
+| **2.1.1 Keyboard**           | All functionality via keyboard | Arrow keys (pan), Ctrl+arrow (zoom), Tab (focus) | T106-T118 (US4)     |
+| **1.4.3 Contrast (Minimum)** | 4.5:1 for text/critical UI     | Handle vs track: 4.5:1+ in all themes            | T131-T133 (US5)     |
+| **1.4.11 Non-text Contrast** | 3:1 for UI components          | Track vs background: 3:1+, hover/active: 3:1+    | T131-T133 (US5)     |
+| **4.1.3 Status Messages**    | Screen reader announcements    | Semantics widget with value updates              | T147-T152 (Phase 8) |
+| **2.4.7 Focus Visible**      | Visible focus indicator        | 2px solid focus ring, high contrast              | T119 (US4)          |
 
 **Validation**: Phase 8 accessibility tests verify all guidelines (T145, T146, T153)
 
@@ -656,7 +675,7 @@ With 3 developers after Foundational phase completes:
   - ✅ API Consistency: Follow Flutter patterns (T106-T110 FocusNode, T111-T118 KeyboardListener)
   - ✅ Documentation Discipline: dartdoc comments for all public APIs (T154-T157)
 - **Total Tasks**: 173 tasks across 9 phases
-- **Parallel Opportunities**: 
+- **Parallel Opportunities**:
   - Phase 2 Foundational: 15+ parallel tasks
   - Each user story tests: 5-7 parallel tasks
   - Phase 9 Documentation: 4 parallel tasks
@@ -670,6 +689,7 @@ With 3 developers after Foundational phase completes:
 **Total Task Count**: 173 tasks
 
 **Tasks by User Story**:
+
 - Phase 1 (Setup): 4 tasks
 - Phase 2 (Foundational): 28 tasks ⚠️ **BLOCKS ALL STORIES**
 - US1 (Visual Feedback): 18 tasks (MVP increment 1)
@@ -683,6 +703,7 @@ With 3 developers after Foundational phase completes:
 **Parallel Opportunities Identified**: 60+ tasks can run in parallel (marked with [P])
 
 **Independent Test Criteria**:
+
 - ✅ US1: Zoom in → scrollbar appears with handle size = viewport ratio
 - ✅ US2: Drag handle → chart viewport pans, zoom level constant
 - ✅ US3: Drag edge → chart zooms with opposite edge anchored
@@ -696,6 +717,7 @@ With 3 developers after Foundational phase completes:
 ## Format Validation
 
 ✅ All 173 tasks follow the checklist format:
+
 - Checkbox: `- [ ]`
 - Task ID: Sequential T001-T173
 - [P] marker: 60+ parallelizable tasks marked

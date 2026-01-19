@@ -12,7 +12,8 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 ## Technical Context
 
 **Language/Version**: Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216  
-**Primary Dependencies**: 
+**Primary Dependencies**:
+
 - ViewportState (Layer 003 - Coordinate System) for viewport updates via withRanges()
 - InteractionConfig (Layer 007 - Interaction System) for enablePan/enableZoom callbacks
 - ChartTheme (Layer 004 - Theming System) for ScrollbarTheme integration
@@ -23,13 +24,15 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 **Testing**: Flutter test framework, ChromeDriver for integration tests, golden tests for visual regression  
 **Target Platform**: Flutter Web (primary - Chrome), iOS/Android (secondary)  
 **Project Type**: Single Flutter library (adding scrollbar components to lib/src/widgets/)  
-**Performance Goals**: 
+**Performance Goals**:
+
 - 60 FPS (≤16.67ms frame time) during drag operations
 - <0.1ms handle position calculations (O(1) complexity)
 - <16ms viewport updates (full frame budget for chart re-render)
 - <100KB memory overhead for both X and Y scrollbars combined
 
-**Constraints**: 
+**Constraints**:
+
 - **CONSTITUTIONAL (Critical)**: ValueNotifier pattern REQUIRED for drag state (>10Hz pointer events) - setState WILL cause box.dart:3345 and mouse_tracker.dart:199 crashes per Constitution v1.1.0 Performance First principle
 - **FR-015**: MUST NOT modify chartAreaBounds in TransformContext (coordinate system independence)
 - Pure Flutter (no HTML/web-specific APIs per Constitution III - Architectural Integrity)
@@ -37,7 +40,8 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 - No external packages (standard Dart libraries only: dart:core, dart:math, dart:ui, dart:async)
 - RepaintBoundary isolation mandatory (prevent cascade rebuilds)
 
-**Scale/Scope**: 
+**Scale/Scope**:
+
 - Handle datasets from 100 to 1,000,000+ data points
 - Support both X-axis (horizontal) and Y-axis (vertical) scrollbars
 - 28 functional requirements across 7 component interactions
@@ -45,18 +49,20 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. Test-First Development ✅ **PASS**
+
 - **Requirement**: Contract tests first, implementation follows TDD cycle
 - **Status**: Specification includes comprehensive acceptance criteria for all 5 user stories
 - **Evidence**: spec.md contains 14 success criteria with measurable validation methods, 28 functional requirements with explicit test conditions
 - **Validation**: Phase 0 will establish contract tests before any implementation
 
 ### II. Performance First ✅ **PASS** (Constitutional Mandate - Critical)
+
 - **Requirement**: 60fps target, setState MUST NOT be used for >10Hz updates, MUST use ValueNotifier pattern
 - **Status**: Feature ENFORCES Constitution v1.1.0 Performance First expansion
-- **Evidence**: 
+- **Evidence**:
   - FR-025 explicitly requires ValueNotifier for scrollbar drag state (pointer events at 100+ Hz)
   - FR-026 mandates RepaintBoundary isolation to prevent cascade rebuilds
   - SC-008 validates 60 FPS performance during drag operations
@@ -64,6 +70,7 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 - **Rationale**: Scrollbar drag operations generate continuous pointer events (>100 events/second). Using setState would trigger catastrophic crashes (box.dart:3345, mouse_tracker.dart:199) as documented in Constitution v1.1.0. ValueNotifier provides granular reactivity without rebuild overhead, achieving smooth 60fps interactions.
 
 ### III. Architectural Integrity ✅ **PASS**
+
 - **Requirement**: Pure Flutter, SOLID principles, architectural consistency
 - **Status**: Feature maintains existing architectural patterns
 - **Evidence**:
@@ -74,12 +81,14 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 - **Validation**: Architecture follows existing widget patterns (CustomPainter for rendering, GestureDetector for input)
 
 ### IV. Requirements Compliance ✅ **PASS**
+
 - **Requirement**: All work tracked in tasks.md, acceptance criteria met
 - **Status**: Specification defines comprehensive requirements
 - **Evidence**: 28 functional requirements, 14 success criteria, 8 edge cases, 5 user stories with acceptance conditions
 - **Validation**: tasks.md will be generated in Phase 2 (/speckit.tasks) tracking all requirements
 
 ### V. API Consistency & Stability ✅ **PASS**
+
 - **Requirement**: Follow Flutter conventions, maintain backward compatibility
 - **Status**: Feature extends existing API patterns without breaking changes
 - **Evidence**:
@@ -90,12 +99,14 @@ Add dual-purpose scrollbars to Braven Charts that enable both panning (drag cent
 - **Validation**: Zero breaking changes to existing chart functionality
 
 ### VI. Documentation Discipline ✅ **PASS**
+
 - **Requirement**: All public APIs documented with examples
 - **Status**: Specification includes detailed documentation requirements
 - **Evidence**: FR-027 mandates dartdoc comments for all public APIs, FR-028 requires usage examples
 - **Validation**: Phase 1 quickstart.md will provide comprehensive developer guide
 
 ### VII. Simplicity & Pragmatism ✅ **PASS**
+
 - **Requirement**: KISS principle, SOLID design, avoid over-engineering
 - **Status**: Feature uses simplest effective solution
 - **Evidence**:
@@ -175,6 +186,7 @@ docs/
 ```
 
 **Structure Decision**: Single Flutter library structure (default for Braven Charts). New scrollbar components integrate into existing layer structure:
+
 - **Layer 007 (Widgets)**: ChartScrollbar widget, ScrollbarHandle component
 - **Layer 007 (Interaction)**: ScrollbarController for transformations
 - **Layer 004 (Theming)**: ScrollbarTheme, ScrollbarConfig for styling
@@ -184,7 +196,7 @@ This structure maintains architectural layering (theming → coordinates → int
 
 ## Complexity Tracking
 
-*No constitutional violations - this section is not applicable.*
+_No constitutional violations - this section is not applicable._
 
 ---
 
@@ -192,6 +204,7 @@ This structure maintains architectural layering (theming → coordinates → int
 
 **Status**: ✅ COMPLETE (2025-01-20)  
 **Outputs** (generated):
+
 - ✅ [`research.md`](./research.md) - 7 technical decisions documented with alternatives considered
 - ✅ Updated plan.md with comprehensive research findings
 
@@ -204,6 +217,7 @@ Based on research.md analysis (1490 lines), the following technical decisions ha
 **Decision**: Use ValueNotifier<ScrollbarState> + ValueListenableBuilder for scrollbar drag state
 
 **Rationale**:
+
 - Constitution II mandates ValueNotifier for >10Hz updates
 - Scrollbar drag generates 100+ pointer events per second
 - Prevents setState-induced crashes (box.dart:3345, mouse_tracker.dart:199)
@@ -211,11 +225,13 @@ Based on research.md analysis (1490 lines), the following technical decisions ha
 - Proven pattern from Layer 008 (ValueNotifier Architecture Refactor)
 
 **Alternatives Considered**:
+
 1. **setState** - REJECTED: Violates Constitution II, causes catastrophic crashes during pointer events
 2. **StatefulWidget without ValueNotifier** - REJECTED: Same setState issues
 3. **InheritedWidget** - REJECTED: Over-engineered for single widget scope
 
 **Implementation Pattern**:
+
 ```dart
 // Scrollbar widget state
 late ValueNotifier<ScrollbarState> _scrollbarStateNotifier;
@@ -250,12 +266,13 @@ Widget build(BuildContext context) {
 **Decision**: O(1) ratio-based formulas for handle geometry
 
 **Formulas** (from research.md lines 334-370):
+
 ```dart
 // Handle size = visible percentage
 double handleSize = (viewportRange / dataRange) * trackSize;
 
 // Handle position = offset percentage (accounting for handle size)
-double handlePosition = ((viewportMin - dataMin) / (dataMax - dataMin)) 
+double handlePosition = ((viewportMin - dataMin) / (dataMax - dataMin))
                         * (trackSize - handleSize);
 
 // Reverse: Handle position → viewport range
@@ -274,12 +291,14 @@ double viewportMax = viewportMin + viewportSpan;
 **Decision**: Scrollbar layout MUST NOT affect TransformContext.chartAreaBounds
 
 **Strategy** (from research.md lines 384-445):
+
 - Separate layout regions (Column/Row structure)
 - Scrollbar uses Flutter RenderBox coordinates, no access to TransformContext
 - Updates flow through ViewportState.withRanges(), not coordinate system modification
 - Validation: chartAreaBounds always calculated from canvas size, never from scrollbar
 
 **Layout Integration**:
+
 ```dart
 Column(
   children: [
@@ -301,12 +320,14 @@ Column(
 **Decision**: Three hit zones with cursor changes (edges, center, track)
 
 **Zones** (from research.md lines 301-330):
+
 1. **Left/Top Edge** (8px wide): Resize by adjusting minimum, cursor: ↔/↕
 2. **Right/Bottom Edge** (8px wide): Resize by adjusting maximum, cursor: ↔/↕
 3. **Center Area**: Drag to pan (no resize), cursor: ✋ (grab)
 4. **Track (outside handle)**: Click to jump viewport, cursor: 👆 (pointer)
 
 **Implementation**:
+
 ```dart
 HitTestZone _getHitZone(Offset localPosition) {
   if (isInLeftEdge(localPosition, edgeGripWidth: 8.0)) {
@@ -326,6 +347,7 @@ HitTestZone _getHitZone(Offset localPosition) {
 **Decision**: Extend ChartTheme with ScrollbarTheme component (follows existing Layer 004 patterns)
 
 **Structure** (from research.md lines 606-685):
+
 ```dart
 class ChartTheme {
   // ... existing 6 component themes
@@ -335,7 +357,7 @@ class ChartTheme {
 class ScrollbarTheme {
   final ScrollbarConfig xAxisScrollbar;
   final ScrollbarConfig yAxisScrollbar;
-  
+
   static const ScrollbarTheme defaultLight = ScrollbarTheme(...);
   static const ScrollbarTheme defaultDark = ScrollbarTheme(...);
 }
@@ -380,6 +402,7 @@ class ScrollbarConfig {
    - Page Up/Down: Jump by full viewport width
 
 3. **Semantics**:
+
 ```dart
 Semantics(
   label: 'Chart X-axis scrollbar',
@@ -413,6 +436,7 @@ Semantics(
    - No data queries during drag (use cached DataRange)
 
 **Performance Targets**:
+
 - Handle position calculation: <0.1ms (O(1) ratio math)
 - Scrollbar render (CustomPainter): <1ms
 - Viewport update + chart re-render: <16ms (full 60 FPS budget)
@@ -434,6 +458,7 @@ Semantics(
 
 **Status**: ✅ COMPLETE (2025-01-20)  
 **Outputs** (generated):
+
 - ✅ [`data-model.md`](./data-model.md) - 7 entities documented with relationships, state transitions, validation rules
 - ✅ [`contracts/`](./contracts/) - 4 API contract files with comprehensive documentation
   - ✅ `chart_scrollbar.dart` - ChartScrollbar widget API
@@ -496,6 +521,7 @@ Based on spec.md Key Entities section and research.md technical design:
 ### Quickstart Content (quickstart.md)
 
 Developer guide covering:
+
 - Basic scrollbar addition to chart
 - Configuration customization (colors, sizes, behavior)
 - Theming integration with ChartTheme
@@ -510,16 +536,17 @@ Developer guide covering:
 **Constitutional Compliance Critical**: The ValueNotifier pattern is MANDATORY for this feature (Constitution v1.1.0 Performance First principle). Scrollbar drag operations generate 100+ pointer events per second, making this a textbook case for the constitutional requirement. Any attempt to use setState will result in catastrophic crashes (box.dart:3345, mouse_tracker.dart:199) as documented in the constitution's expanded Performance First section.
 
 **Architecture Integration**: This feature seamlessly integrates with existing Braven Charts architecture:
+
 - Layer 003 (Coordinate System): ViewportState.withRanges() - no modifications needed
 - Layer 004 (Theming System): ScrollbarTheme extends ChartTheme - follows existing component theme pattern
 - Layer 007 (Interaction System): InteractionConfig callbacks - uses existing interaction patterns
 - Layer 007 (Widgets): ChartScrollbar widget - follows existing widget patterns (CustomPainter, GestureDetector)
 
 **Testing Strategy**: TDD contract tests will be established in Phase 0 before any implementation:
+
 - Contract tests for ChartScrollbar widget API
 - Contract tests for ScrollbarController transformations
 - Unit tests for calculations (handle position, viewport ranges)
 - Integration tests for gesture handling (drag, resize, click-to-jump)
 - Golden tests for visual regression (scrollbar rendering, themes)
 - Performance tests for 60 FPS validation during drag operations
-

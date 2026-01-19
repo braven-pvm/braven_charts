@@ -52,6 +52,7 @@ The Theming System specification defines comprehensive visual control over all c
 ## 📊 Specification Contents
 
 ### User Scenarios (5 scenarios)
+
 1. **Applying Predefined Theme**: Switch between 7 professional themes
 2. **Custom Theme Creation**: Brand-specific styling with builder API
 3. **Accessibility-First Theming**: Colorblind-friendly with redundant encoding
@@ -61,6 +62,7 @@ The Theming System specification defines comprehensive visual control over all c
 ### Requirements
 
 #### Functional Requirements (9 categories)
+
 - **FR-001**: Theme Structure (comprehensive theme definition)
 - **FR-002**: Predefined Themes (7 professional themes)
 - **FR-003**: Theme Customization (builder API, advanced customization)
@@ -72,6 +74,7 @@ The Theming System specification defines comprehensive visual control over all c
 - **FR-009**: Animation Theming (durations, curves, transitions)
 
 #### Non-Functional Requirements (4 categories)
+
 - **NFR-001**: Performance (<100ms theme switching, >95% cache hit rate)
 - **NFR-002**: Accessibility (WCAG 2.1 AA/AAA, colorblind validation)
 - **NFR-003**: Developer Experience (intuitive API, comprehensive docs)
@@ -80,6 +83,7 @@ The Theming System specification defines comprehensive visual control over all c
 ### Technical Design
 
 #### Core Components
+
 1. **ChartTheme**: Top-level theme container (immutable, serializable)
 2. **GridStyle**: Grid line styling (major/minor, colors, patterns)
 3. **AxisStyle**: Axis styling (lines, labels, titles, ticks)
@@ -91,6 +95,7 @@ The Theming System specification defines comprehensive visual control over all c
 9. **ColorUtils**: Accessibility utilities (contrast, colorblind simulation)
 
 #### Key Features
+
 - **Immutability**: All theme classes are immutable with `copyWith()` methods
 - **Serialization**: JSON import/export with schema versioning
 - **Validation**: Theme validation before application (catch invalid configs)
@@ -103,6 +108,7 @@ The Theming System specification defines comprehensive visual control over all c
 ## 🎯 Implementation Roadmap
 
 ### Phase 1: Core Theme Structure (Week 1)
+
 - Define all theme data classes
 - Implement immutability (copyWith, equality, hash code)
 - Add JSON serialization/deserialization
@@ -110,6 +116,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Unit tests for all data classes
 
 ### Phase 2: Predefined Themes (Week 1-2)
+
 - Implement all 7 predefined themes
 - Validate accessibility (WCAG 2.1 AA/AAA)
 - Test colorblind-friendly theme with simulation
@@ -117,6 +124,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Integration tests for theme application
 
 ### Phase 3: Theme Builder (Week 2)
+
 - Implement ChartThemeBuilder with fluent API
 - Add callback-based customization
 - Implement theme preview capability
@@ -124,6 +132,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Unit tests for builder patterns
 
 ### Phase 4: Color Utilities (Week 2)
+
 - Implement contrast ratio calculation (WCAG algorithms)
 - Add colorblind simulation functions
 - Implement auto-contrast text color
@@ -131,6 +140,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Unit tests for all color utilities
 
 ### Phase 5: Theme Application (Week 3)
+
 - Integrate themes with rendering engine
 - Implement theme caching and diffing
 - Add theme change animations
@@ -138,6 +148,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Performance benchmarks (<100ms theme switching)
 
 ### Phase 6: Responsive Theming (Week 3)
+
 - Implement breakpoint detection
 - Add responsive font scaling
 - Implement responsive grid density
@@ -145,6 +156,7 @@ The Theming System specification defines comprehensive visual control over all c
 - Integration tests across viewport sizes
 
 ### Phase 7: Documentation & Polish (Week 4)
+
 - Complete dartdoc for all public APIs
 - Write comprehensive usage guide
 - Create migration guide from other libraries
@@ -158,6 +170,7 @@ The Theming System specification defines comprehensive visual control over all c
 ## ✅ Success Criteria
 
 ### Functional Completeness
+
 - ✅ All 7 predefined themes implemented and documented
 - ✅ Custom theme builder with fluent API
 - ✅ Theme serialization (JSON import/export)
@@ -165,6 +178,7 @@ The Theming System specification defines comprehensive visual control over all c
 - ✅ Responsive theming (mobile/tablet/desktop breakpoints)
 
 ### Performance
+
 - ✅ Theme switching <100ms for complex charts
 - ✅ Style resolution <0.1ms per element
 - ✅ Cache hit rate >95%
@@ -172,6 +186,7 @@ The Theming System specification defines comprehensive visual control over all c
 - ✅ Zero performance overhead vs. no theming
 
 ### Accessibility
+
 - ✅ All themes meet WCAG 2.1 AA (4.5:1 contrast)
 - ✅ High Contrast theme meets WCAG 2.1 AAA (7:1 contrast)
 - ✅ Colorblind Friendly theme validated with simulation
@@ -179,6 +194,7 @@ The Theming System specification defines comprehensive visual control over all c
 - ✅ Touch targets ≥44×44 points (all themes)
 
 ### Developer Experience
+
 - ✅ Comprehensive dartdoc with examples
 - ✅ Intuitive, discoverable API
 - ✅ Theme debugging tools (inspector, validation)
@@ -190,14 +206,17 @@ The Theming System specification defines comprehensive visual control over all c
 ## 🔗 Dependencies
 
 ### Layer 0: Foundation (001-foundation) ✅
+
 **Required**: DataRange, ValidationResult, ChartError  
 **Why**: Theme validation uses foundation validation utilities
 
 ### Layer 1: Core Rendering (002-core-rendering) ✅
+
 **Required**: Paint/Path object pools, TextLayoutCache, RenderLayer  
 **Why**: Themes apply visual properties to rendering primitives
 
 ### Layer 2: Coordinate System (003-coordinate-system) ✅
+
 **Required**: ViewportState, TransformContext  
 **Why**: Responsive theming adapts to viewport dimensions
 

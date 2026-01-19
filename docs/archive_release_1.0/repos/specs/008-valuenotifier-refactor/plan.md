@@ -20,12 +20,13 @@
 **Target Platform**: Flutter Web (primary), iOS/Android/Desktop (secondary via Flutter cross-platform)  
 **Project Type**: Single Flutter package/library (braven_charts)  
 **Performance Goals**: 60fps (16ms frame times) with 1000+ data points during continuous mouse interactions, zero widget rebuilds on hover, isolated CustomPainter repaints only  
-**Constraints**: 
+**Constraints**:
+
 - Zero breaking changes to public BravenChart widget API (backward compatibility required)
 - 90% minimum unit test coverage for refactored code
 - Throttle updates to 60Hz maximum when >60 updates/second occur
 - Comprehensive disposal (ValueNotifier, listeners, timers, animation controllers) to prevent memory leaks  
-**Scale/Scope**: 
+  **Scale/Scope**:
 - Primary file: `lib/src/widgets/braven_chart.dart` (~2000 lines)
 - Affected components: 11+ event handlers, 2 animation controllers, 2 controller callbacks, 1 timer callback, rendering layer
 - Estimated code changes: ~150 lines modified
@@ -33,18 +34,20 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. Test-First Development ✅ **PASS**
+
 - **Requirement**: TDD methodology, comprehensive test coverage, tests before implementation
 - **Status**: Feature includes SC-008 requiring 90% unit test coverage for all refactored code
 - **Evidence**: Specification mandates tests for event handlers, animation listeners, controller callbacks, timer callbacks, and disposal logic
 - **Action**: Implementation will follow Red-Green-Refactor cycle with test-first approach
 
 ### II. Performance First ✅ **PASS** (Constitutional Mandate)
+
 - **Requirement**: 60fps target, setState MUST NOT be used for >10Hz updates, MUST use ValueNotifier pattern
 - **Status**: This refactor ENFORCES Constitution v1.1.0 Performance First expansion
-- **Evidence**: 
+- **Evidence**:
   - Eliminates setState for interaction state updates (FR-001)
   - Implements ValueNotifier + ValueListenableBuilder pattern (FR-002, FR-003)
   - Isolates repainting with RepaintBoundary (FR-004)
@@ -53,9 +56,10 @@
 - **Rationale**: Current setState architecture violates constitution and causes catastrophic crashes. This refactor brings codebase into full constitutional compliance.
 
 ### III. Architectural Integrity ✅ **PASS**
+
 - **Requirement**: Pure Flutter, clean separation of concerns, SOLID principles, no circular dependencies
 - **Status**: Refactor maintains pure Flutter with standard widgets, improves architecture
-- **Evidence**: 
+- **Evidence**:
   - Uses standard Flutter widgets (ValueNotifier, ValueListenableBuilder, RepaintBoundary)
   - Enforces separation: base chart never depends on interaction state (FR-011)
   - Supports simultaneous non-conflicting interactions with state isolation (FR-015)
@@ -63,24 +67,27 @@
 - **Action**: Architecture improves with clearer separation between base rendering and interactive overlays
 
 ### IV. Requirements Compliance ✅ **PASS**
+
 - **Requirement**: Stop and ask for deviations, update tasks.md after every change, acknowledge deviations
 - **Status**: Specification provides 15 functional requirements, 8 success criteria, 5 clarifications
 - **Evidence**: Complete specification (spec.md) and clarification session documented
 - **Action**: tasks.md will be created in Phase 2 (/speckit.tasks), deviations will be documented
 
 ### V. API Consistency & Stability ✅ **PASS**
+
 - **Requirement**: Follow Flutter conventions, maintain backward compatibility, no breaking changes
 - **Status**: FR-012 explicitly mandates backward compatibility, FR-014 ensures automatic migration
-- **Evidence**: 
+- **Evidence**:
   - No changes to public BravenChart widget interface
   - Internal refactor only - users require zero code changes
   - Follows Flutter best practices (ValueNotifier pattern per Flutter docs)
 - **Action**: API surface remains unchanged, users benefit automatically
 
 ### VI. Documentation Discipline ✅ **PASS**
+
 - **Requirement**: Document public APIs, explain "why" not "what", ADRs for major decisions
 - **Status**: Refactor plan includes comprehensive documentation (architecture_refactor_plan.md)
-- **Evidence**: 
+- **Evidence**:
   - Root cause analysis documented (why setState fails)
   - Solution architecture explained (why ValueNotifier works)
   - Code snippets provided for conversions
@@ -88,12 +95,13 @@
 - **Action**: Implementation will include inline documentation explaining architectural patterns
 
 ### VII. Simplicity & Pragmatism ✅ **PASS**
+
 - **Requirement**: KISS principle, SOLID design, avoid over-engineering, justify complexity
 - **Status**: Solution uses simplest correct pattern (standard Flutter widgets)
-- **Evidence**: 
+- **Evidence**:
   - ValueNotifier is the documented Flutter solution for high-frequency updates
   - No custom abstractions or over-engineering
-  - Removes complex broken code (_safeSetState double-deferral)
+  - Removes complex broken code (\_safeSetState double-deferral)
   - Estimated 150 lines changed vs thousands of alternatives
 - **Rationale**: Previous setState approach was over-complicated with timing hacks. ValueNotifier is simpler AND correct.
 
@@ -155,11 +163,12 @@ example/
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
+_Fill ONLY if Constitution Check has violations that must be justified_
 
 **Status**: ✅ NO VIOLATIONS - No complexity tracking required.
 
 All constitutional principles satisfied:
+
 - Test-First Development: 90% coverage mandated
 - Performance First: Enforces Constitution v1.1.0 ValueNotifier requirement
 - Architectural Integrity: Pure Flutter with standard widgets
@@ -168,7 +177,7 @@ All constitutional principles satisfied:
 - Documentation: Comprehensive architecture plan and rationale
 - Simplicity: Uses simplest correct pattern (Flutter-documented solution)
 
-This refactor REDUCES complexity by removing broken timing hacks (_safeSetState double-deferral) and implementing the proper Flutter pattern.
+This refactor REDUCES complexity by removing broken timing hacks (\_safeSetState double-deferral) and implementing the proper Flutter pattern.
 
 ---
 
@@ -229,6 +238,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 
 **Status**: COMPLETE  
 **Outputs**:
+
 - [`data-model.md`](./data-model.md) - Data structures and state management patterns
 - [`contracts/event-handlers.md`](./contracts/event-handlers.md) - Event handler refactor contracts
 - [`contracts/animation-integration.md`](./contracts/animation-integration.md) - Animation listener contracts
@@ -240,6 +250,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 #### Data Model Documentation ([data-model.md](./data-model.md))
 
 **Core Entities Documented**:
+
 1. **InteractionState** (existing, no changes)
    - Immutable value object with copyWith()
    - Fields: crosshair, tooltip, pan, zoom, keyboard state
@@ -256,11 +267,13 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
    - Wrapped in RepaintBoundary for isolation
 
 **State Transitions Documented**:
+
 - Mouse hover → crosshair display
 - Simultaneous zoom + hover (non-conflicting fields)
 - Throttled high-frequency updates (200 events/s → 60 updates/s)
 
 **Performance Benchmarks**:
+
 - Widget rebuilds: 100+/sec → 0/sec (infinite improvement)
 - Overlay repaints: Entire stack → CustomPainter only (100x improvement)
 - Frame times: 25-50ms → <2ms (12-25x improvement)
@@ -271,6 +284,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **1. Event Handlers Contract** ([contracts/event-handlers.md](./contracts/event-handlers.md))
 
 **Handlers Inventoried**: 11+ handlers documented
+
 - `_onHover` - Crosshair display
 - `_onExit` - Crosshair/tooltip hide
 - `_onPointerDown` - Pan gesture initiation
@@ -281,6 +295,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 - ... (4 more handlers)
 
 **Contract Requirements**:
+
 - MUST update notifier (never setState)
 - MUST use copyWith for immutable updates
 - MUST handle null safety
@@ -292,16 +307,19 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **2. Animation Integration Contract** ([contracts/animation-integration.md](./contracts/animation-integration.md))
 
 **Controllers Documented**: 2 controllers
+
 - `_zoomAnimationController` - Zoom interpolation (200ms, Curves.easeOut)
 - `_panAnimationController` - Pan momentum (300ms, Curves.decelerate)
 
 **Listener Contract**:
+
 - MUST update notifier (never setState)
 - MUST complete in <1ms (60 calls/second)
 - MUST use copyWith for immutable updates
 - MUST derive isZooming/isPanning from controller state
 
 **Lifecycle Requirements**:
+
 - Initialize in initState()
 - Register listeners after animation creation
 - Dispose before notifier disposal
@@ -310,17 +328,20 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **3. Disposal & Cleanup Contract** ([contracts/disposal-cleanup.md](./contracts/disposal-cleanup.md))
 
 **4-Phase Disposal Strategy**:
+
 1. **Cancel Timers** - Prevent callbacks during disposal
 2. **Dispose Controllers** - Stop tickers, remove listeners
 3. **Dispose Notifier** - Release all listeners
 4. **Framework Cleanup** - super.dispose() last
 
 **Resources Managed**:
+
 - 1 timer: `_tooltipHideTimer`
 - 2 controllers: `_zoomAnimationController`, `_panAnimationController`
 - 1 notifier: `_interactionStateNotifier`
 
 **Memory Leak Prevention**:
+
 - Documented common leak sources
 - Provided DevTools detection strategy
 - Stress test specification (1000 create/dispose cycles)
@@ -331,6 +352,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 #### Developer Quickstart ([quickstart.md](./quickstart.md))
 
 **Content Provided**:
+
 - **TL;DR**: Quick summary of changes, rationale, impact
 - **Quick Reference**: Before/after code examples
 - **Problem Understanding**: Root cause analysis, why fixes failed
@@ -350,6 +372,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **Status**: Ready to update agent context via `update-agent-context.ps1`
 
 **Context to Add**:
+
 - ValueNotifier pattern as primary state management for high-frequency updates
 - setState prohibition for >10Hz updates (Constitution v1.1.0)
 - RepaintBoundary isolation for interactive overlays
@@ -374,6 +397,7 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **Planning Phase Status**: ✅ COMPLETE
 
 **Artifacts Generated**:
+
 - ✅ plan.md (this file) - 5 sections filled
 - ✅ research.md - 7 research tasks completed
 - ✅ data-model.md - 3 core entities + state transitions + performance benchmarks
@@ -393,4 +417,3 @@ This refactor REDUCES complexity by removing broken timing hacks (_safeSetState 
 **Estimated Implementation Time**: ~3 hours (based on research analysis)
 
 **Risk Assessment**: LOW - Standard Flutter pattern, well-documented, proven solution
-

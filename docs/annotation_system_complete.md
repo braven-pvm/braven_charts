@@ -171,7 +171,7 @@ class _MyChartState extends State<MyChart> {
   void initState() {
     super.initState();
     _controller = AnnotationController();
-    
+
     // Listen to all changes (add, update, remove, etc.)
     _controller.addListener(() {
       setState(() => _updateCount++);
@@ -190,13 +190,13 @@ class _MyChartState extends State<MyChart> {
 
 ### All Annotation Types Supported
 
-| Type | Drag | Resize | Snap | Status |
-|------|------|--------|------|--------|
-| PointAnnotation | ✅ Snap to data points | ❌ | ✅ Auto | ✅ Working |
-| RangeAnnotation | ✅ Free move | ✅ 8 handles | ✅ Optional | ✅ Working |
-| TextAnnotation | ✅ Free move | ❌ | ❌ | ✅ Working |
-| ThresholdAnnotation | ✅ Axis-constrained | ❌ | ❌ | ✅ Working |
-| TrendAnnotation | ❌ Read-only | ❌ | ❌ | ✅ Working |
+| Type                | Drag                   | Resize       | Snap        | Status     |
+| ------------------- | ---------------------- | ------------ | ----------- | ---------- |
+| PointAnnotation     | ✅ Snap to data points | ❌           | ✅ Auto     | ✅ Working |
+| RangeAnnotation     | ✅ Free move           | ✅ 8 handles | ✅ Optional | ✅ Working |
+| TextAnnotation      | ✅ Free move           | ❌           | ❌          | ✅ Working |
+| ThresholdAnnotation | ✅ Axis-constrained    | ❌           | ❌          | ✅ Working |
+| TrendAnnotation     | ❌ Read-only           | ❌           | ❌          | ✅ Working |
 
 ## Testing the Implementation
 
@@ -211,7 +211,7 @@ Navigate to **"Annotations"** page in the showcase.
 
 ### 2. Verify Persistence
 
-1. **Drag a RangeAnnotation**: 
+1. **Drag a RangeAnnotation**:
    - Select the orange range
    - Drag it left/right
    - **Expected**: Range moves and stays at new position
@@ -281,18 +281,21 @@ print('Ranges: ${controller.getAnnotationsByType<RangeAnnotation>().length}');
 ### AnnotationController
 
 **Core Operations**:
+
 - `addAnnotation(ChartAnnotation)` - Add single annotation
 - `updateAnnotation(String id, ChartAnnotation)` - Update annotation
 - `removeAnnotation(String id)` - Remove annotation
 - `clearAnnotations()` - Remove all annotations
 
 **Batch Operations**:
+
 - `addAll(List<ChartAnnotation>)` - Add multiple
 - `updateAll(Map<String, ChartAnnotation>)` - Update multiple
 - `removeAll(List<String> ids)` - Remove multiple
 - `replaceAll(List<ChartAnnotation>)` - Replace all
 
 **Queries**:
+
 - `annotations` → `List<ChartAnnotation>` (unmodifiable)
 - `getAnnotation(String id)` → `ChartAnnotation?`
 - `getAnnotationsByType<T>()` → `List<T>`
@@ -302,6 +305,7 @@ print('Ranges: ${controller.getAnnotationsByType<RangeAnnotation>().length}');
 - `isEmpty` / `isNotEmpty` → `bool`
 
 **Selection**:
+
 - `selectAnnotation(String? id)` - Select annotation
 - `clearSelection()` - Clear selection
 - `selectedAnnotationId` → `String?`
@@ -310,6 +314,7 @@ print('Ranges: ${controller.getAnnotationsByType<RangeAnnotation>().length}');
 ### Annotation Properties
 
 **Common Properties** (all types):
+
 - `id` - Unique identifier
 - `label` - Optional label text
 - `style` - AnnotationStyle (text, background, border)
@@ -320,6 +325,7 @@ print('Ranges: ${controller.getAnnotationsByType<RangeAnnotation>().length}');
 - `snapIncrement` - Snapping granularity (0.1, 0.5, 1.0, etc.)
 
 **Type-Specific Properties**:
+
 - **PointAnnotation**: `seriesId`, `dataPointIndex`, `markerShape`, `markerSize`, `markerColor`
 - **RangeAnnotation**: `startX`, `endX`, `startY`, `endY`, `fillColor`, `borderColor`
 - **TextAnnotation**: `text`, `position`, `anchor`, `backgroundColor`, `borderColor`
@@ -349,6 +355,7 @@ These features are already working, but could be enhanced:
 ✅ **The annotation system is fully implemented and working**
 
 All annotation types support:
+
 - ✅ Drag to move (where applicable)
 - ✅ Resize handles (RangeAnnotation)
 - ✅ Visual feedback during interaction
@@ -357,6 +364,7 @@ All annotation types support:
 - ✅ Snap-to-value support
 
 The persistence architecture is complete:
+
 - ✅ onAnnotationChanged callback wired to controller
 - ✅ ChangeNotifier pattern for reactive updates
 - ✅ All annotation types properly update through controller

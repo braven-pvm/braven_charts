@@ -8,6 +8,7 @@
 ---
 
 ## Execution Flow (main)
+
 ```
 1. Load plan.md from feature directory
    ✓ Loaded: Dart 3.10.0, Flutter 3.37.0, 4 chart types
@@ -42,6 +43,7 @@
 ---
 
 ## Format: `[ID] [P?] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - Include exact file paths in descriptions
 - TDD: Tests MUST be written and MUST FAIL before implementation
@@ -49,6 +51,7 @@
 ---
 
 ## Phase 3.1: Setup & Structure
+
 **Goal**: Create project directory structure and barrel file
 
 - [x] **T001** Create chart types directory structure (lib/src/charts/{base,line,area,bar,scatter}/) ✅ 2025-10-06
@@ -58,9 +61,11 @@
 ---
 
 ## Phase 3.2: Contract Tests (TDD Phase 1) ⚠️ MUST COMPLETE BEFORE 3.3
+
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Configuration Validation Tests (Parallel)
+
 - [x] **T004** [P] Create LineChartConfig contract test (test/charts/contract/line_chart_config_test.dart) - MUST FAIL ✅ 2025-01-06
   - Test markerSize > 0 (must throw)
   - Test lineWidth > 0 (must throw)
@@ -89,6 +94,7 @@
   - Test validate() with valid config (must pass)
 
 ### Chart Layer Interface Test
+
 - [x] **T008** Contract test for ChartLayer interface in test/charts/contract/chart_layer_contract_test.dart ✅ 2025-01-06
   - Test all chart types implement render() correctly
   - Test all chart types implement shouldRender() correctly
@@ -102,6 +108,7 @@
 ## Phase 3.3: Core Models (TDD Phase 2) - ONLY after contract tests are failing
 
 ### Enums (Parallel - Independent)
+
 - [x] **T009** [P] Implement LineStyle enum in lib/src/charts/line/line_chart_config.dart (straight, smooth, stepped) ✅ 2025-01-06
 - [x] **T010** [P] Implement MarkerShape enum in lib/src/charts/base/chart_config.dart (circle, square, triangle, diamond, cross, plus, none) ✅ 2025-01-06
 - [x] **T011** [P] Implement AreaFillStyle enum in lib/src/charts/area/area_chart_config.dart (solid, gradient, pattern) ✅ 2025-01-06
@@ -112,6 +119,7 @@
 - [x] **T016** [P] Implement MarkerStyle enum in lib/src/charts/scatter/scatter_chart_config.dart (filled, outlined, both) ✅ 2025-01-06
 
 ### Supporting Models (Parallel - Independent)
+
 - [x] **T017** [P] Implement AreaBaseline class in lib/src/charts/area/area_chart_config.dart ✅ 2025-01-06
   - Fields: AreaBaselineType type, double? fixedValue, String? seriesId
   - Validation in constructor
@@ -128,6 +136,7 @@
   - Used for per-series overrides
 
 ### Configuration Classes (Sequential - Depend on enums)
+
 - [x] **T020** Implement LineChartConfig class in lib/src/charts/line/line_chart_config.dart ✅ 2025-01-06
   - All fields from data-model.md
   - Validation in constructor (markerSize > 0, lineWidth > 0, dashPattern even)
@@ -157,6 +166,7 @@
   - **Must pass T007 tests** ✅ 13/13 PASSED
 
 ### Internal Models (Parallel - Independent)
+
 - [x] **T024** [P] Implement InterpolatedPoint class in lib/src/charts/line/line_interpolator.dart ✅ 2025-01-06
   - Fields: Offset position, Offset? controlPoint1, Offset? controlPoint2, bool isControlPoint
   - Used internally by line interpolator for bezier curves
@@ -174,6 +184,7 @@
 ## Phase 3.4: Utility Algorithms (TDD Phase 3)
 
 ### Unit Tests for Algorithms (Parallel)
+
 - [x] **T027** [P] Unit test for LineInterpolator in test/charts/unit/line_interpolator_test.dart ✅ 2025-01-06
   - Test straight line produces linear path
   - Test smooth line produces bezier curves (Catmull-Rom algorithm)
@@ -201,6 +212,7 @@
   - Test object pooling for marker paths
 
 ### Algorithm Implementations (Parallel)
+
 - [x] **T032** [P] Implement LineInterpolator in lib/src/charts/line/line_interpolator.dart ✅ 2025-01-06
   - Straight: Linear path between points
   - Smooth: Catmull-Rom to cubic bezier conversion (algorithm from research.md)
@@ -237,6 +249,7 @@
 ## Phase 3.5: Chart Layer Implementations (TDD Phase 4)
 
 ### Chart Layer Tests (Sequential - Depend on utilities)
+
 - [x] **T037** Implement LineChartLayer in lib/src/charts/line/line_chart_layer.dart ✅ 2025-01-06
   - Extends ChartLayer (from lib/src/charts/base/chart_layer.dart)
   - Uses LineInterpolator for path generation (straight/smooth/stepped)
@@ -289,6 +302,7 @@
 ---
 
 ## Phase 3.6: Integration Tests
+
 **Goal**: Validate layer interactions and system integration
 
 - [x] **T042** [P] Integration test for multi-series rendering in test/charts/integration/multi_series_rendering_test.dart ✅ 2025-01-06
@@ -319,6 +333,7 @@
 ---
 
 ## Phase 3.7: Quickstart Validation Tests
+
 **Goal**: Validate all 10 quickstart examples execute correctly
 
 - [x] **T046** [P] Quickstart Example 1: Basic line chart in test/charts/integration/quickstart_01_basic_line_test.dart ✅ 2025-01-06
@@ -374,6 +389,7 @@
 ---
 
 ## Phase 3.8: Performance Benchmarks (Constitutional Requirement)
+
 **Goal**: Validate <16ms frame time for all chart types  
 **Status**: 🔄 **IN PROGRESS** - 1/6 tasks complete
 
@@ -381,7 +397,7 @@
   - ✅ 5 performance benchmarks implemented
   - ✅ 10,000 points tested with all 3 line styles (straight, smooth, stepped)
   - ✅ All 6 marker shapes validated
-  - ✅ Object pool hit rate >90% verified  
+  - ✅ Object pool hit rate >90% verified
   - ✅ All tests pass in <16ms (constitutional requirement met)
   - Constitutional requirement from FR-009
 
@@ -433,6 +449,7 @@
 ---
 
 ## Phase 3.9: Visual Regression Tests (Golden Tests) ⏸️ BLOCKED
+
 **Goal**: Ensure UI consistency across changes  
 **Status**: ⚠️ **DEFERRED** - Requires Chart Widgets (doesn't exist yet)  
 **Move to**: After Chart Widget layer created
@@ -472,6 +489,7 @@
 ---
 
 ## Phase 3.10: Documentation & Polish
+
 **Goal**: Complete documentation and cleanup
 
 - [x] **T066** Update barrel file lib/src/charts/charts.dart ✅ 2025-01-06
@@ -555,6 +573,7 @@
 ## Dependencies
 
 ### Critical Path (Sequential)
+
 1. **T001-T003** (Setup) → ALL OTHER TASKS
 2. **T004-T008** (Contract tests) → **T009-T026** (Models)
 3. **T009-T026** (Models) → **T027-T036** (Algorithms)
@@ -563,6 +582,7 @@
 6. **T037-T040** (Chart implementations) → **T042-T072** (Integration, validation, polish)
 
 ### Parallel Execution Groups
+
 - **Group 1** (T004-T007): All config contract tests
 - **Group 2** (T009-T016): All enum implementations
 - **Group 3** (T017-T019): All supporting models
@@ -580,6 +600,7 @@
 ## Parallel Execution Examples
 
 ### Example 1: Contract Tests (Group 1)
+
 ```bash
 # Launch T004-T007 together (different files, no dependencies):
 Task: "Contract test for LineChartConfig validation in test/charts/contract/line_chart_config_test.dart"
@@ -589,6 +610,7 @@ Task: "Contract test for ScatterChartConfig validation in test/charts/contract/s
 ```
 
 ### Example 2: Enum Implementations (Group 2)
+
 ```bash
 # Launch T009-T016 together (different enums, independent):
 Task: "Implement LineStyle enum in lib/src/charts/line/line_chart_config.dart"
@@ -602,6 +624,7 @@ Task: "Implement MarkerStyle enum in lib/src/charts/scatter/scatter_chart_config
 ```
 
 ### Example 3: Algorithm Unit Tests (Group 5)
+
 ```bash
 # Launch T027-T031 together (different test files):
 Task: "Unit test for LineInterpolator in test/charts/unit/line_interpolator_test.dart"
@@ -612,6 +635,7 @@ Task: "Unit test for ChartRenderer in test/charts/unit/chart_renderer_test.dart"
 ```
 
 ### Example 4: Performance Benchmarks (Group 9)
+
 ```bash
 # Launch T056-T061 together (different benchmark files):
 Task: "Performance benchmark for LineChartLayer in test/charts/performance/line_chart_benchmark.dart"
@@ -625,7 +649,8 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 ---
 
 ## Validation Checklist
-*GATE: Checked before marking feature complete*
+
+_GATE: Checked before marking feature complete_
 
 - [x] All 5 contracts have corresponding tests (T004-T008)
 - [x] All 18 models have implementation tasks (T009-T026)
@@ -685,18 +710,16 @@ Task: "Performance benchmark for object pooling in test/charts/performance/objec
 
 ---
 
-
 ## Changelog
 
 ### 2025-01-06
+
 - Initial tasks.md generated from design documents
 - 72 tasks defined across 10 phases
 - All 45 functional requirements mapped
 - All 10 quickstart examples validated
 - Constitutional requirements enforced (performance benchmarks)
-- **Tasks completed: 68/72** (T072 final validation PASSED - all systems go! 🚀)  
-- **Success**: 144/144 tests passing, no linter errors, constitutional requirements met  
-- **Deferred**: T062-T065 (golden tests - require Chart Widgets layer)  
+- **Tasks completed: 68/72** (T072 final validation PASSED - all systems go! 🚀)
+- **Success**: 144/144 tests passing, no linter errors, constitutional requirements met
+- **Deferred**: T062-T065 (golden tests - require Chart Widgets layer)
 - **Ready**: For v0.4.0-charts release and merge to main
-
-

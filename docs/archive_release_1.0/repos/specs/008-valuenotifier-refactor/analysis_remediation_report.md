@@ -24,34 +24,37 @@ Successfully applied concrete remediation edits to eliminate all 3 identified am
 **Resolution**: Added detailed implementation guidance with two approaches:
 
 **Approach A (Recommended)**: Auto-throttling using `SchedulerBinding.instance.addPostFrameCallback()`
+
 - Automatically coalesces updates to frame rate
 - Simplest implementation
 - Zero manual tracking required
 
 **Approach B (Alternative)**: Manual throttling
+
 - Track `DateTime? _lastUpdateTime`
 - Check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16`
 - Last-value-wins strategy (discard intermediate updates)
 
 **Implementation Guidance Added**:
+
 ```markdown
-- [ ] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart 
-  using one of two approaches: 
-  (A) Auto-throttling: Wrap notifier updates in 
-      `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)` 
-      which automatically coalesces updates to frame rate, 
-  OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field, 
-      check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16` 
-      before updating, use last-value-wins strategy (discard intermediate updates). 
-  Approach A recommended for simplicity.
-  
-- [ ] T050 [US2] Apply throttling to high-frequency event handlers 
-  (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart - 
-  wrap existing `_interactionStateNotifier.value = ...` statements with chosen 
-  throttling approach from T049
+- [ ] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart
+      using one of two approaches:
+      (A) Auto-throttling: Wrap notifier updates in
+      `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)`
+      which automatically coalesces updates to frame rate,
+      OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field,
+      check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16`
+      before updating, use last-value-wins strategy (discard intermediate updates).
+      Approach A recommended for simplicity.
+- [ ] T050 [US2] Apply throttling to high-frequency event handlers
+      (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart -
+      wrap existing `_interactionStateNotifier.value = ...` statements with chosen
+      throttling approach from T049
 ```
 
 **Impact**:
+
 - ✅ Eliminates implementation uncertainty
 - ✅ Provides clear decision criteria (simplicity vs control)
 - ✅ Specifies exact code patterns to use
@@ -63,13 +66,15 @@ Successfully applied concrete remediation edits to eliminate all 3 identified am
 
 **Issue**: Event handlers list inconsistency - spec mentioned "11+ handlers" but only 7 named explicitly
 
-**Files Modified**: 
+**Files Modified**:
+
 - `specs/008-valuenotifier-refactor/spec.md` (FR-006, Key Entities)
 - `specs/008-valuenotifier-refactor/tasks.md` (T019-T029 with correct handler names)
 
 **Resolution**: Verified actual handlers in `lib/src/widgets/braven_chart.dart` and documented all 11 explicitly
 
 **Actual Handler Inventory** (verified via grep):
+
 1. **onHover** (MouseRegion) - Line ~1358
 2. **onExit** (MouseRegion) - Line ~1340
 3. **onPointerSignal** (Listener - zoom/scroll) - Line ~1434
@@ -83,30 +88,33 @@ Successfully applied concrete remediation edits to eliminate all 3 identified am
 11. **onKeyEvent** (KeyboardListener - modifier keys) - Line ~1618
 
 **FR-006 Enhancement**:
+
 ```markdown
-- **FR-006**: System MUST update all event handlers to update notifier value 
+- **FR-006**: System MUST update all event handlers to update notifier value
   directly without setState. Specific handlers to refactor:
-  - **Mouse/Pointer Handlers**: onHover (MouseRegion), onExit (MouseRegion), 
-    onPointerSignal (Listener - zoom/scroll), onPointerDown (Listener - pan start), 
+  - **Mouse/Pointer Handlers**: onHover (MouseRegion), onExit (MouseRegion),
+    onPointerSignal (Listener - zoom/scroll), onPointerDown (Listener - pan start),
     onPointerMove (Listener - pan drag), onPointerUp (Listener - pan end)
-  - **Gesture Handlers**: onTapDown (GestureDetector), onScaleStart 
-    (GestureDetector - pinch zoom/pan), onScaleUpdate (GestureDetector), 
+  - **Gesture Handlers**: onTapDown (GestureDetector), onScaleStart
+    (GestureDetector - pinch zoom/pan), onScaleUpdate (GestureDetector),
     onScaleEnd (GestureDetector)
   - **Keyboard Handler**: onKeyEvent (KeyboardListener - modifier keys)
   - **Total**: 11 interaction handlers
 ```
 
 **Key Entities Enhancement**:
+
 ```markdown
-- **Event Handlers**: 11 handler methods that respond to user interactions 
+- **Event Handlers**: 11 handler methods that respond to user interactions
   and currently trigger setState, will be refactored to update notifier value:
-  - Mouse/Pointer: onHover, onExit, onPointerSignal, onPointerDown, 
+  - Mouse/Pointer: onHover, onExit, onPointerSignal, onPointerDown,
     onPointerMove, onPointerUp (6 handlers)
   - Gesture: onTapDown, onScaleStart, onScaleUpdate, onScaleEnd (4 handlers)
   - Keyboard: onKeyEvent (1 handler)
 ```
 
 **Impact**:
+
 - ✅ Documentation accuracy improved (100% handler coverage)
 - ✅ Clear categorization (Mouse/Pointer, Gesture, Keyboard)
 - ✅ Widget source specified (MouseRegion, Listener, GestureDetector, KeyboardListener)
@@ -129,22 +137,25 @@ Successfully applied concrete remediation edits to eliminate all 3 identified am
 **Enhanced Guidance Added**:
 
 **At Task Section**:
+
 ```markdown
 #### Event Handler Refactoring (Core Stability)
 
-**Note on [P] Parallel Markers**: These handlers are technically independent methods 
-(different callbacks in the widget tree), making parallel implementation possible with 
-atomic git commits per handler. However, due to single-file nature and potential merge 
-conflicts, **sequential execution is RECOMMENDED** for risk-averse workflows. Advanced 
-users comfortable with git conflict resolution may work in parallel using feature branches. 
+**Note on [P] Parallel Markers**: These handlers are technically independent methods
+(different callbacks in the widget tree), making parallel implementation possible with
+atomic git commits per handler. However, due to single-file nature and potential merge
+conflicts, **sequential execution is RECOMMENDED** for risk-averse workflows. Advanced
+users comfortable with git conflict resolution may work in parallel using feature branches.
 When in doubt, execute sequentially.
 ```
 
 **In Dependencies Section**:
+
 ```markdown
 ### No Parallel Opportunities (with caveats)
 
 **Why [P] markers exist but sequential recommended**:
+
 - Handlers are technically independent (different widget callbacks in build tree)
 - Each modifies different sections of the file (different line ranges)
 - Parallel execution IS possible with atomic commits + feature branches
@@ -152,18 +163,21 @@ When in doubt, execute sequentially.
 - **Recommendation**: Sequential execution unless experienced with git conflict resolution
 
 **If executing in parallel**:
+
 - Use atomic commits: one commit per handler
 - Create feature branches if needed: `git checkout -b handler-onHover`
 - Merge frequently to minimize conflicts
 - Test after each handler to catch issues early
 
 **If executing sequentially** (recommended):
+
 - Follow T019 → T020 → T021 → ... → T029 order
 - Commit after every 2-3 handlers for safety
 - Less mental overhead, zero merge conflicts
 ```
 
 **Impact**:
+
 - ✅ Resolves contradiction (both parallel AND sequential valid)
 - ✅ Provides clear decision criteria (experience level, risk tolerance)
 - ✅ Documents best practices for both approaches
@@ -192,6 +206,7 @@ When in doubt, execute sequentially.
 **Resolution**: Verified exact line numbers via grep and updated all handler tasks
 
 **Examples**:
+
 - T019: onHover → Line ~1358
 - T020: onExit → Line ~1340
 - T024: onPointerSignal → Line ~1434
@@ -279,6 +294,7 @@ When in doubt, execute sequentially.
 **Confidence Level**: VERY HIGH
 
 **Rationale**:
+
 1. All blocking ambiguities resolved
 2. Implementation paths clearly specified
 3. Decision criteria provided for all choices

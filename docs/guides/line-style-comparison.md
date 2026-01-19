@@ -20,6 +20,7 @@ When you provide data like `[(0, 50), (1, 80), (2, 60)]`, you're giving the char
 ### Why This Example is Special
 
 Unlike the previous examples, this screen lets you:
+
 - **Switch line styles dynamically** for the SAME dataset
 - **See the interpolation difference** in real-time
 - **Test with multiple data patterns** (sine wave, random, zigzag, peaks, steps)
@@ -71,6 +72,7 @@ Five different data generation patterns to test interpolation:
 ### 4. Interactive Chart
 
 Full interaction support in both modes:
+
 - **Zoom**: Mouse wheel or pinch gesture
 - **Pan**: Click and drag
 - **Crosshair**: Hover to see values
@@ -91,6 +93,7 @@ Full interaction support in both modes:
 ### Understanding Bezier Interpolation
 
 **Test this sequence**:
+
 1. Select "Sine Wave" pattern
 2. Select "Straight" style
    - Notice: Angular segments, sharp transitions at each data point
@@ -104,6 +107,7 @@ Full interaction support in both modes:
 ### Testing with Streaming
 
 **Live interpolation test**:
+
 1. Click **Play** button (▶️)
 2. Chart switches to streaming mode
 3. Select "Smooth (Bezier)" style
@@ -119,6 +123,7 @@ Full interaction support in both modes:
 ### Comparing All Styles Side-by-Side
 
 **Mental comparison technique**:
+
 1. Select "Sine Wave" pattern (static mode)
 2. Look at "Straight" style - memorize the angular shape
 3. Switch to "Smooth (Bezier)" - see how curves smooth out the angles
@@ -169,6 +174,7 @@ Each pattern reveals different aspects of interpolation:
 **Goal**: Confirm that LineStyle.smooth actually generates bezier curves
 
 **Steps**:
+
 1. Static mode, Sine Wave pattern
 2. Select "Straight" style
 3. Count the visible sharp corners where line changes direction
@@ -182,6 +188,7 @@ Each pattern reveals different aspects of interpolation:
 **Goal**: Verify bezier interpolation works at 60fps with live data
 
 **Steps**:
+
 1. Click Play to start streaming
 2. Select "Smooth (Bezier)" style
 3. Select "Sine Wave" pattern
@@ -195,6 +202,7 @@ Each pattern reveals different aspects of interpolation:
 **Goal**: Verify line style can be changed without recreating data
 
 **Steps**:
+
 1. Static mode, any pattern
 2. Rapidly switch between all three line styles (Straight → Smooth → Stepped → Straight)
 3. Verify: Instant switching, no lag, same data points visible
@@ -230,6 +238,7 @@ path.cubicTo(
 ```
 
 This creates a smooth curve that:
+
 - Passes through your data points
 - Has continuous first derivatives (smooth transitions)
 - Is locally controlled (changing one point affects only nearby curve)

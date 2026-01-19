@@ -11,12 +11,14 @@
 The pan constraint implementation in `chart_render_box.dart` has **fundamental conceptual errors** in how it tracks and constrains viewport boundaries. The current approach attempts to track the "original data boundaries" in the current viewport, but this creates **contradictory constraints** that make panning feel unpredictable and broken.
 
 **Key Issues**:
+
 1. ❌ **Conceptual Error**: Tracks where "original data edges" appear in current viewport (wrong reference frame)
 2. ❌ **Coordinate Confusion**: Mixes up which direction data/viewport moves during pan
 3. ❌ **Constraint Contradictions**: "Both edges past limits" logic creates impossible states
 4. ❌ **Zoom-Dependent Behavior**: Constraints behave differently at different zoom levels
 
 **Impact**: Users experience:
+
 - Panning stops unexpectedly (hitting invisible walls)
 - Panning works in one direction but not the opposite
 - Constraints feel inconsistent between zoom levels
@@ -27,13 +29,16 @@ The pan constraint implementation in `chart_render_box.dart` has **fundamental c
 ## Problem Context
 
 ### Project Background
+
 - **Project**: braven_charts v2.0 interaction architecture prototype
-- **Location**: `refactor/interaction/` 
+- **Location**: `refactor/interaction/`
 - **Current Phase**: Phase 0 prototype validation
 - **Design Docs**: `docs/architecture/interaction/interaction_architecture_design.md`
 
 ### Constraint Requirements
+
 From the design specification:
+
 - **Goal**: Limit panning to prevent excessive whitespace beyond data boundaries
 - **Constraint**: Original data edges can move off-screen by up to 10% of viewport (maxWhitespaceFraction = 0.1)
 - **Behavior**: Panning should feel like "hitting a wall" when limit is reached
@@ -48,17 +53,20 @@ From the design specification:
 From `chart_transform.dart` and design docs:
 
 #### 1. **Widget Space**
+
 - **Definition**: Entire chart widget including axes and margins
 - **Origin**: Top-left corner of widget
 - **Use**: Pointer events, cursor positions
 
-#### 2. **Plot Space**  
+#### 2. **Plot Space**
+
 - **Definition**: Plotting area only (excluding axes)
 - **Origin**: Top-left corner of plot area (after axis margins)
 - **Range**: `(0, 0)` → `(plotWidth, plotHeight)`
 - **Use**: Element rendering, hit testing, spatial index
 
 #### 3. **Data Space**
+
 - **Definition**: Logical data values (timestamps, prices, etc.)
 - **Range**: `(dataXMin, dataXMax)` × `(dataYMin, dataYMax)` - determined by visible viewport
 - **Use**: Original data storage, zoom/pan calculations
@@ -66,24 +74,27 @@ From `chart_transform.dart` and design docs:
 ### Transform Operations
 
 #### Data → Plot (for rendering)
+
 ```dart
 // Convert data value to plot pixel position
 final plotX = (dataX - dataXMin) / dataXRange * plotWidth;
-final plotY = invertY 
+final plotY = invertY
     ? (1.0 - (dataY - dataYMin) / dataYRange) * plotHeight  // Y=0 at bottom
     : (dataY - dataYMin) / dataYRange * plotHeight;         // Y=0 at top
 ```
 
 #### Plot → Data (for hit testing)
+
 ```dart
 // Convert plot pixel position to data value
 final dataX = dataXMin + (plotX / plotWidth) * dataXRange;
-final dataY = dataYMin + (invertY 
-    ? (1.0 - plotY / plotHeight) 
+final dataY = dataYMin + (invertY
+    ? (1.0 - plotY / plotHeight)
     : plotY / plotHeight) * dataYRange;
 ```
 
 #### Pan Operation (transform.pan)
+
 ```dart
 // Pan updates data viewport by converting plot delta to data delta
 final dataDx = plotDx * dataPerPixelX;  // dataPerPixelX = dataXRange / plotWidth
@@ -105,6 +116,7 @@ dataYMax += dataDy;
 ### Constraint Algorithm (Lines 350-570 of chart_render_box.dart)
 
 #### Step 1: Calculate where "original data boundaries" appear in current viewport
+
 ```dart
 // Convert original data min/max to CURRENT plot coordinates
 final originalLeft = _transform!.dataToPlot(_originalTransform!.dataXMin, 0.0).dx;
@@ -112,25 +124,30 @@ final originalRight = _transform!.dataToPlot(_originalTransform!.dataXMax, 0.0).
 ```
 
 **Example Scenario**:
-- Original data: X ∈ [0, 100] (stored in _originalTransform)
-- Current viewport: X ∈ [0, 100] (no pan yet, _transform matches original)
+
+- Original data: X ∈ [0, 100] (stored in \_originalTransform)
+- Current viewport: X ∈ [0, 100] (no pan yet, \_transform matches original)
 - Plot width: 800px
 
 Result:
+
 - `originalLeft = dataToPlot(0) = 0px` (left edge at left side of plot)
 - `originalRight = dataToPlot(100) = 800px` (right edge at right side of plot)
 
 #### Step 2: Define allowed bounds with 10% whitespace
+
 ```dart
 final minLeftEdge = -plotWidth * maxWhitespaceFraction;    // -80px
 final maxRightEdge = plotWidth * (1.0 + maxWhitespaceFraction);  // 880px
 ```
 
 **Interpretation**: Original data edges can move:
+
 - Left edge: from 0px to -80px (10% off left side of plot)
 - Right edge: from 800px to 880px (10% off right side of plot)
 
 #### Step 3: Calculate "margins" (distance from limit)
+
 ```dart
 final leftMargin = originalLeft - minLeftEdge;      // 0 - (-80) = 80px room
 final rightMargin = maxRightEdge - originalRight;   // 880 - 800 = 80px room
@@ -139,6 +156,7 @@ final rightMargin = maxRightEdge - originalRight;   // 880 - 800 = 80px room
 **Interpretation**: How much room each edge has before hitting its limit.
 
 #### Step 4: Clamp pan delta based on margins
+
 ```dart
 if (requestedDx > 0) {
     // Panning right: LEFT edge approaches left limit
@@ -155,12 +173,14 @@ if (requestedDx > 0) {
 **Current Approach**: Tracks where "original data boundaries" appear in the **current viewport**.
 
 **Why This Is Wrong**:
+
 - When you pan, the data viewport moves, but "original boundaries" are fixed data values
 - As you zoom in, "original boundaries" move **off-screen naturally** because you're viewing a subset
 - At 2x zoom, the original boundaries are **already outside the viewport** by design
 - The constraint tries to prevent this natural behavior, creating contradictions
 
 **Example**:
+
 ```
 Original viewport: Data X ∈ [0, 100], Plot: 0 → 800px
 ├─────────────────────────────────────────────────┤
@@ -189,12 +209,14 @@ if (bothXEdgesPastLimits) {
 ```
 
 **Why This Breaks**:
+
 1. At any zoom > 1.2x, **both original edges are naturally past the 10% limits**
 2. The code thinks this is an "error state" requiring "recovery"
 3. It only allows panning that would "bring edges back" toward viewport center
 4. But this **prevents normal panning** at moderate zoom levels!
 
 **Example at 2x Zoom**:
+
 - Original left edge (dataX=0) plots at -400px (past -80px limit)
 - Original right edge (dataX=100) plots at 1200px (past 880px limit)
 - Code: "Both edges past limits! Only allow recovery panning!"
@@ -217,25 +239,27 @@ The code has extensive comments explaining the logic:
 
 1. **User Action**: Drag mouse right by 50px (plotDx = +50)
 2. **Transform Calculation**: `dataDx = plotDx * dataPerPixelX = 50 * 0.125 = 6.25` data units
-3. **Viewport Update**: 
+3. **Viewport Update**:
    ```dart
    dataXMin = 25 + 6.25 = 31.25  // Viewport moved RIGHT in data space
    dataXMax = 75 + 6.25 = 81.25
    ```
 4. **Visual Effect**: Chart content slides LEFT (viewport moved right, so you see rightward data)
 
-**Critical Realization**: 
+**Critical Realization**:
+
 - ✅ Pan right → viewport moves right in data space
 - ✅ Visual: content slides left (you see data that was to the right)
 - ❌ Code assumes: "data moves right, so originalLeft position moves LEFT"
 - ✅ Reality: originalLeft is a **fixed data value** (dataX=0), its **plot position** only changes when viewport changes
 
 Let's calculate originalLeft plot position after pan:
+
 ```dart
 // Before pan: viewport = [25, 75]
 originalLeft = (0 - 25) / 50 * 800 = -400px
 
-// After pan right: viewport = [31.25, 81.25]  
+// After pan right: viewport = [31.25, 81.25]
 originalLeft = (0 - 31.25) / 50 * 800 = -500px  // Moved further LEFT (more negative)
 ```
 
@@ -252,6 +276,7 @@ final leftMargin = originalLeft - minLeftEdge;  // How far from limit
 **What We SHOULD Measure**: "How far can the viewport move before the **currently visible data** would show excessive whitespace?"
 
 The difference is subtle but critical:
+
 - **Current approach**: Constrains based on where original boundaries are
 - **Correct approach**: Constrains based on where current viewport is relative to original data extent
 
@@ -260,23 +285,26 @@ The difference is subtle but critical:
 ## Why Users Experience "Broken" Panning
 
 ### Symptom 1: Panning Stops at Low Zoom Levels
+
 - **Cause**: At 1.5x zoom, original boundaries are ~60px off-screen (past -80px limit)
 - **Trigger**: Code enters "both edges past limits" recovery mode
 - **Effect**: Only allows "recovery panning" back toward center
 - **User Experience**: "I can only pan one direction, feels broken"
 
 ### Symptom 2: Panning Works Fine at 1x Zoom, Breaks at 2x
+
 - **Cause**: Constraints are zoom-dependent due to tracking "original boundary positions"
 - **At 1x**: Original boundaries are at plot edges (0px, 800px) - plenty of margin
 - **At 2x**: Original boundaries are way off-screen (-400px, 1200px) - triggers "recovery mode"
 - **User Experience**: "Why does zoom level change how panning works?"
 
 ### Symptom 3: Hitting "Invisible Walls" Prematurely
+
 - **Cause**: Margin calculations prevent panning when original edges approach limits
 - **Effect**: User can't pan far enough to see all interesting data
 - **Example**: At 2x zoom viewing [25,75], user wants to pan to see [40,90]
   - This requires panning right to shift viewport to [40,90]
-  - Original right edge (dataX=100) would plot at: (100-40)/50*800 = 960px
+  - Original right edge (dataX=100) would plot at: (100-40)/50\*800 = 960px
   - 960px > 880px limit → pan blocked!
   - But there's still **10 data units** of original data to the right (90-100)!
 - **User Experience**: "There's more data to see, why won't it let me pan there?"
@@ -302,7 +330,7 @@ Viewport (Camera): X ∈ [dataXMin, dataXMax]  (size = dataXRange)
 Allowed Viewport Positions:
 - Leftmost: dataXMin >= 0 - (plotWidth * 0.1 / pixelsPerDataX)
             "Can start up to 10% of viewport width LEFT of data start"
-            
+
 - Rightmost: dataXMax <= 100 + (plotWidth * 0.1 / pixelsPerDataX)
              "Can end up to 10% of viewport width RIGHT of data end"
 ```
@@ -310,6 +338,7 @@ Allowed Viewport Positions:
 #### Calculating Maximum Whitespace in Data Units
 
 At any zoom level:
+
 ```dart
 final dataPerPixel = dataXRange / plotWidth;  // Current zoom: data units per pixel
 
@@ -326,6 +355,7 @@ final minDataXMax = originalDataXMin + dataXRange + maxWhitespaceData;  // Right
 ```
 
 **Example at 2x Zoom**:
+
 ```
 Original: X ∈ [0, 100]
 Current: X ∈ [25, 75]  (dataXRange = 50, zoom = 2x)
@@ -385,52 +415,55 @@ return actualPlotDx;
 ### Approach 1: Direct Viewport Constraint (Recommended)
 
 **Algorithm**:
+
 1. Calculate requested viewport change in data space
 2. Calculate allowed viewport bounds in data space
 3. Clamp viewport to bounds
 4. Convert back to plot delta
 
 **Advantages**:
+
 - ✅ Conceptually simple and correct
 - ✅ Zoom-independent (constraints scale automatically)
 - ✅ No special cases or "recovery modes"
 - ✅ Predictable "wall" behavior
 
 **Implementation** (pseudocode):
+
 ```dart
 (double, double) _clampPanDelta(double requestedPlotDx, double requestedPlotDy) {
   // Convert plot delta to data delta
   final requestedDataDx = requestedPlotDx * dataPerPixelX;
   final requestedDataDy = requestedPlotDy * dataPerPixelY;
-  
+
   // Calculate tentative new viewport
   final tentativeXMin = dataXMin + requestedDataDx;
   final tentativeXMax = dataXMax + requestedDataDx;
   final tentativeYMin = dataYMin + requestedDataDy;
   final tentativeYMax = dataYMax + requestedDataDy;
-  
+
   // Calculate max whitespace in data units
   final maxWhitespaceX = plotWidth * maxWhitespaceFraction * dataPerPixelX;
   final maxWhitespaceY = plotHeight * maxWhitespaceFraction * dataPerPixelY;
-  
+
   // Calculate allowed viewport bounds
   final minAllowedXMin = originalDataXMin - maxWhitespaceX;
   final maxAllowedXMin = originalDataXMax - dataXRange + maxWhitespaceX;
   final minAllowedYMin = originalDataYMin - maxWhitespaceY;
   final maxAllowedYMin = originalDataYMax - dataYRange + maxWhitespaceY;
-  
+
   // Clamp viewport to bounds
   final clampedXMin = tentativeXMin.clamp(minAllowedXMin, maxAllowedXMin);
   final clampedYMin = tentativeYMin.clamp(minAllowedYMin, maxAllowedYMin);
-  
+
   // Calculate actual movement
   final actualDataDx = clampedXMin - dataXMin;
   final actualDataDy = clampedYMin - dataYMin;
-  
+
   // Convert back to plot space
   final actualPlotDx = actualDataDx / dataPerPixelX;
   final actualPlotDy = actualDataDy / dataPerPixelY;
-  
+
   return (actualPlotDx, actualPlotDy);
 }
 ```
@@ -450,6 +483,7 @@ final maxAllowedXMin = originalDataXMax - dataXRange + maxWhitespaceX;
 ```
 
 **Trade-offs**:
+
 - ✅ Even simpler (maxWhitespace is constant)
 - ✅ Zoom-independent constraints
 - ⚠️ At high zoom, whitespace appears larger on screen (10% of original data is more pixels)
@@ -461,24 +495,28 @@ final maxAllowedXMin = originalDataXMax - dataXRange + maxWhitespaceX;
 
 ## Migration Strategy
 
-### Phase 1: Replace _clampPanDelta Implementation
+### Phase 1: Replace \_clampPanDelta Implementation
+
 1. Remove current implementation (lines 308-570)
 2. Implement new algorithm based on Approach 1
 3. Remove "both edges past limits" logic entirely
 4. Remove directional pan checks (no longer needed)
 
 ### Phase 2: Update Comments
+
 1. Remove misleading "data moves right/left" comments
 2. Add correct "viewport moves in data space" explanations
 3. Document zoom-independence of constraints
 
 ### Phase 3: Test Coverage
-1. Unit tests for _clampPanDelta at different zoom levels
+
+1. Unit tests for \_clampPanDelta at different zoom levels
 2. Integration tests for pan-to-edge behavior
 3. Verify zoom-independent constraint behavior
 4. Test recovery from manual viewport manipulation
 
 ### Phase 4: Remove Roaming Radius Code
+
 The "roaming radius" code (lines 348-405) was a workaround for high-zoom constraints. With correct viewport constraints, this is no longer needed.
 
 ---
@@ -486,6 +524,7 @@ The "roaming radius" code (lines 348-405) was a workaround for high-zoom constra
 ## Test Cases to Validate
 
 ### Test 1: Pan at 1x Zoom (No Zoom)
+
 ```dart
 Original: [0, 100] × [0, 100]
 Viewport: [0, 100] × [0, 100]  (1x zoom)
@@ -497,6 +536,7 @@ Constraint: dataXMax <= 100 + 10 = 110 ✓ (within limit)
 ```
 
 ### Test 2: Pan at 2x Zoom
+
 ```dart
 Original: [0, 100] × [0, 100]
 Viewport: [25, 75] × [25, 75]  (2x zoom, centered)
@@ -508,6 +548,7 @@ Constraint: dataXMax = 81.25 <= 100 + 6.25 = 106.25 ✓
 ```
 
 ### Test 3: Pan to Edge at 2x Zoom
+
 ```dart
 Viewport: [25, 75]  (2x zoom)
 maxWhitespaceData = 800 * 0.1 * 0.0625 = 5
@@ -519,6 +560,7 @@ Visual: See 10% whitespace on right side
 ```
 
 ### Test 4: Pan to Edge at 5x Zoom
+
 ```dart
 Viewport: [40, 60]  (5x zoom, 20 data units visible)
 maxWhitespaceData = 800 * 0.1 * 0.025 = 2
@@ -530,6 +572,7 @@ Visual: See 10% whitespace on right side (same as 2x zoom)
 ```
 
 ### Test 5: Zoom Independence
+
 ```dart
 At all zoom levels (1x, 2x, 5x), the amount of whitespace visible
 when panned to edge should be the same: 10% of viewport.
@@ -547,7 +590,7 @@ After implementing the correct approach:
 ✅ **Predictable Walls**: Panning stops with consistent whitespace across zoom levels  
 ✅ **No Special Cases**: No "recovery mode" or "both edges past limits" logic  
 ✅ **Smooth UX**: Users never hit unexpected invisible walls  
-✅ **Mathematically Correct**: Viewport position constraints are geometrically sound  
+✅ **Mathematically Correct**: Viewport position constraints are geometrically sound
 
 ---
 
@@ -558,6 +601,7 @@ The current pan constraint implementation has a **fundamental conceptual error**
 The solution is to **completely rewrite `_clampPanDelta`** using direct viewport position constraints in data space. This approach is simpler, mathematically correct, and provides zoom-independent behavior.
 
 **Next Steps**:
+
 1. Implement new `_clampPanDelta` algorithm (Approach 1)
 2. Remove "roaming radius" and "both edges past limits" code
 3. Add comprehensive test coverage

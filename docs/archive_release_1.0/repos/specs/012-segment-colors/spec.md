@@ -6,12 +6,12 @@ Enable per-segment color and style customization for line chart series, allowing
 
 ## Status
 
-| Aspect | Status |
-|--------|--------|
-| Design | ✅ Complete |
+| Aspect         | Status      |
+| -------------- | ----------- |
+| Design         | ✅ Complete |
 | Implementation | ✅ Complete |
-| Tests | ✅ Complete |
-| Documentation | ✅ Complete |
+| Tests          | ✅ Complete |
+| Documentation  | ✅ Complete |
 
 ---
 
@@ -32,6 +32,7 @@ LineChartSeries(
 ### Required Capability
 
 Users need to **highlight specific segments** of a line in different colors:
+
 - Segments above a threshold (e.g., red when power > 100W)
 - Categorical regions (e.g., different phases of an experiment)
 - Anomaly visualization (e.g., error regions in orange)
@@ -55,34 +56,34 @@ With Overrides: ═════════════════════�
 
 ### 2.1 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| FR-01 | Support per-segment color override | MUST |
-| FR-02 | Support per-segment stroke width override | SHOULD |
-| FR-03 | Color transitions must be sharp (not gradient) at data point boundaries | MUST |
-| FR-04 | Work with all interpolation modes (linear, bezier, stepped, monotone) | MUST |
-| FR-05 | Bezier curves must remain smooth at color transition points | MUST |
-| FR-06 | Support streaming data with segment styles | SHOULD |
-| FR-07 | Provide helper methods for common use cases (color by index, color by X-range) | SHOULD |
+| ID    | Requirement                                                                    | Priority |
+| ----- | ------------------------------------------------------------------------------ | -------- |
+| FR-01 | Support per-segment color override                                             | MUST     |
+| FR-02 | Support per-segment stroke width override                                      | SHOULD   |
+| FR-03 | Color transitions must be sharp (not gradient) at data point boundaries        | MUST     |
+| FR-04 | Work with all interpolation modes (linear, bezier, stepped, monotone)          | MUST     |
+| FR-05 | Bezier curves must remain smooth at color transition points                    | MUST     |
+| FR-06 | Support streaming data with segment styles                                     | SHOULD   |
+| FR-07 | Provide helper methods for common use cases (color by index, color by X-range) | SHOULD   |
 
 ### 2.2 Performance Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| PR-01 | No performance impact when segment styles are NOT used (fast path) | MUST |
-| PR-02 | Batch consecutive same-color segments into single drawPath() calls | MUST |
-| PR-03 | Cache region analysis to avoid re-computation on every paint | SHOULD |
-| PR-04 | Support 10,000+ points with scattered overrides at 60fps | MUST |
-| PR-05 | Worst case (all different colors) must still render at 30fps minimum | SHOULD |
+| ID    | Requirement                                                          | Priority |
+| ----- | -------------------------------------------------------------------- | -------- |
+| PR-01 | No performance impact when segment styles are NOT used (fast path)   | MUST     |
+| PR-02 | Batch consecutive same-color segments into single drawPath() calls   | MUST     |
+| PR-03 | Cache region analysis to avoid re-computation on every paint         | SHOULD   |
+| PR-04 | Support 10,000+ points with scattered overrides at 60fps             | MUST     |
+| PR-05 | Worst case (all different colors) must still render at 30fps minimum | SHOULD   |
 
 ### 2.3 Non-Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| NR-01 | API must be intuitive and follow existing patterns | MUST |
-| NR-02 | No breaking changes to existing ChartDataPoint usage | MUST |
-| NR-03 | Style on last point should be ignored (no segment follows it) | MUST |
-| NR-04 | Null segment style means "use series/theme default" | MUST |
+| ID    | Requirement                                                   | Priority |
+| ----- | ------------------------------------------------------------- | -------- |
+| NR-01 | API must be intuitive and follow existing patterns            | MUST     |
+| NR-02 | No breaking changes to existing ChartDataPoint usage          | MUST     |
+| NR-03 | Style on last point should be ignored (no segment follows it) | MUST     |
+| NR-04 | Null segment style means "use series/theme default"           | MUST     |
 
 ---
 
@@ -93,12 +94,14 @@ With Overrides: ═════════════════════�
 **Decision**: Store `segmentStyle` on `ChartDataPoint`
 
 **Rationale**:
+
 - Natural mental model: "this point starts a styled segment"
 - Works seamlessly with streaming (each point carries its own style)
 - No separate data structure to maintain in sync with points
 - Minimal API surface (one optional field)
 
 **Rejected Alternatives**:
+
 1. **Map<int, SegmentStyle> on Series** - Index-based, breaks on reorder/filter
 2. **List<SegmentColorOverride> with X-ranges** - Complex, harder to maintain
 
@@ -107,6 +110,7 @@ With Overrides: ═════════════════════�
 **Decision**: Create `SegmentStyle` class with `color` and `strokeWidth`
 
 **Rationale**:
+
 - Extensible for future properties (dash pattern, opacity, etc.)
 - Single responsibility - styling concern is encapsulated
 - Convenience constructors (`SegmentStyle.color(...)`) keep simple cases simple
@@ -116,6 +120,7 @@ With Overrides: ═════════════════════�
 **Decision**: Sharp transitions at data point boundaries
 
 **Rationale**:
+
 - Clearer visual distinction between regions
 - Simpler implementation (no gradient calculation)
 - User specifically requested sharp transitions
@@ -126,6 +131,7 @@ With Overrides: ═════════════════════�
 **Decision**: Calculate control points using full point array, but only draw segments within color region
 
 **Rationale**:
+
 ```
 Problem: Bezier from P1→P2 needs P0 (for entry tangent) and P3 (for exit tangent)
          If P1 starts a new color, P0 is in previous color region.
@@ -133,7 +139,7 @@ Problem: Bezier from P1→P2 needs P0 (for entry tangent) and P3 (for exit tange
 Solution: When building path for Region 2 (starting at P1):
           - Use allPoints[0..n] for tangent calculations
           - Only add path segments for points within Region 2
-          
+
 Result:   Curve is mathematically continuous (smooth)
           Color changes sharply at P1
           Tangent at P1 is identical from both sides
@@ -149,12 +155,12 @@ Result:   Curve is mathematically continuous (smooth)
 
 **Performance Characteristics**:
 
-| Scenario | Regions | drawPath() calls | Notes |
-|----------|---------|------------------|-------|
-| No overrides | 1 | 1 | Fast path |
-| 1 override mid-series | 3 | 3 | Before, override, after |
-| 5 consecutive overrides | 3 | 3 | Batched together |
-| 100 scattered overrides | ~201 | ~201 | Worst realistic case |
+| Scenario                | Regions | drawPath() calls | Notes                   |
+| ----------------------- | ------- | ---------------- | ----------------------- |
+| No overrides            | 1       | 1                | Fast path               |
+| 1 override mid-series   | 3       | 3                | Before, override, after |
+| 5 consecutive overrides | 3       | 3                | Batched together        |
+| 100 scattered overrides | ~201    | ~201             | Worst realistic case    |
 
 ---
 
@@ -164,7 +170,7 @@ Result:   Curve is mathematically continuous (smooth)
 
 **File**: `lib/src/models/segment_style.dart`
 
-```dart
+````dart
 /// Styling override for a line segment.
 ///
 /// When applied to a [ChartDataPoint], this style affects the segment
@@ -215,7 +221,7 @@ class SegmentStyle {
   @override
   String toString() => 'SegmentStyle(color: $color, strokeWidth: $strokeWidth)';
 }
-```
+````
 
 ### 4.2 ChartDataPoint Updates
 
@@ -414,7 +420,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 Key changes to `lib/src/elements/series_element.dart`:
 
 1. Add cache fields for regions
-2. Add `_hasSegmentOverrides()` fast-path check  
+2. Add `_hasSegmentOverrides()` fast-path check
 3. Add `_paintLineSeriesMultiStyle()` method
 4. Add `_buildRegionPath()` with interpolation support
 5. Extract bezier control point calculation for reuse
@@ -445,23 +451,23 @@ See Section 5 pseudocode in full spec for implementation details.
 
 ### Phase 2: Rendering (Est: 3 hours)
 
-- [ ] Add _StyleRegion class to series_element.dart
-- [ ] Add _analyzeStyleRegions() function
+- [ ] Add \_StyleRegion class to series_element.dart
+- [ ] Add \_analyzeStyleRegions() function
 - [ ] Add caching fields to SeriesElement
-  - [ ] _cachedRegions
-  - [ ] _cachedHasOverrides
-- [ ] Modify paint() to branch on _hasSegmentOverrides()
-- [ ] Implement _paintLineSeriesMultiStyle()
-- [ ] Implement _buildRegionPath() with interpolation support
-- [ ] Implement/extract _calculateBezierControlPointsForSegment()
-- [ ] Implement/extract _calculateMonotoneControlPointsForSegment()
+  - [ ] \_cachedRegions
+  - [ ] \_cachedHasOverrides
+- [ ] Modify paint() to branch on \_hasSegmentOverrides()
+- [ ] Implement \_paintLineSeriesMultiStyle()
+- [ ] Implement \_buildRegionPath() with interpolation support
+- [ ] Implement/extract \_calculateBezierControlPointsForSegment()
+- [ ] Implement/extract \_calculateMonotoneControlPointsForSegment()
 - [ ] Update cache invalidation methods
 
 ### Phase 3: Testing (Est: 2 hours)
 
 - [ ] Unit tests for SegmentStyle
 - [ ] Unit tests for ChartDataPoint.segmentStyle
-- [ ] Unit tests for _analyzeStyleRegions()
+- [ ] Unit tests for \_analyzeStyleRegions()
 - [ ] Integration tests for rendering with all interpolation types
 - [ ] Performance tests for fast path and multi-color paths
 
@@ -477,12 +483,12 @@ See Section 5 pseudocode in full spec for implementation details.
 
 ### 7.1 Region Analysis Tests
 
-| Test Case | Points | Expected Regions |
-|-----------|--------|------------------|
-| No overrides | [P0, P1, P2] | 1 region (0→2) |
-| Single override at P1 | [P0, P1(red), P2, P3] | 3 regions |
-| Consecutive overrides | [P0, P1(red), P2(red), P3] | 3 regions (red batched) |
-| All different | [P0(red), P1(blue), P2(green)] | 3 regions |
+| Test Case             | Points                         | Expected Regions        |
+| --------------------- | ------------------------------ | ----------------------- |
+| No overrides          | [P0, P1, P2]                   | 1 region (0→2)          |
+| Single override at P1 | [P0, P1(red), P2, P3]          | 3 regions               |
+| Consecutive overrides | [P0, P1(red), P2(red), P3]     | 3 regions (red batched) |
+| All different         | [P0(red), P1(blue), P2(green)] | 3 regions               |
 
 ### 7.2 Visual Tests
 
@@ -493,12 +499,12 @@ See Section 5 pseudocode in full spec for implementation details.
 
 ### 7.3 Performance Benchmarks
 
-| Scenario | Points | Overrides | Target FPS |
-|----------|--------|-----------|------------|
-| Fast path | 10,000 | 0 | 60 |
-| Few overrides | 10,000 | 10 | 60 |
-| Many overrides | 10,000 | 100 | 60 |
-| Worst case | 10,000 | 5,000 | 30 |
+| Scenario       | Points | Overrides | Target FPS |
+| -------------- | ------ | --------- | ---------- |
+| Fast path      | 10,000 | 0         | 60         |
+| Few overrides  | 10,000 | 10        | 60         |
+| Many overrides | 10,000 | 100       | 60         |
+| Worst case     | 10,000 | 5,000     | 30         |
 
 ---
 
@@ -528,6 +534,7 @@ Where tension is typically 0.5 for Catmull-Rom default.
 ### Why This Preserves Continuity
 
 When we split rendering at P2 (color change):
+
 - Region 1 path ends at P2, using CP2 calculated from [P1, P2, P3]
 - Region 2 path starts at P2, using same tangent direction
 

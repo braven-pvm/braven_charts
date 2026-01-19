@@ -13,6 +13,7 @@
 Please refer to **`axis_position_implementation.md`** for the complete, current implementation.
 
 **What Changed**:
+
 - Initial optimization (Phase 18) had a bug - incorrectly assumed axisPosition was used
 - Bug fix (Phase 19) simplified but disabled the positioning feature
 - Full implementation (Phase 20) made axisPosition fully functional
@@ -36,12 +37,13 @@ The chart was reserving 40px of padding on **all four sides** (top, right, botto
 - **Empty orange padding zones** where no axes existed
 
 ### Before (Wasteful):
+
 ```
 ┌─────────────────────────────────┐
 │ 🟠 TOP: 40px (EMPTY - no axis)  │
 │ ┌────────────────────────────┐ │
 │🟠│                          │🟠│
-│ │   🔵 CHART AREA          │ │ 
+│ │   🔵 CHART AREA          │ │
 │L │                          │R │
 │E │                          │I │
 │F │                          │G │
@@ -65,13 +67,13 @@ Dynamic padding calculation based on actual axis positions:
 ```dart
 // Calculate padding based on actual axis positions
 const axisPadding = 40.0;
-final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) 
+final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left)
     ? axisPadding : 0.0;
-final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) 
+final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right)
     ? axisPadding : 0.0;
-final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) 
+final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top)
     ? axisPadding : 0.0;
-final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) 
+final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom)
     ? axisPadding : 0.0;
 
 final chartRect = Rect.fromLTWH(
@@ -83,23 +85,24 @@ final chartRect = Rect.fromLTWH(
 ```
 
 ### After (Optimized):
+
 ```
 ┌─────────────────────────────────┐
 │ 🔵 CHART AREA (larger!)         │
 │ ┌────────────────────────────── │
-│🟠│                                
-│ │                                
-│L │                                
-│E │                                
-│F │                                
-│T │                                
-│ │                                
-│4 │                                
-│0 │                                
-│p │                                
-│x │                                
-│ │                                
-│ │                                
+│🟠│
+│ │
+│L │
+│E │
+│F │
+│T │
+│ │
+│4 │
+│0 │
+│p │
+│x │
+│ │
+│ │
 │ └────────────────────────────────
 │ 🟠 BOTTOM: 40px (X-axis here)   │
 └─────────────────────────────────┘
@@ -108,29 +111,32 @@ final chartRect = Rect.fromLTWH(
 ## Changes Made
 
 ### 1. Updated `_BravenChartPainter.paint()` (line ~2402)
+
 **File**: `lib/src/widgets/braven_chart.dart`
 
 **Before**:
+
 ```dart
 const padding = 40.0;
 final chartRect = Rect.fromLTWH(
-  padding, 
-  padding, 
-  size.width - padding * 2, 
+  padding,
+  padding,
+  size.width - padding * 2,
   size.height - padding * 2
 );
 ```
 
 **After**:
+
 ```dart
 const axisPadding = 40.0;
-final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left) 
+final leftPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left)
     ? axisPadding : 0.0;
-final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right) 
+final rightPadding = (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right)
     ? axisPadding : 0.0;
-final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top) 
+final topPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top)
     ? axisPadding : 0.0;
-final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom) 
+final bottomPadding = (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom)
     ? axisPadding : 0.0;
 
 final chartRect = Rect.fromLTWH(
@@ -142,11 +148,13 @@ final chartRect = Rect.fromLTWH(
 ```
 
 ### 2. Updated `_calculateChartRect()` (line ~1807)
+
 **File**: `lib/src/widgets/braven_chart.dart`
 
 Applied the same logic to the interaction system's chart rect calculation to ensure tooltip positioning remains accurate.
 
 ### 3. Added Import
+
 **File**: `lib/src/widgets/braven_chart.dart` (line ~31)
 
 ```dart
@@ -175,6 +183,7 @@ import 'package:braven_charts/src/widgets/enums/axis_position.dart';
 ## Coordinate System Impact
 
 ### Before Optimization:
+
 ```
 Stack Coordinates (RED area): Full widget
 Chart Coordinates (BLUE area): Widget minus 40px on ALL sides
@@ -182,6 +191,7 @@ Tooltip positioning: Uses Stack coordinates
 ```
 
 ### After Optimization:
+
 ```
 Stack Coordinates (RED area): Full widget
 Chart Coordinates (BLUE area): Widget minus padding ONLY where axes exist
@@ -193,6 +203,7 @@ Tooltip positioning: Uses Stack coordinates (unchanged)
 ## Examples
 
 ### Default Configuration (bottom/left)
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -200,9 +211,11 @@ BravenChart(
   // Default axes: bottom X, left Y
 )
 ```
+
 **Result**: Padding on bottom (40px) and left (40px) only. Top and right edges extend to widget boundary.
 
 ### Hidden Axes (sparkline)
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -211,9 +224,11 @@ BravenChart(
   yAxis: AxisConfig.hidden(),
 )
 ```
+
 **Result**: NO padding on any side. Chart fills entire widget.
 
 ### Top/Right Axes (inverted)
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -226,6 +241,7 @@ BravenChart(
   ),
 )
 ```
+
 **Result**: Padding on top (40px) and right (40px) only. Bottom and left edges extend to widget boundary.
 
 ## Regression Risks

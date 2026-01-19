@@ -19,11 +19,13 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 1: Drag Random Box (Box Selection)
 
 **Workflow**:
+
 1. User drags a box anywhere on chart
 2. If box includes ≥1 series AND ≥2 points on at least one series
 3. Show popup menu with "Add Range Annotation"
 
 **Analysis**:
+
 - ✅ **Pros**: Natural for defining arbitrary regions, immediate visual feedback during drag
 - ⚠️ **Cons**: Conflicts with existing box-select for multi-selection (scenario 5 in interaction architecture), requires disambiguation logic
 - 💡 **Refinement**: Could use modifier key (e.g., Alt+drag) to distinguish from box-select mode
@@ -34,6 +36,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 2: Right-click Marker → Menu → Interactive Creation
 
 **Workflow**:
+
 1. Right-click on data point marker
 2. Select "Add Range Annotation" from context menu
 3. Choose creation method:
@@ -42,6 +45,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
    - Drag edge of newly created region
 
 **Analysis**:
+
 - ✅ **Pros**: Discoverable via context menu, clear starting point anchored to data
 - ⚠️ **Cons**: Two-step process, requires mode switch after menu selection
 - 💡 **Use Case**: Best for precise range definition starting from known data point
@@ -52,12 +56,14 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 3: Ctrl+Click Start/End Points
 
 **Workflow**:
+
 1. Hold Ctrl key
 2. Click first data point marker (start)
 3. Click second data point marker (end)
 4. Release Ctrl → creation dialog appears
 
 **Analysis**:
+
 - ✅ **Pros**: Fast for power users, precise point-to-point definition, minimal UI
 - ⚠️ **Cons**: Not discoverable, requires documentation/tooltips, hidden feature
 - 💡 **Refinement**: Visual feedback showing "first point selected, click second point" with preview line
@@ -68,6 +74,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 4: Right-click Empty Area → "Add Range Annotation" → Interactive Drag ⭐
 
 **Workflow**:
+
 1. Right-click empty chart area
 2. Select "Add Range Annotation" from context menu
 3. Cursor changes to crosshair with range icon
@@ -76,6 +83,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 6. Confirm or cancel in dialog
 
 **Analysis**:
+
 - ✅ **Pros**: No modifier keys needed, discoverable via menu, visual mode indication, clear entry/exit
 - ✅ **Aligns with web-first design philosophy** (menu-driven, progressive disclosure)
 - ⚠️ **Cons**: Three-step process (click menu → drag → dialog)
@@ -93,6 +101,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 5: Toolbar Button → Interactive Mode
 
 **Workflow**:
+
 1. Click "Range Annotation" button in toolbar
 2. Chart enters "range creation mode" (cursor changes, status indicator)
 3. Click-drag on chart to define region
@@ -100,6 +109,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 5. Mode stays active for multiple ranges OR automatically exits
 
 **Analysis**:
+
 - ✅ **Pros**: Streamlined for creating multiple ranges, clear mode indication, efficient batch operation
 - ⚠️ **Cons**: Requires toolbar UI, modal mode blocks other interactions, less discoverable than context menu
 - 💡 **Variants**:
@@ -112,11 +122,13 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 6: Double-Click-Drag (Gesture-based)
 
 **Workflow**:
+
 1. Double-click empty area (enters range creation mode instantly)
 2. Without releasing, immediately drag to define region
 3. Release mouse button → range created or dialog opens
 
 **Analysis**:
+
 - ✅ **Pros**: Single fluid gesture, fastest for power users, no menu navigation
 - ⚠️ **Cons**: Not discoverable, can conflict with zoom-to-fit double-click gestures, hidden feature
 - 💡 **Refinement**: Could use different gesture (e.g., triple-click, double-right-click)
@@ -127,6 +139,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 7: Right-click Series Line → "Add Range Along Series"
 
 **Workflow**:
+
 1. Right-click on series line (not on marker)
 2. Select "Add Range Along Series" from context menu
 3. Drag horizontally to define X-axis range
@@ -134,6 +147,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 5. Range "hugs" the series data
 
 **Analysis**:
+
 - ✅ **Pros**: Automatic Y-bounds calculation, intuitive for time-series ranges, series-aware
 - ⚠️ **Cons**: Limited to single-series ranges, different UX from other range types
 - 💡 **Use Cases**:
@@ -147,6 +161,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 8: Snap-to-Grid Range Selection
 
 **Workflow**:
+
 1. Right-click data point marker → "Start Range Annotation"
 2. Chart enters "range selection mode" (visual indicator, status text)
 3. Hover over other markers → highlights valid end points
@@ -155,6 +170,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 6. Confirm or cancel
 
 **Analysis**:
+
 - ✅ **Pros**: Precise point-to-point selection, visual feedback on valid targets, no modifier keys
 - ⚠️ **Cons**: Requires mode management, limited to data point boundaries, can't select arbitrary regions
 - 💡 **Enhancements**:
@@ -170,6 +186,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 9: Contextual Smart Ranges (AI-Enhanced)
 
 **Workflow**:
+
 1. Right-click anywhere on chart
 2. Menu shows "Add Smart Range" with sub-options:
    - "Peak Period" (auto-detects local maxima region)
@@ -177,6 +194,7 @@ This document captures the design discussion for RangeAnnotation creation workfl
    - "Custom Range" (falls back to Option 4)
 
 **Analysis**:
+
 - ✅ **Pros**: Leverages data analysis, reduces manual work
 - ⚠️ **Cons**: Complex implementation, requires heuristics, may not match user intent
 - 🎯 **Best for**: Future enhancement after basic workflows proven
@@ -186,12 +204,14 @@ This document captures the design discussion for RangeAnnotation creation workfl
 ### Option 10: Template-Based Ranges
 
 **Workflow**:
+
 1. Right-click → "Add Range from Template"
 2. Select template: "Business Hours", "Weekend", "Monthly", "Quarterly"
 3. Template defines pattern, user specifies start point
 4. Range auto-calculated based on template rules
 
 **Analysis**:
+
 - ✅ **Pros**: Efficient for recurring patterns, standardized annotations
 - ⚠️ **Cons**: Requires template system, not flexible for ad-hoc ranges
 - 🎯 **Best for**: Business dashboards, scheduled reports, compliance marking
@@ -202,35 +222,42 @@ This document captures the design discussion for RangeAnnotation creation workfl
 
 ### Tier 1: Most Discoverable (Start Here) ⭐
 
-**Priority 1a**: 
+**Priority 1a**:
+
 - **Option 4**: Right-click empty → "Add Range Annotation" → Interactive drag
 - **Why**: Most discoverable, no modifier keys, menu-driven
 
 **Priority 1b**:
+
 - **Option 2**: Right-click marker → "Add Range Annotation" → Choose creation method
 - **Why**: Anchored to data, complementary to Option 4
 
 ### Tier 2: Power User Features (Phase 2)
 
 **Priority 2a**:
+
 - **Option 3**: Ctrl+Click start/end points
 - **Why**: Fast keyboard-driven workflow, doesn't interfere with Tier 1
 
 **Priority 2b**:
+
 - **Option 8**: Click-click snap-to-datapoints mode
 - **Why**: Precise point-to-point without modifier keys
 
 ### Tier 3: Advanced Features (Phase 3)
 
 **Priority 3a**:
+
 - **Option 7**: Series-specific range creation
 - **Why**: Specialized use case, powerful for time-series
 
 **Priority 3b**:
+
 - **Option 1**: Alt+Drag box (with disambiguation)
 - **Why**: Freeform selection, requires conflict resolution
 
 **Priority 3c**:
+
 - **Option 5**: Toolbar button mode
 - **Why**: Batch operations, requires toolbar UI
 
@@ -245,6 +272,7 @@ Before implementing any option, these questions must be answered:
 **Question**: What shapes can RangeAnnotations take?
 
 **Options**:
+
 - ✅ **Rectangular** (X-range × Y-range) - Most flexible
 - ✅ **Horizontal bands** (X-range, full Y-height) - Time periods, events
 - ✅ **Vertical bands** (full X-width, Y-range) - Threshold zones, target ranges
@@ -259,6 +287,7 @@ Before implementing any option, these questions must be answered:
 **Question**: How do ranges respond to pan/zoom?
 
 **Options**:
+
 - ✅ **Data-space anchored**: Range fixed to data coordinates (zooms with chart)
   - Use case: "Sales between Jan-Mar 2024"
 - ⚠️ **Plot-space anchored**: Range fixed to pixel coordinates (stays in place during zoom)
@@ -275,6 +304,7 @@ Before implementing any option, these questions must be answered:
 **Question**: Can a single range span multiple series?
 
 **Options**:
+
 - ✅ **Cross-series ranges**: Single range covers all series in region
   - Use case: "All metrics during outage period"
 - ✅ **Per-series ranges**: Range associates with specific series
@@ -291,6 +321,7 @@ Before implementing any option, these questions must be answered:
 **Question**: What feedback during drag operation?
 
 **Options**:
+
 - ✅ **Live rubber-band rectangle**: Semi-transparent box follows cursor
   - Simple, clear, immediate feedback
 - ✅ **Ghost annotation preview**: Shows actual styled range during drag
@@ -307,6 +338,7 @@ Before implementing any option, these questions must be answered:
 **Question**: How can user cancel range creation?
 
 **Options**:
+
 - ✅ **ESC key**: Standard cancellation, works in all modes
 - ✅ **Right-click**: Context menu cancellation (web-native pattern)
 - ✅ **Click outside dialog**: Cancel after dialog opens
@@ -321,6 +353,7 @@ Before implementing any option, these questions must be answered:
 **Question**: Always show properties dialog, or allow direct creation?
 
 **Options**:
+
 - **Always dialog**: Consistent, allows property customization
 - **Direct creation with defaults**: Faster, dialog optional (double-click to edit)
 - **User preference**: Setting to choose behavior
@@ -334,32 +367,33 @@ Before implementing any option, these questions must be answered:
 ### Rectangular Range (Full 2D Region)
 
 **Properties**:
+
 ```dart
 class RangeAnnotation {
   String id;
   String label;
   String? description;
-  
+
   // Bounds
   double xMin;
   double xMax;
   double yMin;
   double yMax;
-  
+
   // Optional: Series association
   String? seriesId; // null = all series
-  
+
   // Styling
   Color fillColor;
   double fillOpacity;
   Color borderColor;
   double borderWidth;
-  
+
   // Interaction
   bool allowDragging;
   bool allowResizing;
   bool showLabel;
-  
+
   // Metadata
   DateTime createdAt;
   String? category;
@@ -368,6 +402,7 @@ class RangeAnnotation {
 ```
 
 **Use Cases**:
+
 - Analysis regions: "High volatility period"
 - Comparison zones: "Before/After intervention"
 - Data quality markers: "Unreliable data region"
@@ -377,12 +412,14 @@ class RangeAnnotation {
 ### Horizontal Band Range (Time Period)
 
 **Properties** (subset of Rectangular):
+
 ```dart
 // yMin/yMax not specified (full Y-height)
 // Primarily used for time-series marking
 ```
 
 **Use Cases**:
+
 - Time periods: "Q1 2024", "Maintenance Window"
 - Events: "Product Launch", "Market Crash"
 - Schedules: "Business Hours", "Peak Season"
@@ -392,12 +429,14 @@ class RangeAnnotation {
 ### Vertical Band Range (Value Range)
 
 **Properties** (subset of Rectangular):
+
 ```dart
 // xMin/xMax not specified (full X-width)
 // Primarily used for threshold/target zones
 ```
 
 **Use Cases**:
+
 - Target zones: "Optimal Temperature Range"
 - Threshold bands: "Warning Level", "Critical Zone"
 - Specification limits: "Tolerance Band"
@@ -409,6 +448,7 @@ class RangeAnnotation {
 ### Interaction Coordinator
 
 **New Mode Required**:
+
 ```dart
 enum InteractionMode {
   // ... existing modes
@@ -417,6 +457,7 @@ enum InteractionMode {
 ```
 
 **State Management**:
+
 - Enter mode when "Add Range Annotation" menu selected
 - Store creation start point in coordinator
 - Exit mode on ESC, right-click, or creation completion
@@ -426,6 +467,7 @@ enum InteractionMode {
 ### Context Menu Updates
 
 **Empty Area Menu** (Option 4):
+
 ```dart
 if (isEmptyArea) {
   WebContextMenuAction(
@@ -437,6 +479,7 @@ if (isEmptyArea) {
 ```
 
 **Marker Menu** (Option 2):
+
 ```dart
 if (isDataPointClick) {
   WebContextMenuAction(
@@ -452,11 +495,13 @@ if (isDataPointClick) {
 ### RenderBox Integration
 
 **Hit Testing**:
+
 - RangeAnnotationElement must participate in spatial indexing
 - Bounds based on transformed X/Y ranges
 - Hit test considers both body and resize handles
 
 **Rendering**:
+
 - Paint filled rectangle with border
 - Optional: Paint series data points within range with highlight
 - Label positioning (corner or center)
@@ -488,6 +533,7 @@ if (isDataPointClick) {
 ### Phase 1: Basic Implementation (Option 4)
 
 **Milestone 1**: Core Creation Flow
+
 - [ ] Add "Add Range Annotation" to context menu (empty area)
 - [ ] Implement `rangeAnnotationCreation` interaction mode
 - [ ] Rubber-band rectangle rendering during drag
@@ -495,6 +541,7 @@ if (isDataPointClick) {
 - [ ] Create RangeAnnotationElement from bounds
 
 **Milestone 2**: Properties Dialog
+
 - [ ] Design RangeAnnotationDialog UI
 - [ ] Form fields: label, description, colors, opacity
 - [ ] Preview pane showing styled range
@@ -502,6 +549,7 @@ if (isDataPointClick) {
 - [ ] Create/Cancel actions
 
 **Milestone 3**: Rendering & Interaction
+
 - [ ] RangeAnnotationElement paint implementation
 - [ ] Resize handles (8 points: corners + edges)
 - [ ] Drag-to-move entire range
@@ -513,12 +561,14 @@ if (isDataPointClick) {
 ### Phase 2: Enhanced Workflows (Options 2, 3, 8)
 
 **Milestone 4**: Point-to-Point Creation
+
 - [ ] Option 2: Right-click marker menu
 - [ ] Option 3: Ctrl+Click two points
 - [ ] Option 8: Click-click snap mode
 - [ ] Visual feedback for point selection
 
 **Milestone 5**: Polish & Refinement
+
 - [ ] Keyboard shortcuts documentation
 - [ ] Tooltip help during creation
 - [ ] Undo/redo support
@@ -529,11 +579,13 @@ if (isDataPointClick) {
 ### Phase 3: Advanced Features (Options 1, 5, 7)
 
 **Milestone 6**: Alternative Creation Methods
+
 - [ ] Option 1: Alt+Drag box selection
 - [ ] Option 5: Toolbar button mode
 - [ ] Option 7: Series-specific ranges
 
 **Milestone 7**: Advanced Capabilities
+
 - [ ] Range templates system
 - [ ] Multi-range batch operations
 - [ ] Range statistics overlay
@@ -580,13 +632,14 @@ if (isDataPointClick) {
 
 ## Revision History
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2025-11-21 | 1.0 | Initial design discussion documented | AI Assistant |
+| Date       | Version | Changes                              | Author       |
+| ---------- | ------- | ------------------------------------ | ------------ |
+| 2025-11-21 | 1.0     | Initial design discussion documented | AI Assistant |
 
 ---
 
 **Next Steps**:
+
 1. ✅ Document complete (this file)
 2. ⏳ Implement TextAnnotation creation dialog (foundation)
 3. ⏳ Implement Option 4 RangeAnnotation creation workflow

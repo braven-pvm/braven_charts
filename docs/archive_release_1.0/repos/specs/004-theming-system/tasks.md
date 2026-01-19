@@ -43,6 +43,7 @@
 ---
 
 ## Format: `[ID] [P?] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - Include exact file paths in task descriptions
 
@@ -51,6 +52,7 @@
 ## Path Conventions
 
 This is a **single Flutter library** project:
+
 - **Source**: `lib/src/theming/`
 - **Tests**: `test/`
 - **Contracts**: `specs/004-theming-system/contracts/`
@@ -218,7 +220,8 @@ This is a **single Flutter library** project:
   - Add library-level documentation
   - **DEPENDS ON**: T009-T016
 
-**Dependencies**: 
+**Dependencies**:
+
 - T009-T015 can run in parallel (independent files)
 - T016 depends on T009-T015 (imports all components)
 - T017 depends on T009-T016 (exports all)
@@ -505,7 +508,8 @@ This is a **single Flutter library** project:
 
 **Dependencies**: All tasks can run in parallel except T048 (depends on everything)
 
-**Verification**: 
+**Verification**:
+
 - `flutter test test/benchmarks/theming/` - benchmarks meet targets
 - `flutter test` - all 100% tests passing
 - `dart analyze` - zero issues
@@ -565,6 +569,7 @@ Phase 6: Performance & Docs (T042-T048)
 ## Parallel Execution Examples
 
 ### Phase 0: Launch all contract tests together
+
 ```bash
 # All 8 contract tests can run in parallel (different files, no dependencies)
 flutter test test/contract/theming/chart_theme_contract_test.dart &
@@ -580,6 +585,7 @@ wait
 ```
 
 ### Phase 1: Implement component themes in parallel
+
 ```bash
 # T009-T015 can run in parallel (independent files)
 # Example using Task agents (if available):
@@ -593,6 +599,7 @@ Task: "Implement ColorUtils in lib/src/theming/utilities/color_utils.dart"
 ```
 
 ### Phase 2: Validate all themes in parallel
+
 ```bash
 # T018-T027 can run in parallel (all depend on T016 but are independent of each other)
 flutter test test/accessibility/theming/default_light_wcag_test.dart &
@@ -607,6 +614,7 @@ wait
 ```
 
 ### Phase 4: Create utilities in parallel
+
 ```bash
 # T031, T033, T035 can run in parallel (independent files)
 Task: "Implement StyleCache in lib/src/theming/utilities/style_cache.dart"
@@ -619,6 +627,7 @@ Task: "Create theme versioning in lib/src/theming/utilities/theme_version.dart"
 ## Validation Checklist
 
 **Pre-Execution**:
+
 - [x] All 8 contracts have corresponding tests (T001-T008)
 - [x] All 9 entities have implementation tasks (T009-T016 + utilities)
 - [x] All tests come before implementation (Phase 0 before Phase 1)
@@ -627,6 +636,7 @@ Task: "Create theme versioning in lib/src/theming/utilities/theme_version.dart"
 - [x] No task modifies same file as another [P] task
 
 **Post-Execution** (after T048):
+
 - [ ] All contract tests passing (T001-T008 verification)
 - [ ] All accessibility tests passing (T018-T024)
 - [ ] All builder tests passing (T029-T030)
@@ -641,7 +651,7 @@ Task: "Create theme versioning in lib/src/theming/utilities/theme_version.dart"
 
 ## Notes
 
-1. **TDD Workflow**: 
+1. **TDD Workflow**:
    - Phase 0 creates failing tests
    - Phase 1 makes tests pass
    - Never implement without a failing test first
@@ -662,6 +672,7 @@ Task: "Create theme versioning in lib/src/theming/utilities/theme_version.dart"
    - Colorblind Friendly: Tested with Brettel simulation
 
 5. **File Organization**:
+
    ```
    lib/src/theming/
    ├── chart_theme.dart (T016)

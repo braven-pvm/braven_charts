@@ -1,10 +1,10 @@
-
 # Implementation Plan: Chart Widgets with Annotations
 
 **Branch**: `006-chart-widgets` | **Date**: October 6, 2025 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/specs/006-chart-widgets/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    ✓ Loaded spec.md with 40 FRs, 8 NFRs, 10 acceptance scenarios, 5 user stories
@@ -35,6 +35,7 @@
 **STATUS**: ✅ PLAN COMPLETE - Ready for `/tasks` command
 
 **IMPORTANT**: The /plan command STOPS at step 9. Phases 2-4 are executed by other commands:
+
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
@@ -45,6 +46,7 @@
 The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`) that wraps all chart layer implementations (Line, Area, Bar, Scatter), enabling Flutter developers to create professional charts with 5-10 lines of code instead of 50+. This widget includes comprehensive axis configuration, real-time data streaming support, annotation overlay system (5 types: Text, Point, Range, Threshold, Trend), and programmatic control via `ChartController`.
 
 **Technical Approach**:
+
 - Single `BravenChart` StatefulWidget as ONLY user-facing API (enforced architectural decision)
 - Internal chart type selection via `chartType` enum parameter (line, area, bar, scatter)
 - Stateful widget pattern with automatic resource lifecycle management
@@ -57,6 +59,7 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - TDD with contract tests, widget tests, golden tests, integration tests
 
 ---
+
 **Language/Version**: Dart 3.10.0-227.0.dev  
 **Primary Dependencies**: Flutter SDK 3.37.0-1.0.pre-216, Standard Dart libraries (dart:ui for widgets, dart:async for streams)  
 **Storage**: N/A (stateless widget with external data sources)  
@@ -68,6 +71,7 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 **Scale/Scope**: 1 primary widget (BravenChart), 4 chart types, 5 annotation types, 1 controller class, 1 comprehensive AxisConfig, 40 functional requirements, 8 non-functional requirements, 100% test coverage target
 
 **User-Provided Implementation Context**:
+
 - **Layer 0 (Foundation)**: ChartSeries, ChartDataPoint, ObjectPool, ViewportCuller implemented
 - **Layer 1 (Core Rendering)**: RenderPipeline, RenderLayer, Paint/Path pooling implemented
 - **Layer 2 (Coordinate System)**: UniversalCoordinateTransformer for all transformations implemented
@@ -79,10 +83,13 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - **Constitution**: TDD mandatory, 60fps/16ms targets, pure Flutter, SOLID principles, zero warnings requirement
 
 ## Constitution Check
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. Test-First Development (NON-NEGOTIABLE)
+
 ✅ **PASS** - Comprehensive TDD strategy
+
 - Contract tests FIRST: BravenChart widget interface, ChartController API, AxisConfig properties
 - Widget tests: Rendering behavior, lifecycle management, hot reload support
 - Golden tests: Visual regression for all chart types, axis configurations, annotation types
@@ -93,7 +100,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Target: 100% coverage for all new code
 
 ### II. Performance First (60fps Target)
+
 ✅ **PASS** - Performance-optimized design
+
 - Reuses Layer 4 performance optimizations (viewport culling, object pooling)
 - Stream throttling at 60 FPS max (16ms minimum interval between updates)
 - Backpressure handling when data arrives faster than render rate
@@ -104,7 +113,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Memory leak tests: 24-hour stream test, hot reload cycles
 
 ### III. Architectural Integrity (Pure Flutter)
+
 ✅ **PASS** - Pure Flutter StatefulWidget implementation
+
 - Uses only Flutter widgets (StatefulWidget, CustomPaint), dart:async (Stream, StreamController)
 - No HTML elements, no web-specific APIs
 - Clean separation:
@@ -118,7 +129,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Architecture Decision: BravenChart as ONLY user-facing widget (ARCH-005-001)
 
 ### IV. Requirements Compliance (NON-NEGOTIABLE)
+
 ✅ **PASS** - Specification-driven implementation
+
 - Business spec: specs/006-chart-widgets/spec.md (40 FRs, 8 NFRs, 10 scenarios)
 - Technical spec: docs/specs/005-chart-widgets/spec.md (2400+ lines, 13 FR sections)
 - Architecture decision: docs/specs/005-chart-widgets/architecture_decision.md
@@ -128,7 +141,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Deviations require explicit documentation in tasks.md with rationale
 
 ### V. API Consistency & Stability
+
 ✅ **PASS** - Flutter-idiomatic API design
+
 - Follows Flutter widget conventions: named parameters, required vs optional
 - Constructor pattern: `BravenChart({required ChartType chartType, required List<ChartSeries> series, ...})`
 - Factory constructors for common patterns: `BravenChart.fromValues()`, `BravenChart.fromMap()`, `BravenChart.fromJson()`
@@ -139,7 +154,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Comprehensive dartdoc for all public APIs with examples
 
 ### VI. Documentation Discipline
+
 ✅ **PASS** - Comprehensive documentation plan
+
 - Inline dartdoc: All public APIs (BravenChart, ChartController, AxisConfig, annotations)
 - Architecture Decision Record: ARCH-005-001 (single entry point justification)
 - Integration guide: Annotation system integration (250+ lines)
@@ -149,7 +166,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - Migration guide: From direct Layer 4 usage to BravenChart (future users)
 
 ### VII. Simplicity & Pragmatism (KISS Principle)
+
 ✅ **PASS** - Simple, focused design
+
 - Single widget entry point (not 4 separate widgets) - KISS applied
 - Reuses all Layer 0-4 complexity (no reinvention)
 - AxisConfig: Simple value object (no complex inheritance)
@@ -162,6 +181,7 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/006-chart-widgets/
 ├── spec.md              # Business specification (350 lines, 40 FRs)
@@ -178,6 +198,7 @@ specs/006-chart-widgets/
 ```
 
 ### Source Code (repository root)
+
 ```
 lib/
 ├── src/
@@ -245,12 +266,14 @@ test/
 ## Phase 0: Outline & Research ✅ COMPLETE
 
 **Execution Summary**:
+
 - All technical unknowns resolved through research.md
 - 7 major architectural decisions documented with full rationale
 - No NEEDS CLARIFICATION items remaining from Technical Context
 - Best practices identified for Flutter StatefulWidget, ChangeNotifier, Stream integration
 
 **Major Decisions**:
+
 1. **StatefulWidget** chosen over StatelessWidget (resource lifecycle needs)
 2. **Controller pattern** using TextEditingController-style ChangeNotifier
 3. **Stream throttling** at 16ms for 60 FPS compliance (NFR-001)
@@ -264,15 +287,18 @@ test/
 **All unknowns resolved** ✅
 
 ## Phase 1: Design & Contracts ✅ COMPLETE
-*Prerequisites: research.md complete ✅*
+
+_Prerequisites: research.md complete ✅_
 
 **Execution Summary**:
+
 - Complete data model documented with 5 entities + 8 supporting types
 - 4 contract test files created following TDD red phase (all intentionally failing)
 - Quickstart guide created with 6 progressive steps (5-minute first chart)
 - Agent context updated with Layer 5 technical information
 
 **Entities Defined** (data-model.md):
+
 1. **BravenChart** (StatefulWidget) - 25+ properties, 3 factory constructors
 2. **ChartController** (ChangeNotifier) - Data + annotation management, 12 methods
 3. **AxisConfig** (Value object) - 45+ properties, 4 factory presets
@@ -280,12 +306,14 @@ test/
 5. **Supporting Types** - 8 enums, 3 value objects
 
 **Contract Tests Created** (TDD Red Phase):
+
 - `braven_chart_contract.dart` - 80+ tests (166 lint errors EXPECTED)
 - `chart_controller_contract.dart` - 40+ tests (147 lint errors EXPECTED)
 - `axis_config_contract.dart` - Factory + validation tests (8 lint errors EXPECTED)
 - `annotation_contracts.dart` - All 5 annotation types (14 lint errors EXPECTED)
 
 **Outputs**:
+
 - `specs/006-chart-widgets/data-model.md` (500+ lines, complete entity documentation)
 - `specs/006-chart-widgets/contracts/` (4 test files, TDD red phase)
 - `specs/006-chart-widgets/quickstart.md` (350+ lines, 6-step guide)
@@ -294,17 +322,20 @@ test/
 **Design Validated** ✅ No constitutional violations
 
 ## Phase 2: Task Planning Approach ✅ COMPLETE
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
+
+_This section describes what the /tasks command will do - DO NOT execute during /plan_
 
 **Task Generation Strategy**:
+
 1. Load `.specify/templates/tasks-template.md` as base structure
 2. Generate tasks from Phase 1 artifacts:
    - data-model.md → Entity implementation tasks
-   - contracts/*.dart → Contract test tasks
+   - contracts/\*.dart → Contract test tasks
    - quickstart.md → Integration test scenarios
    - research.md → Implementation patterns
 
 **Task Categorization**:
+
 - **Setup Tasks** (1-3): Move contracts, create directory structure, setup test helpers
 - **Entity Tasks** (4-15): Implement 5 entities + 8 supporting types to make contracts pass
 - **Widget Tasks** (16-25): Implement BravenChart StatefulWidget + State class
@@ -312,8 +343,9 @@ test/
 - **Documentation Tasks** (31-35): API docs, examples, migration guide
 
 **Ordering Strategy**:
+
 - **TDD Order**: Contract tests → Implementation → Widget tests → Golden tests → Integration tests
-- **Dependency Order**: 
+- **Dependency Order**:
   1. Supporting types (enums, value objects) [P]
   2. ChartAnnotation hierarchy [P]
   3. AxisConfig (depends on enums)
@@ -324,6 +356,7 @@ test/
 **Estimated Task Count**: 35-40 numbered, ordered tasks
 
 **Task Template Pattern**:
+
 ```
 ### Task N: [Action] [Component]
 - [ ] Implementation (or test creation)
@@ -333,6 +366,7 @@ test/
 ```
 
 **Constitutional Compliance Checkpoints**:
+
 - Task 3: Contract tests ready (Test-First principle)
 - Task 15: Entities complete (Architectural Integrity)
 - Task 25: Widget complete (API Consistency)
@@ -342,25 +376,28 @@ test/
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
-*These phases are beyond the scope of the /plan command*
+
+_These phases are beyond the scope of the /plan command_
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
-*Fill ONLY if Constitution Check has violations that must be justified*
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+_Fill ONLY if Constitution Check has violations that must be justified_
 
+| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
+| -------------------------- | ------------------ | ------------------------------------ |
+| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
 
 ## Progress Tracking
-*This checklist is updated during execution flow*
+
+_This checklist is updated during execution flow_
 
 **Phase Status**:
+
 - [x] Phase 0: Research complete (/plan command) ✅ 7 decisions documented
 - [x] Phase 1: Design complete (/plan command) ✅ Data model + contracts + quickstart
 - [x] Phase 2: Task planning complete (/plan command - describe approach only) ✅ Strategy defined
@@ -369,10 +406,12 @@ test/
 - [ ] Phase 5: Validation passed
 
 **Constitutional Checkpoints**:
+
 - [x] Initial Constitution Check: PASS (all 7 principles compliant)
 - [x] Post-Design Constitution Check: PASS (no new violations)
 
 **Artifact Status**:
+
 - [x] research.md created (500+ lines, 7 decisions)
 - [x] data-model.md created (500+ lines, 5 entities)
 - [x] contracts/ created (4 files, TDD red phase)
@@ -382,10 +421,12 @@ test/
 **Ready for /tasks command** ✅
 
 **Gate Status**:
+
 - [ ] Initial Constitution Check: PASS
 - [ ] Post-Design Constitution Check: PASS
 - [ ] All NEEDS CLARIFICATION resolved
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+
+_Based on Constitution v2.1.1 - See `/memory/constitution.md`_

@@ -14,6 +14,7 @@
 **Solution**: Separate static series rendering (cached as `ui.Picture`) from dynamic overlay rendering (crosshair, selection boxes).
 
 **Expected Outcome**:
+
 - Crosshair smooth with 20+ series
 - No impact on real-time streaming (cache invalidated at display rate)
 - Future-proof architecture for complex interactions
@@ -62,16 +63,16 @@ paint() called at 60fps during hover
 
 ### When to Invalidate Cache
 
-| Event | Invalidate? | Reason |
-|-------|------------|--------|
-| **Data Update** | ✅ YES | Series paths changed |
-| **Transform Update (pan/zoom)** | ✅ YES | Coordinate space changed |
-| **Series Added/Removed** | ✅ YES | Element count changed |
-| **Theme Changed** | ✅ YES | Colors/styles changed |
-| **Crosshair Hover** | ❌ NO | Series unchanged |
-| **Box Selection Drag** | ❌ NO | Series unchanged |
-| **Annotation Drag** | ❌ NO | Series unchanged |
-| **Selection State Change** | ⚠️ MAYBE | Only if series highlight changes |
+| Event                           | Invalidate? | Reason                           |
+| ------------------------------- | ----------- | -------------------------------- |
+| **Data Update**                 | ✅ YES      | Series paths changed             |
+| **Transform Update (pan/zoom)** | ✅ YES      | Coordinate space changed         |
+| **Series Added/Removed**        | ✅ YES      | Element count changed            |
+| **Theme Changed**               | ✅ YES      | Colors/styles changed            |
+| **Crosshair Hover**             | ❌ NO       | Series unchanged                 |
+| **Box Selection Drag**          | ❌ NO       | Series unchanged                 |
+| **Annotation Drag**             | ❌ NO       | Series unchanged                 |
+| **Selection State Change**      | ⚠️ MAYBE    | Only if series highlight changes |
 
 ### Cache Lifecycle
 
@@ -90,12 +91,12 @@ void invalidateSeriesCache() {
 ui.Picture _regenerateSeriesPicture() {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
-  
+
   // Paint all series
   for (final element in _seriesElements) {
     element.paint(canvas, _plotArea.size);
   }
-  
+
   return recorder.endRecording();
 }
 ```
@@ -109,6 +110,7 @@ ui.Picture _regenerateSeriesPicture() {
 **Goal**: Set up Picture caching infrastructure without breaking existing functionality.
 
 **Tasks**:
+
 1. Add `dart:ui` import for Picture API
 2. Add cache fields to ChartRenderBox
 3. Implement basic Picture recording
@@ -123,6 +125,7 @@ ui.Picture _regenerateSeriesPicture() {
 **Goal**: Split paint() into layered rendering with caching.
 
 **Tasks**:
+
 1. Extract series painting to separate method
 2. Implement Picture recorder wrapper
 3. Integrate cache check in main paint()
@@ -137,6 +140,7 @@ ui.Picture _regenerateSeriesPicture() {
 **Goal**: Wire up cache invalidation to all relevant events.
 
 **Tasks**:
+
 1. Add invalidation to data update methods
 2. Add invalidation to transform update methods
 3. Add invalidation to series list changes
@@ -151,6 +155,7 @@ ui.Picture _regenerateSeriesPicture() {
 **Goal**: Ensure correctness and measure performance gains.
 
 **Tasks**:
+
 1. Test with 5, 10, 20 series configurations
 2. Verify crosshair hover smoothness
 3. Verify pan/zoom still smooth
@@ -166,6 +171,7 @@ ui.Picture _regenerateSeriesPicture() {
 **Goal**: Fine-tune implementation and add monitoring.
 
 **Tasks**:
+
 1. Add performance metrics logging
 2. Optimize Picture size (if needed)
 3. Add cache statistics (hit rate, etc.)
@@ -186,6 +192,7 @@ ui.Picture _regenerateSeriesPicture() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 // Add at top of file
 import 'dart:ui' as ui;
@@ -193,16 +200,16 @@ import 'dart:ui' as ui;
 // Add to class fields (around line 100)
 class ChartRenderBox extends RenderBox {
   // ... existing fields ...
-  
+
   /// Cached rendering of series layer (invalidated on data/transform change)
   ui.Picture? _cachedSeriesPicture;
-  
+
   /// Flag to track if series cache needs regeneration
   bool _seriesCacheDirty = true;
-  
+
   /// Transform state when cache was generated (for invalidation detection)
   ChartTransform? _cachedTransform;
-  
+
   /// Series list state when cache was generated (for invalidation detection)
   int _cachedSeriesHash = 0;
 ```
@@ -210,6 +217,7 @@ class ChartRenderBox extends RenderBox {
 **Test**: Verify compilation, no runtime changes yet.
 
 **Acceptance Criteria**:
+
 - [x] File compiles without errors
 - [x] No existing tests broken
 - [x] Cache fields properly initialized
@@ -221,6 +229,7 @@ class ChartRenderBox extends RenderBox {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 // Add/update dispose method (create if doesn't exist)
 @override
@@ -228,9 +237,9 @@ void dispose() {
   // Dispose cached Picture to free GPU memory
   _cachedSeriesPicture?.dispose();
   _cachedSeriesPicture = null;
-  
+
   // ... existing dispose logic ...
-  
+
   super.dispose();
 }
 ```
@@ -238,6 +247,7 @@ void dispose() {
 **Test**: Widget lifecycle - create/dispose chart repeatedly, check for memory leaks.
 
 **Acceptance Criteria**:
+
 - [x] Picture disposed when widget removed
 - [x] No memory leaks in repeated create/dispose cycles
 - [x] DevTools memory profiler shows Picture cleanup
@@ -249,19 +259,20 @@ void dispose() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 /// Calculate hash of current series list for cache invalidation detection
 int _calculateSeriesHash() {
   // Simple hash combining series count and IDs
   int hash = _elements.length;
-  
+
   for (final element in _elements) {
     if (element is SeriesElement) {
       // Combine series ID into hash
       hash = hash * 31 + element.id.hashCode;
     }
   }
-  
+
   return hash;
 }
 
@@ -269,11 +280,11 @@ int _calculateSeriesHash() {
 bool _seriesListChanged() {
   final currentHash = _calculateSeriesHash();
   final changed = currentHash != _cachedSeriesHash;
-  
+
   if (changed) {
     debugPrint('🔄 Series list changed: hash $currentHash != $_cachedSeriesHash');
   }
-  
+
   return changed;
 }
 ```
@@ -281,6 +292,7 @@ bool _seriesListChanged() {
 **Test**: Add/remove series, verify hash changes.
 
 **Acceptance Criteria**:
+
 - [x] Hash changes when series added/removed
 - [x] Hash stable when series unchanged
 - [x] Performance: Hash calculation < 0.1ms
@@ -292,13 +304,14 @@ bool _seriesListChanged() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 /// Check if transform changed since cache was generated
 bool _transformChanged() {
   if (_cachedTransform == null || _transform == null) {
     return true;
   }
-  
+
   // Compare transform parameters
   final changed = _cachedTransform!.dataXMin != _transform!.dataXMin ||
                   _cachedTransform!.dataXMax != _transform!.dataXMax ||
@@ -306,11 +319,11 @@ bool _transformChanged() {
                   _cachedTransform!.dataYMax != _transform!.dataYMax ||
                   _cachedTransform!.plotWidth != _transform!.plotWidth ||
                   _cachedTransform!.plotHeight != _transform!.plotHeight;
-  
+
   if (changed) {
     debugPrint('🔄 Transform changed: viewport or dimensions changed');
   }
-  
+
   return changed;
 }
 ```
@@ -318,6 +331,7 @@ bool _transformChanged() {
 **Test**: Pan/zoom, verify transform detection works.
 
 **Acceptance Criteria**:
+
 - [x] Detects pan operations
 - [x] Detects zoom operations
 - [x] Detects resize operations
@@ -330,6 +344,7 @@ bool _transformChanged() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 /// Check if cached Picture is still valid
 bool _isCacheValid() {
@@ -339,25 +354,25 @@ bool _isCacheValid() {
     debugPrint('❌ Cache invalid: no Picture');
     return false;
   }
-  
+
   // 2. Explicitly marked dirty
   if (_seriesCacheDirty) {
     debugPrint('❌ Cache invalid: marked dirty');
     return false;
   }
-  
+
   // 3. Transform changed
   if (_transformChanged()) {
     debugPrint('❌ Cache invalid: transform changed');
     return false;
   }
-  
+
   // 4. Series list changed
   if (_seriesListChanged()) {
     debugPrint('❌ Cache invalid: series list changed');
     return false;
   }
-  
+
   // Cache is valid!
   debugPrint('✅ Cache valid: reusing Picture');
   return true;
@@ -367,6 +382,7 @@ bool _isCacheValid() {
 **Test**: Various scenarios - hover (should be valid), pan (should be invalid), etc.
 
 **Acceptance Criteria**:
+
 - [x] Correctly identifies valid cache during hover
 - [x] Correctly invalidates on transform change
 - [x] Correctly invalidates on series change
@@ -381,11 +397,12 @@ bool _isCacheValid() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Current code** (around line 1180-1200):
+
 ```dart
 @override
 void paint(PaintingContext context, Offset offset) {
   // ... existing setup ...
-  
+
   // Paint all elements (in order: lowest to highest priority)
   final sortedElements = _elements.toList()
     ..sort((a, b) => a.priority.compareTo(b.priority));
@@ -396,19 +413,20 @@ void paint(PaintingContext context, Offset offset) {
     }
     element.paint(canvas, _plotArea.size);
   }
-  
+
   // ... overlay painting ...
 }
 ```
 
 **New structure**:
+
 ```dart
 /// Paint series layer to a canvas (for caching or direct rendering)
 void _paintSeriesLayer(Canvas canvas, Size size) {
   // Sort elements by priority
   final sortedElements = _elements.toList()
     ..sort((a, b) => a.priority.compareTo(b.priority));
-  
+
   // Paint only series elements (priority 8)
   for (final element in sortedElements) {
     if (element is SeriesElement) {
@@ -418,7 +436,7 @@ void _paintSeriesLayer(Canvas canvas, Size size) {
       element.paint(canvas, size);
     }
   }
-  
+
   debugPrint('🎨 Painted ${sortedElements.whereType<SeriesElement>().length} series');
 }
 ```
@@ -426,6 +444,7 @@ void _paintSeriesLayer(Canvas canvas, Size size) {
 **Test**: Call method directly, verify series render correctly.
 
 **Acceptance Criteria**:
+
 - [x] Series paint correctly in isolation
 - [x] Transform updates applied correctly
 - [x] Element sorting preserved
@@ -438,24 +457,25 @@ void _paintSeriesLayer(Canvas canvas, Size size) {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Changes**:
+
 ```dart
 /// Generate cached Picture of series layer
 ui.Picture _generateSeriesPicture() {
   final stopwatch = Stopwatch()..start();
-  
+
   // Create recorder
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
-  
+
   // Paint series to recorder's canvas
   _paintSeriesLayer(canvas, _plotArea.size);
-  
+
   // End recording and get Picture
   final picture = recorder.endRecording();
-  
+
   stopwatch.stop();
   debugPrint('📸 Generated series Picture in ${stopwatch.elapsedMilliseconds}ms');
-  
+
   return picture;
 }
 
@@ -465,21 +485,21 @@ ui.Picture _getSeriesPicture() {
     // Cache hit - reuse existing Picture
     return _cachedSeriesPicture!;
   }
-  
+
   // Cache miss - regenerate Picture
   debugPrint('🔄 Regenerating series Picture...');
-  
+
   // Dispose old Picture if exists
   _cachedSeriesPicture?.dispose();
-  
+
   // Generate new Picture
   _cachedSeriesPicture = _generateSeriesPicture();
-  
+
   // Update cache state
   _seriesCacheDirty = false;
   _cachedTransform = _transform;
   _cachedSeriesHash = _calculateSeriesHash();
-  
+
   return _cachedSeriesPicture!;
 }
 ```
@@ -487,6 +507,7 @@ ui.Picture _getSeriesPicture() {
 **Test**: Force cache regeneration, verify Picture created correctly.
 
 **Acceptance Criteria**:
+
 - [x] Picture generated successfully
 - [x] Performance: Generation time logged
 - [x] Old Picture disposed before new one
@@ -499,23 +520,24 @@ ui.Picture _getSeriesPicture() {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Current code** (around line 1200-1270):
+
 ```dart
 @override
 void paint(PaintingContext context, Offset offset) {
   // ... series painting ...
-  
+
   // Paint overlays in widget space (crosshair, selection box, preview indicators)
-  
+
   // Preview selection indicators
   if (coordinator.currentMode == InteractionMode.boxSelecting) {
     // ... preview painting ...
   }
-  
+
   // Box selection rectangle
   if (coordinator.currentMode == InteractionMode.boxSelecting) {
     // ... box painting ...
   }
-  
+
   // Crosshair
   final cursorPos = _cursorPosition;
   if (cursorPos != null) {
@@ -525,6 +547,7 @@ void paint(PaintingContext context, Offset offset) {
 ```
 
 **New structure**:
+
 ```dart
 /// Paint overlay layer (crosshair, selection boxes, etc.)
 void _paintOverlayLayer(Canvas canvas, Size size) {
@@ -568,7 +591,7 @@ void _paintOverlayLayer(Canvas canvas, Size size) {
   if (cursorPos != null) {
     _paintCrosshair(canvas, size, cursorPos);
   }
-  
+
   debugPrint('🎯 Painted overlay layer');
 }
 
@@ -601,6 +624,7 @@ void _paintCrosshair(Canvas canvas, Size size, Offset cursorPos) {
 **Test**: Verify all overlays render correctly in isolation.
 
 **Acceptance Criteria**:
+
 - [x] Crosshair renders correctly
 - [x] Box selection renders correctly
 - [x] Preview indicators render correctly
@@ -614,11 +638,12 @@ void _paintCrosshair(Canvas canvas, Size size, Offset cursorPos) {
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
 **Replace entire paint() method**:
+
 ```dart
 @override
 void paint(PaintingContext context, Offset offset) {
   final canvas = context.canvas;
-  
+
   // Early exit if no size
   if (!hasSize || size.isEmpty) return;
 
@@ -649,10 +674,10 @@ void paint(PaintingContext context, Offset offset) {
   // LAYER 1: SERIES LAYER (CACHED)
   // ============================================================================
   final stopwatch = Stopwatch()..start();
-  
+
   final seriesPicture = _getSeriesPicture();  // ← Cache check here
   canvas.drawPicture(seriesPicture);
-  
+
   stopwatch.stop();
   debugPrint('🖼️  Drew series layer in ${stopwatch.elapsedMicroseconds}µs');
 
@@ -663,9 +688,9 @@ void paint(PaintingContext context, Offset offset) {
   // ============================================================================
   stopwatch.reset();
   stopwatch.start();
-  
+
   _paintOverlayLayer(canvas, size);
-  
+
   stopwatch.stop();
   debugPrint('🎯 Drew overlay layer in ${stopwatch.elapsedMicroseconds}µs');
 
@@ -676,6 +701,7 @@ void paint(PaintingContext context, Offset offset) {
 **Test**: Full rendering with both layers, verify correctness.
 
 **Acceptance Criteria**:
+
 - [x] Series render in correct layer
 - [x] Overlays render on top
 - [x] Clipping regions correct
@@ -704,7 +730,7 @@ void _rebuildElementsWithTransform() {
 
   // Rebuild spatial index with new elements
   _rebuildSpatialIndex();
-  
+
   // INVALIDATE CACHE: Data changed
   _seriesCacheDirty = true;
   debugPrint('💥 Cache invalidated: data rebuilt');
@@ -716,14 +742,14 @@ void _rebuildElementsWithTransform() {
 void updateSeries(List<ChartSeries> newSeries) {
   // Update internal series list
   _series = newSeries;
-  
+
   // Regenerate elements
   _rebuildElementsWithTransform();
-  
+
   // INVALIDATE CACHE: Series changed
   _seriesCacheDirty = true;
   debugPrint('💥 Cache invalidated: series updated');
-  
+
   markNeedsPaint();
 }
 ```
@@ -731,6 +757,7 @@ void updateSeries(List<ChartSeries> newSeries) {
 **Test**: Add/remove/modify series, verify cache invalidates.
 
 **Acceptance Criteria**:
+
 - [x] Cache invalidates on series data change
 - [x] Next paint() regenerates Picture
 - [x] Visual correctness maintained
@@ -747,21 +774,21 @@ void updateSeries(List<ChartSeries> newSeries) {
 // Method: _handlePointerUp (around line 932)
 void _handlePointerUp(PointerUpEvent event, Offset position) {
   // ... existing logic ...
-  
+
   // Clear pan state and regenerate elements if we were panning
   final wasPanning = coordinator.currentMode == InteractionMode.panning;
   _lastPanPosition = null;
   if (wasPanning && _elementGenerator != null) {
     _updateAxesFromTransform();
     _rebuildElementsWithTransform();
-    
+
     // INVALIDATE CACHE: Transform changed after pan
     _seriesCacheDirty = true;
     debugPrint('💥 Cache invalidated: pan completed');
-    
+
     debugPrint('🔄 Pan ended - regenerated elements with final transform');
   }
-  
+
   // ... rest of method ...
 }
 
@@ -769,15 +796,15 @@ void _handlePointerUp(PointerUpEvent event, Offset position) {
 void _handlePointerScroll(PointerScrollEvent event, Offset position) {
   if (coordinator.isShiftPressed && _transform != null && _elementGenerator != null) {
     // ... existing zoom logic ...
-    
+
     _transform = _clampZoomLevel(tentativeTransform);
     _updateAxesFromTransform();
     _rebuildElementsWithTransform();
-    
+
     // INVALIDATE CACHE: Transform changed after zoom
     _seriesCacheDirty = true;
     debugPrint('💥 Cache invalidated: zoom applied');
-    
+
     markNeedsPaint();
   }
 }
@@ -786,6 +813,7 @@ void _handlePointerScroll(PointerScrollEvent event, Offset position) {
 **Test**: Pan/zoom operations, verify cache invalidates.
 
 **Acceptance Criteria**:
+
 - [x] Cache invalidates after pan completes
 - [x] Cache invalidates after zoom
 - [x] Transform updates trigger regeneration
@@ -797,20 +825,22 @@ void _handlePointerScroll(PointerScrollEvent event, Offset position) {
 
 **File**: `lib/src_plus/rendering/chart_render_box.dart`
 
-**Method: _handlePointerHover** (around line 972):
+**Method: \_handlePointerHover** (around line 972):
 
 **Current code**:
+
 ```dart
 void _handlePointerHover(PointerHoverEvent event, Offset position) {
   _cursorPosition = position;  // ← Update cursor
-  
+
   // ... hit testing logic ...
-  
+
   markNeedsPaint();  // ← Triggers repaint
 }
 ```
 
 **Verify this is CORRECT**:
+
 - `_cursorPosition` update is fine (just data)
 - `markNeedsPaint()` is correct (triggers paint())
 - Cache validity check in paint() will determine if regeneration needed
@@ -819,6 +849,7 @@ void _handlePointerHover(PointerHoverEvent event, Offset position) {
 **Test**: Hover over chart, verify cache NOT invalidated.
 
 **Acceptance Criteria**:
+
 - [x] Hover updates cursor position
 - [x] Hover triggers repaint (expected)
 - [x] Hover does NOT invalidate cache
@@ -836,13 +867,13 @@ void _handlePointerHover(PointerHoverEvent event, Offset position) {
 ```dart
 void updateTheme(ChartTheme newTheme) {
   if (_theme == newTheme) return;
-  
+
   _theme = newTheme;
-  
+
   // INVALIDATE CACHE: Colors changed
   _seriesCacheDirty = true;
   debugPrint('💥 Cache invalidated: theme changed');
-  
+
   markNeedsPaint();
 }
 ```
@@ -850,6 +881,7 @@ void updateTheme(ChartTheme newTheme) {
 **Test**: Switch themes, verify cache invalidates and colors update.
 
 **Acceptance Criteria**:
+
 - [x] Theme changes invalidate cache
 - [x] Colors update correctly
 - [x] No visual artifacts
@@ -862,7 +894,8 @@ void updateTheme(ChartTheme newTheme) {
 
 **Analysis**: Selection highlighting affects series appearance.
 
-**Decision**: 
+**Decision**:
+
 - If selection changes series color/width → invalidate cache
 - If selection only adds overlay indicator → don't invalidate
 
@@ -874,7 +907,7 @@ void onSelectionChanged() {
   // INVALIDATE CACHE: Selection state changed (affects rendering)
   _seriesCacheDirty = true;
   debugPrint('💥 Cache invalidated: selection changed');
-  
+
   markNeedsPaint();
 }
 ```
@@ -884,6 +917,7 @@ void onSelectionChanged() {
 **Test**: Select/deselect series, verify visual correctness.
 
 **Acceptance Criteria**:
+
 - [x] Selection changes invalidate cache
 - [x] Selected series render with highlight
 - [x] Deselection clears highlight
@@ -907,37 +941,37 @@ void main() {
   group('Layer Caching Performance', () {
     testWidgets('Hover performance with 5 series', (tester) async {
       final stopwatch = Stopwatch();
-      
+
       // Create chart with 5 series
       await tester.pumpWidget(/* chart with 5 series */);
-      
+
       // Simulate 60 hover events
       for (int i = 0; i < 60; i++) {
         stopwatch.start();
-        
+
         // Trigger hover at different positions
         await tester.hover(
           find.byType(BravenChartPlus),
           position: Offset(100.0 + i * 10, 100.0),
         );
         await tester.pump();
-        
+
         stopwatch.stop();
-        
+
         // Each hover should take < 5ms (was ~17ms before)
         expect(stopwatch.elapsedMilliseconds, lessThan(5));
         stopwatch.reset();
       }
     });
-    
+
     testWidgets('Cache invalidation on pan', (tester) async {
       // Create chart
       await tester.pumpWidget(/* chart */);
-      
+
       // Perform pan
       await tester.drag(find.byType(BravenChartPlus), Offset(100, 0));
       await tester.pumpAndSettle();
-      
+
       // Verify: Cache should regenerate (expect one slower frame)
       // Then subsequent hovers should be fast again
     });
@@ -946,12 +980,14 @@ void main() {
 ```
 
 **Metrics to measure**:
+
 - Hover event latency (target: < 5ms)
 - Cache hit rate during hover (target: 100%)
 - Cache regeneration time (expected: ~17ms, acceptable)
 - Memory usage (target: < 1MB per chart)
 
 **Acceptance Criteria**:
+
 - [x] Hover latency reduced by 70%+
 - [x] Cache hit rate near 100% during hover
 - [x] No performance regression on pan/zoom
@@ -973,24 +1009,24 @@ void main() {
   group('Layer Caching Visual Regression', () {
     testWidgets('Series rendering matches golden', (tester) async {
       await tester.pumpWidget(/* chart with 5 series */);
-      
+
       // Compare against golden image
       await expectLater(
         find.byType(BravenChartPlus),
         matchesGoldenFile('layer_caching_5series.png'),
       );
     });
-    
+
     testWidgets('Crosshair rendering matches golden', (tester) async {
       await tester.pumpWidget(/* chart */);
-      
+
       // Hover at specific position
       await tester.hover(
         find.byType(BravenChartPlus),
         position: Offset(200, 150),
       );
       await tester.pump();
-      
+
       // Compare against golden image
       await expectLater(
         find.byType(BravenChartPlus),
@@ -1002,6 +1038,7 @@ void main() {
 ```
 
 **Test cases**:
+
 - Static series rendering
 - Crosshair overlay
 - Box selection overlay
@@ -1010,6 +1047,7 @@ void main() {
 - After zoom operation
 
 **Acceptance Criteria**:
+
 - [x] All golden tests pass
 - [x] No pixel differences from before refactor
 - [x] Rendering quality preserved
@@ -1031,31 +1069,31 @@ void main() {
     testWidgets('Picture disposed on widget disposal', (tester) async {
       // Track memory before
       final memoryBefore = /* get memory usage */;
-      
+
       // Create and dispose chart 100 times
       for (int i = 0; i < 100; i++) {
         await tester.pumpWidget(/* chart */);
         await tester.pumpWidget(Container()); // Dispose
       }
-      
+
       // Force GC
       /* trigger garbage collection */
-      
+
       // Memory should not grow significantly
       final memoryAfter = /* get memory usage */;
       expect(memoryAfter - memoryBefore, lessThan(10 * 1024 * 1024)); // < 10MB
     });
-    
+
     testWidgets('Cache invalidation disposes old Picture', (tester) async {
       await tester.pumpWidget(/* chart */);
-      
+
       // Trigger multiple cache invalidations
       for (int i = 0; i < 100; i++) {
         // Update data (invalidates cache)
         /* update series data */
         await tester.pump();
       }
-      
+
       // Memory should stabilize (old Pictures disposed)
       /* verify memory stable */
     });
@@ -1064,6 +1102,7 @@ void main() {
 ```
 
 **Acceptance Criteria**:
+
 - [x] No memory growth after repeated create/dispose
 - [x] Old Pictures disposed when invalidated
 - [x] DevTools memory profiler shows no leaks
@@ -1085,41 +1124,41 @@ void main() {
   group('Layer Caching with Streaming Data', () {
     testWidgets('Cache invalidated at display rate (60fps)', (tester) async {
       await tester.pumpWidget(/* chart with streaming data */);
-      
+
       int cacheHits = 0;
       int cacheInvalidations = 0;
-      
+
       // Simulate 60 data updates (1 second at 60fps)
       for (int i = 0; i < 60; i++) {
         // Add new data point
         /* append data point */
-        
+
         // Should invalidate cache
         cacheInvalidations++;
-        
+
         await tester.pump(Duration(milliseconds: 16));
       }
-      
+
       // Verify: Cache invalidated 60 times (once per update)
       expect(cacheInvalidations, equals(60));
-      
+
       // Performance should still be acceptable
       /* verify frame times */
     });
-    
+
     testWidgets('Hover during streaming maintains cache', (tester) async {
       await tester.pumpWidget(/* chart with streaming data */);
-      
+
       // Start streaming
       /* start data stream at 60fps */
-      
+
       // Hover in between data updates
       await tester.pump(Duration(milliseconds: 8)); // Half frame
       await tester.hover(find.byType(BravenChartPlus), position: Offset(200, 150));
-      
+
       // This hover should NOT invalidate cache
       // (But next data update will)
-      
+
       /* verify behavior */
     });
   });
@@ -1127,6 +1166,7 @@ void main() {
 ```
 
 **Acceptance Criteria**:
+
 - [x] Cache invalidated at data update rate
 - [x] No extra overhead vs. no-cache implementation
 - [x] Hover between updates uses cache
@@ -1137,6 +1177,7 @@ void main() {
 ### Task 4.5: Edge Case Testing
 
 **Test cases**:
+
 1. Empty chart (no series)
 2. Single series with 1 point
 3. Single series with 10,000 points
@@ -1153,39 +1194,40 @@ void main() {
   group('Layer Caching Edge Cases', () {
     testWidgets('Empty chart renders correctly', (tester) async {
       await tester.pumpWidget(/* chart with no series */);
-      
+
       // Should not crash
       expect(tester.takeException(), isNull);
-      
+
       // Hover should work
       await tester.hover(find.byType(BravenChartPlus), position: Offset(100, 100));
       await tester.pump();
       expect(tester.takeException(), isNull);
     });
-    
+
     testWidgets('Large series (10K points) caches correctly', (tester) async {
       final series = /* create series with 10,000 points */;
-      
+
       await tester.pumpWidget(/* chart with series */);
-      
+
       // First render generates cache
       await tester.pump();
-      
+
       // Hover should be fast (cache reused)
       final stopwatch = Stopwatch()..start();
       await tester.hover(find.byType(BravenChartPlus), position: Offset(200, 150));
       await tester.pump();
       stopwatch.stop();
-      
+
       expect(stopwatch.elapsedMilliseconds, lessThan(10));
     });
-    
+
     // ... more edge cases ...
   });
 }
 ```
 
 **Acceptance Criteria**:
+
 - [x] No crashes in edge cases
 - [x] Graceful handling of invalid states
 - [x] Performance acceptable in extreme cases
@@ -1208,13 +1250,13 @@ class _CacheMetrics {
   int regenerations = 0;
   int totalHoverEvents = 0;
   List<int> frameTimes = [];
-  
+
   double get hitRate => totalHoverEvents > 0 ? hits / totalHoverEvents : 0.0;
-  
-  double get avgFrameTime => frameTimes.isEmpty 
-    ? 0.0 
+
+  double get avgFrameTime => frameTimes.isEmpty
+    ? 0.0
     : frameTimes.reduce((a, b) => a + b) / frameTimes.length;
-  
+
   void reset() {
     hits = 0;
     misses = 0;
@@ -1222,7 +1264,7 @@ class _CacheMetrics {
     totalHoverEvents = 0;
     frameTimes.clear();
   }
-  
+
   void logSummary() {
     debugPrint('📊 Cache Metrics Summary:');
     debugPrint('   Hits: $hits, Misses: $misses');
@@ -1234,20 +1276,20 @@ class _CacheMetrics {
 
 class ChartRenderBox extends RenderBox {
   final _cacheMetrics = _CacheMetrics();
-  
+
   // Update _getSeriesPicture to track metrics
   ui.Picture _getSeriesPicture() {
     if (_isCacheValid()) {
       _cacheMetrics.hits++;
       return _cachedSeriesPicture!;
     }
-    
+
     _cacheMetrics.misses++;
     _cacheMetrics.regenerations++;
-    
+
     // ... regenerate Picture ...
   }
-  
+
   // Add method to log metrics on demand
   void logCacheMetrics() {
     _cacheMetrics.logSummary();
@@ -1258,6 +1300,7 @@ class ChartRenderBox extends RenderBox {
 **Test**: Run benchmark, verify metrics accurate.
 
 **Acceptance Criteria**:
+
 - [x] Hit rate tracked correctly
 - [x] Frame times logged accurately
 - [x] Metrics accessible for debugging
@@ -1274,23 +1317,23 @@ class ChartRenderBox extends RenderBox {
 ```dart
 class ChartRenderBox extends RenderBox {
   bool _showCacheDebugInfo = false;
-  
+
   void setDebugCacheVisualization(bool enabled) {
     _showCacheDebugInfo = enabled;
     markNeedsPaint();
   }
-  
+
   void _paintCacheDebugOverlay(Canvas canvas, Size size) {
     if (!_showCacheDebugInfo) return;
-    
+
     // Draw cache status indicator
-    final statusColor = _isCacheValid() 
+    final statusColor = _isCacheValid()
       ? Colors.green.withOpacity(0.7)  // Cache hit
       : Colors.red.withOpacity(0.7);   // Cache miss
-    
+
     final indicator = Paint()..color = statusColor;
     canvas.drawCircle(Offset(20, 20), 10, indicator);
-    
+
     // Draw cache metrics
     final textPainter = TextPainter(
       text: TextSpan(
@@ -1305,14 +1348,14 @@ class ChartRenderBox extends RenderBox {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    
+
     textPainter.paint(canvas, Offset(40, 10));
   }
-  
+
   @override
   void paint(PaintingContext context, Offset offset) {
     // ... existing paint logic ...
-    
+
     // Draw debug overlay last (on top of everything)
     if (_showCacheDebugInfo) {
       _paintCacheDebugOverlay(context.canvas, size);
@@ -1324,6 +1367,7 @@ class ChartRenderBox extends RenderBox {
 **Test**: Enable debug visualization, verify display correct.
 
 **Acceptance Criteria**:
+
 - [x] Visual indicator shows cache status
 - [x] Metrics displayed in real-time
 - [x] Easy to toggle on/off
@@ -1334,12 +1378,14 @@ class ChartRenderBox extends RenderBox {
 ### Task 5.3: Documentation
 
 **Files to update**:
+
 1. `crosshair_lag_analysis.md` - Add "Implementation Complete" section
 2. `architecture_refactor_plan.md` - This file, mark tasks complete
 3. Code comments in `chart_render_box.dart`
 4. API documentation for new methods
 
 **Example code documentation**:
+
 ```dart
 /// Renders the chart using a two-layer architecture for optimal performance.
 ///
@@ -1371,6 +1417,7 @@ void paint(PaintingContext context, Offset offset) {
 ```
 
 **Acceptance Criteria**:
+
 - [x] All public methods documented
 - [x] Architecture rationale explained
 - [x] Performance impact documented
@@ -1388,14 +1435,14 @@ void paint(PaintingContext context, Offset offset) {
 ```dart
 class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
   bool _showCacheDebugInfo = false;
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         actions: [
           // ... existing actions ...
-          
+
           IconButton(
             icon: Icon(_showCacheDebugInfo ? Icons.speed : Icons.speed_outlined),
             onPressed: () {
@@ -1418,7 +1465,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
                 style: TextStyle(fontSize: 12),
               ),
             ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               // ... existing charts ...
@@ -1434,6 +1481,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Test**: Run example app, toggle debug mode, verify display.
 
 **Acceptance Criteria**:
+
 - [x] Debug toggle accessible in UI
 - [x] Metrics displayed clearly
 - [x] Help text explains indicators
@@ -1449,6 +1497,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Impact**: High
 
 **Mitigation**:
+
 - Comprehensive test suite before changes
 - Visual regression testing with golden files
 - Incremental rollout (feature flag if needed)
@@ -1460,6 +1509,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Impact**: Medium
 
 **Mitigation**:
+
 - Benchmark before/after at each phase
 - Identify bottlenecks early with profiling
 - Have fallback optimizations ready (Paint caching, etc.)
@@ -1471,6 +1521,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Impact**: High
 
 **Mitigation**:
+
 - Explicit Picture disposal in dispose()
 - Dispose old Picture before creating new one
 - Memory profiling in CI
@@ -1482,6 +1533,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Impact**: Medium
 
 **Mitigation**:
+
 - Comprehensive invalidation testing
 - Debug visualization to catch issues early
 - Conservative invalidation (err on side of invalidating too often)
@@ -1493,6 +1545,7 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 **Impact**: Medium
 
 **Mitigation**:
+
 - Careful review of canvas transformations
 - Test with various zoom/pan states
 - Visual regression tests
@@ -1504,49 +1557,54 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 
 ### Performance Targets
 
-| Metric | Before | Target | Measured |
-|--------|--------|--------|----------|
-| Hover latency (5 series) | ~17ms | < 5ms | TBD |
-| Hover latency (10 series) | ~35ms | < 10ms | TBD |
-| Cache hit rate during hover | 0% | > 95% | TBD |
-| Memory overhead per chart | N/A | < 500KB | TBD |
-| Pan/zoom performance | ~14ms | No regression | TBD |
+| Metric                      | Before | Target        | Measured |
+| --------------------------- | ------ | ------------- | -------- |
+| Hover latency (5 series)    | ~17ms  | < 5ms         | TBD      |
+| Hover latency (10 series)   | ~35ms  | < 10ms        | TBD      |
+| Cache hit rate during hover | 0%     | > 95%         | TBD      |
+| Memory overhead per chart   | N/A    | < 500KB       | TBD      |
+| Pan/zoom performance        | ~14ms  | No regression | TBD      |
 
 ### Quality Targets
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| Test coverage | > 80% | TBD |
-| Visual regression tests | 0 failures | TBD |
-| Memory leak tests | 0 leaks | TBD |
-| Documentation complete | 100% | TBD |
-| Code review approved | Yes | TBD |
+| Metric                  | Target     | Status |
+| ----------------------- | ---------- | ------ |
+| Test coverage           | > 80%      | TBD    |
+| Visual regression tests | 0 failures | TBD    |
+| Memory leak tests       | 0 leaks    | TBD    |
+| Documentation complete  | 100%       | TBD    |
+| Code review approved    | Yes        | TBD    |
 
 ---
 
 ## Timeline Estimate
 
 ### Sprint 1: Foundation (Week 1)
+
 - **Duration**: 2-3 days
 - **Effort**: ~16-20 hours
 - **Deliverable**: Cache infrastructure in place, no functional changes
 
 ### Sprint 2: Paint Refactoring (Week 1-2)
+
 - **Duration**: 2-3 days
 - **Effort**: ~16-20 hours
 - **Deliverable**: Layered rendering working, cache functional
 
 ### Sprint 3: Cache Invalidation (Week 2)
+
 - **Duration**: 1-2 days
 - **Effort**: ~8-12 hours
 - **Deliverable**: Cache invalidation integrated, performance improved
 
 ### Sprint 4: Testing (Week 2-3)
+
 - **Duration**: 2-3 days
 - **Effort**: ~16-20 hours
 - **Deliverable**: Comprehensive test suite, verified correctness
 
 ### Sprint 5: Polish (Week 3)
+
 - **Duration**: 1-2 days
 - **Effort**: ~8-12 hours
 - **Deliverable**: Metrics, debug tools, documentation
@@ -1558,25 +1616,30 @@ class _BravenChart5ChartsPageState extends State<BravenChart5ChartsPage> {
 ## Rollout Plan
 
 ### Phase 1: Development Branch
+
 - Implement all changes in `performance-debug-branch`
 - Run full test suite
 - Manual testing with example app
 - Performance benchmarking
 
 ### Phase 2: Internal Validation
+
 - Merge to integration branch
 - Extended soak testing
 - Performance monitoring
 - Edge case validation
 
 ### Phase 3: Production Release
+
 - Merge to master
 - Release notes with performance improvements
 - Monitor for issues
 - Gather user feedback
 
 ### Rollback Plan
+
 If critical issues found:
+
 1. Revert commit immediately
 2. Analyze root cause
 3. Fix in development branch
@@ -1588,12 +1651,14 @@ If critical issues found:
 ## Dependencies & Prerequisites
 
 ### Required
+
 - Dart SDK 3.0+ (for `dart:ui` API)
 - Flutter SDK 3.10+ (for Picture support)
 - Existing test infrastructure
 - Git branch: performance-debug-branch
 
 ### Optional
+
 - Performance profiling tools (DevTools)
 - Memory leak detection tools
 - Visual regression test framework
@@ -1603,12 +1668,14 @@ If critical issues found:
 ## Next Steps
 
 ### Immediate Actions
+
 1. ✅ Review and approve this plan
 2. ⬜ Create Git branch for work
 3. ⬜ Set up task tracking (GitHub Issues or similar)
 4. ⬜ Begin Sprint 1: Task 1.1
 
 ### Decision Points
+
 - After Sprint 1: Review foundation, proceed to Sprint 2?
 - After Sprint 2: Verify performance improvement, proceed to Sprint 3?
 - After Sprint 4: Tests pass, proceed to Sprint 5?
@@ -1637,11 +1704,12 @@ A: Can add a flag `enableSeriesCaching` to ChartTheme or configuration. Default:
 
 ## Conclusion
 
-This refactor plan provides a **comprehensive, incremental approach** to implementing canvas layer separation with Picture caching. 
+This refactor plan provides a **comprehensive, incremental approach** to implementing canvas layer separation with Picture caching.
 
 **Key Benefits**:
+
 - ✅ Solves crosshair lag at 5+ series
-- ✅ Supports 20+ series smoothly  
+- ✅ Supports 20+ series smoothly
 - ✅ No impact on streaming data performance
 - ✅ Future-proof architecture
 - ✅ Low risk, high reward

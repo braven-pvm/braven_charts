@@ -17,6 +17,7 @@ The current codebase has **two parallel Y-axis rendering paths** with inconsiste
 2. **`MultiAxisPainter`** (modern) - Used for multi-axis mode via `ChartSeries.yAxisConfig` with `YAxisConfig`
 
 This causes:
+
 - Inconsistent feature availability (unit support, crosshair labels, flexible positioning only in multi-axis mode)
 - Hardcoded margins (left margin = 60) ignoring axis position
 - Dual conversion chains (`AxisConfig` → `InternalAxisConfig` → `Axis` → render)
@@ -32,7 +33,7 @@ This causes:
 - TextPainter caching can be added to `MultiAxisPainter` to maintain performance parity
 - X-axis will follow the same pattern with `XAxisConfig` for API consistency
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Simple Chart with Default Y-Axis (Priority: P1)
 
@@ -136,22 +137,25 @@ As a developer, I want the X-axis configuration API (`XAxisConfig`) to be consis
 - **Null YAxisConfig**: When `yAxis` is explicitly set to `null`, the auto-created default should still appear (per design decision Q6).
 - **Conflicting positions**: If both `yAxis` and series `yAxisConfig` specify the same position, they should stack correctly using `leftOuter`/`rightOuter` positions.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 #### Phase 1: CrosshairLabelPosition Enum
+
 - **FR-001**: System MUST provide a `CrosshairLabelPosition` enum with values `overAxis` and `insidePlot`
 - **FR-002**: `YAxisConfig` MUST include a `crosshairLabelPosition` property defaulting to `overAxis`
 - **FR-003**: Crosshair renderer MUST position Y-value labels according to the axis's `crosshairLabelPosition` setting
 
 #### Phase 2: YAxisConfig as Primary Y-Axis Type
+
 - **FR-004**: `BravenChartPlus.yAxis` property MUST accept `YAxisConfig?` instead of `AxisConfig?`
 - **FR-005**: When `yAxis` is not provided and no series has `yAxisConfig`, system MUST auto-create a default Y-axis with `position: YAxisPosition.left`
 - **FR-006**: `YAxisConfig.position` MUST default to `YAxisPosition.left` when not specified
 - **FR-007**: System MUST NOT require users to specify `id` on `YAxisConfig` - IDs are auto-generated internally
 
 #### Phase 3: Grid Extraction & Rendering Unification
+
 - **FR-008**: System MUST provide a dedicated `GridRenderer` class for rendering grid lines
 - **FR-009**: Grid rendering MUST be controlled via chart-level `GridConfig`, not per-axis settings
 - **FR-010**: `GridConfig` MUST support independent control of horizontal and vertical grid lines
@@ -160,10 +164,12 @@ As a developer, I want the X-axis configuration API (`XAxisConfig`) to be consis
 - **FR-013**: `XAxisRenderer` MUST NOT render grid lines (grid is separate concern)
 
 #### Phase 4: Performance & Cleanup
+
 - **FR-014**: `MultiAxisPainter` MUST cache `TextPainter` objects to maintain performance parity with legacy system
 - **FR-015**: System MUST remove unused Y-axis code from `InternalAxisConfig` and related legacy paths
 
 #### Phase 5: X-Axis Consistency (Future)
+
 - **FR-016**: System MUST provide `XAxisConfig` with consistent property names matching `YAxisConfig`
 - **FR-017**: `XAxisConfig.position` MUST use `XAxisPosition` enum (`top`, `bottom`) for type safety
 
@@ -176,7 +182,7 @@ As a developer, I want the X-axis configuration API (`XAxisConfig`) to be consis
 - **GridRenderer**: Dedicated renderer for chart grid lines. Receives tick positions from axis systems, paints before data series.
 - **XAxisRenderer**: Renamed from `AxisRenderer`. Handles only X-axis line, ticks, and labels. No grid rendering.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -193,16 +199,16 @@ As a developer, I want the X-axis configuration API (`XAxisConfig`) to be consis
 
 ## Resolved Design Decisions
 
-*These decisions were made during spec analysis and are documented in the technical spec.*
+_These decisions were made during spec analysis and are documented in the technical spec._
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| Breaking Change Strategy | Clean break (no deprecation) | Simplifies implementation, matches major version bump expectations |
-| Default ID | Remove from public API | IDs auto-generated as `${series.id}_axis` internally |
-| Default Position | `YAxisPosition.left` | Most common use case, matches industry conventions |
-| Grid Ownership | Separate `GridConfig` at chart level | Multi-axis mode already disables Y-grid; grid is independent concern |
-| X-Axis Unification | Create `XAxisConfig` for consistency | Same property names, type-safe positions |
-| Default Y-Axis Behavior | Auto-create when none provided | Maintains backward compatibility |
+| Question                 | Decision                             | Rationale                                                            |
+| ------------------------ | ------------------------------------ | -------------------------------------------------------------------- |
+| Breaking Change Strategy | Clean break (no deprecation)         | Simplifies implementation, matches major version bump expectations   |
+| Default ID               | Remove from public API               | IDs auto-generated as `${series.id}_axis` internally                 |
+| Default Position         | `YAxisPosition.left`                 | Most common use case, matches industry conventions                   |
+| Grid Ownership           | Separate `GridConfig` at chart level | Multi-axis mode already disables Y-grid; grid is independent concern |
+| X-Axis Unification       | Create `XAxisConfig` for consistency | Same property names, type-safe positions                             |
+| Default Y-Axis Behavior  | Auto-create when none provided       | Maintains backward compatibility                                     |
 
 ---
 

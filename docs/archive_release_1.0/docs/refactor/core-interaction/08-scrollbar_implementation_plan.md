@@ -6,7 +6,7 @@
 **Priority**: P5 (Feature 5 - Last major feature in Phase 2)  
 **Created**: 2025-11-18  
 **Estimated Time**: 4-6 hours (full feature set)  
-**Target Completion**: 2025-11-20  
+**Target Completion**: 2025-11-20
 
 ---
 
@@ -30,6 +30,7 @@ A **dual-purpose scrollbar widget** that provides both pan and zoom interactions
 **Solution**: Scrollbar reports **pixel deltas only** (no data state), parent converts to data deltas using **current viewport** (single source of truth).
 
 **Benefits**:
+
 - ✅ No synchronization issues
 - ✅ External viewport changes handled gracefully
 - ✅ Simpler code (~100 lines removed vs old approach)
@@ -112,15 +113,15 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 
 ### From BravenChart (`lib/src/widgets/scrollbar/`)
 
-| Source File | Destination | Lines | Purpose |
-|-------------|-------------|-------|---------|
-| `chart_scrollbar.dart` | `lib/src_plus/widgets/scrollbar/chart_scrollbar.dart` | 741 | Main StatefulWidget |
-| `scrollbar_controller.dart` | `lib/src_plus/widgets/scrollbar/scrollbar_controller.dart` | ~200 | Pure functions (geometry) |
-| `scrollbar_interaction.dart` | `lib/src_plus/widgets/scrollbar/scrollbar_interaction.dart` | ~50 | Enum (pan/zoom types) |
-| `scrollbar_state.dart` | `lib/src_plus/widgets/scrollbar/scrollbar_state.dart` | ~200 | Immutable state |
-| `scrollbar_painter.dart` | `lib/src_plus/widgets/scrollbar/scrollbar_painter.dart` | ~360 | CustomPainter |
-| `hit_test_zone.dart` | `lib/src_plus/widgets/scrollbar/hit_test_zone.dart` | ~50 | Enum (track/center/edges) |
-| `scrollbar_config.dart` | `lib/src_plus/theming/components/scrollbar_config.dart` | ~350 | Theme configuration |
+| Source File                  | Destination                                                 | Lines | Purpose                   |
+| ---------------------------- | ----------------------------------------------------------- | ----- | ------------------------- |
+| `chart_scrollbar.dart`       | `lib/src_plus/widgets/scrollbar/chart_scrollbar.dart`       | 741   | Main StatefulWidget       |
+| `scrollbar_controller.dart`  | `lib/src_plus/widgets/scrollbar/scrollbar_controller.dart`  | ~200  | Pure functions (geometry) |
+| `scrollbar_interaction.dart` | `lib/src_plus/widgets/scrollbar/scrollbar_interaction.dart` | ~50   | Enum (pan/zoom types)     |
+| `scrollbar_state.dart`       | `lib/src_plus/widgets/scrollbar/scrollbar_state.dart`       | ~200  | Immutable state           |
+| `scrollbar_painter.dart`     | `lib/src_plus/widgets/scrollbar/scrollbar_painter.dart`     | ~360  | CustomPainter             |
+| `hit_test_zone.dart`         | `lib/src_plus/widgets/scrollbar/hit_test_zone.dart`         | ~50   | Enum (track/center/edges) |
+| `scrollbar_config.dart`      | `lib/src_plus/theming/components/scrollbar_config.dart`     | ~350  | Theme configuration       |
 
 **Total**: ~2,000 lines of code to port
 
@@ -131,6 +132,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 ### Phase 1: Core Widget Porting (2-3 hours)
 
 #### Task 1.1: Port Pure Functions & Enums ✅ COMPLETE
+
 **Time**: 30 minutes (Actual: 15 minutes)  
 **Files**: 3 files (~300 lines)
 
@@ -138,16 +140,15 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Pure functions for geometry calculations
   - No dependencies, no modifications needed
   - Verify imports work
-  
 - [x] Copy `scrollbar_interaction.dart` → `lib/src_plus/widgets/scrollbar/`
   - Simple enum (pan, zoomLeftOrTop, zoomRightOrBottom, trackClick, keyboard)
   - No modifications needed
-  
 - [x] Copy `hit_test_zone.dart` → `lib/src_plus/widgets/scrollbar/`
   - Simple enum (track, center, leftEdge, rightEdge, topEdge, bottomEdge)
   - No modifications needed
 
 **Success Criteria**:
+
 - [x] Files compile without errors
 - [x] All imports resolve correctly
 - [x] No dependencies on old BravenChart code
@@ -157,6 +158,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 ---
 
 #### Task 1.2: Port State & Configuration ✅ COMPLETE
+
 **Time**: 30 minutes (Actual: 18 minutes)  
 **Files**: 2 files (~480 lines)  
 **Completed**: 2025-11-18
@@ -165,7 +167,6 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Immutable state class with ValueNotifier
   - Verify imports (should be minimal)
   - No modifications needed
-  
 - [x] Copy `scrollbar_config.dart` → `lib/src_plus/theming/components/`
   - Complete theme configuration with 22+ properties
   - Includes light/dark/high-contrast presets
@@ -173,6 +174,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Will integrate with BravenChartPlus theme system later
 
 **Success Criteria**:
+
 - [x] Files compile without errors (8 deprecation warnings in scrollbar_config.dart - non-blocking)
 - [x] ScrollbarState copyWith() methods work
 - [x] ScrollbarConfig presets (defaultLight, defaultDark, highContrast) available
@@ -180,6 +182,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 ---
 
 #### Task 1.3: Port Custom Painter ✅ COMPLETE
+
 **Time**: 30 minutes (Actual: 12 minutes)  
 **Files**: 1 file (~360 lines)  
 **Completed**: 2025-11-18
@@ -190,6 +193,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - No modifications needed (stateless rendering)
 
 **Success Criteria**:
+
 - [x] File compiles without errors (8 deprecation warnings for Color.opacity - non-blocking)
 - [x] All rendering methods present (paintTrack, paintHandle, paintGripIndicator, paintEdgeHighlight)
 - [x] shouldRepaint() logic works
@@ -197,27 +201,24 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 ---
 
 #### Task 1.4: Port Main Widget (Simplified) ⏳ IN PROGRESS
+
 **Time**: 1 hour (Actual: 45 minutes so far)  
 **Files**: 1 file (741 lines → 712 lines after initial cleanup)  
 **Status**: Partially Complete - Core structure ported, needs final cleanup
 
 - [x] Copy `chart_scrollbar.dart` → `lib/src_plus/widgets/scrollbar/`
-  
 - [x] **REMOVED** obsolete callbacks:
   - Removed `onPanChanged` callback from constructor and field (T071 - old API)
   - Removed `onZoomChanged` callback from constructor and field (T092 - old API)
   - Kept ONLY `onPixelDeltaChanged` (new pixel-delta pattern)
-  
 - [x] **FIXED** imports:
   - Updated import paths to point to src_plus structure
   - Fixed relative imports for scrollbar submodule files
-  
 - [ ] **REMOVE** obsolete animation code (TODO):
   - Remove `_jumpAnimation` and `_jumpAnimationController` fields
   - Remove `_onJumpAnimationTick()` method (unused - confirmed by analyzer)
   - Remove `_onJumpAnimationComplete()` method (unused - confirmed by analyzer)
   - Simplify `_cancelJumpAnimation()` method
-  
 - [x] **KEPT** all essential features:
   - Pixel-delta pattern (`_dragStartPosition`, `_dragZone`)
   - Pan/zoom gesture handlers (`_onPanStart`, `_onPanUpdate`, `_onPanEnd`)
@@ -230,6 +231,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Focus management
 
 **Success Criteria**:
+
 - [x] File copied and initial cleanup done
 - [x] Simplified API (only `onPixelDeltaChanged` callback)
 - [x] Import paths updated for src_plus structure
@@ -238,11 +240,13 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 - [ ] File compiles without errors (blocked by foundation dependency)
 
 **Known Issues**:
+
 - Foundation import doesn't exist yet in src_plus (expected - will be resolved in Phase 2)
 - Jump animation code still present but unused (needs cleanup)
 - 2 analyzer warnings for unused jump animation methods
 
 **Next Steps**:
+
 - Complete jump animation cleanup as part of Phase 2 integration
 - Create minimal foundation stub or adjust imports during integration
 
@@ -251,6 +255,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 ### Phase 2: Integration with ChartRenderBox (1-2 hours)
 
 #### Task 2.1: Add Scrollbar Configuration ✅ COMPLETE
+
 **Time**: 15 minutes (actual: 12 minutes)
 
 - [x] Add scrollbar fields to `BravenChartPlus` widget:
@@ -263,16 +268,16 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 - [x] Add import for `ScrollbarConfig` in both files
 - [x] Add private fields to `ChartRenderBox`:
   - `_showXScrollbar` (final bool)
-  - `_showYScrollbar` (final bool)  
+  - `_showYScrollbar` (final bool)
   - `_scrollbarTheme` (final ScrollbarConfig?)
 
 **Completed Changes**:
+
 - `lib/src_plus/widgets/braven_chart_plus.dart`:
   - Added import: `import '../theming/components/scrollbar_config.dart';`
   - Added 3 new fields with documentation to BravenChartPlus widget
-  - Updated _ChartRenderWidget constructor and fields
+  - Updated \_ChartRenderWidget constructor and fields
   - Passed scrollbar parameters through to ChartRenderBox
-  
 - `lib/src_plus/rendering/chart_render_box.dart`:
   - Added import: `import '../theming/components/scrollbar_config.dart';`
   - Added 3 new parameters to constructor (with defaults)
@@ -280,18 +285,21 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Fields available for use in layout/rendering
 
 **Success Criteria**: ✅ ALL MET
+
 - [x] Config compiles without errors
 - [x] Can enable/disable scrollbars via BravenChartPlus parameters
 - [x] Theme config available to ChartRenderBox
 - [x] Fields properly initialized in constructor
 
 **Known Issues**:
+
 - 3 unused field warnings (expected - will be used in Tasks 2.2-2.4)
 - ScrollbarConfig deprecation warnings (pre-existing, non-blocking)
 
 ---
 
 #### Task 2.2: Layout Integration ✅ COMPLETE
+
 **Time**: 30 minutes (actual: 18 minutes)
 
 - [x] Modified `ChartRenderBox.performLayout()` to reserve space for scrollbars
@@ -303,6 +311,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
 - [x] Position scrollbars adjacent to plot area with proper padding
 
 **Completed Changes**:
+
 - Added fields:
   - `Rect? _xScrollbarRect` - Horizontal scrollbar position
   - `Rect? _yScrollbarRect` - Vertical scrollbar position
@@ -315,6 +324,7 @@ Scrollbar auto-updates (geometry recalculated from new viewport)
   - Set rectangles to null when scrollbars disabled
 
 **Layout Logic**:
+
 ```dart
 // If Y scrollbar enabled:
 _yScrollbarRect = Rect.fromLTWH(
@@ -334,6 +344,7 @@ _xScrollbarRect = Rect.fromLTWH(
 ```
 
 **Success Criteria**: ✅ ALL MET
+
 - [x] Chart canvas size correctly excludes scrollbar space
 - [x] Scrollbar positions calculated correctly (adjacent to plot area)
 - [x] Corner overlap handled naturally (scrollbars don't overlap each other by design)
@@ -341,45 +352,52 @@ _xScrollbarRect = Rect.fromLTWH(
 - [x] Scrollbar rectangles accessible for rendering phase
 
 **Known Issues**:
-- 2 unused field warnings for _xScrollbarRect/_yScrollbarRect (expected - will be used in Task 2.3)
+
+- 2 unused field warnings for \_xScrollbarRect/\_yScrollbarRect (expected - will be used in Task 2.3)
 
 ---
 
 #### Task 2.3: Scrollbar Rendering ✅ COMPLETE
+
 **Time**: 17 minutes
 
 **Implementation Details**:
+
 - Added scrollbar component imports to ChartRenderBox
-- Implemented _paintScrollbars() method:
-  - Uses _originalTransform for full data range (dataXMin/Max, dataYMin/Max)
-  - Uses current _transform for viewport range (same fields)
-  - Calculates handle size as proportion: viewportSpan / dataSpan * trackLength
-  - Calculates handle position: viewportOffset / dataSpan * trackLength
+- Implemented \_paintScrollbars() method:
+  - Uses \_originalTransform for full data range (dataXMin/Max, dataYMin/Max)
+  - Uses current \_transform for viewport range (same fields)
+  - Calculates handle size as proportion: viewportSpan / dataSpan \* trackLength
+  - Calculates handle position: viewportOffset / dataSpan \* trackLength
   - Creates ScrollbarState with calculated values
   - Uses ScrollbarPainter to render scrollbars
-- Added _paintScrollbars() call in paint() method (before final restore)
+- Added \_paintScrollbars() call in paint() method (before final restore)
 
 **Key Insight**: ChartTransform stores viewport as direct fields (dataXMin/Max, dataYMin/Max), not Range objects. The "viewport" IS represented by these data fields - they show the currently visible data range, not separate viewport coordinate properties.
 
 **Success Criteria**: ✅ ALL MET
-- [x] Scrollbars render at correct positions (using _xScrollbarRect/_yScrollbarRect from layout)
+
+- [x] Scrollbars render at correct positions (using \_xScrollbarRect/\_yScrollbarRect from layout)
 - [x] Handle size reflects viewport-to-data ratio
 - [x] Handle position reflects viewport offset in data space
 - [x] Code compiles without errors in ChartRenderBox
 - [x] ScrollbarPainter used correctly (config, state, isHorizontal, trackLength)
 
 **Known Issues**:
+
 - ~130 test errors in standalone scrollbar widget tests (expected - tests use old pixel-delta callback API)
 - These will be addressed in Task 2.4 when implementing ChartRenderBox integration
 
 ---
 
 #### Task 2.4: Pixel-Delta Conversion ✅ COMPLETE
+
 **Time**: 25 minutes
 
 **Implementation Details**:
+
 - Added import for ScrollbarInteraction enum
-- Implemented _handleXScrollbarDelta() method (~115 lines):
+- Implemented \_handleXScrollbarDelta() method (~115 lines):
   - Converts pixel delta to data delta using track length and data span
   - Handles pan: shifts viewport min and max equally
   - Handles zoomLeftOrTop: adjusts dataXMin only (keeps dataXMax anchored)
@@ -387,11 +405,12 @@ _xScrollbarRect = Rect.fromLTWH(
   - Handles trackClick: centers viewport at clicked data position
   - Handles keyboard: applies delta as pan operation
   - Clamps all operations to data bounds with minimum 1% viewport span
-- Implemented _handleYScrollbarDelta() method (~115 lines):
+- Implemented \_handleYScrollbarDelta() method (~115 lines):
   - Same logic as X handler but for Y-axis (dataYMin/dataYMax)
-- Both methods call _updateAxesFromTransform() and markNeedsPaint() after viewport changes
+- Both methods call \_updateAxesFromTransform() and markNeedsPaint() after viewport changes
 
 **Key Implementation Details**:
+
 ```dart
 // Pixel-to-data conversion
 final dataSpan = dataMax - dataMin;
@@ -412,6 +431,7 @@ newMax = viewportMax + dataDelta;
 ```
 
 **Success Criteria**: ✅ ALL MET
+
 - [x] Pixel delta correctly converts to data delta
 - [x] Pan mode shifts viewport (both min and max)
 - [x] Zoom left/top mode resizes viewport minimum boundary
@@ -423,6 +443,7 @@ newMax = viewportMax + dataDelta;
 - [x] Code compiles without errors
 
 **Known Issues**:
+
 - Methods currently unused (2 warnings) - will be wired up in Phase 3 when creating ChartScrollbar widgets
 - Track click animation not implemented (will use instant jump for MVP, animation deferred to Phase 4)
 
@@ -435,15 +456,15 @@ newMax = viewportMax + dataDelta;
   @override
   void performLayout() {
     final scrollbarThickness = config.scrollbarTheme.thickness;
-    
+
     // Calculate chart canvas size (exclude scrollbar space)
-    final chartWidth = constraints.maxWidth - 
+    final chartWidth = constraints.maxWidth -
       (config.showYScrollbar ? scrollbarThickness + padding : 0);
-    final chartHeight = constraints.maxHeight - 
+    final chartHeight = constraints.maxHeight -
       (config.showXScrollbar ? scrollbarThickness + padding : 0);
-    
+
     final chartSize = Size(chartWidth, chartHeight);
-    
+
     // Calculate scrollbar positions
     if (config.showXScrollbar) {
       _xScrollbarRect = Rect.fromLTWH(
@@ -453,7 +474,7 @@ newMax = viewportMax + dataDelta;
         scrollbarThickness,
       );
     }
-    
+
     if (config.showYScrollbar) {
       _yScrollbarRect = Rect.fromLTWH(
         chartWidth + padding,
@@ -462,7 +483,7 @@ newMax = viewportMax + dataDelta;
         chartHeight,
       );
     }
-    
+
     // Handle corner overlap if both scrollbars shown
     if (config.showXScrollbar && config.showYScrollbar) {
       // Adjust X scrollbar to not overlap Y scrollbar
@@ -473,12 +494,13 @@ newMax = viewportMax + dataDelta;
         scrollbarThickness,
       );
     }
-    
+
     size = constraints.biggest;
   }
   ```
 
 **Success Criteria**:
+
 - [ ] Chart canvas size correctly excludes scrollbar space
 - [ ] Scrollbar positions calculated correctly
 - [ ] Corner overlap handled gracefully
@@ -487,14 +509,16 @@ newMax = viewportMax + dataDelta;
 ---
 
 #### Task 2.3: Scrollbar Rendering ⚠️ MODERATE COMPLEXITY
+
 **Time**: 30 minutes
 
 - [ ] Add scrollbar widgets to `ChartRenderBox`:
+
   ```dart
   class ChartRenderBox extends RenderBox {
     ChartScrollbar? _xScrollbar;
     ChartScrollbar? _yScrollbar;
-    
+
     void _buildScrollbars(BoxConstraints constraints) {
       if (config.showXScrollbar) {
         _xScrollbar = ChartScrollbar(
@@ -505,7 +529,7 @@ newMax = viewportMax + dataDelta;
           theme: config.scrollbarTheme,
         );
       }
-      
+
       if (config.showYScrollbar) {
         _yScrollbar = ChartScrollbar(
           axis: Axis.vertical,
@@ -523,6 +547,7 @@ newMax = viewportMax + dataDelta;
 - [ ] Update scrollbars when viewport changes
 
 **Success Criteria**:
+
 - [ ] Scrollbars instantiate correctly
 - [ ] Scrollbars receive correct data/viewport ranges
 - [ ] Scrollbars positioned correctly on canvas
@@ -530,24 +555,26 @@ newMax = viewportMax + dataDelta;
 ---
 
 #### Task 2.4: Pixel-Delta Conversion ⚠️ CRITICAL - MOST COMPLEX
+
 **Time**: 1 hour
 
 - [ ] Implement `_handleXScrollbarDelta()` in `ChartRenderBox`:
+
   ```dart
   void _handleXScrollbarDelta(Offset pixelDelta, ScrollbarInteraction type) {
     // Get track length for conversion
     final trackLength = _xScrollbarRect?.width ?? 0;
     if (trackLength == 0) return;
-    
+
     // Get current viewport from ChartTransform
     final currentViewport = transform.xViewportRange;
-    
+
     // Calculate data per pixel ratio
     final dataPerPixel = currentViewport.span / trackLength;
-    
+
     // Convert pixel delta to data delta
     final dataDelta = pixelDelta.dx * dataPerPixel;
-    
+
     // Apply based on interaction type
     switch (type) {
       case ScrollbarInteraction.pan:
@@ -555,43 +582,43 @@ newMax = viewportMax + dataDelta;
         final newViewport = currentViewport.shift(dataDelta);
         transform.setXViewport(newViewport);
         break;
-        
+
       case ScrollbarInteraction.zoomLeftOrTop:
         // Adjust minimum boundary only
         final newMin = currentViewport.min + dataDelta;
         final newViewport = DataRange(newMin, currentViewport.max);
         transform.setXViewport(newViewport);
         break;
-        
+
       case ScrollbarInteraction.zoomRightOrBottom:
         // Adjust maximum boundary only
         final newMax = currentViewport.max + dataDelta;
         final newViewport = DataRange(currentViewport.min, newMax);
         transform.setXViewport(newViewport);
         break;
-        
+
       case ScrollbarInteraction.trackClick:
         // Convert pixel position to data position
-        final targetDataPosition = transform.xDataRange.min + 
+        final targetDataPosition = transform.xDataRange.min +
           (pixelDelta.dx * dataPerPixel);
-        
+
         // Calculate new viewport centered on target
         final viewportHalfSpan = currentViewport.span / 2;
         final newViewport = DataRange(
           targetDataPosition - viewportHalfSpan,
           targetDataPosition + viewportHalfSpan,
         );
-        
+
         // Animate to target (300ms ease-out)
         _animateXViewportTo(newViewport);
         break;
-        
+
       case ScrollbarInteraction.keyboard:
         // Handle arrow keys, page up/down, home/end
         _handleKeyboardNavigation(dataDelta);
         break;
     }
-    
+
     // Trigger repaint
     markNeedsPaint();
   }
@@ -607,7 +634,7 @@ newMax = viewportMax + dataDelta;
       duration: const Duration(milliseconds: 300),
       vsync: // ... need to wire up vsync
     );
-    
+
     final animation = Tween<DataRange>(
       begin: transform.xViewportRange,
       end: targetViewport,
@@ -615,17 +642,18 @@ newMax = viewportMax + dataDelta;
       parent: animationController,
       curve: Curves.easeOut,
     ));
-    
+
     animation.addListener(() {
       transform.setXViewport(animation.value);
       markNeedsPaint();
     });
-    
+
     animationController.forward();
   }
   ```
 
 **Success Criteria**:
+
 - [ ] Pixel delta correctly converts to data delta
 - [ ] Pan mode shifts viewport
 - [ ] Zoom mode resizes viewport boundaries
@@ -638,23 +666,25 @@ newMax = viewportMax + dataDelta;
 ### Phase 3: Coordinator Integration (30 min - 1 hour)
 
 #### Task 3.1: Gesture Priority Management ⚠️ MODERATE
+
 **Time**: 30 minutes
 
 - [ ] Add scrollbar state to `ChartInteractionCoordinator`:
+
   ```dart
   class ChartInteractionCoordinator {
     bool _isScrollbarActive = false;
-    
+
     void notifyScrollbarDragStart() {
       _isScrollbarActive = true;
       // Disable chart pan/zoom gestures while scrollbar active
     }
-    
+
     void notifyScrollbarDragEnd() {
       _isScrollbarActive = false;
       // Re-enable chart pan/zoom gestures
     }
-    
+
     bool get allowChartGestures => !_isScrollbarActive;
   }
   ```
@@ -664,6 +694,7 @@ newMax = viewportMax + dataDelta;
 - [ ] Update chart gesture recognizers to check `allowChartGestures`
 
 **Success Criteria**:
+
 - [ ] Scrollbar drag prevents chart pan/zoom
 - [ ] Chart pan/zoom prevents scrollbar interaction
 - [ ] No gesture conflicts or interference
@@ -671,26 +702,30 @@ newMax = viewportMax + dataDelta;
 ---
 
 #### Task 3.2: Viewport Synchronization ✅ COMPLETE BY DESIGN
+
 **Time**: 5 minutes (verification only - no code needed)
 
 **VERIFICATION COMPLETE**: Viewport synchronization works automatically by architectural design!
 
 **How It Works** (Pixel-Delta Pattern):
+
 1. Scrollbars rendered directly from `_transform` state (no separate scrollbar state)
-2. _paintScrollbars() recalculates handle position/size from current viewport every frame
+2. \_paintScrollbars() recalculates handle position/size from current viewport every frame
 3. All viewport changes call markNeedsPaint() → repaint → scrollbars auto-update
 
 **Viewport Change Paths Verified**:
-- ✅ **Scrollbar drag**: _handleXScrollbarDelta → update _transform → markNeedsPaint() → _paintScrollbars()
-- ✅ **Chart pan**: panChart() → update _transform → markNeedsPaint() → _paintScrollbars()
-- ✅ **Chart zoom**: zoomChart() → update _transform → _rebuildElementsWithTransform() → markNeedsPaint() → _paintScrollbars()
-- ✅ **Streaming data**: updateDataBounds() → update _transform → markNeedsPaint() → _paintScrollbars()
-- ✅ **Reset view**: resetView() → update _transform → _rebuildElementsWithTransform() → markNeedsPaint() → _paintScrollbars()
+
+- ✅ **Scrollbar drag**: \_handleXScrollbarDelta → update \_transform → markNeedsPaint() → \_paintScrollbars()
+- ✅ **Chart pan**: panChart() → update \_transform → markNeedsPaint() → \_paintScrollbars()
+- ✅ **Chart zoom**: zoomChart() → update \_transform → \_rebuildElementsWithTransform() → markNeedsPaint() → \_paintScrollbars()
+- ✅ **Streaming data**: updateDataBounds() → update \_transform → markNeedsPaint() → \_paintScrollbars()
+- ✅ **Reset view**: resetView() → update \_transform → \_rebuildElementsWithTransform() → markNeedsPaint() → \_paintScrollbars()
 
 **Success Criteria** (all met by design):
+
 - ✅ Scrollbars update when chart pans/zooms (via markNeedsPaint())
 - ✅ Scrollbars update during streaming (via updateDataBounds() → markNeedsPaint())
-- ✅ No lag or desync (single source of truth: _transform)
+- ✅ No lag or desync (single source of truth: \_transform)
 - ✅ No additional state management needed (scrollbars are stateless displays)
 
 **Conclusion**: Task 3.2 complete without code changes. The pixel-delta pattern eliminates
@@ -699,11 +734,13 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 ---
 
 #### Task 3.3: Interaction Mode Integration ✅ COMPLETE
+
 **Time**: 30 minutes (estimated 15 minutes)
 **Status**: ✅ Complete
 **Commit**: [pending]
 
 **What Was Done**:
+
 1. Added `scrollbarDragging` mode to `InteractionMode` enum (priority 4):
    - Priority 4 places it between pan (3) and selection (6)
    - Higher priority than viewport operations, lower than element interactions
@@ -720,12 +757,10 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
        return false; // Modal state blocks scrollbar interaction
      }
      ```
-   
    - Added mode claiming when scrollbar drag starts:
      ```dart
      coordinator.claimMode(InteractionMode.scrollbarDragging);
      ```
-   
    - Added mode releasing when scrollbar drag ends (in `_handlePointerUp()`):
      ```dart
      if (_activeScrollbarAxis != null) {
@@ -736,7 +771,6 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
        return;
      }
      ```
-   
    - Added scroll wheel zoom prevention during scrollbar drag:
      ```dart
      void _handlePointerScroll(PointerScrollEvent event, Offset position) {
@@ -754,6 +788,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
    - Modal states (context menu, edit mode) block scrollbar interaction
 
 **Success Criteria Met**:
+
 - ✅ scrollbarDragging mode added with appropriate priority (4)
 - ✅ Coordinator tracks scrollbar interaction state
 - ✅ Modal states block scrollbar interaction
@@ -762,6 +797,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 - ✅ Code compiles cleanly with zero warnings
 
 **Architecture Notes**:
+
 - Priority 4 ensures scrollbar takes precedence over pan (3) and zoom (1)
 - Lower priority than element interactions (selection 6, dragging 7-8, resizing 9)
 - Blocked by modal states (priority 10): context menu, edit mode
@@ -774,28 +810,32 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 ### Phase 4: Testing & Polish (1-2 hours)
 
 #### Task 4.1: Manual Testing Setup ✅ COMPLETE
+
 **Time**: 20 minutes (estimated 30 minutes)
 **Status**: ✅ Complete
 **Commit**: 281a34e
 
 **What Was Done**:
+
 1. Created comprehensive manual testing checklist (150+ test cases):
-  - File: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
-   - Phase 1: Visual Rendering (18 tests)
-   - Phase 2: Horizontal Scrollbar Interactions (24 tests)
-   - Phase 3: Vertical Scrollbar Interactions (24 tests)
-   - Phase 4: Viewport Synchronization (24 tests)
-   - Phase 5: Coordinator Integration (16 tests)
-   - Phase 6: Edge Cases (20 tests)
-   - Phase 7: Performance (12 tests)
-   - Phase 8: Accessibility (12 tests)
+
+- File: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
+- Phase 1: Visual Rendering (18 tests)
+- Phase 2: Horizontal Scrollbar Interactions (24 tests)
+- Phase 3: Vertical Scrollbar Interactions (24 tests)
+- Phase 4: Viewport Synchronization (24 tests)
+- Phase 5: Coordinator Integration (16 tests)
+- Phase 6: Edge Cases (20 tests)
+- Phase 7: Performance (12 tests)
+- Phase 8: Accessibility (12 tests)
 
 2. Created testing summary document:
-  - File: `docs/refactor/core-interaction/10-task_4.1_testing_summary.md`
-   - Setup instructions for manual testing
-   - Expected test results and known limitations
-   - Platform and environment details
-   - Sign-off checklist
+
+- File: `docs/refactor/core-interaction/10-task_4.1_testing_summary.md`
+- Setup instructions for manual testing
+- Expected test results and known limitations
+- Platform and environment details
+- Sign-off checklist
 
 3. Modified example app to enable scrollbars:
    - File: `example/lib/braven_chart_plus_example.dart`
@@ -811,6 +851,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
    - Status: ✅ Running successfully with scrollbars visible
 
 **Success Criteria Met**:
+
 - ✅ Example app compiles successfully
 - ✅ Example app runs on Chrome
 - ✅ Scrollbars enabled and visible
@@ -819,12 +860,14 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 - ✅ Ready for user manual testing
 
 **Known Limitations**:
+
 - No track click animation (instant jump only)
 - No auto-hide functionality (scrollbars always visible)
 - No keyboard navigation of scrollbars
 - No touch gesture support
 
 **Next Steps**:
+
 - User performs manual testing using checklist
 - Document any bugs or issues found
 - Task 4.2: Address polish items and edge cases
@@ -834,6 +877,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 ---
 
 #### Task 4.2: Polish & Edge Cases ⚠️ CRITICAL
+
 **Time**: 30 minutes
 
 Test scenarios:
@@ -845,24 +889,20 @@ Test scenarios:
   - [ ] Track click jumps to position with animation
   - [ ] Auto-hide fades out after 2 seconds
   - [ ] Hover over edge zones shows blue highlight
-  
 - [ ] **Vertical Scrollbar**:
   - [ ] Pan mode shifts viewport vertically
   - [ ] Zoom top edge resizes viewport minimum
   - [ ] Zoom bottom edge resizes viewport maximum
   - [ ] Track click jumps to position with animation
-  
 - [ ] **Dual-Axis Scrollbars**:
   - [ ] Both scrollbars render without overlap
   - [ ] Corner space handled correctly
   - [ ] X and Y scrollbars independent
-  
 - [ ] **Integration**:
   - [ ] Chart pan updates scrollbar position
   - [ ] Chart zoom updates scrollbar size
   - [ ] Streaming updates scrollbar
   - [ ] No conflicts between chart and scrollbar gestures
-  
 - [ ] **Accessibility**:
   - [ ] Touch targets meet 44x44 minimum
   - [ ] Contrast ratios meet WCAG 2.1 AA
@@ -870,6 +910,7 @@ Test scenarios:
   - [ ] Focus indicators visible
 
 **Success Criteria**:
+
 - [ ] All test scenarios pass
 - [ ] No visual glitches or rendering issues
 - [ ] Performance smooth (60fps during drag)
@@ -877,6 +918,7 @@ Test scenarios:
 ---
 
 #### Task 4.3: Performance Validation ✅ CRITICAL
+
 **Time**: 30 minutes
 
 - [ ] Test scrollbar performance:
@@ -884,12 +926,10 @@ Test scenarios:
   - [ ] No jank or stuttering
   - [ ] Smooth animation for track click (300ms)
   - [ ] No memory leaks (Picture objects disposed correctly)
-  
 - [ ] Test with stress scenarios:
   - [ ] Large dataset (10,000+ points)
   - [ ] Multiple charts with scrollbars
   - [ ] Streaming + scrollbar + pan/zoom simultaneously
-  
 - [ ] Profile if needed:
   ```powershell
   flutter run --profile -d chrome
@@ -897,6 +937,7 @@ Test scenarios:
   ```
 
 **Success Criteria**:
+
 - [ ] Frame times <16ms (60fps)
 - [ ] No memory leaks
 - [ ] Smooth performance under stress
@@ -904,6 +945,7 @@ Test scenarios:
 ---
 
 #### Task 4.4: Unit Tests ⚠️ IMPORTANT
+
 **Time**: 30 minutes
 
 - [ ] Write unit tests for `ScrollbarController` pure functions:
@@ -912,7 +954,6 @@ Test scenarios:
   - [ ] `handleToDataRange()` - inverse transform
   - [ ] `getHitTestZone()` - edge detection
   - [ ] `getCursorForZone()` - cursor mapping
-  
 - [ ] Write widget tests for `ChartScrollbar`:
   - [ ] Renders correctly (horizontal/vertical)
   - [ ] Gesture callbacks fire correctly
@@ -920,8 +961,9 @@ Test scenarios:
   - [ ] Auto-hide timer works
 
 **Success Criteria**:
+
 - [ ] 15+ unit tests passing
-- [ ] >80% code coverage for scrollbar components
+- [ ] > 80% code coverage for scrollbar components
 
 ---
 
@@ -938,17 +980,17 @@ class ChartTransform {
   DataRange get yViewportRange;
   DataRange get xDataRange;
   DataRange get yDataRange;
-  
+
   // Viewport setters (may need to add)
   void setXViewport(DataRange viewport);
   void setYViewport(DataRange viewport);
-  
+
   // Convenience method for pixel-to-data conversion
   double xPixelsToData(double pixels, double trackLength) {
     final dataPerPixel = xViewportRange.span / trackLength;
     return pixels * dataPerPixel;
   }
-  
+
   double yPixelsToData(double pixels, double trackLength) {
     final dataPerPixel = yViewportRange.span / trackLength;
     return pixels * dataPerPixel;
@@ -966,11 +1008,11 @@ class ChartRenderBox extends RenderBox {
   Rect? _yScrollbarRect;
   ChartScrollbar? _xScrollbar;
   ChartScrollbar? _yScrollbar;
-  
+
   // Scrollbar pixel-delta handlers
   void _handleXScrollbarDelta(Offset pixelDelta, ScrollbarInteraction type);
   void _handleYScrollbarDelta(Offset pixelDelta, ScrollbarInteraction type);
-  
+
   // Animation controllers for track click
   AnimationController? _xScrollbarJumpController;
   AnimationController? _yScrollbarJumpController;
@@ -984,7 +1026,7 @@ class ChartRenderBox extends RenderBox {
 ```dart
 class ChartInteractionCoordinator {
   bool _isScrollbarActive = false;
-  
+
   void notifyScrollbarDragStart();
   void notifyScrollbarDragEnd();
   bool get allowChartGestures => !_isScrollbarActive;
@@ -1000,6 +1042,7 @@ class ChartInteractionCoordinator {
 **Problem**: ChartScrollbar needs `TickerProvider` for track click animation (300ms).
 
 **Solution Options**:
+
 1. **Pass TickerProvider from parent** (ChartRenderBox → ChartScrollbar)
 2. **Use `vsync: this` in StatefulWidget** (ChartScrollbar already StatefulWidget, add `TickerProviderStateMixin`)
 3. **Move animation to parent** (ChartRenderBox handles animation, scrollbar only reports target position)
@@ -1007,11 +1050,12 @@ class ChartInteractionCoordinator {
 **Recommendation**: Option 2 (add `TickerProviderStateMixin` to `_ChartScrollbarState`)
 
 **Implementation**:
+
 ```dart
-class _ChartScrollbarState extends State<ChartScrollbar> 
+class _ChartScrollbarState extends State<ChartScrollbar>
     with TickerProviderStateMixin {
   late AnimationController _jumpAnimationController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -1030,6 +1074,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
 **Problem**: Current implementation uses `ChartScrollbar` as a Widget, but ChartRenderBox is a RenderObject. How do we render scrollbar widgets from RenderBox paint()?
 
 **Solution Options**:
+
 1. **Render scrollbars in parent widget** (BravenChartPlus builds scrollbars as siblings to RenderBox)
 2. **Create custom RenderBox for scrollbars** (paint scrollbars directly in RenderBox, no widgets)
 3. **Use CustomMultiChildLayout** (parent widget manages layout, RenderBox paints chart)
@@ -1037,6 +1082,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
 **Recommendation**: Option 1 (render scrollbars in parent widget)
 
 **Architecture**:
+
 ```dart
 class BravenChartPlus extends StatefulWidget {
   @override
@@ -1045,7 +1091,7 @@ class BravenChartPlus extends StatefulWidget {
       children: [
         // Chart canvas (RenderBox)
         _ChartRenderObjectWidget(...),
-        
+
         // Scrollbars (Widgets positioned via Stack)
         if (config.showXScrollbar)
           Positioned(
@@ -1061,7 +1107,7 @@ class BravenChartPlus extends StatefulWidget {
               theme: config.scrollbarTheme,
             ),
           ),
-        
+
         if (config.showYScrollbar)
           Positioned(
             top: 0,
@@ -1083,12 +1129,14 @@ class BravenChartPlus extends StatefulWidget {
 ```
 
 **Benefits**:
+
 - ✅ Scrollbars use standard Flutter widget lifecycle
 - ✅ Easy to manage state (StatefulWidget, ValueNotifier)
 - ✅ Gesture detection works out-of-the-box (GestureDetector)
 - ✅ TickerProvider available (TickerProviderStateMixin)
 
 **Drawbacks**:
+
 - ❌ Slightly more complex widget tree (Stack with Positioned)
 - ❌ Need to pass viewport state from RenderBox to parent widget
 
@@ -1101,11 +1149,12 @@ class BravenChartPlus extends StatefulWidget {
 **Solution**: Pass viewport state from ChartRenderBox to parent widget via callback or ValueNotifier.
 
 **Implementation**:
+
 ```dart
 class ChartRenderBox extends RenderBox {
   final ValueNotifier<DataRange> xViewportNotifier;
   final ValueNotifier<DataRange> yViewportNotifier;
-  
+
   // Update notifiers whenever viewport changes
   void _updateViewport() {
     xViewportNotifier.value = transform.xViewportRange;
@@ -1147,16 +1196,18 @@ class BravenChartPlus extends StatefulWidget {
 **Problem**: Scrollbar drag at 60fps → 60 viewport updates/sec → 60 repaints/sec. Could cause performance issues.
 
 **Mitigation**:
+
 1. **Use Picture caching** (series layer already cached)
 2. **Throttle updates** (max 1 update per 16ms = 60fps)
 3. **Optimize coordinate conversions** (O(1) calculations only)
 4. **RepaintBoundary** around chart canvas (isolate repaints)
 
 **Implementation** (already done in existing architecture):
+
 ```dart
 class ChartRenderBox extends RenderBox {
   Picture? _seriesLayerCache;
-  
+
   @override
   void paint(PaintingContext context, Offset offset) {
     // Layer 1: Cached series (only repaint if data changes)
@@ -1164,7 +1215,7 @@ class ChartRenderBox extends RenderBox {
       _seriesLayerCache = _createSeriesLayerPicture();
     }
     context.canvas.drawPicture(_seriesLayerCache);
-    
+
     // Layer 2: Dynamic axes (repaint on every viewport change)
     _paintAxes(context.canvas, size);
   }
@@ -1175,13 +1226,13 @@ class ChartRenderBox extends RenderBox {
 
 ## 📊 Time Breakdown
 
-| Phase | Tasks | Est. Time | Notes |
-|-------|-------|-----------|-------|
-| **Phase 1: Core Widget Porting** | 4 tasks | 2-3 hours | Port files, simplify widget |
-| **Phase 2: Integration** | 4 tasks | 1-2 hours | Layout, rendering, pixel-delta conversion |
-| **Phase 3: Coordinator** | 3 tasks | 0.5-1 hour | Gesture priority, viewport sync |
-| **Phase 4: Testing & Polish** | 4 tasks | 1-2 hours | Examples, testing, performance |
-| **TOTAL** | **15 tasks** | **4.5-8 hours** | **Full feature set** |
+| Phase                            | Tasks        | Est. Time       | Notes                                     |
+| -------------------------------- | ------------ | --------------- | ----------------------------------------- |
+| **Phase 1: Core Widget Porting** | 4 tasks      | 2-3 hours       | Port files, simplify widget               |
+| **Phase 2: Integration**         | 4 tasks      | 1-2 hours       | Layout, rendering, pixel-delta conversion |
+| **Phase 3: Coordinator**         | 3 tasks      | 0.5-1 hour      | Gesture priority, viewport sync           |
+| **Phase 4: Testing & Polish**    | 4 tasks      | 1-2 hours       | Examples, testing, performance            |
+| **TOTAL**                        | **15 tasks** | **4.5-8 hours** | **Full feature set**                      |
 
 **Conservative Estimate**: 6-8 hours (includes buffer for debugging)  
 **Optimistic Estimate**: 4-5 hours (if no major issues)  
@@ -1192,6 +1243,7 @@ class ChartRenderBox extends RenderBox {
 ## 🎯 Definition of Done
 
 ### Code Complete
+
 - [ ] All 7 files ported to `lib/src_plus/widgets/scrollbar/`
 - [ ] ChartScrollbar widget simplified (removed obsolete code)
 - [ ] Integration with ChartRenderBox complete
@@ -1199,6 +1251,7 @@ class ChartRenderBox extends RenderBox {
 - [ ] Example app demonstrates all features
 
 ### Functionality Complete
+
 - [ ] Horizontal scrollbar works (pan, zoom, track click)
 - [ ] Vertical scrollbar works (pan, zoom, track click)
 - [ ] Dual-axis scrollbars work (no overlap)
@@ -1208,12 +1261,14 @@ class ChartRenderBox extends RenderBox {
 - [ ] No conflicts with chart pan/zoom gestures
 
 ### Quality Complete
+
 - [ ] Manual testing passed (all test scenarios)
 - [ ] Performance validated (60fps, no memory leaks)
 - [ ] Unit tests written and passing (15+ tests)
 - [ ] Code reviewed and clean (no TODOs, no debug prints)
 
 ### Documentation Complete
+
 - [ ] This plan document updated with final status
 - [ ] Code comments in place for complex logic
 - [ ] Example app demonstrates all scrollbar features
@@ -1224,11 +1279,13 @@ class ChartRenderBox extends RenderBox {
 ## 📚 References
 
 ### Documentation
+
 - **Architecture Analysis**: `docs/architecture/scrollbar_architecture_analysis.md` (3000+ lines)
 - **Merge Strategy**: `docs/refactor/core-interaction/07-incremental_merge_strategy.md`
 - **Sprint Tasks**: `docs/refactor/sprint_tasks.md`
 
 ### Source Files (BravenChart)
+
 - `lib/src/widgets/chart_scrollbar.dart` (741 lines)
 - `lib/src/widgets/scrollbar/scrollbar_controller.dart` (~200 lines)
 - `lib/src/widgets/scrollbar/scrollbar_interaction.dart` (~50 lines)
@@ -1238,6 +1295,7 @@ class ChartRenderBox extends RenderBox {
 - `lib/src/theming/components/scrollbar_config.dart` (~350 lines)
 
 ### Destination Files (BravenChartPlus)
+
 - `lib/src_plus/widgets/scrollbar/chart_scrollbar.dart` (to create)
 - `lib/src_plus/widgets/scrollbar/scrollbar_controller.dart` (to create)
 - `lib/src_plus/widgets/scrollbar/scrollbar_interaction.dart` (to create)
@@ -1253,7 +1311,7 @@ class ChartRenderBox extends RenderBox {
 **Status**: ⏳ Phase 4 - Task 4.1 Complete, Ready for User Testing  
 **Started**: 2025-11-18  
 **Target Completion**: 2025-11-20  
-**Actual Completion**: TBD (awaiting user testing)  
+**Actual Completion**: TBD (awaiting user testing)
 
 ### Phase Completion
 
@@ -1274,11 +1332,12 @@ class ChartRenderBox extends RenderBox {
 - [ ] **Phase 4, Task 4.4: Final Commit** (Not Started - 5 minutes)
 
 **Phase 3, Task 3.1 Implementation Details**:
+
 - Added scrollbar drag state fields to ChartRenderBox
-- Implemented _hitTestScrollbars() for pointer-in-scrollbar detection
-- Implemented _startScrollbarInteraction() to detect hit zone and start drag
-- Implemented _handleScrollbarDrag() to calculate pixel deltas and call handlers
-- Implemented _handleScrollbarTrackClick() for jump-to-position functionality
+- Implemented \_hitTestScrollbars() for pointer-in-scrollbar detection
+- Implemented \_startScrollbarInteraction() to detect hit zone and start drag
+- Implemented \_handleScrollbarDrag() to calculate pixel deltas and call handlers
+- Implemented \_handleScrollbarTrackClick() for jump-to-position functionality
 - Added scrollbar hit testing as PRIORITY 1 in pointer down handler
 - Added scrollbar drag handling as PRIORITY 1 in pointer move handler
 - Added scrollbar state cleanup in pointer up handler
@@ -1287,24 +1346,27 @@ class ChartRenderBox extends RenderBox {
 - Code compiles cleanly with zero warnings
 
 **Phase 3, Task 3.2 Verification Details**:
+
 - Verified viewport synchronization works by architectural design
-- _paintScrollbars() renders from current _transform state (single source of truth)
+- \_paintScrollbars() renders from current \_transform state (single source of truth)
 - All viewport changes call markNeedsPaint() → repaint → scrollbars auto-update
 - Verified 5 viewport change paths: scrollbar drag, chart pan, chart zoom, streaming data, reset view
 - No code changes needed - pixel-delta pattern handles synchronization automatically
 
 **Phase 3, Task 3.3 Implementation Details**:
+
 - Added scrollbarDragging mode to InteractionMode enum (priority 4)
 - Priority 4 places it between pan (3) and selection (6)
 - Updated extension methods: priority getter, description getter
-- Added modal state check in _startScrollbarInteraction() to block during modal states
+- Added modal state check in \_startScrollbarInteraction() to block during modal states
 - Added coordinator.claimMode(InteractionMode.scrollbarDragging) when drag starts
-- Added coordinator.releaseMode() when drag ends in _handlePointerUp()
+- Added coordinator.releaseMode() when drag ends in \_handlePointerUp()
 - Added scroll wheel zoom prevention during scrollbar drag
 - Gesture priority management: scrollbar takes precedence over pan/zoom, blocked by modal states
 - Code compiles cleanly with zero warnings
 
 **Phase 4, Task 4.1 Implementation Details**:
+
 - Created comprehensive manual testing checklist (150+ test cases)
 - Created testing summary document with setup instructions
 - Modified example app to enable scrollbars (X and Y)
@@ -1321,11 +1383,12 @@ class ChartRenderBox extends RenderBox {
 
 1. **USER ACTION REQUIRED**: Manual Testing
    - Open running example app: http://127.0.0.1:60596/AbrXCpOYB1A=
-  - Follow checklist: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
-   - Test scrollbar interactions: hit testing, track clicks, handle drag, edge drag
-   - Verify viewport synchronization across all change paths
-   - Test coordinator integration: mode claiming, modal blocking, gesture prevention
-   - Report any bugs or issues found
+
+- Follow checklist: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
+- Test scrollbar interactions: hit testing, track clicks, handle drag, edge drag
+- Verify viewport synchronization across all change paths
+- Test coordinator integration: mode claiming, modal blocking, gesture prevention
+- Report any bugs or issues found
 
 2. **Phase 4, Task 4.2** (Polish & Edge Cases - 20 minutes) **NEXT AFTER TESTING**:
    - Fix any critical bugs found during manual testing
@@ -1342,13 +1405,13 @@ class ChartRenderBox extends RenderBox {
 4. **Phase 4, Task 4.4** (Final Commit - 5 minutes):
    - Commit scrollbar implementation with comprehensive message
    - Tag as scrollbar-implementation-complete
-  - Update changelog.md
-   - Close feature branch and merge to main (if applicable)
+
+- Update changelog.md
+- Close feature branch and merge to main (if applicable)
 
 ---
 
 **Document Status**: ✅ Phase 1: 88% Complete, Phase 2: 100% Complete, Phase 3: 100% Complete  
 **Created**: 2025-11-18  
 **Last Updated**: 2025-11-18  
-**Author**: AI Assistant (with user guidance)  
-
+**Author**: AI Assistant (with user guidance)

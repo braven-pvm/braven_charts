@@ -1,10 +1,10 @@
-
 # Implementation Plan: Interaction System
 
 **Branch**: `007-interaction-system` | **Date**: 2025-01-07 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `specs/007-interaction-system/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    → If not found: ERROR "No feature spec at {path}"
@@ -27,6 +27,7 @@
 ```
 
 **IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
@@ -37,6 +38,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 **Technical Approach**: Build a unified event processing system that translates platform-specific inputs (mouse/touch/keyboard) into chart coordinate space, then delegates to specialized interaction handlers (crosshair, tooltip, zoom/pan, gesture recognition). Use Flutter's GestureDetector for gesture recognition, CustomPainter for crosshair/tooltip rendering, and Flutter's accessibility APIs for keyboard navigation and screen reader support.
 
 ## Technical Context
+
 **Language/Version**: Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216  
 **Primary Dependencies**: Flutter framework (dart:ui for rendering, dart:async for streams)  
 **Storage**: N/A (stateless interaction state, no persistence)  
@@ -48,9 +50,11 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 **Scale/Scope**: 7 core interaction systems (events, crosshair, tooltip, zoom/pan, gestures, keyboard, callbacks), 147 total tests
 
 ## Constitution Check
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. Test-First Development
+
 - [x] **TDD Approach**: All interaction handlers will have unit tests written BEFORE implementation
 - [x] **Test Coverage**: 147 tests planned (110 unit, 25 integration, 12 widget)
 - [x] **Test Categories**: Event processing, crosshair rendering, tooltip positioning, zoom/pan, gestures, keyboard, callbacks
@@ -58,6 +62,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: Tests to be written in Phase 1, implementation in Phase 3
 
 ### II. Performance First (60fps Target)
+
 - [x] **Frame Budget**: All rendering operations <16ms (crosshair <2ms target)
 - [x] **Response Time**: Event processing <5ms, total interaction <100ms
 - [x] **Memory**: <5MB overhead, zero leaks after 10,000 interactions
@@ -66,6 +71,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: Performance targets documented, benchmarks to be created in Phase 1
 
 ### III. Architectural Integrity (Pure Flutter)
+
 - [x] **Pure Flutter**: Using dart:ui, dart:async, Flutter GestureDetector, CustomPainter only
 - [x] **No Web APIs**: No HTML elements, JavaScript interop, or web-specific code
 - [x] **Layer Integration**: Integrates with Layer 5 (BravenChart widget), uses Layer 2 (CoordinateTransformer)
@@ -73,6 +79,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: Architecture compliant, contracts to be defined in Phase 1
 
 ### IV. Requirements Compliance
+
 - [x] **Spec Located**: specs/007-interaction-system/spec.md (512 lines, complete)
 - [x] **Requirements Tracked**: 7 functional (FR-001 to FR-007), 17 non-functional (NFR-001 to NFR-017)
 - [x] **Tasks.md Commitment**: Will update tasks.md after EVERY completed task
@@ -80,6 +87,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: Tasks.md to be generated in Phase 2 (/tasks command)
 
 ### V. API Consistency & Stability
+
 - [x] **Flutter Conventions**: InteractionConfig, CrosshairConfig, TooltipConfig follow Flutter patterns
 - [x] **Backward Compatibility**: No breaking changes to existing chart widgets
 - [x] **Naming**: lowerCamelCase for methods/properties, UpperCamelCase for classes
@@ -87,6 +95,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: API design to be documented in Phase 1 (contracts/)
 
 ### VI. Documentation Discipline
+
 - [x] **Public APIs**: All config classes and callbacks require dartdoc comments
 - [x] **Complex Algorithms**: Snap-to-point logic, gesture state machine, smart tooltip positioning
 - [x] **Coordinate Transformations**: Event coordinate translation to chart data space
@@ -94,6 +103,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 - [ ] **Status**: Quickstart.md to be created in Phase 1 with executable examples
 
 ### VII. Simplicity & Pragmatism (KISS)
+
 - [x] **Use Flutter Primitives**: Leverage GestureDetector, not custom gesture engine
 - [x] **Avoid Over-Engineering**: Simple event delegation, no complex state machines unless needed
 - [x] **SOLID Adherence**: Single responsibility (separate crosshair, tooltip, zoom/pan classes)
@@ -105,6 +115,7 @@ The Interaction System (Layer 7) provides professional-grade user interaction ca
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/007-interaction-system/
 ├── spec.md              # User-facing specification (complete)
@@ -122,6 +133,7 @@ specs/007-interaction-system/
 ```
 
 ### Source Code (repository root)
+
 ```
 lib/
 ├── src/
@@ -169,6 +181,7 @@ test/
 ## Phase 0: Outline & Research
 
 ### Research Tasks
+
 All technical context is clear from the feature spec and existing project structure. Research focused on Flutter patterns and best practices for interaction implementation:
 
 1. **Flutter Gesture Detection System**
@@ -201,10 +214,13 @@ All technical context is clear from the feature spec and existing project struct
 **Status**: ✅ Research scope defined, execution delegated to research.md generation
 
 ## Phase 1: Design & Contracts
-*Prerequisites: research.md complete*
+
+_Prerequisites: research.md complete_
 
 ### Entity Extraction
+
 From feature spec Key Entities section, extract to `data-model.md`:
+
 - **InteractionState**: Current state of all user interactions (hovered point, focused point, selections, crosshair, tooltip, zoom/pan, active gesture)
 - **ZoomPanState**: Zoom levels (X/Y), pan offset, visible data bounds
 - **GestureDetails**: Gesture type, positions, scale/delta, timestamp
@@ -212,7 +228,9 @@ From feature spec Key Entities section, extract to `data-model.md`:
 - **TooltipConfig**: Enabled flag, trigger mode, delays, positioning, style, custom builder
 
 ### API Contract Generation
+
 From functional requirements (FR-001 to FR-007), generate interface contracts:
+
 - **IEventHandler**: `processEvent(PointerEvent) → ChartEvent`
 - **ICrosshairRenderer**: `renderCrosshair(Canvas, InteractionState) → void`
 - **ITooltipProvider**: `showTooltip(ChartDataPoint) → Widget`
@@ -220,7 +238,9 @@ From functional requirements (FR-001 to FR-007), generate interface contracts:
 - **IKeyboardHandler**: `handleKeyEvent(RawKeyEvent) → KeyEventResult`
 
 ### Contract Test Generation
+
 For each contract interface, create failing test:
+
 - `test/interaction/contracts/event_handler_contract_test.dart`
 - `test/interaction/contracts/crosshair_renderer_contract_test.dart`
 - `test/interaction/contracts/tooltip_provider_contract_test.dart`
@@ -228,14 +248,18 @@ For each contract interface, create failing test:
 - `test/interaction/contracts/keyboard_handler_contract_test.dart`
 
 ### Test Scenario Extraction
+
 From user scenarios (Scenarios 1-4), create integration tests:
+
 - **Scenario 1**: Crosshair + Tooltip interaction (crosshair_tooltip_test.dart)
 - **Scenario 2**: Zoom and Pan (zoom_pan_gestures_test.dart)
 - **Scenario 3**: Touch Gestures (zoom_pan_gestures_test.dart - mobile section)
 - **Scenario 4**: Keyboard Navigation (keyboard_navigation_test.dart)
 
 ### Quickstart Example Extraction
+
 From spec Success Metrics (Developer Experience), create 8+ executable examples:
+
 1. Basic crosshair enablement
 2. Custom crosshair styling
 3. Tooltip with default content
@@ -246,7 +270,9 @@ From spec Success Metrics (Developer Experience), create 8+ executable examples:
 8. Complete interaction configuration
 
 ### Agent Context Update
+
 Run update script to add Interaction System to agent context:
+
 ```powershell
 .\.specify\scripts\powershell\update-agent-context.ps1 -AgentType copilot
 ```
@@ -256,12 +282,14 @@ Run update script to add Interaction System to agent context:
 **Status**: ⏳ Ready to execute (next step in workflow)
 
 ## Phase 2: Task Planning Approach
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
+
+_This section describes what the /tasks command will do - DO NOT execute during /plan_
 
 **Task Generation Strategy**:
 The /tasks command will load `.specify/templates/tasks-template.md` and generate granular implementation tasks based on Phase 1 design documents.
 
 **Task Sources**:
+
 1. **From contracts/** → Contract test tasks (failing tests first)
    - Each interface → one contract test file
    - Test that interface requirements are met
@@ -284,8 +312,9 @@ The /tasks command will load `.specify/templates/tasks-template.md` and generate
    - Interaction Callbacks implementation (FR-007)
 
 **Task Ordering Strategy**:
+
 - **TDD Order**: Contract tests → Model creation → Unit tests → Implementation → Integration tests
-- **Dependency Order**: 
+- **Dependency Order**:
   1. Models (InteractionState, ZoomPanState, etc.) - no dependencies
   2. Event Handler - depends on models
   3. Crosshair/Tooltip - depends on models + event handler
@@ -296,28 +325,32 @@ The /tasks command will load `.specify/templates/tasks-template.md` and generate
   8. Widget integration - depends on all above
 
 **Parallel Execution Markers [P]**:
+
 - Model creation tasks can run in parallel (independent)
 - Unit test tasks can run in parallel (isolated)
 - Contract test tasks can run in parallel (independent)
 
-**Estimated Task Count**: 
+**Estimated Task Count**:
+
 - Phase 1 artifacts: 15-20 tasks
-  * 5 contract test files
-  * 5 model implementation tasks
-  * 5-10 model validation unit tests
+  - 5 contract test files
+  - 5 model implementation tasks
+  - 5-10 model validation unit tests
 - Phase 2 implementation: 40-50 tasks
-  * 7 component implementations (one per FR)
-  * 30-40 unit tests (110 total tests)
-  * 3-5 integration tests (25 total tests)
+  - 7 component implementations (one per FR)
+  - 30-40 unit tests (110 total tests)
+  - 3-5 integration tests (25 total tests)
 - Phase 3 testing: 10-15 tasks
-  * Widget test implementation (12 tests)
-  * Performance benchmarks
-  * Accessibility validation
+  - Widget test implementation (12 tests)
+  - Performance benchmarks
+  - Accessibility validation
 - **Total: ~75-90 numbered, ordered tasks**
 
 **Task Template Format** (from tasks-template.md):
+
 ```markdown
 ## Task ###: [Task Name]
+
 **Type**: [Contract Test | Unit Test | Implementation | Integration Test | Documentation]
 **SDLC Phase**: [Planning | Implementation | Testing | Deployment]
 **Status**: [Not Started | In Progress | Complete | Blocked]
@@ -325,13 +358,16 @@ The /tasks command will load `.specify/templates/tasks-template.md` and generate
 **Dependencies**: [Task numbers or "None"]
 
 ### Description
+
 [What needs to be done]
 
 ### Acceptance Criteria
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 
 ### Technical Notes
+
 [Implementation details, edge cases, performance requirements]
 ```
 
@@ -340,18 +376,21 @@ The /tasks command will load `.specify/templates/tasks-template.md` and generate
 **Status**: ⏳ Ready for /tasks command execution
 
 ## Phase 3+: Future Implementation
-*These phases are beyond the scope of the /plan command*
+
+_These phases are beyond the scope of the /plan command_
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
-*Fill ONLY if Constitution Check has violations that must be justified*
+
+_Fill ONLY if Constitution Check has violations that must be justified_
 
 **Status**: ✅ No Violations
 
 All constitutional principles satisfied:
+
 - ✅ Test-First Development: 147 tests planned, TDD approach documented
 - ✅ Performance First: <100ms response, 60 FPS targets, spatial indexing for optimization
 - ✅ Architectural Integrity: Pure Flutter, no web APIs, SOLID design with interface contracts
@@ -362,28 +401,31 @@ All constitutional principles satisfied:
 
 No complexity deviations to document.
 
-
 ## Progress Tracking
-*This checklist is updated during execution flow*
+
+_This checklist is updated during execution flow_
 
 **Phase Status**:
+
 - [x] Phase 0: Research complete (/plan command) - ✅ research.md created (2025-01-07)
 - [x] Phase 1: Design complete (/plan command) - ✅ All artifacts created (2025-01-07)
-  * data-model.md (5 entities, complete)
-  * contracts/ (5 interface files, complete)
-  * quickstart.md (9 executable examples, complete)
+  - data-model.md (5 entities, complete)
+  - contracts/ (5 interface files, complete)
+  - quickstart.md (9 executable examples, complete)
 - [ ] Phase 2: Task planning complete (/plan command - described approach only) - ⏳ Ready for /tasks
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
+
 - [x] Initial Constitution Check: ✅ PASS (All principles followed)
 - [x] Post-Design Constitution Check: ✅ PASS (No violations, pure Flutter, SOLID design)
 - [x] All NEEDS CLARIFICATION resolved: ✅ None (all technical context clear)
 - [x] Complexity deviations documented: ✅ None (no violations)
 
 **Artifacts Created**:
+
 1. ✅ specs/007-interaction-system/plan.md (this file)
 2. ✅ specs/007-interaction-system/research.md (150+ lines, architectural decisions)
 3. ✅ specs/007-interaction-system/data-model.md (400+ lines, 5 entities with validation)
@@ -398,4 +440,5 @@ No complexity deviations to document.
 **Next Command**: `/tasks` to generate tasks.md with ~75-90 implementation tasks
 
 ---
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
+
+_Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`_

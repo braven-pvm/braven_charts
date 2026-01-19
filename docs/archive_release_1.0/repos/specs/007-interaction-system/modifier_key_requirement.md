@@ -23,13 +23,13 @@ This is a **critical anti-pattern** that violates web platform conventions.
 
 **Require modifier keys for scroll-based interactions:**
 
-| Interaction | Input | Behavior |
-|-------------|-------|----------|
-| **Zoom** | CTRL/CMD + Scroll | Zoom chart at cursor position |
-| **Horizontal Pan** | SHIFT + Scroll | Pan chart horizontally |
-| **Pan (Primary)** | Middle-mouse + Drag | Pan chart in any direction |
-| **Pan (Alt)** | Left-click + Drag | Pan chart (when pan mode enabled) |
-| **Page Scroll** | Scroll (no modifier) | Allow default browser scroll (don't consume event) |
+| Interaction        | Input                | Behavior                                           |
+| ------------------ | -------------------- | -------------------------------------------------- |
+| **Zoom**           | CTRL/CMD + Scroll    | Zoom chart at cursor position                      |
+| **Horizontal Pan** | SHIFT + Scroll       | Pan chart horizontally                             |
+| **Pan (Primary)**  | Middle-mouse + Drag  | Pan chart in any direction                         |
+| **Pan (Alt)**      | Left-click + Drag    | Pan chart (when pan mode enabled)                  |
+| **Page Scroll**    | Scroll (no modifier) | Allow default browser scroll (don't consume event) |
 
 ### Platform-Specific Modifier Keys
 
@@ -49,25 +49,25 @@ This is a **critical anti-pattern** that violates web platform conventions.
 onPointerSignal: (signal) {
   if (signal is PointerScrollEvent) {
     // Detect platform-specific modifier keys
-    final isCtrlPressed = HardwareKeyboard.instance.isControlPressed || 
+    final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
                           HardwareKeyboard.instance.isMetaPressed; // CMD on macOS
-    
+
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-    
+
     if (isCtrlPressed) {
       // CTRL/CMD + Scroll → Zoom at cursor position
       _handleZoom(signal.scrollDelta.dy, signal.localPosition);
       // Event consumed - prevents page scroll
       return;
     }
-    
+
     if (isShiftPressed) {
       // SHIFT + Scroll → Pan horizontally
       _handleHorizontalPan(signal.scrollDelta.dy);
       // Event consumed - prevents page scroll
       return;
     }
-    
+
     // No modifier → Allow default page scroll
     // DON'T call event.stopPropagation() or consume the event
   }
@@ -106,24 +106,24 @@ Add to `InteractionConfig`:
 ```dart
 class InteractionConfig {
   /// Whether scroll events require a modifier key (CTRL/CMD or SHIFT).
-  /// 
+  ///
   /// When true (default for web), plain scroll doesn't zoom/pan - only
   /// CTRL+Scroll or SHIFT+Scroll work. This prevents hijacking browser scroll.
-  /// 
+  ///
   /// When false (option for desktop apps), plain scroll zooms the chart.
   final bool requireModifierForScroll;
-  
+
   /// Whether to show a visual hint about modifier keys and pan controls.
-  /// 
+  ///
   /// When true, shows overlay hint like "Hold Ctrl to zoom, Middle-mouse to pan" when hovering.
   final bool showModifierHint;
-  
+
   /// Whether middle-mouse button enables panning.
-  /// 
+  ///
   /// When true (default), middle-mouse + drag pans the chart in any direction.
   /// This is the PRIMARY pan method (doesn't conflict with selection/tooltips).
   final bool enableMiddleMousePan;
-  
+
   // Default to true on web, false on desktop
   InteractionConfig({
     this.requireModifierForScroll = kIsWeb ? true : false,
@@ -156,6 +156,7 @@ Show a subtle overlay when user hovers over chart:
 ### Why Middle-Mouse for Pan?
 
 **Advantages:**
+
 1. ✅ **No Conflicts** - Doesn't interfere with tooltips/selection (left-click) or context menus (right-click)
 2. ✅ **Industry Standard** - CAD software, 3D modeling tools, Google Earth all use middle-mouse for pan
 3. ✅ **Discoverable** - Users familiar with design tools expect this
@@ -163,6 +164,7 @@ Show a subtle overlay when user hovers over chart:
 5. ✅ **Natural Feel** - Continuous drag feels like "grabbing" the chart
 
 **Fallback Options:**
+
 - SHIFT + Scroll → Horizontal pan (for users without middle-mouse button)
 - Left-click + Drag → Pan (when pan mode explicitly enabled, but conflicts with selection)
 
@@ -201,15 +203,19 @@ Update all documentation to mention:
 ## Alternatives Considered
 
 ### ❌ Alternative 1: Always Hijack Scroll
+
 **Problem**: Terrible UX, frustrates users, violates web conventions
 
 ### ❌ Alternative 2: Detect Intent (scroll speed/direction)
+
 **Problem**: Unreliable, still breaks expectations, too clever
 
 ### ❌ Alternative 3: Focus Required (click chart first)
+
 **Problem**: Extra step, not discoverable, still can accidentally trigger
 
 ### ✅ Alternative 4: Modifier Keys (CHOSEN)
+
 **Why**: Standard pattern (Google Maps, Figma, etc.), clear intent, doesn't break scroll
 
 ---
@@ -243,8 +249,9 @@ Update all documentation to mention:
 **Testing**: +3 test cases in R-T013
 
 **Updated Timeline**:
+
 - Best case: 8 hours → 8.5 hours
-- Expected: 12 hours → 12.5 hours  
+- Expected: 12 hours → 12.5 hours
 - Worst case: 16 hours → 16.5 hours
 
 ---

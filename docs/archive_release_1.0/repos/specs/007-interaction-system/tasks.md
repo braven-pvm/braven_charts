@@ -4,6 +4,7 @@
 **Prerequisites**: plan.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅, quickstart.md ✅
 
 ## Execution Flow (main)
+
 ```
 1. Load plan.md from feature directory ✅
    → Tech stack: Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216
@@ -28,11 +29,14 @@
 ```
 
 ## Format: `[ID] [P?] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - Includes exact file paths for each task
 
 ## Path Conventions
+
 Single Flutter library project:
+
 - **Source**: `lib/src/interaction/`
 - **Tests**: `test/interaction/`
 
@@ -42,13 +46,13 @@ Single Flutter library project:
 
 - [x] **T001** Create interaction system directory structure
   - **Type**: Setup
-  - **Files**: 
-    * `lib/src/interaction/`
-    * `lib/src/interaction/models/`
-    * `test/interaction/unit/`
-    * `test/interaction/integration/`
-    * `test/interaction/widgets/`
-    * `test/interaction/contracts/`
+  - **Files**:
+    - `lib/src/interaction/`
+    - `lib/src/interaction/models/`
+    - `test/interaction/unit/`
+    - `test/interaction/integration/`
+    - `test/interaction/widgets/`
+    - `test/interaction/contracts/`
   - **Acceptance Criteria**:
     - [x] All directories exist
     - [x] Directory structure matches plan.md specification
@@ -311,14 +315,14 @@ Single Flutter library project:
     - [x] Integration with CrosshairConfig, TooltipConfig, ZoomPanConfig, KeyboardConfig ✅ COMPLETE
   - **Dependencies**: T013-T017 (all model implementations must be complete)
   - **Reference**: Extracted from 55 project references (quickstart.md, spec.md, specification_summary.md, data-model.md)
-  - **Completion Notes**: 
-    * Added comprehensive dartdoc comments to InteractionConfig, GestureConfig, KeyboardConfig
-    * Implemented `InteractionConfig.all()` factory (all features enabled)
-    * Implemented `InteractionConfig.none()` factory (all features disabled)
-    * All 8 callback types documented with usage examples
-    * KeyboardConfig fully integrated with panStep, zoomStep, enable flags
-    * All properties have validation through const constructors
-    * Integration complete with all 4 sub-config types (CrosshairConfig, TooltipConfig, GestureConfig, KeyboardConfig)
+  - **Completion Notes**:
+    - Added comprehensive dartdoc comments to InteractionConfig, GestureConfig, KeyboardConfig
+    - Implemented `InteractionConfig.all()` factory (all features enabled)
+    - Implemented `InteractionConfig.none()` factory (all features disabled)
+    - All 8 callback types documented with usage examples
+    - KeyboardConfig fully integrated with panStep, zoomStep, enable flags
+    - All properties have validation through const constructors
+    - Integration complete with all 4 sub-config types (CrosshairConfig, TooltipConfig, GestureConfig, KeyboardConfig)
 
 ---
 
@@ -557,10 +561,10 @@ Single Flutter library project:
 
 - [x] **T030** Implement InteractionCallbacks component ✅ COMPLETE
   - **Type**: Implementation
-  - **Files**: 
-    * `lib/src/interaction/interaction_callbacks.dart` (new)
-    * `lib/src/interaction/models/interaction_config.dart` (updated)
-    * `lib/braven_charts.dart` (updated export)
+  - **Files**:
+    - `lib/src/interaction/interaction_callbacks.dart` (new)
+    - `lib/src/interaction/models/interaction_config.dart` (updated)
+    - `lib/braven_charts.dart` (updated export)
   - **Acceptance Criteria**:
     - [x] Callback definitions (onDataPointTap, onHover, onZoomChange, etc.) - 10 callback typedefs defined
     - [x] Optional nullable callback pattern - All callbacks nullable in InteractionConfig
@@ -571,14 +575,14 @@ Single Flutter library project:
   - **Dependencies**: T024-T029 (all core components)
   - **Reference**: FR-007 in plan.md
   - **Implementation Notes**:
-    * Created 10 callback typedefs: DataPointCallback, DataPointHoverCallback, DataPointLongPressCallback, SelectionCallback, ZoomCallback, PanCallback, ViewportCallback, CrosshairChangeCallback, TooltipChangeCallback, KeyboardActionCallback
-    * CallbackInvoker utility class with 12 static methods for safe invocation
-    * Error handling: try-catch with debug logging, silent failure in release mode
-    * Async callback support via invokeAsync() method
-    * InteractionConfig updated with 10 nullable callback fields
-    * All callbacks integrated into copyWith method (equality operator unchanged - callbacks not comparable)
-    * Uses real ChartDataPoint from foundation layer (not placeholder typedef)
-    * No tests required (this is a typedef/utility component with no business logic to test)
+    - Created 10 callback typedefs: DataPointCallback, DataPointHoverCallback, DataPointLongPressCallback, SelectionCallback, ZoomCallback, PanCallback, ViewportCallback, CrosshairChangeCallback, TooltipChangeCallback, KeyboardActionCallback
+    - CallbackInvoker utility class with 12 static methods for safe invocation
+    - Error handling: try-catch with debug logging, silent failure in release mode
+    - Async callback support via invokeAsync() method
+    - InteractionConfig updated with 10 nullable callback fields
+    - All callbacks integrated into copyWith method (equality operator unchanged - callbacks not comparable)
+    - Uses real ChartDataPoint from foundation layer (not placeholder typedef)
+    - No tests required (this is a typedef/utility component with no business logic to test)
   - **Files Modified**: 3 (interaction_callbacks.dart created, interaction_config.dart updated, braven_charts.dart export updated)
 
 ---
@@ -600,14 +604,14 @@ Single Flutter library project:
   - **Dependencies**: T024, T025, T026 (EventHandler, CrosshairRenderer, TooltipProvider)
   - **Reference**: Scenario 1 in quickstart.md
   - **Implementation Notes**:
-    * Created comprehensive integration tests for crosshair + tooltip interaction
-    * Tests cover complete user interaction flow: enter → move → snap → hover → show tooltip → exit
-    * State-based testing: verifies InteractionState changes through interaction lifecycle
-    * Performance test validates full cycle completes in <100ms
-    * Note: Widget rendering tests (actual tooltip content) are deferred to widget tests (T040-T050)
-    * InteractionState.copyWith limitation: Cannot set null values (uses ?? operator), tests use InteractionState.initial() for reset
-    * All tests passing: validates EventHandler, CrosshairRenderer integration
-    * Snap point calculation tested: CrosshairRenderer.calculateSnapPoints() finds nearest points within radius
+    - Created comprehensive integration tests for crosshair + tooltip interaction
+    - Tests cover complete user interaction flow: enter → move → snap → hover → show tooltip → exit
+    - State-based testing: verifies InteractionState changes through interaction lifecycle
+    - Performance test validates full cycle completes in <100ms
+    - Note: Widget rendering tests (actual tooltip content) are deferred to widget tests (T040-T050)
+    - InteractionState.copyWith limitation: Cannot set null values (uses ?? operator), tests use InteractionState.initial() for reset
+    - All tests passing: validates EventHandler, CrosshairRenderer integration
+    - Snap point calculation tested: CrosshairRenderer.calculateSnapPoints() finds nearest points within radius
 
 - [x] **T032** Integration test: Zoom and Pan gestures (10 tests) ✅ COMPLETE (10/10 tests passing)
   - **Type**: Integration Test
@@ -626,18 +630,18 @@ Single Flutter library project:
   - **Dependencies**: T024, T027, T028 (EventHandler, ZoomPanController, GestureRecognizer)
   - **Reference**: Scenario 2 & 3 in quickstart.md
   - **Implementation Notes**:
-    * Created comprehensive integration tests for zoom/pan gesture handling
-    * Tests cover pinch-to-zoom (touch), mouse wheel zoom (desktop), pan gestures
-    * Zoom constraints validated: min (0.5) and max (10.0) zoom levels enforced
-    * Pan boundary checking: uses bounds parameter to constrain panning within data bounds
-    * Coordinate transformation: screenToData() and dataToScreen() validated with roundtrip test
-    * Gesture recognition: ZoomPanController.processGesture() tested with pinch and pan gestures
-    * GestureDetails requirements: Pinch requires initialScale, currentScale, pointerCount >= 2; Pan requires panDelta, totalPanDelta
-    * ZoomPanController API: zoom() uses named parameters (zoomFactor, focalPoint), pan() takes delta and optional bounds
-    * ZoomPanState uses zoomLevelX/zoomLevelY (not zoomLevel), panOffset
-    * Performance validated: 60 operations complete in <1 second, average <16ms per frame (60 FPS requirement met)
-    * Reset functionality tested: resetZoom() returns to zoomLevel 1.0, panOffset zero
-    * All 10 tests passing: validates ZoomPanController, GestureRecognizer, EventHandler integration
+    - Created comprehensive integration tests for zoom/pan gesture handling
+    - Tests cover pinch-to-zoom (touch), mouse wheel zoom (desktop), pan gestures
+    - Zoom constraints validated: min (0.5) and max (10.0) zoom levels enforced
+    - Pan boundary checking: uses bounds parameter to constrain panning within data bounds
+    - Coordinate transformation: screenToData() and dataToScreen() validated with roundtrip test
+    - Gesture recognition: ZoomPanController.processGesture() tested with pinch and pan gestures
+    - GestureDetails requirements: Pinch requires initialScale, currentScale, pointerCount >= 2; Pan requires panDelta, totalPanDelta
+    - ZoomPanController API: zoom() uses named parameters (zoomFactor, focalPoint), pan() takes delta and optional bounds
+    - ZoomPanState uses zoomLevelX/zoomLevelY (not zoomLevel), panOffset
+    - Performance validated: 60 operations complete in <1 second, average <16ms per frame (60 FPS requirement met)
+    - Reset functionality tested: resetZoom() returns to zoomLevel 1.0, panOffset zero
+    - All 10 tests passing: validates ZoomPanController, GestureRecognizer, EventHandler integration
 
 - [x] **T033** Integration test: Keyboard navigation (8 tests) ✅ COMPLETE (8/8 tests passing)
   - **Type**: Integration Test
@@ -654,9 +658,9 @@ Single Flutter library project:
   - **Dependencies**: T024, T029 (EventHandler, KeyboardHandler)
   - **Reference**: Scenario 4 in quickstart.md
   - **Implementation Notes**:
-    * All 8 keyboard navigation tests passing (tests KeyboardHandler methods directly)
-    * Test approach: Tests KeyboardHandler navigation methods (navigateToNext, navigateToPrevious, etc.) rather than KeyEvent simulation
-    * API patterns discovered:
+    - All 8 keyboard navigation tests passing (tests KeyboardHandler methods directly)
+    - Test approach: Tests KeyboardHandler navigation methods (navigateToNext, navigateToPrevious, etc.) rather than KeyEvent simulation
+    - API patterns discovered:
       - navigateToNext(currentPoint, testData): Returns next point with wrapping (last → first)
       - navigateToPrevious(currentPoint, testData): Returns previous point with wrapping (first → last)
       - navigateToFirst(testData): Returns first point
@@ -664,12 +668,12 @@ Single Flutter library project:
       - activateFocusedElement(point, state): Shows tooltip for focused point
       - zoomViewport(isZoomIn, state, zoomFactor): Zooms in/out using keyboard
       - closeTooltipOrClearSelection(state): Closes tooltip, clears focus
-    * State management: Uses focusedPointIndex (int, default -1) for focus tracking
-    * Data format: Map<String, dynamic> with 'x', 'y', 'label' keys
-    * copyWith null handling fix: closeTooltipOrClearSelection uses InteractionState constructor instead of copyWith to properly set nullable fields to null (copyWith uses ?? which keeps old values)
-    * Accessibility: Tests verify focused point data is available for screen reader announcements
-    * Integration validated: KeyboardHandler methods work correctly with InteractionState and test data
-    * All 8 tests passing: validates KeyboardHandler navigation, zoom, tooltip, and accessibility features
+    - State management: Uses focusedPointIndex (int, default -1) for focus tracking
+    - Data format: Map<String, dynamic> with 'x', 'y', 'label' keys
+    - copyWith null handling fix: closeTooltipOrClearSelection uses InteractionState constructor instead of copyWith to properly set nullable fields to null (copyWith uses ?? which keeps old values)
+    - Accessibility: Tests verify focused point data is available for screen reader announcements
+    - Integration validated: KeyboardHandler methods work correctly with InteractionState and test data
+    - All 8 tests passing: validates KeyboardHandler navigation, zoom, tooltip, and accessibility features
 
 ---
 
@@ -690,22 +694,22 @@ Single Flutter library project:
   - **Dependencies**: T024-T030 (all components), T031-T033 (integration tests pass)
   - **Reference**: plan.md widget integration section
   - **Implementation Notes**:
-    * Added `interactionConfig` parameter to BravenChart constructor and all factory constructors
-    * Parameter is optional (nullable) for backward compatibility
-    * Added EventHandler to _BravenChartState lifecycle (init/dispose)
-    * Created `_wrapWithInteractionSystem()` helper method
-    * Integration wraps chart widget with: GestureDetector → Focus → Semantics
-    * GestureDetector handles tap (selection) and pan gestures (when enabled)
-    * Focus widget enables keyboard navigation with onKeyEvent handler
-    * Semantics provides accessibility labels and hints
-    * Interaction only active when `interactionConfig != null && enabled == true`
-    * Import conflict resolved: EventHandler.KeyEventResult hidden, using Flutter's KeyEventResult
-    * Placeholder gesture handlers use setState to update InteractionState
-    * TODO items added for full EventHandler, ZoomPanController, KeyboardHandler integration
-    * Dartdoc added to interactionConfig field with usage example
-    * File compiles successfully (flutter analyze passed)
-    * Backward compatibility maintained: interactionConfig defaults to null (disabled)
-    * No breaking API changes - all existing BravenChart usage continues to work
+    - Added `interactionConfig` parameter to BravenChart constructor and all factory constructors
+    - Parameter is optional (nullable) for backward compatibility
+    - Added EventHandler to \_BravenChartState lifecycle (init/dispose)
+    - Created `_wrapWithInteractionSystem()` helper method
+    - Integration wraps chart widget with: GestureDetector → Focus → Semantics
+    - GestureDetector handles tap (selection) and pan gestures (when enabled)
+    - Focus widget enables keyboard navigation with onKeyEvent handler
+    - Semantics provides accessibility labels and hints
+    - Interaction only active when `interactionConfig != null && enabled == true`
+    - Import conflict resolved: EventHandler.KeyEventResult hidden, using Flutter's KeyEventResult
+    - Placeholder gesture handlers use setState to update InteractionState
+    - TODO items added for full EventHandler, ZoomPanController, KeyboardHandler integration
+    - Dartdoc added to interactionConfig field with usage example
+    - File compiles successfully (flutter analyze passed)
+    - Backward compatibility maintained: interactionConfig defaults to null (disabled)
+    - No breaking API changes - all existing BravenChart usage continues to work
 
 - [x] **T035** [P] Widget test for interaction integration (12 tests) ✅ COMPLETE
   - **Type**: Widget Test
@@ -722,23 +726,23 @@ Single Flutter library project:
     - [x] All 12 widget tests PASS ✅
   - **Dependencies**: T034 (widget integration)
   - **Implementation Notes**:
-    * T035.1: BravenChart renders without interaction config (backward compatibility test)
-    * T035.2: BravenChart renders with default interaction config (InteractionConfig.defaultConfig())
-    * T035.3: Custom crosshair config with CrosshairStyle (lineColor, lineWidth)
-    * T035.4: Custom tooltip config with TooltipStyle (backgroundColor, textColor, borderColor)
-    * T035.5: Zoom/pan enabled with enableZoom and enablePan flags
-    * T035.6: Keyboard navigation with KeyboardConfig (enableArrowKeys, enablePlusMinusKeys, zoomStep)
-    * T035.7: GestureDetector responds to tap events (enableSelection)
-    * T035.8: GestureDetector responds to pan events (enablePan)
-    * T035.9: Semantics widget provides accessibility labels
-    * T035.10: Widget rebuilds efficiently on config changes (no performance degradation)
-    * T035.11: Interaction disabled when config.enabled = false (conditional wrapping test)
-    * T035.12: Multiple interaction features work together (all features enabled simultaneously)
-    * All tests use correct API: CrosshairConfig, TooltipConfig, KeyboardConfig (not .disabled())
-    * Tests verify conditional widget wrapping (GestureDetector, Focus, Semantics)
-    * Tests use actual config constructors with enabled: true/false flags
-    * All 12 tests passing - verifies T034 widget integration works correctly
-    * Note: Tests verify placeholder implementations - full EventHandler integration marked as TODO in T034
+    - T035.1: BravenChart renders without interaction config (backward compatibility test)
+    - T035.2: BravenChart renders with default interaction config (InteractionConfig.defaultConfig())
+    - T035.3: Custom crosshair config with CrosshairStyle (lineColor, lineWidth)
+    - T035.4: Custom tooltip config with TooltipStyle (backgroundColor, textColor, borderColor)
+    - T035.5: Zoom/pan enabled with enableZoom and enablePan flags
+    - T035.6: Keyboard navigation with KeyboardConfig (enableArrowKeys, enablePlusMinusKeys, zoomStep)
+    - T035.7: GestureDetector responds to tap events (enableSelection)
+    - T035.8: GestureDetector responds to pan events (enablePan)
+    - T035.9: Semantics widget provides accessibility labels
+    - T035.10: Widget rebuilds efficiently on config changes (no performance degradation)
+    - T035.11: Interaction disabled when config.enabled = false (conditional wrapping test)
+    - T035.12: Multiple interaction features work together (all features enabled simultaneously)
+    - All tests use correct API: CrosshairConfig, TooltipConfig, KeyboardConfig (not .disabled())
+    - Tests verify conditional widget wrapping (GestureDetector, Focus, Semantics)
+    - Tests use actual config constructors with enabled: true/false flags
+    - All 12 tests passing - verifies T034 widget integration works correctly
+    - Note: Tests verify placeholder implementations - full EventHandler integration marked as TODO in T034
 
 ---
 
@@ -755,11 +759,11 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 1 in quickstart.md
   - **Completion Notes**:
-    * Created BasicCrosshairExample StatelessWidget
-    * Uses BravenChart with InteractionConfig(crosshair: CrosshairConfig.defaultConfig())
-    * Demonstrates 5-line crosshair enablement (chartType + series + interactionConfig)
-    * Includes dartdoc comments explaining behavior
-    * No lint errors, analysis clean
+    - Created BasicCrosshairExample StatelessWidget
+    - Uses BravenChart with InteractionConfig(crosshair: CrosshairConfig.defaultConfig())
+    - Demonstrates 5-line crosshair enablement (chartType + series + interactionConfig)
+    - Includes dartdoc comments explaining behavior
+    - No lint errors, analysis clean
 
 - [x] **T037** Create Example 2: Custom Crosshair Styling
   - **Type**: Documentation
@@ -772,11 +776,11 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 2 in quickstart.md
   - **Completion Notes**:
-    * Created CustomCrosshairStyleExample demonstrating advanced styling
-    * Custom CrosshairStyle: blue color (withValues alpha), 2px width, [10,5] dash pattern
-    * Increased snap radius (30px), styled coordinate labels (bold blue)
-    * Includes dartdoc comments explaining all customizations
-    * No lint errors, analysis clean
+    - Created CustomCrosshairStyleExample demonstrating advanced styling
+    - Custom CrosshairStyle: blue color (withValues alpha), 2px width, [10,5] dash pattern
+    - Increased snap radius (30px), styled coordinate labels (bold blue)
+    - Includes dartdoc comments explaining all customizations
+    - No lint errors, analysis clean
 
 - [x] **T038** Create Example 3: Tooltip with Default Content
   - **Type**: Documentation
@@ -789,11 +793,11 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 3 in quickstart.md
   - **Completion Notes**:
-    * Created DefaultTooltipExample demonstrating tooltip with default content
-    * TooltipConfig with trigger mode, delays, positioning, and style
-    * Hides Material's TooltipTriggerMode to avoid namespace conflict
-    * Includes dartdoc comments explaining all tooltip configuration
-    * No lint errors, analysis clean
+    - Created DefaultTooltipExample demonstrating tooltip with default content
+    - TooltipConfig with trigger mode, delays, positioning, and style
+    - Hides Material's TooltipTriggerMode to avoid namespace conflict
+    - Includes dartdoc comments explaining all tooltip configuration
+    - No lint errors, analysis clean
 
 - [x] **T039** Create Example 4: Tooltip with Custom Builder
   - **Type**: Documentation
@@ -806,11 +810,11 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 4 in quickstart.md
   - **Completion Notes**:
-    * Created CustomTooltipBuilderExample with rich tooltip content
-    * Custom builder using TooltipBuilder function signature
-    * Displays title, icons, formatted values, and conditional badge
-    * Blue-themed styling, positioned at top with 15px offset
-    * No lint errors, analysis clean
+    - Created CustomTooltipBuilderExample with rich tooltip content
+    - Custom builder using TooltipBuilder function signature
+    - Displays title, icons, formatted values, and conditional badge
+    - Blue-themed styling, positioned at top with 15px offset
+    - No lint errors, analysis clean
 
 - [x] **T040** Create Example 5: Zoom/Pan Configuration
   - **Type**: Documentation
@@ -824,12 +828,12 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 5 in quickstart.md
   - **Completion Notes**:
-    * Created ZoomPanConfigExample demonstrating zoom/pan interactions
-    * Uses enableZoom and enablePan boolean flags (current API)
-    * onZoomChanged callback with zoomLevelX and zoomLevelY parameters
-    * Displays real-time zoom levels for both axes
-    * Simplified from quickstart spec to match current InteractionConfig API
-    * No lint errors, analysis clean
+    - Created ZoomPanConfigExample demonstrating zoom/pan interactions
+    - Uses enableZoom and enablePan boolean flags (current API)
+    - onZoomChanged callback with zoomLevelX and zoomLevelY parameters
+    - Displays real-time zoom levels for both axes
+    - Simplified from quickstart spec to match current InteractionConfig API
+    - No lint errors, analysis clean
 
 - [x] **T041** Create Example 6: Gesture Handling with Callbacks
   - **Type**: Documentation
@@ -842,12 +846,12 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 6 in quickstart.md
   - **Completion Notes**:
-    * Created GestureCallbacksExample demonstrating all interaction callbacks
-    * Implements onDataPointTap, onDataPointHover, onDataPointLongPress
-    * Implements onZoomChanged and onPanChanged
-    * Event log displays all interactions with coordinates
-    * Long press shows custom dialog
-    * No lint errors, analysis clean
+    - Created GestureCallbacksExample demonstrating all interaction callbacks
+    - Implements onDataPointTap, onDataPointHover, onDataPointLongPress
+    - Implements onZoomChanged and onPanChanged
+    - Event log displays all interactions with coordinates
+    - Long press shows custom dialog
+    - No lint errors, analysis clean
 
 - [x] **T042** Create Example 7: Keyboard Navigation Setup
   - **Type**: Documentation
@@ -861,12 +865,12 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 7 in quickstart.md
   - **Completion Notes**:
-    * Created KeyboardNavigationExample with full keyboard config
-    * KeyboardConfig with panStep, zoomStep, and key group enables
-    * onKeyboardAction callback shows actions and target points
-    * Instructions panel explains all keyboard controls
-    * Simplified from quickstart spec to match current API
-    * No lint errors, analysis clean
+    - Created KeyboardNavigationExample with full keyboard config
+    - KeyboardConfig with panStep, zoomStep, and key group enables
+    - onKeyboardAction callback shows actions and target points
+    - Instructions panel explains all keyboard controls
+    - Simplified from quickstart spec to match current API
+    - No lint errors, analysis clean
 
 - [x] **T043** Create Example 8: Complete Interaction Configuration
   - **Type**: Documentation
@@ -879,13 +883,13 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 8 in quickstart.md
   - **Completion Notes**:
-    * Created CompleteInteractionExample with all features combined
-    * Status bar tracking: statusMessage, zoomLevelX, zoomLevelY, selectedPoint
-    * Multi-series chart (revenue + profit, 50 points each)
-    * All interaction features: crosshair, tooltip, zoom/pan, gestures, keyboard
-    * All callbacks: onDataPointTap, onDataPointHover, onZoomChanged, onPanChanged, onKeyboardAction
-    * Instructions panel explaining all interactions
-    * No lint errors, analysis clean
+    - Created CompleteInteractionExample with all features combined
+    - Status bar tracking: statusMessage, zoomLevelX, zoomLevelY, selectedPoint
+    - Multi-series chart (revenue + profit, 50 points each)
+    - All interaction features: crosshair, tooltip, zoom/pan, gestures, keyboard
+    - All callbacks: onDataPointTap, onDataPointHover, onZoomChanged, onPanChanged, onKeyboardAction
+    - Instructions panel explaining all interactions
+    - No lint errors, analysis clean
 
 - [x] **T044** Create Example 9: Multi-Series Crosshair
   - **Type**: Documentation
@@ -899,12 +903,12 @@ Single Flutter library project:
   - **Dependencies**: T034 (widget integration)
   - **Reference**: Example 9 in quickstart.md (bonus example)
   - **Completion Notes**:
-    * Created MultiSeriesCrosshairExample with three series (temperature, humidity, pressure)
-    * Vertical crosshair (CrosshairMode.vertical) snaps to X position across all series
-    * Custom tooltip builder shows all series values at crosshair X coordinate
-    * Series indicators with colored circles in tooltip
-    * 24 data points per series (hourly weather data simulation)
-    * No lint errors, analysis clean
+    - Created MultiSeriesCrosshairExample with three series (temperature, humidity, pressure)
+    - Vertical crosshair (CrosshairMode.vertical) snaps to X position across all series
+    - Custom tooltip builder shows all series values at crosshair X coordinate
+    - Series indicators with colored circles in tooltip
+    - 24 data points per series (hourly weather data simulation)
+    - No lint errors, analysis clean
 
 - [x] **T045** Update main example app with interaction examples
   - **Type**: Documentation
@@ -916,12 +920,12 @@ Single Flutter library project:
     - [x] App runs without errors
   - **Dependencies**: T036-T044 (all examples created)
   - **Completion Notes**:
-    * Created InteractionExamplesScreen as navigation hub for all 9 examples
-    * Organized examples into 4 sections: Crosshair, Tooltip, User Interactions, Advanced
-    * Added "Interaction System" card to home screen navigation
-    * Each example card shows icon, title, subtitle with concise description
-    * All examples accessible via consistent navigation pattern
-    * No lint errors, analysis clean
+    - Created InteractionExamplesScreen as navigation hub for all 9 examples
+    - Organized examples into 4 sections: Crosshair, Tooltip, User Interactions, Advanced
+    - Added "Interaction System" card to home screen navigation
+    - Each example card shows icon, title, subtitle with concise description
+    - All examples accessible via consistent navigation pattern
+    - No lint errors, analysis clean
 
 - [x] **T046** Update API documentation
   - **Type**: Documentation
@@ -936,14 +940,14 @@ Single Flutter library project:
     - [x] 100% API documentation coverage for interaction system
   - **Dependencies**: T024-T030, T034 (all implementations)
   - **Completion Notes**:
-    * All interaction system classes have comprehensive dartdoc comments
-    * All public methods documented with parameter descriptions
-    * Code examples included in CrosshairConfig, TooltipConfig, InteractionConfig
-    * All typedefs have detailed function signature documentation
-    * Remaining 22 dartdoc warnings are from PREVIOUS layers (foundation, coordinates, theming)
-    * Warnings are minor formatting issues (square brackets in markdown)
-    * Interaction system itself has ZERO warnings and 100% documentation coverage
-    * All 9 example files include library-level dartdoc explaining usage
+    - All interaction system classes have comprehensive dartdoc comments
+    - All public methods documented with parameter descriptions
+    - Code examples included in CrosshairConfig, TooltipConfig, InteractionConfig
+    - All typedefs have detailed function signature documentation
+    - Remaining 22 dartdoc warnings are from PREVIOUS layers (foundation, coordinates, theming)
+    - Warnings are minor formatting issues (square brackets in markdown)
+    - Interaction system itself has ZERO warnings and 100% documentation coverage
+    - All 9 example files include library-level dartdoc explaining usage
 
 ---
 
@@ -961,14 +965,14 @@ Single Flutter library project:
     - [x] All tests still pass after refactoring
   - **Dependencies**: T024-T046 (all implementation and tests)
   - **Completion Notes**:
-    * Fixed deprecated RawKeyEvent → KeyEvent (3 instances in event_handler.dart)
-    * Removed print statements in production code (4 instances in interaction_callbacks.dart)
-    * Added const declarations for constant values (2 instances in zoom_pan_controller.dart)
-    * Improved error handling: callbacks now fail silently to prevent crashes
-    * All interaction system files now pass flutter analyze with ZERO warnings
-    * Code follows SOLID principles with clear separation of concerns
-    * Performance requirements validated: all operations meet timing constraints
-    * All tests pass after refactoring (157 tests)
+    - Fixed deprecated RawKeyEvent → KeyEvent (3 instances in event_handler.dart)
+    - Removed print statements in production code (4 instances in interaction_callbacks.dart)
+    - Added const declarations for constant values (2 instances in zoom_pan_controller.dart)
+    - Improved error handling: callbacks now fail silently to prevent crashes
+    - All interaction system files now pass flutter analyze with ZERO warnings
+    - Code follows SOLID principles with clear separation of concerns
+    - Performance requirements validated: all operations meet timing constraints
+    - All tests pass after refactoring (157 tests)
 
 - [x] **T048** Final validation against spec.md
   - **Type**: Validation
@@ -983,66 +987,66 @@ Single Flutter library project:
   - **Dependencies**: T001-T047 (all tasks)
   - **Reference**: `specs/007-interaction-system/spec.md`
   - **Validation Summary**:
-  
+
     **FUNCTIONAL REQUIREMENTS**:
-    * ✅ FR-001 Event Handling: EventHandler processes mouse/touch/keyboard in <5ms
-    * ✅ FR-002 Crosshair System: CrosshairRenderer renders in <2ms, snaps in <1ms
-    * ✅ FR-003 Tooltip System: TooltipProvider displays context-aware tooltips <5ms
-    * ✅ FR-004 Zoom/Pan Controls: ZoomPanController maintains 60 FPS with smooth animations
-    * ✅ FR-005 Gesture Recognition: GestureRecognizer handles tap, pinch, pan, long-press
-    * ✅ FR-006 Keyboard Navigation: KeyboardHandler supports arrows, +/-, Home/End
-    * ✅ FR-007 Interaction Callbacks: All 9 callback types implemented (DataPoint, Zoom, Pan, etc.)
-  
+    - ✅ FR-001 Event Handling: EventHandler processes mouse/touch/keyboard in <5ms
+    - ✅ FR-002 Crosshair System: CrosshairRenderer renders in <2ms, snaps in <1ms
+    - ✅ FR-003 Tooltip System: TooltipProvider displays context-aware tooltips <5ms
+    - ✅ FR-004 Zoom/Pan Controls: ZoomPanController maintains 60 FPS with smooth animations
+    - ✅ FR-005 Gesture Recognition: GestureRecognizer handles tap, pinch, pan, long-press
+    - ✅ FR-006 Keyboard Navigation: KeyboardHandler supports arrows, +/-, Home/End
+    - ✅ FR-007 Interaction Callbacks: All 9 callback types implemented (DataPoint, Zoom, Pan, etc.)
+
     **NON-FUNCTIONAL REQUIREMENTS**:
-    * ✅ NFR-001 Response Time: <100ms interaction responses (EventHandler <5ms overhead)
-    * ✅ NFR-002 Frame Rate: 60 FPS zoom/pan animations (AnimationController integration)
-    * ✅ NFR-003 Crosshair Performance: <2ms rendering (measured via benchmarks)
-    * ✅ NFR-004 Event Processing: <5ms overhead per event
-    * ✅ NFR-005 Memory Overhead: <5MB for interaction system
-    * ✅ NFR-006 Memory Leaks: Zero leaks (dispose() methods in all components)
-    * ✅ NFR-007-010 Accessibility: Keyboard navigation, focus indicators, screen reader support
-    * ✅ NFR-011-014 Cross-Platform: Works on web/iOS/Android/desktop consistently
-    * ✅ NFR-015-017 Compatibility: Integrates with Layer 5 widgets, all chart types
-  
+    - ✅ NFR-001 Response Time: <100ms interaction responses (EventHandler <5ms overhead)
+    - ✅ NFR-002 Frame Rate: 60 FPS zoom/pan animations (AnimationController integration)
+    - ✅ NFR-003 Crosshair Performance: <2ms rendering (measured via benchmarks)
+    - ✅ NFR-004 Event Processing: <5ms overhead per event
+    - ✅ NFR-005 Memory Overhead: <5MB for interaction system
+    - ✅ NFR-006 Memory Leaks: Zero leaks (dispose() methods in all components)
+    - ✅ NFR-007-010 Accessibility: Keyboard navigation, focus indicators, screen reader support
+    - ✅ NFR-011-014 Cross-Platform: Works on web/iOS/Android/desktop consistently
+    - ✅ NFR-015-017 Compatibility: Integrates with Layer 5 widgets, all chart types
+
     **SUCCESS METRICS**:
-    * ✅ Response Time: <100ms (99th percentile measured in performance tests)
-    * ✅ Frame Rate: 60 FPS maintained (no frame drops in standard scenarios)
-    * ✅ Test Coverage: >95% (157 tests: 15 contract, 25 model, 110 unit, 25 integration, 12 widget)
-    * ✅ Gesture Accuracy: >95% recognition accuracy (state machine with conflict resolution)
-    * ✅ Keyboard Coverage: 100% features accessible (all interactions keyboard-navigable)
-    * ✅ Memory: <5MB overhead, zero leaks validated
-    * ✅ Cross-Platform: 100% feature parity (unified API across platforms)
-    * ✅ Setup Time: <5 lines (InteractionConfig.defaultConfig() one-liner)
-    * ✅ Customization: All styles configurable (CrosshairStyle, TooltipStyle, etc.)
-    * ✅ Documentation: 100% API coverage (dartdoc on all public APIs)
-    * ✅ Examples: 9 executable examples (exceeds 8 minimum requirement)
-  
+    - ✅ Response Time: <100ms (99th percentile measured in performance tests)
+    - ✅ Frame Rate: 60 FPS maintained (no frame drops in standard scenarios)
+    - ✅ Test Coverage: >95% (157 tests: 15 contract, 25 model, 110 unit, 25 integration, 12 widget)
+    - ✅ Gesture Accuracy: >95% recognition accuracy (state machine with conflict resolution)
+    - ✅ Keyboard Coverage: 100% features accessible (all interactions keyboard-navigable)
+    - ✅ Memory: <5MB overhead, zero leaks validated
+    - ✅ Cross-Platform: 100% feature parity (unified API across platforms)
+    - ✅ Setup Time: <5 lines (InteractionConfig.defaultConfig() one-liner)
+    - ✅ Customization: All styles configurable (CrosshairStyle, TooltipStyle, etc.)
+    - ✅ Documentation: 100% API coverage (dartdoc on all public APIs)
+    - ✅ Examples: 9 executable examples (exceeds 8 minimum requirement)
+
     **TEST SCENARIOS**:
-    * ✅ Scenario 1 (Crosshair + Tooltip): All acceptance criteria pass
-    * ✅ Scenario 2 (Zoom/Pan Desktop): Mouse wheel zoom, drag pan, double-click reset
-    * ✅ Scenario 3 (Touch Gestures): Tap, pinch, pan, long-press all working
-    * ✅ Scenario 4 (Keyboard Navigation): Arrow keys, +/-, Home/End, Tab/Enter
-    * ✅ Scenario 5 (Multi-Series): Crosshair snaps to all series, tooltip shows all values
-  
+    - ✅ Scenario 1 (Crosshair + Tooltip): All acceptance criteria pass
+    - ✅ Scenario 2 (Zoom/Pan Desktop): Mouse wheel zoom, drag pan, double-click reset
+    - ✅ Scenario 3 (Touch Gestures): Tap, pinch, pan, long-press all working
+    - ✅ Scenario 4 (Keyboard Navigation): Arrow keys, +/-, Home/End, Tab/Enter
+    - ✅ Scenario 5 (Multi-Series): Crosshair snaps to all series, tooltip shows all values
+
     **QUICKSTART EXAMPLES** (All 9 running):
-    * ✅ Example 1: Basic Crosshair (5 lines)
-    * ✅ Example 2: Custom Crosshair Styling
-    * ✅ Example 3: Default Tooltip
-    * ✅ Example 4: Custom Tooltip Builder
-    * ✅ Example 5: Zoom/Pan Configuration
-    * ✅ Example 6: Gesture Callbacks
-    * ✅ Example 7: Keyboard Navigation
-    * ✅ Example 8: Complete Interaction Configuration
-    * ✅ Example 9: Multi-Series Crosshair
-  
+    - ✅ Example 1: Basic Crosshair (5 lines)
+    - ✅ Example 2: Custom Crosshair Styling
+    - ✅ Example 3: Default Tooltip
+    - ✅ Example 4: Custom Tooltip Builder
+    - ✅ Example 5: Zoom/Pan Configuration
+    - ✅ Example 6: Gesture Callbacks
+    - ✅ Example 7: Keyboard Navigation
+    - ✅ Example 8: Complete Interaction Configuration
+    - ✅ Example 9: Multi-Series Crosshair
+
     **CONSTITUTION COMPLIANCE** (v1.1.0):
-    * ✅ Testing Excellence: 157 tests, >95% coverage, performance benchmarks
-    * ✅ Requirements Compliance: All 7 FR + 17 NFR implemented and verified
-    * ✅ Performance First: <100ms responses, 60 FPS animations, benchmarks passing
-    * ✅ Accessibility: WCAG 2.1 AA keyboard navigation, focus indicators, semantics
-    * ✅ API Consistency: Flutter conventions, backward compatible
-    * ✅ Documentation Discipline: 100% dartdoc coverage, 9 examples, quickstart guide
-  
+    - ✅ Testing Excellence: 157 tests, >95% coverage, performance benchmarks
+    - ✅ Requirements Compliance: All 7 FR + 17 NFR implemented and verified
+    - ✅ Performance First: <100ms responses, 60 FPS animations, benchmarks passing
+    - ✅ Accessibility: WCAG 2.1 AA keyboard navigation, focus indicators, semantics
+    - ✅ API Consistency: Flutter conventions, backward compatible
+    - ✅ Documentation Discipline: 100% dartdoc coverage, 9 examples, quickstart guide
+
     **FINAL STATUS**: ALL REQUIREMENTS MET ✅
     **BRANCH READY**: Ready for merge to main
 
@@ -1051,15 +1055,19 @@ Single Flutter library project:
 ## Dependencies Summary
 
 ### Phase 3.1 (Setup)
+
 - T001 → T002
 
 ### Phase 3.2 (Contract Tests - Parallel)
+
 - T003, T004, T005, T006, T007 can run in parallel (no dependencies)
 
 ### Phase 3.3 (Model Tests - Parallel)
+
 - T008, T009, T010, T011, T012 can run in parallel (no dependencies)
 
 ### Phase 3.4 (Model Implementation - Parallel)
+
 - T013 depends on T008
 - T014 depends on T009
 - T015 depends on T010
@@ -1068,6 +1076,7 @@ Single Flutter library project:
 - T013-T017 can run in parallel after their respective tests
 
 ### Phase 3.5 (Component Unit Tests)
+
 - T018 depends on T013
 - T019 depends on T013, T016
 - T020 depends on T013, T017
@@ -1076,6 +1085,7 @@ Single Flutter library project:
 - T023 depends on T013
 
 ### Phase 3.6 (Component Implementation)
+
 - T024 depends on T003, T018
 - T025 depends on T004, T019
 - T026 depends on T005, T020
@@ -1085,23 +1095,28 @@ Single Flutter library project:
 - T030 depends on T024-T029
 
 ### Phase 3.7 (Integration Tests)
+
 - T031 depends on T024, T025, T026
 - T032 depends on T024, T027, T028
 - T033 depends on T024, T029
 
 ### Phase 3.8 (Widget Integration)
+
 - T034 depends on T024-T030, T031-T033
 - T035 depends on T034
 
 ### Phase 3.9 (Validation - Parallel)
+
 - T036, T037 depend on T034, can run in parallel
 
 ### Phase 3.10 (Documentation)
+
 - T038-T046 depend on T034, can run in parallel
 - T047 depends on T038-T046
 - T048 depends on T024-T030, T034
 
 ### Phase 3.11 (Polish)
+
 - T049 depends on T024-T048
 - T050 depends on T001-T049
 
@@ -1110,7 +1125,9 @@ Single Flutter library project:
 ## Parallel Execution Examples
 
 ### Example 1: Contract Tests (Phase 3.2)
+
 All contract tests can run in parallel:
+
 ```bash
 # Launch T003-T007 together (5 parallel tasks)
 Task: "Contract test for IEventHandler in test/interaction/contracts/event_handler_contract_test.dart"
@@ -1121,7 +1138,9 @@ Task: "Contract test for IKeyboardHandler in test/interaction/contracts/keyboard
 ```
 
 ### Example 2: Model Tests (Phase 3.3)
+
 All model tests can run in parallel:
+
 ```bash
 # Launch T008-T012 together (5 parallel tasks)
 Task: "Unit tests for InteractionState in test/interaction/unit/models/interaction_state_test.dart"
@@ -1132,7 +1151,9 @@ Task: "Unit tests for TooltipConfig in test/interaction/unit/models/tooltip_conf
 ```
 
 ### Example 3: Model Implementation (Phase 3.4)
+
 After tests fail, implement models in parallel:
+
 ```bash
 # Launch T013-T017 together (5 parallel tasks)
 Task: "Implement InteractionState in lib/src/interaction/models/interaction_state.dart"
@@ -1143,7 +1164,9 @@ Task: "Implement TooltipConfig in lib/src/interaction/models/tooltip_config.dart
 ```
 
 ### Example 4: Documentation Examples (Phase 3.10)
+
 All examples can be created in parallel:
+
 ```bash
 # Launch T038-T046 together (9 parallel tasks)
 Task: "Create Example 1: Basic Crosshair in example/lib/screens/interaction_examples/basic_crosshair.dart"
@@ -1186,6 +1209,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 **Total Tasks**: 50 (T001-T050)
 
 **Task Breakdown**:
+
 - Setup: 2 tasks (T001-T002)
 - Contract Tests: 5 tasks (T003-T007) - All parallel [P]
 - Model Tests: 5 tasks (T008-T012) - All parallel [P]
@@ -1199,6 +1223,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 - Polish: 2 tasks (T049-T050)
 
 **Estimated Duration** (assuming 1 developer):
+
 - Phase 3.1 (Setup): 1 hour
 - Phase 3.2 (Contract Tests): 4 hours (if parallel: 1 hour)
 - Phase 3.3 (Model Tests): 6 hours (if parallel: 2 hours)
@@ -1213,6 +1238,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 - **Total: ~75 hours (single developer) or ~50 hours (with parallelization)**
 
 **Test Coverage**:
+
 - Contract Tests: 5 test files
 - Model Unit Tests: 5 test files
 - Component Unit Tests: 6 test files (110 total tests)
@@ -1221,6 +1247,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 - **Total: 147+ tests** (matches spec.md success metrics)
 
 **Constitution Compliance**:
+
 - ✅ Test-First Development: Tests before implementation enforced
 - ✅ Performance First: Benchmarks in T037, performance criteria in all tests
 - ✅ Architectural Integrity: Pure Flutter, SOLID design, interface contracts
@@ -1230,6 +1257,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 - ✅ Simplicity & Pragmatism: Using Flutter primitives, no over-engineering
 
 **Next Steps**:
+
 1. Review this tasks.md with stakeholders
 2. Begin Phase 3.1 (Setup) - T001, T002
 3. Execute contract tests in parallel (T003-T007)
@@ -1244,6 +1272,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 **Constitution Requirement**: "ALWAYS UPDATE tasks.md after EVERY completed task to document progress and deviations." (Constitution v1.1.0, Section IV)
 
 **Instructions**:
+
 - After completing each task, add an entry below
 - Format: `[Date] [Task ID] [Status] - [Notes]`
 - Status: ✅ COMPLETE | ⚠️ COMPLETE WITH DEVIATIONS | ❌ BLOCKED
@@ -1265,7 +1294,7 @@ Task: "Create Example 9: Multi-Series Crosshair in example/lib/screens/interacti
 
 ---
 
-*Generated from spec.md, plan.md, research.md, data-model.md, contracts/, quickstart.md*  
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*  
-*Feature Branch: 007-interaction-system*  
-*Date: 2025-01-07*
+_Generated from spec.md, plan.md, research.md, data-model.md, contracts/, quickstart.md_  
+_Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`_  
+_Feature Branch: 007-interaction-system_  
+_Date: 2025-01-07_

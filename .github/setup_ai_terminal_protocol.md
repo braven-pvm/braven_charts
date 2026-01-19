@@ -9,15 +9,18 @@ This guide explains where and how to configure AI coding agents (GitHub Copilot,
 ## 📍 Where the Rules Are Configured
 
 ### **1. Project-Specific Instructions** ✅ ALREADY DONE
+
 **File**: `.github/copilot-instructions.md`
 **Status**: ✅ Updated with terminal protocol
 
 This file is automatically loaded by:
+
 - GitHub Copilot in VS Code
 - GitHub Copilot CLI
 - GitHub Copilot Chat
 
 **What was added**:
+
 - Terminal naming convention
 - Critical Flutter rules
 - Pre-command checklist
@@ -25,6 +28,7 @@ This file is automatically loaded by:
 - References to detailed documentation
 
 **Verification**:
+
 ```bash
 # Check that the MANUAL ADDITIONS section contains terminal protocol
 cat .github/copilot-instructions.md
@@ -36,11 +40,11 @@ cat .github/copilot-instructions.md
 
 Created three detailed guides in `.github/`:
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `terminal_workflow_guidelines.md` | Full workflow documentation with examples | ✅ Created |
-| `terminal_quick_reference.md` | One-page cheat sheet for quick lookup | ✅ Created |
-| `system_prompt_terminal_management.md` | System prompt additions for AI training | ✅ Created |
+| File                                   | Purpose                                   | Status     |
+| -------------------------------------- | ----------------------------------------- | ---------- |
+| `terminal_workflow_guidelines.md`      | Full workflow documentation with examples | ✅ Created |
+| `terminal_quick_reference.md`          | One-page cheat sheet for quick lookup     | ✅ Created |
+| `system_prompt_terminal_management.md` | System prompt additions for AI training   | ✅ Created |
 
 ---
 
@@ -49,6 +53,7 @@ Created three detailed guides in `.github/`:
 **File**: `.vscode/settings.json`
 
 Currently your settings have:
+
 ```json
 {
   "chat.tools.terminal.autoApprove": {
@@ -59,13 +64,14 @@ Currently your settings have:
 ```
 
 **Optional additions** (for future enhancement):
+
 ```json
 {
   "chat.tools.terminal.autoApprove": {
     ".specify/scripts/bash/": true,
     ".specify/scripts/powershell/": true
   },
-  
+
   // Optional: Configure terminal-specific settings
   "terminal.integrated.profiles.windows": {
     "flutter-run": {
@@ -85,11 +91,13 @@ Currently your settings have:
 ## 🔄 How GitHub Copilot Loads Instructions
 
 ### **Automatic Loading (GitHub Copilot)**
+
 1. GitHub Copilot automatically detects `.github/copilot-instructions.md`
 2. Instructions are injected into the system prompt for EVERY conversation
 3. No additional configuration needed - it just works!
 
 ### **Verification Steps**
+
 1. Open VS Code in your project directory
 2. Start a new GitHub Copilot chat
 3. Ask: "What terminal should I use to run git commands while Flutter app is running?"
@@ -102,7 +110,9 @@ Currently your settings have:
 If using AI agents outside GitHub Copilot:
 
 ### **Option 1: Manual Context Loading**
+
 Include this in your prompt:
+
 ```
 Follow the terminal management protocol in .github/copilot-instructions.md
 Always use terminal-tools_sendCommand with named terminals.
@@ -110,6 +120,7 @@ Never use run_in_terminal.
 ```
 
 ### **Option 2: Create Custom System Prompt**
+
 Copy contents of `.github/system_prompt_terminal_management.md` into your AI agent's custom instructions/system prompt.
 
 ---
@@ -119,24 +130,28 @@ Copy contents of `.github/system_prompt_terminal_management.md` into your AI age
 After setup, verify the AI agent follows the protocol:
 
 ### Test 1: Start Flutter App
+
 ```
 You: "Start the Flutter app on Chrome"
 AI Should: Use terminal-tools_sendCommand with terminalName: "flutter-run"
 ```
 
 ### Test 2: Git While App Running
+
 ```
 You: "Check git status"
 AI Should: Use terminal-tools_sendCommand with terminalName: "git" (NOT flutter-run)
 ```
 
 ### Test 3: Hot Reload
+
 ```
 You: "Hot reload the Flutter app"
 AI Should: Stop app with cancelCommand, then restart (NOT send "r\n")
 ```
 
 ### Test 4: Run Tests While App Running
+
 ```
 You: "Run the unit tests"
 AI Should: Use terminal-tools_sendCommand with terminalName: "test" (app keeps running)
@@ -147,16 +162,19 @@ AI Should: Use terminal-tools_sendCommand with terminalName: "test" (app keeps r
 ## 🔥 What Happens If AI Violates Rules?
 
 ### **Current Behavior (With Instructions)**
+
 - AI has access to terminal protocol in `.github/copilot-instructions.md`
 - AI should self-correct and use named terminals
 - If AI makes mistake, you can remind: "Follow the terminal protocol in copilot-instructions.md"
 
 ### **Before Instructions (Old Behavior)**
+
 - ❌ Used `run_in_terminal` → killed running processes
 - ❌ Reused terminals randomly → chaos and frustration
 - ❌ Sent "r\n" for hot reload → killed Flutter app
 
 ### **After Instructions (New Behavior)**
+
 - ✅ Uses `terminal-tools_sendCommand` with named terminals
 - ✅ Isolates long-running processes (flutter-run, dev-server)
 - ✅ Uses safest hot reload method (restart, not "r\n")
@@ -169,6 +187,7 @@ AI Should: Use terminal-tools_sendCommand with terminalName: "test" (app keeps r
 If you're using AI agents with custom modes (like your "Ultimate-Transparent-Thinking-Beast-Mode"):
 
 ### **Add to Mode Instructions**
+
 Insert this block in the `<modeInstructions>` section:
 
 ```xml
@@ -189,7 +208,7 @@ Insert this block in the `<modeInstructions>` section:
     - dev-server: Development servers (LOCKED)
     - test-watch: Test runners in watch mode (LOCKED)
   </long_running>
-  
+
   <short_lived reusable="true">
     - git: Version control operations
     - package-manager: Dependency management
@@ -215,13 +234,13 @@ Insert this block in the `<modeInstructions>` section:
 
 ## 📊 Impact Metrics (Before/After)
 
-| Metric | Before Protocol | After Protocol |
-|--------|----------------|----------------|
-| Accidental app kills per session | 3-5 | 0 |
-| Hot reload success rate | 20% | 100% |
-| Git operations kill app | Yes (100%) | No (0%) |
-| Developer frustration level | 🔥🔥🔥🔥🔥 | 😊 |
-| Terminal chaos incidents | Daily | Never |
+| Metric                           | Before Protocol | After Protocol |
+| -------------------------------- | --------------- | -------------- |
+| Accidental app kills per session | 3-5             | 0              |
+| Hot reload success rate          | 20%             | 100%           |
+| Git operations kill app          | Yes (100%)      | No (0%)        |
+| Developer frustration level      | 🔥🔥🔥🔥🔥      | 😊             |
+| Terminal chaos incidents         | Daily           | Never          |
 
 ---
 
@@ -240,7 +259,7 @@ Share these with your team or other developers:
 If you need to modify the terminal protocol:
 
 1. **Edit** `.github/copilot-instructions.md` (MANUAL ADDITIONS section)
-2. **Update** reference docs if needed (TERMINAL_*.md files)
+2. **Update** reference docs if needed (TERMINAL\_\*.md files)
 3. **Restart** VS Code to reload GitHub Copilot instructions
 4. **Verify** AI agent follows new rules
 
@@ -249,19 +268,25 @@ If you need to modify the terminal protocol:
 ## 🆘 Troubleshooting
 
 ### AI Still Uses run_in_terminal
+
 **Solution**: Explicitly remind in chat:
+
 ```
 "Use terminal-tools_sendCommand with named terminals per .github/copilot-instructions.md"
 ```
 
 ### AI Forgets Terminal Names
+
 **Solution**: Point to quick reference:
+
 ```
 "Check .github/terminal_quick_reference.md for terminal names"
 ```
 
 ### AI Kills Running App
+
 **Solution**: Restart and reinforce:
+
 ```
 "The app was killed. Please restart it in the flutter-run terminal and use separate terminals for other commands."
 ```
@@ -271,17 +296,20 @@ If you need to modify the terminal protocol:
 ## ✅ Summary: What You Need to Do
 
 ### **Already Done** ✅
+
 1. ✅ `.github/copilot-instructions.md` updated with terminal protocol
-2. ✅ Reference documents created (TERMINAL_*.md)
+2. ✅ Reference documents created (TERMINAL\_\*.md)
 3. ✅ Quick reference card available
 4. ✅ System prompt additions documented
 
 ### **Automatic** 🤖
+
 - GitHub Copilot loads instructions automatically
 - No additional configuration needed
 - Works immediately in current workspace
 
 ### **Optional** (Future Enhancement)
+
 - [ ] Add terminal profiles to `.vscode/settings.json`
 - [ ] Create terminal-specific icons/colors
 - [ ] Set up automated terminal health monitoring
@@ -292,6 +320,7 @@ If you need to modify the terminal protocol:
 ## 🎉 You're Done!
 
 The terminal management protocol is now active. GitHub Copilot (and future AI agents) will:
+
 - Use named terminals consistently
 - Never kill your running Flutter app
 - Execute git/test/build commands in separate terminals

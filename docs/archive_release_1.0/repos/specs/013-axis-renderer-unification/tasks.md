@@ -8,11 +8,13 @@
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
 ## Path Conventions
+
 - **Library source**: `lib/src/` at repository root
 - **Tests**: `test/` at repository root
 - **Example app**: `example/lib/`
@@ -247,17 +249,20 @@
 ### Parallel Opportunities
 
 **Phase 1 (all parallel)**:
+
 - T001, T002, T003, T004 (YAxisConfig changes)
 - T005 (GridConfig)
 - T006 (GridRenderer skeleton)
 
 **Phase 2 (sequential due to dependencies)**:
+
 - T008-T012 must be sequential (BravenChartPlus → MultiAxisManager)
 - T013, T014 can parallel (GridRenderer methods)
 - T015-T018 must be sequential (rename AxisRenderer)
 - T019-T021 must be sequential (chart_render_box.dart)
 
 **User Story Phases (tests parallel within each story)**:
+
 - Tests within each story can run in parallel
 - Implementation follows test completion
 

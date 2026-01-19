@@ -36,7 +36,7 @@
 6. **Bug #6 - Point Culling Breaks Line Continuity** ⭐ **ROOT CAUSE**
    - **Issue**: Point culling removed out-of-viewport points, breaking line segments
    - **Fix**: Replace point culling with Canvas clipping (hardware-accelerated)
-   - **Location**: 
+   - **Location**:
      - `lib/src/widgets/braven_chart.dart` lines 2004-2062 (`_drawLineSeries()`)
      - `lib/src/widgets/braven_chart.dart` lines 2064-2115 (`_drawAreaSeries()`)
 
@@ -45,6 +45,7 @@
 ### Canvas Clipping Solution (Bug #6)
 
 **Before (BROKEN):**
+
 ```dart
 for (final point in s.points) {
   if (point outside viewport) continue;  // Breaks line continuity!
@@ -54,6 +55,7 @@ canvas.drawPath(path, paint);
 ```
 
 **After (FIXED):**
+
 ```dart
 canvas.save();
 canvas.clipRect(chartRect);  // GPU-accelerated viewport clipping
@@ -123,6 +125,7 @@ canvas.restore();
 ## Code Changes Summary
 
 **Files Modified:**
+
 - `lib/src/widgets/braven_chart.dart` (2742 lines total)
   - Line 2124: `shouldRepaint()` check
   - Lines 1880-1925: `_calculateDataBounds()` coordinate fixes
@@ -131,10 +134,12 @@ canvas.restore();
   - Lines 2064-2115: `_drawAreaSeries()` Canvas clipping
 
 **Files Created:**
+
 - `integration_test/line_continuity_test.dart` (159 lines)
 - 4 documentation files (~1300 lines total)
 
 **Lines Changed:**
+
 - ~150 lines modified/added in core widget
 - ~1500 lines of tests and documentation created
 
@@ -195,6 +200,7 @@ Potential enhancements not required for this fix:
 The chart now correctly maintains line and area chart shapes during zoom and pan operations. The fundamental issue (point culling breaking line continuity) has been eliminated with a superior Canvas clipping approach that's both faster and simpler.
 
 The solution is:
+
 - ✅ **Tested**: 3 integration tests prove correctness
 - ✅ **Documented**: 4 comprehensive documents explain the fix
 - ✅ **Production-ready**: No new errors, all tests passing

@@ -13,47 +13,47 @@ BravenChartPlus(
 
 ## CRUD Operations
 
-| Operation | Code | Result |
-|-----------|------|--------|
-| **Add** | `controller.addAnnotation(annotation)` | Adds single annotation |
-| **Add Multiple** | `controller.addAll([a1, a2, a3])` | Batch add (efficient) |
-| **Update** | `controller.updateAnnotation(id, updated)` | Updates annotation |
-| **Update Multiple** | `controller.updateAll({id: updated})` | Batch update |
-| **Remove** | `controller.removeAnnotation(id)` | Removes by ID |
-| **Remove Multiple** | `controller.removeAll([id1, id2])` | Batch remove |
-| **Replace All** | `controller.replaceAll([annotations])` | Atomic replacement |
-| **Clear All** | `controller.clearAnnotations()` | Removes all |
+| Operation           | Code                                       | Result                 |
+| ------------------- | ------------------------------------------ | ---------------------- |
+| **Add**             | `controller.addAnnotation(annotation)`     | Adds single annotation |
+| **Add Multiple**    | `controller.addAll([a1, a2, a3])`          | Batch add (efficient)  |
+| **Update**          | `controller.updateAnnotation(id, updated)` | Updates annotation     |
+| **Update Multiple** | `controller.updateAll({id: updated})`      | Batch update           |
+| **Remove**          | `controller.removeAnnotation(id)`          | Removes by ID          |
+| **Remove Multiple** | `controller.removeAll([id1, id2])`         | Batch remove           |
+| **Replace All**     | `controller.replaceAll([annotations])`     | Atomic replacement     |
+| **Clear All**       | `controller.clearAnnotations()`            | Removes all            |
 
 ## Queries
 
-| Query | Code | Returns |
-|-------|------|---------|
-| **Get All** | `controller.annotations` | `List<ChartAnnotation>` |
-| **Get by ID** | `controller.getAnnotation(id)` | `ChartAnnotation?` |
-| **Get by Type** | `controller.getAnnotationsByType<T>()` | `List<T>` |
-| **Filter** | `controller.where((a) => condition)` | `List<ChartAnnotation>` |
-| **Count** | `controller.length` | `int` |
-| **Is Empty** | `controller.isEmpty` | `bool` |
-| **Contains** | `controller.containsId(id)` | `bool` |
+| Query           | Code                                   | Returns                 |
+| --------------- | -------------------------------------- | ----------------------- |
+| **Get All**     | `controller.annotations`               | `List<ChartAnnotation>` |
+| **Get by ID**   | `controller.getAnnotation(id)`         | `ChartAnnotation?`      |
+| **Get by Type** | `controller.getAnnotationsByType<T>()` | `List<T>`               |
+| **Filter**      | `controller.where((a) => condition)`   | `List<ChartAnnotation>` |
+| **Count**       | `controller.length`                    | `int`                   |
+| **Is Empty**    | `controller.isEmpty`                   | `bool`                  |
+| **Contains**    | `controller.containsId(id)`            | `bool`                  |
 
 ## Selection
 
-| Action | Code | Result |
-|--------|------|--------|
-| **Select** | `controller.selectAnnotation(id)` | Sets selected annotation |
-| **Clear Selection** | `controller.clearSelection()` | Deselects all |
-| **Get Selected ID** | `controller.selectedAnnotationId` | `String?` |
-| **Get Selected** | `controller.selectedAnnotation` | `ChartAnnotation?` |
+| Action              | Code                              | Result                   |
+| ------------------- | --------------------------------- | ------------------------ |
+| **Select**          | `controller.selectAnnotation(id)` | Sets selected annotation |
+| **Clear Selection** | `controller.clearSelection()`     | Deselects all            |
+| **Get Selected ID** | `controller.selectedAnnotationId` | `String?`                |
+| **Get Selected**    | `controller.selectedAnnotation`   | `ChartAnnotation?`       |
 
 ## Annotation Types
 
-| Type | Drag Behavior | Resize | Snap | Use Case |
-|------|---------------|--------|------|----------|
-| **Point** | Snap to data points | ❌ | ✅ Auto | Mark important data points |
-| **Range** | Free move (maintains size) | ✅ 8 handles | ✅ Optional | Highlight regions/timeframes |
-| **Text** | Free move (screen coords) | ❌ | ❌ | Labels, titles, notes |
-| **Threshold** | Axis-constrained | ❌ | ❌ | Reference lines (targets, limits) |
-| **Trend** | ❌ Not draggable | ❌ | ❌ | Statistical overlays |
+| Type          | Drag Behavior              | Resize       | Snap        | Use Case                          |
+| ------------- | -------------------------- | ------------ | ----------- | --------------------------------- |
+| **Point**     | Snap to data points        | ❌           | ✅ Auto     | Mark important data points        |
+| **Range**     | Free move (maintains size) | ✅ 8 handles | ✅ Optional | Highlight regions/timeframes      |
+| **Text**      | Free move (screen coords)  | ❌           | ❌          | Labels, titles, notes             |
+| **Threshold** | Axis-constrained           | ❌           | ❌          | Reference lines (targets, limits) |
+| **Trend**     | ❌ Not draggable           | ❌           | ❌          | Statistical overlays              |
 
 ## Drag Permissions
 
@@ -81,12 +81,12 @@ RangeAnnotation(
 )
 ```
 
-| Increment | Effect | Example |
-|-----------|--------|---------|
-| `0.1` | Tenths | 2.3, 2.4, 2.5 |
-| `0.5` | Halves | 2.0, 2.5, 3.0 |
-| `1.0` | Integers | 2, 3, 4 |
-| `10.0` | Tens | 10, 20, 30 |
+| Increment | Effect   | Example       |
+| --------- | -------- | ------------- |
+| `0.1`     | Tenths   | 2.3, 2.4, 2.5 |
+| `0.5`     | Halves   | 2.0, 2.5, 3.0 |
+| `1.0`     | Integers | 2, 3, 4       |
+| `10.0`    | Tens     | 10, 20, 30    |
 
 ## Listening to Changes
 
@@ -186,21 +186,23 @@ void loadAnnotations() {
 
 ## Error Handling
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `ArgumentError: already exists` | Duplicate ID in `addAnnotation` | Use unique IDs or `updateAnnotation` |
-| `ArgumentError: not found` | ID not in controller | Check with `containsId(id)` first |
-| `ArgumentError: ID mismatch` | `updated.id != id` | Ensure IDs match in `updateAnnotation` |
-| Annotations reset after drag | Using `annotations` property | Use `annotationController` instead |
+| Error                           | Cause                           | Solution                               |
+| ------------------------------- | ------------------------------- | -------------------------------------- |
+| `ArgumentError: already exists` | Duplicate ID in `addAnnotation` | Use unique IDs or `updateAnnotation`   |
+| `ArgumentError: not found`      | ID not in controller            | Check with `containsId(id)` first      |
+| `ArgumentError: ID mismatch`    | `updated.id != id`              | Ensure IDs match in `updateAnnotation` |
+| Annotations reset after drag    | Using `annotations` property    | Use `annotationController` instead     |
 
 ## Performance Tips
 
 ✅ **Do**: Use batch operations
+
 ```dart
 controller.addAll([a1, a2, a3]);  // 1 notification
 ```
 
 ❌ **Don't**: Loop with single operations
+
 ```dart
 for (final a in annotations) {
   controller.addAnnotation(a);  // N notifications
@@ -208,6 +210,7 @@ for (final a in annotations) {
 ```
 
 ✅ **Do**: Dispose controller
+
 ```dart
 @override
 void dispose() {
@@ -217,6 +220,7 @@ void dispose() {
 ```
 
 ❌ **Don't**: Forget to remove listeners
+
 ```dart
 // Memory leak!
 controller.addListener(callback);
@@ -228,25 +232,25 @@ controller.addListener(callback);
 ```dart
 test('annotation persistence', () {
   final controller = AnnotationController();
-  
+
   // Add annotation
   controller.addAnnotation(RangeAnnotation(
     id: 'test',
     startX: 0,
     endX: 10,
   ));
-  
+
   expect(controller.length, 1);
-  
+
   // Update annotation
   final updated = controller.getAnnotation('test')!.copyWith(
     startX: 5,
   );
   controller.updateAnnotation('test', updated);
-  
+
   final result = controller.getAnnotation('test') as RangeAnnotation;
   expect(result.startX, 5);
-  
+
   controller.dispose();
 });
 ```

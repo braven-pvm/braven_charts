@@ -10,6 +10,7 @@
 This guide provides instructions for manually testing the dual-mode streaming feature (User Story 1 - T001 through T024) before proceeding to Phase 4.
 
 **Critical**: We must verify that:
+
 1. ✅ **No Breaking Changes**: Existing zoom/pan/interaction functionality still works perfectly
 2. ✅ **New Feature Works**: Streaming mode behaves correctly with mode transitions
 
@@ -36,6 +37,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
 **Purpose**: Verify NO breaking changes to existing functionality
 
 **Steps**:
+
 1. Click "✅ Regression Test - Static Chart" from home screen
 2. Observe the chart with 100 static data points
 3. **Test Zoom**:
@@ -62,6 +64,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
    - Verify **NO errors or warnings**
 
 **Expected Results**:
+
 - ✅ All interactions work smoothly
 - ✅ No rendering errors
 - ✅ No breaking changes from previous behavior
@@ -74,6 +77,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
 **Steps**:
 
 #### Phase A: Streaming Mode Validation
+
 1. Click "🚀 Streaming Mode Test" from home screen
 2. **Observe Initial State**:
    - Mode: "STREAMING"
@@ -87,6 +91,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
    - **This is correct behavior in streaming mode**
 
 #### Phase B: Mode Transition (Streaming → Interactive)
+
 4. **Click anywhere on the chart**
 5. **Observe Mode Change**:
    - Mode changes to: "INTERACTIVE"
@@ -102,6 +107,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
    - **All interactions should work perfectly**
 
 #### Phase C: Auto-Resume Validation
+
 7. **Wait 5 seconds without interacting**
 8. **Observe Auto-Resume**:
    - Mode switches back to: "STREAMING"
@@ -112,6 +118,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
    - Interactions disabled again
 
 #### Phase D: Buffer Overflow Test
+
 9. **Click chart to enter interactive mode**
 10. **Wait for buffer to fill** (buffer size = 100 points, ~10 seconds at 100ms interval)
 11. **Observe Buffer Overflow Behavior**:
@@ -122,6 +129,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
     - **This prevents memory overflow**
 
 #### Phase E: Error Handling
+
 12. **Check Console** (F12):
     - Verify **NO rendering errors**
     - Verify **NO performance warnings**
@@ -131,6 +139,7 @@ On the home screen, you'll see a new **"Testing & Validation"** section at the t
     - Verify streaming restarts
 
 **Expected Results**:
+
 - ✅ Streaming mode: auto-scroll works, interactions disabled
 - ✅ Interactive mode: zoom/pan/crosshair/tooltip work perfectly
 - ✅ Mode transitions smooth and instant
@@ -193,10 +202,12 @@ Copy and fill this template after testing:
 ## 🔄 Next Steps
 
 **If ALL tests pass**:
+
 - Proceed to Phase 4 (User Story 2 - T025-T036)
 - Continue with automatic pause-on-interaction implementation
 
 **If ANY tests fail**:
+
 - Document the failure in test results
 - Report to development team
 - Do NOT proceed to Phase 4 until issues are resolved
@@ -204,12 +215,14 @@ Copy and fill this template after testing:
 ## 📚 Technical Reference
 
 ### Implementation Details
+
 - **Files Modified**: `lib/src/widgets/braven_chart.dart`
 - **New Classes**: `ChartMode`, `StreamingConfig`, `BufferManager`
 - **Tests**: 41 tests passing (8 unit + 18 unit + 7 integration + 4 performance + 4 golden)
 - **Performance**: 0.052ms avg frame time (346x better than 60fps target)
 
 ### Related Documentation
+
 - Spec: `specs/009-dual-mode-streaming/readme.md`
 - Tasks: `specs/009-dual-mode-streaming/tasks.md`
 - Implementation: T017-T024 (all complete)

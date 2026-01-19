@@ -67,34 +67,34 @@ python tools/flutter_agent/flutter_agent.py stop
 
 ## Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `run <target> -d <device>` | Start Flutter app (use with Start-Process) |
-| `wait [--timeout N]` | Wait for Flutter to be ready (default: 30s) |
-| `status` | Show current Flutter status as JSON |
-| `cmd <key>` | Send any single-key command to Flutter |
-| `screenshot` | Take a screenshot (alias for `cmd s`) |
-| `reload` | Hot reload (alias for `cmd r`) |
-| `restart` | Hot restart (alias for `cmd R`) |
-| `stop` | Stop Flutter gracefully (sends `q`) |
-| `output [--tail N]` | Show Flutter output log |
-| `clean` | Clean all control files |
-| `generate <target>` | Generate Start-Process command to copy |
+| Command                    | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `run <target> -d <device>` | Start Flutter app (use with Start-Process)  |
+| `wait [--timeout N]`       | Wait for Flutter to be ready (default: 30s) |
+| `status`                   | Show current Flutter status as JSON         |
+| `cmd <key>`                | Send any single-key command to Flutter      |
+| `screenshot`               | Take a screenshot (alias for `cmd s`)       |
+| `reload`                   | Hot reload (alias for `cmd r`)              |
+| `restart`                  | Hot restart (alias for `cmd R`)             |
+| `stop`                     | Stop Flutter gracefully (sends `q`)         |
+| `output [--tail N]`        | Show Flutter output log                     |
+| `clean`                    | Clean all control files                     |
+| `generate <target>`        | Generate Start-Process command to copy      |
 
 ## Flutter Interactive Keys
 
-| Key | Action |
-|-----|--------|
-| `r` | Hot reload |
-| `R` | Hot restart |
-| `s` | Screenshot |
-| `q` | Quit |
-| `h` | Help |
-| `c` | Clear terminal |
-| `d` | Detach |
+| Key | Action              |
+| --- | ------------------- |
+| `r` | Hot reload          |
+| `R` | Hot restart         |
+| `s` | Screenshot          |
+| `q` | Quit                |
+| `h` | Help                |
+| `c` | Clear terminal      |
+| `d` | Detach              |
 | `p` | Performance overlay |
-| `I` | Widget inspector |
-| `t` | Dump widget tree |
+| `I` | Widget inspector    |
+| `t` | Dump widget tree    |
 
 ## File Structure
 
@@ -147,12 +147,14 @@ Add this to your project's `.github/copilot-instructions.md`:
 Use the Flutter Agent Controller for running and interacting with Flutter apps:
 
 ### Starting Flutter (MUST use Start-Process!)
+
 \`\`\`powershell
 Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", `
   "cd '<working_dir>'; python tools/flutter_agent/flutter_agent.py run <target> -d chrome"
 \`\`\`
 
 ### Waiting & Interacting
+
 \`\`\`powershell
 python tools/flutter_agent/flutter_agent.py wait --timeout 30
 python tools/flutter_agent/flutter_agent.py screenshot

@@ -2,7 +2,7 @@
 
 **Branch**: `core-interaction-refactor`  
 **Status**: Analysis Complete ✅  
-**Next**: Phase 1 Implementation  
+**Next**: Phase 1 Implementation
 
 ---
 
@@ -60,6 +60,7 @@ Integrating the **prototype interaction system** (`refactor/interaction`) into t
 ## Three-Phase Plan
 
 ### Phase 1: Foundation (Week 1-2)
+
 **Replace rendering pipeline**
 
 ```dart
@@ -73,7 +74,7 @@ class BravenChartRenderBox extends RenderBox {
   void paint(PaintingContext context, Offset offset) {
     // SAME rendering code, just moved here
   }
-  
+
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     // NEW: Coordinator-based event routing
   }
@@ -81,12 +82,14 @@ class BravenChartRenderBox extends RenderBox {
 ```
 
 **Deliverables**:
+
 - Chart renders identically to before
 - Basic hit testing works
 - Coordinator integrated
 - QuadTree operational
 
 ### Phase 2: Element System (Week 3)
+
 **Wrap existing chart objects in ChartElement interface**
 
 ```dart
@@ -94,12 +97,12 @@ class BravenChartRenderBox extends RenderBox {
 class DataPointElement implements ChartElement {
   final ChartDataPoint dataPoint;  // Existing
   final ChartTheme theme;           // Existing
-  
+
   @override
   bool hitTest(Offset position) {
     // Use existing logic + theme values
   }
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     // Use existing rendering code
@@ -108,12 +111,14 @@ class DataPointElement implements ChartElement {
 ```
 
 **Deliverables**:
+
 - All elements respond to interactions
 - No gesture conflicts
 - Selection works
 - Hover effects operational
 
 ### Phase 3: Advanced Features (Week 4-5)
+
 **Add zoom/pan constraints + dynamic axes**
 
 ```dart
@@ -132,13 +137,14 @@ void paint(PaintingContext context, Offset offset) {
   // Update axes just-in-time before painting
   _xAxis?.updateDataRange(_transform.dataXMin, _transform.dataXMax);
   _yAxis?.updateDataRange(_transform.dataYMin, _transform.dataYMax);
-  
+
   // Paint with fresh ticks
   AxisRenderer(_xAxis).paint(canvas, size, _plotArea);
 }
 ```
 
 **Deliverables**:
+
 - Perfect pan constraints (10% whitespace)
 - Live axis updates during pan
 - Streaming + zoom/pan working together
@@ -154,10 +160,10 @@ void paint(PaintingContext context, Offset offset) {
 Widget Space → Plot Space → Data Space
 (includes axes) (chart area) (actual data values)
 
-Widget (400, 300) 
-  → widgetToPlot() → 
-Plot (350, 250) 
-  → plotToData() → 
+Widget (400, 300)
+  → widgetToPlot() →
+Plot (350, 250)
+  → plotToData() →
 Data (175.5, 42.3)
 ```
 
@@ -166,6 +172,7 @@ Data (175.5, 42.3)
 ### 2. Rendering: RenderBox vs CustomPainter
 
 **RenderBox Advantages**:
+
 - Direct access to pointer events (handleEvent)
 - Fine-grained repaint control
 - Better integration with Flutter's render tree
@@ -209,6 +216,7 @@ For 1000 elements:
 ## Feature Preservation
 
 ### Theming System (100% Preserved)
+
 ```dart
 // NO CHANGES to theme API
 final theme = ChartTheme(
@@ -226,6 +234,7 @@ BravenChartRenderBox(
 ```
 
 ### Streaming System (100% Preserved)
+
 ```dart
 // NO CHANGES to streaming API
 StreamingConfig(
@@ -239,6 +248,7 @@ StreamingConfig(
 ```
 
 ### Scrollbar System (100% Preserved)
+
 ```dart
 // Scrollbars remain as overlay widgets
 // Connect via viewport callbacks
@@ -253,33 +263,37 @@ onViewportChanged: (Rect viewport) {
 
 ### High-Risk Areas & Mitigation
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Breaking streaming | HIGH | Phase separately, extensive tests |
-| Theme integration | MEDIUM | Pass to RenderBox, visual regression tests |
-| Scrollbar sync | MEDIUM | Viewport callbacks, integration tests |
-| Performance regression | LOW | Benchmarking, QuadTree should improve |
+| Risk                   | Impact | Mitigation                                 |
+| ---------------------- | ------ | ------------------------------------------ |
+| Breaking streaming     | HIGH   | Phase separately, extensive tests          |
+| Theme integration      | MEDIUM | Pass to RenderBox, visual regression tests |
+| Scrollbar sync         | MEDIUM | Viewport callbacks, integration tests      |
+| Performance regression | LOW    | Benchmarking, QuadTree should improve      |
 
 ### Testing Strategy
 
 **Unit Tests**:
+
 - Coordinator state transitions
 - Spatial index queries
 - Transform coordinate conversions
 - Pan constraint algorithm
 
 **Integration Tests**:
+
 - Zoom + streaming
 - Pan + scrollbars
 - Annotations + coordinator
 - Theme application
 
 **Widget Tests**:
+
 - Complete workflows
 - Gesture conflict scenarios
 - Keyboard shortcuts
 
 **Manual Testing**:
+
 - Visual inspection
 - Theme variations
 - Edge cases
@@ -289,6 +303,7 @@ onViewportChanged: (Rect viewport) {
 ## Success Metrics
 
 ### Functional ✅
+
 - All existing features work identically
 - No gesture conflicts
 - Pan constraints (10% whitespace limit)
@@ -297,12 +312,14 @@ onViewportChanged: (Rect viewport) {
 - Themes apply correctly
 
 ### Performance ✅
+
 - Hit testing <5ms (QuadTree enables)
 - Paint <16ms for 60fps
 - Event processing <5ms
 - No memory leaks
 
 ### Code Quality ✅
+
 - Single responsibility maintained
 - Separation of concerns improved
 - Test coverage >90%
@@ -315,6 +332,7 @@ onViewportChanged: (Rect viewport) {
 ### Breaking Changes: **Minimal**
 
 Widget API **completely preserved**:
+
 ```dart
 // Same API before and after
 BravenChart(
@@ -343,12 +361,14 @@ InteractionConfig(
 ## Timeline
 
 ### Conservative: 6 weeks
+
 - Week 1-2: Foundation (RenderBox + coordinator)
 - Week 3: Element system
 - Week 4-5: Advanced features (zoom/pan/axes)
 - Week 6: Testing & polish
 
 ### Aggressive: 4 weeks
+
 - Week 1: Foundation
 - Week 2: Element system
 - Week 3: Advanced features
@@ -361,12 +381,14 @@ InteractionConfig(
 ## Next Steps
 
 ### Immediate (Today)
+
 1. ✅ Branch created: `core-interaction-refactor`
 2. ✅ Analysis complete: `core_interaction_refactor_analysis.md`
 3. ⏳ Review & approval needed
 4. ⏳ Establish baseline test suite
 
 ### Phase 1 Kickoff (Next)
+
 1. Create `BravenChartRenderBox` skeleton
 2. Move `_BravenChartPainter.paint()` code
 3. Add basic coordinator integration
@@ -377,13 +399,16 @@ InteractionConfig(
 ## Files to Review
 
 ### Analysis Document
+
 📄 `core_interaction_refactor_analysis.md` (932 lines)
+
 - Complete technical deep-dive
 - Component mapping
 - Code examples
 - Migration strategies
 
 ### Key Sections
+
 1. **Section 1-2**: Current state analysis (main package vs prototype)
 2. **Section 3**: Integration strategy (3-phase plan)
 3. **Section 4**: Feature preservation (theming, streaming, scrollbars)
@@ -395,26 +420,30 @@ InteractionConfig(
 ## Why This Will Succeed
 
 ### Clear Path Forward
+
 ✅ Detailed analysis complete  
 ✅ Migration strategy defined  
 ✅ Risks identified with mitigation  
-✅ Phased approach reduces risk  
+✅ Phased approach reduces risk
 
 ### Proven Components
+
 ✅ Prototype: Perfect zoom/pan/constraints **TESTED**  
 ✅ Main package: Complete production features **PROVEN**  
-✅ Integration points: **CLEARLY DEFINED**  
+✅ Integration points: **CLEARLY DEFINED**
 
 ### Manageable Scope
+
 ✅ ~7,300 lines to refactor (surgical, not rewrite)  
 ✅ ~2,500 lines to integrate (proven code)  
-✅ API changes: **MINIMAL** (widget API preserved)  
+✅ API changes: **MINIMAL** (widget API preserved)
 
 ---
 
 ## The Bottom Line
 
 This refactor is:
+
 - ✅ **Achievable**: Clear migration path, proven components
 - ✅ **Beneficial**: Better architecture, zero conflicts, improved performance
 - ✅ **Low Risk**: Phased approach, extensive testing, minimal API changes
@@ -428,9 +457,9 @@ This refactor is:
 **Status**: 📋 Analysis Complete  
 **Branch**: `core-interaction-refactor`  
 **Document**: `core_interaction_refactor_analysis.md`  
-**Next**: Review → Approve → Begin Phase 1  
+**Next**: Review → Approve → Begin Phase 1
 
 ---
 
-*Generated: 2025-11-10*  
-*Commit: a4010b1*
+_Generated: 2025-11-10_  
+_Commit: a4010b1_

@@ -7,6 +7,7 @@
 ## What You'll Build
 
 A real-time line chart that:
+
 - Streams data continuously at 60fps in **streaming mode**
 - Automatically pauses and buffers data when user interacts (hover, zoom, pan)
 - Auto-resumes after 10 seconds of inactivity
@@ -47,16 +48,16 @@ Stream<DataPoint> createServerMetricsStream() async* {
 ```dart
 class MyDashboard extends StatelessWidget {
   final stream = createServerMetricsStream();
-  
+
   @override
   Widget build(BuildContext context) {
     return BravenChart(
       data: stream, // Pass Stream (not List)
       chartType: ChartType.line,
-      
+
       // Enable dual-mode streaming with defaults
       streamingConfig: StreamingConfig(),
-      
+
       // Optional: Customize appearance
       lineColor: Colors.blue,
       showGrid: true,
@@ -66,6 +67,7 @@ class MyDashboard extends StatelessWidget {
 ```
 
 **That's it!** Chart now:
+
 - ✅ Streams data in real-time (60fps)
 - ✅ Pauses on first interaction (hover/click)
 - ✅ Auto-resumes after 10 seconds
@@ -82,10 +84,10 @@ class MyDashboard extends StatelessWidget {
 StreamingConfig(
   // Auto-resume after 15 seconds (instead of 10)
   autoResumeTimeout: Duration(seconds: 15),
-  
+
   // Buffer up to 5,000 points (instead of 10,000)
   maxBufferSize: 5000,
-  
+
   // Disable auto-pause (chart stays in interactive mode)
   pauseOnFirstInteraction: false,
 )
@@ -115,7 +117,7 @@ class MyDashboard extends StatefulWidget {
 
 class _MyDashboardState extends State<MyDashboard> {
   int _bufferedCount = 0;
-  
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -126,7 +128,7 @@ class _MyDashboardState extends State<MyDashboard> {
             label: Text('$_bufferedCount new points'),
             backgroundColor: Colors.orange,
           ),
-        
+
         // Chart with buffer callback
         BravenChart(
           data: widget.stream,
@@ -154,7 +156,7 @@ class MyDashboard extends StatefulWidget {
 class _MyDashboardState extends State<MyDashboard> {
   final GlobalKey<BravenChartState> _chartKey = GlobalKey();
   bool _showResumeButton = false;
-  
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -174,7 +176,7 @@ class _MyDashboardState extends State<MyDashboard> {
             },
           ),
         ),
-        
+
         // Manual resume button (top-right corner)
         if (_showResumeButton)
           Positioned(
@@ -201,7 +203,7 @@ StreamingConfig(
   onStreamError: (Object error) {
     // Log error
     print('Stream error: $error');
-    
+
     // Show error banner
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -209,7 +211,7 @@ StreamingConfig(
         backgroundColor: Colors.red,
       ),
     );
-    
+
     // Developer is responsible for reconnection logic
     // Chart does NOT retry automatically
     _attemptReconnection();
@@ -236,17 +238,17 @@ class _RealTimeDashboardState extends State<RealTimeDashboard> {
   final GlobalKey<BravenChartState> _chartKey = GlobalKey();
   late StreamController<DataPoint> _controller;
   late Timer _dataGenerator;
-  
+
   ChartMode _currentMode = ChartMode.streaming;
   int _bufferedCount = 0;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Create stream controller
     _controller = StreamController<DataPoint>.broadcast();
-    
+
     // Generate data every 100ms (10 points/sec)
     _dataGenerator = Timer.periodic(Duration(milliseconds: 100), (_) {
       _controller.add(DataPoint(
@@ -255,14 +257,14 @@ class _RealTimeDashboardState extends State<RealTimeDashboard> {
       ));
     });
   }
-  
+
   @override
   void dispose() {
     _dataGenerator.cancel();
     _controller.close();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,28 +297,28 @@ class _RealTimeDashboardState extends State<RealTimeDashboard> {
             chartType: ChartType.line,
             lineColor: Colors.blue,
             showGrid: true,
-            
+
             streamingConfig: StreamingConfig(
               // Custom timeout: 15 seconds
               autoResumeTimeout: Duration(seconds: 15),
-              
+
               // Track mode changes
               onModeChanged: (ChartMode mode) {
                 setState(() => _currentMode = mode);
               },
-              
+
               // Track buffer count
               onBufferUpdated: (int count) {
                 setState(() => _bufferedCount = count);
               },
-              
+
               // Handle stream errors
               onStreamError: (error) {
                 print('Stream error: $error');
               },
             ),
           ),
-          
+
           // Buffer status badge
           if (_bufferedCount > 0)
             Positioned(
@@ -331,7 +333,7 @@ class _RealTimeDashboardState extends State<RealTimeDashboard> {
                 backgroundColor: Colors.orange,
               ),
             ),
-          
+
           // Manual resume button
           if (_currentMode == ChartMode.interactive)
             Positioned(

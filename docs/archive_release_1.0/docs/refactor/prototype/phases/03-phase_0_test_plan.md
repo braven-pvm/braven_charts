@@ -18,33 +18,33 @@ This document provides a complete test coverage plan for Phase 0 prototype valid
 
 ### ✅ Completed (6 of 15 scenarios - 40%)
 
-| Scenario | Description | Test Coverage | Status |
-|----------|-------------|---------------|--------|
-| **#6** | Pan vs Series Click | Middle-click pan tested in `conflict_scenarios_test.dart` | ✅ COMPLETE |
-| **#7** | Crosshair Active | Passive behavior validated in coordinator tests | ✅ COMPLETE |
-| **#9** | Ctrl+Click Multi-Select | Toggle selection tested in `coordinator_test.dart` | ✅ COMPLETE |
-| **#12** | Pan + Hover | Hover suspension during pan tested | ✅ COMPLETE |
+| Scenario | Description             | Test Coverage                                             | Status      |
+| -------- | ----------------------- | --------------------------------------------------------- | ----------- |
+| **#6**   | Pan vs Series Click     | Middle-click pan tested in `conflict_scenarios_test.dart` | ✅ COMPLETE |
+| **#7**   | Crosshair Active        | Passive behavior validated in coordinator tests           | ✅ COMPLETE |
+| **#9**   | Ctrl+Click Multi-Select | Toggle selection tested in `coordinator_test.dart`        | ✅ COMPLETE |
+| **#12**  | Pan + Hover             | Hover suspension during pan tested                        | ✅ COMPLETE |
 
 ### ⚠️ Partial Coverage (3 of 15 scenarios - 20%)
 
-| Scenario | Description | Current Tests | Missing Tests | Status |
-|----------|-------------|---------------|---------------|--------|
-| **#2** | Datapoint vs Series Line | Basic datapoint selection | Series line click, priority resolution | ⚠️ PARTIAL |
-| **#4** | Overlapping Datapoints | Nearest point selection | 3px epsilon ambiguity, picker UI | ⚠️ PARTIAL |
-| **#5** | Box Select vs Datapoint Drag | Basic drag detection | 5px threshold, box select mode, annotation exclusion | ⚠️ PARTIAL |
+| Scenario | Description                  | Current Tests             | Missing Tests                                        | Status     |
+| -------- | ---------------------------- | ------------------------- | ---------------------------------------------------- | ---------- |
+| **#2**   | Datapoint vs Series Line     | Basic datapoint selection | Series line click, priority resolution               | ⚠️ PARTIAL |
+| **#4**   | Overlapping Datapoints       | Nearest point selection   | 3px epsilon ambiguity, picker UI                     | ⚠️ PARTIAL |
+| **#5**   | Box Select vs Datapoint Drag | Basic drag detection      | 5px threshold, box select mode, annotation exclusion | ⚠️ PARTIAL |
 
 ### ❌ Not Tested (6 of 15 scenarios - 40%)
 
-| Scenario | Description | Priority | User-Reported | Status |
-|----------|-------------|----------|---------------|--------|
-| **#1** | Resize Handle vs Datapoint | P9 vs P6 | YES - "drag to resize" | ❌ NOT TESTED |
-| **#3** | Annotation Body vs Datapoint | P7 vs P6 | NO | ❌ NOT TESTED |
-| **#8** | Context Menu Open | P10 (modal) | YES - "right click" | ❌ NOT TESTED |
-| **#10** | Resize Drag Leaves Bounds | P9 | YES - part of resize | ❌ NOT TESTED |
-| **#11** | Edit Mode Active | P9 | NO | ❌ NOT TESTED |
-| **#13** | Datapoint Drag vs Series Drag | P7 vs P5 | NO | ❌ NOT TESTED |
-| **#14** | Box Select Over Annotations | P5 | NO | ❌ NOT TESTED |
-| **#15** | Long Press vs Drag | Various | NO | ❌ NOT TESTED |
+| Scenario | Description                   | Priority    | User-Reported          | Status        |
+| -------- | ----------------------------- | ----------- | ---------------------- | ------------- |
+| **#1**   | Resize Handle vs Datapoint    | P9 vs P6    | YES - "drag to resize" | ❌ NOT TESTED |
+| **#3**   | Annotation Body vs Datapoint  | P7 vs P6    | NO                     | ❌ NOT TESTED |
+| **#8**   | Context Menu Open             | P10 (modal) | YES - "right click"    | ❌ NOT TESTED |
+| **#10**  | Resize Drag Leaves Bounds     | P9          | YES - part of resize   | ❌ NOT TESTED |
+| **#11**  | Edit Mode Active              | P9          | NO                     | ❌ NOT TESTED |
+| **#13**  | Datapoint Drag vs Series Drag | P7 vs P5    | NO                     | ❌ NOT TESTED |
+| **#14**  | Box Select Over Annotations   | P5          | NO                     | ❌ NOT TESTED |
+| **#15**  | Long Press vs Drag            | Various     | NO                     | ❌ NOT TESTED |
 
 ---
 
@@ -94,6 +94,7 @@ refactor/interaction/test/
 ### Scenario #1: Resize Handle vs Datapoint (CRITICAL - User Reported)
 
 **Design Requirements**:
+
 - **Priority**: Resize handle = 9, Datapoint = 6
 - **Winner**: Resize handle (always)
 - **Handle Size**: 8×8px visual, 10px hit radius
@@ -101,6 +102,7 @@ refactor/interaction/test/
 - **Behavior**: Handle claims click/drag, datapoint ignored when pointer in handle region
 
 **Existing Implementation** (✅ FOUND):
+
 - `SimulatedAnnotation.getResizeHandles()` - returns 8 handle positions
 - `ResizableElement` mixin - interface for resizable elements
 - `InteractionMode.resizingAnnotation` - priority 9 mode
@@ -110,6 +112,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ ZERO TESTS):
 
 #### Unit Tests (`coordinator_test.dart` additions):
+
 1. **Resize Mode Priority**:
    - [ ] `claimMode(resizingAnnotation)` succeeds when idle (priority 9 > 0)
    - [ ] `claimMode(resizingAnnotation)` blocks panning (priority 9 > 3)
@@ -117,6 +120,7 @@ refactor/interaction/test/
    - [ ] `claimMode(panning)` fails when resizing active (priority 3 < 9)
 
 #### Widget Tests (`resize_scenarios_test.dart` - NEW FILE):
+
 2. **Handle Hit Testing**:
    - [ ] Click on corner handle (topLeft) triggers `onResizeStart` with correct direction
    - [ ] Click on midpoint handle (top) triggers `onResizeStart` with correct direction
@@ -141,6 +145,7 @@ refactor/interaction/test/
    - [ ] Pointer up releases resize mode, returns to idle
 
 #### Integration Tests (`resize_workflows_test.dart` - NEW FILE):
+
 6. **Complete Resize Workflows**:
    - [ ] Select annotation → hover over handle (cursor change) → drag handle → release → annotation resized
    - [ ] Resize annotation → release → deselect → handles disappear
@@ -148,6 +153,7 @@ refactor/interaction/test/
    - [ ] Resize multiple annotations sequentially (state cleanup between resizes)
 
 **Acceptance Criteria**:
+
 - ✅ All 8 resize handles functional and tested
 - ✅ Priority 9 properly blocks lower priority interactions
 - ✅ Resize mode transitions clean (no lingering state)
@@ -162,6 +168,7 @@ refactor/interaction/test/
 ### Scenario #10: Resize Drag Leaves Bounds (CRITICAL - Related to #1)
 
 **Design Requirements**:
+
 - **Priority**: Resize operation in progress = 9
 - **Winner**: Continue resize (track mouse outside bounds)
 - **Behavior**: If mouse leaves chart during resize, continue tracking; apply resize on mouse up regardless of position
@@ -170,6 +177,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ ZERO TESTS):
 
 #### Widget Tests (`resize_scenarios_test.dart`):
+
 1. **Mouse Outside Bounds**:
    - [ ] Drag resize handle outside chart area → resize continues
    - [ ] Drag handle far outside (1000px away) → resize still tracks correctly
@@ -184,6 +192,7 @@ refactor/interaction/test/
    - [ ] ESC key after mouse leaves bounds → cancel still works
 
 **Acceptance Criteria**:
+
 - ✅ Resize tracks mouse position even when outside chart bounds
 - ✅ Resize applies correctly when released outside bounds
 - ✅ ESC key provides reliable cancel mechanism
@@ -196,6 +205,7 @@ refactor/interaction/test/
 ### Scenario #8: Context Menu Open (CRITICAL - User Reported)
 
 **Design Requirements**:
+
 - **Priority**: Context menu = 10 (MODAL - highest priority)
 - **Behavior**: Right-click opens context menu (modal state blocks ALL other interactions)
 - **Menu Types**:
@@ -204,6 +214,7 @@ refactor/interaction/test/
 - **Close Triggers**: Click outside, select item, ESC key
 
 **Existing Implementation** (✅ FOUND):
+
 - `InteractionMode.contextMenuOpen` - priority 10 modal mode
 - `kSecondaryMouseButton` handling in RenderBox (lines 194-196)
 - `ContextMenuElement` mixin - interface for menu-enabled elements
@@ -211,6 +222,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ ZERO TESTS):
 
 #### Unit Tests (`coordinator_test.dart` - ALREADY HAS SOME):
+
 1. **Modal Priority** (✅ ALREADY TESTED - lines 116-131):
    - [x] `claimMode(contextMenuOpen)` sets `isModal = true`
    - [x] All other `claimMode()` calls fail when context menu open
@@ -219,6 +231,7 @@ refactor/interaction/test/
    - [x] Resizing blocked (priority 9 < 10)
 
 #### Widget Tests (`context_menu_test.dart` - NEW FILE):
+
 2. **Right-Click Detection**:
    - [ ] Right-click on empty chart area triggers `onContextMenu(null)`
    - [ ] Right-click on annotation triggers `onContextMenu(annotation)`
@@ -239,6 +252,7 @@ refactor/interaction/test/
    - [ ] Right-click elsewhere → closes first menu, opens new menu
 
 #### Integration Tests (`context_menu_workflows_test.dart` - NEW FILE):
+
 5. **Complete Menu Workflows**:
    - [ ] Right-click empty → "Add Annotation" menu → select item → add flow begins
    - [ ] Right-click annotation → "Edit/Delete" menu → select Edit → edit mode starts
@@ -246,6 +260,7 @@ refactor/interaction/test/
    - [ ] Open menu → click outside → menu closes, chart still interactive
 
 **Acceptance Criteria**:
+
 - ✅ Right-click reliably opens context menu (not left or middle)
 - ✅ Context menu is truly modal (blocks ALL chart interactions)
 - ✅ Menu closes on all expected triggers (click outside, ESC, item select)
@@ -259,18 +274,21 @@ refactor/interaction/test/
 ### Scenario #4: Overlapping Datapoints (PARTIAL - User Reported Hover Bugs)
 
 **Design Requirements**:
+
 - **Priority**: Datapoint = 6
 - **Winner**: Nearest datapoint by Euclidean distance
 - **Ambiguity Threshold**: If multiple points within 3px of same distance, show picker UI
 - **Multi-Select**: Ctrl+click toggles nearest point
 
 **Existing Implementation** (✅ TESTED PARTIALLY):
+
 - Nearest point selection tested in `conflict_scenarios_test.dart` (lines 220-239)
 - Ctrl+click toggle tested in `coordinator_test.dart`
 
 **Test Requirements** (⚠️ PARTIAL - Missing Edge Cases):
 
 #### Widget Tests (`hover_edge_cases_test.dart` - NEW FILE):
+
 1. **Hover with Overlapping Elements** (❌ NOT TESTED):
    - [ ] Hover over 2 datapoints within 3px → hover nearest (deterministic)
    - [ ] Hover over 3+ datapoints within 3px → hover nearest (or show picker)
@@ -291,6 +309,7 @@ refactor/interaction/test/
    - [ ] Hover during scroll/zoom → hover coordinates update correctly
 
 **Acceptance Criteria**:
+
 - ✅ Hover detection deterministic (same position always hovers same element)
 - ✅ No hover flickering when elements are close (<5px)
 - ✅ Hover correctly suspended during all priority 3+ interactions
@@ -304,6 +323,7 @@ refactor/interaction/test/
 ### Scenario #2: Datapoint vs Series Line
 
 **Design Requirements**:
+
 - **Priority**: Datapoint = 6, Series = 4
 - **Winner**: Datapoint (if pointer within marker radius), otherwise Series
 - **Behavior**: Datapoint hit radius wins; clicks outside radius hit series line
@@ -311,6 +331,7 @@ refactor/interaction/test/
 **Test Requirements** (⚠️ BASIC TESTS - Missing Priority Resolution):
 
 #### Widget Tests (`annotation_conflicts_test.dart` or expand `conflict_scenarios_test.dart`):
+
 1. **Hit Detection**:
    - [ ] Click on datapoint marker (within 10px radius) → datapoint selected (priority 6)
    - [ ] Click on series line between datapoints → series selected (priority 4)
@@ -323,6 +344,7 @@ refactor/interaction/test/
    - [ ] Hover over series line (not on marker) → series hover only
 
 **Acceptance Criteria**:
+
 - ✅ Datapoint radius (10px) correctly determines hit priority
 - ✅ Series line accessible when not overlapping datapoint
 - ✅ Priority 6 > 4 enforced in QuadTree nearest queries
@@ -334,6 +356,7 @@ refactor/interaction/test/
 ### Scenario #3: Annotation Body vs Datapoint
 
 **Design Requirements**:
+
 - **Priority**: Annotation (trend/selectable) = 7, Datapoint = 6
 - **Winner**: Annotation for Trend annotations; otherwise Datapoint
 - **Behavior**: Trend annotations claim clicks in body region; passive annotations allow datapoint selection underneath
@@ -341,6 +364,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ NOT TESTED):
 
 #### Widget Tests (`annotation_conflicts_test.dart` - NEW FILE):
+
 1. **Trend Annotation Priority**:
    - [ ] Click on Trend annotation body over datapoint → annotation selected (priority 7 > 6)
    - [ ] Click on Trend annotation with no datapoint underneath → annotation selected
@@ -352,6 +376,7 @@ refactor/interaction/test/
    - [ ] Click on Range annotation resize handle over datapoint → handle wins (priority 9 > 6)
 
 **Acceptance Criteria**:
+
 - ✅ Trend annotations selectable and block datapoint clicks
 - ✅ Passive annotations (Text, Range body) do NOT block datapoint selection
 - ✅ Priority hierarchy: Resize handle (9) > Trend annotation (7) > Datapoint (6) > Series (4)
@@ -363,6 +388,7 @@ refactor/interaction/test/
 ### Scenario #5: Box Selection vs Datapoint Drag
 
 **Design Requirements**:
+
 - **Priority**: Datapoint drag = 6, Box select = 5
 - **Winner**: Datapoint drag (if started within 10px radius); otherwise Box select
 - **Threshold**: Drag >5px from initial pointer down triggers box select
@@ -371,6 +397,7 @@ refactor/interaction/test/
 **Test Requirements** (⚠️ BASIC DRAG TESTS - Missing Box Select):
 
 #### Widget Tests (`box_select_test.dart` - NEW FILE):
+
 1. **Drag Threshold Detection**:
    - [ ] Click empty area, drag 6px → box select starts (threshold = 5px)
    - [ ] Click empty area, drag 4px → no box select (below threshold)
@@ -389,6 +416,7 @@ refactor/interaction/test/
    - [ ] Box select + Ctrl+click → both mechanisms work together
 
 **Acceptance Criteria**:
+
 - ✅ 5px drag threshold enforced (no accidental box select on small movements)
 - ✅ Datapoint drag wins when started within 10px radius
 - ✅ Box select only captures datapoints (annotations excluded)
@@ -401,6 +429,7 @@ refactor/interaction/test/
 ### Scenario #11: Edit Mode Active
 
 **Design Requirements**:
+
 - **Priority**: Edit mode = 9
 - **Winner**: Edit mode blocks most interactions
 - **Behavior**: Double-click annotation enters edit mode; click outside commits changes and exits
@@ -408,6 +437,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ NOT TESTED):
 
 #### Unit Tests (`coordinator_test.dart` additions):
+
 1. **Edit Mode Priority**:
    - [ ] `claimMode(editingAnnotation)` sets `isModal = true` (priority 9)
    - [ ] Pan blocked during edit (priority 3 < 9)
@@ -415,6 +445,7 @@ refactor/interaction/test/
    - [ ] Other element selection blocked during edit (priority 6 < 9)
 
 #### Widget Tests (`annotation_conflicts_test.dart`):
+
 2. **Edit Mode Entry/Exit**:
    - [ ] Double-click annotation → edit mode activated
    - [ ] Click outside annotation during edit → changes committed, edit mode exited
@@ -422,6 +453,7 @@ refactor/interaction/test/
    - [ ] ESC key during edit → changes discarded, edit mode exited
 
 **Acceptance Criteria**:
+
 - ✅ Double-click reliably enters edit mode (not single-click)
 - ✅ Edit mode blocks lower priority interactions
 - ✅ Click outside commits and allows new interaction
@@ -434,6 +466,7 @@ refactor/interaction/test/
 ### Scenario #13: Datapoint Drag vs Series Drag
 
 **Design Requirements**:
+
 - **Priority**: Datapoint drag = 7, Series drag = 5
 - **Winner**: Datapoint drag (click on point); Series drag requires Alt modifier
 - **Behavior**: Click datapoint = drag point; Alt+drag series = move series
@@ -441,6 +474,7 @@ refactor/interaction/test/
 **Test Requirements** (❌ NOT TESTED):
 
 #### Widget Tests (expand `conflict_scenarios_test.dart` or create `series_drag_test.dart`):
+
 1. **Drag Type Detection**:
    - [ ] Click datapoint, drag → datapoint moves (priority 7)
    - [ ] Click series line (not on point), drag → nothing happens (no series drag without modifier)
@@ -448,6 +482,7 @@ refactor/interaction/test/
    - [ ] Alt+click datapoint, drag → datapoint moves (point takes priority over series)
 
 **Acceptance Criteria**:
+
 - ✅ Datapoint drag works without modifier (priority 7)
 - ✅ Series drag requires Alt modifier (priority 5)
 - ✅ Datapoint always wins over series when both present
@@ -459,6 +494,7 @@ refactor/interaction/test/
 ### Scenario #14: Box Select Over Annotations
 
 **Design Requirements**:
+
 - **Priority**: Box select = 5
 - **Behavior**: Box select only selects datapoints, ignores annotations entirely
 - **Selection Criteria**: Element center inside box OR boundary intersects box (configurable)
@@ -466,12 +502,14 @@ refactor/interaction/test/
 **Test Requirements** (❌ NOT TESTED):
 
 #### Widget Tests (`box_select_test.dart`):
+
 1. **Annotation Exclusion**:
    - [ ] Drag box over 3 datapoints + 2 annotations → only 3 datapoints selected
    - [ ] Drag box over only annotations → no selections
    - [ ] Drag box over mixed elements → only datapoints selected (annotations untouched)
 
 **Acceptance Criteria**:
+
 - ✅ Box select never selects annotations (only datapoints)
 - ✅ Annotations remain unaffected by box selection
 
@@ -482,18 +520,21 @@ refactor/interaction/test/
 ### Scenario #15: Long Press vs Drag
 
 **Design Requirements**:
+
 - **Threshold**: Move >5px within 200ms = Drag; Hold still >500ms = Long press
 - **Behavior**: Long press shows context menu (touch devices); Mouse uses right-click
 
 **Test Requirements** (❌ NOT TESTED - Lower Priority):
 
 #### Widget Tests (optional - low priority for mouse-focused prototype):
+
 1. **Gesture Disambiguation**:
    - [ ] Hold still 600ms → long press detected (context menu)
    - [ ] Move 6px within 100ms → drag wins (long press canceled)
    - [ ] Hold 300ms then move → drag wins (long press canceled)
 
 **Acceptance Criteria**:
+
 - ✅ Long press and drag do not conflict
 - ✅ Touch: long press = context menu; Mouse: right-click = context menu
 
@@ -511,6 +552,7 @@ refactor/interaction/test/
 **Timeline**: 1-2 sessions
 
 **Milestones**:
+
 1. Add 4 unit tests to `coordinator_test.dart` for resize mode priority
 2. Create `resize_scenarios_test.dart` with 4-5 widget tests
 3. Create `resize_workflows_test.dart` with 2-3 integration tests
@@ -527,6 +569,7 @@ refactor/interaction/test/
 **Timeline**: 2-3 sessions
 
 **Milestones**:
+
 1. Create `context_menu_test.dart` with 3-4 widget tests (right-click detection, modal blocking)
 2. Create `context_menu_workflows_test.dart` with 1-2 integration tests
 3. Create `hover_edge_cases_test.dart` with 6-8 tests (overlapping elements, suspension, **BUG FIX**)
@@ -544,6 +587,7 @@ refactor/interaction/test/
 **Timeline**: 2-3 sessions
 
 **Milestones**:
+
 1. Create `annotation_conflicts_test.dart` with 6-9 tests (scenarios #2, #3, #11)
 2. Create `box_select_test.dart` with 4-7 tests (scenarios #5, #14)
 3. Add tests for scenario #13 (datapoint vs series drag)
@@ -560,6 +604,7 @@ refactor/interaction/test/
 **Timeline**: 1-2 sessions (OPTIONAL)
 
 **Milestones**:
+
 1. Create `golden_tests.dart` with 5-10 screenshot tests
 2. Create `modifier_keys_test.dart` with 4-6 tests (Shift, Alt combinations)
 3. Run full test suite → target 145-160 passing tests
@@ -575,6 +620,7 @@ refactor/interaction/test/
 **Timeline**: 1 session
 
 **Checklist**:
+
 - [ ] All 15 conflict scenarios validated with tests
 - [ ] User-reported bugs fixed:
   - [ ] "drag to resize" - ✅ Tested in Phase 0.9
@@ -594,13 +640,14 @@ refactor/interaction/test/
 All performance benchmarks from Phase 0.8 remain valid:
 
 - ✅ QuadTree insert: 6ms (16x faster than 100ms target)
-- ✅ QuadTree query: 0.006ms (8x faster than 0.05ms target)  
+- ✅ QuadTree query: 0.006ms (8x faster than 0.05ms target)
 - ✅ QuadTree remove: 2ms (50x faster than 100ms target)
 - ✅ Widget rebuild: 4.70ms (3.5x under 16.67ms budget)
 - ✅ Interaction handling: 2.25ms (7x under 16.67ms budget)
 - ✅ Memory: Stable with 1000 elements, no leaks over 50 cycles
 
 **Additional Performance Tests** (Phase 0.9-0.11):
+
 - Resize handle hit test: <1ms (QuadTree performance applies)
 - Context menu open/close: <10ms
 - Hover detection with 1000+ elements: <5ms
@@ -647,23 +694,23 @@ All performance benchmarks from Phase 0.8 remain valid:
 
 Quick reference for all 15 scenarios from `conflict_resolution_table.md`:
 
-| # | Scenario | Priority A | Priority B | Winner | Status | User Reported |
-|---|----------|------------|------------|--------|--------|---------------|
-| 1 | Resize handle vs Datapoint | 9 | 6 | Handle | ❌ NOT TESTED | YES - "drag to resize" |
-| 2 | Datapoint vs Series line | 6 | 4 | Datapoint | ⚠️ PARTIAL | NO |
-| 3 | Annotation body vs Datapoint | 7 | 6 | Annotation (trend) | ❌ NOT TESTED | NO |
-| 4 | Overlapping datapoints | 6 | 6 | Nearest (3px picker) | ⚠️ PARTIAL | YES - "inconsistent hover" |
-| 5 | Box select vs Datapoint drag | 6 | 5 | Datapoint (if on point) | ⚠️ PARTIAL | NO |
-| 6 | Pan vs Series click | 3 | 4 | Pan (middle-button) | ✅ COMPLETE | NO |
-| 7 | Crosshair vs Click | 0 | Any | Passive (never wins) | ✅ COMPLETE | NO |
-| 8 | Context menu open | 10 | All | Context menu (modal) | ❌ NOT TESTED | YES - "right click" |
-| 9 | Ctrl+Click multi-select | N/A | N/A | Toggle selection | ✅ COMPLETE | NO |
-| 10 | Resize drag leaves bounds | 9 | N/A | Continue resize | ❌ NOT TESTED | YES - part of resize |
-| 11 | Edit mode active | 9 | <9 | Edit mode blocks | ❌ NOT TESTED | NO |
-| 12 | Pan + Hover tooltips | 3 | 0 | Pan suspends hover | ✅ COMPLETE | NO |
-| 13 | Datapoint drag vs Series drag | 7 | 5 | Datapoint (Alt for series) | ❌ NOT TESTED | NO |
-| 14 | Box select over annotations | 5 | N/A | Ignore annotations | ❌ NOT TESTED | NO |
-| 15 | Long press vs Drag | N/A | N/A | Thresholds: 5px/500ms | ❌ NOT TESTED | NO |
+| #   | Scenario                      | Priority A | Priority B | Winner                     | Status        | User Reported              |
+| --- | ----------------------------- | ---------- | ---------- | -------------------------- | ------------- | -------------------------- |
+| 1   | Resize handle vs Datapoint    | 9          | 6          | Handle                     | ❌ NOT TESTED | YES - "drag to resize"     |
+| 2   | Datapoint vs Series line      | 6          | 4          | Datapoint                  | ⚠️ PARTIAL    | NO                         |
+| 3   | Annotation body vs Datapoint  | 7          | 6          | Annotation (trend)         | ❌ NOT TESTED | NO                         |
+| 4   | Overlapping datapoints        | 6          | 6          | Nearest (3px picker)       | ⚠️ PARTIAL    | YES - "inconsistent hover" |
+| 5   | Box select vs Datapoint drag  | 6          | 5          | Datapoint (if on point)    | ⚠️ PARTIAL    | NO                         |
+| 6   | Pan vs Series click           | 3          | 4          | Pan (middle-button)        | ✅ COMPLETE   | NO                         |
+| 7   | Crosshair vs Click            | 0          | Any        | Passive (never wins)       | ✅ COMPLETE   | NO                         |
+| 8   | Context menu open             | 10         | All        | Context menu (modal)       | ❌ NOT TESTED | YES - "right click"        |
+| 9   | Ctrl+Click multi-select       | N/A        | N/A        | Toggle selection           | ✅ COMPLETE   | NO                         |
+| 10  | Resize drag leaves bounds     | 9          | N/A        | Continue resize            | ❌ NOT TESTED | YES - part of resize       |
+| 11  | Edit mode active              | 9          | <9         | Edit mode blocks           | ❌ NOT TESTED | NO                         |
+| 12  | Pan + Hover tooltips          | 3          | 0          | Pan suspends hover         | ✅ COMPLETE   | NO                         |
+| 13  | Datapoint drag vs Series drag | 7          | 5          | Datapoint (Alt for series) | ❌ NOT TESTED | NO                         |
+| 14  | Box select over annotations   | 5          | N/A        | Ignore annotations         | ❌ NOT TESTED | NO                         |
+| 15  | Long press vs Drag            | N/A        | N/A        | Thresholds: 5px/500ms      | ❌ NOT TESTED | NO                         |
 
 **Summary**: 4 complete ✅ | 3 partial ⚠️ | 8 not tested ❌  
 **User-Reported Issues**: 4 scenarios (all marked YES)  

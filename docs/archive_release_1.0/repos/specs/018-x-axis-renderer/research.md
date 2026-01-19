@@ -17,6 +17,7 @@ This research documents the technical decisions made during the design phase. Al
 **Rationale**: Maintains API consistency with Y-axis. The first series color provides a reasonable default that integrates with the chart's visual theme. Users can override with explicit `XAxisConfig.color`.
 
 **Alternatives Considered**:
+
 - Neutral theme color - Rejected because it differs from Y-axis approach
 - Hardcoded default - Rejected because it's less flexible
 
@@ -27,12 +28,11 @@ This research documents the technical decisions made during the design phase. Al
 **Rationale**: Standard chart convention. X-axis has horizontal space available, so rotation is unnecessary. Y-axis rotates because vertical space is limited horizontally.
 
 **Layout**:
-`
-───1───2───3───
-     Time (s)
-`
+`───1───2───3───
+     Time (s)`
 
 **Alternatives Considered**:
+
 - Rotated like Y-axis - Rejected because X-axis has horizontal space
 - No title support - Rejected because parity with Y-axis is needed
 
@@ -43,6 +43,7 @@ This research documents the technical decisions made during the design phase. Al
 **Rationale**: Maintains separation of concerns and avoids breaking changes. Grid theming can be addressed in a future sprint if needed.
 
 **Alternatives Considered**:
+
 - Move vertical grid lines into XAxisPainter - Rejected to limit scope
 - Pass axis color to GridRenderer - Could be future enhancement
 
@@ -51,6 +52,7 @@ This research documents the technical decisions made during the design phase. Al
 **Decision**: XAxisConfig is a simplified subset of YAxisConfig
 
 **Properties Included** (17 total):
+
 - `color`, `label`, `unit` - Appearance
 - `min`, `max` - Bounds
 - `visible`, `showAxisLine`, `showTicks`, `showCrosshairLabel` - Visibility
@@ -60,6 +62,7 @@ This research documents the technical decisions made during the design phase. Al
 - `tickCount`, `labelFormatter` - Formatting
 
 **Properties Excluded**:
+
 - `id` - Single axis, no ID needed
 - `position` - Always bottom
 - `crosshairLabelPosition` - Always below plot area
@@ -71,6 +74,7 @@ This research documents the technical decisions made during the design phase. Al
 **Decision**: Model XAxisPainter after MultiAxisPainter
 
 **Key Patterns from MultiAxisPainter**:
+
 1. TextPainter caching for performance
 2. Nice-number tick generation algorithm
 3. Axis color resolution from config → series → theme → default
@@ -78,6 +82,7 @@ This research documents the technical decisions made during the design phase. Al
 5. Cache invalidation when bounds or style change
 
 **Files to Reference**:
+
 - `lib/src/rendering/multi_axis_painter.dart` - Main rendering logic
 - `lib/src/models/y_axis_config.dart` - Configuration structure
 - `lib/src/rendering/modules/crosshair_renderer.dart` - Crosshair label styling
@@ -86,12 +91,12 @@ This research documents the technical decisions made during the design phase. Al
 
 **Decision**: Four integration points required
 
-| Component | Change Required |
-|-----------|-----------------|
-| `BravenChartPlus` | Add `xAxisConfig` parameter |
-| `ChartRenderBox` | Instantiate and call `XAxisPainter.paint()` |
-| `CrosshairRenderer` | Accept `XAxisConfig` for X-label theming |
-| `XAxisRenderer` | Bypass/remove calls (legacy) |
+| Component           | Change Required                             |
+| ------------------- | ------------------------------------------- |
+| `BravenChartPlus`   | Add `xAxisConfig` parameter                 |
+| `ChartRenderBox`    | Instantiate and call `XAxisPainter.paint()` |
+| `CrosshairRenderer` | Accept `XAxisConfig` for X-label theming    |
+| `XAxisRenderer`     | Bypass/remove calls (legacy)                |
 
 **Critical Lesson**: Previous sprint failed because painter was created but `paint()` was never called. Integration verification is mandatory.
 
@@ -100,6 +105,7 @@ This research documents the technical decisions made during the design phase. Al
 **Decision**: Match Y-axis crosshair label styling exactly
 
 **Styling Spec**:
+
 - Background: `axisColor.withValues(alpha: 0.15)` (semi-transparent)
 - Border: `axisColor.withValues(alpha: 0.6)`
 - Border width: 1.0

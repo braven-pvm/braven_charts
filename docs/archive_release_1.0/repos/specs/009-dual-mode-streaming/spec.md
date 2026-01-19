@@ -15,7 +15,7 @@
 - Q: Should the chart provide built-in logging, metrics, or debugging hooks to help developers troubleshoot streaming/buffering issues? → A: No built-in observability (developers use external debugging tools)
 - Q: When buffer reaches maximum capacity and continues receiving data, what should happen (given constraint: no data loss allowed)? → A: Force immediate return to streaming mode when buffer fills (auto-resume to apply buffered data and free space)
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Real-Time Data Monitoring (Priority: P1)
 
@@ -120,7 +120,7 @@ A developer wants to show users how much data has accumulated while they're in i
 - What happens on hot reload during interactive mode?
   - Chart resets to streaming mode (no mode persistence across hot reload)
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -157,7 +157,7 @@ A developer wants to show users how much data has accumulated while they're in i
 - **Mode Transition**: Event representing change from one mode to another, with associated state cleanup and initialization
 - **Auto-Resume Timer**: Countdown mechanism that triggers automatic return to streaming mode after inactivity period
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -182,4 +182,3 @@ A developer wants to show users how much data has accumulated while they're in i
 - 10,000 point buffer limit is sufficient for typical interaction durations
 - Users accept viewport "jump" to latest data when resuming (alternative: smooth animation to latest data)
 - Charts display on devices capable of 60fps rendering (modern desktops, tablets, phones)
-

@@ -20,7 +20,7 @@
 ✅ **Architecture**: Hybrid RenderObject + Overlay + Coordinator  
 ✅ **Approach**: Standalone prototype first, then integration  
 ✅ **Testing**: Comprehensive unit/widget/integration/performance tests  
-✅ **Preserve**: IEventHandler interface and ChartEvent model (excellent existing design)  
+✅ **Preserve**: IEventHandler interface and ChartEvent model (excellent existing design)
 
 ⏳ **Pending**: Interaction priority hierarchy (conflict resolution table)
 
@@ -29,6 +29,7 @@
 ## 🏗️ Proposed Architecture (3 Layers)
 
 ### Layer 1: Custom RenderObject (Foundation)
+
 - High-performance chart rendering
 - GPU batching with `Canvas.drawRawAtlas`
 - QuadTree spatial indexing (O(log n) hit testing)
@@ -36,6 +37,7 @@
 - Background interactions: pan, zoom, wheel events
 
 ### Layer 2: Positioned Widget Overlays (High-Priority Elements)
+
 - Annotation resize handles
 - Draggable annotation bodies
 - Datapoint selection handles
@@ -43,6 +45,7 @@
 - Pattern: `MouseRegion` + `RawGestureDetector` + custom recognizers
 
 ### Layer 3: ChartInteractionCoordinator (State Manager)
+
 - Track interaction mode (idle, panning, dragging, selecting, etc.)
 - Claim/release interaction rights
 - Keyboard modifier state
@@ -53,6 +56,7 @@
 ## 🔄 Current Implementation (Widget-Level)
 
 **Structure**:
+
 ```dart
 MouseRegion (cursor)
   └─ GestureDetector (right-click, opaque)
@@ -62,6 +66,7 @@ MouseRegion (cursor)
 ```
 
 **Issues Found**:
+
 - ❌ Multiple `HitTestBehavior.opaque` widgets compete in gesture arena
 - ❌ Manual layering workarounds (code comments indicate previous failures)
 - ❌ No spatial indexing (linear search)
@@ -76,6 +81,7 @@ MouseRegion (cursor)
 ## ✅ Interactive Elements Confirmed
 
 ### Primary Elements
+
 - **Series Lines**: Click select, hover highlight
 - **Data Points**: Select, drag, hover tooltip
 - **Annotations**: Drag, resize (8 handles), edit, select
@@ -85,12 +91,14 @@ MouseRegion (cursor)
 - **Legend**: Click show/hide series
 
 ### Selection Mechanisms
+
 - **Single Select**: Click
 - **Multi-Select**: Ctrl+Click
 - **Box Select**: Left-drag selection rectangle
 - **Range Select**: Select datapoint sequence
 
 ### Interaction Types
+
 - **Hover/Enter/Exit**: Highlight, tooltips, cursors
 - **Left/Right/Middle Click**: Select, context menu, pan
 - **Mouse Wheel**: Zoom (with Ctrl/Shift modifiers)
@@ -103,9 +111,11 @@ MouseRegion (cursor)
 ## 🚧 Implementation Plan
 
 ### ⭐ Phase 0: Standalone Prototype (CURRENT)
+
 **Objective**: Build and validate complete architecture in isolation
 
 **Deliverables**:
+
 ```
 test/interaction_prototype/
 ├── lib/
@@ -121,6 +131,7 @@ test/interaction_prototype/
 ```
 
 **Success Criteria**:
+
 - [ ] All conflict scenarios tested and resolved
 - [ ] 60fps with 100+ simulated elements
 - [ ] Zero gesture arena conflicts
@@ -129,6 +140,7 @@ test/interaction_prototype/
 - [ ] Memory leak free (listener cleanup validated)
 
 ### Phase 1: Current Implementation Analysis ✅ COMPLETE
+
 - Analyzed widget-level interaction approach
 - Identified gesture arena conflicts
 - Documented missing features
@@ -140,18 +152,18 @@ test/interaction_prototype/
 
 ## ⚠️ Critical Conflict Scenarios (NEEDS DECISION)
 
-| # | Scenario | Element 1 | Element 2 | Winner? | Behavior? |
-|---|----------|-----------|-----------|---------|-----------|
-| 1 | Annotation resize handle under datapoint | Resize handle | Datapoint | ? | ? |
-| 2 | Datapoint on series line | Datapoint | Series | ? | ? |
-| 3 | Annotation body over datapoint | Annotation | Datapoint | ? | ? |
-| 4 | Multiple overlapping datapoints | Point A | Point B | ? | Closest? |
-| 5 | Box select vs datapoint | Box drag | Point click | ? | Distance threshold? |
-| 6 | Pan vs series click | Pan | Series | ? | ? |
-| 7 | Crosshair vs any click | Crosshair | Other | ? | ? |
-| 8 | Context menu open | Menu | Any | Menu | Block all ✅ |
-| 9 | Ctrl+Click vs normal click | Multi-select | Select | ? | Check modifier ✅ |
-| 10 | Resize drag leaves element | Resize | Exit | ? | Continue? Cancel? |
+| #   | Scenario                                 | Element 1     | Element 2   | Winner? | Behavior?           |
+| --- | ---------------------------------------- | ------------- | ----------- | ------- | ------------------- |
+| 1   | Annotation resize handle under datapoint | Resize handle | Datapoint   | ?       | ?                   |
+| 2   | Datapoint on series line                 | Datapoint     | Series      | ?       | ?                   |
+| 3   | Annotation body over datapoint           | Annotation    | Datapoint   | ?       | ?                   |
+| 4   | Multiple overlapping datapoints          | Point A       | Point B     | ?       | Closest?            |
+| 5   | Box select vs datapoint                  | Box drag      | Point click | ?       | Distance threshold? |
+| 6   | Pan vs series click                      | Pan           | Series      | ?       | ?                   |
+| 7   | Crosshair vs any click                   | Crosshair     | Other       | ?       | ?                   |
+| 8   | Context menu open                        | Menu          | Any         | Menu    | Block all ✅        |
+| 9   | Ctrl+Click vs normal click               | Multi-select  | Select      | ?       | Check modifier ✅   |
+| 10  | Resize drag leaves element               | Resize        | Exit        | ?       | Continue? Cancel?   |
 
 **ACTION REQUIRED**: Complete this table with team decisions before prototype implementation.
 
@@ -160,12 +172,14 @@ test/interaction_prototype/
 ## 📊 Performance Targets
 
 ### Must Achieve
+
 - ✅ 60fps with 100+ interactive datapoints
 - ✅ <5ms event processing overhead (99th percentile)
 - ✅ O(log n) hit testing with spatial index
 - ✅ Zero memory growth after 10,000 event cycles
 
 ### Stretch Goals
+
 - 60fps with 500+ datapoints
 - 120fps on high-refresh displays
 - <1ms hit testing with optimized QuadTree
@@ -184,6 +198,7 @@ test/interaction_prototype/
 ## 🔗 Architecture Patterns from Research
 
 ### Custom RenderObject Pattern
+
 ```dart
 class ChartRenderBox extends RenderBox {
   @override
@@ -196,7 +211,7 @@ class ChartRenderBox extends RenderBox {
     }
     return false;
   }
-  
+
   @override
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     // Direct event handling - bypasses gesture arena
@@ -206,10 +221,11 @@ class ChartRenderBox extends RenderBox {
 ```
 
 ### Context-Aware Recognizer Pattern
+
 ```dart
 class ContextAwareRecognizer extends OneSequenceGestureRecognizer {
   final bool Function(Offset) shouldAcceptGesture;
-  
+
   @override
   void addPointer(PointerDownEvent event) {
     if (shouldAcceptGesture(event.position)) {
@@ -222,15 +238,16 @@ class ContextAwareRecognizer extends OneSequenceGestureRecognizer {
 ```
 
 ### Coordinator Pattern
+
 ```dart
 class ChartInteractionCoordinator extends ChangeNotifier {
   InteractionMode _mode = InteractionMode.idle;
-  
+
   bool canClaim(InteractionMode mode, Widget element) {
-    return _mode == InteractionMode.idle || 
+    return _mode == InteractionMode.idle ||
            (_mode == mode && _activeElement == element);
   }
-  
+
   void claim(InteractionMode mode, Widget element) { /* ... */ }
   void release(Widget element) { /* ... */ }
 }
@@ -241,6 +258,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 ## 🚀 Getting Started with Prototype
 
 ### Next Immediate Actions
+
 1. Create prototype project structure
 2. Implement basic QuadTree spatial index
 3. Create ChartInteractionCoordinator skeleton
@@ -249,6 +267,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 6. Validate ALL conflict scenarios
 
 ### First Week Goals
+
 - Complete Phase 0 prototype implementation
 - Validate architecture with 100+ elements
 - Performance benchmark at 60fps
@@ -259,6 +278,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 ## 📝 Notes for Implementation Team
 
 ### What to Keep from Current Code
+
 - ✅ `IEventHandler` interface (excellent abstraction)
 - ✅ `ChartEvent` model (clean coordinate translation)
 - ✅ `GestureDetails` model (comprehensive tracking)
@@ -266,6 +286,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 - ✅ Priority-based handler registration system
 
 ### What to Replace
+
 - ❌ Nested GestureDetector + Listener pattern
 - ❌ Widget-level CustomPaint approach
 - ❌ Linear hit testing (no spatial index)
@@ -273,11 +294,13 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 - ❌ Per-annotation GestureDetectors (use overlays + custom recognizers)
 
 ### Critical Risks
+
 - **Migration complexity**: Breaking changes to public API
 - **Performance regression**: Custom RenderObject bugs could hurt performance
 - **Scope creep**: Must control feature requests during implementation
 
 ### Mitigations
+
 - Standalone prototype validates architecture before production integration
 - Comprehensive benchmarks catch performance regressions early
 - Strict scope control - backlog for v2.1 features

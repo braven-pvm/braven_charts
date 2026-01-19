@@ -4,6 +4,7 @@
 **Prerequisites**: plan.md, research.md, data-model.md, contracts/, quickstart.md
 
 ## Execution Flow (main)
+
 ```
 1. Load plan.md from feature directory
    → Tech stack: Da- [x] **T026**: Write unit tests for `RenderPipeline` `ViewportCuller` integrationt 3.0+, Flutter SDK 3.37.0-1.0.pre-216
@@ -30,22 +31,26 @@
 ```
 
 ## Format: `[ID] [P?] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - Include exact file paths in descriptions
 
 ## Path Conventions
+
 - **Single Flutter project**: `lib/src/rendering/`, `test/unit/`, `test/contract/`, `test/integration/`
 - All paths relative to repository root: `X:\Cloud Storage\Dropbox\Repositories\Flutter\braven_charts_v2.0\`
 
 ---
 
 ## Phase 3.1: Setup (2 tasks)
+
 - [x] **T001** Create rendering directory structure in lib/src/rendering/ (render_context.dart, render_layer.dart, render_pipeline.dart, performance_monitor.dart, performance_metrics.dart, text_layout_cache.dart)
 - [x] **T002** Create test directory structure in test/ (unit/rendering/, contract/rendering/, integration/rendering/, benchmarks/rendering/)
 
 ---
 
 ## Phase 3.2: Contract Tests (TDD - MUST COMPLETE BEFORE 3.3) (3 tasks)
+
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 - [x] **T003** [P] Contract test for RenderLayer interface in test/contract/rendering/render_layer_contract_test.dart
@@ -118,6 +123,7 @@
 ## Phase 3.4: Core Entity Implementation (6 tasks)
 
 ### T010: PerformanceMetrics (Immutable Value Object)
+
 - [x] **T010** [P] Implement PerformanceMetrics in lib/src/rendering/performance_metrics.dart
   - Create immutable class with const constructor
   - Fields: frameTime, averageFrameTime, p99FrameTime, jankCount, poolHitRate, culledElementCount, renderedElementCount
@@ -130,6 +136,7 @@
   - Run contract tests to verify compilation (expected: still failing, implementation incomplete)
 
 ### T011: TextLayoutCache (LRU Cache Implementation)
+
 - [x] **T011** [P] Implement TextLayoutCache in lib/src/rendering/text_layout_cache.dart
   - Create abstract base class matching contract
   - Implement LinkedHashMapTextLayoutCache using dart:collection
@@ -139,13 +146,15 @@
   - Implement put(text, style, painter) → store with LRU eviction
   - Implement clear() → reset cache and counters
   - Implement hitRate getter → hits / (hits + misses), handle division by zero
-  - Private method: _makeCacheKey(text, style) → "$text:${style.hashCode}"
+  - Private method: \_makeCacheKey(text, style) → "$text:${style.hashCode}"
   - LRU eviction: remove oldest entry when size >= maxSize
   - Add dartdoc comments
   - Run contract tests (T005) → should pass
 
 ### T012: PerformanceMonitor (Frame Timing)
+
 ### T012: PerformanceMonitor (Stopwatch-based Implementation)
+
 - [x] **T012** Implement PerformanceMonitor in lib/src/rendering/performance_monitor.dart
   - Create abstract base class matching contract
   - Implement StopwatchPerformanceMonitor using dart:core Stopwatch
@@ -153,15 +162,16 @@
   - Private field: `_frameTimes` (List<Duration>, max length = maxHistorySize)
   - Private field: `_jankCount` (int counter for >16ms frames)
   - Implement beginFrame() → start stopwatch
-  - Implement endFrame() → stop stopwatch, record elapsed, detect jank (>16ms), add to _frameTimes with LRU eviction
-  - Implement currentMetrics getter → calculate avg, p99 from _frameTimes, return PerformanceMetrics
-  - Implement reset() → clear _frameTimes, reset _jankCount
+  - Implement endFrame() → stop stopwatch, record elapsed, detect jank (>16ms), add to \_frameTimes with LRU eviction
+  - Implement currentMetrics getter → calculate avg, p99 from \_frameTimes, return PerformanceMetrics
+  - Implement reset() → clear \_frameTimes, reset \_jankCount
   - Assert beginFrame/endFrame pairing (debug mode assertion)
   - Add dartdoc comments
   - Run contract tests (T004) → should pass
   - **Dependency**: Requires T010 (PerformanceMetrics) complete
 
 ### T013: RenderContext (Dependency Injection Container)
+
 - [x] **T013** [P] Implement RenderContext in lib/src/rendering/render_context.dart
   - Create immutable class with const constructor
   - Fields: canvas, size, viewport, culler, paintPool, pathPool, textPainterPool, textCache, performanceMonitor
@@ -174,6 +184,7 @@
   - Run tests (expected: compilation success, contract tests use this)
 
 ### T014: RenderLayer (Abstract Interface)
+
 - [x] **T014** [P] Implement RenderLayer in lib/src/rendering/render_layer.dart
   - Move contract from specs/002-core-rendering/contracts/render_layer.dart to lib/src/rendering/render_layer.dart
   - Keep abstract class with zIndex, isVisible fields
@@ -185,6 +196,7 @@
   - Run contract tests (T003) → should pass
 
 ### T015: RenderPipeline (Orchestrator)
+
 - [x] **T015** Implement RenderPipeline in lib/src/rendering/render_pipeline.dart
   - Create class with mutable layers list (List<RenderLayer>)
   - Constructor: Accept paintPool, pathPool, textPainterPool, textCache, performanceMonitor, culler, initial viewport
@@ -402,7 +414,7 @@
 
 ## Phase 3.9: Documentation & Polish (6 tasks)
 
-- [x] **T043** [P] Add dartdoc comments to all public APIs in lib/src/rendering/*.dart
+- [x] **T043** [P] Add dartdoc comments to all public APIs in lib/src/rendering/\*.dart
   - Document RenderContext fields with usage examples
   - Document RenderLayer contract requirements
   - Document RenderPipeline lifecycle
@@ -429,7 +441,7 @@
   - Screenshots of expected vs actual rendering
 
 - [x] **T047** [P] Update quickstart.md with final implementation paths
-  - Verify all import paths correct (lib/src/rendering/*)
+  - Verify all import paths correct (lib/src/rendering/\*)
   - Verify all examples compile and run
   - Add troubleshooting section with common issues
   - Add performance validation checklist
@@ -455,6 +467,7 @@
 ## Dependencies
 
 ### Phase Order
+
 1. **Setup (T001-T002)** → All other phases
 2. **Contract Tests (T003-T005)** → Core Implementation (T010-T015)
 3. **Integration Tests (T006-T009)** → Core Implementation (T010-T015)
@@ -465,6 +478,7 @@
 8. **All Implementation** → Documentation (T043-T048)
 
 ### Specific Task Dependencies
+
 - **T012** (PerformanceMonitor) requires **T010** (PerformanceMetrics)
 - **T013** (RenderContext) requires **T011** (TextLayoutCache), **T012** (PerformanceMonitor)
 - **T015** (RenderPipeline) requires **T010, T011, T012, T013, T014** (all entities)
@@ -476,6 +490,7 @@
 - **T048** (Validation) requires **ALL** previous tasks
 
 ### Blocking Chains
+
 ```
 T001, T002 (Setup)
   ↓
@@ -506,32 +521,39 @@ T048 (Final validation)
 ## Parallel Execution Examples
 
 ### Example 1: Contract Tests (Phase 3.2)
+
 ```
 Task: "Contract test for RenderLayer interface in test/contract/rendering/render_layer_contract_test.dart"
 Task: "Contract test for PerformanceMonitor interface in test/contract/rendering/performance_monitor_contract_test.dart"
 Task: "Contract test for TextLayoutCache interface in test/contract/rendering/text_layout_cache_contract_test.dart"
 ```
+
 **Rationale**: Different files, no shared dependencies, all test contracts independently.
 
 ### Example 2: Integration Tests (Phase 3.3)
+
 ```
 Task: "Integration test for Scenario 1 (Stock Chart 10K) in test/integration/rendering/stock_chart_10k_test.dart"
 Task: "Integration test for Scenario 2 (Multi-layer) in test/integration/rendering/multi_layer_chart_test.dart"
 Task: "Integration test for Scenario 3 (Performance Dashboard) in test/integration/rendering/performance_dashboard_test.dart"
 Task: "Integration test for Scenario 4 (Text-heavy) in test/integration/rendering/text_heavy_chart_test.dart"
 ```
+
 **Rationale**: Different test files, each validates independent user scenario.
 
 ### Example 3: Entity Implementations (Phase 3.4 - Partial)
+
 ```
 Task: "Implement PerformanceMetrics in lib/src/rendering/performance_metrics.dart"
 Task: "Implement TextLayoutCache in lib/src/rendering/text_layout_cache.dart"
 ```
+
 **Rationale**: No dependencies between PerformanceMetrics and TextLayoutCache.
 
 **NOTE**: T012 (PerformanceMonitor) CANNOT run parallel with T010 (PerformanceMetrics) - requires T010 complete.
 
 ### Example 4: Unit Tests (Phase 3.5)
+
 ```
 Task: "Unit test for PerformanceMetrics validation in test/unit/rendering/performance_metrics_test.dart"
 Task: "Unit test for TextLayoutCache LRU eviction in test/unit/rendering/text_layout_cache_test.dart"
@@ -539,9 +561,11 @@ Task: "Unit test for PerformanceMonitor frame timing in test/unit/rendering/perf
 Task: "Unit test for RenderContext validation in test/unit/rendering/render_context_test.dart"
 Task: "Unit test for RenderLayer isEmpty optimization in test/unit/rendering/render_layer_test.dart"
 ```
+
 **Rationale**: Different test files, test different entities independently.
 
 ### Example 5: Benchmarks (Phase 3.7)
+
 ```
 Task: "Benchmark object pool performance in test/benchmarks/rendering/object_pool_benchmark.dart"
 Task: "Benchmark viewport culling performance in test/benchmarks/rendering/viewport_culling_benchmark.dart"
@@ -550,6 +574,7 @@ Task: "Benchmark RenderPipeline frame time in test/benchmarks/rendering/render_p
 Task: "Benchmark layer z-ordering overhead in test/benchmarks/rendering/layer_sorting_benchmark.dart"
 Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_layer_benchmark.dart"
 ```
+
 **Rationale**: Different benchmark files, measure independent performance aspects.
 
 ---
@@ -557,6 +582,7 @@ Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_la
 ## Notes
 
 ### TDD Workflow
+
 1. ✅ Write contract test (T003-T005) - **MUST FAIL** initially
 2. ✅ Write integration test (T006-T009) - **MUST FAIL** initially
 3. ✅ Implement entity (T010-T015) - Make tests **PASS**
@@ -564,15 +590,18 @@ Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_la
 5. ✅ Refactor - Improve code without breaking tests
 
 ### Performance Validation
+
 - Run benchmarks after T015 (RenderPipeline) complete
 - Targets: <8ms avg frame, <16ms p99, >90% pool hit, >70% cache hit
 - If targets missed: Optimize, re-benchmark, repeat
 
 ### Commit Strategy
+
 - Commit after each task or logical group
 - Tag milestones: `v0.2.0-alpha` after T015, `v0.2.0-beta` after T042, `v0.2.0` after T048
 
 ### Code Review Checklist (Apply before T048)
+
 - [ ] All tests pass (flutter test)
 - [ ] All benchmarks meet targets
 - [ ] Zero external dependencies (pubspec.yaml)
@@ -584,7 +613,8 @@ Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_la
 ---
 
 ## Task Generation Rules
-*Applied during main() execution*
+
+_Applied during main() execution_
 
 1. **From Contracts (3 files)**:
    - render_layer.dart → T003 (contract test), T014 (implementation)
@@ -619,14 +649,15 @@ Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_la
 ---
 
 ## Validation Checklist
-*GATE: Checked before execution*
+
+_GATE: Checked before execution_
 
 - [x] All 3 contracts have corresponding tests (T003-T005)
 - [x] All 6 entities have implementation tasks (T010-T015)
 - [x] All 4 user scenarios have integration tests (T006-T009)
 - [x] All tests come before implementation (T003-T009 before T010-T015)
 - [x] Parallel tasks truly independent (verified file paths, no shared state)
-- [x] Each task specifies exact file path (lib/src/rendering/*, test/*)
+- [x] Each task specifies exact file path (lib/src/rendering/_, test/_)
 - [x] No task modifies same file as another [P] task
 - [x] Dependencies explicitly documented (T012 requires T010, etc.)
 - [x] TDD workflow enforced (contract tests fail initially, pass after implementation)
@@ -646,6 +677,7 @@ Task: "Benchmark empty layer short-circuit in test/benchmarks/rendering/empty_la
 **Next Step**: Execute T001 (Create rendering directory structure)
 
 **Constitutional Compliance**:
+
 - ✅ TDD: Tests (T003-T009) before implementation (T010-T015)
 - ✅ Performance: Benchmarks (T031-T036) validate <8ms, >90% pool hit, >70% cache hit
 - ✅ KISS: Reuses Foundation (ObjectPool, ViewportCuller), simple LRU cache

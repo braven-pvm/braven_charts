@@ -12,7 +12,7 @@
 
 ### 🚨 Problem Statement
 
-The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 tests passing) but **ALL user-facing interaction features are non-functional**. 
+The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 tests passing) but **ALL user-facing interaction features are non-functional**.
 
 **Root Cause**: Task T034 ("Update BravenChart widget to integrate interaction system") was completed with only "infrastructure" (parameter wiring, placeholders) but NOT the actual rendering and event handling logic.
 
@@ -21,6 +21,7 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 ### 📊 Gap Analysis
 
 #### ✅ What EXISTS (Completed in Original Sprint)
+
 - All configuration models (`InteractionConfig`, `CrosshairConfig`, `TooltipConfig`, `KeyboardConfig`, `GestureConfig`, `ZoomPanState`)
 - All business logic classes:
   - `EventHandler` - processes pointer/key events → `ChartEvent`
@@ -35,6 +36,7 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 - Example showcase screen (520 lines, demonstrates all 8 callbacks)
 
 #### ❌ What's MISSING (This Remediation Sprint)
+
 1. **Crosshair Rendering** - No `_CrosshairPainter` class, no canvas drawing
 2. **Tooltip Display** - No tooltip overlay widget, no positioning logic
 3. **Zoom/Pan Transformation** - No viewport transformation applied to chart rendering
@@ -47,6 +49,7 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 ### 🎯 Acceptance Criteria for Remediation
 
 **Sprint is COMPLETE when:**
+
 - [ ] User can hover over chart and see crosshair following cursor
 - [ ] Crosshair snaps to nearest data point within configured radius
 - [ ] Tooltip appears on hover showing data point values
@@ -62,14 +65,14 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 - [ ] +/- keys zoom in/out at center
 - [ ] Home/End keys jump to first/last data point
 - [ ] All 8 callbacks fire from actual user interactions:
-  * `onDataPointTap` - fires on tap
-  * `onDataPointHover` - fires on hover
-  * `onDataPointLongPress` - fires on long press
-  * `onSelectionChanged` - fires when selection changes
-  * `onZoomChanged` - fires when zoom level changes
-  * `onPanChanged` - fires when pan offset changes
-  * `onViewportChanged` - fires when visible data bounds change
-  * `onCrosshairPositionChanged` - fires when crosshair moves
+  - `onDataPointTap` - fires on tap
+  - `onDataPointHover` - fires on hover
+  - `onDataPointLongPress` - fires on long press
+  - `onSelectionChanged` - fires when selection changes
+  - `onZoomChanged` - fires when zoom level changes
+  - `onPanChanged` - fires when pan offset changes
+  - `onViewportChanged` - fires when visible data bounds change
+  - `onCrosshairPositionChanged` - fires when crosshair moves
 - [ ] Example showcase screen demonstrates all features working
 - [ ] All existing tests still pass (277/277)
 - [ ] Performance meets spec: <100ms response, 60 FPS, <2ms crosshair, <5ms events
@@ -81,6 +84,7 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 ### Phase 1: Core Integration (3-4 hours)
 
 #### **R-T001: Create CrosshairPainter Class** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: None
@@ -90,6 +94,7 @@ The 007-interaction-system sprint was marked COMPLETE (87/87 tasks ✅, 277/277 
 Create `_CrosshairPainter` class extending `CustomPainter` that renders crosshair lines on canvas.
 
 **Acceptance Criteria**:
+
 - [ ] Class extends `CustomPainter` with `paint()` and `shouldRepaint()` methods
 - [ ] Renders vertical and horizontal lines at crosshair position
 - [ ] Respects `CrosshairConfig` (style, color, width, mode)
@@ -98,6 +103,7 @@ Create `_CrosshairPainter` class extending `CustomPainter` that renders crosshai
 - [ ] Performance: <2ms render time for single crosshair
 
 **Technical Notes**:
+
 - Use `CrosshairRenderer` interface as reference but implement directly in painter
 - Support `CrosshairMode.free` (follows cursor) and `CrosshairMode.snap` (snaps to nearest point)
 - Draw using `canvas.drawLine()` for crosshair lines
@@ -109,6 +115,7 @@ Create `_CrosshairPainter` class extending `CustomPainter` that renders crosshai
 ---
 
 #### **R-T002: Implement Tooltip Overlay Widget** ⏱️ 45 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: None
@@ -118,6 +125,7 @@ Create `_CrosshairPainter` class extending `CustomPainter` that renders crosshai
 Create tooltip overlay widget that displays data point information with smart positioning.
 
 **Acceptance Criteria**:
+
 - [ ] Creates positioned tooltip widget at cursor location
 - [ ] Uses `TooltipConfig.customBuilder` if provided, otherwise default builder
 - [ ] Implements smart positioning (flips to opposite side if clipping chart bounds)
@@ -126,13 +134,14 @@ Create tooltip overlay widget that displays data point information with smart po
 - [ ] Shows data for all series at X position if `showAllSeries = true`
 
 **Technical Notes**:
+
 - Use `Positioned` widget with calculated `left/top` offsets
 - Default builder shows: `"X: {x}\nY: {y}"` formatted with `toStringAsFixed(2)`
 - Smart positioning algorithm:
   ```dart
   // If tooltip would clip right edge, position to left of cursor
-  final tooltipLeft = (cursorX + tooltipWidth > chartWidth) 
-    ? cursorX - tooltipWidth - 10 
+  final tooltipLeft = (cursorX + tooltipWidth > chartWidth)
+    ? cursorX - tooltipWidth - 10
     : cursorX + 10;
   // Similar logic for top/bottom
   ```
@@ -143,6 +152,7 @@ Create tooltip overlay widget that displays data point information with smart po
 ---
 
 #### **R-T003: Wire EventHandler to Widget Lifecycle** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: None
@@ -152,6 +162,7 @@ Create tooltip overlay widget that displays data point information with smart po
 Instantiate and properly wire `EventHandler` in widget lifecycle (init, update, dispose).
 
 **Acceptance Criteria**:
+
 - [ ] Create `EventHandler` instance in `initState()` when `interactionConfig.enabled == true`
 - [ ] Dispose `EventHandler` in `dispose()` method
 - [ ] Handle `EventHandler` recreation on config changes in `didUpdateWidget()`
@@ -160,6 +171,7 @@ Instantiate and properly wire `EventHandler` in widget lifecycle (init, update, 
 - [ ] Process key events through `EventHandler.processKeyEvent()`
 
 **Technical Notes**:
+
 - Already have `EventHandler? _eventHandler;` field (line 617)
 - Already initializing in `initState()` (line 650)
 - Need to add callback registration:
@@ -174,8 +186,9 @@ Instantiate and properly wire `EventHandler` in widget lifecycle (init, update, 
 
 ---
 
-#### **R-T004: Implement Complete _wrapWithInteractionSystem Method** ⏱️ 2 hours ✅ COMPLETE
-**Status**: COMPLETE - Full Stack implementation with MouseRegion, Listener (scroll events), GestureDetector (tap/long-press/pan/scale), and Focus. Crosshair overlay using _CrosshairPainter, tooltip overlay using _buildTooltipOverlay, all callbacks properly wired with ChartDataPoint conversions via _mapToDataPoint helper.
+#### **R-T004: Implement Complete \_wrapWithInteractionSystem Method** ⏱️ 2 hours ✅ COMPLETE
+
+**Status**: COMPLETE - Full Stack implementation with MouseRegion, Listener (scroll events), GestureDetector (tap/long-press/pan/scale), and Focus. Crosshair overlay using \_CrosshairPainter, tooltip overlay using \_buildTooltipOverlay, all callbacks properly wired with ChartDataPoint conversions via \_mapToDataPoint helper.
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T001, R-T002, R-T003
@@ -184,6 +197,7 @@ Instantiate and properly wire `EventHandler` in widget lifecycle (init, update, 
 Replace placeholder `_wrapWithInteractionSystem()` method with full implementation that integrates all interaction features.
 
 **Acceptance Criteria**:
+
 - [ ] Wraps chart in `Stack` with crosshair overlay (using `_CrosshairPainter`)
 - [ ] Adds tooltip overlay (using tooltip builder from R-T002)
 - [ ] Wraps in `MouseRegion` for hover detection (onEnter, onExit, onHover)
@@ -196,6 +210,7 @@ Replace placeholder `_wrapWithInteractionSystem()` method with full implementati
 - [ ] Respects all enabled flags (`crosshair.enabled`, `tooltip.enabled`, `enableZoom`, etc.)
 
 **Technical Notes**:
+
 - **Stack Structure**:
   ```dart
   Stack(
@@ -214,8 +229,8 @@ Replace placeholder `_wrapWithInteractionSystem()` method with full implementati
   - `onTapDown`: Find nearest point, trigger `onDataPointTap`, update selection
   - `onLongPressStart`: Trigger `onDataPointLongPress`
   - `onPanStart/Update/End`: If `enablePan`, update pan offset, trigger `onPanChanged`
-    * **Middle-mouse button** (button 4) + drag → Always pans (primary pan method)
-    * **Left-mouse button** + drag → Pans only if pan mode enabled
+    - **Middle-mouse button** (button 4) + drag → Always pans (primary pan method)
+    - **Left-mouse button** + drag → Pans only if pan mode enabled
   - `onScaleStart/Update/End`: If `enableZoom`, handle pinch zoom
 - **Listener for Mouse Wheel**:
   - `onPointerSignal`: Check for `PointerScrollEvent` with modifier keys
@@ -230,8 +245,9 @@ Replace placeholder `_wrapWithInteractionSystem()` method with full implementati
 
 ---
 
-#### **R-T005: Implement _findNearestDataPoint Helper** ⏱️ 20 min ✅ COMPLETE
-**Status**: COMPLETE - Full implementation with proper coordinate transformation using _dataToScreenPoint helper. Reuses same transformation logic as _BravenChartPainter._dataToPixel. Includes _calculateDataBounds and _calculateChartRect helpers for accurate screen coordinate mapping. Performance: O(n) for n total data points.
+#### **R-T005: Implement \_findNearestDataPoint Helper** ⏱️ 20 min ✅ COMPLETE
+
+**Status**: COMPLETE - Full implementation with proper coordinate transformation using \_dataToScreenPoint helper. Reuses same transformation logic as \_BravenChartPainter.\_dataToPixel. Includes \_calculateDataBounds and \_calculateChartRect helpers for accurate screen coordinate mapping. Performance: O(n) for n total data points.
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: None
@@ -240,6 +256,7 @@ Replace placeholder `_wrapWithInteractionSystem()` method with full implementati
 Create helper method to find the nearest data point to a screen position.
 
 **Acceptance Criteria**:
+
 - [ ] Takes `Offset screenPosition` parameter
 - [ ] Returns `ChartDataPoint?` (null if none within snap radius)
 - [ ] Searches all visible series' data points
@@ -249,6 +266,7 @@ Create helper method to find the nearest data point to a screen position.
 - [ ] Performance: <1ms for 10,000 points (use spatial indexing if needed)
 
 **Technical Notes**:
+
 - Need to reuse coordinate transformation from `_BravenChartPainter._dataToPixel()`
 - Consider extracting transformation logic to shared helper
 - For large datasets, could implement quadtree spatial index (future optimization)
@@ -258,7 +276,7 @@ Create helper method to find the nearest data point to a screen position.
     final snapRadius = widget.interactionConfig!.crosshair.snapRadius;
     ChartDataPoint? nearest;
     double minDistance = snapRadius;
-    
+
     for (final series in _getAllSeries()) {
       for (final point in series.points) {
         final screenPoint = _dataToPixel(point); // Need this helper
@@ -280,6 +298,7 @@ Create helper method to find the nearest data point to a screen position.
 ### Phase 2: Zoom/Pan Integration (2 hours)
 
 #### **R-T006: Implement Modifier Key Detection for Scroll Events** ⏱️ 30 min ✅ COMPLETE
+
 **Status**: COMPLETE - Platform-aware modifier key detection implemented (CTRL/CMD for zoom, SHIFT for horizontal pan). Middle-mouse button pan detection added with onPointerDown/Move/Up handlers. Plain scroll without modifiers correctly allows default page scroll (critical for web UX). Placeholders for actual zoom/pan logic to be added in R-T007.
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
@@ -289,6 +308,7 @@ Create helper method to find the nearest data point to a screen position.
 Implement modifier key detection to prevent scroll wheel hijacking browser's default scroll behavior.
 
 **Acceptance Criteria**:
+
 - [ ] Detect CTRL/CMD modifier key state on pointer events
 - [ ] Detect SHIFT modifier key state on pointer events
 - [ ] Detect middle-mouse button (button 4) press/drag
@@ -300,16 +320,17 @@ Implement modifier key detection to prevent scroll wheel hijacking browser's def
 - [ ] Works consistently across platforms (Windows: Ctrl, macOS: Cmd, Linux: Ctrl)
 
 **Technical Notes**:
+
 - Use `RawKeyboard.instance.keysPressed` or event modifiers:
   ```dart
   onPointerSignal: (signal) {
     if (signal is PointerScrollEvent) {
-      final isCtrlPressed = signal.kind == PointerDeviceKind.mouse && 
-        (HardwareKeyboard.instance.isControlPressed || 
+      final isCtrlPressed = signal.kind == PointerDeviceKind.mouse &&
+        (HardwareKeyboard.instance.isControlPressed ||
          HardwareKeyboard.instance.isMetaPressed); // Meta = CMD on macOS
-      
+
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-      
+
       if (isCtrlPressed) {
         // Zoom at cursor position
         _handleZoom(signal.scrollDelta.dy, signal.localPosition);
@@ -359,12 +380,14 @@ Implement modifier key detection to prevent scroll wheel hijacking browser's def
 ---
 
 #### **R-T007: Integrate ZoomPanController** ⏱️ 1 hour
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T004
 
 #### **R-T007: Integrate ZoomPanController** ⏱️ 1 hour ✅ COMPLETE
-**Status**: COMPLETE - ZoomPanController instantiated in initState when zoom/pan enabled. Wired CTRL/CMD+scroll to zoom, SHIFT+scroll to pan horizontally, middle-mouse drag to pan. Pinch gestures and double-tap reset integrated. All interactions update InteractionState.zoomPanState and invoke onZoomChanged, onPanChanged, and onViewportChanged callbacks. Helper method _invokeViewportCallback calculates visible data bounds.
+
+**Status**: COMPLETE - ZoomPanController instantiated in initState when zoom/pan enabled. Wired CTRL/CMD+scroll to zoom, SHIFT+scroll to pan horizontally, middle-mouse drag to pan. Pinch gestures and double-tap reset integrated. All interactions update InteractionState.zoomPanState and invoke onZoomChanged, onPanChanged, and onViewportChanged callbacks. Helper method \_invokeViewportCallback calculates visible data bounds.
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T004, R-T006
@@ -373,6 +396,7 @@ Implement modifier key detection to prevent scroll wheel hijacking browser's def
 Instantiate `ZoomPanController` and wire it to gesture events to enable zoom/pan viewport transformation.
 
 **Acceptance Criteria**:
+
 - [ ] Create `ZoomPanController` instance when `enableZoom || enablePan`
 - [ ] Initialize with default zoom level (1.0) and pan offset (0, 0)
 - [ ] Wire CTRL/CMD + scroll events to `controller.handleZoom()` (from R-T006)
@@ -386,6 +410,7 @@ Instantiate `ZoomPanController` and wire it to gesture events to enable zoom/pan
 - [ ] Trigger `onViewportChanged` callback when visible bounds change
 
 **Technical Notes**:
+
 - Add `ZoomPanController? _zoomPanController;` field to state
 - Initialize in `initState()`:
   ```dart
@@ -411,15 +436,17 @@ Instantiate `ZoomPanController` and wire it to gesture events to enable zoom/pan
 ---
 
 #### **R-T008: Apply Viewport Transformation to Chart Rendering** ⏱️ 1 hour ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T007
-**Status**: COMPLETE - ZoomPanState passed to painter, _calculateDataBounds applies zoom/pan transformation, viewport culling implemented in all draw methods (line, area, bar, scatter)
+**Status**: COMPLETE - ZoomPanState passed to painter, \_calculateDataBounds applies zoom/pan transformation, viewport culling implemented in all draw methods (line, area, bar, scatter)
 
 **Description**:
 Modify `_BravenChartPainter` to apply zoom/pan transformation to chart rendering.
 
 **Acceptance Criteria**:
+
 - [ ] Pass `ZoomPanState` to `_BravenChartPainter` constructor
 - [ ] Transform data bounds based on zoom level and pan offset
 - [ ] Only render data points within visible viewport (culling)
@@ -428,12 +455,13 @@ Modify `_BravenChartPainter` to apply zoom/pan transformation to chart rendering
 - [ ] Axis labels update to show visible data range
 
 **Technical Notes**:
+
 - Modify `_calculateDataBounds()` to apply transformation:
   ```dart
   if (zoomPanState != null) {
     final visibleXRange = (maxX - minX) / zoomPanState.zoomLevelX;
     final visibleYRange = (maxY - minY) / zoomPanState.zoomLevelY;
-    
+
     minX = minX + zoomPanState.panOffsetX;
     maxX = minX + visibleXRange;
     minY = minY + zoomPanState.panOffsetY;
@@ -455,6 +483,7 @@ Modify `_BravenChartPainter` to apply zoom/pan transformation to chart rendering
 ### Phase 3: Keyboard & Gesture Integration (1.5 hours)
 
 #### **R-T009: Integrate GestureRecognizer** ⏱️ 45 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T004
@@ -464,18 +493,20 @@ Modify `_BravenChartPainter` to apply zoom/pan transformation to chart rendering
 Wire `GestureRecognizer` to detect and classify gestures, triggering appropriate callbacks.
 
 **Acceptance Criteria**:
+
 - [ ] Create `GestureRecognizer` instance when any gesture callbacks are registered
 - [ ] Process all pointer events through `GestureRecognizer.recognizeGesture()`
 - [ ] Trigger callbacks based on recognized gesture type:
-  * Tap → `onDataPointTap`
-  * Double-tap → reset zoom
-  * Long-press → `onDataPointLongPress`
-  * Pan → `onPanChanged`
-  * Pinch → zoom
+  - Tap → `onDataPointTap`
+  - Double-tap → reset zoom
+  - Long-press → `onDataPointLongPress`
+  - Pan → `onPanChanged`
+  - Pinch → zoom
 - [ ] Handle gesture conflicts (e.g., pan vs pinch priority)
 - [ ] Update `InteractionState.activeGesture` with current gesture
 
 **Technical Notes**:
+
 - Add `GestureRecognizer? _gestureRecognizer;` field
 - Initialize in `initState()`:
   ```dart
@@ -500,6 +531,7 @@ Wire `GestureRecognizer` to detect and classify gestures, triggering appropriate
 ---
 
 #### **R-T010: Integrate KeyboardHandler** ⏱️ 45 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T004
@@ -509,6 +541,7 @@ Wire `GestureRecognizer` to detect and classify gestures, triggering appropriate
 Wire `KeyboardHandler` to process keyboard navigation and trigger appropriate actions.
 
 **Acceptance Criteria**:
+
 - [ ] Create `KeyboardHandler` instance when `keyboard.enabled == true`
 - [ ] Process key events through `KeyboardHandler.handleKeyEvent()`
 - [ ] Arrow keys navigate between data points (update focused point)
@@ -521,6 +554,7 @@ Wire `KeyboardHandler` to process keyboard navigation and trigger appropriate ac
 - [ ] Screen reader announces focused point (via Semantics)
 
 **Technical Notes**:
+
 - Add `KeyboardHandler? _keyboardHandler;` field
 - Initialize with keyboard shortcuts config:
   ```dart
@@ -554,15 +588,17 @@ Wire `KeyboardHandler` to process keyboard navigation and trigger appropriate ac
 ### Phase 4: InteractionState Synchronization (1 hour)
 
 #### **R-T011: Fix InteractionState Type Mismatches** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Bug Fix  
 **File**: `lib/src/interaction/models/interaction_state.dart`  
 **Dependencies**: None
-**Status**: COMPLETE - Kept Map<String, dynamic> for data points to avoid circular dependencies and maintain JSON serializability. Added comprehensive documentation explaining this design choice. All properties (hoveredPoint, focusedPoint, selectedPoints) are properly documented. Widget layer handles conversion via _mapToDataPoint helper.
+**Status**: COMPLETE - Kept Map<String, dynamic> for data points to avoid circular dependencies and maintain JSON serializability. Added comprehensive documentation explaining this design choice. All properties (hoveredPoint, focusedPoint, selectedPoints) are properly documented. Widget layer handles conversion via \_mapToDataPoint helper.
 
 **Description**:
 Fix type mismatches between `InteractionState` properties and usage in widget.
 
 **Acceptance Criteria**:
+
 - [ ] Decide: Keep `Map<String, dynamic>` for data points OR change to `ChartDataPoint?`
 - [ ] Add missing `isHovering` property if needed
 - [ ] Add missing `selectedPoint` property if needed
@@ -571,6 +607,7 @@ Fix type mismatches between `InteractionState` properties and usage in widget.
 - [ ] Document the chosen approach in dartdoc comments
 
 **Technical Notes**:
+
 - Current issue: `InteractionState` uses `Map<String, dynamic>? hoveredPoint` but widget expects `ChartDataPoint?`
 - **Option A** (Recommended): Change to `ChartDataPoint?` for type safety
   ```dart
@@ -590,6 +627,7 @@ Fix type mismatches between `InteractionState` properties and usage in widget.
 ---
 
 #### **R-T012: Synchronize InteractionState Updates** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Implementation  
 **File**: `lib/src/widgets/braven_chart.dart`  
 **Dependencies**: R-T010
@@ -599,6 +637,7 @@ Fix type mismatches between `InteractionState` properties and usage in widget.
 Ensure all user interactions properly update `InteractionState` with correct values.
 
 **Acceptance Criteria**:
+
 - [ ] Mouse hover updates: `hoveredPoint`, `crosshairPosition`, `isCrosshairVisible`, `isTooltipVisible`, `tooltipPosition`
 - [ ] Mouse exit clears: `hoveredPoint`, `crosshairPosition`, `tooltipPosition`, sets `isCrosshairVisible = false`
 - [ ] Tap updates: `selectedPoints`, `focusedPoint`
@@ -609,6 +648,7 @@ Ensure all user interactions properly update `InteractionState` with correct val
 - [ ] State changes trigger `setState()` for rebuild
 
 **Technical Notes**:
+
 - Pattern for all updates:
   ```dart
   setState(() {
@@ -635,6 +675,7 @@ Ensure all user interactions properly update `InteractionState` with correct val
 ### Phase 5: Testing & Validation (2 hours)
 
 #### **R-T013: Manual Testing with Showcase Screen** ⏱️ 1 hour
+
 **Type**: Testing  
 **File**: `example/lib/screens/interaction_showcase_screen.dart`  
 **Dependencies**: R-T001 through R-T011
@@ -643,6 +684,7 @@ Ensure all user interactions properly update `InteractionState` with correct val
 Manually test all interaction features using the existing showcase screen.
 
 **Test Cases**:
+
 - [ ] **Crosshair**: Hover over chart, verify crosshair appears and follows cursor
 - [ ] **Snap-to-Point**: Verify crosshair snaps to nearest point within 20px
 - [ ] **Tooltip**: Verify tooltip appears with correct data values
@@ -663,6 +705,7 @@ Manually test all interaction features using the existing showcase screen.
 - [ ] **Modifier Key Hint**: Verify visual hint shows "Hold Ctrl to zoom" (if enabled)
 
 **Performance Validation**:
+
 - [ ] Crosshair render time: <2ms (use DevTools Performance tab)
 - [ ] Event processing time: <5ms (log timestamps)
 - [ ] Zoom/pan FPS: 60 FPS during continuous interaction (use Performance Overlay)
@@ -673,6 +716,7 @@ Manually test all interaction features using the existing showcase screen.
 ---
 
 #### **R-T014: Verify Existing Tests Still Pass** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Testing  
 **File**: N/A (run all tests)  
 **Dependencies**: R-T001 through R-T011
@@ -682,6 +726,7 @@ Manually test all interaction features using the existing showcase screen.
 Run all existing tests to ensure new implementation doesn't break anything.
 
 **Acceptance Criteria**:
+
 - [x] All existing tests pass or failures are pre-existing (unrelated to Layer 7)
 - [x] No new analyzer warnings or errors from interaction system code
 - [x] `flutter analyze` passes with only info-level warnings (deprecated Flutter APIs)
@@ -690,6 +735,7 @@ Run all existing tests to ensure new implementation doesn't break anything.
 - [x] Interaction widget tests validate widget integration
 
 **Test Results**:
+
 - **Total**: 1884 passed, 96 failed, 3 skipped
 - **Interaction Tests**: All 12 tests pass ✅
 - **Failures**: All 96 failures are pre-existing Layer 1 contract tests (ChartLayer interface not implemented)
@@ -697,12 +743,14 @@ Run all existing tests to ensure new implementation doesn't break anything.
 - **Regression Status**: ✅ NO REGRESSIONS - All failures existed before Layer 7 changes
 
 **Critical Fixes Applied**:
+
 - Fixed GestureDetector configuration error: "Having both pan and scale gesture recognizer is redundant"
 - Consolidated gesture handling to use only `onScale*` handlers
 - `onScaleUpdate` now handles both zoom (scale != 1.0) and pan (focalPointDelta != zero)
 - Removed conflicting `onPan*` handlers that caused widget build failures
 
 **Commands**:
+
 ```powershell
 # Run all tests
 flutter test  # 1884 passed, 96 failed (all pre-existing)
@@ -719,6 +767,7 @@ flutter analyze  # 4 info-level warnings (not errors)
 ---
 
 #### **R-T015: Update Documentation** ⏱️ 30 min ✅ COMPLETE
+
 **Type**: Documentation  
 **File**: Multiple  
 **Dependencies**: R-T012, R-T013
@@ -728,6 +777,7 @@ flutter analyze  # 4 info-level warnings (not errors)
 Update documentation to reflect completed functionality.
 
 **Acceptance Criteria**:
+
 - [x] Document remediation sprint completion in remediation_sprint.md
 - [x] Record all technical fixes (GestureDetector conflict, viewport transformation, etc.)
 - [x] Document test results (1884 passing, 96 pre-existing failures)
@@ -736,6 +786,7 @@ Update documentation to reflect completed functionality.
 - [x] **Important**: Note modifier key requirements for web (CTRL+Scroll zoom, SHIFT+Scroll pan)
 
 **Documentation Updates**:
+
 - **remediation_sprint.md**: Serves as primary documentation of all remediation work
   - All 15 tasks documented with status, technical notes, and completion details
   - GestureDetector conflict and resolution documented
@@ -743,12 +794,12 @@ Update documentation to reflect completed functionality.
   - Modifier key requirements noted in R-T006
   - Keyboard integration details in R-T010
   - Zoom/pan viewport transformation in R-T008
-  
+
 **Key Findings Documented**:
+
 1. **GestureDetector Constraint**: Flutter prohibits both `onPan*` and `onScale*` handlers simultaneously
    - Solution: Use `onScale*` only (handles both zoom and pan)
    - `onScaleUpdate` detects zoom (scale != 1.0) vs pan (focalPointDelta)
-   
 2. **Modifier Keys**: Critical for web UX to prevent scroll hijacking
    - CTRL/CMD + Scroll = Zoom
    - SHIFT + Scroll = Horizontal Pan
@@ -761,6 +812,7 @@ Update documentation to reflect completed functionality.
    - All failures pre-existing (Layer 1 contracts)
 
 **Future Documentation Tasks** (Out of scope for remediation):
+
 - Update root readme.md with interaction feature list
 - Add modifier key instructions to example/readme.md
 - Update project_status.md with Layer 7 completion
@@ -773,23 +825,27 @@ Update documentation to reflect completed functionality.
 ## Risk Assessment
 
 ### 🟢 Low Risk
+
 - **Crosshair Rendering** (R-T001) - Straightforward CustomPainter implementation
 - **Tooltip Display** (R-T002) - Standard Flutter overlay pattern
 - **EventHandler Wiring** (R-T003) - Handler class already exists and is tested
 - **Type Fixes** (R-T011) - Simple model update
 
 ### 🟡 Medium Risk
-- **_wrapWithInteractionSystem** (R-T004) - Complex method with many interactions, may have edge cases
+
+- **\_wrapWithInteractionSystem** (R-T004) - Complex method with many interactions, may have edge cases
 - **Modifier Key Detection** (R-T006) - Platform differences (Ctrl vs Cmd), web vs desktop behavior
 - **ZoomPanController Integration** (R-T007) - Viewport math can be tricky
 - **GestureRecognizer Integration** (R-T009) - Gesture conflicts possible
 
 ### 🔴 High Risk
+
 - **Viewport Transformation** (R-T008) - Could break existing chart rendering if not careful
 - **Performance** (R-T013) - Meeting <2ms crosshair, 60 FPS targets may require optimization
 - **Web Scroll Hijacking Prevention** (R-T006) - Critical UX issue, must not break browser scroll
 
 ### Mitigation Strategies
+
 1. **Incremental Development**: Complete one task at a time, test before moving to next
 2. **Existing Test Safety Net**: 277 tests will catch regressions immediately
 3. **Git Workflow**: Commit after each completed task for easy rollback
@@ -801,12 +857,14 @@ Update documentation to reflect completed functionality.
 ## Dependencies & Prerequisites
 
 ### External Dependencies
+
 - ✅ All handler classes exist (`EventHandler`, `CrosshairRenderer`, etc.)
 - ✅ All config models exist (`InteractionConfig`, `CrosshairConfig`, etc.)
 - ✅ All tests exist and are passing
 - ✅ Example showcase screen exists
 
 ### Internal Dependencies
+
 - R-T004 depends on R-T001, R-T002, R-T003
 - R-T007 depends on R-T006
 - R-T008 depends on R-T007
@@ -815,6 +873,7 @@ Update documentation to reflect completed functionality.
 - R-T015 depends on R-T013, R-T014
 
 ### Parallel Execution Opportunities
+
 - **Phase 1**: R-T001, R-T002, R-T003, R-T005 can be done in parallel (if multiple developers)
 - **Phase 2**: R-T006 and R-T007 are sequential, R-T008 depends on R-T007
 - **Phase 3**: R-T009 and R-T010 can be done in parallel
@@ -826,12 +885,14 @@ Update documentation to reflect completed functionality.
 ## Success Metrics
 
 ### Functional Metrics
+
 - [ ] All 12 acceptance criteria from "🎯 Acceptance Criteria for Remediation" section are met
 - [ ] All 15 remediation tasks (R-T001 through R-T015) are complete
 - [ ] Zero new bugs introduced (all existing tests pass)
 - [ ] **Modifier key zoom/pan works on web** (critical - prevents scroll hijacking)
 
 ### Performance Metrics
+
 - [ ] Crosshair render time: <2ms (spec requirement)
 - [ ] Event processing time: <5ms (spec requirement)
 - [ ] Zoom/pan FPS: 60 FPS during continuous interaction (spec requirement)
@@ -839,6 +900,7 @@ Update documentation to reflect completed functionality.
 - [ ] Memory usage: <5MB for interaction system (spec requirement)
 
 ### Code Quality Metrics
+
 - [ ] Zero analyzer warnings/errors
 - [ ] 100% dartdoc coverage for new public APIs
 - [ ] Code follows existing patterns in `braven_chart.dart`
@@ -849,12 +911,14 @@ Update documentation to reflect completed functionality.
 ## Timeline Estimate
 
 ### Best Case (1 day)
+
 - Experienced Flutter developer
 - No unexpected issues
 - Straight implementation following tasks
 - **Total**: 8.5 hours of focused work (added 30min for modifier key handling)
 
 ### Expected Case (1.5 days)
+
 - Moderate Flutter experience
 - Minor debugging needed
 - Some performance optimization required
@@ -862,6 +926,7 @@ Update documentation to reflect completed functionality.
 - **Total**: 12.5 hours of work
 
 ### Worst Case (2 days)
+
 - Complex edge cases discovered
 - Performance optimization required
 - Multiple iterations needed for testing
@@ -873,33 +938,38 @@ Update documentation to reflect completed functionality.
 ## Approval & Sign-Off
 
 **Review Checklist**:
+
 - [ ] All tasks clearly defined with acceptance criteria
 - [ ] Dependencies and risks identified
 - [ ] Timeline estimate is reasonable
 - [ ] Success metrics are measurable
 - [ ] No missing requirements from original spec
 
-**Approved By**: _________________  
-**Date**: _________________  
-**Estimated Start**: _________________  
-**Estimated Completion**: _________________  
+**Approved By**: ********\_********  
+**Date**: ********\_********  
+**Estimated Start**: ********\_********  
+**Estimated Completion**: ********\_********
 
 ---
 
 ## Execution Notes
 
-*This section will be filled during execution*
+_This section will be filled during execution_
 
 **Deviations from Plan**:
+
 - [To be documented during implementation]
 
 **Unexpected Issues**:
+
 - [To be documented during implementation]
 
 **Performance Optimizations**:
+
 - [To be documented during implementation]
 
 **Lessons Learned**:
+
 - [To be documented during implementation]
 
 ---

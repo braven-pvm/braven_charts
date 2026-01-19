@@ -57,7 +57,7 @@ class _MyChartScreenState extends State<MyChartScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize controller with annotations
     _annotationController = AnnotationController(
       initialAnnotations: [
@@ -81,7 +81,7 @@ class _MyChartScreenState extends State<MyChartScreen> {
         ),
       ],
     );
-    
+
     // Optional: Listen to changes for UI feedback
     _annotationController.addListener(_onAnnotationsChanged);
   }
@@ -201,6 +201,7 @@ if (_annotationController.containsId('weekend')) {
 ## Annotation Types & Editing Behavior
 
 ### PointAnnotation
+
 - **Drag Behavior**: Moves to nearest data point on the series
 - **Visual Feedback**: Ghost marker at original position, preview at target position
 - **Persistence**: Updates `dataPointIndex` property
@@ -219,6 +220,7 @@ PointAnnotation(
 ```
 
 ### RangeAnnotation
+
 - **Drag Behavior**: Moves entire range (maintains width/height)
 - **Resize Behavior**: 8 resize handles (4 corners + 4 edges)
 - **Visual Feedback**: Live preview during drag/resize with value labels
@@ -243,6 +245,7 @@ RangeAnnotation(
 ```
 
 ### TextAnnotation
+
 - **Drag Behavior**: Free-form repositioning anywhere on chart
 - **Visual Feedback**: Moves smoothly with pointer
 - **Persistence**: Updates `position` property (screen coordinates)
@@ -260,6 +263,7 @@ TextAnnotation(
 ```
 
 ### ThresholdAnnotation
+
 - **Drag Behavior**: Constrained to axis direction (horizontal/vertical only)
 - **Visual Feedback**: Halo effect + real-time value label during drag
 - **Persistence**: Updates `value` property
@@ -280,6 +284,7 @@ ThresholdAnnotation(
 ```
 
 ### TrendAnnotation
+
 - **Drag Behavior**: Not draggable (calculated from data)
 - **Edit Behavior**: Not directly editable
 - **Use Case**: Statistical overlays (linear regression, moving average, etc.)
@@ -310,12 +315,14 @@ RangeAnnotation(
 ```
 
 **Snap Increments**:
+
 - `0.1`: Snap to tenths (2.3, 2.4, 2.5)
 - `0.5`: Snap to halves (2.0, 2.5, 3.0) - default
 - `1.0`: Snap to integers (2, 3, 4)
 - `10.0`: Snap to tens (10, 20, 30)
 
 **Snap Tolerance**: Percentage of visible viewport range (0.0-1.0)
+
 - `0.05`: Snap within 5% of viewport (default)
 - `0.1`: Snap within 10% of viewport (more lenient)
 - `0.02`: Snap within 2% of viewport (stricter)
@@ -325,11 +332,11 @@ RangeAnnotation(
 ```dart
 BravenChartPlus(
   annotationController: _controller,
-  
+
   // Called when annotation is dragged/resized
   onAnnotationDragged: (annotation, position) {
     print('Annotation ${annotation.id} moved to $position');
-    
+
     // Custom validation
     if (annotation is RangeAnnotation) {
       if (annotation.endX - annotation.startX < 1.0) {
@@ -369,6 +376,7 @@ _annotationController.replaceAll([
 ### 1. Always Use AnnotationController for Persistence
 
 ❌ **Don't** pass annotations directly to widget:
+
 ```dart
 BravenChartPlus(
   annotations: [myAnnotation],  // Changes won't persist!
@@ -376,6 +384,7 @@ BravenChartPlus(
 ```
 
 ✅ **Do** use controller:
+
 ```dart
 BravenChartPlus(
   annotationController: _controller,  // Persistence works!
@@ -469,6 +478,7 @@ _controller.addAnnotation(RangeAnnotation(
 ## Example: Complete Implementation
 
 See `example/lib/showcase_plus/pages/annotations_page.dart` for a complete working example with:
+
 - ✅ All 5 annotation types demonstrated
 - ✅ Real-time persistence feedback
 - ✅ Change counter showing live updates
@@ -532,6 +542,7 @@ for (final annotation in hundreds) {
 ## API Reference
 
 See:
+
 - `lib/src_plus/controllers/annotation_controller.dart` - Full AnnotationController API
 - `lib/src_plus/models/chart_annotation.dart` - Annotation models with all properties
 - `lib/src_plus/elements/annotation_elements.dart` - Rendering and interaction implementation

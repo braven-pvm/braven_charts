@@ -15,7 +15,7 @@
 - Q: How should the system handle simultaneous multiple interaction types (zoom + pan + hover)? → A: Allow non-conflicting interactions simultaneously with proper state isolation
 - Q: How should memory leaks be prevented when disposing ValueNotifier instances? → A: Dispose ValueNotifier, remove all listeners, cancel timers, dispose animation controllers
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Smooth Mouse Interactions Without Crashes (Priority: P1)
 
@@ -73,7 +73,7 @@ Users can programmatically update chart data via ChartController while simultane
 - How does system behave when interaction state updates occur faster than frame rate (>60 updates/second)? Updates are throttled to 60Hz maximum, with ValueNotifier coalescing multiple updates within a single frame.
 - What happens during rapid enable/disable cycles of interactionConfig?
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -88,9 +88,9 @@ Users can programmatically update chart data via ChartController while simultane
   - **Keyboard Handler**: onKeyEvent (KeyboardListener - modifier keys)
   - **Total**: 11 interaction handlers
 - **FR-007**: System MUST update animation controller listeners (zoom, pan) to use notifier instead of setState
-- **FR-008**: System MUST update controller callbacks (_onControllerUpdate, _onDataStreamPoint) to use notifier
+- **FR-008**: System MUST update controller callbacks (\_onControllerUpdate, \_onDataStreamPoint) to use notifier
 - **FR-009**: System MUST update timer callbacks (tooltip hide timer) to use notifier
-- **FR-010**: System MUST delete deprecated _safeSetState() method and all its usages
+- **FR-010**: System MUST delete deprecated \_safeSetState() method and all its usages
 - **FR-011**: System MUST ensure base chart rendering never depends on interaction state (separation of concerns)
 - **FR-012**: System MUST maintain backward compatibility with existing public APIs (no breaking changes to BravenChart widget interface)
 - **FR-013**: System MUST throttle interaction state updates to 60Hz maximum using frame-based coalescing when updates occur faster than the frame rate
@@ -108,7 +108,7 @@ Users can programmatically update chart data via ChartController while simultane
   - Keyboard: onKeyEvent (1 handler)
 - **Base Chart**: The chart rendering layer (axes, grid, data series) that should remain stable and never rebuild during mouse interactions.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -125,10 +125,9 @@ Users can programmatically update chart data via ChartController while simultane
 
 - Interaction system code is primarily in `lib/src/widgets/braven_chart.dart` file
 - InteractionState class exists with copyWith() method for immutable updates
-- CustomPainter implementations (_CrosshairPainter, tooltip painters) are already implemented and just need new integration approach
+- CustomPainter implementations (\_CrosshairPainter, tooltip painters) are already implemented and just need new integration approach
 - RepaintBoundary and ValueListenableBuilder are available in Flutter version being used (standard Flutter widgets)
-- Existing event handler structure (_onHover, _onExit, etc.) can be modified without breaking other dependencies
+- Existing event handler structure (\_onHover, \_onExit, etc.) can be modified without breaking other dependencies
 - ChartController interface remains stable and doesn't require changes
 - Performance profiling will be done using Flutter DevTools
 - Testing will cover all 11+ interaction handlers, animation controllers, controller callbacks, and timer callbacks mentioned in implementation checklist
-

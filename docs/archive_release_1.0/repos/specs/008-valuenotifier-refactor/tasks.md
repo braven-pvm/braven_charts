@@ -8,12 +8,15 @@
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
+
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
 
 ## Path Conventions
+
 Flutter package structure:
+
 - **Library code**: `lib/src/` (implementation)
 - **Tests**: `test/unit/`, `test/integration/`, `test/performance/`
 - **Example app**: `example/lib/` (no changes - backward compatible)
@@ -24,11 +27,11 @@ Flutter package structure:
 
 **Purpose**: Project initialization and branch preparation
 
-- [X] T001 Verify branch 008-valuenotifier-refactor is current and clean (git status)
-- [X] T002 Review architecture_refactor_plan.md to understand root cause and solution architecture
-- [X] T003 [P] Review contracts/event-handlers.md to understand event handler refactor patterns
-- [X] T004 [P] Review contracts/animation-integration.md to understand animation listener patterns
-- [X] T005 [P] Review contracts/disposal-cleanup.md to understand memory management requirements
+- [x] T001 Verify branch 008-valuenotifier-refactor is current and clean (git status)
+- [x] T002 Review architecture_refactor_plan.md to understand root cause and solution architecture
+- [x] T003 [P] Review contracts/event-handlers.md to understand event handler refactor patterns
+- [x] T004 [P] Review contracts/animation-integration.md to understand animation listener patterns
+- [x] T005 [P] Review contracts/disposal-cleanup.md to understand memory management requirements
 
 **Checkpoint**: Understanding established - ready to begin foundational refactoring
 
@@ -40,10 +43,10 @@ Flutter package structure:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T006 Add ValueNotifier<InteractionState> field declaration in lib/src/widgets/braven_chart.dart (line ~583)
-- [X] T007 Initialize _interactionStateNotifier in initState() with InteractionState.initial() in lib/src/widgets/braven_chart.dart
-- [X] T008 Add _interactionStateNotifier.dispose() to dispose() method in lib/src/widgets/braven_chart.dart (before super.dispose())
-- [X] T009 Remove old InteractionState _interactionState field declaration from lib/src/widgets/braven_chart.dart
+- [x] T006 Add ValueNotifier<InteractionState> field declaration in lib/src/widgets/braven_chart.dart (line ~583)
+- [x] T007 Initialize \_interactionStateNotifier in initState() with InteractionState.initial() in lib/src/widgets/braven_chart.dart
+- [x] T008 Add \_interactionStateNotifier.dispose() to dispose() method in lib/src/widgets/braven_chart.dart (before super.dispose())
+- [x] T009 Remove old InteractionState \_interactionState field declaration from lib/src/widgets/braven_chart.dart
 
 **Checkpoint**: Foundation ready - ValueNotifier infrastructure in place, user story implementation can now begin in parallel
 
@@ -59,15 +62,15 @@ Flutter package structure:
 
 **NOTE: Write these tests FIRST before any implementation, ensure they FAIL initially**
 
-- [X] T010 [P] [US1] Create test/unit/widgets/braven_chart_valuenotifier_test.dart with test verifying _interactionStateNotifier exists and initializes correctly
-- [X] T011 [P] [US1] Add test verifying _interactionStateNotifier updates without triggering setState in test/unit/widgets/braven_chart_valuenotifier_test.dart
-- [X] T012 [P] [US1] Create test/unit/widgets/event_handlers_refactor_test.dart with test for _onHover updating notifier (not setState)
-- [X] T013 [P] [US1] Add test for _onExit updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
-- [X] T014 [P] [US1] Add test for _onPointerDown updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
-- [X] T015 [P] [US1] Add test for _onPointerUp updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
-- [X] T016 [P] [US1] Add test for _onPointerMove updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
-- [X] T017 [P] [US1] Add test for _onPointerSignal updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
-- [X] T018 [P] [US1] Create test/integration/crash_prevention_test.dart with 1000+ continuous mouse movements test (verifies SC-001)
+- [x] T010 [P] [US1] Create test/unit/widgets/braven_chart_valuenotifier_test.dart with test verifying \_interactionStateNotifier exists and initializes correctly
+- [x] T011 [P] [US1] Add test verifying \_interactionStateNotifier updates without triggering setState in test/unit/widgets/braven_chart_valuenotifier_test.dart
+- [x] T012 [P] [US1] Create test/unit/widgets/event_handlers_refactor_test.dart with test for \_onHover updating notifier (not setState)
+- [x] T013 [P] [US1] Add test for \_onExit updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
+- [x] T014 [P] [US1] Add test for \_onPointerDown updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
+- [x] T015 [P] [US1] Add test for \_onPointerUp updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
+- [x] T016 [P] [US1] Add test for \_onPointerMove updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
+- [x] T017 [P] [US1] Add test for \_onPointerSignal updating notifier in test/unit/widgets/event_handlers_refactor_test.dart
+- [x] T018 [P] [US1] Create test/integration/crash_prevention_test.dart with 1000+ continuous mouse movements test (verifies SC-001)
 
 **Run tests - ALL SHOULD PASS now** ✅
 
@@ -77,35 +80,35 @@ Flutter package structure:
 
 **Note on [P] Parallel Markers**: These handlers are technically independent methods (different callbacks in the widget tree), making parallel implementation possible with atomic git commits per handler. However, due to single-file nature and potential merge conflicts, **sequential execution is RECOMMENDED** for risk-averse workflows. Advanced users comfortable with git conflict resolution may work in parallel using feature branches. When in doubt, execute sequentially.
 
-- [X] T019 [P] [US1] Refactor onHover (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1358)
-- [X] T020 [P] [US1] Refactor onExit (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1340)
-- [X] T021 [P] [US1] Refactor onPointerDown (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1468)
-- [X] T022 [P] [US1] Refactor onPointerUp (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1497)
-- [X] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)
-- [X] T024 [P] [US1] Refactor onPointerSignal (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1434)
-- [X] T025 [P] [US1] Refactor onTapDown (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1512)
-- [X] T026 [P] [US1] Refactor onScaleStart (GestureDetector callback) - NO-OP (handler is empty, no setState)
-- [X] T027 [P] [US1] Refactor onScaleUpdate (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1554)
-- [X] T028 [P] [US1] Refactor onScaleEnd (GestureDetector callback) - NO-OP (handler is empty, no setState)
-- [X] T029 [P] [US1] Refactor onKeyEvent (KeyboardListener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1618)
+- [x] T019 [P] [US1] Refactor onHover (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1358)
+- [x] T020 [P] [US1] Refactor onExit (MouseRegion callback) in lib/src/widgets/braven_chart.dart: Replace `_safeSetState(() => _interactionState = ...)` with `_interactionStateNotifier.value = ...` (line ~1340)
+- [x] T021 [P] [US1] Refactor onPointerDown (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1468)
+- [x] T022 [P] [US1] Refactor onPointerUp (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1497)
+- [x] T023 [P] [US1] Refactor onPointerMove (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1477)
+- [x] T024 [P] [US1] Refactor onPointerSignal (Listener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1434)
+- [x] T025 [P] [US1] Refactor onTapDown (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1512)
+- [x] T026 [P] [US1] Refactor onScaleStart (GestureDetector callback) - NO-OP (handler is empty, no setState)
+- [x] T027 [P] [US1] Refactor onScaleUpdate (GestureDetector callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1554)
+- [x] T028 [P] [US1] Refactor onScaleEnd (GestureDetector callback) - NO-OP (handler is empty, no setState)
+- [x] T029 [P] [US1] Refactor onKeyEvent (KeyboardListener callback) in lib/src/widgets/braven_chart.dart: Replace setState/safeSetState with `_interactionStateNotifier.value = ...` (line ~1618)
 
 #### Rendering Layer Integration
 
-- [X] T030 [US1] Wrap crosshair rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
-- [X] T031 [US1] Wrap tooltip rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
-- [X] T032 [US1] Ensure base chart rendering (axes, grid, series) does NOT depend on _interactionStateNotifier in lib/src/widgets/braven_chart.dart - VERIFIED: Only zoomPanState passed to painter
-- [X] T030 FIX: Fixed widget hierarchy bug (Positioned.fill must wrap RepaintBoundary, not vice versa) - Commit dfd0151
+- [x] T030 [US1] Wrap crosshair rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
+- [x] T031 [US1] Wrap tooltip rendering in RepaintBoundary + ValueListenableBuilder in build() method of lib/src/widgets/braven_chart.dart
+- [x] T032 [US1] Ensure base chart rendering (axes, grid, series) does NOT depend on \_interactionStateNotifier in lib/src/widgets/braven_chart.dart - VERIFIED: Only zoomPanState passed to painter
+- [x] T030 FIX: Fixed widget hierarchy bug (Positioned.fill must wrap RepaintBoundary, not vice versa) - Commit dfd0151
 
 #### Cleanup
 
-- [X] T033 [US1] Delete _safeSetState() method from lib/src/widgets/braven_chart.dart (lines ~1133-1165)
-- [X] T034 [US1] Search and remove all remaining _safeSetState() calls in lib/src/widgets/braven_chart.dart (verify with grep) - VERIFIED: Zero matches
+- [x] T033 [US1] Delete \_safeSetState() method from lib/src/widgets/braven_chart.dart (lines ~1133-1165)
+- [x] T034 [US1] Search and remove all remaining \_safeSetState() calls in lib/src/widgets/braven_chart.dart (verify with grep) - VERIFIED: Zero matches
 
 **Verify tests now PASS** ✅
 
-- [X] T035 [US1] Run test/unit/widgets/braven_chart_valuenotifier_test.dart - verify all tests pass - PASSED: 2/2 tests
-- [X] T036 [US1] Run test/unit/widgets/event_handlers_refactor_test.dart - verify all tests pass - PASSED: 6/6 tests
-- [X] T037 [US1] Run test/integration/crash_prevention_test.dart - verify zero crashes during 1000+ mouse movements - PASSED: 2/2 tests
+- [x] T035 [US1] Run test/unit/widgets/braven_chart_valuenotifier_test.dart - verify all tests pass - PASSED: 2/2 tests
+- [x] T036 [US1] Run test/unit/widgets/event_handlers_refactor_test.dart - verify all tests pass - PASSED: 6/6 tests
+- [x] T037 [US1] Run test/integration/crash_prevention_test.dart - verify zero crashes during 1000+ mouse movements - PASSED: 2/2 tests
 
 **Checkpoint**: At this point, User Story 1 (crash elimination) should be fully functional and testable independently. Mouse interactions work without crashes.
 
@@ -119,10 +122,10 @@ Flutter package structure:
 
 ### Tests for User Story 2 (TDD - Write FIRST, ensure they FAIL) ⚠️
 
-- [X] T038 [P] [US2] Create test/performance/interaction_performance_test.dart with frame time measurement test (verifies SC-002: <16ms frames)
-- [X] T039 [P] [US2] Add widget rebuild count test to test/performance/interaction_performance_test.dart (verifies SC-003: zero rebuilds)
-- [X] T040 [P] [US2] Add CustomPainter repaint isolation test to test/performance/interaction_performance_test.dart (verifies SC-004)
-- [X] T041 [P] [US2] Add 1000+ consecutive mouse movements test to test/performance/interaction_performance_test.dart (verifies SC-005)
+- [x] T038 [P] [US2] Create test/performance/interaction_performance_test.dart with frame time measurement test (verifies SC-002: <16ms frames)
+- [x] T039 [P] [US2] Add widget rebuild count test to test/performance/interaction_performance_test.dart (verifies SC-003: zero rebuilds)
+- [x] T040 [P] [US2] Add CustomPainter repaint isolation test to test/performance/interaction_performance_test.dart (verifies SC-004)
+- [x] T041 [P] [US2] Add 1000+ consecutive mouse movements test to test/performance/interaction_performance_test.dart (verifies SC-005)
 
 **Run tests - ALL SHOULD FAIL at this point** ✅
 
@@ -130,28 +133,28 @@ Flutter package structure:
 
 #### Animation Controller Integration
 
-- [X] T042 [P] [US2] Refactor zoom animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~645)
-- [X] T043 [P] [US2] Refactor pan animation listener in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ... (line ~658)
-- [X] T044 [US2] Update dispose() to dispose animation controllers BEFORE notifier in lib/src/widgets/braven_chart.dart (enforce disposal order) - VERIFIED: Correct order (timers → controllers → notifier)
+- [x] T042 [P] [US2] Refactor zoom animation listener in lib/src/widgets/braven_chart.dart: Replace setState with \_interactionStateNotifier.value = ... (line ~645)
+- [x] T043 [P] [US2] Refactor pan animation listener in lib/src/widgets/braven_chart.dart: Replace setState with \_interactionStateNotifier.value = ... (line ~658)
+- [x] T044 [US2] Update dispose() to dispose animation controllers BEFORE notifier in lib/src/widgets/braven_chart.dart (enforce disposal order) - VERIFIED: Correct order (timers → controllers → notifier)
 
 #### Controller Callbacks Integration
 
-- [X] T045 [P] [US2] Refactor _onControllerUpdate callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
-- [X] T046 [P] [US2] Refactor _onDataStreamPoint callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
+- [x] T045 [P] [US2] Refactor \_onControllerUpdate callback in lib/src/widgets/braven_chart.dart: Replace setState with \_interactionStateNotifier.value = ...
+- [x] T046 [P] [US2] Refactor \_onDataStreamPoint callback in lib/src/widgets/braven_chart.dart: Replace setState with \_interactionStateNotifier.value = ...
 
 #### Timer Callbacks Integration
 
-- [X] T047 [US2] Refactor tooltip hide timer callback in lib/src/widgets/braven_chart.dart: Replace setState with _interactionStateNotifier.value = ...
-- [X] T048 [US2] Update dispose() to cancel timers BEFORE disposing controllers in lib/src/widgets/braven_chart.dart (enforce disposal order) - VERIFIED: Correct order (timers → controllers → notifier)
+- [x] T047 [US2] Refactor tooltip hide timer callback in lib/src/widgets/braven_chart.dart: Replace setState with \_interactionStateNotifier.value = ...
+- [x] T048 [US2] Update dispose() to cancel timers BEFORE disposing controllers in lib/src/widgets/braven_chart.dart (enforce disposal order) - VERIFIED: Correct order (timers → controllers → notifier)
 
 #### Throttling Implementation
 
-- [X] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart using one of two approaches: (A) Auto-throttling: Wrap notifier updates in `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)` which automatically coalesces updates to frame rate, OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field, check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16` before updating, use last-value-wins strategy (discard intermediate updates). Approach A recommended for simplicity. - IMPLEMENTED: Approach A (_updateInteractionStateThrottled helper method)
-- [X] T050 [US2] Apply throttling to high-frequency event handlers (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart - wrap existing `_interactionStateNotifier.value = ...` statements with chosen throttling approach from T049 - APPLIED: All 3 handlers now use _updateInteractionStateThrottled()
+- [x] T049 [US2] Implement 60Hz throttling logic in lib/src/widgets/braven_chart.dart using one of two approaches: (A) Auto-throttling: Wrap notifier updates in `SchedulerBinding.instance.addPostFrameCallback(() => _interactionStateNotifier.value = ...)` which automatically coalesces updates to frame rate, OR (B) Manual throttling: Add `DateTime? _lastUpdateTime` field, check `DateTime.now().difference(_lastUpdateTime ?? DateTime(0)).inMilliseconds >= 16` before updating, use last-value-wins strategy (discard intermediate updates). Approach A recommended for simplicity. - IMPLEMENTED: Approach A (\_updateInteractionStateThrottled helper method)
+- [x] T050 [US2] Apply throttling to high-frequency event handlers (onHover, onPointerMove, onPointerSignal) in lib/src/widgets/braven_chart.dart - wrap existing `_interactionStateNotifier.value = ...` statements with chosen throttling approach from T049 - APPLIED: All 3 handlers now use \_updateInteractionStateThrottled()
 
 **Verify tests now PASS** ✅
 
-- [X] T051 [US2] Run test/performance/interaction_performance_test.dart - verify all tests pass (60fps, zero rebuilds, isolation) - PASSED: 4/4 tests (max 9ms frames, 0 rebuilds, 76.3% improved performance)
+- [x] T051 [US2] Run test/performance/interaction_performance_test.dart - verify all tests pass (60fps, zero rebuilds, isolation) - PASSED: 4/4 tests (max 9ms frames, 0 rebuilds, 76.3% improved performance)
 - [ ] T052 [US2] Profile with Flutter DevTools during mouse hover - verify zero widget rebuilds in Performance tab
 - [ ] T053 [US2] Verify RepaintBoundary working using DevTools Repaint Rainbow - only overlays should flash
 
@@ -177,8 +180,8 @@ Flutter package structure:
 
 #### State Isolation Verification
 
-- [ ] T057 [US3] Verify _onControllerUpdate does NOT clear interaction state fields in lib/src/widgets/braven_chart.dart
-- [ ] T058 [US3] Verify _onDataStreamPoint preserves crosshair/tooltip state in lib/src/widgets/braven_chart.dart
+- [ ] T057 [US3] Verify \_onControllerUpdate does NOT clear interaction state fields in lib/src/widgets/braven_chart.dart
+- [ ] T058 [US3] Verify \_onDataStreamPoint preserves crosshair/tooltip state in lib/src/widgets/braven_chart.dart
 - [ ] T059 [US3] Add copyWith calls to preserve non-conflicting fields during controller updates in lib/src/widgets/braven_chart.dart
 
 #### Edge Case Handling
@@ -223,7 +226,7 @@ Flutter package structure:
 ### Memory Leak Prevention
 
 - [ ] T076 Run DevTools Memory profiler during 1000 create/dispose cycles
-- [ ] T077 Force GC and verify <10 _BravenChartState instances remaining
+- [ ] T077 Force GC and verify <10 \_BravenChartState instances remaining
 - [ ] T078 Fix any memory leaks discovered (add disposal for leaked resources)
 
 ### Quickstart Validation
@@ -266,23 +269,27 @@ Unlike typical projects where user stories can be parallelized, this refactor MU
 ### Within Each User Story
 
 **TDD Workflow**:
+
 1. Write tests FIRST (they should FAIL)
 2. Implement changes to make tests pass
 3. Verify tests now pass
 4. Move to next story
 
 **Event Handler Tasks**:
+
 - T019-T029 (11 handlers) can run in parallel if using atomic git commits
 - Each handler is independent (different method in same file)
 - Recommended: Do in sequence to avoid merge conflicts
 
 **Animation/Controller Tasks**:
+
 - T042-T048 can run in parallel (different callbacks)
 - T044/T048 (disposal order) should be done together
 
 ### No Parallel Opportunities (with caveats)
 
 **Why [P] markers exist but sequential recommended**:
+
 - Handlers are technically independent (different widget callbacks in build tree)
 - Each modifies different sections of the file (different line ranges)
 - Parallel execution IS possible with atomic commits + feature branches
@@ -290,12 +297,14 @@ Unlike typical projects where user stories can be parallelized, this refactor MU
 - **Recommendation**: Sequential execution unless experienced with git conflict resolution
 
 **If executing in parallel**:
+
 - Use atomic commits: one commit per handler
 - Create feature branches if needed: `git checkout -b handler-onHover`
 - Merge frequently to minimize conflicts
 - Test after each handler to catch issues early
 
 **If executing sequentially** (recommended):
+
 - Follow T019 → T020 → T021 → ... → T029 order
 - Commit after every 2-3 handlers for safety
 - Less mental overhead, zero merge conflicts
@@ -305,24 +314,28 @@ Unlike typical projects where user stories can be parallelized, this refactor MU
 ## Parallel Examples
 
 ### Phase 1: Setup (Review Documents)
+
 ```bash
 # All review tasks can happen simultaneously
 Parallel: T003 (event handlers), T004 (animations), T005 (disposal)
 ```
 
 ### Phase 3: User Story 1 Tests
+
 ```bash
 # All test file creation can happen simultaneously (different files)
 Parallel: T010-T018 (9 test files)
 ```
 
 ### Phase 4: User Story 2 Tests
+
 ```bash
 # All performance tests can be written in parallel
 Parallel: T038-T041 (4 performance tests)
 ```
 
 ### Phase 6: Polish
+
 ```bash
 # Documentation tasks independent
 Parallel: T069 (inline docs), T070 (comments), T071 (changelog)
@@ -342,7 +355,7 @@ Parallel: T065 (coverage run), T066 (report generation)
    - Refactor all 11 event handlers
    - Integrate rendering layer
    - Cleanup old code
-4. **STOP and VALIDATE**: 
+4. **STOP and VALIDATE**:
    - Run integration tests
    - Manual testing with example app
    - Verify zero crashes
@@ -363,11 +376,13 @@ Each phase adds value without breaking previous functionality.
 ### Sequential Team Strategy
 
 **Single Developer**:
+
 - Follow phases 1→2→3→4→5→6 sequentially
 - Estimated total time: ~3 hours (matches plan.md estimate)
 - Commit after each phase for safety
 
 **Multiple Developers** (not recommended for this refactor):
+
 - Phase 1-2: All developers together
 - Phase 3: Developer A (handles merge conflicts)
 - Phase 4-5: Same developer continues
@@ -380,6 +395,7 @@ Each phase adds value without breaking previous functionality.
 ## Task Count Summary
 
 **Total Tasks**: 85
+
 - **Setup**: 5 tasks (~15 minutes)
 - **Foundational**: 4 tasks (~30 minutes)
 - **User Story 1**: 29 tasks (~90 minutes) 🎯 MVP
@@ -390,7 +406,8 @@ Each phase adds value without breaking previous functionality.
 **Test Tasks**: 21 (25% of total - ensures 90% coverage requirement)  
 **Implementation Tasks**: 64 (75% of total)
 
-**Parallel Opportunities**: 
+**Parallel Opportunities**:
+
 - 5 tasks in Setup (review documents)
 - 18 test tasks (different files)
 - 6 tasks in Polish (documentation)
@@ -402,16 +419,16 @@ Each phase adds value without breaking previous functionality.
 
 ## Success Criteria Mapping
 
-| Success Criteria | Validated By Tasks |
-|------------------|-------------------|
-| SC-001: Zero crashes | T018, T035-T037, T075 |
-| SC-002: 60fps performance | T038, T051, T073-T074 |
-| SC-003: Zero widget rebuilds | T039, T052 |
-| SC-004: Independent repaints | T040, T053 |
-| SC-005: 1000+ movements | T041, T051 |
-| SC-006: Controller conflicts | T054-T056, T063-T064 |
-| SC-007: Zero regressions | T064, T082-T083 |
-| SC-008: 90% coverage | T065-T068 |
+| Success Criteria             | Validated By Tasks    |
+| ---------------------------- | --------------------- |
+| SC-001: Zero crashes         | T018, T035-T037, T075 |
+| SC-002: 60fps performance    | T038, T051, T073-T074 |
+| SC-003: Zero widget rebuilds | T039, T052            |
+| SC-004: Independent repaints | T040, T053            |
+| SC-005: 1000+ movements      | T041, T051            |
+| SC-006: Controller conflicts | T054-T056, T063-T064  |
+| SC-007: Zero regressions     | T064, T082-T083       |
+| SC-008: 90% coverage         | T065-T068             |
 
 ---
 

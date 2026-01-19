@@ -1,10 +1,10 @@
-
 # Implementation Plan: Core Rendering Engine
 
 **Branch**: `002-core-rendering` | **Date**: 2025-10-05 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/002-core-rendering/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    → If not found: ERROR "No feature spec at {path}"
@@ -18,7 +18,7 @@
    → Update Progress Tracking: Initial Constitution Check
 5. Execute Phase 0 → research.md
    → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
-6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code, or `AGENTS.md` for all other agents).
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `claude.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `gemini.md` for Gemini CLI, `qwen.md` for Qwen Code, or `agents.md` for all other agents).
 7. Re-evaluate Constitution Check section
    → If new violations: Refactor design, return to Phase 1
    → Update Progress Tracking: Post-Design Constitution Check
@@ -27,6 +27,7 @@
 ```
 
 **IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
@@ -35,6 +36,7 @@
 The Core Rendering Engine provides high-performance chart visualization through object pooling for Flutter canvas primitives (Paint, Path, TextPainter), a composable layer-based rendering pipeline, viewport culling/clipping for large datasets, real-time performance monitoring, and text layout caching. This layer builds upon the Foundation Layer (001-foundation) to deliver 60fps rendering for charts with 10,000+ data points, achieving <8ms average frame time through aggressive optimization and zero-allocation rendering strategies.
 
 ## Technical Context
+
 **Language/Version**: Dart 3.0+ (Dart 3.10.0-227.0.dev)  
 **Primary Dependencies**: Flutter SDK 3.37.0-1.0.pre-216, Foundation Layer (ObjectPool<T>, ViewportCuller, ChartDataPoint, ChartResult<T>)  
 **Storage**: N/A (in-memory rendering state)  
@@ -46,16 +48,19 @@ The Core Rendering Engine provides high-performance chart visualization through 
 **Scale/Scope**: Support 10,000+ visible data points, unlimited layers (performance scales with visible elements), 500-entry text cache, dynamic pool sizing
 
 ## Constitution Check
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 **I. Test-First Development (TDD)**: ✅ PASS
+
 - All contracts will have failing tests before implementation
 - Performance benchmarks define acceptance before code
 - Integration tests from user scenarios (spec §User Scenarios 1-4)
 - Contract tests for RenderLayer interface, ObjectPool usage
 - Red-Green-Refactor mandatory per Foundation pattern
 
-**II. Performance First (60fps)**: ✅ PASS  
+**II. Performance First (60fps)**: ✅ PASS
+
 - Target: <8ms avg, <16ms p99 frame time (spec §NFR-001)
 - Object pooling eliminates per-frame allocation (spec §FR-001)
 - Viewport culling reduces rendering to visible elements only (spec §FR-003)
@@ -63,6 +68,7 @@ The Core Rendering Engine provides high-performance chart visualization through 
 - Benchmarks required for all rendering paths
 
 **III. Architectural Integrity (Pure Flutter)**: ✅ PASS
+
 - Pure Flutter Canvas API (no HTML elements)
 - Layered architecture: RenderContext → RenderPipeline → RenderLayer (spec §Key Entities)
 - Dependency injection via RenderContext
@@ -70,24 +76,28 @@ The Core Rendering Engine provides high-performance chart visualization through 
 - SOLID principles: Single Responsibility per layer, Open-Closed via layer composition
 
 **IV. Requirements Compliance**: ✅ PASS
+
 - Spec has clear FR-001 to FR-005, NFR-001 to NFR-003
 - No clarifications needed (verified by /clarify)
 - tasks.md will track all deviations per constitution
 - Implementation follows established Foundation patterns
 
 **V. API Consistency & Stability**: ✅ PASS
+
 - RenderLayer interface follows Flutter CustomPainter patterns
 - ObjectPool<T> usage consistent with Foundation
 - No breaking changes (new layer, builds on Foundation)
 - All public APIs will have dartdoc comments
 
 **VI. Documentation Discipline**: ✅ PASS
+
 - ADRs for: pooling strategy, layer pipeline, culling algorithm, text caching
 - Inline docs for complex rendering transformations
 - Quickstart.md for layer creation examples
 - Contracts define testable interfaces
 
 **VII. Simplicity & Pragmatism (KISS)**: ✅ PASS
+
 - Reuse Foundation ObjectPool (no reimplementation)
 - Reuse Foundation ViewportCuller (proven algorithm)
 - Simple layer pipeline: sort by zIndex, render visible layers
@@ -97,6 +107,7 @@ The Core Rendering Engine provides high-performance chart visualization through 
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/002-core-rendering/
 ├── plan.md              # This file (/plan command output)
@@ -111,6 +122,7 @@ specs/002-core-rendering/
 ```
 
 ### Source Code (repository root)
+
 ```
 lib/
 ├── src/
@@ -150,6 +162,7 @@ test/
 **Structure Decision**: Single Flutter project structure (lib/ and test/). This is a library feature, not an application. Rendering logic goes in lib/src/rendering/ following established Foundation pattern (lib/src/foundation/). Tests mirror source structure under test/unit/, test/contract/, test/integration/ per TDD constitution requirement. All files use Dart stdlib only (no external packages).
 
 ## Phase 0: Outline & Research
+
 1. **Extract unknowns from Technical Context** above:
    - ✅ NO NEEDS CLARIFICATION present - all context clear from spec
    - ✅ Foundation Layer dependencies verified available
@@ -167,7 +180,7 @@ test/
    - ✅ Decision 1: Object Pool Types and Strategy
    - ✅ Decision 2: Layer-Based Rendering Pipeline Architecture
    - ✅ Decision 3: Viewport Culling Integration with Foundation
-   - ✅ Decision 4: Performance Monitoring Strategy  
+   - ✅ Decision 4: Performance Monitoring Strategy
    - ✅ Decision 5: Text Layout Cache Design
    - ✅ Decision 6: RenderContext Design Pattern
    - ✅ ADR-001 to ADR-004: Architecture Decision Records
@@ -177,7 +190,8 @@ test/
 **Output**: ✅ research.md complete (all unknowns resolved)
 
 ## Phase 1: Design & Contracts
-*Prerequisites: research.md complete*
+
+_Prerequisites: research.md complete_
 
 1. **Extract entities from feature spec** → `data-model.md`:
    - ✅ Entity 1: RenderContext (dependency injection container)
@@ -216,9 +230,11 @@ test/
 **Output**: ✅ data-model.md (6 entities), contracts/ (3 contract files with TDD placeholders), quickstart.md (usage examples), agent file update pending
 
 ## Phase 2: Task Planning Approach
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
+
+_This section describes what the /tasks command will do - DO NOT execute during /plan_
 
 **Task Generation Strategy**:
+
 - Load `.specify/templates/tasks-template.md` as base
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
 - TDD Order: Contract tests → Entity tests → Integration tests → Implementation
@@ -228,11 +244,11 @@ test/
 - Implementation tasks to make tests pass (Green phase of Red-Green-Refactor)
 
 **Ordering Strategy**:
+
 - **Phase 1**: Contract tests (all fail initially, parallel [P])
   - render_layer_contract_test.dart [P]
   - performance_monitor_contract_test.dart [P]
   - text_layout_cache_contract_test.dart [P]
-  
 - **Phase 2**: Entity unit tests (all fail, dependencies guide order)
   - performance_metrics_test.dart [P] (no dependencies)
   - text_layout_cache_test.dart [P] (no dependencies)
@@ -256,13 +272,15 @@ test/
   - text_heavy_chart_test.dart (Scenario 4: cache hit rate)
 
 **Parallel Execution Markers**:
+
 - [P] indicates tasks can execute in parallel (independent files/tests)
 - Phase 1 contract tests: All parallel
 - Phase 2 entity tests: Parallel within dependency groups
 - Phase 3 implementation: Parallel where no dependencies exist
 - Phase 4 integration: Sequential (validate in order)
 
-**Estimated Output**: 
+**Estimated Output**:
+
 - ~40-45 numbered, ordered tasks in tasks.md
 - Breakdown: 3 contract tests + 12 unit tests + 6 implementations + 12 integration tests + setup/validation
 - Duration: 2-4 weeks following TDD (test first, then code)
@@ -270,16 +288,19 @@ test/
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
-*These phases are beyond the scope of the /plan command*
+
+_These phases are beyond the scope of the /plan command_
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
-*Fill ONLY if Constitution Check has violations that must be justified*
+
+_Fill ONLY if Constitution Check has violations that must be justified_
 
 **No violations**. All constitutional requirements satisfied:
+
 - ✅ TDD: Contracts written before implementation, tests-first workflow
 - ✅ Performance: Targets defined (<8ms, >90% pool hit rate)
 - ✅ Pure Flutter: No HTML, uses Flutter Canvas API
@@ -289,14 +310,15 @@ test/
 - ✅ KISS: Reuses Foundation primitives, simple LinkedHashMap cache, no over-engineering
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| *None* | *N/A* | *N/A* |
-
+| --------- | ---------- | ------------------------------------ |
+| _None_    | _N/A_      | _N/A_                                |
 
 ## Progress Tracking
-*This checklist is updated during execution flow*
+
+_This checklist is updated during execution flow_
 
 **Phase Status**:
+
 - [x] Phase 0: Research complete (/plan command) ✅
 - [x] Phase 1: Design complete (/plan command) ✅
 - [x] Phase 2: Task planning complete (/plan command - describe approach only) ✅
@@ -305,6 +327,7 @@ test/
 - [x] Phase 5: Validation passed (97% tests passing) ✅
 
 **Implementation Summary** (T001-T048 complete):
+
 - **Test Coverage**: 717/739 tests passing (97% pass rate)
 - **Performance Benchmarks**: ✅ All targets met
   - Frame time: <8ms avg (achieved: 0-5ms typical)
@@ -321,12 +344,14 @@ test/
 - **Recommendation**: Document known issues, proceed with merge and tag v0.2.0-rendering
 
 **Gate Status**:
+
 - [x] Initial Constitution Check: PASS ✅
 - [x] Post-Design Constitution Check: PASS ✅
 - [x] All NEEDS CLARIFICATION resolved ✅ (none present)
 - [x] Complexity deviations documented ✅ (none)
 
 **Artifacts Generated**:
+
 - [x] research.md (6 decisions, 4 ADRs, Foundation integration)
 - [x] data-model.md (6 entities with relationships)
 - [x] contracts/render_layer.dart (RenderLayer interface)
@@ -337,5 +362,6 @@ test/
 - [ ] .github/copilot-instructions.md update (pending script execution)
 
 ---
-*Plan execution complete. Tasks generated. Ready for Phase 4 implementation.*
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
+
+_Plan execution complete. Tasks generated. Ready for Phase 4 implementation._
+_Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`_

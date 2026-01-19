@@ -24,6 +24,7 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 ## 🏗️ Specification Architecture (Dependency Layers)
 
 ### Layer 0: Foundation (000-foundation) ✅ SPEC COMPLETE
+
 **What**: Core data structures, performance primitives, math utilities  
 **Why**: Everything else depends on these base components  
 **Dependencies**: None
@@ -31,12 +32,14 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 **Status**: ✅ Specification complete (`specs/000-foundation/spec.md`)
 
 **Key Components:**
+
 - Data Models: ChartDataPoint, ChartSeries, DataRange, TimeSeriesData
 - Performance Primitives: ObjectPool, ViewportCuller, BatchProcessor
 - Type System: ChartResult, ChartError, Validation utilities
 - Math Utilities: Statistics, interpolation, curve fitting
 
 **Next Steps:**
+
 - Create `plan.md` - Implementation strategy
 - Create `tasks.md` - Task breakdown for SDLC
 - Create `data-model.md` - Detailed data structures
@@ -45,6 +48,7 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 ---
 
 ### Layer 1: Core Rendering Engine (001-core-rendering) 🔄 NEXT
+
 **What**: Canvas-based rendering with performance optimization  
 **Why**: All visual elements need efficient rendering  
 **Dependencies**: 000-foundation
@@ -52,26 +56,28 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 **Status**: ⏳ Awaiting specification
 
 **Planned Components:**
+
 - Canvas Renderer: Low-level drawing primitives
 - Rendering Pipeline: Paint, Path, TextPainter management
 - Viewport Management: Culling, clipping, visible area calculation
 - Performance Monitoring: Frame time tracking, jank detection
 
 **Critical Requirements:**
+
 - 60 FPS with 10,000+ data points
-**Next Steps:**
-- Draft `spec.md` based on PERFORMANCE_ARCHITECTURE.md
+  **Next Steps:**
+- Draft `spec.md` based on performance_architecture.md
+
 ---
 
-
-
 **Planned Components:**
+
 - Coordinate Transformer: 8 coordinate system transformations
 - Transform Context: Immutable transformation state
 - Bounds Calculator: Automatic bounds and validation
 - Zoom/Pan Controller: Viewport transformations
 
-**Reference**: Detailed design in `docs/architecture/specs/UNIVERSAL_COORDINATE_TRANSFORMER.md`
+**Reference**: Detailed design in `docs/architecture/specs/universal_coordinate_transformer.md`
 
 4. Data (logical space)
 5. DataPoint (series indices)
@@ -80,55 +86,52 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 8. Normalized (0.0-1.0)
 
 **Next Steps:**
-- Convert UNIVERSAL_COORDINATE_TRANSFORMER.md to spec format
+
+- Convert universal_coordinate_transformer.md to spec format
 - Define type-safe API to prevent coordinate space errors
 - Specify performance requirements (<1ms transformations)
 - Detail validation and edge case handling
 
 ---
 
-
-
 **Planned Components:**
+
 - Theme Definition: ChartTheme with 7 predefined themes
 - Style Cascade: CSS-like style resolution
 - Color Schemes: Professional color palettes
 - Typography System: Font management
 - Responsive Styling: Viewport-based adaptation
 
-**Reference**: Design patterns in `docs/architecture/features/THEMING_SYSTEM.md`
-4. Vibrant
-5. Minimal
-6. High Contrast
-7. Colorblind Friendly
+**Reference**: Design patterns in `docs/architecture/features/theming_system.md` 4. Vibrant 5. Minimal 6. High Contrast 7. Colorblind Friendly
 
 **Next Steps:**
-- Convert THEMING_SYSTEM.md to spec format
+
+- Convert theming_system.md to spec format
 - Define ChartTheme data structure
 - Specify theme switching behavior (no chart recreation)
 - Detail WCAG 2.1 AA accessibility compliance
 
 ---
 
-
 **Branch**: `005-chart-types` (ready for merge to main)
 
 **Implemented Chart Types:**
+
 1. ✅ Line Charts (single/multi-series, 3 interpolation modes: linear, smooth, stepped)
 2. ✅ Area Charts (3 fill styles: solid, gradient, pattern, stacking support)
 3. ✅ Bar Charts (2 orientations, 2 grouping modes: grouped/stacked, rounded corners)
 4. ✅ Scatter Plots (6 marker shapes, dynamic sizing, clustering)
 
 **Implementation Results:**
+
 - ✅ Viewport culling: <2ms for 10K points
 - ✅ 144/144 tests passing (unit + integration + performance)
 - ✅ 100% DartDoc coverage on all public APIs
 - ✅ Comprehensive 988-line usage guide
 - 4 golden tests (T062-T065) - require Chart Widgets layer for widget testing
 
-
-
 ### Layer 5: Chart Widgets (005-chart-widgets) 🆕 NEXT
+
 **What**: User-facing Flutter widgets wrapping chart layers  
 **Why**: Make charts usable by Flutter developers without boilerplate  
 **Dependencies**: Layers 0-4
@@ -136,6 +139,7 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 **Status**: ⏳ Specification starting NOW
 
 **Planned Components:**
+
 - LineChart Widget: StatelessWidget wrapper for LineChartLayer
 - AreaChart Widget: StatelessWidget wrapper for AreaChartLayer
 - BarChart Widget: StatelessWidget wrapper for BarChartLayer
@@ -145,10 +149,11 @@ I've analyzed the existing Braven Charts documentation and created a comprehensi
 - Data binding: Simple API (List<ChartDataPoint> → Widget)
 - State management: Internal handling of animations and updates
 - Event callbacks: onTap, onHover, onZoom, onPan
-LineChart(
+  LineChart(
   config: LineChartConfig(),
   theme: ChartTheme.defaultLight,
-)
+  )
+
 ```
 
 **Next Steps:**
@@ -159,7 +164,7 @@ LineChart(
 - User-facing library release (v0.5.0-widgets)
 - Real-world usage and feedback collection
 
-**Why**: Professional-grade user experience  
+**Why**: Professional-grade user experience
 
 **Status**: ⏳ Awaiting Chart Widgets
 
@@ -170,7 +175,7 @@ LineChart(
 - Tooltip System: Context-aware tooltips
 - Zoom/Pan Controls: Professional scrollbars
 
-**Reference**: Requirements in FUNCTIONAL_REQUIREMENTS.md (FR-002)
+**Reference**: Requirements in functional_requirements.md (FR-002)
 
 **Interaction Types:**
 - Left Click: Crosshair + tooltip
@@ -188,8 +193,8 @@ LineChart(
 ---
 
 ### Layer 7: Annotation System (007-annotation-system) ⏳ PENDING
-**What**: Five annotation types for data storytelling  
-**Why**: Critical user requirement for data analysis  
+**What**: Five annotation types for data storytelling
+**Why**: Critical user requirement for data analysis
 **Dependencies**: Layers 0-6
 
 **Status**: ⏳ Awaiting Interaction System
@@ -201,10 +206,10 @@ LineChart(
 4. Trend Line Annotations (mathematical trends)
 5. Series Selection Annotations (segment annotation)
 
-**Reference**: Complete architecture in `docs/architecture/specs/ANNOTATION_SYSTEM_ARCHITECTURE.md`
+**Reference**: Complete architecture in `docs/architecture/specs/annotation_system_architecture.md`
 
 **Next Steps:**
-- Convert ANNOTATION_SYSTEM_ARCHITECTURE.md to spec format
+- Convert annotation_system_architecture.md to spec format
 - Define unified AnnotationStyle composition pattern
 - Specify persistence (localStorage, JSON export)
 - Detail creation workflows and editing
@@ -212,8 +217,8 @@ LineChart(
 ---
 
 ### Layer 8: Advanced Features (008-advanced-features) ⏳ PENDING
-**What**: Trendline analysis, statistics, streaming, export  
-**Why**: Professional analytics capabilities  
+**What**: Trendline analysis, statistics, streaming, export
+**Why**: Professional analytics capabilities
 **Dependencies**: Layers 0-7
 
 
@@ -241,7 +246,7 @@ LineChart(
 **For Core Rendering Layer (001-core-rendering):**
 
 5. 🔄 Draft `spec.md`
-   - Convert PERFORMANCE_ARCHITECTURE.md insights
+   - Convert performance_architecture.md insights
    - Define rendering pipeline
    - Specify object pooling
    - Detail viewport culling
@@ -265,41 +270,41 @@ LineChart(
 - [ ] contracts/
 
 ### Coordinate System (002-coordinate-system)
-- [ ] spec.md (adapt from UNIVERSAL_COORDINATE_TRANSFORMER.md)
+- [ ] spec.md (adapt from universal_coordinate_transformer.md)
 - [ ] plan.md
 - [ ] tasks.md
 - [ ] data-model.md
 - [ ] contracts/
 
 ### Theming System (003-theming-system)
-- [ ] spec.md (adapt from THEMING_SYSTEM.md)
+- [ ] spec.md (adapt from theming_system.md)
 - [ ] plan.md
 - [ ] tasks.md
 - [ ] data-model.md
 - [ ] contracts/
 
 ### Chart Types (004-chart-types)
-- [ ] spec.md (extract from FUNCTIONAL_REQUIREMENTS.md FR-001)
+- [ ] spec.md (extract from functional_requirements.md FR-001)
 - [ ] plan.md
 - [ ] tasks.md
 - [ ] data-model.md
 - [ ] contracts/
 
 ### Interaction System (005-interaction-system)
-- [ ] spec.md (extract from FUNCTIONAL_REQUIREMENTS.md FR-002)
+- [ ] spec.md (extract from functional_requirements.md FR-002)
 - [ ] plan.md
 - [ ] tasks.md
 - [ ] data-model.md
 - [ ] contracts/
 
 ### Annotation System (006-annotation-system)
-- [ ] spec.md (adapt from ANNOTATION_SYSTEM_ARCHITECTURE.md)
+- [ ] spec.md (adapt from annotation_system_architecture.md)
 - [ ] plan.md
 - [ ] data-model.md
 - [ ] contracts/
 
 ### Advanced Features (007-advanced-features)
-- [ ] spec.md (extract from FUNCTIONAL_REQUIREMENTS.md FR-006)
+- [ ] spec.md (extract from functional_requirements.md FR-006)
 - [ ] plan.md
 - [ ] tasks.md
 - [ ] data-model.md
@@ -418,3 +423,4 @@ I've completed the initial analysis and created the foundation specification. We
 **Option C**: Continue specifying all 7 layers before any implementation
 
 **Which approach would you prefer?** Or do you have questions/clarifications about the current spec structure?
+```

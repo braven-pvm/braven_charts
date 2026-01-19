@@ -2,7 +2,7 @@
 
 **Branch**: `core-interaction-refactor`  
 **Date**: 2025-11-10  
-**Status**: Planning Phase  
+**Status**: Planning Phase
 
 ---
 
@@ -25,6 +25,7 @@ This document provides a comprehensive analysis for integrating the **prototype 
 ### 1.1 Main Package Architecture (`lib/src`)
 
 #### Widget Structure
+
 ```
 BravenChart (StatefulWidget)
   ├─ build() → GestureDetector
@@ -41,12 +42,14 @@ BravenChart (StatefulWidget)
 #### Key Components
 
 **File**: `lib/src/widgets/braven_chart.dart` (7,306 lines)
+
 - **Lines 1-800**: Widget definition, configuration, state management
 - **Lines 800-2400**: Event handlers (tap, pan, zoom, scroll, keyboard)
 - **Lines 2400-4200**: Build method (widget tree construction)
 - **Lines 4200-7300**: `_BravenChartPainter` (CustomPainter rendering)
 
 **Interaction System** (`lib/src/interaction/`):
+
 - `event_handler.dart`: Abstract event processing, coordinate translation
 - `zoom_pan_controller.dart`: Zoom/pan state management (no RenderBox integration)
 - `gesture_recognizer.dart`: Basic gesture detection (533 lines)
@@ -55,6 +58,7 @@ BravenChart (StatefulWidget)
 - `tooltip_provider.dart`: Tooltip positioning
 
 **Key Characteristics**:
+
 - ✅ **Complete Feature Set**: Theming, streaming, scrollbars, annotations, legends
 - ✅ **Production-Ready**: Mature, tested, extensive configuration
 - ❌ **Interaction Issues**: Gesture conflicts, no priority system, distributed state
@@ -64,6 +68,7 @@ BravenChart (StatefulWidget)
 ### 1.2 Prototype Architecture (`refactor/interaction`)
 
 #### Widget Structure
+
 ```
 ChartPrototypeWidget (StatefulWidget)
   └─ RawGestureDetector (custom recognizers)
@@ -76,6 +81,7 @@ ChartPrototypeWidget (StatefulWidget)
 #### Key Components
 
 **Core System**:
+
 - `rendering/chart_render_box.dart` (1,308 lines): Custom RenderBox with full interaction pipeline
 - `rendering/spatial_index.dart` (700+ lines): QuadTree for O(log n) hit testing
 - `core/coordinator.dart` (450 lines): Centralized interaction state management
@@ -83,22 +89,26 @@ ChartPrototypeWidget (StatefulWidget)
 - `transforms/chart_transform.dart`: 3-space coordinate system (Widget→Plot→Data)
 
 **Recognizers** (`recognizers/`):
+
 - `priority_tap_recognizer.dart`: Priority-based tap detection
 - `priority_pan_recognizer.dart`: Pan with conflict resolution
 - `context_aware_recognizer.dart`: Base class with coordinator integration
 
 **Elements** (`elements/`):
+
 - `simulated_datapoint.dart`: Interactive datapoints with selection
 - `simulated_annotation.dart`: Draggable/resizable annotations
 - `simulated_series.dart`: Series lines with hover
 - `resize_handle_element.dart`: 8-direction resize handles
 
 **Axis System** (`axis/`):
+
 - `axis.dart`: Axis with dynamic tick generation
 - `axis_renderer.dart`: Axis painting
 - `axis_scale.dart`: Linear/log scale support
 
 **Key Characteristics**:
+
 - ✅ **Perfect Interactions**: Zero gesture conflicts, priority-based resolution
 - ✅ **Performance**: QuadTree spatial indexing, GPU batching capable
 - ✅ **Clean Architecture**: Separation of concerns, coordinator pattern
@@ -121,51 +131,59 @@ The integration will follow a **"swap the engine, keep the body"** approach:
 ### 2.2 Three-Phase Integration Plan
 
 #### Phase 1: Foundation Replacement (Core System)
+
 **Goal**: Replace CustomPainter with RenderBox, integrate coordinator
 
 **Files to Replace**:
+
 - `lib/src/widgets/braven_chart.dart` (lines 4200-7300) → New `ChartRenderBox`
 - `lib/src/interaction/event_handler.dart` → Prototype's approach
 - Add `lib/src/interaction/coordinator.dart` (from prototype)
 - Add `lib/src/interaction/spatial_index.dart` (from prototype)
 
 **Files to Preserve**:
+
 - Widget configuration (lines 1-800)
 - Theming system (`lib/src/theming/`)
 - Data structures (`lib/src/foundation/data_models/`)
 - Streaming system (`lib/src/models/streaming_config.dart`, `lib/src/utils/buffer_manager.dart`)
 
 **Integration Points**:
+
 1. Convert `_BravenChartPainter` to `ChartRenderBox` subclass
 2. Move paint logic into RenderBox.paint()
 3. Add handleEvent() with coordinator integration
 4. Preserve all rendering code (series, annotations, axes, grid)
 
 #### Phase 2: Element System Integration
+
 **Goal**: Convert real chart elements to ChartElement interface
 
 **Create Element Wrappers**:
+
 - `DataPointElement` (wraps `ChartDataPoint`) → implements `ChartElement`
 - `SeriesElement` (wraps `ChartSeries`) → implements `ChartElement`
 - `AnnotationElement` (wraps `ChartAnnotation`) → implements `ChartElement`
 
 **Preserve Existing**:
+
 - Annotation types (`lib/src/widgets/annotations/`)
 - Annotation rendering logic
 - Annotation configuration
 
 **Integration Approach**:
+
 ```dart
 // Example: DataPointElement wrapper
 class DataPointElement implements ChartElement {
   final ChartDataPoint dataPoint;  // Existing data structure
   final ChartTheme theme;           // Existing theming
-  
+
   @override
   bool hitTest(Offset position) {
     // Use existing hit test logic + theme.markerRadius
   }
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     // Use existing rendering code from _BravenChartPainter
@@ -174,19 +192,23 @@ class DataPointElement implements ChartElement {
 ```
 
 #### Phase 3: Advanced Features Integration
+
 **Goal**: Connect zoom/pan/constraints/dynamic-axes to existing features
 
 **Integrate Zoom/Pan**:
+
 - Replace `lib/src/interaction/zoom_pan_controller.dart` with prototype's `ChartTransform`
 - Connect to streaming system's viewport management
 - Preserve scrollbar integration
 
 **Integrate Constraints**:
+
 - Apply prototype's pan constraint algorithm
 - Respect data boundaries from existing `DataRange` system
 - Work with streaming's auto-scroll feature
 
 **Integrate Dynamic Axes**:
+
 - Replace static axis rendering with prototype's `Axis` + `AxisRenderer`
 - Preserve axis configuration from `AxisConfig`
 - Apply theming from `AxisStyle`
@@ -197,14 +219,15 @@ class DataPointElement implements ChartElement {
 
 ### 3.1 Rendering System
 
-| Main Package | Prototype | Action |
-|-------------|-----------|--------|
-| `_BravenChartPainter` (CustomPainter) | `ChartRenderBox` (RenderBox) | **REPLACE** - Convert painter to RenderBox |
-| `paint()` method (lines 4287-5200) | `paint()` method | **PRESERVE** - Keep rendering logic, move to RenderBox |
-| Widget-level GestureDetector | RenderBox.handleEvent() | **REPLACE** - Use RenderBox event pipeline |
-| No spatial indexing | QuadTree | **ADD** - Integrate QuadTree for performance |
+| Main Package                          | Prototype                    | Action                                                 |
+| ------------------------------------- | ---------------------------- | ------------------------------------------------------ |
+| `_BravenChartPainter` (CustomPainter) | `ChartRenderBox` (RenderBox) | **REPLACE** - Convert painter to RenderBox             |
+| `paint()` method (lines 4287-5200)    | `paint()` method             | **PRESERVE** - Keep rendering logic, move to RenderBox |
+| Widget-level GestureDetector          | RenderBox.handleEvent()      | **REPLACE** - Use RenderBox event pipeline             |
+| No spatial indexing                   | QuadTree                     | **ADD** - Integrate QuadTree for performance           |
 
 **Migration Strategy**:
+
 ```dart
 // OLD (main package):
 class _BravenChartPainter extends CustomPainter {
@@ -218,7 +241,7 @@ class _BravenChartPainter extends CustomPainter {
 class BravenChartRenderBox extends RenderBox {
   final ChartInteractionCoordinator coordinator;
   final QuadTree spatialIndex;
-  
+
   @override
   void paint(PaintingContext context, Offset offset) {
     final canvas = context.canvas;
@@ -229,7 +252,7 @@ class BravenChartRenderBox extends RenderBox {
     _drawAnnotations(canvas, chartRect);      // Keep existing
     _drawAxes(canvas, size, chartRect, bounds);
   }
-  
+
   @override
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     // NEW: Prototype's interaction pipeline
@@ -241,14 +264,15 @@ class BravenChartRenderBox extends RenderBox {
 
 ### 3.2 Interaction System
 
-| Main Package | Prototype | Action |
-|-------------|-----------|--------|
-| Distributed gesture handlers | `ChartInteractionCoordinator` | **REPLACE** - Centralize state |
-| No conflict resolution | Priority-based routing | **ADD** - Implement priority system |
-| `InteractionState` (simple) | `InteractionMode` (enum) | **REPLACE** - Use enum-based modes |
-| Manual cursor tracking | Coordinator state | **MIGRATE** - Use coordinator |
+| Main Package                 | Prototype                     | Action                              |
+| ---------------------------- | ----------------------------- | ----------------------------------- |
+| Distributed gesture handlers | `ChartInteractionCoordinator` | **REPLACE** - Centralize state      |
+| No conflict resolution       | Priority-based routing        | **ADD** - Implement priority system |
+| `InteractionState` (simple)  | `InteractionMode` (enum)      | **REPLACE** - Use enum-based modes  |
+| Manual cursor tracking       | Coordinator state             | **MIGRATE** - Use coordinator       |
 
 **Conflict Resolution Table** (from prototype):
+
 ```
 Priority | Element Type      | Action
 ---------|-------------------|------------------
@@ -265,13 +289,14 @@ Priority | Element Type      | Action
 
 ### 3.3 Coordinate System
 
-| Main Package | Prototype | Action |
-|-------------|-----------|--------|
-| Screen ↔ Data (2 spaces) | Widget → Plot → Data (3 spaces) | **ADOPT** - Use 3-space system |
-| `_dataToPixel()` helper | `ChartTransform` class | **REPLACE** - Use transform |
-| Zoom stored in state | Transform embedded | **MIGRATE** - Use transform's zoom |
+| Main Package             | Prototype                       | Action                             |
+| ------------------------ | ------------------------------- | ---------------------------------- |
+| Screen ↔ Data (2 spaces) | Widget → Plot → Data (3 spaces) | **ADOPT** - Use 3-space system     |
+| `_dataToPixel()` helper  | `ChartTransform` class          | **REPLACE** - Use transform        |
+| Zoom stored in state     | Transform embedded              | **MIGRATE** - Use transform's zoom |
 
 **Coordinate Space Migration**:
+
 ```dart
 // OLD (main package):
 Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
@@ -286,16 +311,16 @@ Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
 // NEW (after integration):
 class ChartTransform {
   // Widget space → Plot space (convert widget coords to plot area coords)
-  Offset widgetToPlot(Offset widgetPos) => 
+  Offset widgetToPlot(Offset widgetPos) =>
     Offset(widgetPos.dx - plotArea.left, widgetPos.dy - plotArea.top);
-  
+
   // Plot space → Data space (apply zoom/pan)
-  Offset plotToData(double plotX, double plotY) => 
+  Offset plotToData(double plotX, double plotY) =>
     Offset(
       dataXMin + plotX * dataPerPixelX,
       dataYMin + (invertY ? (plotHeight - plotY) : plotY) * dataPerPixelY,
     );
-  
+
   // Reverse: Data space → Plot space → Widget space
   Offset dataToWidget(double dataX, double dataY) {
     final plotPos = dataToPlot(dataX, dataY);
@@ -306,60 +331,62 @@ class ChartTransform {
 
 ### 3.4 Zoom/Pan System
 
-| Main Package | Prototype | Action |
-|-------------|-----------|--------|
-| `ZoomPanController` (no constraints) | `ChartTransform` with constraints | **REPLACE** - Use constrained system |
-| Middle-button pan (basic) | Pan with whitespace limit | **UPGRADE** - Add constraint algorithm |
-| Shift+wheel zoom | Full zoom system | **PRESERVE & ENHANCE** - Keep shortcuts, add focal point |
+| Main Package                         | Prototype                         | Action                                                   |
+| ------------------------------------ | --------------------------------- | -------------------------------------------------------- |
+| `ZoomPanController` (no constraints) | `ChartTransform` with constraints | **REPLACE** - Use constrained system                     |
+| Middle-button pan (basic)            | Pan with whitespace limit         | **UPGRADE** - Add constraint algorithm                   |
+| Shift+wheel zoom                     | Full zoom system                  | **PRESERVE & ENHANCE** - Keep shortcuts, add focal point |
 
 **Pan Constraint Algorithm** (from prototype - PROVEN WORKING):
+
 ```dart
 (double, double) _clampPanDelta(double requestedPlotDx, double requestedPlotDy) {
   // 1. Convert requested plot delta to data space
   final dataPerPixelX = _transform.dataPerPixelX;
   final dataPerPixelY = _transform.dataPerPixelY;
   final requestedDataDx = requestedPlotDx * dataPerPixelX;
-  final requestedDataDy = _transform.invertY 
-    ? -requestedPlotDy * dataPerPixelY 
+  final requestedDataDy = _transform.invertY
+    ? -requestedPlotDy * dataPerPixelY
     : requestedPlotDy * dataPerPixelY;
-  
+
   // 2. Calculate tentative new viewport position
   final tentativeDataXMin = _transform.dataXMin + requestedDataDx;
   final tentativeDataYMin = _transform.dataYMin + requestedDataDy;
-  
+
   // 3. Calculate max allowed whitespace (10% of viewport in data space)
   final maxWhitespaceDataX = _transform.plotWidth * 0.1 * dataPerPixelX;
   final maxWhitespaceDataY = _transform.plotHeight * 0.1 * dataPerPixelY;
-  
+
   // 4. Calculate allowed bounds for viewport position
   final minAllowedDataXMin = _originalTransform.dataXMin - maxWhitespaceDataX;
   final maxAllowedDataXMin = _originalTransform.dataXMax - _transform.dataXRange + maxWhitespaceDataX;
-  
+
   // 5. Clamp tentative position
   final clampedDataXMin = tentativeDataXMin.clamp(minAllowedDataXMin, maxAllowedDataXMin);
   final clampedDataYMin = tentativeDataYMin.clamp(minAllowedDataYMin, maxAllowedDataYMin);
-  
+
   // 6. Convert back to plot delta
   final actualDataDx = clampedDataXMin - _transform.dataXMin;
   final actualDataDy = clampedDataYMin - _transform.dataYMin;
   final actualPlotDx = actualDataDx / dataPerPixelX;
-  final actualPlotDy = _transform.invertY 
-    ? -actualDataDy / dataPerPixelY 
+  final actualPlotDy = _transform.invertY
+    ? -actualDataDy / dataPerPixelY
     : actualDataDy / dataPerPixelY;
-  
+
   return (actualPlotDx, actualPlotDy);
 }
 ```
 
 ### 3.5 Dynamic Axes System
 
-| Main Package | Prototype | Action |
-|-------------|-----------|--------|
-| Static axis calculation in paint | `Axis` class with updateDataRange() | **REPLACE** - Use dynamic system |
-| Inline tick generation | Separate `AxisRenderer` | **ADOPT** - Cleaner separation |
-| Static intervals | Just-in-time updates | **MIGRATE** - Update axes in paint() |
+| Main Package                     | Prototype                           | Action                               |
+| -------------------------------- | ----------------------------------- | ------------------------------------ |
+| Static axis calculation in paint | `Axis` class with updateDataRange() | **REPLACE** - Use dynamic system     |
+| Inline tick generation           | Separate `AxisRenderer`             | **ADOPT** - Cleaner separation       |
+| Static intervals                 | Just-in-time updates                | **MIGRATE** - Update axes in paint() |
 
 **Dynamic Axes Pattern** (from prototype - PROVEN WORKING):
+
 ```dart
 @override
 void paint(PaintingContext context, Offset offset) {
@@ -368,7 +395,7 @@ void paint(PaintingContext context, Offset offset) {
     _xAxis?.updateDataRange(_transform.dataXMin, _transform.dataXMax);
     _yAxis?.updateDataRange(_transform.dataYMin, _transform.dataYMax);
   }
-  
+
   // Paint axes immediately with fresh ticks
   if (_xAxis != null) {
     AxisRenderer(_xAxis).paint(canvas, size, _plotArea);
@@ -388,6 +415,7 @@ void paint(PaintingContext context, Offset offset) {
 **Location**: `lib/src/theming/`
 
 **Components to Preserve**:
+
 - `ChartTheme` - Complete theme configuration
 - `SeriesTheme` - Series colors, styles
 - `AxisStyle` - Axis appearance
@@ -397,11 +425,12 @@ void paint(PaintingContext context, Offset offset) {
 - `AnimationTheme` - Animation curves, durations
 
 **Integration Approach**:
+
 ```dart
 // Use theming in new RenderBox
 class BravenChartRenderBox extends RenderBox {
   final ChartTheme theme;  // Pass from widget
-  
+
   @override
   void paint(PaintingContext context, Offset offset) {
     // Apply theme colors/styles to all rendering
@@ -419,6 +448,7 @@ class BravenChartRenderBox extends RenderBox {
 **Location**: `lib/src/models/streaming_config.dart`, `lib/src/utils/buffer_manager.dart`, `lib/src/widgets/controller/streaming_controller.dart`
 
 **Components to Preserve**:
+
 - `StreamingConfig` - Streaming configuration
 - `BufferManager` - Ring buffer for efficient data management
 - `StreamingController` - Real-time data ingestion
@@ -426,6 +456,7 @@ class BravenChartRenderBox extends RenderBox {
 - `ChartMode` enum (static, streaming, dual)
 
 **Integration Approach**:
+
 - Keep streaming logic in widget layer
 - RenderBox receives pre-processed data points
 - Transform's viewport respects streaming boundaries
@@ -435,14 +466,14 @@ class BravenChartRenderBox extends RenderBox {
 // Streaming continues to work transparently
 class _BravenChartState extends State<BravenChart> {
   StreamSubscription? _dataStreamSub;
-  
+
   void _handleStreamData(ChartDataPoint point) {
     // Existing streaming logic unchanged
     _bufferManager.addPoint(point);
-    
+
     // NEW: Update spatial index with new point
     _spatialIndex.insert(DataPointElement(point, theme));
-    
+
     // Trigger repaint (now via RenderBox)
     _renderBox.markNeedsPaint();
   }
@@ -454,6 +485,7 @@ class _BravenChartState extends State<BravenChart> {
 **Location**: `lib/src/widgets/chart_scrollbar.dart`, `lib/src/widgets/scrollbar/`
 
 **Components to Preserve**:
+
 - `ChartScrollbar` widget
 - `ScrollbarController` - Scrollbar state management
 - `ScrollbarPainter` - Custom scrollbar rendering
@@ -461,6 +493,7 @@ class _BravenChartState extends State<BravenChart> {
 - `HitTestZone` - Scrollbar hit detection
 
 **Integration Strategy**:
+
 - Scrollbars remain as overlay widgets (Stack)
 - Connect scrollbar state to ChartTransform viewport
 - Scrollbar drag updates transform's dataXMin/dataYMin
@@ -470,10 +503,10 @@ class _BravenChartState extends State<BravenChart> {
 // Scrollbar integration
 class BravenChartRenderBox extends RenderBox {
   final ValueChanged<Rect>? onViewportChanged;  // Callback for scrollbars
-  
+
   void _updateViewport(ChartTransform newTransform) {
     _transform = newTransform;
-    
+
     // Notify scrollbars of viewport change
     onViewportChanged?.call(Rect.fromLTRB(
       _transform.dataXMin,
@@ -481,7 +514,7 @@ class BravenChartRenderBox extends RenderBox {
       _transform.dataXMax,
       _transform.dataYMax,
     ));
-    
+
     markNeedsPaint();
   }
 }
@@ -492,6 +525,7 @@ class BravenChartRenderBox extends RenderBox {
 **Location**: `lib/src/widgets/annotations/`
 
 **Annotation Types to Preserve**:
+
 - `PointAnnotation` - Point markers
 - `RangeAnnotation` - Horizontal/vertical ranges
 - `TextAnnotation` - Text labels
@@ -499,6 +533,7 @@ class BravenChartRenderBox extends RenderBox {
 - `TrendAnnotation` - Trend lines
 
 **Migration Approach**:
+
 1. Keep existing annotation classes (data structures)
 2. Create `AnnotationElement` wrapper (implements `ChartElement`)
 3. Add resize handles from prototype
@@ -510,14 +545,14 @@ class AnnotationElement implements ChartElement {
   final ChartAnnotation annotation;  // Existing annotation type
   final ChartTheme theme;
   final bool isSelected;
-  
+
   List<ResizeHandleElement>? _handles;
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     // Use existing annotation rendering code
     annotation.paint(canvas, size, theme);
-    
+
     // Add resize handles if selected (NEW from prototype)
     if (isSelected && _handles != null) {
       for (final handle in _handles!) {
@@ -525,7 +560,7 @@ class AnnotationElement implements ChartElement {
       }
     }
   }
-  
+
   @override
   bool hitTest(Offset position) {
     // Check resize handles first (priority 9)
@@ -547,34 +582,42 @@ class AnnotationElement implements ChartElement {
 ### 5.1 High-Risk Areas
 
 #### Risk 1: Breaking Streaming System
+
 **Impact**: HIGH - Streaming is critical production feature  
 **Probability**: MEDIUM - Significant interaction changes  
 **Mitigation**:
+
 - Phase 1 focuses on non-streaming features first
 - Extensive testing with streaming enabled
 - Preserve exact buffer management code
 - Add integration tests for streaming + pan/zoom
 
 #### Risk 2: Theme System Integration
+
 **Impact**: MEDIUM - Affects visual consistency  
 **Probability**: LOW - Themes are orthogonal to interaction  
 **Mitigation**:
+
 - Pass theme to RenderBox constructor
 - Use existing theme application code
 - Visual regression testing
 
 #### Risk 3: Performance Degradation
+
 **Impact**: MEDIUM - User experience impact  
 **Probability**: LOW - RenderBox should improve performance  
 **Mitigation**:
+
 - Benchmark before/after
 - QuadTree should reduce hit-test overhead
 - Canvas batching opportunities
 
 #### Risk 4: Breaking Scrollbar Sync
+
 **Impact**: MEDIUM - Important navigation feature  
 **Probability**: MEDIUM - Coordinate system changes  
 **Mitigation**:
+
 - Scrollbar viewport callbacks
 - Integration tests for scrollbar + zoom/pan
 - Preserve exact scrollbar calculation logic
@@ -582,6 +625,7 @@ class AnnotationElement implements ChartElement {
 ### 5.2 Testing Strategy
 
 #### Unit Tests
+
 - Coordinator state transitions
 - Spatial index queries
 - Transform coordinate conversions
@@ -589,6 +633,7 @@ class AnnotationElement implements ChartElement {
 - Element hit testing
 
 #### Integration Tests
+
 - Zoom + streaming
 - Pan + scrollbars
 - Annotations + coordinator
@@ -596,12 +641,14 @@ class AnnotationElement implements ChartElement {
 - Multi-gesture sequences
 
 #### Widget Tests
+
 - Complete interaction workflows
 - Gesture conflict scenarios
 - Keyboard shortcuts
 - Context menus
 
 #### Manual Testing
+
 - Visual inspection of all chart types
 - Theme variations
 - Streaming performance
@@ -614,12 +661,14 @@ class AnnotationElement implements ChartElement {
 ### Phase 1: Foundation (Week 1-2)
 
 **Goals**:
+
 - Replace CustomPainter with RenderBox
 - Integrate coordinator
 - Basic hit testing works
 - Rendering preserved
 
 **Tasks**:
+
 1. Create `BravenChartRenderBox` extending RenderBox
 2. Move `_BravenChartPainter.paint()` code to RenderBox.paint()
 3. Implement RenderBox.handleEvent() with coordinator routing
@@ -630,6 +679,7 @@ class AnnotationElement implements ChartElement {
 8. Verify all existing rendering works (series, axes, grid, annotations)
 
 **Success Criteria**:
+
 - Chart renders identically to before
 - Basic tap detection works
 - No gesture functionality lost
@@ -638,11 +688,13 @@ class AnnotationElement implements ChartElement {
 ### Phase 2: Element System (Week 3)
 
 **Goals**:
+
 - Full element system operational
 - Coordinator manages all interactions
 - Priority-based conflict resolution works
 
 **Tasks**:
+
 1. Complete element wrappers for all chart types
 2. Implement annotation elements with resize handles
 3. Wire coordinator to all gesture recognizers
@@ -652,6 +704,7 @@ class AnnotationElement implements ChartElement {
 7. Test all conflict resolution scenarios
 
 **Success Criteria**:
+
 - All elements respond to interactions
 - No gesture conflicts
 - Annotations draggable and resizable
@@ -660,12 +713,14 @@ class AnnotationElement implements ChartElement {
 ### Phase 3: Advanced Features (Week 4-5)
 
 **Goals**:
+
 - Zoom/pan with constraints works
 - Dynamic axes operational
 - Streaming integrated
 - Scrollbars synced
 
 **Tasks**:
+
 1. Replace zoom/pan controller with ChartTransform
 2. Implement pan constraint algorithm
 3. Add dynamic axis updates in paint()
@@ -676,6 +731,7 @@ class AnnotationElement implements ChartElement {
 8. Performance optimization pass
 
 **Success Criteria**:
+
 - Zoom/pan works with perfect constraints
 - Axes update live during pan
 - Streaming + zoom/pan works together
@@ -685,11 +741,13 @@ class AnnotationElement implements ChartElement {
 ### Phase 4: Polish & Testing (Week 6)
 
 **Goals**:
+
 - All features working together
 - No regressions
 - Documentation complete
 
 **Tasks**:
+
 1. Comprehensive testing (unit, integration, widget, manual)
 2. Performance benchmarking
 3. Fix any discovered issues
@@ -698,6 +756,7 @@ class AnnotationElement implements ChartElement {
 6. Example updates
 
 **Success Criteria**:
+
 - All existing functionality preserved
 - All new functionality working
 - Test coverage >90%
@@ -711,6 +770,7 @@ class AnnotationElement implements ChartElement {
 ### 7.1 Breaking Changes (Minimal)
 
 #### Widget API (Mostly Preserved)
+
 ```dart
 // OLD & NEW - No change
 BravenChart(
@@ -724,6 +784,7 @@ BravenChart(
 ```
 
 #### Interaction Config (Enhanced, Backward Compatible)
+
 ```dart
 // NEW optional parameters
 InteractionConfig(
@@ -731,7 +792,7 @@ InteractionConfig(
   enableZoom: true,
   enablePan: true,
   enableCrosshair: true,
-  
+
   // NEW parameters (optional, with defaults)
   panConstraints: PanConstraints.whitespaceLimit(0.1),  // NEW
   zoomConstraints: ZoomConstraints.range(0.1, 10.0),    // NEW
@@ -742,16 +803,19 @@ InteractionConfig(
 ### 7.2 Internal API Changes
 
 #### Removed
+
 - `_BravenChartPainter` (replaced by `BravenChartRenderBox`)
 - Direct coordinate conversion helpers (replaced by `ChartTransform`)
 
 #### Added
+
 - `ChartElement` interface (for extensibility)
 - `ChartInteractionCoordinator` (centralized state)
 - `QuadTree` (spatial indexing)
 - `ChartTransform` (coordinate system)
 
 #### Modified
+
 - Gesture handling (now via RenderBox.handleEvent)
 - Zoom/pan (now via transform with constraints)
 - Axis rendering (now via dynamic system)
@@ -761,6 +825,7 @@ InteractionConfig(
 ## 8. Success Metrics
 
 ### Functional Requirements
+
 - ✅ All existing features work identically
 - ✅ No gesture conflicts (priority system working)
 - ✅ Pan constraints functional (10% whitespace limit)
@@ -771,12 +836,14 @@ InteractionConfig(
 - ✅ Annotations draggable/resizable
 
 ### Performance Requirements
+
 - ✅ Hit testing: <5ms (99th percentile) - QuadTree enables this
 - ✅ Paint: <16ms for 60fps - RenderBox enables better control
 - ✅ Event processing: <5ms - Coordinator routing is O(1)
 - ✅ Memory: No leaks, stable under load
 
 ### Code Quality
+
 - ✅ Single responsibility principle maintained
 - ✅ Separation of concerns improved
 - ✅ Test coverage >90%
@@ -791,6 +858,7 @@ InteractionConfig(
 **No Breaking Changes Expected** - The widget API remains identical.
 
 Optional new features:
+
 ```dart
 // Enable pan constraints (NEW)
 interactionConfig: InteractionConfig(
@@ -804,25 +872,27 @@ interactionConfig: InteractionConfig(
 **If extending the library**:
 
 1. **Custom Elements**: Implement `ChartElement` interface
+
 ```dart
 class MyCustomElement implements ChartElement {
   @override
   String get id => 'custom-${hashCode}';
-  
+
   @override
   Rect get bounds => _calculateBounds();
-  
+
   @override
   bool hitTest(Offset position) => bounds.contains(position);
-  
+
   @override
   void paint(Canvas canvas, Size size) { /* ... */ }
-  
+
   // ... implement other required methods
 }
 ```
 
 2. **Custom Interactions**: Register with coordinator
+
 ```dart
 coordinator.registerHandler((event) {
   if (event.type == InteractionMode.myCustomMode) {
@@ -862,12 +932,14 @@ coordinator.registerHandler((event) {
 ## 11. Timeline Estimate
 
 ### Conservative Estimate (6 weeks)
+
 - Week 1-2: Foundation (RenderBox, coordinator)
 - Week 3: Element system
 - Week 4-5: Advanced features (zoom/pan, axes, streaming)
 - Week 6: Testing, polish, documentation
 
 ### Aggressive Estimate (4 weeks)
+
 - Week 1: Foundation
 - Week 2: Element system
 - Week 3: Advanced features
@@ -898,6 +970,7 @@ coordinator.registerHandler((event) {
 ## 13. References
 
 ### Prototype Documentation
+
 - `refactor/interaction/readme.md` - Architecture overview
 - `refactor/interaction/phase_0_summary.md` - Phase 0 completion
 - `refactor/interaction/coordinate_space_architecture.md` - Coordinate system
@@ -905,6 +978,7 @@ coordinator.registerHandler((event) {
 - `refactor/interaction/zoom_pan_architecture.md` - Zoom/pan details
 
 ### Main Package Documentation
+
 - `docs/architecture.md` - Current architecture
 - `docs/development.md` - Development guide
 - `phase_0_test_plan.md` - Testing approach
@@ -917,13 +991,13 @@ This refactor is **achievable and beneficial** with careful execution:
 
 ✅ **Achievable**: Clear migration path, feature preservation strategy  
 ✅ **Beneficial**: Better architecture, zero gesture conflicts, improved performance  
-✅ **Manageable Risk**: Phased approach, extensive testing, minimal API changes  
+✅ **Manageable Risk**: Phased approach, extensive testing, minimal API changes
 
 The prototype has **proven** the interaction system works perfectly (pan constraints, dynamic axes, conflict resolution). The main package has **proven** production features (theming, streaming, scrollbars). **Combining them is the logical next step** to create a world-class charting library.
 
 **Estimated Effort**: 4-6 weeks  
 **Risk Level**: Medium (with mitigation strategies)  
-**Reward**: High (production-ready interaction system + all existing features)  
+**Reward**: High (production-ready interaction system + all existing features)
 
 ---
 

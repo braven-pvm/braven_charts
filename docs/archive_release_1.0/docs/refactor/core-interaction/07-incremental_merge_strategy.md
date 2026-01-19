@@ -5,7 +5,7 @@
 **Status**: ✅ Phase 1 Complete | ✅ Phase 2 Complete (85%) | ⏳ Phase 3 In Progress (20%)  
 **Implementation Location**: `lib/src_plus/` (isolated from production `lib/src/`)  
 **Created**: 2025-11-10  
-**Last Updated**: 2025-11-17  
+**Last Updated**: 2025-11-17
 
 ---
 
@@ -16,6 +16,7 @@
 ### What's Been Completed
 
 ✅ **6 out of 7 core features fully implemented:**
+
 1. ✅ Real ChartSeries (sealed class architecture)
 2. ✅ Theming System (runtime switching)
 3. ✅ Annotations (all 5 types: Point, Range, Text, Threshold, Trend)
@@ -24,6 +25,7 @@
 6. ✅ Markers, Legends, Tooltips (complete visualization suite)
 
 ⏳ **Remaining:**
+
 - Scrollbars (ChartScrollbar widget)
 
 ### Key Achievements Beyond Plan
@@ -36,8 +38,9 @@
 ### What This Means
 
 BravenChartPlus now has **near feature parity** with BravenChart:
+
 - All major visualization features ✅
-- All interaction features ✅  
+- All interaction features ✅
 - Performance optimized ✅
 - Only missing: Scrollbars (minor feature)
 
@@ -50,6 +53,7 @@ BravenChartPlus now has **near feature parity** with BravenChart:
 **DECISION**: BravenChartPlus is being built in **`lib/src_plus/`** (NOT `lib/src/`)
 
 **Rationale**:
+
 - ✅ Complete isolation from production code
 - ✅ Zero risk of breaking existing BravenChart
 - ✅ Clean prototype-to-production evolution path
@@ -68,6 +72,7 @@ BravenChartPlus now has **near feature parity** with BravenChart:
 ### What Happened
 
 During the implementation of the theming system (Phase 2, Feature 2), we encountered **massive performance issues**:
+
 - Frame render times spiked to 200-300ms (target: <16ms for 60fps)
 - UI became completely unresponsive during pan/zoom
 - Hit testing caused cascade failures
@@ -84,16 +89,16 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 
 ### Performance Optimizations Completed
 
-| Optimization | Impact | Time Spent |
-|--------------|--------|------------|
-| Picture caching for chart canvas | ~17ms saved per frame | 4h |
-| Hit test throttling (50ms debounce) | Prevents cascade failures | 2h |
-| QuadTree spatial index optimization | O(log n) hit testing | 3h |
-| Pan/zoom constraint validation | 10% max whitespace, smooth UX | 4h |
-| Memory leak investigation | Fixed Picture disposal | 3h |
-| 5-chart stress test example | Validates performance claims | 2h |
-| Dynamic axis tick generation | Just-in-time ticks, no waste | 4h |
-| Focus management fix | Runtime theme switching works | 3h |
+| Optimization                        | Impact                        | Time Spent |
+| ----------------------------------- | ----------------------------- | ---------- |
+| Picture caching for chart canvas    | ~17ms saved per frame         | 4h         |
+| Hit test throttling (50ms debounce) | Prevents cascade failures     | 2h         |
+| QuadTree spatial index optimization | O(log n) hit testing          | 3h         |
+| Pan/zoom constraint validation      | 10% max whitespace, smooth UX | 4h         |
+| Memory leak investigation           | Fixed Picture disposal        | 3h         |
+| 5-chart stress test example         | Validates performance claims  | 2h         |
+| Dynamic axis tick generation        | Just-in-time ticks, no waste  | 4h         |
+| Focus management fix                | Runtime theme switching works | 3h         |
 
 **Total**: 25 hours of unplanned work
 
@@ -130,6 +135,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 ## Why This Approach?
 
 ### Previous Attempt Failed Because:
+
 - ❌ Tried to gut BravenChart (7,300 lines) and replace engine in place
 - ❌ Attempted "100% functionality preservation" while changing architecture
 - ❌ Big-bang migration with no safety net
@@ -137,6 +143,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 - ❌ Lost working code, broke everything
 
 ### New Approach Succeeds Because:
+
 - ✅ Keep BravenChart untouched (continues working)
 - ✅ Keep PrototypeChart untouched (proven architecture)
 - ✅ Create NEW BravenChartPlus based on PrototypeChart
@@ -150,6 +157,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 ## Core Principle: PrototypeChart Architecture is Sacred
 
 **PrototypeChart has PROVEN:**
+
 - ✅ RenderBox-based rendering with handleEvent()
 - ✅ ChartInteractionCoordinator for unified state
 - ✅ QuadTree spatial indexing (O(log n) hit testing)
@@ -160,6 +168,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 - ✅ Zero gesture conflicts
 
 **BravenChart has PROVEN:**
+
 - ✅ Complete theming system (ChartTheme)
 - ✅ Real-time streaming (BufferManager, StreamingController)
 - ✅ Scrollbars (ChartScrollbar)
@@ -181,6 +190,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 **Status**: ✅ **COMPLETE** (implemented in `lib/src_plus/`)
 
 **Tasks**:
+
 1. ✅ Copy PrototypeChart files to new BravenChartPlus structure
 2. ✅ Align public API with BravenChart (constructor parameters, etc.)
 3. ✅ Keep internal architecture from PrototypeChart
@@ -188,6 +198,7 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 5. ✅ Verify basic rendering works
 
 **Files Created** (in `lib/src_plus/`):
+
 ```
 lib/src_plus/widgets/braven_chart_plus.dart       # ✅ Public widget (340 lines)
 lib/src_plus/rendering/chart_render_box.dart      # ✅ RenderBox (1,247 lines)
@@ -205,6 +216,7 @@ lib/src_plus/axis/tick.dart                       # ✅
 ```
 
 **Success Criteria**:
+
 - [x] BravenChartPlus compiles without errors
 - [x] Example app runs and shows basic chart
 - [x] No impact to existing BravenChart
@@ -213,6 +225,7 @@ lib/src_plus/axis/tick.dart                       # ✅
 - [x] Coordinator managing interaction state
 
 **Commits**:
+
 - Multiple commits implementing Phase 1 foundation
 - See git history from `c8a00de` onwards
 
@@ -225,11 +238,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 **Approach**: One feature at a time, test thoroughly, commit
 
 #### Feature 1: Real ChartSeries (Priority 1) - ✅ COMPLETE
+
 **Goal**: Replace simulated datapoints with real ChartSeries data structures
 
 **Status**: ✅ **COMPLETE**
 
 **Implementation** (in `lib/src_plus/`):
+
 - ✅ `models/chart_series.dart` - **Sealed class hierarchy** (commit `233fc70`)
   - `LineChartSeries` with interpolation (linear, bezier, stepped, monotone)
   - `BarChartSeries` with width configuration
@@ -243,13 +258,15 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ Real data rendering in example apps
 
 **Success Criteria**:
+
 - [x] Can pass List<ChartSeries> to BravenChartPlus
 - [x] Series renders correctly (line, area, bar, scatter)
 - [x] Spatial index contains datapoint elements
 - [x] Click on point shows hit test works
 - [x] Sealed class provides type safety
 
-**Commits**: 
+**Commits**:
+
 - `233fc70` - feat: Implement sealed class series architecture
 - `b86f975` - refactor: Remove obsolete chartType parameter
 
@@ -258,11 +275,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 2: Theming System (Priority 2) - ✅ COMPLETE
+
 **Goal**: Apply BravenChart's theming to BravenChartPlus rendering
 
 **Status**: ✅ **COMPLETE**
 
 **Implementation** (in `lib/src_plus/`):
+
 - ✅ `models/chart_theme.dart` - Complete theme system
 - ✅ Theme passed to ChartRenderBox
 - ✅ Background, grid, axes use theme colors
@@ -270,13 +289,15 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ Runtime theme switching with FocusNode fix (commit `17c692f`)
 
 **Success Criteria**:
+
 - [x] Can pass ChartTheme to BravenChartPlus
 - [x] Background, grid, axes use theme colors
 - [x] Series lines use theme colors
 - [x] Theme changes update rendering
 - [x] Runtime theme switching works
 
-**Commits**: 
+**Commits**:
+
 - `17c692f` - feat: Add runtime theme switching with FocusNode fix
 
 **Estimated Time**: 4-6 hours | **Actual Time**: ~5 hours
@@ -284,11 +305,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 3: Annotations (Priority 3) - ✅ COMPLETE
+
 **Goal**: Add BravenChart's annotation types with PrototypeChart's interactions
 
 **Status**: ✅ **COMPLETE** (all 5 annotation types implemented and tested)
 
 **Implemented**:
+
 - ✅ `models/chart_annotation.dart` - All 5 annotation model classes (PointAnnotation, RangeAnnotation, TextAnnotation, ThresholdAnnotation, TrendAnnotation)
 - ✅ `elements/annotation_elements.dart` - All annotation element rendering classes
 - ✅ PointAnnotation - Markers at specific data points with custom shapes
@@ -304,13 +327,15 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ Unit tests (14 tests passing)
 
 **Success Criteria**:
+
 - [x] Basic annotations render correctly
 - [x] Annotations are draggable
 - [x] Annotations are resizable (with handles)
 - [x] No gesture conflicts
 - [x] All 5 annotation types from BravenChart ported
 
-**Commits**: 
+**Commits**:
+
 - feat(annotations): Add ThresholdAnnotation and TrendAnnotation models
 - feat(annotations): Implement ThresholdAnnotationElement and TrendAnnotationElement
 - feat(annotations): Add pattern matching in BravenChartPlus widget
@@ -318,7 +343,8 @@ lib/src_plus/axis/tick.dart                       # ✅
 - feat(annotations): Complete all 5 annotation types
 
 **Estimated Time**: 8-10 hours | **Actual Time**: ~10 hours  
-**Breakdown**: 
+**Breakdown**:
+
 - Models: 1.5h
 - Elements (Threshold): 2h
 - Elements (Trend): 2.5h
@@ -330,11 +356,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 4: Streaming (Priority 4) - ✅ COMPLETE
+
 **Goal**: Add real-time data streaming from BravenChart
 
 **Status**: ✅ **COMPLETE**
 
 **Implemented**:
+
 - ✅ `StreamingConfig` class (commit `9fdb0cc`)
 - ✅ `BufferManager` (ring buffer) (commit `9fdb0cc`)
 - ✅ `StreamingController` (commit `9fdb0cc`)
@@ -343,12 +371,14 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ Full dataset panning when paused (commit `41539ff`)
 
 **Integrated with PrototypeChart**:
+
 - ✅ ChartTransform viewport updates during streaming
 - ✅ Spatial index updates on new data
 - ✅ Pan/zoom works during streaming AND when paused
 - ✅ Dual-mode system: streaming window vs full dataset exploration
 
 **Success Criteria**:
+
 - [x] Can enable streaming mode
 - [x] Data updates in real-time
 - [x] Spatial index updates correctly
@@ -358,7 +388,8 @@ lib/src_plus/axis/tick.dart                       # ✅
 - [x] Resume jumps back to latest data
 - [x] Instant button response (no delay)
 
-**Commits**: 
+**Commits**:
+
 - `9fdb0cc` - feat(streaming): Add StreamingConfig, BufferManager, and StreamingController
 - `337330a` - feat(streaming): Integrate streaming into BravenChartPlus widget
 - `4b2426e` - feat(streaming): Add Feature #9 showcase with real-time data
@@ -370,21 +401,25 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 5: Scrollbars (Priority 5) - ❌ NOT STARTED
+
 **Goal**: Add BravenChart's scrollbars synced with PrototypeChart's viewport
 
 **Status**: ❌ **NOT STARTED**
 
 **From BravenChart** (needs porting):
+
 - ⏳ `ChartScrollbar` widget
 - ⏳ `ScrollbarController`
 - ⏳ Horizontal/vertical scrollbar support
 
 **Adapt To PrototypeChart**:
+
 - ⏳ Sync with ChartTransform viewport
 - ⏳ Scrollbar drag updates transform
 - ⏳ Keep PrototypeChart's zoom/pan
 
 **Success Criteria**:
+
 - [ ] Scrollbars appear when data exceeds viewport
 - [ ] Dragging scrollbar updates viewport
 - [ ] Pan/zoom updates scrollbar position
@@ -395,11 +430,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 6: Additional Chart Types - ✅ COMPLETE
+
 **Goal**: Add remaining chart types (Bar, Scatter if not already done)
 
 **Status**: ✅ **COMPLETE**
 
 **Implementation**:
+
 - ✅ Line chart with interpolation modes
 - ✅ Bar chart rendering
 - ✅ Scatter chart rendering
@@ -407,11 +444,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ All integrated with sealed class series
 
 **Success Criteria**:
+
 - [x] All 4 chart types work (Line, Bar, Scatter, Area)
 - [x] Type-specific configuration via sealed classes
 - [x] Proper rendering for each type
 
-**Commits**: 
+**Commits**:
+
 - `233fc70` - Sealed class series with all 4 types
 
 **Estimated Time**: 4-6 hours | **Actual Time**: Included in Feature 1
@@ -419,11 +458,13 @@ lib/src_plus/axis/tick.dart                       # ✅
 ---
 
 #### Feature 7: Markers, Legends, Tooltips - ✅ COMPLETE
+
 **Goal**: Add visual enhancements from BravenChart
 
 **Status**: ✅ **COMPLETE**
 
 **Implemented**:
+
 - ✅ Basic tooltips (commit `2c03fcc`) - nearest datapoint lookup, <5ms render
 - ✅ Crosshair with coordinate labels
 - ✅ Data point marker configuration in series
@@ -431,13 +472,15 @@ lib/src_plus/axis/tick.dart                       # ✅
 - ✅ Multiple marker shapes (circle, square, triangle, etc.)
 
 **Success Criteria**:
+
 - [x] Basic tooltips work
 - [x] Crosshair shows coordinates
 - [x] Legend widget displays all series
 - [x] Legend allows show/hide series
 - [x] Multiple marker shapes available
 
-**Commits**: 
+**Commits**:
+
 - `2c03fcc` - perf: Basic tooltips implementation
 - `bc04513` - feat: Add ChartLegend widget for show/hide series control
 
@@ -452,6 +495,7 @@ lib/src_plus/axis/tick.dart                       # ✅
 **Status**: ❌ **NOT STARTED** (pending Phase 2 completion)
 
 **Tasks**:
+
 1. Feature comparison audit (BravenChart vs BravenChartPlus)
 2. Port any remaining features
 3. Performance testing and optimization
@@ -460,6 +504,7 @@ lib/src_plus/axis/tick.dart                       # ✅
 6. Deprecate BravenChart (keep for backwards compat)
 
 **Success Criteria**:
+
 - [ ] BravenChartPlus has feature parity with BravenChart
 - [ ] All example apps work with BravenChartPlus
 - [ ] All tests pass
@@ -476,36 +521,36 @@ lib/src_plus/axis/tick.dart                       # ✅
 
 ### Phase Completion Status
 
-| Phase | Status | Completion | Time Estimate | Time Actual |
-|-------|--------|-----------|---------------|-------------|
-| **Phase 1: Foundation** | ✅ Complete | 100% | 8 hours | ~10 hours |
-| **Phase 2: Feature Porting** | ✅ Complete | 100% | 80-100 hours | ~54 hours |
-| **Phase 3: Feature Parity** | ⏳ In Progress | 20% | 40 hours | ~8 hours |
+| Phase                        | Status         | Completion | Time Estimate | Time Actual |
+| ---------------------------- | -------------- | ---------- | ------------- | ----------- |
+| **Phase 1: Foundation**      | ✅ Complete    | 100%       | 8 hours       | ~10 hours   |
+| **Phase 2: Feature Porting** | ✅ Complete    | 100%       | 80-100 hours  | ~54 hours   |
+| **Phase 3: Feature Parity**  | ⏳ In Progress | 20%        | 40 hours      | ~8 hours    |
 
 ### Feature Implementation Status
 
-| Feature | Priority | Status | Completion | Time Est | Time Actual | Notes |
-|---------|----------|--------|-----------|----------|-------------|-------|
-| **1. Real ChartSeries** | P1 | ✅ Complete | 100% | 4-6h | ~6h | Sealed class architecture |
-| **2. Theming System** | P2 | ✅ Complete | 100% | 4-6h | ~5h | Runtime switching works |
-| **3. Annotations** | P3 | ✅ Complete | 100% | 8-10h | ~10h | All 5 types implemented & tested |
-| **4. Streaming** | P4 | ✅ Complete | 100% | 6-8h | ~12h | Dual-mode pause/resume |
-| **5. Scrollbars** | P5 | ❌ Not Started | 0% | 4-6h | - | ChartScrollbar pending |
-| **6. Chart Types** | P6 | ✅ Complete | 100% | 4-6h | (in F1) | All 4 types done |
-| **7. Markers/Legends/Tooltips** | P7 | ✅ Complete | 100% | 6-8h | ~7h | All features implemented |
+| Feature                         | Priority | Status         | Completion | Time Est | Time Actual | Notes                            |
+| ------------------------------- | -------- | -------------- | ---------- | -------- | ----------- | -------------------------------- |
+| **1. Real ChartSeries**         | P1       | ✅ Complete    | 100%       | 4-6h     | ~6h         | Sealed class architecture        |
+| **2. Theming System**           | P2       | ✅ Complete    | 100%       | 4-6h     | ~5h         | Runtime switching works          |
+| **3. Annotations**              | P3       | ✅ Complete    | 100%       | 8-10h    | ~10h        | All 5 types implemented & tested |
+| **4. Streaming**                | P4       | ✅ Complete    | 100%       | 6-8h     | ~12h        | Dual-mode pause/resume           |
+| **5. Scrollbars**               | P5       | ❌ Not Started | 0%         | 4-6h     | -           | ChartScrollbar pending           |
+| **6. Chart Types**              | P6       | ✅ Complete    | 100%       | 4-6h     | (in F1)     | All 4 types done                 |
+| **7. Markers/Legends/Tooltips** | P7       | ✅ Complete    | 100%       | 6-8h     | ~7h         | All features implemented         |
 
 ### Additional Work Completed (Not in Original Plan)
 
-| Feature | Status | Time Spent | Commits | Notes |
-|---------|--------|------------|---------|-------|
-| **Pan/Zoom Constraints** | ✅ Complete | ~10h | Multiple | 10% whitespace, 1x-10x zoom |
-| **Dynamic Axes** | ✅ Complete | ~6h | `c8a00de` | Just-in-time tick generation |
-| **Performance Optimizations** | ✅ Complete | ~15h | 4 commits | Picture caching, throttling |
-| **Sealed Class Series** | ✅ Complete | ~4h | `233fc70` | Type-safe series architecture |
-| **5-Chart Example** | ✅ Complete | ~2h | `50196d4` | Performance validation |
-| **Focus Management** | ✅ Complete | ~2h | `4d5433e` | Keyboard integration |
-| **Dual-Mode Streaming** | ✅ Complete | ~6h | `29c87c3`, `41539ff` | Pause/resume with full dataset panning |
-| **Bug Fixes** | ✅ Complete | ~8h | Multiple | Double-pan, constraints, etc. |
+| Feature                       | Status      | Time Spent | Commits              | Notes                                  |
+| ----------------------------- | ----------- | ---------- | -------------------- | -------------------------------------- |
+| **Pan/Zoom Constraints**      | ✅ Complete | ~10h       | Multiple             | 10% whitespace, 1x-10x zoom            |
+| **Dynamic Axes**              | ✅ Complete | ~6h        | `c8a00de`            | Just-in-time tick generation           |
+| **Performance Optimizations** | ✅ Complete | ~15h       | 4 commits            | Picture caching, throttling            |
+| **Sealed Class Series**       | ✅ Complete | ~4h        | `233fc70`            | Type-safe series architecture          |
+| **5-Chart Example**           | ✅ Complete | ~2h        | `50196d4`            | Performance validation                 |
+| **Focus Management**          | ✅ Complete | ~2h        | `4d5433e`            | Keyboard integration                   |
+| **Dual-Mode Streaming**       | ✅ Complete | ~6h        | `29c87c3`, `41539ff` | Pause/resume with full dataset panning |
+| **Bug Fixes**                 | ✅ Complete | ~8h        | Multiple             | Double-pan, constraints, etc.          |
 
 **Total Additional Work**: ~53 hours (not originally planned)
 
@@ -518,6 +563,7 @@ lib/src_plus/axis/tick.dart                       # ✅
 **Progress**: Phase 1 complete + Phase 2 complete + Phase 3 started (20%)
 
 **Major Achievements**:
+
 - ✅ All 7 core features implemented (except scrollbars)
 - ✅ Dual-mode streaming with pause/resume
 - ✅ Full dataset panning when paused
@@ -531,29 +577,28 @@ lib/src_plus/axis/tick.dart                       # ✅
 The implementation has delivered MORE than the original strategy planned:
 
 ### Architecture Enhancements ✅
+
 1. **Pan/Zoom Constraints System** (not in original plan)
    - 10% whitespace constraint algorithm
    - Zoom-aware constraint calculations
    - Edge case handling for high zoom levels
    - Viewport position constraint algorithm
-   
 2. **Dynamic Axis System** (not in original plan)
    - Just-in-time tick generation
    - Axis updates during zoom/pan
    - No stale ticks problem
-   
 3. **Performance Layer** (not in original plan)
    - Picture caching for series layer (~17ms saved)
    - Two-layer rendering architecture
    - Hit test throttling (50ms debounce, 60fps hover)
    - Cache invalidation system
-   
 4. **API Improvements** (not in original plan)
    - Sealed class series architecture (type safety)
    - Removed redundant chartType parameter
    - Runtime theme switching
 
 ### Performance Validated ✅
+
 - 60fps with 7 series simultaneously
 - O(log n) hit testing via QuadTree
 - <100ms for 1000 points
@@ -570,6 +615,7 @@ Based on current progress, recommended next features:
 **Phase 3: Feature Parity & Polish** (~35-40 hours remaining)
 
 **1. Scrollbars Implementation** (~6 hours, 6 tasks) ⚠️ ONLY MAJOR FEATURE REMAINING
+
 - Port ChartScrollbar widget from BravenChart
 - Sync with ChartTransform viewport (two-way binding)
 - Test scrollbar + pan/zoom interaction (no conflicts)
@@ -578,12 +624,14 @@ Based on current progress, recommended next features:
 - **Current Progress**: 0% complete
 
 **2. Feature Parity Audit** (~4 hours)
+
 - Compare BravenChart vs BravenChartPlus feature lists
 - Port any missing chart types (Candlestick, Bubble, etc.)
 - Port any missing interaction modes
 - Update documentation
 
 **3. Testing & Optimization** (~11 hours)
+
 - Unit test coverage for all features
 - Integration testing (feature combinations)
 - Performance benchmarking at scale (10+ charts, 10k+ points)
@@ -591,6 +639,7 @@ Based on current progress, recommended next features:
 - Bug fixes
 
 **4. Migration Guide** (~10 hours)
+
 - Document differences between BravenChart and BravenChartPlus
 - Migration steps and code examples
 - Breaking changes documentation
@@ -598,6 +647,7 @@ Based on current progress, recommended next features:
 - Deprecate old BravenChart (add deprecation notices)
 
 **5. Theming Re-Verification** (~4 hours, 8 tasks) **⚠️ CRITICAL**
+
 - Re-test theming system after ALL features added
 - Verify theme changes update: series, axes, tooltips, annotations, legends, markers
 - Test runtime theme switching performance
@@ -607,15 +657,18 @@ Based on current progress, recommended next features:
 **Phase 3 Total**: ~35 hours, ~27 major tasks
 
 ---
+
 ## Timeline Revision
 
 ### Original Estimate (from 2025-11-10)
+
 - Phase 1: 1 day (8 hours)
 - Phase 2: 2-3 weeks (80-100 hours)
 - Phase 3: 1 week (40 hours)
 - **Total**: 128-148 hours (4-6 weeks)
 
 ### Actual Progress (as of 2025-11-12)
+
 - Phase 1: ✅ Complete (~10 hours)
 - Phase 2: ⏳ 60% Complete (~25 hours planned + 47 hours additional)
 - Phase 3: ❌ Not Started
@@ -626,6 +679,7 @@ Based on current progress, recommended next features:
 ### Revised Timeline (from 2025-11-12)
 
 **Weeks 1-2**: Complete Phase 3 (scrollbars + testing + migration)
+
 - Scrollbars implementation (6h)
 - Feature parity audit (4h)
 - Comprehensive testing (11h)
@@ -718,11 +772,13 @@ refactor/interaction/                      # ✅ REFERENCE - Original prototype
 ### After Each Feature Port:
 
 1. **Compile Check**:
+
    ```powershell
    flutter analyze
    ```
 
 2. **Visual Test**:
+
    ```powershell
    cd example
    flutter run -d chrome lib/braven_chart_plus_example.dart
@@ -740,6 +796,7 @@ refactor/interaction/                      # ✅ REFERENCE - Original prototype
    ```
 
 ### Continuous Validation:
+
 - BravenChart continues to work (no changes)
 - PrototypeChart continues to work (no changes)
 - BravenChartPlus gains features incrementally
@@ -749,6 +806,7 @@ refactor/interaction/                      # ✅ REFERENCE - Original prototype
 ## API Alignment Strategy
 
 **BravenChart Public API** (must match):
+
 ```dart
 BravenChart({
   Key? key,
@@ -765,6 +823,7 @@ BravenChart({
 ```
 
 **BravenChartPlus API** (matches public API):
+
 ```dart
 BravenChartPlus({
   Key? key,
@@ -781,11 +840,12 @@ BravenChartPlus({
 ```
 
 **Internal Implementation** (from PrototypeChart):
+
 ```dart
 class _BravenChartPlusState extends State<BravenChartPlus> {
   late ChartInteractionCoordinator _coordinator;  // PrototypeChart
   late ChartTransform _transform;                 // PrototypeChart
-  
+
   @override
   Widget build(BuildContext context) {
     return RawGestureDetector(
@@ -805,15 +865,19 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 ## Risk Mitigation
 
 ### Risk 1: Breaking PrototypeChart Architecture
+
 **Mitigation**: Keep PrototypeChart code in refactor/interaction/ as reference. Any changes to BravenChartPlus must preserve core patterns (Coordinator, QuadTree, 3-space coords).
 
 ### Risk 2: Feature Port Complexity
+
 **Mitigation**: Port simplest features first (series, theming). Build confidence before tackling complex features (streaming, scrollbars).
 
 ### Risk 3: API Incompatibility
+
 **Mitigation**: Match BravenChart's public API exactly. Internal implementation can be completely different.
 
 ### Risk 4: Performance Regression
+
 **Mitigation**: Benchmark after each major feature. PrototypeChart's QuadTree should improve performance, not degrade it.
 
 ---
@@ -821,6 +885,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 ## Success Metrics
 
 ### After Each Feature:
+
 - ✅ Feature works in BravenChartPlus
 - ✅ No regressions in previously ported features
 - ✅ BravenChart still works (untouched)
@@ -828,6 +893,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 - ✅ Example app demonstrates feature
 
 ### Final Success (Phase 3):
+
 - ✅ BravenChartPlus has 100% feature parity
 - ✅ All interactions work without conflicts
 - ✅ Performance equal or better than BravenChart
@@ -844,11 +910,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 ### Original Estimate
 
 **Phase 1 (Foundation)**: 1 day (8 hours)
+
 - Setup BravenChartPlus skeleton
 - Create example app
 - Verify basic rendering
 
 **Phase 2 (Feature Porting)**: 2-3 weeks (80-100 hours)
+
 - Feature 1 (Series): 4-6 hours
 - Feature 2 (Theming): 4-6 hours
 - Feature 3 (Annotations): 8-10 hours
@@ -859,6 +927,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 - Buffer time: 40-50 hours
 
 **Phase 3 (Cutover)**: 1 week (40 hours)
+
 - Feature parity audit
 - Performance optimization
 - Migration guide
@@ -871,15 +940,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
 ### Revised Timeline (After Performance Divergence)
 
-| Phase | Original Est. | Actual Spent | Remaining | Notes |
-|-------|---------------|--------------|-----------|-------|
-| Phase 1: Foundation | 8h | ~25h | 0h | Over by 17h (added extra arch work) |
-| Phase 2: Features (planned) | 36-50h | ~40h | 0h | **ALL FEATURES COMPLETE** except scrollbars |
-| **Performance Divergence** | **0h** | **~25h** | **0h** | **Unplanned optimization work** |
-| Phase 2: Streaming Extensions | - | ~12h | 0h | Dual-mode pause/resume, full dataset panning |
-| Phase 3: Feature Parity | 40h | ~8h | ~32h | Scrollbars, audit, testing, migration |
-| **Theming Re-Verification** | **0h** | **0h** | **~4h** | **New requirement from divergence** |
-| **TOTAL** | **84-98h** | **110h** | **~36h** | **~146h total estimated** |
+| Phase                         | Original Est. | Actual Spent | Remaining | Notes                                        |
+| ----------------------------- | ------------- | ------------ | --------- | -------------------------------------------- |
+| Phase 1: Foundation           | 8h            | ~25h         | 0h        | Over by 17h (added extra arch work)          |
+| Phase 2: Features (planned)   | 36-50h        | ~40h         | 0h        | **ALL FEATURES COMPLETE** except scrollbars  |
+| **Performance Divergence**    | **0h**        | **~25h**     | **0h**    | **Unplanned optimization work**              |
+| Phase 2: Streaming Extensions | -             | ~12h         | 0h        | Dual-mode pause/resume, full dataset panning |
+| Phase 3: Feature Parity       | 40h           | ~8h          | ~32h      | Scrollbars, audit, testing, migration        |
+| **Theming Re-Verification**   | **0h**        | **0h**       | **~4h**   | **New requirement from divergence**          |
+| **TOTAL**                     | **84-98h**    | **110h**     | **~36h**  | **~146h total estimated**                    |
 
 **Current Status**: Phase 2 Complete (except scrollbars), Phase 3 Started (20%)  
 **Time Invested**: 110 hours  
@@ -887,6 +956,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 **Revised Completion Target**: Early December 2025 (was Mid-December)
 
 **Variance Analysis**:
+
 - Phase 1 over by 17h (architectural improvements)
 - Performance divergence added 25h (unplanned)
 - Dual-mode streaming added 12h (beyond basic streaming)
