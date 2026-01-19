@@ -5,12 +5,14 @@ This guide will help you set up your development environment for contributing to
 ## 📋 Prerequisites
 
 ### Required
+
 - **Flutter SDK** ≥ 3.10.0 ([Download](https://flutter.dev/docs/get-started/install))
 - **Dart SDK** ≥ 3.0.0 (included with Flutter)
 - **Git** ([Download](https://git-scm.com/downloads))
 - **Google Chrome** (for web testing)
 
 ### Recommended
+
 - **VS Code** with Flutter extension ([Download](https://code.visualstudio.com/))
 - **Android Studio** (optional, for Android testing)
 - **ChromeDriver** (included in project at `chromedriver/`)
@@ -128,7 +130,7 @@ braven_charts_v2.0/
 ├── docs/                              # Documentation
 │   ├── testing/                       # Testing guides
 │   ├── architecture/                  # Architecture docs
-│   └── README.md                      # Docs index
+│   └── readme.md                      # Docs index
 │
 ├── scripts/                           # Utility scripts
 │   ├── testing/                       # Test runners
@@ -148,7 +150,7 @@ braven_charts_v2.0/
 ├── build.yaml                         # Mock generation config
 ├── pubspec.yaml                       # Package definition
 ├── analysis_options.yaml              # Linter rules
-└── README.md                          # Project overview
+└── readme.md                          # Project overview
 ```
 
 ## 🔧 Development Workflow
@@ -156,10 +158,11 @@ braven_charts_v2.0/
 ### TDD Cycle (Recommended)
 
 1. **Write Test First**
+
    ```bash
    # Create test file in test/
    # Example: test/unit/line_chart_test.dart
-   
+
    flutter test test/unit/line_chart_test.dart --watch
    ```
 
@@ -225,7 +228,7 @@ class LineChart extends StatelessWidget {
   });
 
   final ChartData data;
-  
+
   @override
   Widget build(BuildContext context) {
     // Implementation
@@ -249,11 +252,11 @@ void main() {
     testWidgets('renders with valid data', (tester) async {
       // Arrange
       final data = ChartData(/* ... */);
-      
+
       // Act
       await tester.pumpWidget(LineChart(data: data));
       await tester.pumpAndSettle();
-      
+
       // Assert
       expect(find.byType(LineChart), findsOneWidget);
     });
@@ -265,7 +268,7 @@ void main() {
 
 Every public API must have documentation:
 
-```dart
+````dart
 /// A chart that displays data as a series of points connected by lines.
 ///
 /// The [LineChart] is ideal for showing trends over time or continuous data.
@@ -281,13 +284,14 @@ Every public API must have documentation:
 class LineChart extends StatelessWidget {
   // Implementation
 }
-```
+````
 
 ## 🐛 Debugging
 
 ### VS Code
 
 1. Create `.vscode/launch.json`:
+
 ```json
 {
   "version": "0.2.0",
@@ -308,6 +312,7 @@ class LineChart extends StatelessWidget {
 ### Chrome DevTools
 
 When running web tests:
+
 1. Look for DevTools URL in output
 2. Open in browser
 3. Use Flutter DevTools for debugging
@@ -360,11 +365,13 @@ flutter test && flutter analyze
 ## 🆘 Troubleshooting
 
 ### Flutter not found
+
 ```powershell
 ./scripts/setup/fix_flutter_path.ps1
 ```
 
 ### Tests failing
+
 ```bash
 flutter clean
 flutter pub get
@@ -372,6 +379,7 @@ flutter test
 ```
 
 ### ChromeDriver issues
+
 1. Check Chrome version: `chrome://version`
 2. Verify ChromeDriver version matches
 3. See [ChromeDriver Setup](testing/CHROMEDRIVER_SETUP.md)
@@ -388,4 +396,4 @@ flutter test
 
 **Ready to start developing!** 🚀
 
-If you have questions, check the [docs](README.md) or open an issue.
+If you have questions, check the [docs](readme.md) or open an issue.

@@ -4,12 +4,12 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 
 ## Quick Start
 
-- Start at [README.md](../README.md) for installation and a minimal example.
-- Run the demo app: [example/README.md](../example/README.md).
+- Start at [readme.md](../readme.md) for installation and a minimal example.
+- Run the demo app: [example/readme.md](../example/readme.md).
 
 ## Public API Reference
 
-- [API.md](API.md) - Public API reference for `BravenChartPlus` and core types.
+- [api.md](api.md) - Public API reference for `BravenChartPlus` and core types.
 
 ## Guides
 

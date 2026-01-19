@@ -31,6 +31,7 @@ Braven Charts follows strict TDD. **All code contributions must include tests.**
 ### Writing Tests
 
 1. **Write the test first**
+
    ```dart
    // test/unit/my_feature_test.dart
    test('should do something amazing', () {
@@ -40,11 +41,13 @@ Braven Charts follows strict TDD. **All code contributions must include tests.**
    ```
 
 2. **See it fail**
+
    ```bash
    flutter test test/unit/my_feature_test.dart
    ```
 
 3. **Write minimum code** to pass
+
    ```dart
    // lib/src/my_feature.dart
    String doSomething() => 'amazing';
@@ -99,7 +102,7 @@ class chart_component extends StatelessWidget {
 
 All public APIs must be documented:
 
-```dart
+````dart
 /// A reusable chart component for displaying time-series data.
 ///
 /// The [TimeSeriesChart] accepts [ChartData] and renders it as a
@@ -119,7 +122,7 @@ All public APIs must be documented:
 class TimeSeriesChart extends StatelessWidget {
   // Implementation
 }
-```
+````
 
 ### Naming Conventions
 
@@ -242,15 +245,18 @@ Before submitting your PR, ensure:
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Widget tests added/updated
 - [ ] Integration tests added/updated
@@ -258,6 +264,7 @@ Brief description of changes
 - [ ] All tests passing
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -331,10 +338,10 @@ Add performance tests for new features:
 test('renders large dataset efficiently', () {
   final data = generateLargeDataset(10000);
   final stopwatch = Stopwatch()..start();
-  
+
   final chart = LineChart(data: data);
   // Render chart
-  
+
   stopwatch.stop();
   expect(stopwatch.elapsedMilliseconds, lessThan(50));
 });
@@ -359,7 +366,7 @@ Documentation is as important as code!
 - Create tutorials
 - Update architecture docs
 
-See [docs/README.md](docs/README.md) for structure.
+See [docs/readme.md](docs/readme.md) for structure.
 
 ## 🆘 Getting Help
 

@@ -81,33 +81,34 @@ cd example
 flutter run -d chrome
 ```
 
-See [example/README.md](example/README.md) for demo details.
+See [example/readme.md](example/readme.md) for demo details.
 
 ## Documentation
 
 ### Guides
 
-- [docs/README.md](docs/README.md) - Documentation index
-- [docs/API.md](docs/API.md) - Public API reference
+- [docs/readme.md](docs/readme.md) - Documentation index
+- [docs/api.md](docs/api.md) - Public API reference
 - [docs/guides/chart-types.md](docs/guides/chart-types.md) - Chart type overview
 - [docs/guides/theming-usage.md](docs/guides/theming-usage.md) - Theming guide
 - [docs/guides/theming-accessibility.md](docs/guides/theming-accessibility.md) - Accessibility
 - [docs/guides/coordinate-system.md](docs/guides/coordinate-system.md) - Coordinate system
 - [docs/guides/ANNOTATION_QUICK_REFERENCE.md](docs/guides/ANNOTATION_QUICK_REFERENCE.md) - Annotation quick reference
 - [docs/guides/ANNOTATION_PERSISTENCE_GUIDE.md](docs/guides/ANNOTATION_PERSISTENCE_GUIDE.md) - Annotation persistence
-- [Getting Started Guide](docs/README.md) - Basic usage and examples
+- [Getting Started Guide](docs/readme.md) - Basic usage and examples
 - [Chart Types](docs/architecture/features/) - Available chart types
 - [Theming Guide](docs/architecture/features/THEMING_SYSTEM.md) - Customization options
 - [Annotation System](docs/architecture/features/ANNOTATION_SYSTEM.md) - Interactive annotations
 
 ### For Contributors
+
 - [Testing Guide](docs/testing/TESTING.md) - Running tests
 - [Web Testing](docs/testing/TESTING_WEB.md) - Web-specific testing
 - [Architecture](docs/architecture/) - System design and specifications
 - [Development Setup](docs/DEVELOPMENT.md) - Environment setup
 - [Technical Debt Register](TECHNICAL_DEBT.md) - Known issues and planned improvements
 
-##  Testing
+## Testing
 
 This project uses **Test-Driven Development (TDD)** with comprehensive test coverage:
 
@@ -122,39 +123,44 @@ flutter test test/web/
 ./scripts/testing/run_chromedriver_tests.ps1
 ```
 
-**Current Test Status:**  197/197 tests passing (26 foundation + 171 chart types)
+**Current Test Status:** 197/197 tests passing (26 foundation + 171 chart types)
 
 See [Testing Documentation](docs/testing/) for details.
 
-##  Project Structure
+## Project Structure
 
 ```
+
 ```
+
 braven_charts/
-├── lib/                          # Library source code
-│   ├── src/                      # Internal implementation
-│   └── braven_charts.dart        # Public API
-├── test/                         # All testing files
-│   ├── web/                      # Web-specific tests
-│   ├── unit/                     # Unit tests
-│   ├── golden/                   # Golden file tests
-│   ├── performance/              # Performance tests
-│   ├── integration/              # Integration test utilities
-│   ├── integration_test/         # End-to-end tests
-│   ├── test_driver/              # Test drivers
-│   └── chromedriver/             # ChromeDriver for web testing
-├── docs/                         # Documentation
-│   ├── testing/                  # Testing guides
-│   └── architecture/             # Architecture specs
-└── scripts/                      # Utility scripts
-    ├── testing/                  # Test runners
-    └── setup/                    # Setup scripts
-```
+├── lib/ # Library source code
+│ ├── src/ # Internal implementation
+│ └── braven_charts.dart # Public API
+├── test/ # All testing files
+│ ├── web/ # Web-specific tests
+│ ├── unit/ # Unit tests
+│ ├── golden/ # Golden file tests
+│ ├── performance/ # Performance tests
+│ ├── integration/ # Integration test utilities
+│ ├── integration_test/ # End-to-end tests
+│ ├── test_driver/ # Test drivers
+│ └── chromedriver/ # ChromeDriver for web testing
+├── docs/ # Documentation
+│ ├── testing/ # Testing guides
+│ └── architecture/ # Architecture specs
+└── scripts/ # Utility scripts
+├── testing/ # Test runners
+└── setup/ # Setup scripts
+
 ```
 
-##  Development Status
+```
 
-###  Completed
+## Development Status
+
+### Completed
+
 - [x] **Foundation Layer** (100% complete, 37/58 tasks)
   - Data models with 100% test coverage
   - Performance primitives (ObjectPool, ViewportCuller, BatchProcessor)
@@ -191,25 +197,28 @@ braven_charts/
 - [x] Documentation structure
 - [x] CI/CD foundation
 
-###  In Progress
+### In Progress
+
 - [ ] Core chart components
 - [ ] Annotation system implementation
 - [ ] Theming system implementation
 
-###  Planned
+### Planned
+
 - [ ] Advanced chart types
 - [ ] Performance optimizations
 - [ ] Accessibility enhancements
 - [ ] Example gallery
 - [ ] API documentation
 
-##  Contributing
+## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Development Workflow
 
 1. **Clone & Setup**
+
    ```bash
    git clone <repository-url>
    cd braven_charts_v2.0
@@ -217,12 +226,14 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
    ```
 
 2. **Write Tests First** (TDD)
+
    ```bash
    # Create test in test/ directory
    flutter test --watch
    ```
 
 3. **Implement Feature**
+
    ```bash
    # Write implementation in lib/
    flutter test
@@ -233,21 +244,21 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
    ./scripts/testing/run_chromedriver_tests.ps1
    ```
 
-##  License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-##  Acknowledgments
+## Acknowledgments
 
 - Built with [Flutter](https://flutter.dev)
 - Testing powered by [integration_test](https://pub.dev/packages/integration_test)
 - Web testing with [ChromeDriver](https://chromedriver.chromium.org/)
 
-##  Contact
+## Contact
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/braven_charts/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/braven_charts/discussions)
 
 ---
 
-**Ready for web-first chart development!** 
+**Ready for web-first chart development!**
