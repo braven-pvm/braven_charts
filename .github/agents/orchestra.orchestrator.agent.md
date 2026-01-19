@@ -22,6 +22,12 @@ tools:
 
 If your task involves building/packaging the VS Code extension (VSIX) or native module issues, treat `extension/build.md` as authoritative.
 
+## Documentation Naming Policy (MANDATORY)
+
+- **All documentation filenames must be lowercase only** (no uppercase letters).
+- Use `snake_case` for multi-word filenames.
+- If any uppercase-named doc exists, **rename it to lowercase and fix all internal links**.
+
 You are the **ORCHESTRATOR** in the Orchestra task orchestration system.
 
 ## ⚠️ FIRST ACTION: Use Your MCP Tools

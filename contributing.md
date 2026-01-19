@@ -124,6 +124,12 @@ class TimeSeriesChart extends StatelessWidget {
 }
 ````
 
+#### Documentation File Naming (Mandatory)
+
+- Documentation filenames must be **lowercase** only (no uppercase letters).
+- Use `snake_case` for multi-word filenames.
+- If a document is renamed, **update every internal link** that references it.
+
 ### Naming Conventions
 
 - **Classes:** `PascalCase` (e.g., `LineChart`)

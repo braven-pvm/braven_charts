@@ -71,6 +71,15 @@ Your completion signal will be **REJECTED** and you will be required to fix ALL 
 
 ---
 
+## Documentation Naming Policy (MANDATORY)
+
+- **All documentation filenames must be lowercase only** (no uppercase letters).
+- Use `snake_case` for multi-word filenames.
+- If you create, rename, or move a document, **update every internal link** that references it.
+- If any uppercase-named doc exists, **rename it to lowercase and fix links immediately**.
+
+---
+
 ## Terminal Management Protocol (CRITICAL - MANDATORY ENFORCEMENT)
 
 ### 🎯 ABSOLUTE RULES - ZERO TOLERANCE
