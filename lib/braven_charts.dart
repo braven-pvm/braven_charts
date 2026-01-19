@@ -1,5 +1,25 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
-// Public API for braven_charts package
+/// Public API for the BravenChartPlus package.
+///
+/// Import this library to access the `BravenChartPlus` widget and core models.
+///
+/// ```dart
+/// import 'package:braven_charts/braven_charts.dart';
+///
+/// final series = ChartSeries(
+///   id: 'revenue',
+///   points: const [
+///     ChartDataPoint(x: 1, y: 10),
+///     ChartDataPoint(x: 2, y: 15),
+///   ],
+/// );
+///
+/// BravenChartPlus(
+///   series: [series],
+///   xAxisConfig: const XAxisConfig(label: 'Month'),
+///   yAxis: const YAxisConfig(label: 'USD'),
+/// );
+/// ```
 
 library;
 
