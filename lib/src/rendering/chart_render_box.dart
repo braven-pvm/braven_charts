@@ -1877,6 +1877,7 @@ class ChartRenderBox extends RenderBox {
         axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
         labelStyle: labelStyle,
         series: _multiAxisManager.series,
+        tickValues: _xAxis!.ticks.map((t) => t.value).toList(),
       );
       xAxisPainter.paint(canvas, Rect.fromLTWH(0, 0, size.width, size.height), _plotArea);
     }
