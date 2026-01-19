@@ -259,8 +259,8 @@ final actualPlotDy = _transform!.invertY
 
 **Reference**:
 - `lib/transforms/chart_transform.dart` - Contains `pan()` method with inversion logic
-- `docs/architecture/interaction/PAN_CONSTRAINT_ANALYSIS.md` - Original problem analysis
-- `docs/architecture/interaction/PAN_CONSTRAINT_SOLUTION_ALGORITHM.md` - Solution design
+- `docs/architecture/interaction/pan_constraint_analysis.md` - Original problem analysis
+- `docs/architecture/interaction/pan_constraint_solution_algorithm.md` - Solution design
 
 ---
 

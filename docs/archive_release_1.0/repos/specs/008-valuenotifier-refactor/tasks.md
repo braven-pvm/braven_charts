@@ -25,7 +25,7 @@ Flutter package structure:
 **Purpose**: Project initialization and branch preparation
 
 - [X] T001 Verify branch 008-valuenotifier-refactor is current and clean (git status)
-- [X] T002 Review ARCHITECTURE_REFACTOR_PLAN.md to understand root cause and solution architecture
+- [X] T002 Review architecture_refactor_plan.md to understand root cause and solution architecture
 - [X] T003 [P] Review contracts/event-handlers.md to understand event handler refactor patterns
 - [X] T004 [P] Review contracts/animation-integration.md to understand animation listener patterns
 - [X] T005 [P] Review contracts/disposal-cleanup.md to understand memory management requirements
@@ -211,7 +211,7 @@ Flutter package structure:
 
 - [ ] T069 [P] Update inline documentation in lib/src/widgets/braven_chart.dart explaining ValueNotifier pattern
 - [ ] T070 [P] Add code comments documenting disposal order in dispose() method in lib/src/widgets/braven_chart.dart
-- [ ] T071 [P] Update CHANGELOG.md with refactor details (internal improvement, zero breaking changes)
+- [ ] T071 [P] Update changelog.md with refactor details (internal improvement, zero breaking changes)
 
 ### Performance Baseline Validation
 

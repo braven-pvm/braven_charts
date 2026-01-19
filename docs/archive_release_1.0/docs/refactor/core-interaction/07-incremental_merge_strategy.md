@@ -55,7 +55,7 @@ BravenChartPlus now has **near feature parity** with BravenChart:
 - ✅ Clean prototype-to-production evolution path
 - ✅ Easy to compare old vs new implementations
 
-**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../SPRINT_TASKS.md) below.
+**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../sprint_tasks.md) below.
 
 ---
 
@@ -121,9 +121,9 @@ During the implementation of the theming system (Phase 2, Feature 2), we encount
 
 **Why**: Performance divergence happened during theming implementation. Must verify theming works correctly with ALL features once they're all ported (annotations, legends, markers, streaming, scrollbars).
 
-**See**: [Theming Re-Verification Tasks](../SPRINT_TASKS.md#️-critical-theming-re-verification-task) in SPRINT_TASKS.md
+**See**: [Theming Re-Verification Tasks](../sprint_tasks.md#️-critical-theming-re-verification-task) in sprint_tasks.md
 
-**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../SPRINT_TASKS.md) below.
+**Current Status**: See [Progress Tracking](#progress-tracking-updated-2025-11-12) and [Sprint Tasks](../sprint_tasks.md) below.
 
 ---
 
@@ -920,7 +920,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
 ## References
 
-- **Previous Strategy (FAILED)**: `03-PHASE_1_IMPLEMENTATION_PLAN.md` (big-bang migration)
+- **Previous Strategy (FAILED)**: `03-phase_1_implementation_plan.md` (big-bang migration)
 - **Prototype Code**: `refactor/interaction/` (proven architecture)
 - **Target API**: `lib/src/widgets/braven_chart.dart` (production API)
-- **Analysis Documents**: `01-TECHNICAL_ANALYSIS.md`, `02-EXECUTIVE_SUMMARY.md`
+- **Analysis Documents**: `01-technical_analysis.md`, `02-executive_summary.md`

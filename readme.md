@@ -93,20 +93,20 @@ See [example/readme.md](example/readme.md) for demo details.
 - [docs/guides/theming-usage.md](docs/guides/theming-usage.md) - Theming guide
 - [docs/guides/theming-accessibility.md](docs/guides/theming-accessibility.md) - Accessibility
 - [docs/guides/coordinate-system.md](docs/guides/coordinate-system.md) - Coordinate system
-- [docs/guides/ANNOTATION_QUICK_REFERENCE.md](docs/guides/ANNOTATION_QUICK_REFERENCE.md) - Annotation quick reference
-- [docs/guides/ANNOTATION_PERSISTENCE_GUIDE.md](docs/guides/ANNOTATION_PERSISTENCE_GUIDE.md) - Annotation persistence
+- [docs/guides/annotation_quick_reference.md](docs/guides/annotation_quick_reference.md) - Annotation quick reference
+- [docs/guides/annotation_persistence_guide.md](docs/guides/annotation_persistence_guide.md) - Annotation persistence
 - [Getting Started Guide](docs/readme.md) - Basic usage and examples
-- [Chart Types](docs/architecture/features/) - Available chart types
-- [Theming Guide](docs/architecture/features/THEMING_SYSTEM.md) - Customization options
-- [Annotation System](docs/architecture/features/ANNOTATION_SYSTEM.md) - Interactive annotations
+- [Chart Types](docs/archive_release_1.0/docs/architecture/features/) - Available chart types (archived)
+- [Theming Guide](docs/archive_release_1.0/docs/architecture/features/theming_system.md) - Customization options (archived)
+- [Annotation System](docs/archive_release_1.0/docs/architecture/features/annotation_system.md) - Interactive annotations (archived)
 
 ### For Contributors
 
-- [Testing Guide](docs/testing/TESTING.md) - Running tests
-- [Web Testing](docs/testing/TESTING_WEB.md) - Web-specific testing
-- [Architecture](docs/architecture/) - System design and specifications
-- [Development Setup](docs/DEVELOPMENT.md) - Environment setup
-- [Technical Debt Register](TECHNICAL_DEBT.md) - Known issues and planned improvements
+- [Testing Guide](docs/archive_release_1.0/docs/testing/testing.md) - Running tests (archived)
+- [Web Testing](docs/archive_release_1.0/docs/testing/testing_web.md) - Web-specific testing (archived)
+- [Architecture](docs/archive_release_1.0/docs/architecture/) - System design and specifications (archived)
+- [Development Setup](docs/development.md) - Environment setup
+- [Technical Debt Register](docs/technical_debt.md) - Known issues and planned improvements
 
 ## Testing
 
@@ -125,7 +125,7 @@ flutter test test/web/
 
 **Current Test Status:** 197/197 tests passing (26 foundation + 171 chart types)
 
-See [Testing Documentation](docs/testing/) for details.
+See [Testing Documentation](docs/archive_release_1.0/docs/testing/) for details.
 
 ## Project Structure
 
@@ -173,7 +173,7 @@ braven_charts/
   - Viewport culling (<3ms for 10K points)
   - Text layout caching (>70% hit rate)
   - Performance monitoring (<8ms avg frame time, <16ms p99)
-  - 717/739 tests passing (22 edge case issues tracked in [Technical Debt](TECHNICAL_DEBT.md))
+  - 717/739 tests passing (22 edge case issues tracked in [Technical Debt](docs/technical_debt.md))
   - **Ready for v0.2.0-rendering release** 🎯
 - [x] **Theming System** (100% complete, 59/59 tasks ✅)
   - 7 predefined themes (Light, Dark, Corporate, Vibrant, Minimal, High Contrast, Colorblind)
@@ -213,7 +213,7 @@ braven_charts/
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [contributing.md](contributing.md) for guidelines.
 
 ### Development Workflow
 

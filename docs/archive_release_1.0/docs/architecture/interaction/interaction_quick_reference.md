@@ -174,7 +174,7 @@ test/interaction_prototype/
 
 ## 📚 Key Reference Documents
 
-- **Full Design**: `INTERACTION_ARCHITECTURE_DESIGN.md`
+- **Full Design**: `interaction_architecture_design.md`
 - **Research**: `interaction-systems.md` (Flutter gesture system deep dive)
 - **Current Code**: `lib/src/widgets/braven_chart.dart` (main widget)
 - **Event Handler**: `lib/src/interaction/event_handler.dart` (keep this!)

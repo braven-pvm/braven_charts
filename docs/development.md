@@ -382,7 +382,7 @@ flutter test
 
 1. Check Chrome version: `chrome://version`
 2. Verify ChromeDriver version matches
-3. See [ChromeDriver Setup](testing/CHROMEDRIVER_SETUP.md)
+3. See [ChromeDriver Setup](archive_release_1.0/docs/testing/chromedriver_setup.md)
 
 ## 📚 Additional Resources
 

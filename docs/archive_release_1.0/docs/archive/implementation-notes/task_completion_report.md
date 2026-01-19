@@ -60,9 +60,9 @@
 |------|---------------|-------------|
 | `lib/src/widgets/braven_chart.dart` | ~150 | All 6 bug fixes + debug cleanup |
 | `integration_test/line_continuity_test.dart` | +159 | New test (created) |
-| `LINE_CONTINUITY_BUG_ANALYSIS.md` | +450 | Detailed bug analysis (created) |
-| `ZOOM_FIX_SUMMARY.md` | +350 | Complete fix summary (created) |
-| `TASK_COMPLETION_REPORT.md` | +200 | This file (created) |
+| `line_continuity_bug_analysis.md` | +450 | Detailed bug analysis (created) |
+| `zoom_fix_summary.md` | +350 | Complete fix summary (created) |
+| `task_completion_report.md` | +200 | This file (created) |
 
 **Total**: ~1,300 lines added/modified
 
@@ -157,19 +157,19 @@ If performance issues arise with >10K points:
 
 ## 📚 Documentation Created
 
-1. **LINE_CONTINUITY_BUG_ANALYSIS.md**
+1. **line_continuity_bug_analysis.md**
    - Detailed bug #6 analysis
    - Root cause explanation
    - Canvas clipping solution
    - Before/after comparisons
 
-2. **ZOOM_FIX_SUMMARY.md**
+2. **zoom_fix_summary.md**
    - Complete fix for all 6 bugs
    - Technical details for each fix
    - Migration guide
    - Lessons learned
 
-3. **TASK_COMPLETION_REPORT.md** (This File)
+3. **task_completion_report.md** (This File)
    - Task summary
    - All bugs fixed
    - Tests created

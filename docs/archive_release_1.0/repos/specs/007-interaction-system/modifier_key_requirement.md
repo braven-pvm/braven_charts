@@ -170,7 +170,7 @@ Show a subtle overlay when user hovers over chart:
 
 Update all documentation to mention:
 
-- **README.md**: "Use CTRL+Scroll to zoom, Middle-mouse drag to pan"
+- **readme.md**: "Use CTRL+Scroll to zoom, Middle-mouse drag to pan"
 - **Example app**: Tooltip explaining "Middle-mouse to pan, Ctrl+Scroll to zoom"
 - **API docs**: Document `requireModifierForScroll` and `enableMiddleMousePan` parameters
 - **Migration guide**: If users upgrade, explain new behavior

@@ -10,28 +10,28 @@
 
 **Before starting implementation, read these in order:**
 
-- [ ] `REFACTOR_SUMMARY.md` (436 lines, 15 min read)
+- [ ] `refactor_summary.md` (436 lines, 15 min read)
   - Executive summary of the "swap the engine" strategy
   - Why this matters and what's proven
   - Quick reference for key decisions
   
-- [ ] `CORE_INTERACTION_REFACTOR_ANALYSIS.md` (932 lines, 30 min read)
+- [ ] `core_interaction_refactor_analysis.md` (932 lines, 30 min read)
   - Complete technical deep-dive
   - Component mapping (what to replace vs preserve)
   - Risk assessment and mitigation strategies
   - API surface changes
   
-- [ ] **`PHASE_1_DETAILED_PLAN.md` (1148 lines, 45 min read) ⭐ CRITICAL**
+- [ ] **`03-phase_1_implementation_plan.md` (1148 lines, 45 min read) ⭐ CRITICAL**
   - **READ THIS COMPLETELY before coding**
   - Zero ambiguity, every field/method enumerated
   - Step-by-step instructions with exact code
   - Troubleshooting guide included
   
-- [ ] `PHASE_1_GUIDE.md` (579 lines, quick reference)
+- [ ] `04-quick_reference.md` (579 lines, quick reference)
   - Use DURING implementation for quick lookup
   - Not a replacement for detailed plan
   
-- [ ] `PHASE_2_3_PLANS.md` (placeholder)
+- [ ] `06-phase_2_3_plans.md` (placeholder)
   - High-level overview of future phases
   - Don't worry about this until Phase 1 complete
 
@@ -60,7 +60,7 @@
 
 ### Part 1: Field Inventory (2-4 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 1
+**Read**: 03-phase_1_implementation_plan.md, Part 1
 
 - [ ] Identified all 10 fields from `_BravenChartPainter`:
   1. [ ] `chartType` (ChartType)
@@ -89,7 +89,7 @@
 
 ### Part 2: File Structure & Prototype Files (4-6 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 2
+**Read**: 03-phase_1_implementation_plan.md, Part 2
 
 #### Step 2.1: Create Directories
 - [ ] Created `lib/src/rendering/`
@@ -140,7 +140,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 ### Part 3: BravenChartRenderBox Skeleton (6-8 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 3
+**Read**: 03-phase_1_implementation_plan.md, Part 3
 
 #### Step 3.1: Create RenderBox File
 - [ ] Created `lib/src/rendering/braven_chart_render_box.dart`
@@ -191,7 +191,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 ### Part 4: Paint Logic Migration (12-16 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 4
+**Read**: 03-phase_1_implementation_plan.md, Part 4
 
 #### Step 4.1: Extract Paint Method
 - [ ] Opened `lib/src/widgets/braven_chart.dart`
@@ -285,7 +285,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 ### Part 5: Widget Integration (6-8 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 5
+**Read**: 03-phase_1_implementation_plan.md, Part 5
 
 #### Step 5.1: Create RenderObjectWidget
 - [ ] Created `lib/src/widgets/braven_chart_render_widget.dart`
@@ -325,7 +325,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 ### Part 6: Testing & Verification (8-10 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 6
+**Read**: 03-phase_1_implementation_plan.md, Part 6
 
 #### Step 6.1: Compile & Analyze
 - [ ] Run: `flutter clean`
@@ -397,7 +397,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 #### Step 6.5: Performance Benchmark
 - [ ] Created `test/benchmarks/render_benchmark.dart` (if doesn't exist)
-- [ ] Copied benchmark code from PHASE_1_DETAILED_PLAN.md
+- [ ] Copied benchmark code from 03-phase_1_implementation_plan.md
 - [ ] Run: `flutter test test/benchmarks/render_benchmark.dart`
 - [ ] **Result**: Paint time < 100ms for 1000 points ✅
 - [ ] **Actual time**: _____ ms
@@ -441,7 +441,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 
 ### Part 7: Final Commit & Documentation (2-3 hours)
 
-**Read**: PHASE_1_DETAILED_PLAN.md, Part 7
+**Read**: 03-phase_1_implementation_plan.md, Part 7
 
 #### Final Checklist Verification
 **Core Migration**:
@@ -474,7 +474,7 @@ Copy-Item "refactor\interaction\lib\core\element_types.dart" "lib\src\interactio
 - [ ] Run: `git add .`
 - [ ] Run: `git status` (verify all changes staged)
 - [ ] Run: `git commit -m "feat: PHASE 1 COMPLETE - CustomPainter → RenderBox migration"`
-  - Used commit message template from PHASE_1_DETAILED_PLAN.md
+  - Used commit message template from 03-phase_1_implementation_plan.md
   - Included SUMMARY, FILES CHANGED, TESTING sections
 - [ ] Run: `git log -1` (verify commit message)
 - [ ] Run: `git log --oneline --decorate -10` (view recent commits)

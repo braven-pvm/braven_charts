@@ -73,9 +73,9 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 - **Layer 2 (Coordinate System)**: UniversalCoordinateTransformer for all transformations implemented
 - **Layer 3 (Theming)**: ChartTheme, SeriesTheme, dark mode support implemented
 - **Layer 4 (Chart Types)**: LineChartLayer, AreaChartLayer, BarChartLayer, ScatterChartLayer implemented
-- **Architecture Decision ARCH-005-001**: BravenChart as single entry point (see docs/specs/005-chart-widgets/ARCHITECTURE_DECISION.md)
+- **Architecture Decision ARCH-005-001**: BravenChart as single entry point (see docs/specs/005-chart-widgets/architecture_decision.md)
 - **Technical Specification**: Detailed implementation in docs/specs/005-chart-widgets/spec.md (2400+ lines, 13 FR sections)
-- **Annotation Architecture**: Full specification in project-restart-docs/03-architecture-specs/ANNOTATION_SYSTEM_ARCHITECTURE.md
+- **Annotation Architecture**: Full specification in project-restart-docs/03-architecture-specs/annotation_system_architecture.md
 - **Constitution**: TDD mandatory, 60fps/16ms targets, pure Flutter, SOLID principles, zero warnings requirement
 
 ## Constitution Check
@@ -121,8 +121,8 @@ The Chart Widgets layer provides a **single user-facing widget** (`BravenChart`)
 ✅ **PASS** - Specification-driven implementation
 - Business spec: specs/006-chart-widgets/spec.md (40 FRs, 8 NFRs, 10 scenarios)
 - Technical spec: docs/specs/005-chart-widgets/spec.md (2400+ lines, 13 FR sections)
-- Architecture decision: docs/specs/005-chart-widgets/ARCHITECTURE_DECISION.md
-- Annotation integration: docs/specs/005-chart-widgets/ANNOTATIONS_INTEGRATION.md
+- Architecture decision: docs/specs/005-chart-widgets/architecture_decision.md
+- Annotation integration: docs/specs/005-chart-widgets/annotations_integration.md
 - All 40 functional requirements testable and documented
 - tasks.md will be updated after EVERY task completion
 - Deviations require explicit documentation in tasks.md with rationale

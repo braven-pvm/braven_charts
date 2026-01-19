@@ -11,26 +11,34 @@ The Foundation Layer provides core data structures, performance primitives, type
 The Foundation layer consists of four main categories:
 
 ### 1. Data Models
+
 Core data structures for representing chart data:
+
 - **ChartDataPoint**: Individual (x, y) coordinates with optional timestamp and metadata
 - **ChartSeries**: Collections of related data points with computed properties
 - **DataRange**: Representation of min/max ranges with operations
 - **TimeSeriesData**: Time-based data with aggregation and sampling capabilities
 
 ### 2. Performance Primitives
+
 High-performance optimization tools:
+
 - **ObjectPool**: Generic object pooling for reduced allocations
 - **ViewportCuller**: Efficient viewport-based data point culling
 - **BatchProcessor**: Grouping operations for batch processing
 
 ### 3. Type System
+
 Type-safe error handling and validation:
+
 - **ChartResult**: Sealed Result type for functional error handling
 - **ChartError**: Structured error representation with types and severity
 - **ValidationUtils**: Composable validation utilities
 
 ### 4. Math Utilities
+
 Statistical and mathematical functions:
+
 - **StatisticalFunctions**: Central tendency, dispersion, quartiles, correlation
 - **InterpolationFunctions**: Linear, cubic spline, Bezier interpolation
 - **CurveFittingFunctions**: Linear regression, polynomial fitting
@@ -42,12 +50,14 @@ Statistical and mathematical functions:
 ### Installation
 
 Add to your `pubspec.yaml`:
+
 ```yaml
 dependencies:
   braven_charts: ^2.0.0
 ```
 
 Import the foundation layer:
+
 ```dart
 import 'package:braven_charts/braven_charts.dart';
 ```
@@ -199,14 +209,14 @@ final predicted = fit.predict(4.0); // Predict y for x=4
 
 All Foundation components meet strict performance targets:
 
-| Component | Target | Achieved |
-|-----------|--------|----------|
-| ChartDataPoint creation | <1μs | ✅ 0.07μs |
-| ChartSeries (100k points) | <100ms | ✅ 10ms |
-| ObjectPool acquire/release | <100ns | ✅ <100ns |
-| ViewportCuller (10k points) | <1ms | ✅ 150μs |
-| Statistics (10k values) | <10ms | ✅ 1-4ms |
-| Curve fitting | <50ms | ✅ 0ms |
+| Component                   | Target | Achieved  |
+| --------------------------- | ------ | --------- |
+| ChartDataPoint creation     | <1μs   | ✅ 0.07μs |
+| ChartSeries (100k points)   | <100ms | ✅ 10ms   |
+| ObjectPool acquire/release  | <100ns | ✅ <100ns |
+| ViewportCuller (10k points) | <1ms   | ✅ 150μs  |
+| Statistics (10k values)     | <10ms  | ✅ 1-4ms  |
+| Curve fitting               | <50ms  | ✅ 0ms    |
 
 ### Memory Efficiency
 
@@ -229,6 +239,7 @@ All Foundation components meet strict performance targets:
 ### Data Models
 
 #### ChartDataPoint
+
 ```dart
 class ChartDataPoint {
   final double x;
@@ -236,16 +247,17 @@ class ChartDataPoint {
   final DateTime? timestamp;
   final String? label;
   final Map<String, dynamic>? metadata;
-  
+
   bool get isValid;
   bool get hasTimestamp;
   bool get hasLabel;
-  
+
   ChartDataPoint copyWith({...});
 }
 ```
 
 #### ChartSeries
+
 ```dart
 class ChartSeries {
   final String id;
@@ -254,12 +266,12 @@ class ChartSeries {
   final Color? color;
   final SeriesStyle? style;
   final bool isXOrdered;
-  
+
   bool get isEmpty;
   int get length;
   DataRange get xRange;
   DataRange get yRange;
-  
+
   bool validateOrdering();
   ChartResult<void> validate();
   ChartSeries copyWith({...});
@@ -267,19 +279,20 @@ class ChartSeries {
 ```
 
 #### DataRange
+
 ```dart
 class DataRange {
   final double min;
   final double max;
-  
+
   double get span;
   double get center;
-  
+
   bool contains(double value);
   bool overlaps(DataRange other);
   DataRange merge(DataRange other);
   DataRange withPadding(double fraction);
-  
+
   factory DataRange.fromValues(List<double> values);
   factory DataRange.fromPoints(List<ChartDataPoint> points, Axis axis);
   factory DataRange.symmetric(double center, double radius);
@@ -289,6 +302,7 @@ class DataRange {
 ### Performance Primitives
 
 #### ObjectPool\<T\>
+
 ```dart
 class ObjectPool<T extends Object> {
   ObjectPool({
@@ -296,20 +310,21 @@ class ObjectPool<T extends Object> {
     required void Function(T) reset,
     int maxSize = 10,
   });
-  
+
   T acquire();
   void release(T object);
   void clear();
-  
+
   PoolStatistics get statistics;
 }
 ```
 
 #### ViewportCuller
+
 ```dart
 class ViewportCuller {
   const ViewportCuller({double margin = 0.0});
-  
+
   List<ChartDataPoint> cull({
     required List<ChartDataPoint> points,
     required DataRange viewportX,
@@ -322,20 +337,21 @@ class ViewportCuller {
 ### Type System
 
 #### ChartResult\<T\>
+
 ```dart
 sealed class ChartResult<T> {
   bool get isSuccess;
   bool get isFailure;
-  
+
   T? getOrNull();
   T getOrElse(T defaultValue);
   T getOrThrow();
-  
+
   R when<R>({
     required R Function(T) success,
     required R Function(ChartError) failure,
   });
-  
+
   ChartResult<R> map<R>(R Function(T) transform);
   ChartResult<R> flatMap<R>(ChartResult<R> Function(T) transform);
 }
@@ -354,19 +370,20 @@ class Failure<T> extends ChartResult<T> {
 ### Math Utilities
 
 #### StatisticalFunctions
+
 ```dart
 class StatisticalFunctions {
   // Central Tendency
   static double mean(List<double> values, {MeanType type});
   static double median(List<double> values);
   static double mode(List<double> values);
-  
+
   // Dispersion
   static double variance(List<double> values);
   static double standardDeviation(List<double> values);
   static Quartiles quartiles(List<double> values);
   static MinMax minMax(List<double> values);
-  
+
   // Correlation
   static double covariance(List<double> x, List<double> y);
   static double pearsonCorrelation(List<double> x, List<double> y);
@@ -374,6 +391,7 @@ class StatisticalFunctions {
 ```
 
 #### InterpolationFunctions
+
 ```dart
 class InterpolationFunctions {
   static double lerp(double a, double b, double t);
@@ -385,6 +403,7 @@ class InterpolationFunctions {
 ```
 
 #### CurveFittingFunctions
+
 ```dart
 class CurveFittingFunctions {
   static FitResult linearFit(List<ChartDataPoint> points);
@@ -395,7 +414,7 @@ class FitResult {
   final List<double> coefficients;
   final double rSquared;
   final String equation;
-  
+
   double predict(double x);
 }
 ```
@@ -412,6 +431,7 @@ The Foundation layer has comprehensive test coverage:
 - **Performance Tests**: All FR-005 targets validated
 
 Run tests:
+
 ```bash
 # Unit tests
 flutter test test/unit/foundation/
@@ -447,6 +467,7 @@ final series = ChartSeries(
 ```
 
 Benefits:
+
 - ViewportCuller uses O(log n) binary search instead of O(n) linear scan
 - Validation checks ordering once, not on every operation
 
@@ -522,7 +543,7 @@ ChartResult<ChartSeries> createSeries(List<ChartDataPoint> points) {
   if (points.isEmpty) {
     return Failure(ChartError.validation('Points cannot be empty'));
   }
-  
+
   final series = ChartSeries(id: 'series', points: points);
   return series.validate().map((_) => series);
 }
@@ -573,7 +594,7 @@ void printSummary(List<double> data) {
   final median = StatisticalFunctions.median(data);
   final stdDev = StatisticalFunctions.standardDeviation(data);
   final quartiles = StatisticalFunctions.quartiles(data);
-  
+
   print('Mean: $mean');
   print('Median: $median');
   print('Std Dev: $stdDev');
@@ -587,14 +608,14 @@ void printSummary(List<double> data) {
 ```dart
 ChartSeries addTrendline(ChartSeries series) {
   final fit = CurveFittingFunctions.linearFit(series.points);
-  
-  final trendPoints = series.points.map((p) => 
+
+  final trendPoints = series.points.map((p) =>
     ChartDataPoint(
       x: p.x,
       y: fit.predict(p.x),
     )
   ).toList();
-  
+
   return ChartSeries(
     id: '${series.id}-trend',
     name: '${series.name} Trend',
@@ -659,7 +680,7 @@ The Foundation layer follows strict quality standards:
 - **Zero dependencies** on other chart layers
 - **Comprehensive documentation** for all public APIs
 
-See [CONTRIBUTING.md](../../../CONTRIBUTING.md) for details.
+See [contributing.md](../../../contributing.md) for details.
 
 ---
 

@@ -3,7 +3,7 @@
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-12-10
 **Feature**: [spec.md](./spec.md)
-**Technical Spec Reference**: [AXIS_RENDERER_UNIFICATION_SPEC.md](../../docs/architecture/specs/AXIS_RENDERER_UNIFICATION_SPEC.md)
+**Technical Spec Reference**: [axis_renderer_unification_spec.md](../../docs/architecture/specs/axis_renderer_unification_spec.md)
 
 ## Content Quality
 
@@ -33,5 +33,5 @@
 ## Notes
 
 - All design decisions were pre-resolved during the technical spec phase (see Resolved Design Decisions table)
-- Technical implementation details are documented separately in `docs/architecture/specs/AXIS_RENDERER_UNIFICATION_SPEC.md`
+- Technical implementation details are documented separately in `docs/architecture/specs/axis_renderer_unification_spec.md`
 - This spec is ready for `/speckit.plan`

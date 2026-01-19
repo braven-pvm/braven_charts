@@ -1,7 +1,7 @@
 # Implementation Plan: X-Axis Renderer Unification
 
 **Branch**: `018-x-axis-renderer` | **Date**: 2026-01-18 | **Spec**: [spec.md](spec.md)  
-**Design Document**: [X_AXIS_RENDERING_UNIFICATION.md](../../docs/design/X_AXIS_RENDERING_UNIFICATION.md)
+**Design Document**: [x_axis_rendering_unification.md](../../docs/design/x_axis_rendering_unification.md)
 
 ## Summary
 

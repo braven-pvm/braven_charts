@@ -538,6 +538,6 @@ See:
 
 ## Related Guides
 
-- [Annotation Types Guide](./ANNOTATION_TYPES_GUIDE.md) - Detailed explanation of each type
-- [Interaction System Guide](./INTERACTION_SYSTEM_GUIDE.md) - How interaction modes work
-- [Custom Annotations Guide](./CUSTOM_ANNOTATIONS_GUIDE.md) - Creating custom annotation types
+- [Annotation Types Guide](./annotation_types_guide.md) - Detailed explanation of each type
+- [Interaction System Guide](./interaction_system_guide.md) - How interaction modes work
+- [Custom Annotations Guide](./custom_annotations_guide.md) - Creating custom annotation types

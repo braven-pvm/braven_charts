@@ -274,8 +274,8 @@ Home → Chart Types → 🔬 Line Style Comparison Lab
 
 - `/lib/src/charts/line/line_interpolator.dart` - Implementation details
 - `/specs/005-chart-types/research.md` - Algorithm research
-- `/CUBIC_BEZIER_IMPLEMENTATION.md` - Technical overview
-- `/TESTING_BEZIER_CURVES.md` - Testing checklist
+- `/cubic_bezier_implementation.md` - Technical overview
+- `/testing_bezier_curves.md` - Testing checklist
 
 ---
 

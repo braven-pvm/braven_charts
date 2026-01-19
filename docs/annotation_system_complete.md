@@ -103,14 +103,14 @@ Complete working example at `example/lib/showcase_plus/pages/annotations_page.da
 
 ### 5. Documentation ✅
 
-- ✅ **Comprehensive Guide**: `docs/guides/ANNOTATION_PERSISTENCE_GUIDE.md`
+- ✅ **Comprehensive Guide**: `docs/guides/annotation_persistence_guide.md`
   - Complete architecture explanation
   - Usage examples for all annotation types
   - Best practices and patterns
   - Troubleshooting guide
   - API reference
 
-- ✅ **Quick Reference**: `docs/guides/ANNOTATION_QUICK_REFERENCE.md`
+- ✅ **Quick Reference**: `docs/guides/annotation_quick_reference.md`
   - Operation cheat sheet
   - Common patterns
   - Error handling

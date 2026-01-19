@@ -522,7 +522,7 @@ bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
   - Verify no regressions in X-axis rendering
   - Document any breaking changes (should be none)
 
-- [ ] T045 [US4] Update library documentation in `lib/braven_charts.dart` and `README.md`
+- [ ] T045 [US4] Update library documentation in `lib/braven_charts.dart` and `readme.md`
   - Document XAxisConfig availability
   - Add migration notes (if any)
   - Include basic usage example
@@ -564,7 +564,7 @@ bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
   - Run in example app
   - Verify all examples compile and render correctly
 
-- [ ] T051 Update CHANGELOG.md with feature summary
+- [ ] T051 Update changelog.md with feature summary
   - Add 018-x-axis-renderer entry
   - Document new XAxisConfig class and properties
   - Note backward compatibility maintained

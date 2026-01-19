@@ -221,7 +221,7 @@ if (event.logicalKey == LogicalKeyboardKey.home ||
 - Calls `renderBox.resetView()` directly
 - Works independently of other keyboard controls
 
-### PHASE_7_CONSTRAINTS_TESTING.md (NEW)
+### phase_7_constraints_testing.md (NEW)
 **Lines**: 428
 
 **Content**:
@@ -234,7 +234,7 @@ if (event.logicalKey == LogicalKeyboardKey.home ||
 - Performance considerations
 - Success criteria checklist
 
-### ZOOM_PAN_ARCHITECTURE.md
+### zoom_pan_architecture.md
 **Lines Changed**: +80
 
 **Additions**:
@@ -288,7 +288,7 @@ if (event.logicalKey == LogicalKeyboardKey.home ||
 - ⏳ Test constraints at different zoom levels
 - ⏳ Test performance with constraints
 
-See `PHASE_7_CONSTRAINTS_TESTING.md` for complete test plan.
+See `phase_7_constraints_testing.md` for complete test plan.
 
 ## Performance Impact
 
@@ -419,8 +419,8 @@ See `PHASE_7_CONSTRAINTS_TESTING.md` for complete test plan.
 **Files Changed**:
 - lib/rendering/chart_render_box.dart (+217 lines)
 - lib/widgets/prototype_chart.dart (+7 lines)
-- PHASE_7_CONSTRAINTS_TESTING.md (+428 lines, new file)
-- ZOOM_PAN_ARCHITECTURE.md (+80 lines)
+- phase_7_constraints_testing.md (+428 lines, new file)
+- zoom_pan_architecture.md (+80 lines)
 
 **Total**: 4 files changed, 628 insertions(+), 16 deletions(-)
 
@@ -432,7 +432,7 @@ See `PHASE_7_CONSTRAINTS_TESTING.md` for complete test plan.
 ## Next Steps
 
 ### Immediate: Manual Testing
-1. Follow `PHASE_7_CONSTRAINTS_TESTING.md` test scenarios
+1. Follow `phase_7_constraints_testing.md` test scenarios
 2. Verify all constraints work as expected
 3. Test edge cases and combinations
 4. Note any UX issues or improvements

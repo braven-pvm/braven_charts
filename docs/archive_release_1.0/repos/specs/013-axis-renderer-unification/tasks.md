@@ -212,9 +212,9 @@
 **Purpose**: Documentation, demos, and final validation
 
 - [ ] T063 [P] Create unified axis demo in `example/lib/demos/axis_unification_demo.dart`
-- [ ] T064 [P] Update `README.md` with new `YAxisConfig` and `GridConfig` examples
-- [ ] T065 [P] Add migration section to `CHANGELOG.md` with before/after code examples
-- [ ] T066 [P] Update `docs/architecture/specs/AXIS_RENDERER_UNIFICATION_SPEC.md` checklist items as complete
+- [ ] T064 [P] Update `readme.md` with new `YAxisConfig` and `GridConfig` examples
+- [ ] T065 [P] Add migration section to `changelog.md` with before/after code examples
+- [ ] T066 [P] Update `docs/architecture/specs/axis_renderer_unification_spec.md` checklist items as complete
 - [ ] T067 Run full test suite: `flutter test`
 - [ ] T068 Run `flutter analyze lib/ example/` - must return zero errors
 - [ ] T069 Manual verification: Run demo app and verify all axis features work

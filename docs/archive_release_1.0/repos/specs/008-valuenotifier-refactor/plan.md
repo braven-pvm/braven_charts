@@ -79,7 +79,7 @@
 
 ### VI. Documentation Discipline ✅ **PASS**
 - **Requirement**: Document public APIs, explain "why" not "what", ADRs for major decisions
-- **Status**: Refactor plan includes comprehensive documentation (ARCHITECTURE_REFACTOR_PLAN.md)
+- **Status**: Refactor plan includes comprehensive documentation (architecture_refactor_plan.md)
 - **Evidence**: 
   - Root cause analysis documented (why setState fails)
   - Solution architecture explained (why ValueNotifier works)

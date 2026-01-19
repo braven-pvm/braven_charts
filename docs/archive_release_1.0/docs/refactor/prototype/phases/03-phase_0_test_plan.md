@@ -8,7 +8,7 @@
 
 ## Purpose
 
-This document provides a complete test coverage plan for Phase 0 prototype validation, mapping all 15 conflict scenarios from `CONFLICT_RESOLUTION_TABLE.md` to specific test requirements and acceptance criteria.
+This document provides a complete test coverage plan for Phase 0 prototype validation, mapping all 15 conflict scenarios from `conflict_resolution_table.md` to specific test requirements and acceptance criteria.
 
 **CRITICAL**: Phase 0 is NOT complete until ALL scenarios are validated with comprehensive test coverage.
 
@@ -582,7 +582,7 @@ refactor/interaction/test/
   - [ ] "inconsistent hover detection" - ✅ Fixed and tested in Phase 0.10
 - [ ] Performance targets met (already validated in Phase 0.8)
 - [ ] All tests passing (130-160 tests)
-- [ ] Documentation updated (PHASE_0_SUMMARY.md corrected)
+- [ ] Documentation updated (phase_0_summary.md corrected)
 - [ ] Code coverage >90% for interaction system
 
 **THEN**: Phase 0 is **TRULY COMPLETE** ✅
@@ -636,16 +636,16 @@ All performance benchmarks from Phase 0.8 remain valid:
 
 ### Documentation Requirements
 
-- [ ] Update PHASE_0_SUMMARY.md: Change status from "PRODUCTION-READY" to honest "IN PROGRESS - 60% → 100%"
-- [ ] Update README.md: Remove premature "COMPLETE ✅" claims
-- [ ] Create PHASE_0_TEST_PLAN.md: **THIS DOCUMENT**
+- [ ] Update phase_0_summary.md: Change status from "PRODUCTION-READY" to honest "IN PROGRESS - 60% → 100%"
+- [ ] Update readme.md: Remove premature "COMPLETE ✅" claims
+- [ ] Create phase_0_test_plan.md: **THIS DOCUMENT**
 - [ ] Document all 15 conflict scenarios with test evidence
 
 ---
 
 ## Appendix: Conflict Scenario Reference Table
 
-Quick reference for all 15 scenarios from `CONFLICT_RESOLUTION_TABLE.md`:
+Quick reference for all 15 scenarios from `conflict_resolution_table.md`:
 
 | # | Scenario | Priority A | Priority B | Winner | Status | User Reported |
 |---|----------|------------|------------|--------|--------|---------------|

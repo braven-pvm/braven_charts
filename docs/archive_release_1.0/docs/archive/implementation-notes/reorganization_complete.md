@@ -25,8 +25,8 @@ All test-related folders have been consolidated into the `/test` directory for b
 - `scripts/testing/run_web_tests.ps1`
 
 ✅ **Documentation Updated:**
-- `docs/testing/CHROMEDRIVER_SETUP.md`
-- `README.md`
+- `docs/testing/chromedriver_setup.md`
+- `readme.md`
 
 ✅ **Test Files Updated:**
 - `test/integration_test/app_test.dart` (import paths fixed)
@@ -117,8 +117,8 @@ flutter test test/web/ test/unit/ test/golden/ test/performance/ test/braven_cha
 - ✅ run_web_tests.ps1
 
 **All Documentation Updated:**
-- ✅ README.md
-- ✅ CHROMEDRIVER_SETUP.md
+- ✅ readme.md
+- ✅ chromedriver_setup.md
 
 ---
 

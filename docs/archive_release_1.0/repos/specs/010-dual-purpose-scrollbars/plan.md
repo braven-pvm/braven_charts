@@ -197,7 +197,7 @@ This structure maintains architectural layering (theming → coordinates → int
 
 ### Research Questions to Resolve
 
-Based on RESEARCH.md analysis (1490 lines), the following technical decisions have been documented and require consolidation into research.md:
+Based on research.md analysis (1490 lines), the following technical decisions have been documented and require consolidation into research.md:
 
 #### 1. ValueNotifier Pattern for Drag State Management ✅ RESOLVED (Constitutional)
 
@@ -249,7 +249,7 @@ Widget build(BuildContext context) {
 
 **Decision**: O(1) ratio-based formulas for handle geometry
 
-**Formulas** (from RESEARCH.md lines 334-370):
+**Formulas** (from research.md lines 334-370):
 ```dart
 // Handle size = visible percentage
 double handleSize = (viewportRange / dataRange) * trackSize;
@@ -273,7 +273,7 @@ double viewportMax = viewportMin + viewportSpan;
 
 **Decision**: Scrollbar layout MUST NOT affect TransformContext.chartAreaBounds
 
-**Strategy** (from RESEARCH.md lines 384-445):
+**Strategy** (from research.md lines 384-445):
 - Separate layout regions (Column/Row structure)
 - Scrollbar uses Flutter RenderBox coordinates, no access to TransformContext
 - Updates flow through ViewportState.withRanges(), not coordinate system modification
@@ -300,7 +300,7 @@ Column(
 
 **Decision**: Three hit zones with cursor changes (edges, center, track)
 
-**Zones** (from RESEARCH.md lines 301-330):
+**Zones** (from research.md lines 301-330):
 1. **Left/Top Edge** (8px wide): Resize by adjusting minimum, cursor: ↔/↕
 2. **Right/Bottom Edge** (8px wide): Resize by adjusting maximum, cursor: ↔/↕
 3. **Center Area**: Drag to pan (no resize), cursor: ✋ (grab)
@@ -325,7 +325,7 @@ HitTestZone _getHitZone(Offset localPosition) {
 
 **Decision**: Extend ChartTheme with ScrollbarTheme component (follows existing Layer 004 patterns)
 
-**Structure** (from RESEARCH.md lines 606-685):
+**Structure** (from research.md lines 606-685):
 ```dart
 class ChartTheme {
   // ... existing 6 component themes
@@ -364,7 +364,7 @@ class ScrollbarConfig {
 
 **Decision**: WCAG 2.1 AA compliance with keyboard navigation and screen readers
 
-**Requirements** (from RESEARCH.md lines 686-760):
+**Requirements** (from research.md lines 686-760):
 
 1. **Contrast Ratios**:
    - Track vs Handle: Minimum 3:1
@@ -395,7 +395,7 @@ Semantics(
 
 **Decision**: Independent rendering + throttling + RepaintBoundary isolation
 
-**Strategies** (from RESEARCH.md lines 761-810):
+**Strategies** (from research.md lines 761-810):
 
 1. **Independent Rendering**:
    - Scrollbar renders in separate CustomPainter (RepaintBoundary wrapped)
@@ -420,7 +420,7 @@ Semantics(
 
 ### Unknowns Remaining
 
-**None** - All critical technical decisions documented in RESEARCH.md and consolidated above. Research phase complete, ready to generate formal research.md artifact.
+**None** - All critical technical decisions documented in research.md and consolidated above. Research phase complete, ready to generate formal research.md artifact.
 
 ### Next Steps for Phase 0 Completion
 
@@ -444,7 +444,7 @@ Semantics(
 
 ### Entities to Document (data-model.md)
 
-Based on spec.md Key Entities section and RESEARCH.md technical design:
+Based on spec.md Key Entities section and research.md technical design:
 
 1. **ChartScrollbar** (StatefulWidget)
    - Purpose: Main scrollbar widget with dual-purpose handle

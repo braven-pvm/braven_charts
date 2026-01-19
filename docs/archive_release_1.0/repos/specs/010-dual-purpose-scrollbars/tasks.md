@@ -242,7 +242,7 @@
 
 ### Integration Tests for User Story 3
 
-- [X] T096 [US3] Integration test: Drag right edge left → verify zoom in with left edge anchored in test/integration/scrollbar_right_edge_zoom_test.dart (SKIPPED - edge zoom feature not working yet, see T096_TEST_FINDINGS.md)
+- [X] T096 [US3] Integration test: Drag right edge left → verify zoom in with left edge anchored in test/integration/scrollbar_right_edge_zoom_test.dart (SKIPPED - edge zoom feature not working yet, see t096_test_findings.md)
 - [X] T097 [US3] Integration test: Drag left edge right → verify zoom in with right edge anchored in test/integration/scrollbar_left_edge_zoom_test.dart (SKIPPED - pending edge zoom feature fix)
 - [X] T098 [US3] Integration test: Zoom to min handle size → verify clamping at 1% visible in test/integration/scrollbar_min_handle_size_test.dart (SKIPPED - pending edge zoom feature fix)
 - [X] T099 [US3] Integration test: Hover over edge → verify cursor changes to ↔ in test/integration/scrollbar_cursor_hover_test.dart (SKIPPED - cursor testing requires MouseRegion inspection)
@@ -401,7 +401,7 @@
 - [ ] T170 Run all contract tests and verify 100% pass rate
 - [ ] T171 Run all golden tests and verify 100% visual match
 - [ ] T172 Run quickstart.md validation scenarios
-- [ ] T173 Update CHANGELOG.md with scrollbar feature details
+- [ ] T173 Update changelog.md with scrollbar feature details
 
 ---
 

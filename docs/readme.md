@@ -18,13 +18,13 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system
 - [guides/line-style-comparison.md](guides/line-style-comparison.md) - Line interpolation styles
-- [guides/ANNOTATION_QUICK_REFERENCE.md](guides/ANNOTATION_QUICK_REFERENCE.md) - Annotation quick reference
-- [guides/ANNOTATION_PERSISTENCE_GUIDE.md](guides/ANNOTATION_PERSISTENCE_GUIDE.md) - Annotation persistence
+- [guides/annotation_quick_reference.md](guides/annotation_quick_reference.md) - Annotation quick reference
+- [guides/annotation_persistence_guide.md](guides/annotation_persistence_guide.md) - Annotation persistence
 
 ## Development Notes
 
-- [DEVELOPMENT.md](DEVELOPMENT.md) - Local development setup
-- [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) - Known debt and cleanup targets
+- [development.md](development.md) - Local development setup
+- [technical_debt.md](technical_debt.md) - Known debt and cleanup targets
 
 ## Archived Materials
 

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This research documents the technical decisions made during the design phase. All clarifications were resolved during the technical design document creation (see [X_AXIS_RENDERING_UNIFICATION.md](../../docs/design/X_AXIS_RENDERING_UNIFICATION.md)).
+This research documents the technical decisions made during the design phase. All clarifications were resolved during the technical design document creation (see [x_axis_rendering_unification.md](../../docs/design/x_axis_rendering_unification.md)).
 
 ## Research Topics
 

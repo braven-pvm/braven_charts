@@ -64,7 +64,7 @@ Each example includes:
 
 Created comprehensive documentation:
 
-**`AXIS_POSITION_IMPLEMENTATION.md`**:
+**`axis_position_implementation.md`**:
 - Complete implementation details
 - Usage examples for all 4 combinations
 - Evolution history (Phases 18-20)
@@ -73,7 +73,7 @@ Created comprehensive documentation:
 - Backwards compatibility analysis
 - Performance impact assessment
 
-**Updated `AXIS_PADDING_OPTIMIZATION.md`**:
+**Updated `axis_padding_optimization.md`**:
 - Marked as superseded
 - Added notice directing to current implementation
 - Preserved historical record
@@ -176,10 +176,10 @@ Complete implementation of axis positioning feature:
 - Updated X-axis rendering (top/bottom support)
 - Updated Y-axis rendering (left/right support)
 - Added comprehensive example demonstrations
-- Created AXIS_POSITION_IMPLEMENTATION.md
+- Created axis_position_implementation.md
 
 ### Commit 2: 0fe03d4
-**docs: Mark AXIS_PADDING_OPTIMIZATION.md as superseded**
+**docs: Mark axis_padding_optimization.md as superseded**
 
 Updated historical documentation with notice directing
 to current implementation.

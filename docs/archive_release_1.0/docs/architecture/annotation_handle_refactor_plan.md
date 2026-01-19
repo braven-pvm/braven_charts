@@ -1,7 +1,7 @@
 # Annotation Handle Refactor - Implementation Plan
 
 **Created**: November 4, 2025  
-**Related Issue**: ANNOTATION_HANDLE_MOUSE_EVENT_ISSUE.md  
+**Related Issue**: annotation_handle_mouse_event_issue.md  
 **Status**: PLANNING - Ready for Review  
 **Estimated Complexity**: Medium (30-50 lines moved, careful testing required)
 
@@ -597,7 +597,7 @@ if (allAnnotations.isNotEmpty) {
 ### Step 6: Cleanup & Documentation (15 minutes)
 - [ ] Remove any debug print statements
 - [ ] Add architecture comments explaining new structure
-- [ ] Update ANNOTATION_HANDLE_MOUSE_EVENT_ISSUE.md with results
+- [ ] Update annotation_handle_mouse_event_issue.md with results
 - [ ] Create commit with detailed message
 - [ ] Push to remote
 

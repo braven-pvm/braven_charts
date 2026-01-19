@@ -133,10 +133,10 @@ f9517d9 T038-T052: Phase 3.10 Documentation complete
    - Edge cases documented
 
 2. **README Files**
-   - lib/src/foundation/README.md (600+ lines)
-   - README.md updated with Foundation section
-   - COMPLETION_REPORT.md
-   - IMPLEMENTATION_VALIDATION.md
+   - lib/src/foundation/readme.md (600+ lines)
+   - readme.md updated with Foundation section
+   - completion_report.md
+   - implementation_validation.md
 
 3. **Specification Documents**
    - spec.md (Feature specification)

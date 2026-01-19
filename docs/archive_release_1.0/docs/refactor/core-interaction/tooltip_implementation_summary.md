@@ -130,7 +130,7 @@ All features implemented using **canvas primitives only** - NO Flutter widgets/o
    - Added assertion validation to `TooltipConfig` constructor
    - Updated documentation for constraints
 
-3. **docs/refactor/core-interaction/TOOLTIP_FEATURE_PARITY_TRACKER.md**
+3. **docs/refactor/core-interaction/tooltip_feature_parity_tracker.md**
    - Updated all task checkboxes (15 complete)
    - Updated progress metrics
    - Marked Phase 6 complete

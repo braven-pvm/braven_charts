@@ -9,7 +9,7 @@
 ## What Was Accomplished
 
 ### 1. Test Checklist Created
-- **File**: `docs/refactor/core-interaction/09-SCROLLBAR_MANUAL_TESTING_CHECKLIST.md`
+- **File**: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
 - **Scope**: 150+ test cases across 8 phases
 - **Coverage**:
   - Phase 1: Visual Rendering (18 tests)
@@ -48,7 +48,7 @@
    - You should see the BravenChartPlus example with scrollbars enabled
 
 2. **Follow Test Checklist**:
-   - Open: `docs/refactor/core-interaction/09-SCROLLBAR_MANUAL_TESTING_CHECKLIST.md`
+   - Open: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
    - Go through each phase systematically
    - Check off tests as you complete them
    - Note any issues or bugs found
@@ -221,7 +221,7 @@
 ### Task 4.4 (Final Commit)
 - Commit complete scrollbar implementation
 - Tag as scrollbar-implementation-complete
-- Update CHANGELOG.md
+- Update changelog.md
 
 ---
 
@@ -230,7 +230,7 @@
 **Task 4.1 Setup Status**: ✅ Complete  
 **Ready for Manual Testing**: ✅ Yes  
 **App Running**: ✅ Chrome on http://127.0.0.1:60596/AbrXCpOYB1A=  
-**Test Checklist Available**: ✅ docs/refactor/core-interaction/09-SCROLLBAR_MANUAL_TESTING_CHECKLIST.md  
+**Test Checklist Available**: ✅ docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md  
 
 **Completed By**: AI Assistant  
 **Date**: 2025-11-18  

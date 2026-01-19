@@ -1011,7 +1011,7 @@ static const double minVisibleDataFraction = 0.1;
 - **Stateless**: Works by comparing current transform to original, no state tracking
 
 #### Testing
-See `PHASE_7_CONSTRAINTS_TESTING.md` for comprehensive test scenarios.
+See `phase_7_constraints_testing.md` for comprehensive test scenarios.
 
 ### Phase 8: Testing and Refinement 🔄 IN PROGRESS
 - [ ] Comprehensive zoom/pan testing

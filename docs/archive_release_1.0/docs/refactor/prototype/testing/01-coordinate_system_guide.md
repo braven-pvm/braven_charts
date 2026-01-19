@@ -304,7 +304,7 @@ Blocked: [ ]
 4. **Export**: Export with proper coordinate metadata
 
 ### Documentation Updates
-1. Update COORDINATE_SPACE_ARCHITECTURE.md with testing results
+1. Update coordinate_space_architecture.md with testing results
 2. Create user guide for data coordinate usage
 3. Document coordinate conversion helpers
 4. Add examples of zoom/pan usage

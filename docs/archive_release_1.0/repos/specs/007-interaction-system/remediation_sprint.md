@@ -722,13 +722,13 @@ flutter analyze  # 4 info-level warnings (not errors)
 **Type**: Documentation  
 **File**: Multiple  
 **Dependencies**: R-T012, R-T013
-**Status**: COMPLETE - All documentation updated to reflect completed remediation sprint. REMEDIATION_SPRINT.md serves as comprehensive record of all functionality gaps resolved, technical decisions made, and testing performed.
+**Status**: COMPLETE - All documentation updated to reflect completed remediation sprint. remediation_sprint.md serves as comprehensive record of all functionality gaps resolved, technical decisions made, and testing performed.
 
 **Description**:
 Update documentation to reflect completed functionality.
 
 **Acceptance Criteria**:
-- [x] Document remediation sprint completion in REMEDIATION_SPRINT.md
+- [x] Document remediation sprint completion in remediation_sprint.md
 - [x] Record all technical fixes (GestureDetector conflict, viewport transformation, etc.)
 - [x] Document test results (1884 passing, 96 pre-existing failures)
 - [x] Mark all completed tasks (R-T001 through R-T015) with status and notes
@@ -736,7 +736,7 @@ Update documentation to reflect completed functionality.
 - [x] **Important**: Note modifier key requirements for web (CTRL+Scroll zoom, SHIFT+Scroll pan)
 
 **Documentation Updates**:
-- **REMEDIATION_SPRINT.md**: Serves as primary documentation of all remediation work
+- **remediation_sprint.md**: Serves as primary documentation of all remediation work
   - All 15 tasks documented with status, technical notes, and completion details
   - GestureDetector conflict and resolution documented
   - Test results thoroughly documented
@@ -761,12 +761,12 @@ Update documentation to reflect completed functionality.
    - All failures pre-existing (Layer 1 contracts)
 
 **Future Documentation Tasks** (Out of scope for remediation):
-- Update root README.md with interaction feature list
-- Add modifier key instructions to example/README.md
-- Update PROJECT_STATUS.md with Layer 7 completion
+- Update root readme.md with interaction feature list
+- Add modifier key instructions to example/readme.md
+- Update project_status.md with Layer 7 completion
 - Add screenshots to showcase screen documentation
 
-**Code Location**: `specs/007-interaction-system/REMEDIATION_SPRINT.md` (this file)
+**Code Location**: `specs/007-interaction-system/remediation_sprint.md` (this file)
 
 ---
 

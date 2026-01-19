@@ -449,7 +449,7 @@ Week 5: Validation & Documentation
 - ✅ Complete interaction system prototype (`refactor/interaction/`)
 - ✅ 91 passing tests (unit, widget, integration, performance)
 - ✅ Performance benchmarks (QuadTree, Widget, Memory, Stress)
-- ✅ Phase 0 summary document (`PHASE_0_SUMMARY.md`)
+- ✅ Phase 0 summary document (`phase_0_summary.md`)
 - ✅ Example app with working demo (`lib/main.dart`, `lib/widgets/prototype_chart.dart`)
 
 ### Reusable Components

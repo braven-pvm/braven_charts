@@ -310,7 +310,7 @@ Single Flutter library project:
     - [x] dartdoc comments on all public APIs with usage examples ✅ COMPREHENSIVE
     - [x] Integration with CrosshairConfig, TooltipConfig, ZoomPanConfig, KeyboardConfig ✅ COMPLETE
   - **Dependencies**: T013-T017 (all model implementations must be complete)
-  - **Reference**: Extracted from 55 project references (quickstart.md, spec.md, SPECIFICATION_SUMMARY.md, data-model.md)
+  - **Reference**: Extracted from 55 project references (quickstart.md, spec.md, specification_summary.md, data-model.md)
   - **Completion Notes**: 
     * Added comprehensive dartdoc comments to InteractionConfig, GestureConfig, KeyboardConfig
     * Implemented `InteractionConfig.all()` factory (all features enabled)

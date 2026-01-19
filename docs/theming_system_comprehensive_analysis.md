@@ -691,8 +691,8 @@ class AnimationTheme {
 7. Performance test theme switching
 
 **Files to Create**:
-- `docs/THEMING_GUIDE.md`
-- `docs/THEME_MIGRATION.md`
+- `docs/theming_guide.md`
+- `docs/theme_migration.md`
 - `test/unit/theming/*.dart`
 - `test/golden/themes/*.dart`
 

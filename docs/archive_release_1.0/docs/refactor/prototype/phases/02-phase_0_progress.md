@@ -51,7 +51,7 @@ The user correctly identified that Phase 0 was prematurely declared "PRODUCTION-
 
 ---
 
-## Scenario Coverage (per CONFLICT_RESOLUTION_TABLE.md)
+## Scenario Coverage (per conflict_resolution_table.md)
 
 ### ✅ Fully Tested (4 scenarios - 27%)
 1. ✅ **#12** - Hover suspended during pan (coordinator + integration tests)
@@ -138,7 +138,7 @@ The user correctly identified that Phase 0 was prematurely declared "PRODUCTION-
 - **Phase 0.13**: Full suite validation + documentation
   - Run all 130-160 tests
   - Verify all 15 scenarios tested
-  - Update PHASE_0_SUMMARY.md (remove "PRODUCTION-READY" claim)
+  - Update phase_0_summary.md (remove "PRODUCTION-READY" claim)
   - Git commit with accurate status
 
 ---
@@ -217,7 +217,7 @@ integration/
 
 1. **Premature Completion Declaration**: Agent incorrectly declared Phase 0 "PRODUCTION-READY" at ~60% coverage
    - **Learning**: Must validate ALL scenarios before completion claims
-   - **Prevention**: Created PHASE_0_TEST_PLAN.md with explicit scenario mapping
+  - **Prevention**: Created phase_0_test_plan.md with explicit scenario mapping
 
 2. **Test Coverage ≠ Scenario Coverage**: 91 tests != 15 scenarios tested
    - **Learning**: Focus on scenario coverage, not just test count
@@ -299,4 +299,4 @@ Phase 0 will be considered COMPLETE when:
 
 ---
 
-*Generated automatically from PHASE_0_TEST_PLAN.md and current test results.*
+*Generated automatically from phase_0_test_plan.md and current test results.*

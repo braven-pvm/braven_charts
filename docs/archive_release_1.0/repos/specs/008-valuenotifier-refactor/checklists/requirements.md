@@ -86,7 +86,7 @@
 **Summary**:
 - All mandatory sections complete and high quality
 - All constitutional principles satisfied
-- Complete alignment with ARCHITECTURE_REFACTOR_PLAN.md
+- Complete alignment with architecture_refactor_plan.md
 - Zero [NEEDS CLARIFICATION] markers
 - All user stories independently testable
 - All success criteria measurable

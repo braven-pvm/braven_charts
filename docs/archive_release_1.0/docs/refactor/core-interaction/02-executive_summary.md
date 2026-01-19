@@ -362,7 +362,7 @@ InteractionConfig(
 
 ### Immediate (Today)
 1. ✅ Branch created: `core-interaction-refactor`
-2. ✅ Analysis complete: `CORE_INTERACTION_REFACTOR_ANALYSIS.md`
+2. ✅ Analysis complete: `core_interaction_refactor_analysis.md`
 3. ⏳ Review & approval needed
 4. ⏳ Establish baseline test suite
 
@@ -377,7 +377,7 @@ InteractionConfig(
 ## Files to Review
 
 ### Analysis Document
-📄 `CORE_INTERACTION_REFACTOR_ANALYSIS.md` (932 lines)
+📄 `core_interaction_refactor_analysis.md` (932 lines)
 - Complete technical deep-dive
 - Component mapping
 - Code examples
@@ -427,7 +427,7 @@ This refactor is:
 
 **Status**: 📋 Analysis Complete  
 **Branch**: `core-interaction-refactor`  
-**Document**: `CORE_INTERACTION_REFACTOR_ANALYSIS.md`  
+**Document**: `core_interaction_refactor_analysis.md`  
 **Next**: Review → Approve → Begin Phase 1  
 
 ---

@@ -11,7 +11,7 @@
 **This is a QUICK REFERENCE guide only.**
 
 **For COMPLETE, UNAMBIGUOUS instructions, read:**
-📄 **`PHASE_1_DETAILED_PLAN.md`** (25 pages, zero ambiguity)
+📄 **`03-phase_1_implementation_plan.md`** (25 pages, zero ambiguity)
 
 The detailed plan includes:
 - ✅ Complete field inventory (all 10 fields enumerated)
@@ -25,7 +25,7 @@ The detailed plan includes:
 - ✅ Success criteria
 
 **Use this guide for quick reference during implementation.**  
-**Use PHASE_1_DETAILED_PLAN.md for step-by-step execution.**
+**Use 03-phase_1_implementation_plan.md for step-by-step execution.**
 
 ---
 
@@ -33,8 +33,8 @@ The detailed plan includes:
 
 Before starting Phase 1, ensure:
 
-- [ ] Read `PHASE_1_DETAILED_PLAN.md` completely (45 minutes)
-- [ ] Analysis documents reviewed (`CORE_INTERACTION_REFACTOR_ANALYSIS.md`, `REFACTOR_SUMMARY.md`)
+- [ ] Read `03-phase_1_implementation_plan.md` completely (45 minutes)
+- [ ] Analysis documents reviewed (`core_interaction_refactor_analysis.md`, `refactor_summary.md`)
 - [ ] Branch confirmed: `core-interaction-refactor` ✅
 - [ ] Baseline test suite established (capture current functionality)
 - [ ] Development environment ready (Flutter SDK, dependencies installed)
@@ -566,8 +566,8 @@ Once Phase 1 is complete, Phase 2 will:
 ## Resources
 
 ### Key Files to Reference
-- `CORE_INTERACTION_REFACTOR_ANALYSIS.md` (detailed technical analysis)
-- `REFACTOR_SUMMARY.md` (executive summary)
+- `core_interaction_refactor_analysis.md` (detailed technical analysis)
+- `refactor_summary.md` (executive summary)
 - `refactor/interaction/lib/rendering/chart_render_box.dart` (prototype reference)
 - `lib/src/widgets/braven_chart.dart` (current implementation)
 

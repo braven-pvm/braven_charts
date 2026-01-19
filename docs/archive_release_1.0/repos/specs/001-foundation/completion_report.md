@@ -345,7 +345,7 @@ lib/src/foundation/
 │   ├── interpolation.dart
 │   └── curve_fitting.dart
 ├── foundation.dart       # Barrel export
-└── README.md            # 600+ line documentation
+└── readme.md            # 600+ line documentation
 
 test/
 ├── unit/foundation/      # 352 unit tests

@@ -457,7 +457,7 @@ Once all decisions are made, sign off here:
 
 ## Next Steps After Completion
 
-1. ✅ Update `INTERACTION_ARCHITECTURE_DESIGN.md` with final priority hierarchy
+1. ✅ Update `interaction_architecture_design.md` with final priority hierarchy
 2. ✅ Update `InteractionMode` enum with all required modes
 3. ✅ Implement conflict resolution logic in `ChartInteractionCoordinator`
 4. ✅ Create test cases for each conflict scenario

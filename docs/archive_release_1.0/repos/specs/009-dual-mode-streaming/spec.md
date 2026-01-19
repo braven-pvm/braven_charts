@@ -3,7 +3,7 @@
 **Feature Branch**: `009-dual-mode-streaming`  
 **Created**: 2025-01-22  
 **Status**: Draft  
-**Input**: User description: "New feature - detail in `docs\specs\STREAMING_INTERACTION_ARCHITECTURE.md`"
+**Input**: User description: "New feature - detail in `docs\specs\streaming_interaction_architecture.md`"
 
 ## Clarifications
 

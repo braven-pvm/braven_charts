@@ -469,7 +469,7 @@ See Section 5 pseudocode in full spec for implementation details.
 
 - [ ] Add demo to example app
 - [ ] Update API documentation
-- [ ] Add to CHANGELOG.md
+- [ ] Add to changelog.md
 
 ---
 

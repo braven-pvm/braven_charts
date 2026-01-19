@@ -571,7 +571,7 @@ if (isDataPointClick) {
 
 ## References
 
-- **Interaction Architecture**: `docs/architecture/INTERACTION_ARCHITECTURE_DESIGN.md`
+- **Interaction Architecture**: `docs/architecture/interaction_architecture_design.md`
 - **Conflict Resolution**: Scenario 5 (box selection vs element drag)
 - **Context Menu**: Commit fad07c7 (context-aware menus)
 - **Related Annotations**: PointAnnotation, TrendAnnotation, TextAnnotation, ThresholdAnnotation

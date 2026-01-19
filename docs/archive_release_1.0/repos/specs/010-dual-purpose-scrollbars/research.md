@@ -72,7 +72,7 @@ class _ChartScrollbarState extends State<ChartScrollbar> {
 - Constitution v1.1.0 Performance First expansion (lines 24-78)
 - Layer 008 ValueNotifier Architecture Refactor (successful crash elimination)
 - Flutter docs: https://api.flutter.dev/flutter/foundation/ValueNotifier-class.html
-- RESEARCH.md comprehensive analysis (lines 1-1490)
+- research.md comprehensive analysis (lines 1-1490)
 
 ---
 

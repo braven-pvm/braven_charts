@@ -479,7 +479,7 @@ BravenChart(
 ```
 
 ### Manual Testing
-- **Location:** `example/INTERACTION_FEATURES_TEST.md`
+- **Location:** `example/interaction_features_test.md`
 - **Status:** ✅ COMPREHENSIVE GUIDE CREATED
 - **Coverage:**
   - All 15 core interaction features
@@ -548,7 +548,7 @@ BravenChart(
 
 ### Documentation ✅
 - [x] Example README updated with interaction system section
-- [x] INTERACTION_FEATURES_TEST.md created (comprehensive manual guide)
+- [x] interaction_features_test.md created (comprehensive manual guide)
 - [x] All code has detailed comments
 - [x] Usage examples provided for all features
 - [x] Navigation flow documented
@@ -576,7 +576,7 @@ BravenChart(
 The example app now serves as a complete reference implementation for all interaction features, with live demonstrations, configuration controls, event logging, and comprehensive documentation.
 
 **Next Steps:**
-1. Manual testing using INTERACTION_FEATURES_TEST.md
+1. Manual testing using interaction_features_test.md
 2. Record test results in the test log
 3. Any bugs found → create issues and fix
 4. When all tests pass → Layer 7 is COMPLETE ✅

@@ -10,7 +10,7 @@
 
 All major technical decisions were pre-resolved during the specification phase. This document consolidates those decisions and documents the research findings that informed them.
 
-**Reference**: `docs/architecture/specs/AXIS_RENDERER_UNIFICATION_SPEC.md`
+**Reference**: `docs/architecture/specs/axis_renderer_unification_spec.md`
 
 ---
 
@@ -164,8 +164,8 @@ None - all NEEDS CLARIFICATION items were resolved during specification phase.
 
 ### Breaking Change Communication
 
-- Document in CHANGELOG.md with migration examples
-- Update README.md with new API examples
+- Document in changelog.md with migration examples
+- Update readme.md with new API examples
 - Provide before/after code snippets
 - Consider major version bump (v2.0.0)
 

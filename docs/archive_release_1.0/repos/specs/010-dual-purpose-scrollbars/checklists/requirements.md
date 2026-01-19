@@ -78,6 +78,6 @@
 - Clear boundaries (Assumptions, Dependencies, Out of Scope)
 - Strong accessibility focus (WCAG compliance, keyboard navigation, screen reader support)
 
-**Readiness Assessment**: Specification is **READY FOR PLANNING** phase. No clarifications needed - all requirements are concrete, testable, and unambiguous. The research document (RESEARCH.md) provides comprehensive technical background that will support implementation planning.
+**Readiness Assessment**: Specification is **READY FOR PLANNING** phase. No clarifications needed - all requirements are concrete, testable, and unambiguous. The research document (research.md) provides comprehensive technical background that will support implementation planning.
 
 **Next Steps**: Proceed to `/speckit.clarify` (if interactive refinement desired) or `/speckit.plan` (to create implementation tasks and technical architecture).

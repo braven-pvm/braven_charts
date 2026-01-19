@@ -15,19 +15,19 @@ braven_charts_v2.0/
 │
 ├── 📚 docs/                              # All documentation
 │   ├── testing/                          # Testing guides
-│   │   ├── TESTING.md                    # Main testing guide (614 lines)
-│   │   ├── TESTING_WEB.md                # Web testing guide (614 lines)
-│   │   ├── CHROMEDRIVER_SETUP.md         # ChromeDriver setup
-│   │   └── WEB_TESTING_QUICK_START.md    # Quick reference
+│   │   ├── testing.md                    # Main testing guide (614 lines)
+│   │   ├── testing_web.md                # Web testing guide (614 lines)
+│   │   ├── chromedriver_setup.md         # ChromeDriver setup
+│   │   └── web_testing_quick_start.md    # Quick reference
 │   ├── architecture/                     # Architecture documentation
 │   │   ├── vision/                       # Project vision
 │   │   ├── requirements/                 # Requirements
 │   │   ├── specs/                        # Technical specs
 │   │   ├── features/                     # Feature documentation
 │   │   ├── lessons-learned/              # Critical insights
-│   │   └── README.md                     # Architecture index
-│   ├── README.md                         # Documentation index
-│   └── DEVELOPMENT.md                    # Development setup guide
+│   │   └── readme.md                     # Architecture index
+│   ├── readme.md                         # Documentation index
+│   └── development.md                    # Development setup guide
 │
 ├── 🧪 test/                              # Unit & widget tests
 │   ├── web/                              # Web-specific tests
@@ -71,9 +71,9 @@ braven_charts_v2.0/
 │           └── chromedriver.exe         # ChromeDriver v140
 │
 ├── 📄 Root Files
-│   ├── README.md                        # Project overview
-│   ├── CONTRIBUTING.md                  # Contribution guidelines
-│   ├── CHANGELOG.md                     # Version history
+│   ├── readme.md                        # Project overview
+│   ├── contributing.md                  # Contribution guidelines
+│   ├── changelog.md                     # Version history
 │   ├── LICENSE                          # MIT License
 │   ├── pubspec.yaml                     # Package definition
 │   ├── build.yaml                       # Mock generation
@@ -92,17 +92,17 @@ braven_charts_v2.0/
 
 ### ✅ All Tests Passing: 26/26
 
-| Test Category | Files | Tests | Status |
-|---------------|-------|-------|--------|
-| Core Tests | `braven_charts_test.dart` | 11 | ✅ |
-| Unit Tests | `unit/chart_utils_test.dart` | 10 | ✅ |
-| Web Tests | `web/web_utils_test.dart` | 5 | ✅ |
-| **Total** | **3 files** | **26 tests** | **✅ PASSING** |
+| Test Category | Files                        | Tests        | Status         |
+| ------------- | ---------------------------- | ------------ | -------------- |
+| Core Tests    | `braven_charts_test.dart`    | 11           | ✅             |
+| Unit Tests    | `unit/chart_utils_test.dart` | 10           | ✅             |
+| Web Tests     | `web/web_utils_test.dart`    | 5            | ✅             |
+| **Total**     | **3 files**                  | **26 tests** | **✅ PASSING** |
 
 ### Test Framework Layers
 
 1. ✅ **Unit Tests** - Business logic testing
-2. ✅ **Widget Tests** - UI component testing  
+2. ✅ **Widget Tests** - UI component testing
 3. ✅ **Integration Tests** - Component interaction testing
 4. ✅ **Golden Tests** - Visual regression testing (framework ready)
 5. ✅ **Performance Tests** - Benchmarking (framework ready)
@@ -113,6 +113,7 @@ braven_charts_v2.0/
 ## 🚀 Quick Start Commands
 
 ### Testing
+
 ```bash
 # Run all tests
 flutter test
@@ -128,6 +129,7 @@ flutter test --watch
 ```
 
 ### Development
+
 ```bash
 # Install dependencies
 flutter pub get
@@ -147,18 +149,21 @@ flutter pub run build_runner build
 ## 📚 Documentation Available
 
 ### User Documentation
-- ✅ [README.md](README.md) - Project overview
-- ✅ [docs/README.md](docs/README.md) - Documentation index
+
+- ✅ [readme.md](readme.md) - Project overview
+- ✅ [docs/readme.md](docs/readme.md) - Documentation index
 - ✅ [Architecture Docs](docs/architecture/) - System design
 
 ### Developer Documentation
-- ✅ [DEVELOPMENT.md](docs/DEVELOPMENT.md) - Setup guide
-- ✅ [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- ✅ [Testing Guide](docs/testing/TESTING.md) - Complete testing framework
-- ✅ [Web Testing](docs/testing/TESTING_WEB.md) - Web-specific testing
-- ✅ [ChromeDriver Setup](docs/testing/CHROMEDRIVER_SETUP.md) - Browser testing
+
+- ✅ [development.md](docs/development.md) - Setup guide
+- ✅ [contributing.md](contributing.md) - Contribution guidelines
+- ✅ [Testing Guide](docs/testing/testing.md) - Complete testing framework
+- ✅ [Web Testing](docs/testing/testing_web.md) - Web-specific testing
+- ✅ [ChromeDriver Setup](docs/testing/chromedriver_setup.md) - Browser testing
 
 ### Architecture Documentation
+
 - ✅ [Vision](docs/architecture/vision/) - Project goals
 - ✅ [Requirements](docs/architecture/requirements/) - Functional & technical
 - ✅ [Specifications](docs/architecture/specs/) - Detailed architecture
@@ -172,6 +177,7 @@ flutter pub run build_runner build
 ## 🎯 What's Ready
 
 ### ✅ Infrastructure
+
 - [x] Git repository initialized (3 commits)
 - [x] Flutter package structure
 - [x] Comprehensive testing framework
@@ -181,6 +187,7 @@ flutter pub run build_runner build
 - [x] Clean project organization
 
 ### ✅ Testing
+
 - [x] 26/26 tests passing
 - [x] Unit test framework
 - [x] Widget test framework
@@ -191,6 +198,7 @@ flutter pub run build_runner build
 - [x] Mock generation setup
 
 ### ✅ Web Testing
+
 - [x] ChromeDriver v140 configured
 - [x] 8 responsive viewports (375x667 to 3440x1440)
 - [x] Mouse interaction testing
@@ -199,6 +207,7 @@ flutter pub run build_runner build
 - [x] Proper gesture handling (no errors!)
 
 ### ✅ Documentation
+
 - [x] README with badges and structure
 - [x] Development setup guide
 - [x] Contributing guidelines
@@ -209,6 +218,7 @@ flutter pub run build_runner build
 - [x] Quick reference guides
 
 ### ✅ Development Tools
+
 - [x] Test runners (Windows & Unix)
 - [x] Flutter PATH setup script
 - [x] ChromeDriver automation
@@ -221,18 +231,21 @@ flutter pub run build_runner build
 ## 🎨 What's Next (Development Phase)
 
 ### Phase 1: Core Components
+
 - [ ] LineChart component
-- [ ] BarChart component  
+- [ ] BarChart component
 - [ ] PieChart component
 - [ ] ScatterChart component
 
 ### Phase 2: Advanced Features
+
 - [ ] Annotation system implementation
 - [ ] Theming system implementation
 - [ ] Coordinate transformation
 - [ ] Marker system
 
 ### Phase 3: Polish
+
 - [ ] Performance optimizations
 - [ ] Accessibility enhancements
 - [ ] Example gallery
@@ -257,6 +270,7 @@ flutter pub run build_runner build
 ## 📖 Development Workflow
 
 ### TDD Cycle
+
 1. **Write test** in `test/` directory
 2. **Run tests** - See it fail
 3. **Implement** in `lib/src/`
@@ -265,6 +279,7 @@ flutter pub run build_runner build
 6. **Commit** with conventional message
 
 ### Example
+
 ```bash
 # 1. Create test
 # test/unit/line_chart_test.dart
@@ -293,6 +308,7 @@ git commit -m "feat(charts): Add LineChart component"
 **Project Status:** ✅ **READY FOR DEVELOPMENT!**
 
 You now have:
+
 - ✨ Clean, organized project structure
 - 📁 All documentation in `/docs`
 - 🔧 All scripts in `/scripts`
@@ -311,9 +327,9 @@ You now have:
 
 ## 📞 Quick Links
 
-- **Main README:** [README.md](README.md)
-- **Development Guide:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Main README:** [readme.md](readme.md)
+- **Development Guide:** [docs/development.md](docs/development.md)
+- **Contributing:** [contributing.md](contributing.md)
 - **Testing Docs:** [docs/testing/](docs/testing/)
 - **Architecture:** [docs/architecture/](docs/architecture/)
 - **Scripts:** [scripts/](scripts/)

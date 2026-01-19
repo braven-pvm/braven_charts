@@ -20,10 +20,10 @@ Added comprehensive terminal protocol to the MANUAL ADDITIONS section:
 
 | File | Purpose | Lines | Status |
 |------|---------|-------|--------|
-| `TERMINAL_WORKFLOW_GUIDELINES.md` | Full workflow documentation with examples, decision trees, and patterns | 400+ | ✅ Created |
-| `TERMINAL_QUICK_REFERENCE.md` | One-page cheat sheet for quick lookup | 150+ | ✅ Created |
-| `SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` | System prompt additions for AI training/integration | 500+ | ✅ Created |
-| `SETUP_AI_TERMINAL_PROTOCOL.md` | Setup guide explaining where rules are configured | 300+ | ✅ Created |
+| `terminal_workflow_guidelines.md` | Full workflow documentation with examples, decision trees, and patterns | 400+ | ✅ Created |
+| `terminal_quick_reference.md` | One-page cheat sheet for quick lookup | 150+ | ✅ Created |
+| `system_prompt_terminal_management.md` | System prompt additions for AI training/integration | 500+ | ✅ Created |
+| `setup_ai_terminal_protocol.md` | Setup guide explaining where rules are configured | 300+ | ✅ Created |
 
 ---
 
@@ -124,10 +124,10 @@ AI: terminal-tools_sendCommand(terminalName: "git", command: "git status")
 ```
 .github/
 ├── copilot-instructions.md          ⭐ PRIMARY CONFIG (Auto-loaded by Copilot)
-├── TERMINAL_WORKFLOW_GUIDELINES.md  📚 Full documentation
-├── TERMINAL_QUICK_REFERENCE.md      📋 1-page cheat sheet
-├── SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md  🤖 AI training additions
-└── SETUP_AI_TERMINAL_PROTOCOL.md    📖 Setup guide (this answers your question!)
+├── terminal_workflow_guidelines.md  📚 Full documentation
+├── terminal_quick_reference.md      📋 1-page cheat sheet
+├── system_prompt_terminal_management.md  🤖 AI training additions
+└── setup_ai_terminal_protocol.md    📖 Setup guide (this answers your question!)
 ```
 
 ---
@@ -193,7 +193,7 @@ When working with AI agents in this project:
 
 ### **Reference Documentation**
 ```
-"Check .github/TERMINAL_QUICK_REFERENCE.md for the correct terminal names"
+"Check .github/terminal_quick_reference.md for the correct terminal names"
 ```
 
 ---

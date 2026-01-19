@@ -298,7 +298,7 @@ It was NOT designed to have **interactive child widgets** (like draggable handle
 
 ### Coordinate Space Complexity
 
-**Why Sibling Layer Approach Failed** (see ANNOTATION_REFACTOR_FAILURE_ANALYSIS.md):
+**Why Sibling Layer Approach Failed** (see annotation_refactor_failure_analysis.md):
 
 Moving annotations OUTSIDE the interaction system seemed logical for event routing, but broke coordinate transformations:
 
@@ -358,7 +358,7 @@ if (allAnnotations.isNotEmpty) {
 3. ✅ No handle events - coordinate space corrupted
 4. ✅ Terminal showed handle widgets built but not functional
 
-**Root Cause**: Coordinate space mismatch (detailed in ANNOTATION_REFACTOR_FAILURE_ANALYSIS.md)
+**Root Cause**: Coordinate space mismatch (detailed in annotation_refactor_failure_analysis.md)
 
 ---
 
@@ -741,8 +741,8 @@ RawGestureDetector(
 
 ## References
 
-- **Failed Attempts**: See `ANNOTATION_HANDLE_MOUSE_EVENT_ISSUE.md` (11 hitTestBehavior attempts)
-- **Coordinate Problem**: See `ANNOTATION_REFACTOR_FAILURE_ANALYSIS.md` (sibling layer failure)
+- **Failed Attempts**: See `annotation_handle_mouse_event_issue.md` (11 hitTestBehavior attempts)
+- **Coordinate Problem**: See `annotation_refactor_failure_analysis.md` (sibling layer failure)
 - **Implementation**: `lib/src/widgets/braven_chart.dart` (lines 1884-1913, 2160-2691, 5588-5915)
 - **Flutter Docs**: 
   - [Gesture Arena](https://api.flutter.dev/flutter/gestures/GestureArenaManager-class.html)

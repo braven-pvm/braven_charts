@@ -305,7 +305,7 @@ When in doubt, execute sequentially.
    - FR-006: Expanded to list all 11 handlers with categorization
    - Key Entities: Enhanced Event Handlers description with breakdown
 
-3. ✅ `specs/008-valuenotifier-refactor/ANALYSIS_REMEDIATION_REPORT.md`
+3. ✅ `specs/008-valuenotifier-refactor/analysis_remediation_report.md`
    - Created this report documenting all changes
 
 ---

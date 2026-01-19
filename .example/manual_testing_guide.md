@@ -210,6 +210,6 @@ Copy and fill this template after testing:
 - **Performance**: 0.052ms avg frame time (346x better than 60fps target)
 
 ### Related Documentation
-- Spec: `specs/009-dual-mode-streaming/README.md`
+- Spec: `specs/009-dual-mode-streaming/readme.md`
 - Tasks: `specs/009-dual-mode-streaming/tasks.md`
 - Implementation: T017-T024 (all complete)

@@ -214,10 +214,10 @@
 - [X] T077 [P] Update example/lib/main.dart with basic streaming chart example (minimal configuration) - Created basic_streaming_example.dart with minimal setup
 - [X] T078 [P] Create example/lib/advanced_streaming_example.dart with advanced configuration (custom timeout, buffer callbacks, manual resume) - Complete with all callbacks and manual control
 - [X] T079 [P] Create example/lib/buffer_status_example.dart demonstrating buffer count tracking and "Return to Live" button - Complete with real-time buffer tracking
-- [X] T080 [P] Update README.md with quick start for dual-mode streaming feature - Added comprehensive streaming section with quick start and advanced examples
+- [X] T080 [P] Update readme.md with quick start for dual-mode streaming feature - Added comprehensive streaming section with quick start and advanced examples
 - [X] T081 [P] Add inline documentation to ChartMode enum in lib/src/models/chart_mode.dart with examples - Enhanced with usage examples
 - [X] T082 [P] Add inline documentation to StreamingConfig class in lib/src/models/streaming_config.dart with examples for each parameter - Already comprehensively documented
-- [X] T083 [P] Update CHANGELOG.md with breaking change notice and migration guide - Completed with comprehensive dual-mode streaming section
+- [X] T083 [P] Update changelog.md with breaking change notice and migration guide - Completed with comprehensive dual-mode streaming section
 - [X] T084 Verify all examples in quickstart.md execute successfully - Verified via flutter analyze and flutter build web (all examples compile clean)
 - [X] T085 Generate API documentation with dartdoc and verify StreamingConfig API documented - Generated successfully with full documentation
 
@@ -241,7 +241,7 @@
 - [~] T095 Cross-browser testing on Flutter Web (Chrome, Firefox, Safari, Edge) - DEFERRED (Chrome tested successfully, cross-browser optional)
 - [X] T096 [P] Update .specify/templates/ with any lessons learned - All lessons captured in implementation notes and CHANGELOG
 - [X] T097 Final validation run of quickstart.md examples - All examples integrated into app, compile successfully, accessible from navigation
-- [X] T098 Merge Constitution check (all 7 principles pass, breaking change documented) - Constitution compliance verified: ValueNotifier pattern throughout, no setState violations, breaking change documented in CHANGELOG.md
+- [X] T098 Merge Constitution check (all 7 principles pass, breaking change documented) - Constitution compliance verified: ValueNotifier pattern throughout, no setState violations, breaking change documented in changelog.md
 
 **Final Checkpoint**: Feature complete, tested, documented, and ready for merge
 

@@ -81,8 +81,8 @@ This is a **material expansion** of the Performance First principle that:
 ✅ **No command file updates needed** - All prompts reference constitution generically
 
 ### Documentation
-✅ **ARCHITECTURE_REFACTOR_PLAN.md** - Existing document provides implementation guidance  
-✅ **README.md** - No changes needed (doesn't reference internal patterns)  
+✅ **architecture_refactor_plan.md** - Existing document provides implementation guidance  
+✅ **readme.md** - No changes needed (doesn't reference internal patterns)  
 ✅ **Development guides** - Will reference constitution for state management patterns
 
 ---
@@ -133,7 +133,7 @@ This constitutional amendment captures hard-won knowledge from debugging the int
 - Validate performance patterns against constitution
 
 ### For Existing Code:
-- Interaction system requires refactor to ValueNotifier pattern (see ARCHITECTURE_REFACTOR_PLAN.md)
+- Interaction system requires refactor to ValueNotifier pattern (see architecture_refactor_plan.md)
 - Estimated 150 lines of changes, ~3 hours work
 - Performance gain: 10-100x improvement, elimination of crashes
 
@@ -181,7 +181,7 @@ No template changes required - Constitution Check references remain generic.
 
 1. ✅ **Constitution updated** - v1.1.0 committed
 2. ✅ **Sync Impact Report** - Embedded in constitution file
-3. ⏭️ **Implement refactor** - Follow ARCHITECTURE_REFACTOR_PLAN.md
+3. ⏭️ **Implement refactor** - Follow architecture_refactor_plan.md
 4. ⏭️ **Verify compliance** - Test interaction system with new patterns
 5. ⏭️ **Update ADRs** - Document state management decision if needed
 

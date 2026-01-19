@@ -30,7 +30,7 @@ The pan constraint implementation in `chart_render_box.dart` has **fundamental c
 - **Project**: braven_charts v2.0 interaction architecture prototype
 - **Location**: `refactor/interaction/` 
 - **Current Phase**: Phase 0 prototype validation
-- **Design Docs**: `docs/architecture/interaction/INTERACTION_ARCHITECTURE_DESIGN.md`
+- **Design Docs**: `docs/architecture/interaction/interaction_architecture_design.md`
 
 ### Constraint Requirements
 From the design specification:

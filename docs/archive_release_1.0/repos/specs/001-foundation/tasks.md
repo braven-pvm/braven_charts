@@ -676,7 +676,7 @@ export 'math/curve_fitting.dart';
 
 ### T051: [X] Create Foundation Layer README
 **Description**: Create comprehensive README for foundation layer  
-**File**: `lib/src/foundation/README.md`  
+**File**: `lib/src/foundation/readme.md`  
 **Contents**:
 - Overview of foundation layer
 - Quick start guide (from quickstart.md)
@@ -691,7 +691,7 @@ export 'math/curve_fitting.dart';
 
 ### T052: [X] Update Main Package README
 **Description**: Update main package README with foundation layer section  
-**File**: `README.md` (repository root)  
+**File**: `readme.md` (repository root)  
 **Add Section**: Foundation Layer overview with link to detailed docs  
 **Acceptance**: README updated, foundation mentioned
 

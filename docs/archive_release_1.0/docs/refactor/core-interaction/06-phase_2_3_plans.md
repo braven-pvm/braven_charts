@@ -153,7 +153,7 @@
 
 **🎯 FOCUS ON PHASE 1 NOW**
 
-Read and execute `PHASE_1_DETAILED_PLAN.md` completely before thinking about Phase 2/3.
+Read and execute `03-phase_1_implementation_plan.md` completely before thinking about Phase 2/3.
 
 **One phase at a time. Zero ambiguity. Complete success.**
 

@@ -2,7 +2,7 @@
 
 **Date**: October 21, 2025  
 **Branch**: `007-interaction-system`  
-**Status**: ⚠️ SUPERSEDED by AXIS_POSITION_IMPLEMENTATION.md
+**Status**: ⚠️ SUPERSEDED by axis_position_implementation.md
 
 ---
 
@@ -10,7 +10,7 @@
 
 **This document is SUPERSEDED by the full axis positioning implementation.**
 
-Please refer to **`AXIS_POSITION_IMPLEMENTATION.md`** for the complete, current implementation.
+Please refer to **`axis_position_implementation.md`** for the complete, current implementation.
 
 **What Changed**:
 - Initial optimization (Phase 18) had a bug - incorrectly assumed axisPosition was used
@@ -18,7 +18,7 @@ Please refer to **`AXIS_POSITION_IMPLEMENTATION.md`** for the complete, current 
 - Full implementation (Phase 20) made axisPosition fully functional
 - Axes now render at the positions specified by axisPosition property
 
-**See**: `AXIS_POSITION_IMPLEMENTATION.md` for comprehensive documentation.
+**See**: `axis_position_implementation.md` for comprehensive documentation.
 
 ---
 
@@ -293,7 +293,7 @@ BravenChart(
 
 ## Related Issues
 
-- Tooltip positioning architecture: `TOOLTIP_POSITIONING_ARCHITECTURE_FIX.md`
+- Tooltip positioning architecture: `tooltip_positioning_architecture_fix.md`
 - Coordinate system design: `docs/guides/coordinate-system.md`
 
 ---

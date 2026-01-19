@@ -24,6 +24,7 @@ The example app is organized into three main sections:
 Comprehensive demonstrations of specific chart capabilities:
 
 #### **Interaction System Showcase** 🆕
+
 - **All Interaction Features** in one comprehensive demo
   - `Crosshair`: Vertical, horizontal, or both modes with snap-to-point
   - `Tooltip`: Default or custom builder with smart positioning
@@ -39,6 +40,7 @@ Comprehensive demonstrations of specific chart capabilities:
 - **Event Log**: See every interaction in real-time
 
 #### **Interaction Examples** 🆕
+
 - **9 Focused Examples** demonstrating specific interaction patterns
   1. Basic Crosshair (5-line setup)
   2. Custom Crosshair Style (color, width, dash pattern)
@@ -51,17 +53,19 @@ Comprehensive demonstrations of specific chart capabilities:
   9. Complete Interaction (all features working together)
 
 #### **Annotations Showcase**
+
 - **All 5 Annotation Types** with live examples
   - `TextAnnotation`: Free-form labels with custom positioning
   - `PointAnnotation`: 7 marker shapes (circle, square, triangle, diamond, star, cross, plus)
   - `RangeAnnotation`: Highlight time periods or value zones
-  - `ThresholdAnnotation`: Reference lines for targets and limits  
+  - `ThresholdAnnotation`: Reference lines for targets and limits
   - `TrendAnnotation`: Linear, polynomial, exponential, and moving average trends
 - **Interactive Controls**: Toggle annotation types on/off
 - **Combined Demo**: All annotations working together
 - **Code Snippets**: Ready-to-use examples for each type
 
 #### **Advanced Features**
+
 - **Real-Time Streaming**
   - Automatic 60 FPS throttling
   - Sensor data simulation (200ms intervals)
@@ -76,6 +80,7 @@ Comprehensive demonstrations of specific chart capabilities:
 - **Complete Code Examples**: Stream setup and controller usage
 
 #### **Axis & Theming**
+
 - **4 Axis Presets**
   - `AxisConfig.defaults()`: Full axes with labels and grid
   - `AxisConfig.hidden()`: Sparkline style (no axes)
@@ -91,6 +96,7 @@ Comprehensive demonstrations of specific chart capabilities:
 ### 2. Quickstart Guide
 
 A single screen with all 6 quickstart scenarios:
+
 1. **Basic Line Chart** - Get started in 2 minutes
 2. **Add Annotations** - Highlight important data points
 3. **fromValues Factory** - Simplified data input
@@ -101,6 +107,7 @@ A single screen with all 6 quickstart scenarios:
 ### 3. Chart Types
 
 Individual screens for each chart type:
+
 - **Line Charts**: Straight, smooth, and stepped interpolation
 - **Area Charts**: Filled areas with gradients and stacking
 - **Bar Charts**: Grouped and stacked bars (vertical & horizontal)
@@ -109,6 +116,7 @@ Individual screens for each chart type:
 ## 🎯 Key Features Demonstrated
 
 ### Interaction System (Layer 7) 🆕
+
 - ✅ **Crosshair**: Vertical, horizontal, both modes
 - ✅ **Snap-to-Point**: Configurable snap radius (default: 30px)
 - ✅ **Tooltip**: Default and custom builders
@@ -124,6 +132,7 @@ Individual screens for each chart type:
 - ✅ **Focus Management**: Keyboard events with proper focus handling
 
 ### Annotations
+
 - ✅ 5 annotation types (Text, Point, Range, Threshold, Trend)
 - ✅ 7 marker shapes for point annotations
 - ✅ Custom styling (colors, fonts, borders, backgrounds)
@@ -131,6 +140,7 @@ Individual screens for each chart type:
 - ✅ Multiple annotations on one chart
 
 ### Data Management
+
 - ✅ Static series data
 - ✅ Real-time streaming (Stream<ChartDataPoint>)
 - ✅ Programmatic updates (ChartController)
@@ -138,6 +148,7 @@ Individual screens for each chart type:
 - ✅ Dynamic add/remove operations
 
 ### Customization
+
 - ✅ 4 axis presets + custom configurations
 - ✅ Light and dark themes
 - ✅ Custom dimensions (width × height)
@@ -146,12 +157,14 @@ Individual screens for each chart type:
 - ✅ copyWith() for preset customization
 
 ### Performance
+
 - ✅ Automatic 60 FPS throttling for streams
 - ✅ RepaintBoundary for optimal rendering
 - ✅ Efficient data updates
 - ✅ Smooth animations
 
 ### Chart Types
+
 - ✅ Line charts (4 supported)
 - ✅ Area charts (4 supported)
 - ✅ Bar charts (4 supported)
@@ -189,13 +202,14 @@ example/
 │   │   └── chart_data_generator.dart          # Sample data utilities
 │   └── widgets/
 │       └── chart_container.dart               # Reusable chart wrapper
-├── README.md                                   # This file
-└── INTERACTION_FEATURES_TEST.md               # Manual testing guide 🆕
+├── readme.md                                   # This file
+└── interaction_features_test.md               # Manual testing guide 🆕
 ```
 
 ## 💡 Usage Examples
 
 ### Basic Line Chart
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -217,6 +231,7 @@ BravenChart(
 ```
 
 ### Real-Time Streaming
+
 ```dart
 final streamController = StreamController<ChartDataPoint>();
 
@@ -233,6 +248,7 @@ streamController.add(ChartDataPoint(x: 1, y: 20));
 ```
 
 ### Programmatic Control
+
 ```dart
 final controller = ChartController();
 
@@ -264,6 +280,7 @@ controller.addAnnotation(
 ```
 
 ### Annotations
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -277,7 +294,7 @@ BravenChart(
       dataPointIndex: 5,
       markerShape: MarkerShape.star,
     ),
-    
+
     // Show target line
     ThresholdAnnotation(
       id: 'target',
@@ -289,7 +306,7 @@ BravenChart(
         borderWidth: 2,
       ),
     ),
-    
+
     // Highlight time range
     RangeAnnotation(
       id: 'q1',
@@ -303,6 +320,7 @@ BravenChart(
 ```
 
 ### Axis Customization
+
 ```dart
 // Use preset
 BravenChart(
@@ -329,6 +347,7 @@ BravenChart(
 ```
 
 ### Theming
+
 ```dart
 // Light theme
 BravenChart(
@@ -348,6 +367,7 @@ BravenChart(
 ### Interaction System 🆕
 
 #### Basic Crosshair
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -364,6 +384,7 @@ BravenChart(
 ```
 
 #### Custom Tooltip
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -387,6 +408,7 @@ BravenChart(
 ```
 
 #### Zoom & Pan
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -405,6 +427,7 @@ BravenChart(
 ```
 
 #### Keyboard Navigation
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -423,6 +446,7 @@ BravenChart(
 ```
 
 #### All Interaction Callbacks
+
 ```dart
 BravenChart(
   chartType: ChartType.line,
@@ -433,7 +457,7 @@ BravenChart(
     tooltip: TooltipConfig(enabled: true),
     enableZoom: true,
     enablePan: true,
-    
+
     // All 10 callbacks
     onDataPointTap: (point, position) {
       print('Tapped: X=${point.x}, Y=${point.y}');
@@ -472,6 +496,7 @@ BravenChart(
 ```
 
 #### Factory Constructors
+
 ```dart
 // All features enabled
 BravenChart(
@@ -498,6 +523,7 @@ BravenChart(
 ## 🧪 Testing
 
 The example app serves as both a showcase and a testing platform. Each screen can be used to:
+
 - **Visual Testing**: Verify chart rendering across different configurations
 - **Interaction Testing**: Test dynamic updates, streaming, and controller operations
 - **Theme Testing**: Validate appearance in light and dark modes
@@ -564,6 +590,7 @@ Home Screen
 ## 🧪 Testing & Verification
 
 ### Automated Testing
+
 ```bash
 # Run all tests
 flutter test
@@ -573,7 +600,9 @@ flutter test test/interaction/widgets/interaction_widget_test.dart
 ```
 
 ### Manual Testing
-See **[INTERACTION_FEATURES_TEST.md](INTERACTION_FEATURES_TEST.md)** for comprehensive manual testing guide covering:
+
+See **[interaction_features_test.md](interaction_features_test.md)** for comprehensive manual testing guide covering:
+
 - All 15 core interaction features
 - All 10 interaction callbacks
 - Factory constructors (.all(), .none(), .defaultConfig())

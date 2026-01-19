@@ -499,8 +499,8 @@ This is a **single Flutter library** project:
   - ✅ All 261 theming tests passing (100% coverage of theming system)
   - ✅ Run dartanalyzer: 607 info warnings (pre-existing, no errors)
   - ✅ Run dartfmt: 116 files formatted
-  - ✅ Update CHANGELOG.md with theming system features
-  - ✅ Update README.md with theming quick start and guide links
+  - ✅ Update changelog.md with theming system features
+  - ✅ Update readme.md with theming quick start and guide links
   - **DEPENDS ON**: T001-T047 (all tasks)
 
 **Dependencies**: All tasks can run in parallel except T048 (depends on everything)

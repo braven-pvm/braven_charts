@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: User description: "Refactor: Unify axis renderer - consolidate two parallel Y-axis rendering paths (AxisRenderer and MultiAxisPainter) into a single consistent system using MultiAxisPainter as the unified Y-axis renderer"
 
-**Technical Specification Reference**: `docs/architecture/specs/AXIS_RENDERER_UNIFICATION_SPEC.md`
+**Technical Specification Reference**: `docs/architecture/specs/axis_renderer_unification_spec.md`
 
 ---
 

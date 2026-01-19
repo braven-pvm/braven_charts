@@ -9,7 +9,7 @@
 ## 📋 What We Accomplished
 
 ### 1. ✅ Comprehensive Design Document Created
-**File**: `INTERACTION_ARCHITECTURE_DESIGN.md` (Full technical specification)
+**File**: `interaction_architecture_design.md` (Full technical specification)
 
 **Contents**:
 - Problem statement and research summary
@@ -22,7 +22,7 @@
 - Open questions tracking
 
 ### 2. ✅ Quick Reference Guide Created
-**File**: `INTERACTION_QUICK_REFERENCE.md` (Team quick access)
+**File**: `interaction_quick_reference.md` (Team quick access)
 
 **Contents**:
 - One-page architecture summary
@@ -33,7 +33,7 @@
 - First week goals and immediate actions
 
 ### 3. ✅ Conflict Resolution Framework Created
-**File**: `CONFLICT_RESOLUTION_TABLE.md` (Decision-making tool)
+**File**: `conflict_resolution_table.md` (Decision-making tool)
 
 **Contents**:
 - 15 detailed conflict scenarios
@@ -141,7 +141,7 @@
 ### ⏳ Decision 5: Conflict Priority Hierarchy
 **Status**: **PENDING** - Requires team decisions
 
-**Blocker**: 13 of 15 conflict scenarios need decisions in `CONFLICT_RESOLUTION_TABLE.md`
+**Blocker**: 13 of 15 conflict scenarios need decisions in `conflict_resolution_table.md`
 
 ---
 
@@ -191,7 +191,7 @@
 - Documented missing features
 - Assessed migration requirements
 
-### Phases 2-7: See `INTERACTION_ARCHITECTURE_DESIGN.md`
+### Phases 2-7: See `interaction_architecture_design.md`
 - Phase 2: Core architecture implementation
 - Phase 3: Element-specific interactions
 - Phase 4: Advanced features (pan/zoom, context menus)
@@ -219,7 +219,7 @@
 ## ⚠️ Critical Blockers
 
 ### 🔴 BLOCKER 1: Conflict Resolution Decisions Required
-**File**: `CONFLICT_RESOLUTION_TABLE.md`
+**File**: `conflict_resolution_table.md`
 
 **Status**: 13 of 15 scenarios need team decisions
 
@@ -243,9 +243,9 @@
 ## 📚 Documentation Created
 
 ### Primary Documents
-1. **`INTERACTION_ARCHITECTURE_DESIGN.md`** (Complete technical spec)
-2. **`INTERACTION_QUICK_REFERENCE.md`** (Quick access guide)
-3. **`CONFLICT_RESOLUTION_TABLE.md`** (Decision-making tool) ⚠️ NEEDS COMPLETION
+1. **`interaction_architecture_design.md`** (Complete technical spec)
+2. **`interaction_quick_reference.md`** (Quick access guide)
+3. **`conflict_resolution_table.md`** (Decision-making tool) ⚠️ NEEDS COMPLETION
 
 ### Supporting Documents
 - Research: `interaction-systems.md` (already existed - Flutter gesture system deep dive)
@@ -275,7 +275,7 @@
 
 ### Immediate (This Week)
 1. **CRITICAL**: Schedule conflict resolution meeting
-2. **CRITICAL**: Complete `CONFLICT_RESOLUTION_TABLE.md` decisions
+2. **CRITICAL**: Complete `conflict_resolution_table.md` decisions
 3. Review all documentation with team
 4. Finalize `InteractionMode` enum based on conflict decisions
 5. Set up prototype project structure
@@ -328,8 +328,8 @@ Found in `braven_chart.dart` lines 2369-2375:
 ## 📞 Team Communication
 
 ### Documents for Review
-- **Product Team**: Read `INTERACTION_QUICK_REFERENCE.md` + `CONFLICT_RESOLUTION_TABLE.md`
-- **Dev Team**: Read `INTERACTION_ARCHITECTURE_DESIGN.md` (full technical spec)
+- **Product Team**: Read `interaction_quick_reference.md` + `conflict_resolution_table.md`
+- **Dev Team**: Read `interaction_architecture_design.md` (full technical spec)
 - **QA Team**: Review test strategy section in design doc
 - **Everyone**: Complete conflict resolution decisions in table
 

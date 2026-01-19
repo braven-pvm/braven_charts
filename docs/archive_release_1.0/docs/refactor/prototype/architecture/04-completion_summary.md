@@ -269,7 +269,7 @@ final plotRect = transform.dataRectToPlot(dataRect);
 ```
 
 **Testing Documentation Created**:
-- `COORDINATE_SYSTEM_TESTING_GUIDE.md` (500+ lines)
+- `coordinate_system_testing_guide.md` (500+ lines)
 - Comprehensive manual testing checklist
 - 10 test categories covering all features
 - Visual verification steps
@@ -337,8 +337,8 @@ ChartTransform tests:           47 tests, 100% passing
 ChartRenderBox changes:         ~150 lines modified
 Example app rewrite:            ~300 lines
 Documentation:                  1,200+ lines total
-  - COORDINATE_SPACE_ARCHITECTURE.md: ~800 lines
-  - COORDINATE_SYSTEM_TESTING_GUIDE.md: ~500 lines
+  - coordinate_space_architecture.md: ~800 lines
+  - coordinate_system_testing_guide.md: ~500 lines
 ```
 
 ### Test Coverage
@@ -391,7 +391,7 @@ Clipping overhead:              Negligible (GPU-accelerated)
 ## Lessons Learned
 
 ### What Worked Well
-1. **Comprehensive Documentation First**: COORDINATE_SPACE_ARCHITECTURE.md clarified all design decisions before implementation
+1. **Comprehensive Documentation First**: coordinate_space_architecture.md clarified all design decisions before implementation
 2. **Test-Driven Development**: 47 unit tests caught edge cases early
 3. **Immutable Design**: ChartTransform immutability prevents state bugs
 4. **Clear Separation**: Three coordinate spaces eliminated ambiguity
@@ -425,9 +425,9 @@ Clipping overhead:              Negligible (GPU-accelerated)
 
 ### Documentation
 ```
-✅ docs/architecture/COORDINATE_SPACE_ARCHITECTURE.md (NEW - 800+ lines)
-✅ COORDINATE_SYSTEM_TESTING_GUIDE.md (NEW - 500+ lines)
-✅ COORDINATE_ARCHITECTURE_COMPLETION_SUMMARY.md (THIS FILE)
+✅ docs/architecture/coordinate_space_architecture.md (NEW - 800+ lines)
+✅ coordinate_system_testing_guide.md (NEW - 500+ lines)
+✅ coordinate_architecture_completion_summary.md (THIS FILE)
 ```
 
 ### Test Status

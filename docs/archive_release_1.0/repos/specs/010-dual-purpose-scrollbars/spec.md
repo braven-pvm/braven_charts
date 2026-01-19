@@ -3,7 +3,7 @@
 **Feature Branch**: `010-dual-purpose-scrollbars`  
 **Created**: 2025-10-24  
 **Status**: Draft  
-**Input**: User description: "010-scrollbars - Detail of new feature is here: `docs\specs\010-scrollbars\RESEARCH.md`"
+**Input**: User description: "010-scrollbars - Detail of new feature is here: `docs\specs\010-scrollbars\research.md`"
 
 ## User Scenarios & Testing *(mandatory)*
 

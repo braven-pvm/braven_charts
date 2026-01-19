@@ -399,7 +399,7 @@ For this remediation sprint to be considered COMPLETE, ALL of the following must
 - [ ] Large datasets (50+ points) render smoothly
 
 ### Documentation Verification
-- [ ] REMEDIATION_SPRINT.md fully updated with all test results
+- [ ] remediation_sprint.md fully updated with all test results
 - [ ] This test plan covers all implemented features
 - [ ] README or integration docs updated with interaction examples
 - [ ] Code comments explain all non-obvious behavior

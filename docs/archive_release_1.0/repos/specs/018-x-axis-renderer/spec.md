@@ -4,7 +4,7 @@
 **Created**: 2026-01-17  
 **Status**: Draft  
 **Input**: Unify X-axis rendering to match Y-axis theming and styling  
-**Design Document**: [X_AXIS_RENDERING_UNIFICATION.md](../../docs/design/X_AXIS_RENDERING_UNIFICATION.md)
+**Design Document**: [x_axis_rendering_unification.md](../../docs/design/x_axis_rendering_unification.md)
 
 ## User Scenarios & Testing _(mandatory)_
 

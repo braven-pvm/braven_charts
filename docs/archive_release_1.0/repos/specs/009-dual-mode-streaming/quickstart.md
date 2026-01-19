@@ -493,7 +493,7 @@ StreamingConfig(
 
 - **Testing**: See `/test/integration/dual_mode_streaming_test.dart` for test examples
 - **API Reference**: See `/specs/009-dual-mode-streaming/contracts/streaming_api_contract.dart`
-- **Architecture**: See `/docs/specs/STREAMING_INTERACTION_ARCHITECTURE.md` for design details
+- **Architecture**: See `/docs/specs/streaming_interaction_architecture.md` for design details
 - **Performance**: See `/test/performance/streaming_benchmark.dart` for benchmarks
 
 ---

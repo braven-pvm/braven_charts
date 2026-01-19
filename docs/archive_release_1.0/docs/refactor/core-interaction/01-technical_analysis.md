@@ -898,16 +898,16 @@ coordinator.registerHandler((event) {
 ## 13. References
 
 ### Prototype Documentation
-- `refactor/interaction/README.md` - Architecture overview
-- `refactor/interaction/PHASE_0_SUMMARY.md` - Phase 0 completion
-- `refactor/interaction/COORDINATE_SPACE_ARCHITECTURE.md` - Coordinate system
-- `refactor/interaction/DYNAMIC_AXES_IMPLEMENTATION.md` - Dynamic axes pattern
-- `refactor/interaction/ZOOM_PAN_ARCHITECTURE.md` - Zoom/pan details
+- `refactor/interaction/readme.md` - Architecture overview
+- `refactor/interaction/phase_0_summary.md` - Phase 0 completion
+- `refactor/interaction/coordinate_space_architecture.md` - Coordinate system
+- `refactor/interaction/dynamic_axes_implementation.md` - Dynamic axes pattern
+- `refactor/interaction/zoom_pan_architecture.md` - Zoom/pan details
 
 ### Main Package Documentation
-- `docs/ARCHITECTURE.md` - Current architecture
-- `docs/DEVELOPMENT.md` - Development guide
-- `PHASE_0_TEST_PLAN.md` - Testing approach
+- `docs/architecture.md` - Current architecture
+- `docs/development.md` - Development guide
+- `phase_0_test_plan.md` - Testing approach
 
 ---
 

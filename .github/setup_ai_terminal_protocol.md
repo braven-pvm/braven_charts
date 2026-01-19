@@ -38,9 +38,9 @@ Created three detailed guides in `.github/`:
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `TERMINAL_WORKFLOW_GUIDELINES.md` | Full workflow documentation with examples | ✅ Created |
-| `TERMINAL_QUICK_REFERENCE.md` | One-page cheat sheet for quick lookup | ✅ Created |
-| `SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` | System prompt additions for AI training | ✅ Created |
+| `terminal_workflow_guidelines.md` | Full workflow documentation with examples | ✅ Created |
+| `terminal_quick_reference.md` | One-page cheat sheet for quick lookup | ✅ Created |
+| `system_prompt_terminal_management.md` | System prompt additions for AI training | ✅ Created |
 
 ---
 
@@ -110,7 +110,7 @@ Never use run_in_terminal.
 ```
 
 ### **Option 2: Create Custom System Prompt**
-Copy contents of `.github/SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` into your AI agent's custom instructions/system prompt.
+Copy contents of `.github/system_prompt_terminal_management.md` into your AI agent's custom instructions/system prompt.
 
 ---
 
@@ -229,9 +229,9 @@ Insert this block in the `<modeInstructions>` section:
 
 Share these with your team or other developers:
 
-1. **Quick Start**: `.github/TERMINAL_QUICK_REFERENCE.md` (1-page cheat sheet)
-2. **Full Guide**: `.github/TERMINAL_WORKFLOW_GUIDELINES.md` (comprehensive examples)
-3. **AI Integration**: `.github/SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` (for AI training)
+1. **Quick Start**: `.github/terminal_quick_reference.md` (1-page cheat sheet)
+2. **Full Guide**: `.github/terminal_workflow_guidelines.md` (comprehensive examples)
+3. **AI Integration**: `.github/system_prompt_terminal_management.md` (for AI training)
 
 ---
 
@@ -257,7 +257,7 @@ If you need to modify the terminal protocol:
 ### AI Forgets Terminal Names
 **Solution**: Point to quick reference:
 ```
-"Check .github/TERMINAL_QUICK_REFERENCE.md for terminal names"
+"Check .github/terminal_quick_reference.md for terminal names"
 ```
 
 ### AI Kills Running App

@@ -100,8 +100,8 @@ python tools/flutter_agent/flutter_agent.py stop
 
 ```
 tools/flutter_agent/
-├── README.md                 # This file
-├── FLUTTER_AGENT_GUIDE.md    # Detailed usage guide
+├── readme.md                 # This file
+├── flutter_agent_guide.md    # Detailed usage guide
 ├── flutter_agent.py          # Main controller script
 └── .flutter_control/         # IPC directory (auto-created)
     ├── status.json           # Current status

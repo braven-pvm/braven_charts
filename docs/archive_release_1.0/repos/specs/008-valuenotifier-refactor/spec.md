@@ -3,7 +3,7 @@
 **Feature Branch**: `008-valuenotifier-refactor`  
 **Created**: 2025-01-21  
 **Status**: Draft  
-**Input**: User description: "We are in dire need of an architectural refactor. Detail is in this document: ARCHITECTURE_REFACTOR_PLAN.md"
+**Input**: User description: "We are in dire need of an architectural refactor. Detail is in this document: architecture_refactor_plan.md"
 
 ## Clarifications
 

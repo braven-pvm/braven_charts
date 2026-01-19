@@ -255,8 +255,8 @@ If performance issues arise with very large datasets (>10,000 points):
 - `example/screenshots/line_continuity_*.png` - Visual evidence of fix
 
 ### Documentation
-- `LINE_CONTINUITY_BUG_ANALYSIS.md` - Detailed analysis of bug #6
-- `ZOOM_FIX_SUMMARY.md` - This file (complete fix summary)
+- `line_continuity_bug_analysis.md` - Detailed analysis of bug #6
+- `zoom_fix_summary.md` - This file (complete fix summary)
 
 ---
 

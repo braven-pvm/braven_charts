@@ -167,10 +167,10 @@ flutter test test/performance/benchmark_test.dart
 ## Documentation
 
 ### Phase 0 (Complete)
-- **[PHASE_0_SUMMARY.md](PHASE_0_SUMMARY.md)**: Complete validation results, performance analysis, lessons learned, production readiness assessment
+- **[phase_0_summary.md](phase_0_summary.md)**: Complete validation results, performance analysis, lessons learned, production readiness assessment
 
 ### Phase 1 (Planning)
-- **[PHASE_1_PLAN.md](PHASE_1_PLAN.md)**: 5-week production integration plan, risk analysis, migration strategy, timeline
+- **[phase_1_plan.md](phase_1_plan.md)**: 5-week production integration plan, risk analysis, migration strategy, timeline
 
 ### Code Documentation
 - All classes have comprehensive dartdoc comments
@@ -252,7 +252,7 @@ flutter test test/performance/benchmark_test.dart
 - ✅ Complete developer documentation
 - ✅ Safe rollback mechanism validated
 
-See **[PHASE_1_PLAN.md](PHASE_1_PLAN.md)** for complete roadmap.
+See **[phase_1_plan.md](phase_1_plan.md)** for complete roadmap.
 
 ---
 
@@ -281,13 +281,13 @@ See **[PHASE_1_PLAN.md](PHASE_1_PLAN.md)** for complete roadmap.
 ## FAQ
 
 **Q: Can I use this in production now?**  
-A: Phase 0 is a validated prototype. Phase 1 (production integration) is planned for the next 5 weeks. See PHASE_1_PLAN.md.
+A: Phase 0 is a validated prototype. Phase 1 (production integration) is planned for the next 5 weeks. See phase_1_plan.md.
 
 **Q: What chart types are supported?**  
 A: Phase 0 implements datapoints and annotations only (proof-of-concept). Phase 1+ will add Line, Bar, Scatter, Candlestick, etc.
 
 **Q: How does this compare to the current braven_charts interaction system?**  
-A: Phase 0 demonstrates 3-50x better performance with cleaner architecture. See PHASE_0_SUMMARY.md for detailed comparison.
+A: Phase 0 demonstrates 3-50x better performance with cleaner architecture. See phase_0_summary.md for detailed comparison.
 
 **Q: Is the API stable?**  
 A: Core architecture is stable (validated by 91 tests). Production API may evolve during Phase 1 integration based on real-world usage patterns.
@@ -309,8 +309,8 @@ This code is part of the braven_charts library. See root LICENSE file for detail
 ## Contact
 
 For questions or feedback on the interaction system refactor:
-- Review PHASE_0_SUMMARY.md for technical details
-- Review PHASE_1_PLAN.md for integration roadmap
+- Review phase_0_summary.md for technical details
+- Review phase_1_plan.md for integration roadmap
 - Open an issue in the braven_charts repository
 
 **Last Updated**: 2025-11-05  

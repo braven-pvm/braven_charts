@@ -410,7 +410,7 @@
   - Document TextLayoutCache LRU behavior
   - Include @example annotations
 
-- [x] **T044** [P] Create rendering README in lib/src/rendering/README.md
+- [x] **T044** [P] Create rendering README in lib/src/rendering/readme.md
   - Overview of rendering architecture
   - Quick start example (copy from quickstart.md)
   - Link to contracts, data model, spec
@@ -440,10 +440,10 @@
   - ✅ Verify zero external dependencies (Flutter SDK only confirmed)
   - ✅ Verify TDD compliance (all tests written before implementation)
   - ✅ Update plan.md Progress Tracking to 100% complete
-  - ✅ Create Technical Debt Register (TECHNICAL_DEBT.md) - 5 items tracked
+  - ✅ Create Technical Debt Register (technical_debt.md) - 5 items tracked
   - ⏭️ Merge 002-core-rendering branch to main (NEXT STEP)
   - ⏭️ Tag release: v0.2.0-rendering (AFTER MERGE)
-  - **Known Issues** (22 failing tests documented in TECHNICAL_DEBT.md):
+  - **Known Issues** (22 failing tests documented in technical_debt.md):
     - TD-001: Culling stats not tracked (5 tests) - Target: v0.3.0
     - TD-002: Mock Canvas missing drawRect (5 tests) - Target: v0.2.1
     - TD-003: Text cache edge cases (3 tests) - Target: v0.2.1

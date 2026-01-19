@@ -82,7 +82,7 @@ To see actual rendered charts:
 4. Wire up chart layers to sample data
 5. Add interactivity (tap, zoom, pan)
 
-See `INTEGRATION_TESTING.md` for detailed integration guide.
+See `integration_testing.md` for detailed integration guide.
 
 ## Troubleshooting
 

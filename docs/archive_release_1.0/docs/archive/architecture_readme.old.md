@@ -9,10 +9,10 @@
 [![Pub Version](https://img.shields.io/pub/v/braven_charts.svg)](https://pub.dev/packages/braven_charts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MI## 📚 Documentation
 
-- **[📖 Full Documentation](docs/README.md)** - Complete documentation index
-- **[🎨 Theming Guide](docs/features/THEMING.md)** - Complete theming documentation
-- **[📈 Trendlines Guide](docs/features/TRENDLINES.md)** - Comprehensive trendline analysis with 6 mathematical curve types
-- **[📝 Annotations Guide](docs/features/ANNOTATIONS.md)** - Annotation persistence system
+- **[📖 Full Documentation](docs/readme.md)** - Complete documentation index
+- **[🎨 Theming Guide](docs/features/theming.md)** - Complete theming documentation
+- **[📈 Trendlines Guide](docs/features/trendlines.md)** - Comprehensive trendline analysis with 6 mathematical curve types
+- **[📝 Annotations Guide](docs/features/annotations.md)** - Annotation persistence system
 - **[📋 User Guides](docs/guides/)** - Screenshots and usage guides
 - **[📊 Examples](example/)** - Full-featured demo app
 - **[🔧 API Reference](https://pub.dev/documentation/braven_charts/)** - Complete API docs
@@ -22,7 +22,7 @@
 
 Beautiful, interactive charts with comprehensive theming and customization capabilities
 
-[🚀 Quick Start](#-quick-start) • [🎨 Themes](#-themes) • [📊 Examples](#-chart-types) • [📖 Documentation](docs/README.md)
+[🚀 Quick Start](#-quick-start) • [🎨 Themes](#-themes) • [📊 Examples](#-chart-types) • [📖 Documentation](docs/readme.md)
 
 </div>
 
@@ -750,18 +750,18 @@ Then open http://localhost:8000 to see all themes and features in action!
 
 ## 📚 Documentation
 
-- **[🎨 Theming Guide](docs/features/THEMING.md)** - Complete theming documentation
-- **[� Trendlines Guide](docs/features/TRENDLINES.md)** - Comprehensive trendline analysis with 6 mathematical curve types
+- **[🎨 Theming Guide](docs/features/theming.md)** - Complete theming documentation
+- **[� Trendlines Guide](docs/features/trendlines.md)** - Comprehensive trendline analysis with 6 mathematical curve types
 - **[�📊 Examples](example/)** - Full-featured demo app
 - **[🔧 API Reference](https://pub.dev/documentation/braven_charts/)** - Complete API docs
 
 ## 🤝 Contributing
 
-We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! See our [Contributing Guide](contributing.md) for details.
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [license](license) file for details.
 
 ---
 
@@ -930,19 +930,19 @@ Widget buildResponsiveChart(BuildContext context) {
 
 ## 📚 Documentation
 
-- [📖 Full Documentation](docs/README.md) - Complete documentation index
-- [🎨 Comprehensive Theming Guide](docs/features/THEMING.md) - Detailed theming documentation
-- [📈 Advanced Trendlines Guide](docs/features/TRENDLINES.md) - Mathematical curve fitting and statistical analysis
-- [📝 **NEW** Annotations System Guide](docs/features/ANNOTATIONS.md) - **v0.3.0** Composition-based annotation styling
-- [🔄 **NEW** Migration Guide](docs/guides/MIGRATION.md) - **v0.3.0** Upgrade from older annotation API
-- [⚡ **NEW** Performance Guide](docs/guides/PERFORMANCE.md) - **v0.3.0** Optimization best practices
+- [📖 Full Documentation](docs/readme.md) - Complete documentation index
+- [🎨 Comprehensive Theming Guide](docs/features/theming.md) - Detailed theming documentation
+- [📈 Advanced Trendlines Guide](docs/features/trendlines.md) - Mathematical curve fitting and statistical analysis
+- [📝 **NEW** Annotations System Guide](docs/features/annotations.md) - **v0.3.0** Composition-based annotation styling
+- [🔄 **NEW** Migration Guide](docs/guides/migration.md) - **v0.3.0** Upgrade from older annotation API
+- [⚡ **NEW** Performance Guide](docs/guides/performance.md) - **v0.3.0** Optimization best practices
 - [📋 User Guides](docs/guides/) - Screenshots and usage tutorials
 - [📊 Examples](example/) - Sample implementations and use cases
 - [🔧 API Reference](https://pub.dev/documentation/braven_charts/latest/) - Complete API documentation
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](contributing.md) for details.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)

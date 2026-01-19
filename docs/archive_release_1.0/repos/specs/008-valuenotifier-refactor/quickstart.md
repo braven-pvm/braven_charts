@@ -698,7 +698,7 @@ A: Follow same pattern: Create in initState(), dispose in dispose(), use ValueLi
 ## Additional Resources
 
 **Documentation**:
-- [ARCHITECTURE_REFACTOR_PLAN.md](../../../ARCHITECTURE_REFACTOR_PLAN.md) - Full technical analysis
+- [architecture_refactor_plan.md](../../../architecture_refactor_plan.md) - Full technical analysis
 - [spec.md](../spec.md) - Feature specification with requirements
 - [research.md](../research.md) - Research findings and decisions
 - [data-model.md](../data-model.md) - Data structures and flow

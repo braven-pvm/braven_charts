@@ -200,9 +200,9 @@ Before EVERY terminal command:
 
 See comprehensive guides:
 
-- `.github/TERMINAL_WORKFLOW_GUIDELINES.md` - Full workflow documentation
-- `.github/TERMINAL_QUICK_REFERENCE.md` - Quick reference card
-- `.github/SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` - System prompt additions
+- `.github/terminal_workflow_guidelines.md` - Full workflow documentation
+- `.github/terminal_quick_reference.md` - Quick reference card
+- `.github/system_prompt_terminal_management.md` - System prompt additions
 
 ---
 

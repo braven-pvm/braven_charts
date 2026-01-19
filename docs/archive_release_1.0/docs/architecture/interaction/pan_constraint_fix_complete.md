@@ -25,7 +25,7 @@
 - ✅ **Identified** Y-axis coordinate inversion issue causing chart to disappear
 - ✅ **Fixed** constraint calculation to match `ChartTransform.pan()` inversion logic
 - ✅ **Tested** and verified Y-axis now works identically to X-axis
-- ✅ **Documented** bug analysis and fix in PAN_CONSTRAINT_Y_AXIS_FIX.md
+- ✅ **Documented** bug analysis and fix in pan_constraint_y_axis_fix.md
 
 ---
 
@@ -122,7 +122,7 @@ This confirms:
 ### Full Test Plan
 
 Comprehensive testing guide available in:
-`docs/architecture/interaction/PAN_CONSTRAINT_FIX_VERIFICATION.md`
+`docs/architecture/interaction/pan_constraint_fix_verification.md`
 
 **Includes**:
 - ✅ Step-by-step test procedures for all zoom levels
@@ -137,27 +137,27 @@ Comprehensive testing guide available in:
 ## Documentation Created
 
 ### Analysis Documents (From Earlier)
-1. **PAN_CONSTRAINT_ANALYSIS.md** (~1000 lines)
+1. **pan_constraint_analysis.md** (~1000 lines)
    - Deep technical analysis of the problem
    - Identified 4 fundamental conceptual errors
    - Mathematical validation with examples
 
-2. **PAN_CONSTRAINT_SOLUTION_ALGORITHM.md** (~600 lines)
+2. **pan_constraint_solution_algorithm.md** (~600 lines)
    - Step-by-step algorithm explanation
    - Comparison: old vs new approach
    - Implementation guide
 
-3. **PAN_CONSTRAINT_EXECUTIVE_SUMMARY.md**
+3. **pan_constraint_executive_summary.md**
    - Quick overview for stakeholders
    - Problem and solution summary
 
 ### Integration & Testing (Just Created)
-4. **PAN_CONSTRAINT_INTEGRATION_ANALYSIS.md**
+4. **pan_constraint_integration_analysis.md**
    - Proves fix integrates seamlessly
    - No architectural changes required
    - Drop-in replacement confirmation
 
-5. **PAN_CONSTRAINT_FIX_VERIFICATION.md** (THIS IS YOUR TESTING GUIDE)
+5. **pan_constraint_fix_verification.md** (THIS IS YOUR TESTING GUIDE)
    - Complete manual testing procedures
    - Expected results at each zoom level
    - Debug output interpretation
@@ -219,11 +219,11 @@ Let me know:
 - `refactor/interaction/lib/rendering/chart_render_box.dart` (lines 308-375)
 
 ### Documentation Created
-- `docs/architecture/interaction/PAN_CONSTRAINT_ANALYSIS.md`
-- `docs/architecture/interaction/PAN_CONSTRAINT_SOLUTION_ALGORITHM.md`
-- `docs/architecture/interaction/PAN_CONSTRAINT_EXECUTIVE_SUMMARY.md`
-- `docs/architecture/interaction/PAN_CONSTRAINT_INTEGRATION_ANALYSIS.md`
-- `docs/architecture/interaction/PAN_CONSTRAINT_FIX_VERIFICATION.md`
+- `docs/architecture/interaction/pan_constraint_analysis.md`
+- `docs/architecture/interaction/pan_constraint_solution_algorithm.md`
+- `docs/architecture/interaction/pan_constraint_executive_summary.md`
+- `docs/architecture/interaction/pan_constraint_integration_analysis.md`
+- `docs/architecture/interaction/pan_constraint_fix_verification.md`
 
 ### App Status
 - **Running on**: Chrome at http://127.0.0.1:54838
@@ -231,7 +231,7 @@ Let me know:
 - **Console**: Shows "📸 Original transform captured"
 
 ### Testing Guide
-- **Location**: `docs/architecture/interaction/PAN_CONSTRAINT_FIX_VERIFICATION.md`
+- **Location**: `docs/architecture/interaction/pan_constraint_fix_verification.md`
 - **Critical Test**: Pan at 2x zoom (old code failed here)
 
 ---

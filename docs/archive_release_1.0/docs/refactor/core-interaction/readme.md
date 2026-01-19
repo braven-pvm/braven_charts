@@ -19,12 +19,12 @@ Read these documents in the following order for complete understanding:
 
 | # | Document | Lines | Time | Purpose | Status |
 |---|----------|-------|------|---------|--------|
-| 1 | **[02-EXECUTIVE_SUMMARY.md](02-EXECUTIVE_SUMMARY.md)** | 436 | 15 min | Executive overview, "swap the engine" strategy | ✅ Complete |
-| 2 | **[01-TECHNICAL_ANALYSIS.md](01-TECHNICAL_ANALYSIS.md)** | 932 | 30 min | Complete technical deep-dive, architecture comparison | ✅ Complete |
-| 3 | **[03-PHASE_1_IMPLEMENTATION_PLAN.md](03-PHASE_1_IMPLEMENTATION_PLAN.md)** ⭐ | 1,148 | 45 min | **CRITICAL** - Zero-ambiguity implementation plan | ✅ Complete |
-| 4 | **[04-QUICK_REFERENCE.md](04-QUICK_REFERENCE.md)** | 602 | Quick Ref | Quick reference during implementation | ✅ Complete |
-| 5 | **[05-IMPLEMENTATION_CHECKLIST.md](05-IMPLEMENTATION_CHECKLIST.md)** ✅ | 657 | Ongoing | Print and check off tasks during implementation | ✅ Complete |
-| 6 | **[06-PHASE_2_3_PLANS.md](06-PHASE_2_3_PLANS.md)** | 164 | 5 min | Future phases overview (detailed plans TBD) | 📋 Placeholder |
+| 1 | **[02-executive_summary.md](02-executive_summary.md)** | 436 | 15 min | Executive overview, "swap the engine" strategy | ✅ Complete |
+| 2 | **[01-technical_analysis.md](01-technical_analysis.md)** | 932 | 30 min | Complete technical deep-dive, architecture comparison | ✅ Complete |
+| 3 | **[03-phase_1_implementation_plan.md](03-phase_1_implementation_plan.md)** ⭐ | 1,148 | 45 min | **CRITICAL** - Zero-ambiguity implementation plan | ✅ Complete |
+| 4 | **[04-quick_reference.md](04-quick_reference.md)** | 602 | Quick Ref | Quick reference during implementation | ✅ Complete |
+| 5 | **[05-implementation_checklist.md](05-implementation_checklist.md)** ✅ | 657 | Ongoing | Print and check off tasks during implementation | ✅ Complete |
+| 6 | **[06-phase_2_3_plans.md](06-phase_2_3_plans.md)** | 164 | 5 min | Future phases overview (detailed plans TBD) | 📋 Placeholder |
 
 **Total**: 4,630 lines of comprehensive, zero-ambiguity documentation
 
@@ -33,14 +33,14 @@ Read these documents in the following order for complete understanding:
 ## 🎯 Quick Start
 
 ### For First-Time Readers
-1. Read **02-EXECUTIVE_SUMMARY.md** (15 minutes) - Understand the "what" and "why"
-2. Read **01-TECHNICAL_ANALYSIS.md** (30 minutes) - Understand the "how" and technical details
-3. Read **03-PHASE_1_IMPLEMENTATION_PLAN.md** (45 minutes) - Understand exact implementation steps
+1. Read **02-executive_summary.md** (15 minutes) - Understand the "what" and "why"
+2. Read **01-technical_analysis.md** (30 minutes) - Understand the "how" and technical details
+3. Read **03-phase_1_implementation_plan.md** (45 minutes) - Understand exact implementation steps
 
 ### For Implementation
-1. **Print** [05-IMPLEMENTATION_CHECKLIST.md](05-IMPLEMENTATION_CHECKLIST.md) (physical copy recommended)
-2. **Read completely** [03-PHASE_1_IMPLEMENTATION_PLAN.md](03-PHASE_1_IMPLEMENTATION_PLAN.md) before coding
-3. **Use during coding** [04-QUICK_REFERENCE.md](04-QUICK_REFERENCE.md) as quick reference
+1. **Print** [05-implementation_checklist.md](05-implementation_checklist.md) (physical copy recommended)
+2. **Read completely** [03-phase_1_implementation_plan.md](03-phase_1_implementation_plan.md) before coding
+3. **Use during coding** [04-quick_reference.md](04-quick_reference.md) as quick reference
 4. **Check off tasks** on printed checklist as you complete them
 5. **Commit at each commit point** (6 commit points throughout Phase 1)
 
@@ -48,7 +48,7 @@ Read these documents in the following order for complete understanding:
 
 ## 📖 Document Descriptions
 
-### 01-TECHNICAL_ANALYSIS.md (Deep-Dive Analysis)
+### 01-technical_analysis.md (Deep-Dive Analysis)
 **Complete technical analysis of the refactor project.**
 
 **Contents**:
@@ -74,7 +74,7 @@ Read these documents in the following order for complete understanding:
 
 ---
 
-### 02-SUMMARY.md (Executive Summary)
+### 02-executive_summary.md (Executive Summary)
 **High-level overview for quick review.**
 
 **Contents**:
@@ -95,7 +95,7 @@ Read these documents in the following order for complete understanding:
 
 ---
 
-### 03-PHASE_1_DETAILED_PLAN.md ⭐ (PRIMARY IMPLEMENTATION GUIDE)
+### 03-phase_1_implementation_plan.md ⭐ (PRIMARY IMPLEMENTATION GUIDE)
 **Comprehensive, zero-ambiguity implementation plan for Phase 1.**
 
 **THIS IS THE AUTHORITATIVE IMPLEMENTATION DOCUMENT.**
@@ -135,10 +135,10 @@ Read these documents in the following order for complete understanding:
 
 ---
 
-### 04-PHASE_1_QUICK_GUIDE.md (Quick Reference)
+### 04-quick_reference.md (Quick Reference)
 **Quick-reference guide for use DURING implementation.**
 
-**⚠️ IMPORTANT**: This is a QUICK REFERENCE only. For complete instructions, use 03-PHASE_1_DETAILED_PLAN.md.
+**⚠️ IMPORTANT**: This is a QUICK REFERENCE only. For complete instructions, use 03-phase_1_implementation_plan.md.
 
 **Contents**:
 - High-level task breakdown (7 major parts)
@@ -155,7 +155,7 @@ Read these documents in the following order for complete understanding:
 
 ---
 
-### 05-PHASE_1_CHECKLIST.md ✅ (Master Implementation Checklist)
+### 05-implementation_checklist.md ✅ (Master Implementation Checklist)
 **Print-friendly comprehensive task tracking checklist.**
 
 **RECOMMENDATION**: Print this document and check off items physically as you complete them.
@@ -201,7 +201,7 @@ Read these documents in the following order for complete understanding:
 
 ---
 
-### 06-PHASE_2_3_PLANS.md (Future Phases Overview)
+### 06-phase_2_3_plans.md (Future Phases Overview)
 **High-level overview of Phase 2 and Phase 3 (detailed plans TBD).**
 
 **Contents**:
@@ -238,12 +238,12 @@ Read these documents in the following order for complete understanding:
 **Workflow**:
 ```
 1. Read all documentation (90 minutes total)
-   ├─ 02-SUMMARY.md (15 min)
-   ├─ 01-ANALYSIS.md (30 min)
-   └─ 03-PHASE_1_DETAILED_PLAN.md (45 min)
+  ├─ 02-executive_summary.md (15 min)
+  ├─ 01-technical_analysis.md (30 min)
+  └─ 03-phase_1_implementation_plan.md (45 min)
 
 2. Print checklist
-   └─ 05-PHASE_1_CHECKLIST.md (physical copy)
+  └─ 05-implementation_checklist.md (physical copy)
 
 3. Setup environment
    ├─ Verify Flutter/Dart versions
@@ -282,7 +282,7 @@ Read these documents in the following order for complete understanding:
    └─ git tag -a "v2.0-phase1-complete"
 
 7. Phase 1 Sign-Off
-   └─ Update 05-PHASE_1_CHECKLIST.md with completion details
+  └─ Update 05-implementation_checklist.md with completion details
 ```
 
 **DO NOT proceed to Phase 2 until ALL success criteria pass.**
@@ -378,13 +378,13 @@ c8a00de (origin/interaction-refactor, interaction-refactor) feat: Dynamic axes
 
 ```
 docs/refactor/core-interaction/
-├── README.md                          # This file (navigation guide)
-├── 01-ANALYSIS.md                     # Technical deep-dive (932 lines)
-├── 02-SUMMARY.md                      # Executive overview (436 lines)
-├── 03-PHASE_1_DETAILED_PLAN.md        # ⭐ Zero-ambiguity implementation (1,148 lines)
-├── 04-PHASE_1_QUICK_GUIDE.md          # Quick reference (602 lines)
-├── 05-PHASE_1_CHECKLIST.md            # ✅ Master checklist (657 lines)
-└── 06-PHASE_2_3_PLANS.md              # Future phases overview (164 lines)
+├── readme.md                          # This file (navigation guide)
+├── 01-technical_analysis.md           # Technical deep-dive (932 lines)
+├── 02-executive_summary.md            # Executive overview (436 lines)
+├── 03-phase_1_implementation_plan.md  # ⭐ Zero-ambiguity implementation (1,148 lines)
+├── 04-quick_reference.md              # Quick reference (602 lines)
+├── 05-implementation_checklist.md     # ✅ Master checklist (657 lines)
+└── 06-phase_2_3_plans.md              # Future phases overview (164 lines)
 ```
 
 **Total**: 4,639 lines (including this README)
@@ -394,16 +394,16 @@ docs/refactor/core-interaction/
 ## 🔖 Quick Links
 
 ### Primary Documents (Read First)
-- [Executive Summary](02-SUMMARY.md) - Start here (15 min)
-- [Technical Analysis](01-ANALYSIS.md) - Deep dive (30 min)
-- [Phase 1 Detailed Plan](03-PHASE_1_DETAILED_PLAN.md) - ⭐ Implementation guide (45 min)
+- [Executive Summary](02-executive_summary.md) - Start here (15 min)
+- [Technical Analysis](01-technical_analysis.md) - Deep dive (30 min)
+- [Phase 1 Detailed Plan](03-phase_1_implementation_plan.md) - ⭐ Implementation guide (45 min)
 
 ### Implementation Tools
-- [Quick Reference Guide](04-PHASE_1_QUICK_GUIDE.md) - Use during coding
-- [Master Checklist](05-PHASE_1_CHECKLIST.md) - ✅ Print and check off
+- [Quick Reference Guide](04-quick_reference.md) - Use during coding
+- [Master Checklist](05-implementation_checklist.md) - ✅ Print and check off
 
 ### Future Planning
-- [Phase 2 & 3 Overview](06-PHASE_2_3_PLANS.md) - What's next
+- [Phase 2 & 3 Overview](06-phase_2_3_plans.md) - What's next
 
 ---
 

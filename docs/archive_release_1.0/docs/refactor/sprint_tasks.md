@@ -315,9 +315,9 @@
 
 ## 🔗 Related Documents
 
-- **Implementation Status**: [CURRENT_STATUS.md](./CURRENT_STATUS.md) - What's currently implemented
-- **Merge Strategy**: [07-INCREMENTAL_MERGE_STRATEGY.md](./core-interaction/07-INCREMENTAL_MERGE_STRATEGY.md) - Overall plan and progress
-- **Project README**: [README.md](./README.md) - Refactor documentation overview
+- **Implementation Status**: [current_status.md](./current_status.md) - What's currently implemented
+- **Merge Strategy**: [07-incremental_merge_strategy.md](./core-interaction/07-incremental_merge_strategy.md) - Overall plan and progress
+- **Project README**: [readme.md](./readme.md) - Refactor documentation overview
 
 ---
 

@@ -111,8 +111,8 @@ flutter run
 Supports: Android, iOS, Web, Windows, macOS, Linux
 
 ### Documentation
-- `example/README.md` - Overview and features
-- `example/INTEGRATION_TESTING.md` - Detailed integration guide
+- `example/readme.md` - Overview and features
+- `example/integration_testing.md` - Detailed integration guide
 
 ---
 
@@ -256,7 +256,7 @@ Visual regression tests for UI consistency.
 - ✅ T066: Barrel file (lib/src/charts/charts.dart) - COMPLETE
 - ❌ T067: DartDoc comments - PENDING
 - ❌ T068: Algorithm explanations - PENDING
-- ❌ T069: README.md update - PENDING
+- ❌ T069: readme.md update - PENDING
 - ❌ T070: Usage guide (docs/guides/chart-types.md) - PENDING
 - ✅ T071: Code cleanup - COMPLETE
 - ❌ T072: Final validation - AWAITING INTEGRATION
@@ -423,8 +423,8 @@ example/
 ├── android/                           # Android platform config
 ├── ios/                              # iOS platform config
 ├── pubspec.yaml                      # Dependencies (local path to parent)
-├── README.md                         # App overview
-└── INTEGRATION_TESTING.md            # Integration guide
+├── readme.md                         # App overview
+└── integration_testing.md            # Integration guide
 ```
 
 ---

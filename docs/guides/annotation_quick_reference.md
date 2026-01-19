@@ -253,6 +253,6 @@ test('annotation persistence', () {
 
 ## See Also
 
-- [Full Persistence Guide](./ANNOTATION_PERSISTENCE_GUIDE.md)
-- [Annotation Types Guide](./ANNOTATION_TYPES_GUIDE.md)
+- [Full Persistence Guide](./annotation_persistence_guide.md)
+- [Annotation Types Guide](./annotation_types_guide.md)
 - [API Reference](../../lib/src_plus/controllers/annotation_controller.dart)

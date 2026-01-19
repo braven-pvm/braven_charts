@@ -383,7 +383,7 @@ By contributing, you agree that your contributions will be licensed under the MI
 Contributors are recognized in:
 
 - Release notes
-- CHANGELOG.md
+- changelog.md
 - Project documentation
 
 Thank you for making Braven Charts better! 🎉

@@ -218,7 +218,7 @@ The Theming System specification defines comprehensive visual control over all c
 ## 📚 References
 
 - **Specification**: `docs/specs/003-theming-system/spec.md`
-- **Architecture**: `docs/architecture/features/THEMING_SYSTEM.md`
+- **Architecture**: `docs/architecture/features/theming_system.md`
 - **WCAG Guidelines**: https://www.w3.org/WAI/WCAG21/quickref/
 - **Material Design 3**: https://m3.material.io/styles/color/overview
 - **Flutter Theming**: https://docs.flutter.dev/cookbook/design/themes

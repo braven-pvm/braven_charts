@@ -499,7 +499,7 @@ Tasks T010-T037
 - `specs/008-valuenotifier-refactor/quickstart.md` - Developer guide with patterns and debugging tips
 
 **Root Cause Analysis**:
-- `ARCHITECTURE_REFACTOR_PLAN.md` - Original crisis analysis and solution architecture
+- `architecture_refactor_plan.md` - Original crisis analysis and solution architecture
 
 **Governance**:
 - `docs/memory/constitution.md` - Constitution v1.1.0 with Performance First principle

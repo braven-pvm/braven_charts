@@ -62,7 +62,7 @@ Rightmost:   ████████████████ [viewport]
 
 ## Documents Created
 
-### 1. PAN_CONSTRAINT_ANALYSIS.md (Deep Dive)
+### 1. pan_constraint_analysis.md (Deep Dive)
 **Purpose**: Complete technical analysis of the problem  
 **Length**: ~1000 lines with examples, diagrams, and test cases  
 **Contents**:
@@ -72,7 +72,7 @@ Rightmost:   ████████████████ [viewport]
 - Visual examples of wrong vs. right approach
 - Why users experience "broken panning"
 
-### 2. PAN_CONSTRAINT_SOLUTION_ALGORITHM.md (Implementation Guide)
+### 2. pan_constraint_solution_algorithm.md (Implementation Guide)
 **Purpose**: Step-by-step implementation algorithm  
 **Length**: ~600 lines with pseudocode and examples  
 **Contents**:
@@ -247,7 +247,7 @@ After implementing the fix:
 ## Next Actions
 
 ### Immediate (This Week)
-1. ✅ Review analysis documents (PAN_CONSTRAINT_ANALYSIS.md + SOLUTION_ALGORITHM.md)
+1. ✅ Review analysis documents (pan_constraint_analysis.md + pan_constraint_solution_algorithm.md)
 2. ⏸️ Team sign-off on approach
 3. ⏸️ Implement new algorithm
 4. ⏸️ Write tests
@@ -283,8 +283,8 @@ After implementing the fix:
 
 ## Questions?
 
-**Technical Details**: See `PAN_CONSTRAINT_ANALYSIS.md` (deep dive)  
-**Implementation**: See `PAN_CONSTRAINT_SOLUTION_ALGORITHM.md` (step-by-step)  
+**Technical Details**: See `pan_constraint_analysis.md` (deep dive)  
+**Implementation**: See `pan_constraint_solution_algorithm.md` (step-by-step)  
 **Both Documents**: `docs/architecture/interaction/`
 
 ---

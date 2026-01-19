@@ -124,10 +124,10 @@ await WebTestUtils.waitForLoadingComplete(tester);
 
 ## 📚 Documentation
 
-- **TESTING.md** - Complete testing framework guide (614 lines)
-- **TESTING_WEB.md** - Web-specific testing guide (614 lines)
-- **CHROMEDRIVER_SETUP.md** - ChromeDriver configuration & troubleshooting
-- **WEB_TESTING_QUICK_START.md** - This file
+- **testing.md** - Complete testing framework guide (614 lines)
+- **testing_web.md** - Web-specific testing guide (614 lines)
+- **chromedriver_setup.md** - ChromeDriver configuration & troubleshooting
+- **web_testing_quick_start.md** - This file
 
 ## 🔧 Troubleshooting
 

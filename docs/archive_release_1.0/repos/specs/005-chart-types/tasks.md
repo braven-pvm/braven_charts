@@ -499,8 +499,8 @@
   - ✅ Clustering algorithm (scatter_clusterer.dart) - distance-based grouping
   - ✅ All critical algorithms have inline comments and DartDoc explanations
 
-- [x] **T069** [P] Update main README.md with chart types examples ✅ 2025-01-06
-  - ✅ Added "Chart Types" section to README.md
+- [x] **T069** [P] Update main readme.md with chart types examples ✅ 2025-01-06
+  - ✅ Added "Chart Types" section to readme.md
   - ✅ Included code snippets for all 4 chart types (Line, Area, Bar, Scatter)
   - ✅ Linked to quickstart.md (10 examples)
   - ✅ Updated "Development Status" with Chart Types completion (66/72 tasks)
@@ -543,7 +543,7 @@
   - ✅ Documentation complete:
     - DartDoc comments: 100+ doc comments across all public APIs
     - Algorithm explanations: Inline comments in all utility classes
-    - README.md: Chart Types section with examples
+    - readme.md: Chart Types section with examples
     - Usage guide: 600+ line comprehensive guide (docs/guides/chart-types.md)
     - Quickstart examples: 10 examples in specs/005-chart-types/quickstart.md
   - ✅ No linter warnings or errors (flutter analyze: No issues found!)

@@ -21,7 +21,7 @@ Attempted to fix annotation handle mouse event issues by moving the annotation o
 
 ## What We Attempted
 
-### Original Plan (From ANNOTATION_HANDLE_REFACTOR_PLAN.md)
+### Original Plan (From annotation_handle_refactor_plan.md)
 
 **Theory**: Move annotation overlay from INSIDE interaction system to SIBLING layer so it receives events FIRST.
 

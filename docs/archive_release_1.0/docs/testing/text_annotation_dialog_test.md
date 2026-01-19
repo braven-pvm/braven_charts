@@ -425,7 +425,7 @@ After successful testing:
    ```bash
    git push origin core-interaction-refactor
    ```
-5. **Update progress docs** (e.g., DEVELOPMENT.md)
+5. **Update progress docs** (e.g., development.md)
 
 ---
 

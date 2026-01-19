@@ -780,7 +780,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
 
 **What Was Done**:
 1. Created comprehensive manual testing checklist (150+ test cases):
-   - File: `docs/refactor/core-interaction/09-SCROLLBAR_MANUAL_TESTING_CHECKLIST.md`
+  - File: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
    - Phase 1: Visual Rendering (18 tests)
    - Phase 2: Horizontal Scrollbar Interactions (24 tests)
    - Phase 3: Vertical Scrollbar Interactions (24 tests)
@@ -791,7 +791,7 @@ the dual-source-of-truth problem by having scrollbars render directly from viewp
    - Phase 8: Accessibility (12 tests)
 
 2. Created testing summary document:
-   - File: `docs/refactor/core-interaction/10-TASK_4.1_TESTING_SUMMARY.md`
+  - File: `docs/refactor/core-interaction/10-task_4.1_testing_summary.md`
    - Setup instructions for manual testing
    - Expected test results and known limitations
    - Platform and environment details
@@ -1217,16 +1217,16 @@ class ChartRenderBox extends RenderBox {
 - [ ] This plan document updated with final status
 - [ ] Code comments in place for complex logic
 - [ ] Example app demonstrates all scrollbar features
-- [ ] Integration guide updated in 07-INCREMENTAL_MERGE_STRATEGY.md
+- [ ] Integration guide updated in 07-incremental_merge_strategy.md
 
 ---
 
 ## 📚 References
 
 ### Documentation
-- **Architecture Analysis**: `docs/architecture/SCROLLBAR_ARCHITECTURE_ANALYSIS.md` (3000+ lines)
-- **Merge Strategy**: `docs/refactor/core-interaction/07-INCREMENTAL_MERGE_STRATEGY.md`
-- **Sprint Tasks**: `docs/refactor/SPRINT_TASKS.md`
+- **Architecture Analysis**: `docs/architecture/scrollbar_architecture_analysis.md` (3000+ lines)
+- **Merge Strategy**: `docs/refactor/core-interaction/07-incremental_merge_strategy.md`
+- **Sprint Tasks**: `docs/refactor/sprint_tasks.md`
 
 ### Source Files (BravenChart)
 - `lib/src/widgets/chart_scrollbar.dart` (741 lines)
@@ -1321,7 +1321,7 @@ class ChartRenderBox extends RenderBox {
 
 1. **USER ACTION REQUIRED**: Manual Testing
    - Open running example app: http://127.0.0.1:60596/AbrXCpOYB1A=
-   - Follow checklist: `docs/refactor/core-interaction/09-SCROLLBAR_MANUAL_TESTING_CHECKLIST.md`
+  - Follow checklist: `docs/refactor/core-interaction/09-scrollbar_manual_testing_checklist.md`
    - Test scrollbar interactions: hit testing, track clicks, handle drag, edge drag
    - Verify viewport synchronization across all change paths
    - Test coordinator integration: mode claiming, modal blocking, gesture prevention
@@ -1342,7 +1342,7 @@ class ChartRenderBox extends RenderBox {
 4. **Phase 4, Task 4.4** (Final Commit - 5 minutes):
    - Commit scrollbar implementation with comprehensive message
    - Tag as scrollbar-implementation-complete
-   - Update CHANGELOG.md
+  - Update changelog.md
    - Close feature branch and merge to main (if applicable)
 
 ---

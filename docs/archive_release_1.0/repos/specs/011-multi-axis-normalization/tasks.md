@@ -249,7 +249,7 @@
 - [x] T052 Run quickstart.md validation - test all code examples compile
    - ✅ Completed: Orchestrator Task 16, commit 128727b
    - Demo compiles and runs successfully
-- [x] T053 Update CHANGELOG.md with multi-axis normalization feature
+- [x] T053 Update changelog.md with multi-axis normalization feature
    - ✅ Completed: Orchestrator Task 16, commit 128727b
 
 ---

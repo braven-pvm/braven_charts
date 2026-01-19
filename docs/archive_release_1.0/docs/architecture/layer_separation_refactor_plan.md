@@ -1334,8 +1334,8 @@ class ChartRenderBox extends RenderBox {
 ### Task 5.3: Documentation
 
 **Files to update**:
-1. `CROSSHAIR_LAG_ANALYSIS.md` - Add "Implementation Complete" section
-2. `ARCHITECTURE_REFACTOR_PLAN.md` - This file, mark tasks complete
+1. `crosshair_lag_analysis.md` - Add "Implementation Complete" section
+2. `architecture_refactor_plan.md` - This file, mark tasks complete
 3. Code comments in `chart_render_box.dart`
 4. API documentation for new methods
 

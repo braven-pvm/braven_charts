@@ -699,7 +699,7 @@ When submitting a FAIL judgment, provide specific feedback:
 When you submit a FAIL judgment, the system automatically:
 
 1. **Generates feedback** - Creates feedback document with issues from `failures` array
-2. **Archives attempt** - Moves signal to `signals/signal-archive/attempt-N.md`
+2. **Archives attempt** - Moves signal to `signals/signal-archive/attempt-n.md`
 3. **Updates task state** - Task returns to IMPLEMENT phase with incremented retry count
 
 #### Tools for Managing Feedback
