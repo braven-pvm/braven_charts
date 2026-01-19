@@ -164,6 +164,7 @@ class CrosshairRenderer {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         isRangeCreationMode: isRangeCreationMode,
+        seriesElements: seriesElements,
         xAxisConfig: xAxisConfig,
       );
     }
@@ -180,12 +181,13 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required bool isRangeCreationMode,
+    required List<SeriesElement> seriesElements,
     XAxisConfig? xAxisConfig,
   }) {
     final interactionTheme = theme?.interactionTheme;
-    final crosshairColor = isRangeCreationMode
-        ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF))
-        : (interactionTheme?.crosshairColor ?? const Color(0x80666666));
+    final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
+    final crosshairColor =
+        isRangeCreationMode ? (interactionTheme?.crosshairColor ?? const Color(0xFF448AFF)) : (interactionTheme?.crosshairColor ?? axisColor);
     final crosshairWidth = isRangeCreationMode ? 1.5 : (interactionTheme?.crosshairWidth ?? 1.0);
 
     final crosshairPaint = Paint()
@@ -247,6 +249,7 @@ class CrosshairRenderer {
       transform: transform,
       theme: theme,
       multiAxisInfo: multiAxisInfo,
+      seriesElements: seriesElements,
       xAxisConfig: xAxisConfig,
     );
   }
@@ -362,6 +365,7 @@ class CrosshairRenderer {
         plotArea: plotArea,
         theme: theme,
         dataX: trackingState.dataX,
+        seriesElements: seriesElements,
         xAxisConfig: xAxisConfig,
       );
     }
@@ -425,6 +429,7 @@ class CrosshairRenderer {
     required ChartTransform transform,
     required ChartTheme? theme,
     required MultiAxisInfo multiAxisInfo,
+    required List<SeriesElement> seriesElements,
     XAxisConfig? xAxisConfig,
   }) {
     // Convert widget space cursor to data coordinates
@@ -443,8 +448,7 @@ class CrosshairRenderer {
 
     // X coordinate label - only render if axis is visible and showCrosshairLabel is true
     if (xAxisConfig?.visible != false && xAxisConfig?.showCrosshairLabel != false) {
-      // Get axis color or use default gray
-      final axisColor = xAxisConfig?.color ?? const Color(0xFF666666);
+      final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
 
       // Apply custom formatter if provided, otherwise use default formatting
       final String displayValue;
@@ -812,6 +816,7 @@ class CrosshairRenderer {
     required Rect plotArea,
     required ChartTheme? theme,
     required double dataX,
+    required List<SeriesElement> seriesElements,
     XAxisConfig? xAxisConfig,
   }) {
     // Skip if axis is not visible or showCrosshairLabel is false
@@ -825,8 +830,7 @@ class CrosshairRenderer {
     final labelPadding = labelStyle?.padding.left ?? 4.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
 
-    // Get axis color or use default gray
-    final axisColor = xAxisConfig?.color ?? const Color(0xFF666666);
+    final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
 
     // Apply custom formatter if provided, otherwise use default formatting
     final String displayValue;
@@ -934,6 +938,21 @@ class CrosshairRenderer {
       );
     }
     yTextPainter.paint(canvas, Offset(yLabelX, yLabelY));
+  }
+
+  Color _resolveXAxisColor(XAxisConfig? xAxisConfig, List<SeriesElement> seriesElements) {
+    if (xAxisConfig?.color != null) {
+      return xAxisConfig!.color!;
+    }
+
+    for (final element in seriesElements) {
+      final seriesColor = element.series.color;
+      if (seriesColor != null) {
+        return seriesColor;
+      }
+    }
+
+    return const Color(0xFF333333);
   }
 
   /// Formats data values for display.
