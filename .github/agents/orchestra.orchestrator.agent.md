@@ -22,12 +22,6 @@ tools:
 
 If your task involves building/packaging the VS Code extension (VSIX) or native module issues, treat `extension/build.md` as authoritative.
 
-## Documentation Naming Policy (MANDATORY)
-
-- **All documentation filenames must be lowercase only** (no uppercase letters).
-- Use `snake_case` for multi-word filenames.
-- If any uppercase-named doc exists, **rename it to lowercase and fix all internal links**.
-
 You are the **ORCHESTRATOR** in the Orchestra task orchestration system.
 
 ## ⚠️ FIRST ACTION: Use Your MCP Tools
@@ -355,11 +349,11 @@ When preparing a handover with `prepare_task`:
 }
 ```
 
-| Field               | Required | Description                    | Examples                                           |
-| ------------------- | -------- | ------------------------------ | -------------------------------------------------- |
-| `test_command`      | ✅       | Command to run tests           | `npm test`, `flutter test`, `pytest`, `cargo test` |
-| `test_file_pattern` | ✅       | Glob pattern for test files    | `test/**/*.test.ts`, `test/**/*_test.dart`         |
-| `source_base_dir`   | ✅       | Base directory for source code | `src`, `lib`, `extension/src`                      |
+| Field | Required | Description | Examples |
+|-------|----------|-------------|----------|
+| `test_command` | ✅ | Command to run tests | `npm test`, `flutter test`, `pytest`, `cargo test` |
+| `test_file_pattern` | ✅ | Glob pattern for test files | `test/**/*.test.ts`, `test/**/*_test.dart` |
+| `source_base_dir` | ✅ | Base directory for source code | `src`, `lib`, `extension/src` |
 
 **Why this is required:**
 
@@ -370,12 +364,12 @@ When preparing a handover with `prepare_task`:
 
 **Common configurations by language:**
 
-| Language     | test_command   | test_file_pattern     | source_base_dir |
-| ------------ | -------------- | --------------------- | --------------- |
-| TypeScript   | `npm test`     | `test/**/*.test.ts`   | `src`           |
-| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib`           |
-| Python       | `pytest`       | `tests/**/*.py`       | `src`           |
-| Rust         | `cargo test`   | `tests/**/*.rs`       | `src`           |
+| Language | test_command | test_file_pattern | source_base_dir |
+|----------|--------------|-------------------|-----------------|
+| TypeScript | `npm test` | `test/**/*.test.ts` | `src` |
+| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib` |
+| Python | `pytest` | `tests/**/*.py` | `src` |
+| Rust | `cargo test` | `tests/**/*.rs` | `src` |
 
 ### TDD Task Pattern
 
@@ -705,7 +699,7 @@ When submitting a FAIL judgment, provide specific feedback:
 When you submit a FAIL judgment, the system automatically:
 
 1. **Generates feedback** - Creates feedback document with issues from `failures` array
-2. **Archives attempt** - Moves signal to `signals/signal-archive/attempt-n.md`
+2. **Archives attempt** - Moves signal to `signals/signal-archive/attempt-N.md`
 3. **Updates task state** - Task returns to IMPLEMENT phase with incremented retry count
 
 #### Tools for Managing Feedback
@@ -1070,13 +1064,13 @@ During manual review, look for these cross-reference inconsistency patterns:
 
 The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Commands that work in bash may FAIL on Windows.
 
-| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative                               |
-| ------------------------------- | ----------------------------------------------------- |
-| `cd dir && npm test`            | Use single command: `npm test --prefix dir`           |
-| `cd dir && flutter test`        | Use working dir: PowerShell handles `cd` but not `&&` |
-| `echo "a" && echo "b"`          | Use `;` instead: `echo "a"; echo "b"`                 |
-| `grep pattern file \| wc -l`    | Use PowerShell: `(Select-String pattern file).Count`  |
-| `export VAR=val && cmd`         | Set env differently per platform                      |
+| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative |
+|--------------------------------|------------------------|
+| `cd dir && npm test` | Use single command: `npm test --prefix dir` |
+| `cd dir && flutter test` | Use working dir: PowerShell handles `cd` but not `&&` |
+| `echo "a" && echo "b"` | Use `;` instead: `echo "a"; echo "b"` |
+| `grep pattern file \| wc -l` | Use PowerShell: `(Select-String pattern file).Count` |
+| `export VAR=val && cmd` | Set env differently per platform |
 
 **Rule**: Avoid `&&` in behavioral check commands. The system will ERROR if `&&` is used.
 
@@ -1085,7 +1079,6 @@ The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Com
 **Previously**, the system tried to auto-detect project type. **Now**, you MUST specify the environment explicitly in `configure_sprint`. The system uses your declared configuration, not guesses.
 
 For TDD red-phase tasks, verification checks are generated using your `environment` settings:
-
 - `test_command` → Used in behavioral checks to run tests
 - `test_file_pattern` → Used in structural checks to find test files
 - `source_base_dir` → Used in quality checks to find source files
@@ -1096,11 +1089,11 @@ For TDD red-phase tasks, verification checks are generated using your `environme
 
 Structural checks use glob patterns to find files. Common mistakes:
 
-| ❌ WRONG                | Why                             | ✅ CORRECT                     |
-| ----------------------- | ------------------------------- | ------------------------------ |
-| `path: "src/handlers"`  | Directory, not glob             | `path: "src/handlers/*.ts"`    |
+| ❌ WRONG | Why | ✅ CORRECT |
+|----------|-----|-----------|
+| `path: "src/handlers"` | Directory, not glob | `path: "src/handlers/*.ts"` |
 | `path: "src/handlers/"` | Trailing slash, still directory | `path: "src/handlers/**/*.ts"` |
-| `path: "test"`          | Directory                       | `path: "test/**/*.test.ts"`    |
+| `path: "test"` | Directory | `path: "test/**/*.test.ts"` |
 
 **Rule**: Paths must be files or glob patterns, never directories.
 
