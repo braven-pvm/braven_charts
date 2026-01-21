@@ -163,6 +163,41 @@ When the Controller rejects your sprint config or handover, you'll see status ch
 | `resubmit_handover` | Resubmit task handover after revisions           | After fixing handover issues           |
 | `get_amendments`    | View all amendments made to tasks                | Reviewing specification change history |
 
+#### Code Review Remediation Tools
+
+| Tool                          | Purpose                                         | When to Use                                         |
+| ----------------------------- | ----------------------------------------------- | --------------------------------------------------- |
+| `reopen_task`                 | Reopen a COMPLETE task after CHANGES_REQUESTED  | Primary path to fix failed code review on same task |
+| `get_open_code_review_issues` | Get unresolved code review issues               | Before reopen to scope fixes                        |
+| `update_handover`             | Update handover to include review issues        | After reopen to re-prepare with explicit fixes      |
+| `update_verification`         | Update verification to align with review issues | After reopen so verification matches required fixes |
+
+### Handling Code Review Failures (Sprint 005)
+
+When a completed task fails Code Review (CHANGES_REQUESTED), **do NOT create a new task**. Reopen the original task and re-prepare it with the review issues.
+
+**Workflow:**
+
+1. **Detect Failure**: Check `get_latest_code_review` or `get_code_review_summary`.
+2. **Analyze Issues**: Call `get_open_code_review_issues` to see EXACTLY what is wrong.
+3. **Reopen Task**: Call `reopen_task` with a clear reason referencing the review.
+4. **Re-Prepare**:
+
+- Use `update_handover` to include the review issues in acceptance criteria and context.
+- Use `update_verification` to align checks with the required fixes.
+
+5. **Implementor Fixes**: Implementor sees the reopened task in `get_current_task` and applies fixes.
+
+**Example: Reopen + Reprepare**
+
+```json
+// Reopen the task due to review failures
+{
+  "task_id": 4,
+  "reason": "Code review CHANGES_REQUESTED: wiring + navigation + tests"
+}
+```
+
 **Example: Resubmitting After Rejection**
 
 ```json
@@ -244,6 +279,15 @@ When the Controller rejects your sprint config or handover, you'll see status ch
 | ------------------ | ----------------------- | ---------------------- |
 | `set_config`       | Set configuration value | Adjusting settings     |
 | `get_task_history` | Get task audit trail    | Reviewing task history |
+
+### Code Review Visibility
+
+| Tool                          | Purpose                               | When to Use                                |
+| ----------------------------- | ------------------------------------- | ------------------------------------------ |
+| `get_latest_code_review`      | Get most recent review for a task     | Checking why a task failed review          |
+| `get_open_code_review_issues` | Get unresolved issues for sprint/task | **CRITICAL**: Use this to define fix tasks |
+| `get_code_review_history`     | Get review history for a task         | Analyzing past failure patterns            |
+| `get_code_review_summary`     | Get sprint-level code review summary  | Dashboard overview                         |
 
 ## Workflow: Task Lifecycle
 
@@ -349,11 +393,11 @@ When preparing a handover with `prepare_task`:
 }
 ```
 
-| Field | Required | Description | Examples |
-|-------|----------|-------------|----------|
-| `test_command` | ✅ | Command to run tests | `npm test`, `flutter test`, `pytest`, `cargo test` |
-| `test_file_pattern` | ✅ | Glob pattern for test files | `test/**/*.test.ts`, `test/**/*_test.dart` |
-| `source_base_dir` | ✅ | Base directory for source code | `src`, `lib`, `extension/src` |
+| Field               | Required | Description                    | Examples                                           |
+| ------------------- | -------- | ------------------------------ | -------------------------------------------------- |
+| `test_command`      | ✅       | Command to run tests           | `npm test`, `flutter test`, `pytest`, `cargo test` |
+| `test_file_pattern` | ✅       | Glob pattern for test files    | `test/**/*.test.ts`, `test/**/*_test.dart`         |
+| `source_base_dir`   | ✅       | Base directory for source code | `src`, `lib`, `extension/src`                      |
 
 **Why this is required:**
 
@@ -364,12 +408,12 @@ When preparing a handover with `prepare_task`:
 
 **Common configurations by language:**
 
-| Language | test_command | test_file_pattern | source_base_dir |
-|----------|--------------|-------------------|-----------------|
-| TypeScript | `npm test` | `test/**/*.test.ts` | `src` |
-| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib` |
-| Python | `pytest` | `tests/**/*.py` | `src` |
-| Rust | `cargo test` | `tests/**/*.rs` | `src` |
+| Language     | test_command   | test_file_pattern     | source_base_dir |
+| ------------ | -------------- | --------------------- | --------------- |
+| TypeScript   | `npm test`     | `test/**/*.test.ts`   | `src`           |
+| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib`           |
+| Python       | `pytest`       | `tests/**/*.py`       | `src`           |
+| Rust         | `cargo test`   | `tests/**/*.rs`       | `src`           |
 
 ### TDD Task Pattern
 
@@ -1064,13 +1108,13 @@ During manual review, look for these cross-reference inconsistency patterns:
 
 The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Commands that work in bash may FAIL on Windows.
 
-| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative |
-|--------------------------------|------------------------|
-| `cd dir && npm test` | Use single command: `npm test --prefix dir` |
-| `cd dir && flutter test` | Use working dir: PowerShell handles `cd` but not `&&` |
-| `echo "a" && echo "b"` | Use `;` instead: `echo "a"; echo "b"` |
-| `grep pattern file \| wc -l` | Use PowerShell: `(Select-String pattern file).Count` |
-| `export VAR=val && cmd` | Set env differently per platform |
+| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative                               |
+| ------------------------------- | ----------------------------------------------------- |
+| `cd dir && npm test`            | Use single command: `npm test --prefix dir`           |
+| `cd dir && flutter test`        | Use working dir: PowerShell handles `cd` but not `&&` |
+| `echo "a" && echo "b"`          | Use `;` instead: `echo "a"; echo "b"`                 |
+| `grep pattern file \| wc -l`    | Use PowerShell: `(Select-String pattern file).Count`  |
+| `export VAR=val && cmd`         | Set env differently per platform                      |
 
 **Rule**: Avoid `&&` in behavioral check commands. The system will ERROR if `&&` is used.
 
@@ -1079,6 +1123,7 @@ The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Com
 **Previously**, the system tried to auto-detect project type. **Now**, you MUST specify the environment explicitly in `configure_sprint`. The system uses your declared configuration, not guesses.
 
 For TDD red-phase tasks, verification checks are generated using your `environment` settings:
+
 - `test_command` → Used in behavioral checks to run tests
 - `test_file_pattern` → Used in structural checks to find test files
 - `source_base_dir` → Used in quality checks to find source files
@@ -1089,11 +1134,11 @@ For TDD red-phase tasks, verification checks are generated using your `environme
 
 Structural checks use glob patterns to find files. Common mistakes:
 
-| ❌ WRONG | Why | ✅ CORRECT |
-|----------|-----|-----------|
-| `path: "src/handlers"` | Directory, not glob | `path: "src/handlers/*.ts"` |
+| ❌ WRONG                | Why                             | ✅ CORRECT                     |
+| ----------------------- | ------------------------------- | ------------------------------ |
+| `path: "src/handlers"`  | Directory, not glob             | `path: "src/handlers/*.ts"`    |
 | `path: "src/handlers/"` | Trailing slash, still directory | `path: "src/handlers/**/*.ts"` |
-| `path: "test"` | Directory | `path: "test/**/*.test.ts"` |
+| `path: "test"`          | Directory                       | `path: "test/**/*.test.ts"`    |
 
 **Rule**: Paths must be files or glob patterns, never directories.
 
