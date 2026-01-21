@@ -34,10 +34,14 @@ class _GalleryPageState extends State<GalleryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Chart Gallery', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('Chart Gallery',
+                        style: theme.textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text("Multitude of chart configurations", style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
+                      child: Text("Multitude of chart configurations",
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: theme.hintColor)),
                     ),
                   ],
                 ),
@@ -48,7 +52,8 @@ class _GalleryPageState extends State<GalleryPage> {
               padding: const EdgeInsets.all(16),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 750, // Increased from 500 for bigger charts (3 per row on wide screens)
+                  maxCrossAxisExtent:
+                      750, // Increased from 500 for bigger charts (3 per row on wide screens)
                   childAspectRatio: 1.2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
@@ -56,10 +61,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 delegate: SliverChildListDelegate([
                   _buildMonthlyRevenueChart(isDark),
                   _buildTemperatureTrendChart(isDark),
-                  _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
-                  _buildNormalizedCrosshairChart(isDark), // Multi-axis normalized with crosshair tracking
+                  _buildMixedSeriesTypeChart(
+                      isDark), // Line + Area on same chart
+                  _buildNormalizedCrosshairChart(
+                      isDark), // Multi-axis normalized with crosshair tracking
                   _buildAnnotatedChart(isDark), // Chart with annotations
-                  _buildMixedInterpolationChart(isDark), // Multiple interpolation types on one chart
+                  _buildMixedInterpolationChart(
+                      isDark), // Multiple interpolation types on one chart
                   _buildStockPriceChart(isDark),
                   _buildSalesComparisonChart(isDark),
                   _buildHeartRateChart(isDark),
@@ -69,14 +77,18 @@ class _GalleryPageState extends State<GalleryPage> {
                   _buildCpuUsageChart(isDark), // Real-time CPU monitoring
                   // Segment Colors Showcases - Lines
                   _buildThresholdColoringChart(isDark), // Color by Y threshold
-                  _buildGradientSegmentsChart(isDark), // Rainbow gradient segments
+                  _buildGradientSegmentsChart(
+                      isDark), // Rainbow gradient segments
                   _buildStockGainLossChart(isDark), // Green/red for gain/loss
                   // Segment Colors Showcases - Areas
-                  _buildTemperatureZonesAreaChart(isDark), // Area with hot/cold zones
-                  _buildProfitLossAreaChart(isDark), // Area with profit/loss coloring
+                  _buildTemperatureZonesAreaChart(
+                      isDark), // Area with hot/cold zones
+                  _buildProfitLossAreaChart(
+                      isDark), // Area with profit/loss coloring
                   // Multi-Series Mixed Charts
                   _buildMultiLayerAnalyticsChart(isDark), // 3 areas + 2 lines
-                  _buildNetworkTrafficChart(isDark), // Upload/download areas + latency line
+                  _buildNetworkTrafficChart(
+                      isDark), // Upload/download areas + latency line
                   _buildFinancialDashboardChart(isDark), // Multiple indicators
                 ]),
               ),
@@ -94,7 +106,8 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Monthly Revenue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Monthly Revenue',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -128,7 +141,8 @@ class _GalleryPageState extends State<GalleryPage> {
                     dashPattern: const [6, 3],
                   ),
                 ],
-                theme: ChartTheme.light.copyWith(backgroundColor: const Color(0xFFE8F5E9)),
+                theme: ChartTheme.light
+                    .copyWith(backgroundColor: const Color(0xFFE8F5E9)),
                 showLegend: true,
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(enabled: true),
@@ -158,11 +172,16 @@ class _GalleryPageState extends State<GalleryPage> {
           children: [
             Row(
               children: [
-                const Text('Temperature Trend', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Temperature Trend',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFFFFE0B2), borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFE0B2),
+                      borderRadius: BorderRadius.circular(12)),
                   child: const Text('°C', style: TextStyle(fontSize: 12)),
                 ),
               ],
@@ -214,7 +233,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
                 normalizationMode: NormalizationMode.perSeries,
-                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle:
+                    const LegendStyle(orientation: LegendOrientation.vertical),
                 xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
@@ -247,15 +267,24 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 const Text(
                   'Stock Price',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFF2E7D32), borderRadius: BorderRadius.circular(4)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32),
+                      borderRadius: BorderRadius.circular(4)),
                   child: const Text(
                     '+12.5%',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -289,7 +318,11 @@ class _GalleryPageState extends State<GalleryPage> {
                 xAxisConfig: const XAxisConfig(showAxisLine: false),
                 yAxis: YAxisConfig(position: YAxisPosition.left),
                 interactionConfig: const InteractionConfig(
-                  crosshair: CrosshairConfig(enabled: true, mode: CrosshairMode.both, snapToDataPoint: true, showCoordinateLabels: true),
+                  crosshair: CrosshairConfig(
+                      enabled: true,
+                      mode: CrosshairMode.both,
+                      snapToDataPoint: true,
+                      showCoordinateLabels: true),
                 ),
               ),
             ),
@@ -306,7 +339,8 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Q4 Sales Comparison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Q4 Sales Comparison',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -314,7 +348,11 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'product-a',
                     name: 'Product A',
-                    points: [ChartDataPoint(x: 10, y: 85), ChartDataPoint(x: 11, y: 92), ChartDataPoint(x: 12, y: 98)],
+                    points: [
+                      ChartDataPoint(x: 10, y: 85),
+                      ChartDataPoint(x: 11, y: 92),
+                      ChartDataPoint(x: 12, y: 98)
+                    ],
                     color: Colors.purple,
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 4.0,
@@ -324,7 +362,11 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'product-b',
                     name: 'Product B',
-                    points: [ChartDataPoint(x: 10, y: 70), ChartDataPoint(x: 11, y: 75), ChartDataPoint(x: 12, y: 82)],
+                    points: [
+                      ChartDataPoint(x: 10, y: 70),
+                      ChartDataPoint(x: 11, y: 75),
+                      ChartDataPoint(x: 12, y: 82)
+                    ],
                     color: Colors.teal,
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 3.0,
@@ -334,7 +376,11 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'product-c',
                     name: 'Product C',
-                    points: [ChartDataPoint(x: 10, y: 60), ChartDataPoint(x: 11, y: 68), ChartDataPoint(x: 12, y: 71)],
+                    points: [
+                      ChartDataPoint(x: 10, y: 60),
+                      ChartDataPoint(x: 11, y: 68),
+                      ChartDataPoint(x: 12, y: 71)
+                    ],
                     color: Colors.amber,
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 2.0,
@@ -345,7 +391,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.light,
                 showLegend: true,
                 xAxisConfig: const XAxisConfig(label: 'Month'),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Sales'),
+                yAxis:
+                    YAxisConfig(position: YAxisPosition.left, label: 'Sales'),
               ),
             ),
           ],
@@ -371,19 +418,29 @@ class _GalleryPageState extends State<GalleryPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.monitor_heart, color: Color(0xFF00FF00), size: 20),
+                const Icon(Icons.monitor_heart,
+                    color: Color(0xFF00FF00), size: 20),
                 const SizedBox(width: 8),
                 const Text(
                   'ECG Monitor',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFF00FF00).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF00FF00).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4)),
                   child: const Text(
                     '70 BPM',
-                    style: TextStyle(color: Color(0xFF00FF00), fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Color(0xFF00FF00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -401,9 +458,11 @@ class _GalleryPageState extends State<GalleryPage> {
                     strokeWidth: 1.5,
                   ),
                 ],
-                theme: ChartTheme.dark.copyWith(backgroundColor: const Color(0xFF0D1117)),
+                theme: ChartTheme.dark
+                    .copyWith(backgroundColor: const Color(0xFF0D1117)),
                 showLegend: false,
-                xAxisConfig: const XAxisConfig(label: 'Time (s)', showAxisLine: false),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Time (s)', showAxisLine: false),
                 yAxis: YAxisConfig(position: YAxisPosition.left, label: 'mV'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
@@ -432,7 +491,9 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 Icon(Icons.bolt, color: Color(0xFFF57C00), size: 20),
                 SizedBox(width: 8),
-                Text('Energy Usage', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Energy Usage',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -489,7 +550,8 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Website Traffic', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Website Traffic',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -532,13 +594,15 @@ class _GalleryPageState extends State<GalleryPage> {
                   ),
                 ],
                 theme: ChartTheme.light.copyWith(
-                  // backgroundColor: const Color(0xFFE3F2FD),
-                ),
+                    // backgroundColor: const Color(0xFFE3F2FD),
+                    ),
                 showLegend: true,
-                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle:
+                    const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
                 xAxisConfig: const XAxisConfig(label: 'Day'),
-                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: true),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, showAxisLine: true),
               ),
             ),
           ],
@@ -554,7 +618,8 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Project Progress', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Project Progress',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -604,8 +669,10 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxisConfig: const XAxisConfig(label: 'Week', showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: '% Complete'),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Week', showAxisLine: false),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, label: '% Complete'),
               ),
             ),
           ],
@@ -626,12 +693,18 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 Text(
                   'CPU Usage',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 Spacer(),
                 Text(
                   '42%',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF67E8F9)),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF67E8F9)),
                 ),
               ],
             ),
@@ -642,7 +715,11 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'cpu',
                     name: 'CPU',
-                    points: List.generate(50, (i) => ChartDataPoint(x: i.toDouble(), y: 30 + (i * 1.5) % 40 + (i % 5) * 3)),
+                    points: List.generate(
+                        50,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(),
+                            y: 30 + (i * 1.5) % 40 + (i % 5) * 3)),
                     color: const Color(0xFF67E8F9),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 1.5,
@@ -679,7 +756,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.dark,
                 showLegend: false,
                 xAxisConfig: const XAxisConfig(showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: true),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, showAxisLine: true),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -705,8 +783,10 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Revenue & Forecast', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Line + Area Chart', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Revenue & Forecast',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Line + Area Chart',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -752,11 +832,17 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.light,
                 showLegend: true,
-                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
-                xAxisConfig: const XAxisConfig(label: 'Month', showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Revenue (\$)'),
+                legendStyle:
+                    const LegendStyle(orientation: LegendOrientation.vertical),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Month', showAxisLine: false),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, label: 'Revenue (\$)'),
                 interactionConfig: const InteractionConfig(
-                  crosshair: CrosshairConfig(enabled: true, mode: CrosshairMode.vertical, snapToDataPoint: true),
+                  crosshair: CrosshairConfig(
+                      enabled: true,
+                      mode: CrosshairMode.vertical,
+                      snapToDataPoint: true),
                 ),
               ),
             ),
@@ -775,8 +861,10 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Multi-Sensor Monitoring', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Normalized + Crosshair Tracking', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Multi-Sensor Monitoring',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Normalized + Crosshair Tracking',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -788,7 +876,9 @@ class _GalleryPageState extends State<GalleryPage> {
                       50, // High data point count triggers tracking mode
                       (i) => ChartDataPoint(
                         x: i.toDouble(),
-                        y: random.nextInt(1000) + (i * 2.5) % 100 + (i % 10) * 5,
+                        y: random.nextInt(1000) +
+                            (i * 2.5) % 100 +
+                            (i % 10) * 5,
                         // 1000 + (i * 2.5) % 100 + (i % 10) * 5,
                       ),
                     ),
@@ -807,11 +897,20 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'temperature',
                     name: 'Temperature',
-                    points: List.generate(50, (i) => ChartDataPoint(x: i.toDouble(), y: random.nextInt(20) + (i * 0.05) % 15 + (i % 8) * 0.5)),
+                    points: List.generate(
+                        50,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(),
+                            y: random.nextInt(20) +
+                                (i * 0.05) % 15 +
+                                (i % 8) * 0.5)),
                     color: const Color(0xFFF59E0B),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 1.5,
-                    yAxisConfig: YAxisConfig(position: YAxisPosition.right, label: 'Temp', unit: '°C'),
+                    yAxisConfig: YAxisConfig(
+                        position: YAxisPosition.right,
+                        label: 'Temp',
+                        unit: '°C'),
                     unit: '°C',
                   ),
                 ],
@@ -825,7 +924,8 @@ class _GalleryPageState extends State<GalleryPage> {
                     mode: CrosshairMode.vertical,
                     snapToDataPoint: true,
                     showCoordinateLabels: true,
-                    displayMode: CrosshairDisplayMode.tracking, // Will use tracking mode for 300 points
+                    displayMode: CrosshairDisplayMode
+                        .tracking, // Will use tracking mode for 300 points
                   ),
                 ),
               ),
@@ -844,8 +944,10 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Annotated Analysis', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Point, Range & Threshold', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Annotated Analysis',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Point, Range & Threshold',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -902,7 +1004,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: ChartTheme.light,
                 showLegend: false,
                 xAxisConfig: const XAxisConfig(label: 'Week'),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Score'),
+                yAxis:
+                    YAxisConfig(position: YAxisPosition.left, label: 'Score'),
               ),
             ),
           ],
@@ -919,8 +1022,10 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Interpolation Showcase', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Linear, Bezier, Stepped, Monotone', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Interpolation Showcase',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Linear, Bezier, Stepped, Monotone',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1050,23 +1155,34 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 Icon(Icons.speed, color: Color(0xFF10B981), size: 20),
                 SizedBox(width: 8),
-                Text('System Load Monitor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('System Load Monitor',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
             Row(
               children: [
-                const Text('Threshold Coloring', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text('Threshold Coloring',
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('< 80%', style: TextStyle(fontSize: 10, color: Color(0xFF10B981))),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4)),
+                  child: const Text('< 80%',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF10B981))),
                 ),
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFEF4444).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('≥ 80%', style: TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4)),
+                  child: const Text('≥ 80%',
+                      style: TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
                 ),
               ],
             ),
@@ -1088,7 +1204,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
                 xAxisConfig: const XAxisConfig(label: 'Time (s)'),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Load %'),
+                yAxis:
+                    YAxisConfig(position: YAxisPosition.left, label: 'Load %'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -1108,7 +1225,8 @@ class _GalleryPageState extends State<GalleryPage> {
   /// Rainbow gradient segments across the line
   Widget _buildGradientSegmentsChart(bool isDark) {
     // Generate smooth wave data
-    final points = List.generate(20, (i) => ChartDataPoint(x: i.toDouble(), y: 50 + 30 * sin(i * 0.5)));
+    final points = List.generate(
+        20, (i) => ChartDataPoint(x: i.toDouble(), y: 50 + 30 * sin(i * 0.5)));
 
     // Rainbow colors for each segment
     final rainbowColors = [
@@ -1152,11 +1270,17 @@ class _GalleryPageState extends State<GalleryPage> {
                 const SizedBox(width: 8),
                 Text(
                   'Rainbow Segments',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87),
                 ),
               ],
             ),
-            Text('Per-segment color override', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey)),
+            Text('Per-segment color override',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1164,7 +1288,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: false,
                 xAxisConfig: const XAxisConfig(showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: false),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, showAxisLine: false),
               ),
             ),
           ],
@@ -1229,33 +1354,49 @@ class _GalleryPageState extends State<GalleryPage> {
               children: [
                 const Text(
                   'TECH Stock',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    color: isPositive
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
-            const Text('Gain/Loss segment coloring', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Gain/Loss segment coloring',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
                 series: [series],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxisConfig: const XAxisConfig(label: 'Day', showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Price (\$)'),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Day', showAxisLine: false),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, label: 'Price (\$)'),
                 interactionConfig: const InteractionConfig(
-                  crosshair: CrosshairConfig(enabled: true, mode: CrosshairMode.both, snapToDataPoint: true, showCoordinateLabels: true),
+                  crosshair: CrosshairConfig(
+                      enabled: true,
+                      mode: CrosshairMode.both,
+                      snapToDataPoint: true,
+                      showCoordinateLabels: true),
                 ),
               ),
             ),
@@ -1320,17 +1461,24 @@ class _GalleryPageState extends State<GalleryPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.thermostat, color: isDark ? Colors.white70 : Colors.black87, size: 20),
+                Icon(Icons.thermostat,
+                    color: isDark ? Colors.white70 : Colors.black87, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   '24-Hour Temperature',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87),
                 ),
               ],
             ),
             Row(
               children: [
-                Text('Area with zone coloring', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey)),
+                Text('Area with zone coloring',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[400] : Colors.grey)),
                 const Spacer(),
                 _buildLegendChip('Cold', const Color(0xFF3B82F6)),
                 _buildLegendChip('Mild', const Color(0xFFF59E0B)),
@@ -1382,7 +1530,8 @@ class _GalleryPageState extends State<GalleryPage> {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -1416,7 +1565,8 @@ class _GalleryPageState extends State<GalleryPage> {
     );
 
     // Red for loss periods
-    series = series.withColorWhere((point) => point.y < 0, const Color(0xFFEF4444));
+    series =
+        series.withColorWhere((point) => point.y < 0, const Color(0xFFEF4444));
 
     return Card(
       color: const Color(0xFF0C1222),
@@ -1431,16 +1581,23 @@ class _GalleryPageState extends State<GalleryPage> {
                 SizedBox(width: 8),
                 Text(
                   'Monthly P&L',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 Spacer(),
                 Text(
                   'YTD: +\$54,800',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981)),
                 ),
               ],
             ),
-            const Text('Profit (green) / Loss (red) area segments', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('Profit (green) / Loss (red) area segments',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1458,7 +1615,8 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: ChartTheme.dark,
                 showLegend: false,
-                xAxisConfig: const XAxisConfig(label: 'Month', showAxisLine: false),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Month', showAxisLine: false),
                 yAxis: YAxisConfig(position: YAxisPosition.left, label: 'USD'),
               ),
             ),
@@ -1483,8 +1641,10 @@ class _GalleryPageState extends State<GalleryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('User Analytics Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('3 Areas + 2 Lines', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            const Text('User Analytics Dashboard',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('3 Areas + 2 Lines',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1493,7 +1653,10 @@ class _GalleryPageState extends State<GalleryPage> {
                   AreaChartSeries(
                     id: 'sessions',
                     name: 'Sessions',
-                    points: List.generate(12, (i) => ChartDataPoint(x: i.toDouble(), y: baseData[i] * 1.5 + 30)),
+                    points: List.generate(
+                        12,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: baseData[i] * 1.5 + 30)),
                     color: const Color(0xFF6366F1),
                     interpolation: LineInterpolation.bezier,
                     tension: 0.3,
@@ -1503,7 +1666,10 @@ class _GalleryPageState extends State<GalleryPage> {
                   AreaChartSeries(
                     id: 'pageviews',
                     name: 'Page Views',
-                    points: List.generate(12, (i) => ChartDataPoint(x: i.toDouble(), y: baseData[i] * 1.2)),
+                    points: List.generate(
+                        12,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: baseData[i] * 1.2)),
                     color: const Color(0xFF8B5CF6),
                     interpolation: LineInterpolation.bezier,
                     tension: 0.3,
@@ -1513,7 +1679,10 @@ class _GalleryPageState extends State<GalleryPage> {
                   AreaChartSeries(
                     id: 'users',
                     name: 'Active Users',
-                    points: List.generate(12, (i) => ChartDataPoint(x: i.toDouble(), y: baseData[i] * 0.8)),
+                    points: List.generate(
+                        12,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: baseData[i] * 0.8)),
                     color: const Color(0xFFA855F7),
                     interpolation: LineInterpolation.bezier,
                     tension: 0.3,
@@ -1524,7 +1693,11 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'bounce-rate',
                     name: 'Bounce Rate',
-                    points: List.generate(12, (i) => ChartDataPoint(x: i.toDouble(), y: 45 - i * 1.5 + 10 * sin(i * 0.8))),
+                    points: List.generate(
+                        12,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(),
+                            y: 45 - i * 1.5 + 10 * sin(i * 0.8))),
                     color: const Color(0xFFF97316),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 2.5,
@@ -1534,7 +1707,10 @@ class _GalleryPageState extends State<GalleryPage> {
                   LineChartSeries(
                     id: 'conversion',
                     name: 'Conversion %',
-                    points: List.generate(12, (i) => ChartDataPoint(x: i.toDouble(), y: 15 + i * 2 + 5 * cos(i * 0.6))),
+                    points: List.generate(
+                        12,
+                        (i) => ChartDataPoint(
+                            x: i.toDouble(), y: 15 + i * 2 + 5 * cos(i * 0.6))),
                     color: const Color(0xFF10B981),
                     interpolation: LineInterpolation.bezier,
                     strokeWidth: 2.5,
@@ -1544,10 +1720,13 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                legendStyle: const LegendStyle(orientation: LegendOrientation.vertical),
+                legendStyle:
+                    const LegendStyle(orientation: LegendOrientation.vertical),
                 normalizationMode: NormalizationMode.perSeries,
-                xAxisConfig: const XAxisConfig(label: 'Month', showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Value'),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Month', showAxisLine: false),
+                yAxis:
+                    YAxisConfig(position: YAxisPosition.left, label: 'Value'),
               ),
             ),
           ],
@@ -1559,14 +1738,26 @@ class _GalleryPageState extends State<GalleryPage> {
   /// Network traffic: Upload/Download areas + Latency line with segment colors
   Widget _buildNetworkTrafficChart(bool isDark) {
     final hours = 24;
-    final downloadData = List.generate(hours, (i) => ChartDataPoint(x: i.toDouble(), y: 50 + 40 * sin(i * 0.3) + (i > 8 && i < 20 ? 30 : 0)));
-    final uploadData = List.generate(hours, (i) => ChartDataPoint(x: i.toDouble(), y: 20 + 15 * cos(i * 0.4) + (i > 10 && i < 18 ? 20 : 0)));
+    final downloadData = List.generate(
+        hours,
+        (i) => ChartDataPoint(
+            x: i.toDouble(),
+            y: 50 + 40 * sin(i * 0.3) + (i > 8 && i < 20 ? 30 : 0)));
+    final uploadData = List.generate(
+        hours,
+        (i) => ChartDataPoint(
+            x: i.toDouble(),
+            y: 20 + 15 * cos(i * 0.4) + (i > 10 && i < 18 ? 20 : 0)));
 
     // Latency line with segment coloring (red when high)
     var latencySeries = LineChartSeries(
       id: 'latency',
       name: 'Latency (ms)',
-      points: List.generate(hours, (i) => ChartDataPoint(x: i.toDouble(), y: 20 + 15 * sin(i * 0.5) + (i > 12 && i < 16 ? 40 : 0))),
+      points: List.generate(
+          hours,
+          (i) => ChartDataPoint(
+              x: i.toDouble(),
+              y: 20 + 15 * sin(i * 0.5) + (i > 12 && i < 16 ? 40 : 0))),
       color: const Color(0xFF10B981), // Green = good
       interpolation: LineInterpolation.monotone,
       strokeWidth: 2.5,
@@ -1592,11 +1783,15 @@ class _GalleryPageState extends State<GalleryPage> {
                 SizedBox(width: 8),
                 Text(
                   'Network Monitor',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
               ],
             ),
-            const Text('Download/Upload areas + Latency line (red when >50ms)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text('Download/Upload areas + Latency line (red when >50ms)',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
@@ -1643,7 +1838,8 @@ class _GalleryPageState extends State<GalleryPage> {
                   textStyle: TextStyle(color: Colors.white54, fontSize: 11),
                 ),
                 xAxisConfig: const XAxisConfig(label: 'Hour'),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Mbps / ms'),
+                yAxis: YAxisConfig(
+                    position: YAxisPosition.left, label: 'Mbps / ms'),
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,
@@ -1705,7 +1901,10 @@ class _GalleryPageState extends State<GalleryPage> {
     var expenseSeries = AreaChartSeries(
       id: 'expenses',
       name: 'Expenses',
-      points: List.generate(months, (i) => ChartDataPoint(x: (i + 1).toDouble(), y: 40 + 15 * sin(i * 0.5) + i * 3)),
+      points: List.generate(
+          months,
+          (i) => ChartDataPoint(
+              x: (i + 1).toDouble(), y: 40 + 15 * sin(i * 0.5) + i * 3)),
       color: const Color(0xFFF59E0B),
       interpolation: LineInterpolation.bezier,
       tension: 0.3,
@@ -1714,7 +1913,8 @@ class _GalleryPageState extends State<GalleryPage> {
     );
 
     // Color high expense periods
-    expenseSeries = expenseSeries.withColorWhere((point) => point.y > 70, const Color(0xFFEF4444));
+    expenseSeries = expenseSeries.withColorWhere(
+        (point) => point.y > 70, const Color(0xFFEF4444));
 
     return Card(
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -1725,17 +1925,22 @@ class _GalleryPageState extends State<GalleryPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.analytics, color: isDark ? Colors.white70 : Colors.black87, size: 20),
+                Icon(Icons.analytics,
+                    color: isDark ? Colors.white70 : Colors.black87, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Financial Overview',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87),
                 ),
               ],
             ),
             Text(
               'Revenue line (growth/decline) + Expense area (alert when high)',
-              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
+              style: TextStyle(
+                  fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -1747,7 +1952,10 @@ class _GalleryPageState extends State<GalleryPage> {
                   const LineChartSeries(
                     id: 'target',
                     name: 'Target',
-                    points: [ChartDataPoint(x: 1, y: 100), ChartDataPoint(x: 12, y: 150)],
+                    points: [
+                      ChartDataPoint(x: 1, y: 100),
+                      ChartDataPoint(x: 12, y: 150)
+                    ],
                     color: Color(0xFF6366F1),
                     interpolation: LineInterpolation.linear,
                     strokeWidth: 1.5,
@@ -1767,10 +1975,15 @@ class _GalleryPageState extends State<GalleryPage> {
                 ],
                 theme: isDark ? ChartTheme.dark : ChartTheme.light,
                 showLegend: true,
-                xAxisConfig: const XAxisConfig(label: 'Month', showAxisLine: false),
-                yAxis: YAxisConfig(position: YAxisPosition.left, label: 'K USD'),
+                xAxisConfig:
+                    const XAxisConfig(label: 'Month', showAxisLine: false),
+                yAxis:
+                    YAxisConfig(position: YAxisPosition.left, label: 'K USD'),
                 interactionConfig: const InteractionConfig(
-                  crosshair: CrosshairConfig(enabled: true, mode: CrosshairMode.both, snapToDataPoint: true),
+                  crosshair: CrosshairConfig(
+                      enabled: true,
+                      mode: CrosshairMode.both,
+                      snapToDataPoint: true),
                 ),
               ),
             ),

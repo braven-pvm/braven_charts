@@ -165,16 +165,20 @@ class _PerformancePageState extends State<PerformancePage> {
                 name: 'Series ${i + 1}',
                 points: _allSeriesData[i],
                 color: colors[i % colors.length],
-                interpolation: _useSmoothing ? LineInterpolation.bezier : LineInterpolation.linear,
+                interpolation: _useSmoothing
+                    ? LineInterpolation.bezier
+                    : LineInterpolation.linear,
                 strokeWidth: 1.5,
-                showDataPointMarkers: _optionsController.showDataMarkers && _dataPointCount <= 100,
+                showDataPointMarkers: _optionsController.showDataMarkers &&
+                    _dataPointCount <= 100,
               );
             }),
             theme: _optionsController.theme,
             showLegend: _seriesCount > 1 && _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme:
+                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),

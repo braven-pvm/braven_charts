@@ -50,7 +50,8 @@ class MockCanvas implements Canvas {
   }
 
   @override
-  void clipRect(Rect rect, {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
+  void clipRect(Rect rect,
+      {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
     operations.add(MockPaintOperation(
       type: 'clipRect',
       rect: rect,
@@ -102,14 +103,16 @@ class MockCanvas implements Canvas {
   void clipRRect(RRect rrect, {bool doAntiAlias = true}) {}
 
   @override
-  void clipRSuperellipse(RSuperellipse rsuperellipse, {bool doAntiAlias = true}) {}
+  void clipRSuperellipse(RSuperellipse rsuperellipse,
+      {bool doAntiAlias = true}) {}
 
   @override
-  void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter, Paint paint) {}
+  void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter,
+      Paint paint) {}
 
   @override
-  void drawAtlas(
-      Image atlas, List<RSTransform> transforms, List<Rect> rects, List<Color>? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
+  void drawAtlas(Image atlas, List<RSTransform> transforms, List<Rect> rects,
+      List<Color>? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
 
   @override
   void drawColor(Color color, BlendMode blendMode) {}
@@ -151,8 +154,8 @@ class MockCanvas implements Canvas {
   void drawPoints(PointMode pointMode, List<Offset> points, Paint paint) {}
 
   @override
-  void drawRawAtlas(
-      Image atlas, Float32List rstTransforms, Float32List rects, Int32List? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
+  void drawRawAtlas(Image atlas, Float32List rstTransforms, Float32List rects,
+      Int32List? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
 
   @override
   void drawRawPoints(PointMode pointMode, Float32List points, Paint paint) {}
@@ -161,7 +164,8 @@ class MockCanvas implements Canvas {
   void drawRect(Rect rect, Paint paint) {}
 
   @override
-  void drawShadow(Path path, Color color, double elevation, bool transparentOccluder) {}
+  void drawShadow(
+      Path path, Color color, double elevation, bool transparentOccluder) {}
 
   @override
   void drawVertices(Vertices vertices, BlendMode blendMode, Paint paint) {}
@@ -225,7 +229,8 @@ void main() {
           YAxisConfig.withId(
             id: 'default',
             position: YAxisPosition.left,
-            showCrosshairLabel: false, // Disable Y-axis crosshair label for X-label testing
+            showCrosshairLabel:
+                false, // Disable Y-axis crosshair label for X-label testing
           ),
         ],
         axisBounds: const {'default': DataRange(min: 0, max: 100)},
@@ -263,7 +268,9 @@ void main() {
       );
     });
 
-    test('X-value label uses semi-transparent background (alpha 0.15) from axis color', () {
+    test(
+        'X-value label uses semi-transparent background (alpha 0.15) from axis color',
+        () {
       const axisColor = Color(0xFF0000FF); // Blue
       const xAxisConfig = XAxisConfig(
         color: axisColor,
@@ -287,7 +294,10 @@ void main() {
       // Find background drawRRect operations for X label
       final expectedBgColor = axisColor.withValues(alpha: 0.15);
       final bgOperations = mockCanvas.operations.where((op) =>
-          op.type == 'drawRRect' && op.paint != null && op.paint!.color.value == expectedBgColor.value && op.paint!.style == PaintingStyle.fill);
+          op.type == 'drawRRect' &&
+          op.paint != null &&
+          op.paint!.color.value == expectedBgColor.value &&
+          op.paint!.style == PaintingStyle.fill);
 
       expect(
         bgOperations.isNotEmpty,
@@ -359,7 +369,8 @@ void main() {
       );
 
       // Find paragraph drawing operations (text rendering)
-      final paragraphOps = mockCanvas.operations.where((op) => op.type == 'drawParagraph');
+      final paragraphOps =
+          mockCanvas.operations.where((op) => op.type == 'drawParagraph');
 
       // With proper implementation, there should be at least one paragraph drawn for X-value
       // This will fail initially because xAxisConfig parameter doesn't exist
@@ -391,7 +402,8 @@ void main() {
       );
 
       // Count drawRRect operations (should be fewer without X label)
-      final rrectCount = mockCanvas.operations.where((op) => op.type == 'drawRRect').length;
+      final rrectCount =
+          mockCanvas.operations.where((op) => op.type == 'drawRRect').length;
 
       // With showCrosshairLabel=false, there should be no X-value label
       // This will fail because current implementation always draws the label
@@ -434,7 +446,8 @@ void main() {
       );
 
       // Find paragraph operations - with custom formatter there should be label drawn
-      final paragraphOps = mockCanvas.operations.where((op) => op.type == 'drawParagraph');
+      final paragraphOps =
+          mockCanvas.operations.where((op) => op.type == 'drawParagraph');
 
       // This will fail because labelFormatter is not yet supported
       expect(
@@ -444,7 +457,8 @@ void main() {
       );
     });
 
-    test('visible=false hides crosshair label even if showCrosshairLabel=true', () {
+    test('visible=false hides crosshair label even if showCrosshairLabel=true',
+        () {
       const xAxisConfig = XAxisConfig(
         color: Color(0xFF0000FF),
         showCrosshairLabel: true,
@@ -466,7 +480,8 @@ void main() {
       );
 
       // No X-value label should be drawn when visible=false
-      final rrectCount = mockCanvas.operations.where((op) => op.type == 'drawRRect').length;
+      final rrectCount =
+          mockCanvas.operations.where((op) => op.type == 'drawRRect').length;
 
       expect(
         rrectCount,
@@ -475,7 +490,8 @@ void main() {
       );
     });
 
-    test('X-value label uses default gray color when xAxisConfig color is null', () {
+    test('X-value label uses default gray color when xAxisConfig color is null',
+        () {
       const xAxisConfig = XAxisConfig(
         color: null, // No explicit color
         showCrosshairLabel: true,
@@ -499,8 +515,10 @@ void main() {
       const expectedDefaultColor = Color(0xFF333333);
       final expectedBgColor = expectedDefaultColor.withValues(alpha: 0.15);
 
-      final bgOperations =
-          mockCanvas.operations.where((op) => op.type == 'drawRRect' && op.paint != null && op.paint!.color.value == expectedBgColor.value);
+      final bgOperations = mockCanvas.operations.where((op) =>
+          op.type == 'drawRRect' &&
+          op.paint != null &&
+          op.paint!.color.value == expectedBgColor.value);
 
       expect(
         bgOperations.isNotEmpty,
@@ -537,7 +555,8 @@ void main() {
       );
 
       // Find paragraph operations - unit should be included
-      final paragraphOps = mockCanvas.operations.where((op) => op.type == 'drawParagraph');
+      final paragraphOps =
+          mockCanvas.operations.where((op) => op.type == 'drawParagraph');
 
       // This will fail because unit from xAxisConfig is not yet applied
       expect(

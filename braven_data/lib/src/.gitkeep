@@ -1,0 +1,6 @@
+# Placeholder for source files
+# This directory will contain:
+# - series.dart - Series<TX, TY> container
+# - storage.dart - TypedData storage backends
+# - aggregation.dart - Window configuration and reducers
+# - pipeline.dart - Fluent transformation API
