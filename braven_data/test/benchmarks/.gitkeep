@@ -1,3 +1,0 @@
-# Placeholder for performance benchmark scripts
-# This directory will contain standalone Dart scripts using Stopwatch
-# to verify performance requirements (e.g., <50ms aggregation of 100k points)
