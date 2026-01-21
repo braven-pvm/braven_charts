@@ -1,7 +1,7 @@
 import 'dart:math';
 
 // Import the Metric definitions (Simulated here for single-file runnable)
-// import 'power_metrics.dart'; 
+// import 'power_metrics.dart';
 
 /// --------------------------------------------------------------------------
 /// MOCK API FRAMEWORK (Represents the proposed 'braven_chart_plus/data' pkg)
@@ -38,7 +38,7 @@ class DataFrame {
 /// 3. Series Pipeline with Extensions
 class SeriesPipeline {
   final Series<dynamic, double> _source;
-  
+
   SeriesPipeline(this._source);
 
   /// Apply a metric calculation (Scalar)
@@ -59,37 +59,33 @@ class RollingPipeline {
   final Series<dynamic, double> source;
   final Duration window;
   final WindowAlignment align;
-  
+
   RollingPipeline(this.source, this.window, this.align);
-  
+
   /// Apply a Reducer to the rolling window to create a new Series
   Series<double, double> reduce(SeriesReducer<double> reducer) {
-    print("  -> Calculating Rolling ${reducer.runtimeType} over ${window.inSeconds}s (Align: ${align.name})...");
-    
+    print('  -> Calculating Rolling ${reducer.runtimeType} over ${window.inSeconds}s (Align: ${align.name})...');
+
     final inputY = source.storage.yAsList;
     final int winSize = window.inSeconds;
     final outY = <double>[];
     final outX = <double>[];
-    
+
     // Naive rolling implementation
     for (int i = 0; i < inputY.length; i++) {
-        // Trailing Window Logic (Simplest case)
-        int start = max(0, i - winSize + 1);
-        int end = i + 1;
-        
-        final windowData = inputY.sublist(start, end);
-        outY.add(reducer.reduce(windowData));
-        
-        // Simplified Time Assignment:
-        // Rolling/Smoothing usually preserves input timestamp (Trailing Alignment)
-        outX.add(i.toDouble()); 
+      // Trailing Window Logic (Simplest case)
+      final int start = max(0, i - winSize + 1);
+      final int end = i + 1;
+
+      final windowData = inputY.sublist(start, end);
+      outY.add(reducer.reduce(windowData));
+
+      // Simplified Time Assignment:
+      // Rolling/Smoothing usually preserves input timestamp (Trailing Alignment)
+      outX.add(i.toDouble());
     }
-    
-    return ConcreteSeries(
-        id: "${source.id}_rolling_${winSize}", 
-        xData: outX, 
-        yData: outY
-    );
+
+    return ConcreteSeries(id: '${source.id}_rolling_$winSize', xData: outX, yData: outY);
   }
 }
 
@@ -126,6 +122,7 @@ abstract class SeriesReducer<T> {
 class ConcreteSeries<TX, TY> implements Series<TX, TY> {
   final List<TX> xData;
   final List<TY> yData;
+  @override
   final String id;
 
   ConcreteSeries({required this.id, required this.xData, required this.yData});
@@ -175,10 +172,10 @@ class NormalizedPowerMetric implements SeriesMetric<double> {
   const NormalizedPowerMetric();
   @override
   double calculate(Series<dynamic, double> series) {
-      // For whole ride, we usually need 30s smoothing first.
-      // But for this mock, we'll verify valid data only.
-      // Real impl would call _calculateSMA first.
-      return const NormalizedPowerReducer().reduce(series.storage.yAsList);
+    // For whole ride, we usually need 30s smoothing first.
+    // But for this mock, we'll verify valid data only.
+    // Real impl would call _calculateSMA first.
+    return const NormalizedPowerReducer().reduce(series.storage.yAsList);
   }
 }
 
@@ -199,90 +196,81 @@ class VariabilityIndexMetric implements SeriesMetric<double> {
 /// --------------------------------------------------------------------------
 
 void main() async {
-  print("--- BEGIN SCIENTIFIC DATA INGESTION ---");
+  print('--- BEGIN SCIENTIFIC DATA INGESTION ---');
 
   // A. DEFINE SCHEMA
   // Matches: data/tp-2023646.2025-10-26-13-23-16-784Z.GarminPing.AAAAAGj-IMQ_uYSx_core_records.csv
-  final schema = CsvSchema(
-    dateColumn: "timestamp", 
-    columns: [
-      ColumnDef("power", FieldType.float),
-      ColumnDef("heart_rate", FieldType.integer),
-    ]
-  );
-  
+  const schema = CsvSchema(dateColumn: 'timestamp', columns: [
+    ColumnDef('power', FieldType.float),
+    ColumnDef('heart_rate', FieldType.integer),
+  ]);
+
   // B. LOAD DATA
-  final table = await _mockCsvLoaderLoad("garmin_data.csv", schema);
-  
+  final table = await _mockCsvLoaderLoad('garmin_data.csv', schema);
+
   print("Loaded DataFrame with ${table.get('power').length} rows.");
 
   // C. EXTRACT SERIES
-  final timeBuffer = table.get<DateTime>("timestamp")
-      .map((dt) => dt.millisecondsSinceEpoch.toDouble())
-      .toList();
+  final timeBuffer = table.get<DateTime>('timestamp').map((dt) => dt.millisecondsSinceEpoch.toDouble()).toList();
 
   final powerSeries = ConcreteSeries<double, double>(
-    id: "cycling_power",
+    id: 'cycling_power',
     xData: timeBuffer,
-    yData: table.get<double>("power"),
+    yData: table.get<double>('power'),
   );
 
   // D. APPLY SCIENTIFIC CALCULATIONS (SCALARS)
-  
+
   final pipeline = SeriesPipeline(powerSeries);
-  
+
   // 1. Normalized Power (NP)
   final np = pipeline.calculateNormalizedPower();
-  print("Metric: Normalized Power (NP) [Whole Ride]: ${np.toStringAsFixed(1)} W");
+  print('Metric: Normalized Power (NP) [Whole Ride]: ${np.toStringAsFixed(1)} W');
 
   // E. GENERATE PLOTTING DATA (SERIES)
   // "I want to see the 30s average power curve over time"
-  
-  print("\n--- GENERATING PLOT DATA ---");
-  
+
+  print('\n--- GENERATING PLOT DATA ---');
+
   // 1. Rolling 30s Average
-  final rollingAvg30 = pipeline
-      .rolling(window: Duration(seconds: 30))
-      .reduce(const MeanReducer());
+  final rollingAvg30 = pipeline.rolling(window: const Duration(seconds: 30)).reduce(const MeanReducer());
 
   print("Generated '${rollingAvg30.id}' with ${rollingAvg30.storage.yAsList.length} points.");
-  print("Sample (T=60s): ${rollingAvg30.storage.yAsList[60].toStringAsFixed(1)} W");
-      
-  // 2. Rolling 30s "Normalized" (Intensity)
-  final rollingNP30 = pipeline
-      .rolling(window: Duration(seconds: 30))
-      .reduce(const NormalizedPowerReducer());
-      
-  print("Generated '${rollingNP30.id}' with ${rollingNP30.storage.yAsList.length} points.");
-  print("Sample (T=60s): ${rollingNP30.storage.yAsList[60].toStringAsFixed(1)} W (Weighted)");
+  print('Sample (T=60s): ${rollingAvg30.storage.yAsList[60].toStringAsFixed(1)} W');
 
-  print("--- END ANALYSIS ---");
+  // 2. Rolling 30s "Normalized" (Intensity)
+  final rollingNP30 = pipeline.rolling(window: const Duration(seconds: 30)).reduce(const NormalizedPowerReducer());
+
+  print("Generated '${rollingNP30.id}' with ${rollingNP30.storage.yAsList.length} points.");
+  print('Sample (T=60s): ${rollingNP30.storage.yAsList[60].toStringAsFixed(1)} W (Weighted)');
+
+  print('--- END ANALYSIS ---');
 }
 
 /// --------------------------------------------------------------------------
-/// MOCK LOADER 
+/// MOCK LOADER
 /// --------------------------------------------------------------------------
 
 Future<DataFrame> _mockCsvLoaderLoad(String path, CsvSchema schema) async {
-  final count = 1000;
+  const count = 1000;
   final timestamps = <DateTime>[];
   final power = <double>[];
   final hr = <double>[];
 
-  final start = DateTime.parse("2025-10-26 07:32:46+02:00");
-  
+  final start = DateTime.parse('2025-10-26 07:32:46+02:00');
+
   for (int i = 0; i < count; i++) {
     timestamps.add(start.add(Duration(seconds: i)));
     // Base 150W + Noise +/- 20W + Occasional 400W surge
     double p = 150.0 + (Random().nextDouble() * 40 - 20);
-    if (i % 60 == 0) p = 400.0; 
+    if (i % 60 == 0) p = 400.0;
     power.add(p);
     hr.add(140.0 + (Random().nextDouble() * 5));
   }
 
   return DataFrame({
-    "timestamp": timestamps,
-    "power": power,
-    "heart_rate": hr,
+    'timestamp': timestamps,
+    'power': power,
+    'heart_rate': hr,
   });
 }

@@ -464,7 +464,7 @@ void main() async {
 
   // 5. Generate Smoothed Curves for Plotting (Series)
   // "Give me a 30s Rolling Average line to draw on the chart"
-  // DEFAULT: Uses 'WindowAlignment.end' (Trailing). 
+  // DEFAULT: Uses 'WindowAlignment.end' (Trailing).
   // Point at 10:00:30 represents average of 10:00:00 -> 10:00:30.
   final smoothPower = SeriesPipeline(powerSeries)
       .rolling(window: Duration(seconds: 30))
