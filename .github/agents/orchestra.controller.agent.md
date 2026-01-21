@@ -61,6 +61,20 @@ Orchestra's post-mortem from Sprint 017 revealed a catastrophic failure pattern:
 | `approve_handover` | Approve task handover        | Handover aligns with spec    |
 | `reject_handover`  | Reject task handover         | Handover has spec violations |
 
+### Code Review Actions
+
+| Tool                          | Purpose                                   | When to Use                           |
+| ----------------------------- | ----------------------------------------- | ------------------------------------- |
+| `claim_code_review`           | Claim a single review for isolated review | Before any approve/request/reject     |
+| `approve_code_review`         | Approve implementation                    | Code meets spec and quality standards |
+| `request_changes_code_review` | Request changes with issues               | Code needs fixes before approval      |
+| `reject_code_review`          | Reject with blocking issues               | Critical defects found                |
+| `verify_code_review_fixes`    | Verify submitted fixes after review       | After implementor submits fixes       |
+| `get_latest_code_review`      | Get most recent review for a task         | Check review status                   |
+| `get_code_review_history`     | Get review history for a task             | See all reviews for a task            |
+| `get_open_code_review_issues` | Get unresolved issues for sprint/task     | Check pending issues                  |
+| `get_code_review_summary`     | Get sprint-level summary for dashboards   | Check overall code review status      |
+
 ### Spec Reading
 
 | Tool             | Purpose                      | When to Use                     |
@@ -103,24 +117,19 @@ When sprint status is `PENDING_SPEC_REVIEW`:
 
 ### Sprint Review Checklist
 
-- [ ] Every spec requirement maps to at least one task
-- [ ] No tasks created that aren't in the spec
-- [ ] Task titles accurately reflect spec requirements
-- [ ] Task descriptions don't defer or stub core functionality
-- [ ] Dependencies make sense for the spec's structure
-
-## Workflow: Handover Review
-
-When a task has status `PENDING_HANDOVER_REVIEW`:
+- [ ] Wiring is present: feature is invoked from runtime paths
+- [ ] Evidence of behavior: tests or code paths validate outcomes
+      When a task has status `PENDING_HANDOVER_REVIEW`:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                      HANDOVER REVIEW                              │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│   1. get_task → Get task details                                  │
-│                                                                   │
 │   2. get_current_task → See what implementor will receive         │
+
+ ### Evidence Bar (STRICT)
+
+ - **APPROVE only if** you can cite concrete evidence for every requirement.
+ - **REQUEST CHANGES** if any requirement lacks proof in code/tests.
+ - **REJECT** if wiring is missing, behavior is incorrect, or spec is violated.
 │                                                                   │
 │   3. read_spec_file → Get the spec for this specific task         │
 │                                                                   │
@@ -146,9 +155,160 @@ When a task has status `PENDING_HANDOVER_REVIEW`:
 - [ ] NO "placeholder", "stub", "no-op", "future work" language
 - [ ] NO deferred functionality that the spec requires
 
+## Workflow: Code Review
+
+After a task is marked as COMPLETE by the orchestrator, it enters code review. You perform a thorough review of the actual implementation against the specification.
+
+**Reference**: See [code-review-process.md](../../specs/005-code-review-workflow/code-review-process.md) for the complete process documentation.
+
+### 🔒 Mandatory Isolation Rules (NO EXCEPTIONS)
+
+- **Review exactly ONE task at a time.**
+- If multiple pending reviews exist, **complete one task end-to-end, then continue to the next until none remain**.
+- **Never batch multiple tasks into a single review.** Keep each task fully isolated.
+
+### 🔍 Mandatory Thoroughness Rules (NO SHORTCUTS)
+
+- Assume the implementation is **incorrect until proven correct**.
+- Verify **spec alignment**, **wiring**, and **actual runtime behavior**.
+- Confirm the code is **called from real execution paths**, not just present.
+- Look for **missing edge cases**, **error handling gaps**, and **dead code**.
+- If evidence is missing, **request changes**.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                      CODE REVIEW WORKFLOW                         │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│   1. get_latest_code_review → Check if review exists              │
+│                                                                   │
+│   2. claim_code_review → Claim the review (required)              │
+│                                                                   │
+│   3. get_task → Get task details and handover                     │
+│                                                                   │
+│   4. read_spec_file → Get the specification for this task         │
+│                                                                   │
+│   5. Review implementation code:                                  │
+│      - Read files created/modified by implementor                 │
+│      - Check test files and coverage                              │
+│      - Verify spec alignment and functional correctness           │
+│      - Assess code quality and maintainability                    │
+│                                                                   │
+│   6. Make decision:                                               │
+│      ┌─────────────────────────────────────────────┐              │
+│      │ APPROVED:                                   │              │
+│      │   → approve_code_review                     │              │
+│      │      (summary, risk, files_reviewed, tests) │              │
+│      │                                             │              │
+│      │ NEEDS_REVISION:                             │              │
+│      │   → request_changes_code_review             │              │
+│      │      (summary, risk, issues, recommendations)│             │
+│      │   → Implementor fixes and submits           │              │
+│      │   → verify_code_review_fixes                │              │
+│      │                                             │              │
+│      │ REJECTED:                                   │              │
+│      │   → reject_code_review                      │              │
+│      │      (summary, risk, issues, recommendation)│              │
+│      └─────────────────────────────────────────────┘              │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Code Review Focus Areas
+
+Review implementations against these mandatory criteria:
+
+1. **Requirements alignment**: Does code match task requirements, handover, and spec?
+2. **Functional behavior**: Does code work correctly for expected and edge cases?
+3. **Architecture & constitution**: Does code follow core-first design and constraints?
+4. **Code quality**: Is code readable, cohesive, and maintainable?
+5. **Test meaningfulness**: Do tests validate behavior, not just pass conditions?
+6. **Test sufficiency**: Does coverage protect against regressions?
+
+### Decision Policy
+
+**APPROVED** (approve_code_review)
+
+- Implementation meets spec requirements
+- Code is functionally correct
+- Tests validate behavior and provide coverage
+- Quality is acceptable (no material risks)
+- Risk: LOW or MEDIUM
+
+**NEEDS_REVISION** (request_changes_code_review)
+
+- Issues found that should be fixed
+- Not blocking but strongly recommended
+- Implementor submits fixes, controller verifies
+- Risk: MEDIUM or HIGH
+
+**REJECTED** (reject_code_review)
+
+- Blocking issues that must be fixed
+- Spec/requirement mismatch
+- Functional correctness defects
+- Security or safety risks
+- Test fraud (tests that don't validate behavior)
+- Risk: HIGH
+
+### Issue Severity Guide
+
+When documenting issues:
+
+| Severity     | Description                                     | Action              |
+| ------------ | ----------------------------------------------- | ------------------- |
+| **Blocking** | Spec mismatch, functional defects, test fraud   | REJECTED            |
+| **Major**    | Maintainability risks, missing edge test cases  | NEEDS_REVISION      |
+| **Minor**    | Naming/style polish, documentation improvements | APPROVED with notes |
+
+### Required Artifacts for Review Decisions
+
+All review decisions must include:
+
+- **summary**: Clear description of review findings (min 30 chars)
+- **risk**: Risk rating (LOW, MEDIUM, HIGH)
+- **files_reviewed**: List of file paths reviewed
+- **tests_run**: List of tests executed (or "NOT_RUN")
+- **issues**: List of issues (for NEEDS_REVISION or REJECTED)
+  - Each issue: severity, impact, reason, guidance
+
+### Evidence Bar (STRICT)
+
+- **APPROVE only if** you can cite concrete evidence for every requirement.
+- **REQUEST CHANGES** if any requirement lacks proof in code/tests.
+- **REJECT** if wiring is missing, behavior is incorrect, or spec is violated.
+
+### Code Review Checklist
+
+- [ ] All acceptance criteria from handover are met
+- [ ] Implementation matches specification requirements
+- [ ] Wiring is present: feature is invoked from runtime paths
+- [ ] Evidence of behavior: tests or code paths validate outcomes
+- [ ] Tests cover expected behavior and edge cases
+- [ ] Tests validate behavior, not just pass conditions
+- [ ] Error handling is appropriate for all failure modes
+- [ ] Code follows project patterns and conventions
+- [ ] No security or safety risks introduced
+- [ ] No test fraud (passing tests that don't validate)
+
+### Red Flags: ALWAYS REJECT
+
+The following patterns indicate code review failures:
+
+| Pattern                  | Why It's Wrong                         |
+| ------------------------ | -------------------------------------- |
+| "Spec mismatch"          | Implementation doesn't match spec      |
+| "Test fraud"             | Tests pass but don't validate behavior |
+| "Functional defect"      | Code has bugs or incorrect behavior    |
+| "Security risk"          | Injection risks, unsafe operations     |
+| "Missing tests"          | Critical paths not covered             |
+| "Stubbed implementation" | Core functionality not implemented     |
+
 ## Red Flags: ALWAYS REJECT
 
-The following patterns indicate spec violation. Always reject when you see:
+The following patterns indicate violations in handovers or code reviews:
+
+### Handover Red Flags
 
 | Pattern                      | Why It's Wrong                       |
 | ---------------------------- | ------------------------------------ |
@@ -159,6 +319,18 @@ The following patterns indicate spec violation. Always reject when you see:
 | "Minimal implementation"     | Spec defines scope, not orchestrator |
 | Missing acceptance criteria  | Spec requirement not covered         |
 | Extra tasks not in spec      | Scope creep                          |
+
+### Code Review Red Flags
+
+| Pattern                  | Why It's Wrong                         |
+| ------------------------ | -------------------------------------- |
+| "Spec mismatch"          | Implementation doesn't match spec      |
+| "Test fraud"             | Tests pass but don't validate behavior |
+| "Functional defect"      | Code has bugs or incorrect behavior    |
+| "Security risk"          | Injection risks, unsafe operations     |
+| "Missing tests"          | Critical paths not covered             |
+| "Stubbed implementation" | Core functionality not implemented     |
+| "No error handling"      | Critical paths lack error handling     |
 
 ## Conformance Levels
 
@@ -239,6 +411,63 @@ All spec requirements are covered by tasks. Task breakdown is appropriate.
 issues: [
 {severity: "BLOCKING", issue: "Scope reduction: 'minimal' not in spec"},
 {severity: "MAJOR", issue: "Missing type safety acceptance criterion"}
+]
+```
+
+## Example: Code Review
+
+```markdown
+## Reviewing Implementation: Task 2 "Query Methods"
+
+### Spec Requirements (from read_spec_file)
+
+- Implement query<T>() generic method
+- Support parameterized queries
+- Return type-safe results
+
+### Implementation Review (files: src/db/client.ts, test/db/client.test.ts)
+
+**Files Reviewed:**
+
+- src/db/client.ts (query method implementation)
+- test/db/client.test.ts (test suite)
+
+**Tests Run:**
+
+- npm test -- client.test.ts (all 8 tests passing)
+
+**Findings:**
+
+1. ✅ query<T>() generic method implemented correctly
+2. ✅ Parameterized queries work with prepared statements
+3. ✅ Type safety enforced via TypeScript generics
+4. ❌ BLOCKING: Test fraud detected
+   - Test "should handle SQL errors" catches error but doesn't validate error type
+   - Test passes even if wrong error type is thrown
+5. ❌ MAJOR: Missing edge case coverage
+   - No test for empty result set
+   - No test for connection timeout scenario
+
+### Judgment: NEEDS_REVISION (MEDIUM RISK)
+
+issues: [
+{
+severity: "BLOCKING",
+impact: "Tests don't validate actual error handling behavior",
+reason: "Test 'should handle SQL errors' catches error but doesn't check error type or message",
+guidance: "Assert error instanceof DatabaseError and check error.code === 'SQL_ERROR'"
+},
+{
+severity: "MAJOR",
+impact: "Edge cases not validated, may fail in production",
+reason: "Missing tests for empty results and connection timeout",
+guidance: "Add test cases: 'should return empty array for no results' and 'should throw on connection timeout'"
+}
+]
+
+recommendations: [
+"Fix test fraud in error handling test",
+"Add edge case coverage for empty results and timeouts"
 ]
 ```
 

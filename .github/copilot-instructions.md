@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-10-04
 
 ## Active Technologies
+
 - Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages (017-x-axis-unification)
 
 - N/A (stateless rendering library) (013-axis-renderer-unification)
@@ -34,12 +35,11 @@ tests/
 Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard conventions
 
 ## Recent Changes
+
 - 018-x-axis-renderer: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages
 - 017-x-axis-unification: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages
 
 - 013-axis-renderer-unification: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.37.0-1.0.pre-216 + Standard Dart libraries only (dart:core, dart:math, dart:ui) - NO external packages
-
-
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -68,6 +68,15 @@ When you CREATE or MODIFY any file, **ALL** issues in that file become YOUR resp
 ### CONSEQUENCE OF VIOLATION
 
 Your completion signal will be **REJECTED** and you will be required to fix ALL issues before re-submission.
+
+---
+
+## Documentation Naming Policy (MANDATORY)
+
+- **All documentation filenames must be lowercase only** (no uppercase letters).
+- Use `snake_case` for multi-word filenames.
+- If you create, rename, or move a document, **update every internal link** that references it.
+- If any uppercase-named doc exists, **rename it to lowercase and fix links immediately**.
 
 ---
 
@@ -200,9 +209,9 @@ Before EVERY terminal command:
 
 See comprehensive guides:
 
-- `.github/TERMINAL_WORKFLOW_GUIDELINES.md` - Full workflow documentation
-- `.github/TERMINAL_QUICK_REFERENCE.md` - Quick reference card
-- `.github/SYSTEM_PROMPT_TERMINAL_MANAGEMENT.md` - System prompt additions
+- `.github/terminal_workflow_guidelines.md` - Full workflow documentation
+- `.github/terminal_quick_reference.md` - Quick reference card
+- `.github/system_prompt_terminal_management.md` - System prompt additions
 
 ---
 

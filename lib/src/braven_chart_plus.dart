@@ -50,17 +50,34 @@ import 'widgets/dialogs/threshold_annotation_dialog.dart';
 import 'widgets/dialogs/trend_annotation_dialog.dart';
 import 'widgets/web_context_menu.dart';
 
-/// Next-generation BravenChart with prototype interaction system.
+/// BravenChartPlus renders interactive, multi-series charts with annotations.
 ///
-/// **⚠️ COMPLETELY ISOLATED** - No references to lib/src!
+/// Key capabilities:
+/// - Multi-axis support with independent Y-axis configuration
+/// - Crosshair and tooltip interactions
+/// - Annotations (point, range, text, threshold, trend)
+/// - Streaming mode with buffering and auto-resume
 ///
-/// **Architecture** (from PrototypeChart):
-/// - RenderBox with handleEvent() for direct pointer events
-/// - ChartInteractionCoordinator for unified state management
-/// - QuadTree spatial indexing for O(log n) hit testing
-///
-/// **Current Phase**: Foundation - Widget skeleton created
-/// Next: Create example app to test empty widget
+/// Usage:
+/// ```dart
+/// BravenChartPlus(
+///   series: [
+///     ChartSeries(
+///       id: 'revenue',
+///       points: const [
+///         ChartDataPoint(x: 1, y: 10),
+///         ChartDataPoint(x: 2, y: 15),
+///       ],
+///       color: Colors.green,
+///     ),
+///   ],
+///   xAxisConfig: const XAxisConfig(label: 'Month'),
+///   yAxis: const YAxisConfig(label: 'USD'),
+///   interactionConfig: const InteractionConfig(
+///     crosshair: CrosshairConfig(enabled: true),
+///   ),
+/// )
+/// ```
 class BravenChartPlus extends StatefulWidget {
   const BravenChartPlus({
     super.key,

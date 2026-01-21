@@ -511,8 +511,8 @@ void main() {
         xAxisConfig: xAxisConfig,
       );
 
-      // Should use default gray color (0xFF666666) when no color specified
-      const expectedDefaultColor = Color(0xFF666666);
+      // Should use default gray color (0xFF333333) when no color specified
+      const expectedDefaultColor = Color(0xFF333333);
       final expectedBgColor = expectedDefaultColor.withValues(alpha: 0.15);
 
       final bgOperations = mockCanvas.operations.where((op) =>
@@ -523,7 +523,7 @@ void main() {
       expect(
         bgOperations.isNotEmpty,
         isTrue,
-        reason: 'Expected default gray color (0xFF666666) when color is null',
+        reason: 'Expected default gray color (0xFF333333) when color is null',
       );
     });
 
