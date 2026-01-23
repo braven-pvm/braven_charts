@@ -299,10 +299,14 @@ class MultiAxisManager {
   /// - [originalTransform]: Original transform before zoom/pan (for comparison)
   /// - [forceFullBounds]: If true, always return full data bounds (no viewport transformation).
   ///   Use this for series painting transforms where we need the full range.
+  /// - [forPainting]: When true AND viewport is zoomed, returns bounds that match
+  ///   the visible portion of data rather than full data bounds. Used for series
+  ///   rendering transforms in perSeries normalization mode. Default is false.
   Map<String, DataRange> computeAxisBounds({
     ChartTransform? transform,
     ChartTransform? originalTransform,
     bool forceFullBounds = false,
+    bool forPainting = false,
   }) {
     final bounds = <String, DataRange>{};
 
@@ -340,9 +344,16 @@ class MultiAxisManager {
     // In perSeries mode WITH multi-axis config, normalized Y range is 0-1, so if
     // transform differs, we need to adjust axis labels to show visible data range
     // Skip viewport transformation if forceFullBounds is true (for series painting)
+    // When forPainting=true AND zoomed, we want viewport-aware bounds for painting
     final isViewportTransformed = !forceFullBounds &&
         _normalizationMode == NormalizationMode.perSeries &&
         hasMultiAxisConfig && // Only when transform is in normalized space
+        t != null &&
+        ot != null &&
+        (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
+
+    // When forPainting=true, check if viewport is zoomed and use viewport-aware bounds
+    final usePaintingBounds = forPainting &&
         t != null &&
         ot != null &&
         (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
@@ -370,7 +381,7 @@ class MultiAxisManager {
         final explicitPaddedMin = fullMin - explicitPadding;
         final explicitPaddedMax = fullMax + explicitPadding;
 
-        if (isViewportTransformed) {
+        if (isViewportTransformed || usePaintingBounds) {
           // Transform explicit bounds based on viewport (zoom/pan)
           // Use the buffer range (-0.05 to 1.05) for viewport calculation
           const bufferRange = 1.1;
@@ -417,7 +428,7 @@ class MultiAxisManager {
       final paddedMin = fullMin - paddingAmount;
       final paddedMax = fullMax + paddingAmount;
 
-      if (isViewportTransformed) {
+      if (isViewportTransformed || usePaintingBounds) {
         // Transform computed bounds based on viewport (zoom/pan)
         // The viewport Y range maps to the visible portion of the data
         // Use the buffer range (-0.05 to 1.05) for viewport calculation
