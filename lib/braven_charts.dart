@@ -40,6 +40,7 @@ export 'src/layout/multi_axis_layout.dart';
 // Models
 export 'src/models/annotation_style.dart';
 export 'src/models/auto_scroll_config.dart';
+export 'src/models/bar_group_info.dart';
 // X-axis configuration uses XAxisConfig; Y-axis uses YAxisConfig.
 export 'src/models/chart_annotation.dart';
 export 'src/models/chart_data_point.dart';

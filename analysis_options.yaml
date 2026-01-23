@@ -25,6 +25,8 @@ analyzer:
     missing_enum_constant_in_switch: error # Exhaustive switch for CoordinateSystem enum
     prefer_const_constructors: error # Enforce const constructors for immutability
     prefer_final_fields: error # Enforce immutability patterns
+    # Ignore git dependency warning (braven_data is internal package)
+    invalid_dependency: ignore
     # Ignore deprecation warnings from Flutter framework updates
     deprecated_member_use: ignore
     # Style preferences

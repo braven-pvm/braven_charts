@@ -7,6 +7,7 @@ import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
+import '../models/bar_group_info.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../theming/components/series_theme.dart';
@@ -125,6 +126,7 @@ class SeriesElement implements ChartElement {
     this.seriesTheme,
     this.seriesIndex = 0,
     this.coordinator,
+    this.barGroupInfo,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   })  : _deprecatedStrokeWidth = strokeWidth,
@@ -139,6 +141,13 @@ class SeriesElement implements ChartElement {
   final SeriesTheme? seriesTheme;
   final int seriesIndex;
   final ChartInteractionCoordinator? coordinator;
+
+  /// Bar group positioning metadata (only used for BarChartSeries).
+  ///
+  /// When multiple bar series share the same X-values, this metadata is used
+  /// to calculate horizontal offsets so bars appear side-by-side rather than
+  /// overlapping. Null for non-bar series.
+  final BarGroupInfo? barGroupInfo;
 
   // Deprecated fields for backward compatibility
   final double? _deprecatedStrokeWidth;
