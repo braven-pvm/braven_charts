@@ -62,15 +62,15 @@ This section documents the existing rendering architecture. **All changes MUST w
 
 ### Key Classes and Responsibilities
 
-| Class | File | Responsibility |
-|-------|------|----------------|
-| `ChartRenderBox` | `lib/src/rendering/chart_render_box.dart` | Main RenderBox, orchestrates all rendering |
-| `SeriesElement` | `lib/src/elements/series_element.dart` | Wraps ChartSeries for rendering/hit testing |
-| `ChartTransform` | `lib/src/coordinates/chart_transform.dart` | Immutable Data↔Plot coordinate transform |
-| `MultiAxisManager` | `lib/src/rendering/modules/multi_axis_manager.dart` | Multi-axis config, bounds, normalization |
-| `SeriesCacheManager` | `lib/src/rendering/modules/series_cache_manager.dart` | GPU Picture caching for series layer |
-| `ScrollbarManager` | `lib/src/rendering/modules/scrollbar_manager.dart` | Scrollbar state, zoom/pan via scrollbars |
-| `EventHandlerManager` | `lib/src/rendering/modules/event_handler_manager.dart` | Pointer events, zoom/pan gestures |
+| Class                 | File                                                   | Responsibility                              |
+| --------------------- | ------------------------------------------------------ | ------------------------------------------- |
+| `ChartRenderBox`      | `lib/src/rendering/chart_render_box.dart`              | Main RenderBox, orchestrates all rendering  |
+| `SeriesElement`       | `lib/src/elements/series_element.dart`                 | Wraps ChartSeries for rendering/hit testing |
+| `ChartTransform`      | `lib/src/coordinates/chart_transform.dart`             | Immutable Data↔Plot coordinate transform    |
+| `MultiAxisManager`    | `lib/src/rendering/modules/multi_axis_manager.dart`    | Multi-axis config, bounds, normalization    |
+| `SeriesCacheManager`  | `lib/src/rendering/modules/series_cache_manager.dart`  | GPU Picture caching for series layer        |
+| `ScrollbarManager`    | `lib/src/rendering/modules/scrollbar_manager.dart`     | Scrollbar state, zoom/pan via scrollbars    |
+| `EventHandlerManager` | `lib/src/rendering/modules/event_handler_manager.dart` | Pointer events, zoom/pan gestures           |
 
 ### Coordinate Spaces
 
@@ -214,22 +214,22 @@ This section documents the existing rendering architecture. **All changes MUST w
 
 ### Performance-Critical Paths (DO NOT REGRESS)
 
-| Path | Target | Current | Notes |
-|------|--------|---------|-------|
-| Hover response | <16ms (60fps) | ~2ms | Cached Picture reuse |
-| Series paint (5×1000 pts) | <17ms | ~15ms | Path caching |
-| Zoom animation | 60fps | 60fps | Incremental cache invalidate |
-| Hit testing | O(log n) | O(log n) | QuadTree spatial index |
+| Path                      | Target        | Current  | Notes                        |
+| ------------------------- | ------------- | -------- | ---------------------------- |
+| Hover response            | <16ms (60fps) | ~2ms     | Cached Picture reuse         |
+| Series paint (5×1000 pts) | <17ms         | ~15ms    | Path caching                 |
+| Zoom animation            | 60fps         | 60fps    | Incremental cache invalidate |
+| Hit testing               | O(log n)      | O(log n) | QuadTree spatial index       |
 
 ### Files We Will Modify
 
-| File | Changes | Risk |
-|------|---------|------|
-| `lib/src/elements/series_element.dart` | Add BarGroupInfo, modify `_paintBarSeries()` | LOW - isolated change |
-| `lib/src/models/bar_group_info.dart` | NEW FILE - BarGroupInfo class | NONE - new file |
-| `lib/src/rendering/modules/multi_axis_manager.dart` | Add `forPainting` param to computeAxisBounds | MEDIUM - core logic |
-| `lib/src/rendering/chart_render_box.dart` | Pass BarGroupInfo, use forPainting bounds | MEDIUM - orchestration |
-| `lib/src/braven_chart_plus.dart` | Compute bar series index/count during element gen | LOW - minor addition |
+| File                                                | Changes                                           | Risk                   |
+| --------------------------------------------------- | ------------------------------------------------- | ---------------------- |
+| `lib/src/elements/series_element.dart`              | Add BarGroupInfo, modify `_paintBarSeries()`      | LOW - isolated change  |
+| `lib/src/models/bar_group_info.dart`                | NEW FILE - BarGroupInfo class                     | NONE - new file        |
+| `lib/src/rendering/modules/multi_axis_manager.dart` | Add `forPainting` param to computeAxisBounds      | MEDIUM - core logic    |
+| `lib/src/rendering/chart_render_box.dart`           | Pass BarGroupInfo, use forPainting bounds         | MEDIUM - orchestration |
+| `lib/src/braven_chart_plus.dart`                    | Compute bar series index/count during element gen | LOW - minor addition   |
 
 ---
 
