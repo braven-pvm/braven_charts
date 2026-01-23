@@ -91,35 +91,147 @@ Aggregation transforms data from "Raw Domain" to "Visual Domain".
 
 ### API Proposal: `AggregationSpec`
 
-```dart
+````dart
 /// Defines HOW to reduce the data.
 class AggregationSpec<TX> {
   // 1. How to slice
   final WindowSpec<TX> window;
 
   // 2. What to calculate
-  final Set<ReducerType> reducers;
+  final List<SeriesReducer> reducers; // CHANGED: Enum -> Extensible Class
 
   // 3. Post-process limit
   final int? maxOutputPoints;
 }
 
+/// Alignment of the window result relative to the input timeline
+enum WindowAlignment {
+  start,  // Point T represents [T, T+Size]
+  center, // Point T represents [T-Size/2, T+Size/2]
+  end     // Point T represents [T-Size, T] (Default for Trailing/Real-time)
+}
+
 /// Examples of Windowing
 class WindowSpec<TX> {
-  // "Give me a point every 1 second"
-  factory WindowSpec.fixed(TX size);
+  // "Fixed Bins": Reduces frequency (e.g., 1 point per 30s).
+  // Default Alignment: WindowAlignment.start
+  factory WindowSpec.fixed(TX size, {WindowAlignment align});
 
-  // "I want exactly 1000 points on current screen width"
+  // "Rolling Window": Maintains frequency (e.g., 1 point per 1s, smoothed).
+  // Default Alignment: WindowAlignment.end (Trailing)
+  factory WindowSpec.rolling(TX size, {TX? step, WindowAlignment align});
+
+  // "Pixel Aligned": Dynamic adaptive binning for rendering.
   factory WindowSpec.pixelAligned(double pixels, Range<TX> visibleRange);
 }
 
-enum ReducerType {
-  min, max, mean, sum, variance,
-  first, last, // "OHLC" style
-  median, p90, p99 // Expensive but useful
+
+/// Defines how to reduce a list of values into a single point value
+abstract class SeriesReducer<T> {
+  T reduce(List<double> values);
+
+  // Built-in reducers
+  static const mean = MeanReducer();
+  static const max = MaxReducer();
+  static const np = NormalizedPowerReducer(); // Domain specific!
+}
+
+
+### 3.1 Specialized Algorithms: Physiological Power Metrics
+
+For scientific and sports usage, simple arithmetic means are insufficient. The API supports multi-stage transformation pipelines for specific domain metrics.
+
+#### A. Normalized Power (NP)®
+*Formula*: $\sqrt[4]{\frac{1}{n} \sum (SMA_{30s})^4}$
+*Logic*: Accounts for the physiological cost of high-intensity efforts (which rises to the 4th power of intensity).
+*Pipeline Implementation*:
+1.  **Smoothing**: Simple Moving Average (SMA), 30-second window.
+2.  **Weighting**: Raise smoothed values to $P^4$.
+3.  **Averaging**: Arithmetic Mean of the weighted values.
+4.  **Scaling**: Take the 4th root.
+
+#### B. xPower (Exponential variation)
+*Formula*: $\sqrt[4]{\frac{1}{n} \sum (EWMA_{25s})^4}$
+*Logic*: Similar to NP but uses Exponentially Weighted Moving Average for better temporal response (no "drop-off" artifact).
+*Pipeline Implementation*:
+1.  **Smoothing**: EWMA, 25-second window ($\alpha \approx 1/26$).
+2.  **Weighting**: Rate smoothed values to $P^4$.
+3.  **Averaging**: Arithmetic Mean.
+4.  **Scaling**: Take 4th root.
+
+#### C. Variability Index (VI)
+*Formula*: $VI = \frac{NP}{AP}$
+*Logic*: Ratio of Normalized Power to Average Power.
+- $VI \approx 1.0$: Steady state effort.
+- $VI > 1.2$: Highly stochastic (criterium/intervals).
+
+### 3.2 Transformer Pipeline Extensions
+
+To support the above, the `SeriesPipeline` includes `map()` and `rolling()` operators beyond simple windowing:
+
+```dart
+// Example: Calculating Normalized Power manually via primitives
+var np = SeriesPipeline(rawWatts)
+    .rollingMean(window: Duration(seconds: 30)) // Step 1: SMA
+    .map((w) => pow(w, 4))                      // Step 2: Weight
+    .collapse(Reducer.mean)                     // Step 3: Mean
+    .map((w) => pow(w, 0.25));                  // Step 4: Root
+````
+
+````
+
+### 3.3 Extensible Metric System (Formalized Calculations)
+
+To avoid hardcoding every scientific formula into the core, we support a plugin architecture via `SeriesMetric` (Scalar) and `SeriesReducer` (Vector/Rolling).
+
+#### The Metric Interface (Scalar)
+```dart
+/// Calculates a single value for an entire series (e.g., Total Normalized Power)
+abstract class SeriesMetric<T> {
+  T calculate(Series<dynamic, double> series);
 }
 ```
 
+#### The Reducer Interface (Vector/Rolling)
+```dart
+/// Applied to a Window (Fixed or Rolling) to produce a Point in a new Series.
+/// This is what generates the "Data for Plotting".
+abstract class SeriesReducer<T> {
+  T reduce(List<double> windowValues);
+}
+```
+
+#### Example: Implementing Reducers
+```dart
+class NormalizedPowerReducer implements SeriesReducer<double> {
+  @override
+  double reduce(List<double> values) {
+    // Standard NP formula applied to this specific window/bin
+    if (values.isEmpty) return 0.0;
+    // Note: NP usually requires a 30s pre-smoothing, so typically
+    // this reducer is applied to a 30s-smoothed series OR
+    // it implements the logic internally on raw data.
+    double sum4th = 0.0;
+    for (final v in values) sum4th += pow(v, 4);
+    return pow(sum4th / values.length, 0.25).toDouble();
+  }
+}
+```
+
+#### Proposed Usage (Fluent API)
+Users can extend `SeriesPipeline` to add "syntax sugar" for their domain.
+
+```dart
+// Generate the PLOT DATA (Series)
+// "30s Rolling Average Curve"
+var plotData = SeriesPipeline(rawWatts)
+    .rolling(window: Duration(seconds: 30))
+    .reduce(SeriesReducer.mean) // or SeriesReducer.np
+    .toSeries();
+
+// Generate the METRIC (Scalar)
+// "Total ride NP"
+var npValue = SeriesPipeline(rawWatts).calculateNormalizedPower();
 ### Technical Explanation: Binning vs. Downsampling
 
 - **Binning (Aggregation)**: 100 points -> 1 representative point (mean/max). Mathematically changes data shape. Good for scientific summaries.
@@ -145,7 +257,7 @@ class RenderReadyData {
   final Float32List? yMax; // For error bands
   final Int8List? flags;   // For coloring points by quality/status
 }
-```
+````
 
 **Developer Workflow**:
 
@@ -310,7 +422,66 @@ The `SeriesPipeline` specifically supports these "Forked Views"—one raw buffer
 
 ---
 
-## 9. Implementation Phases
+## 9. Real-World Usage Example
+
+Below is the exact pattern for ingesting a Garmin FIT/CSV file using this API.
+
+### 9.1 The Source Data (`GarminPing.csv`)
+
+```csv
+timestamp,                  power, heart_rate, cadence
+2025-10-26 07:32:46+02:00,  100.0, 85,         61
+2025-10-26 07:32:47+02:00,  102.0, 86,         62
+...
+```
+
+### 9.2 The Ingestion Code
+
+```dart
+void main() async {
+  // 1. Define Schema (Once per file type)
+  final schema = CsvSchema(
+    dateColumn: "timestamp",
+    columns: [
+      ColumnDef("power", FieldType.float),
+      ColumnDef("heart_rate", FieldType.integer),
+    ]
+  );
+
+  // 2. Load Data (Streamed/Buffered)
+  final table = await CsvLoader.load("data/GarminPing.csv", schema);
+
+  // 3. Extract Series (Zero-Copy Views)
+  final powerSeries = Series.fromColumn(
+    id: "pwr",
+    x: table.timestampColumn,
+    y: table["power"]
+  );
+
+  // 4. Calculate Specialized Metrics (Scalar)
+  final np = SeriesPipeline(powerSeries).calculateNormalizedPower();
+  print("Normalized Power: ${np.toStringAsFixed(1)} W");
+
+  // 5. Generate Smoothed Curves for Plotting (Series)
+  // "Give me a 30s Rolling Average line to draw on the chart"
+  // DEFAULT: Uses 'WindowAlignment.end' (Trailing).
+  // Point at 10:00:30 represents average of 10:00:00 -> 10:00:30.
+  final smoothPower = SeriesPipeline(powerSeries)
+      .rolling(window: Duration(seconds: 30))
+      .reduce(SeriesReducer.mean)
+      .toSeries();
+
+  // "Give me a 30s Rolling NP line to draw" (Sustained intensity)
+  final np30s = SeriesPipeline(powerSeries)
+      .rolling(window: Duration(seconds: 30))
+      .reduce(SeriesReducer.np)
+      .toSeries();
+}
+```
+
+---
+
+## 10. Implementation Phases
 
 ### Phase A: Data Model Types (`Series`, `Point`, `AxisDomain`, `PointMeta`)
 

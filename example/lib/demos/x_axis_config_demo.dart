@@ -212,7 +212,8 @@ class _XAxisDemoPainter extends CustomPainter {
     );
 
     // Paint the axis
-    painter.paint(canvas, Rect.fromLTWH(0, 0, size.width, size.height), plotArea);
+    painter.paint(
+        canvas, Rect.fromLTWH(0, 0, size.width, size.height), plotArea);
   }
 
   @override

@@ -85,7 +85,8 @@ void main() {
       expect(renderBox, isNotNull);
     });
 
-    testWidgets('crosshairLabelPosition.insidePlot affects rendering', (tester) async {
+    testWidgets('crosshairLabelPosition.insidePlot affects rendering',
+        (tester) async {
       const xAxisConfig = XAxisConfig(
         label: 'X-Axis',
         showCrosshairLabel: true,
@@ -128,7 +129,8 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('crosshairLabelPosition.overAxis affects rendering', (tester) async {
+    testWidgets('crosshairLabelPosition.overAxis affects rendering',
+        (tester) async {
       const xAxisConfig = XAxisConfig(
         label: 'Data Points',
         showCrosshairLabel: true,

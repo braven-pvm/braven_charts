@@ -43,6 +43,7 @@ This returns your task handover with acceptance criteria, file operations, and d
 | `get_current_task`  | **Get your task assignment** | **FIRST - Always start here**  |
 | `signal_completion` | Signal task is done          | After implementation complete  |
 | `get_feedback`      | Get failure feedback         | After verification fails       |
+| `fix_code_review`   | Resolve code review issues   | After CHANGES_REQUESTED review |
 | `get_progress`      | Sprint progress              | Check overall status           |
 | `escalate_task`     | Escalate if stuck            | After multiple failed attempts |
 
@@ -477,6 +478,57 @@ If you're stuck and cannot make progress, call `escalate_task`:
 - ❌ Assume the feedback is complete (there may be hidden checks)
 - ❌ Ignore the retry count
 - ❌ Re-signal without actually fixing the issues
+
+## Code Review Fix Workflow
+
+When a Controller requests changes, use `fix_code_review` to retrieve issues, resolve them, and submit fixes for verification.
+
+### Fix Cycle
+
+1. **GET_ISSUES** → Pull open code review issues for your task
+2. **Fix code** → Implement the requested changes locally
+3. **RESOLVE_ISSUE** → Mark each issue as resolved with a short fix summary
+4. **SUBMIT_FIXES** → Submit the full set of fixes for Controller verification
+
+### Tool Actions
+
+The `fix_code_review` tool supports three actions:
+
+- **GET_ISSUES**: Returns the full handover context plus all open issues
+- **RESOLVE_ISSUE**: Marks a specific issue as resolved (`issue_id`, `fix_summary` required)
+- **SUBMIT_FIXES**: Submits all fixes for Controller verification (`summary`, `files_changed`, `tests_run` required)
+
+### Example: Get Issues
+
+```json
+// Call: fix_code_review
+{
+  "action": "GET_ISSUES"
+}
+```
+
+### Example: Resolve an Issue
+
+```json
+// Call: fix_code_review
+{
+  "action": "RESOLVE_ISSUE",
+  "issue_id": 42,
+  "fix_summary": "Added missing error handling and updated tests for timeout case."
+}
+```
+
+### Example: Submit Fixes
+
+```json
+// Call: fix_code_review
+{
+  "action": "SUBMIT_FIXES",
+  "summary": "Fixed all requested issues and aligned error handling with spec requirements.",
+  "files_changed": ["src/db/client.ts", "test/db/client.test.ts"],
+  "tests_run": ["npm test"]
+}
+```
 
 ## Critical Constraints
 
