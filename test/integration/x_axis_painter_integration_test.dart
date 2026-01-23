@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('XAxisPainter Integration', () {
-    testWidgets('Chart renders successfully with X-axis configuration', (tester) async {
+    testWidgets('Chart renders successfully with X-axis configuration',
+        (tester) async {
       // Create a simple chart to verify XAxisPainter is integrated correctly
       final series = [
         const LineChartSeries(
@@ -191,7 +192,9 @@ void main() {
       // - All axis elements use the resolved color
     });
 
-    testWidgets('Chart derives axis color from first series when config color is null', (tester) async {
+    testWidgets(
+        'Chart derives axis color from first series when config color is null',
+        (tester) async {
       const seriesColor = Color(0xFFFF0000); // Red
 
       final series = [
@@ -248,7 +251,8 @@ void main() {
       // - Falls back to default color if no series or series has no color
     });
 
-    testWidgets('legacy XAxisRenderer is NOT used for X-axis rendering', (tester) async {
+    testWidgets('legacy XAxisRenderer is NOT used for X-axis rendering',
+        (tester) async {
       // This test verifies that the new XAxisPainter is used instead of
       // the legacy XAxisRenderer class.
       //

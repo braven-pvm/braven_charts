@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:math' as math;
-import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, Rect, TextDirection;
+import 'dart:ui'
+    show Canvas, Color, Offset, Paint, PaintingStyle, Rect, TextDirection;
 
-import 'package:flutter/painting.dart' show FontWeight, TextPainter, TextSpan, TextStyle;
+import 'package:flutter/painting.dart'
+    show FontWeight, TextPainter, TextSpan, TextStyle;
 
 import '../models/chart_series.dart';
 import '../models/data_range.dart';
@@ -87,7 +89,9 @@ class XAxisPainter {
 
     for (final tickValue in ticks) {
       // Calculate X position for this tick
-      final ratio = axisBounds.span == 0 ? 0.0 : (tickValue - axisBounds.min) / axisBounds.span;
+      final ratio = axisBounds.span == 0
+          ? 0.0
+          : (tickValue - axisBounds.min) / axisBounds.span;
       final x = plotArea.left + ratio * plotArea.width;
 
       // Draw tick mark
@@ -122,7 +126,10 @@ class XAxisPainter {
 
     // Draw axis label if configured
     if (config.shouldShowAxisLabel && config.label != null) {
-      final axisLabelText = config.shouldAppendUnitToLabel && config.unit != null ? '${config.label} (${config.unit})' : config.label!;
+      final axisLabelText =
+          config.shouldAppendUnitToLabel && config.unit != null
+              ? '${config.label} (${config.unit})'
+              : config.label!;
 
       final axisLabelPainter = TextPainter(
         text: TextSpan(
@@ -139,7 +146,11 @@ class XAxisPainter {
       const tickLength = 6.0;
       // Estimate tick label height (approximately fontSize * 1.2)
       final tickLabelHeight = labelStyle.fontSize ?? 12.0 * 1.2;
-      final axisLabelY = plotArea.bottom + tickLength + config.tickLabelPadding + tickLabelHeight + config.axisLabelPadding;
+      final axisLabelY = plotArea.bottom +
+          tickLength +
+          config.tickLabelPadding +
+          tickLabelHeight +
+          config.axisLabelPadding;
 
       axisLabelPainter.paint(
         canvas,
@@ -240,13 +251,17 @@ class XAxisPainter {
       formatted = value.toStringAsFixed(2);
     } else if (value.abs() < 100) {
       final rounded = _roundToDecimals(value, 1);
-      formatted = rounded == rounded.roundToDouble() ? rounded.toInt().toString() : rounded.toStringAsFixed(1);
+      formatted = rounded == rounded.roundToDouble()
+          ? rounded.toInt().toString()
+          : rounded.toStringAsFixed(1);
     } else {
       formatted = value.round().toString();
     }
 
     // Append unit if configured
-    if (config.shouldShowTickUnit && config.unit != null && config.unit!.isNotEmpty) {
+    if (config.shouldShowTickUnit &&
+        config.unit != null &&
+        config.unit!.isNotEmpty) {
       formatted = '$formatted ${config.unit}';
     }
 

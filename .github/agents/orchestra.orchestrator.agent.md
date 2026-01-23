@@ -163,6 +163,43 @@ When the Controller rejects your sprint config or handover, you'll see status ch
 | `resubmit_handover` | Resubmit task handover after revisions           | After fixing handover issues           |
 | `get_amendments`    | View all amendments made to tasks                | Reviewing specification change history |
 
+#### Code Review Remediation Tools
+
+| Tool                  | Purpose                                         | When to Use                                         |
+| --------------------- | ----------------------------------------------- | --------------------------------------------------- |
+| `reopen_task`         | Reopen a COMPLETE task after CHANGES_REQUESTED  | Primary path to fix failed code review on same task |
+| `get_code_review`     | Fetch review with issues for a task             | Before reopen to scope fixes (`include_issues`)     |
+| `update_handover`     | Update handover to include review issues        | After reopen to re-prepare with explicit fixes      |
+| `update_verification` | Update verification to align with review issues | After reopen so verification matches required fixes |
+
+**Implementor fix workflow:** After you reopen and re-prepare the task, the Implementor resolves code review issues using `fix_code_review` (GET_ISSUES → fix code → RESOLVE_ISSUE → SUBMIT_FIXES). Ensure your handover context points them to that workflow.
+
+### Handling Code Review Failures (Sprint 005)
+
+When a completed task fails Code Review (CHANGES_REQUESTED), **do NOT create a new task**. Reopen the original task and re-prepare it with the review issues.
+
+**Workflow:**
+
+1. **Detect Failure**: Check `get_code_review` or `get_code_review_summary`.
+2. **Analyze Issues**: Call `get_code_review` with `include_issues` to see EXACTLY what is wrong.
+3. **Reopen Task**: Call `reopen_task` with a clear reason referencing the review.
+4. **Re-Prepare**:
+
+- Use `update_handover` to include the review issues in acceptance criteria and context.
+- Use `update_verification` to align checks with the required fixes.
+
+5. **Implementor Fixes**: Implementor sees the reopened task in `get_current_task` and applies fixes.
+
+**Example: Reopen + Reprepare**
+
+```json
+// Reopen the task due to review failures
+{
+  "task_id": 4,
+  "reason": "Code review CHANGES_REQUESTED: wiring + navigation + tests"
+}
+```
+
 **Example: Resubmitting After Rejection**
 
 ```json
@@ -245,6 +282,13 @@ When the Controller rejects your sprint config or handover, you'll see status ch
 | `set_config`       | Set configuration value | Adjusting settings     |
 | `get_task_history` | Get task audit trail    | Reviewing task history |
 
+### Code Review Visibility
+
+| Tool                      | Purpose                              | When to Use                       |
+| ------------------------- | ------------------------------------ | --------------------------------- |
+| `get_code_review`         | Get review details for a task        | Checking why a task failed review |
+| `get_code_review_summary` | Get sprint-level code review summary | Dashboard overview                |
+
 ## Workflow: Task Lifecycle
 
 ```
@@ -266,12 +310,57 @@ PENDING → PREPARE → IMPLEMENT → VERIFY → COMPLETE
 
 When preparing a handover with `prepare_task`:
 
-1. **Analyze the task** - Call `get_task` first to understand requirements
-2. **Define acceptance criteria** - Clear, measurable outcomes
-3. **Specify file operations** - What files to CREATE, UPDATE, DELETE
-4. **List deliverables** - Explicit list of what must be produced
-5. **Provide context** - Background and architectural decisions
-6. **Set priority** - P0 (Critical) through P3 (Low)
+1. **Check amendment history** - Call `get_amendments` to learn from past verification failures
+2. **Analyze the task** - Call `get_task` first to understand requirements
+3. **Define acceptance criteria** - Clear, measurable outcomes
+4. **Specify file operations** - What files to CREATE, UPDATE, DELETE
+5. **List deliverables** - Explicit list of what must be produced
+6. **Provide context** - Background and architectural decisions
+7. **Set priority** - P0 (Critical) through P3 (Low)
+
+### ⚠️ MANDATORY: Check Amendment History Before Preparing Tasks
+
+**BEFORE calling `prepare_task` or `update_verification`, you MUST check for past verification failures:**
+
+```
+mcp_orchestra-orc_get_amendments({ amendment_type: "VERIFICATION" })
+```
+
+This returns all verification criteria amendments from previous tasks, including:
+
+- **before_state**: What the incorrect verification criteria looked like
+- **after_state**: What the corrected criteria look like
+- **rationale**: Why the amendment was needed
+
+**Learn from these patterns and DO NOT repeat the same mistakes.**
+
+#### Common Verification Criteria Errors (from Amendment History)
+
+| Error Pattern               | Incorrect              | Correct                     | Why                                                          |
+| --------------------------- | ---------------------- | --------------------------- | ------------------------------------------------------------ |
+| **Test runner flags**       | `--testPathPattern=X`  | `-t "X"`                    | Vitest uses `-t` for name filtering, not `--testPathPattern` |
+| **NPM exclusion**           | `npm test --exclude X` | Use negated regex in `-t`   | NPM doesn't support `--exclude` flag                         |
+| **Test file paths**         | `src/core/X.test.ts`   | `test/core/X.test.ts`       | Tests are in `test/` not `src/`                              |
+| **Directory in structural** | `path: "src/handlers"` | `path: "src/handlers/*.ts"` | Must use glob pattern, not directory                         |
+| **Shell chaining**          | `cd dir && npm test`   | Single command or `;`       | `&&` fails on Windows PowerShell                             |
+
+#### Example: Pre-Prepare Amendment Check
+
+```json
+// BEFORE preparing any task, check what went wrong before:
+// Call: get_amendments
+{
+  "amendment_type": "VERIFICATION"
+}
+
+// Response shows past failures like:
+// - Task 1: Changed --testPathPattern to -t
+// - Task 2: Changed --testPathPattern to -t (SAME ERROR!)
+//
+// NOW you know: Never use --testPathPattern with Vitest
+```
+
+**If you see the same error pattern repeated in amendments, that's a systemic issue you MUST avoid.**
 
 ### Example: Preparing a Task
 
@@ -349,11 +438,11 @@ When preparing a handover with `prepare_task`:
 }
 ```
 
-| Field | Required | Description | Examples |
-|-------|----------|-------------|----------|
-| `test_command` | ✅ | Command to run tests | `npm test`, `flutter test`, `pytest`, `cargo test` |
-| `test_file_pattern` | ✅ | Glob pattern for test files | `test/**/*.test.ts`, `test/**/*_test.dart` |
-| `source_base_dir` | ✅ | Base directory for source code | `src`, `lib`, `extension/src` |
+| Field               | Required | Description                    | Examples                                           |
+| ------------------- | -------- | ------------------------------ | -------------------------------------------------- |
+| `test_command`      | ✅       | Command to run tests           | `npm test`, `flutter test`, `pytest`, `cargo test` |
+| `test_file_pattern` | ✅       | Glob pattern for test files    | `test/**/*.test.ts`, `test/**/*_test.dart`         |
+| `source_base_dir`   | ✅       | Base directory for source code | `src`, `lib`, `extension/src`                      |
 
 **Why this is required:**
 
@@ -364,12 +453,12 @@ When preparing a handover with `prepare_task`:
 
 **Common configurations by language:**
 
-| Language | test_command | test_file_pattern | source_base_dir |
-|----------|--------------|-------------------|-----------------|
-| TypeScript | `npm test` | `test/**/*.test.ts` | `src` |
-| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib` |
-| Python | `pytest` | `tests/**/*.py` | `src` |
-| Rust | `cargo test` | `tests/**/*.rs` | `src` |
+| Language     | test_command   | test_file_pattern     | source_base_dir |
+| ------------ | -------------- | --------------------- | --------------- |
+| TypeScript   | `npm test`     | `test/**/*.test.ts`   | `src`           |
+| Dart/Flutter | `flutter test` | `test/**/*_test.dart` | `lib`           |
+| Python       | `pytest`       | `tests/**/*.py`       | `src`           |
+| Rust         | `cargo test`   | `tests/**/*.rs`       | `src`           |
 
 ### TDD Task Pattern
 
@@ -1047,6 +1136,107 @@ When task involves defining identifiers, ensure checks cover:
 | CSS classes     | Style definitions                        | Template HTML usage                                            |
 | Export names    | Module exports                           | Import statements                                              |
 
+## Interface Contract Validation
+
+### The Principle
+
+When a task modifies files that define **external contracts** (schemas, APIs, configs, specs), verification **MUST** include checks that the definitions are valid according to their specification — not just that the code using them works.
+
+Tests verify code behavior. Interface definitions have their own rules (JSON Schema, OpenAPI, npm package spec). If you only test handlers, invalid definitions slip through and fail at runtime in consumers.
+
+### What "External Contracts" Means
+
+External contracts are files **consumed by other systems**:
+
+- Schemas consumed by VS Code or MCP clients
+- APIs consumed by external clients or services
+- Configs parsed by tools (npm, TypeScript compiler, build systems)
+
+### Common Interface Types
+
+| Interface Type  | Example Files/Locations                | Spec to Validate Against |
+| --------------- | -------------------------------------- | ------------------------ |
+| JSON Schema     | MCP tool `inputSchema`, config schemas | JSON Schema Draft-07     |
+| OpenAPI/Swagger | `openapi.yaml`, `swagger.json`         | OpenAPI 3.x spec         |
+| package.json    | `package.json`                         | npm package spec         |
+| tsconfig.json   | `tsconfig.json`                        | TypeScript config spec   |
+| Protobuf        | `*.proto`                              | proto3 syntax            |
+| GraphQL SDL     | `*.graphql`                            | GraphQL spec             |
+
+### Requirement
+
+When preparing tasks that modify interface definition files, you **MUST** include verification criteria that validate those definitions against their specification.
+
+### How to Add Interface Validation
+
+Add behavioral checks (or tests) that explicitly validate the interface definition, for example:
+
+```json
+{
+  "behavioral_checks": [
+    {
+      "description": "MCP tool schemas are valid JSON Schema",
+      "command": "npm test -- -t 'tool schema validation'",
+      "expect_exit_code": 0,
+      "severity": "BLOCKING"
+    }
+  ]
+}
+```
+
+### File Pattern Recognition
+
+Look for interface definition files and schema declarations such as:
+
+- `**/inputSchema` properties in tools registrations
+- `package.json`, `tsconfig.json`, `*.config.js`
+- `openapi.yaml`, `swagger.json`
+- `*.proto`, `*.graphql`
+- Any file consumed by external systems or clients
+
+## Verification Design: Interface Definition Validation
+
+**CRITICAL**: When a task modifies **interface definitions** (schemas, contracts, specs), verification must include **schema/spec validity checks** - not just tests that the code using them works.
+
+### The Problem
+
+Tests validate that handlers work. Tests validate that Zod schemas parse correctly. But interface definitions themselves (JSON Schema, OpenAPI, protobuf, GraphQL SDL) have their own specification rules. Consumer validation happens at runtime - often in a different system (VS Code, API gateway, client SDK).
+
+### Interface Definition Types Requiring Validity Checks
+
+| Interface Type       | Spec to Validate Against | Common Errors                                         |
+| -------------------- | ------------------------ | ----------------------------------------------------- |
+| MCP tool inputSchema | JSON Schema Draft-07     | Array without `items`, object without `properties`    |
+| OpenAPI/Swagger      | OpenAPI 3.x spec         | Invalid `$ref`, missing required fields               |
+| GraphQL SDL          | GraphQL spec             | Invalid types, circular references                    |
+| Protobuf             | proto3 syntax            | Reserved field numbers, invalid defaults              |
+| JSON Schema          | JSON Schema spec         | Invalid `type`, `enum` not array, `required` mismatch |
+| package.json         | npm package spec         | Invalid `exports`, missing `main`                     |
+| tsconfig.json        | TypeScript config spec   | Conflicting options, invalid paths                    |
+
+### Mandatory Verification for Interface Tasks
+
+When preparing a task that touches interface definitions:
+
+1. **Add a behavioral check** that validates the definition against its spec
+2. **Add a test** (if project supports it) that loads and validates all definitions
+3. **Include in acceptance criteria**: "Definitions pass spec validation"
+
+Example verification for MCP tools:
+
+```json
+{
+  "behavioral_checks": [
+    {
+      "description": "MCP tool schemas are valid JSON Schema",
+      "command": "npm test -- -t 'tool schema validation'",
+      "expect_exit_code": 0,
+      "severity": "BLOCKING"
+    }
+  ]
+}
+```
+
 ### Red Flags During Verification
 
 During manual review, look for these cross-reference inconsistency patterns:
@@ -1060,17 +1250,45 @@ During manual review, look for these cross-reference inconsistency patterns:
 
 **ENVIRONMENT AWARENESS IS YOUR RESPONSIBILITY.** Verification checks must work on the actual user's environment, not just your assumptions.
 
+### 🔴 FIRST: Check Amendment History for Past Failures
+
+**Before writing ANY verification criteria, check what failed before:**
+
+```
+mcp_orchestra-orc_get_amendments({ amendment_type: "VERIFICATION" })
+```
+
+Past amendments reveal recurring mistakes. If you see the same error pattern multiple times, it's a systemic issue you MUST avoid.
+
+### Test Runner Compatibility (CRITICAL - Most Common Error)
+
+Different test runners have different CLI flags. **Do NOT assume Jest syntax works everywhere.**
+
+| Test Runner | Filter Tests by Name                      | ❌ WRONG (Won't Work)                    |
+| ----------- | ----------------------------------------- | ---------------------------------------- |
+| **Vitest**  | `npm test -- -t "pattern"`                | `--testPathPattern`, `--testNamePattern` |
+| **Jest**    | `npm test -- --testNamePattern="pattern"` |                                          |
+| **Mocha**   | `npm test -- --grep "pattern"`            |                                          |
+| **pytest**  | `pytest -k "pattern"`                     |                                          |
+
+**For this repository (Vitest):**
+
+- ✅ `npm test -- -t "pattern"` (name filter)
+- ✅ `npm test -- path/to/file.test.ts` (file filter)
+- ❌ `npm test -- --testPathPattern=X` (NOT SUPPORTED)
+- ❌ `npm test --exclude X` (NOT SUPPORTED by npm)
+
 ### Shell Compatibility
 
 The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Commands that work in bash may FAIL on Windows.
 
-| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative |
-|--------------------------------|------------------------|
-| `cd dir && npm test` | Use single command: `npm test --prefix dir` |
-| `cd dir && flutter test` | Use working dir: PowerShell handles `cd` but not `&&` |
-| `echo "a" && echo "b"` | Use `;` instead: `echo "a"; echo "b"` |
-| `grep pattern file \| wc -l` | Use PowerShell: `(Select-String pattern file).Count` |
-| `export VAR=val && cmd` | Set env differently per platform |
+| ❌ Bash-Only (FAILS on Windows) | ✅ Portable Alternative                               |
+| ------------------------------- | ----------------------------------------------------- |
+| `cd dir && npm test`            | Use single command: `npm test --prefix dir`           |
+| `cd dir && flutter test`        | Use working dir: PowerShell handles `cd` but not `&&` |
+| `echo "a" && echo "b"`          | Use `;` instead: `echo "a"; echo "b"`                 |
+| `grep pattern file \| wc -l`    | Use PowerShell: `(Select-String pattern file).Count`  |
+| `export VAR=val && cmd`         | Set env differently per platform                      |
 
 **Rule**: Avoid `&&` in behavioral check commands. The system will ERROR if `&&` is used.
 
@@ -1079,6 +1297,7 @@ The command executor uses **PowerShell on Windows** and **/bin/sh on Unix**. Com
 **Previously**, the system tried to auto-detect project type. **Now**, you MUST specify the environment explicitly in `configure_sprint`. The system uses your declared configuration, not guesses.
 
 For TDD red-phase tasks, verification checks are generated using your `environment` settings:
+
 - `test_command` → Used in behavioral checks to run tests
 - `test_file_pattern` → Used in structural checks to find test files
 - `source_base_dir` → Used in quality checks to find source files
@@ -1089,11 +1308,11 @@ For TDD red-phase tasks, verification checks are generated using your `environme
 
 Structural checks use glob patterns to find files. Common mistakes:
 
-| ❌ WRONG | Why | ✅ CORRECT |
-|----------|-----|-----------|
-| `path: "src/handlers"` | Directory, not glob | `path: "src/handlers/*.ts"` |
+| ❌ WRONG                | Why                             | ✅ CORRECT                     |
+| ----------------------- | ------------------------------- | ------------------------------ |
+| `path: "src/handlers"`  | Directory, not glob             | `path: "src/handlers/*.ts"`    |
 | `path: "src/handlers/"` | Trailing slash, still directory | `path: "src/handlers/**/*.ts"` |
-| `path: "test"` | Directory | `path: "test/**/*.test.ts"` |
+| `path: "test"`          | Directory                       | `path: "test/**/*.test.ts"`    |
 
 **Rule**: Paths must be files or glob patterns, never directories.
 
@@ -1101,11 +1320,13 @@ Structural checks use glob patterns to find files. Common mistakes:
 
 Before calling `configure_sprint`, verify:
 
-1. **Environment is specified** - `environment` field with `test_command`, `test_file_pattern`, `source_base_dir` is REQUIRED
-2. **Commands are portable** - No `&&` for command chaining (use `;` or single commands)
-3. **Paths are globs** - Not directories (must contain `*` or have file extension)
-4. **Patterns match environment** - Use values from your `environment` config, not guesses
-5. **Test command matches project** - `npm test` for Node, `flutter test` for Flutter, etc.
+1. **Check amendment history** - Call `get_amendments` to learn from past verification failures in previous sprints
+2. **Environment is specified** - `environment` field with `test_command`, `test_file_pattern`, `source_base_dir` is REQUIRED
+3. **Commands are portable** - No `&&` for command chaining (use `;` or single commands)
+4. **Paths are globs** - Not directories (must contain `*` or have file extension)
+5. **Patterns match environment** - Use values from your `environment` config, not guesses
+6. **Test command matches project** - `npm test` for Node, `flutter test` for Flutter, etc.
+7. **Test runner flags are correct** - Vitest uses `-t`, Jest uses `--testNamePattern`, etc.
 
 The system validates these and will BLOCK you if environment is missing or return WARNINGS for other issues. Catching issues early saves escalation cycles.
 
@@ -1131,8 +1352,9 @@ Never be in the same session as the Implementor. The trust boundary must be main
 When starting as Orchestrator:
 
 1. Call `get_sprint_status` to understand current state
-2. Identify what phase the sprint is in
-3. Determine next action based on workflow_step:
+2. Call `get_amendments` to review past verification failures and learn from them
+3. Identify what phase the sprint is in
+4. Determine next action based on workflow_step:
    - `SELECT_TASK`: Pick next task to prepare
    - `PREPARE_TASK`: Prepare handover with `prepare_task`
    - `IMPLEMENT`: Wait for implementor (you're not active)

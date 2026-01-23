@@ -6,6 +6,7 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - specs/** # Contract interface files not meant to be compiled yet
+    - docs/** # Documentation examples with unimplemented API references
     - docs/archive_release_1.0/** # Archived release 1.0 source snapshots
     - test/charts/** # Chart tests for unimplemented features
     - test/integration/coordinates/** # Coordinate integration tests for unimplemented features
