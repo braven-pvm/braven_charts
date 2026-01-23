@@ -1,10 +1,5 @@
-// @orchestra-task: 3
-
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
-
-@Tags(['tdd-red'])
-library;
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
@@ -549,15 +544,16 @@ void main() {
             lessThan(boundsDefault['axis3']!.max));
 
         // Each axis should reflect its own series' proportional zoom
-        // Axis 1: 100 * 0.5 = 50, plus padding
-        // Axis 2: 500 * 0.5 = 250, plus padding
-        // Axis 3: 1000 * 0.5 = 500, plus padding
-        expect(boundsForPainting['axis1']!.max, lessThan(60),
-            reason: 'Axis 1 max should reflect 50% viewport of 100');
-        expect(boundsForPainting['axis2']!.max, lessThan(270),
-            reason: 'Axis 2 max should reflect 50% viewport of 500');
-        expect(boundsForPainting['axis3']!.max, lessThan(550),
-            reason: 'Axis 3 max should reflect 50% viewport of 1000');
+        // Viewing middle 50% (25-75 of 0-100 range) means showing Y from 25% to 75%
+        // Axis 1: 100 data, 25-75 visible → bounds ~22.5 to ~77.5 with padding
+        // Axis 2: 500 data, same proportional zoom → bounds ~112.5 to ~387.5
+        // Axis 3: 1000 data, same proportional zoom → bounds ~225 to ~775
+        expect(boundsForPainting['axis1']!.max, lessThan(85),
+            reason: 'Axis 1 max should reflect 75% point of padded range');
+        expect(boundsForPainting['axis2']!.max, lessThan(420),
+            reason: 'Axis 2 max should reflect 75% point of padded range');
+        expect(boundsForPainting['axis3']!.max, lessThan(840),
+            reason: 'Axis 3 max should reflect 75% point of padded range');
       });
     });
 

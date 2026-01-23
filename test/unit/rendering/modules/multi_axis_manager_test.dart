@@ -431,7 +431,9 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
       });
 
-      test('computeAxisBounds supports viewport transformation', () {
+      test(
+          'computeAxisBounds supports viewport transformation with forPainting=true',
+          () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
         manager.setSeries([
           ChartSeries(
@@ -468,9 +470,10 @@ void main() {
         final bounds = manager.computeAxisBounds(
           transform: zoomed,
           originalTransform: original,
+          forPainting: true,
         );
 
-        // The bounds should be transformed based on the viewport
+        // The bounds should be transformed based on the viewport when forPainting=true
         expect(bounds['axis1']!.min, isNot(closeTo(-5.0, 0.001)));
         expect(bounds['axis1']!.max, isNot(closeTo(105.0, 0.001)));
       });

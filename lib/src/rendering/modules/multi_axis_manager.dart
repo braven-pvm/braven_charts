@@ -340,20 +340,19 @@ class MultiAxisManager {
         ot != null &&
         (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
 
-    // Check if viewport Y range differs from original (zoom or pan in perSeries mode)
-    // In perSeries mode WITH multi-axis config, normalized Y range is 0-1, so if
-    // transform differs, we need to adjust axis labels to show visible data range
-    // Skip viewport transformation if forceFullBounds is true (for series painting)
-    // When forPainting=true AND zoomed, we want viewport-aware bounds for painting
-    final isViewportTransformed = !forceFullBounds &&
+    // When forPainting=true AND viewport is zoomed, use viewport-aware bounds.
+    // This is the ONLY case where we apply viewport transformation.
+    //
+    // forPainting=false should ALWAYS return full data bounds (with 5% padding),
+    // regardless of zoom state. This is used for axis labels which need to show
+    // the full data range context.
+    //
+    // forPainting=true returns bounds that match the visible viewport when zoomed.
+    // This is used for series rendering transforms in perSeries normalization mode.
+    final usePaintingBounds = forPainting &&
+        !forceFullBounds &&
         _normalizationMode == NormalizationMode.perSeries &&
         hasMultiAxisConfig && // Only when transform is in normalized space
-        t != null &&
-        ot != null &&
-        (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
-
-    // When forPainting=true, check if viewport is zoomed and use viewport-aware bounds
-    final usePaintingBounds = forPainting &&
         t != null &&
         ot != null &&
         (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
@@ -381,16 +380,16 @@ class MultiAxisManager {
         final explicitPaddedMin = fullMin - explicitPadding;
         final explicitPaddedMax = fullMax + explicitPadding;
 
-        if (isViewportTransformed || usePaintingBounds) {
+        if (usePaintingBounds) {
           // Transform explicit bounds based on viewport (zoom/pan)
-          // Use the buffer range (-0.05 to 1.05) for viewport calculation
-          const bufferRange = 1.1;
-          final viewportNormMin = (t.dataYMin + 0.05) / bufferRange;
-          final viewportNormMax = (t.dataYMax + 0.05) / bufferRange;
+          // Calculate what fraction of the original range the zoomed viewport represents
+          final originalRange = ot.dataYMax - ot.dataYMin;
+          final viewportRatioMin = (t.dataYMin - ot.dataYMin) / originalRange;
+          final viewportRatioMax = (t.dataYMax - ot.dataYMin) / originalRange;
           final paddedRange = explicitPaddedMax - explicitPaddedMin;
           bounds[axis.id] = DataRange(
-            min: explicitPaddedMin + (viewportNormMin * paddedRange),
-            max: explicitPaddedMin + (viewportNormMax * paddedRange),
+            min: explicitPaddedMin + (viewportRatioMin * paddedRange),
+            max: explicitPaddedMin + (viewportRatioMax * paddedRange),
           );
         } else {
           bounds[axis.id] =
@@ -428,17 +427,16 @@ class MultiAxisManager {
       final paddedMin = fullMin - paddingAmount;
       final paddedMax = fullMax + paddingAmount;
 
-      if (isViewportTransformed || usePaintingBounds) {
+      if (usePaintingBounds) {
         // Transform computed bounds based on viewport (zoom/pan)
-        // The viewport Y range maps to the visible portion of the data
-        // Use the buffer range (-0.05 to 1.05) for viewport calculation
-        const bufferRange = 1.1; // -0.05 to 1.05
-        final viewportNormMin = (t.dataYMin + 0.05) / bufferRange;
-        final viewportNormMax = (t.dataYMax + 0.05) / bufferRange;
+        // Calculate what fraction of the original range the zoomed viewport represents
+        final originalRange = ot.dataYMax - ot.dataYMin;
+        final viewportRatioMin = (t.dataYMin - ot.dataYMin) / originalRange;
+        final viewportRatioMax = (t.dataYMax - ot.dataYMin) / originalRange;
         final paddedRange = paddedMax - paddedMin;
         bounds[axis.id] = DataRange(
-          min: paddedMin + (viewportNormMin * paddedRange),
-          max: paddedMin + (viewportNormMax * paddedRange),
+          min: paddedMin + (viewportRatioMin * paddedRange),
+          max: paddedMin + (viewportRatioMax * paddedRange),
         );
       } else {
         bounds[axis.id] = DataRange(min: paddedMin, max: paddedMax);

@@ -1,10 +1,5 @@
-// @orchestra-task: 3
-
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
-
-@Tags(['tdd-red'])
-library;
 
 import 'package:braven_charts/src/models/bar_group_info.dart';
 import 'package:flutter_test/flutter_test.dart';
