@@ -1,6 +1,6 @@
 name: braven_charts_plus_example
 description: Simple showcase app for BravenChartPlus
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -10,10 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Reference the parent braven_charts package
   braven_charts:
     path: ../
+
+  # braven_data for FIT ingestion and analysis
+  braven_data:
+    git:
+      url: https://github.com/forcegage-pvm/braven_data.git
 
 dev_dependencies:
   flutter_test:

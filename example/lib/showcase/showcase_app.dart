@@ -11,6 +11,7 @@ import 'pages/live_streaming_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/scientific_page.dart';
+import 'pages/fit_distribution_page.dart';
 import 'pages/segment_styling_page.dart';
 import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
@@ -164,6 +165,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.science,
       page: ScientificPage(),
     ),
+    const NavDestination(
+      label: 'FIT Analysis',
+      icon: Icons.fitness_center_outlined,
+      selectedIcon: Icons.fitness_center,
+      page: FitDistributionPage(),
+      badge: 'NEW',
+    ),
   ];
 
   @override
@@ -216,9 +224,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
             },
-            labelType: extended
-                ? NavigationRailLabelType.none
-                : NavigationRailLabelType.all,
+            labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: extended
