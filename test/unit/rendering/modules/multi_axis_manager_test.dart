@@ -20,13 +20,15 @@ void main() {
 
     group('Configuration Updates', () {
       test('setNormalizationMode returns true when mode changes', () {
-        expect(manager.setNormalizationMode(NormalizationMode.perSeries), isTrue);
+        expect(
+            manager.setNormalizationMode(NormalizationMode.perSeries), isTrue);
         expect(manager.normalizationMode, equals(NormalizationMode.perSeries));
       });
 
       test('setNormalizationMode returns false when mode is same', () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
-        expect(manager.setNormalizationMode(NormalizationMode.perSeries), isFalse);
+        expect(
+            manager.setNormalizationMode(NormalizationMode.perSeries), isFalse);
       });
 
       test('setSeries returns true when series changes', () {
@@ -65,7 +67,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
         expect(manager.hasMultipleYAxes(), isFalse);
@@ -77,13 +80,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
         expect(manager.hasMultipleYAxes(), isTrue);
@@ -95,13 +100,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -128,7 +135,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -143,13 +151,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
           ),
         ]);
 
@@ -163,7 +173,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -180,7 +191,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -191,7 +203,8 @@ void main() {
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -223,13 +236,16 @@ void main() {
         expect(axes.first.id, equals('primary_axis'));
       });
 
-      test('getEffectiveYAxes does not duplicate primaryYAxis with inline config', () {
+      test(
+          'getEffectiveYAxes does not duplicate primaryYAxis with inline config',
+          () {
         manager.setSeries([
           ChartSeries(
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'shared', position: YAxisPosition.left),
           ),
         ]);
 
@@ -258,7 +274,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -273,7 +290,9 @@ void main() {
         expect(axes.first.id, equals('axis1'));
       });
 
-      test('getEffectiveYAxes does not create default when primaryYAxis provided', () {
+      test(
+          'getEffectiveYAxes does not create default when primaryYAxis provided',
+          () {
         final primaryAxis = YAxisConfig.withId(
           id: 'custom',
           position: YAxisPosition.right,
@@ -297,7 +316,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -329,7 +349,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'inline_axis', position: YAxisPosition.left),
+            yAxisConfig: YAxisConfig.withId(
+                id: 'inline_axis', position: YAxisPosition.left),
             yAxisId: 'referenced_axis',
           ),
         ]);
@@ -380,7 +401,8 @@ void main() {
               ChartDataPoint(x: 0, y: 10),
               ChartDataPoint(x: 1, y: 90),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -397,7 +419,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -418,7 +441,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 100),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -451,7 +475,8 @@ void main() {
         expect(bounds['axis1']!.max, isNot(closeTo(105.0, 0.001)));
       });
 
-      test('computeAxisBounds with forPainting=false uses default behavior', () {
+      test('computeAxisBounds with forPainting=false uses default behavior',
+          () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
         manager.setSeries([
           ChartSeries(
@@ -461,7 +486,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 100),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -487,7 +513,9 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
       });
 
-      test('computeAxisBounds with forPainting=true and no zoom uses full bounds', () {
+      test(
+          'computeAxisBounds with forPainting=true and no zoom uses full bounds',
+          () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
         manager.setSeries([
           ChartSeries(
@@ -497,7 +525,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 100),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -522,7 +551,9 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
       });
 
-      test('computeAxisBounds with forPainting=true and zoom returns viewport-aware bounds', () {
+      test(
+          'computeAxisBounds with forPainting=true and zoom returns viewport-aware bounds',
+          () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
         manager.setSeries([
           ChartSeries(
@@ -532,7 +563,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 100),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -572,7 +604,9 @@ void main() {
         expect(bounds['axis1']!.max, lessThan(105.0));
       });
 
-      test('computeAxisBounds with explicit axis bounds and forPainting=true applies viewport transformation', () {
+      test(
+          'computeAxisBounds with explicit axis bounds and forPainting=true applies viewport transformation',
+          () {
         manager.setSeries([
           ChartSeries(
             id: 's1',
@@ -627,8 +661,10 @@ void main() {
 
         // forPainting=true and forPainting=false should both apply transformation
         // when viewport is zoomed (they should be similar)
-        expect(boundsPainting['axis1']!.min, closeTo(boundsDefault['axis1']!.min, 0.001));
-        expect(boundsPainting['axis1']!.max, closeTo(boundsDefault['axis1']!.max, 0.001));
+        expect(boundsPainting['axis1']!.min,
+            closeTo(boundsDefault['axis1']!.min, 0.001));
+        expect(boundsPainting['axis1']!.max,
+            closeTo(boundsDefault['axis1']!.max, 0.001));
       });
     });
 
@@ -674,7 +710,8 @@ void main() {
               ChartDataPoint(x: 0, y: 10),
               ChartDataPoint(x: 1, y: 90),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
@@ -683,7 +720,8 @@ void main() {
               ChartDataPoint(x: 0, y: 0),
               ChartDataPoint(x: 1, y: 1000),
             ],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
 
@@ -704,7 +742,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
@@ -718,13 +757,15 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
           ChartSeries(
             id: 's2',
             name: 'Series 2',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
           ),
         ]);
         info = manager.buildMultiAxisInfo();
@@ -744,7 +785,8 @@ void main() {
             id: 's1',
             name: 'Series 1',
             points: const [],
-            yAxisConfig: YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
           ),
         ]);
 
