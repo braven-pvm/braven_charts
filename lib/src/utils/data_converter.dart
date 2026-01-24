@@ -4,6 +4,7 @@
 import '../coordinates/chart_transform.dart';
 import '../elements/series_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../models/bar_group_info.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 
@@ -45,10 +46,27 @@ class DataConverter {
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
+    // First pass: Count total bar series for grouping
+    final barSeriesCount = series.whereType<BarChartSeries>().length;
+
+    // Track bar series index for grouping
+    int barSeriesIndex = 0;
+
     // Use theme.seriesTheme if available, otherwise backward compatibility mode
     return series.asMap().entries.map((entry) {
       final index = entry.key;
       final s = entry.value;
+
+      // Compute BarGroupInfo for bar series (needed for grouped rendering)
+      BarGroupInfo? barGroupInfo;
+      if (s is BarChartSeries && barSeriesCount > 0) {
+        barGroupInfo = BarGroupInfo(
+          index: barSeriesIndex,
+          count: barSeriesCount,
+          gap: 2.0, // Default 2px gap per FR-003 specification
+        );
+        barSeriesIndex++;
+      }
 
       return SeriesElement(
         series: s,
@@ -56,6 +74,7 @@ class DataConverter {
         seriesTheme: theme?.seriesTheme,
         seriesIndex: index,
         coordinator: coordinator,
+        barGroupInfo: barGroupInfo,
       );
     }).toList();
   }

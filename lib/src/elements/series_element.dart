@@ -998,6 +998,14 @@ class SeriesElement implements ChartElement {
       defaultBarWidth = defaultBarWidth.clamp(series.minWidth, series.maxWidth);
     }
 
+    // Enforce minimum bar width (4px default per FR-012)
+    const minBarWidthPixels = 4.0;
+    final minBarWidthData = minBarWidthPixels / _currentTransform.dataPerPixelX;
+    defaultBarWidth = defaultBarWidth.clamp(minBarWidthData, double.infinity);
+
+    // Calculate X-offset for bar grouping (if multiple bar series)
+    final xOffset = barGroupInfo?.calculateOffset(defaultBarWidth) ?? 0.0;
+
     if (!hasOverrides) {
       // FAST PATH: Single color for all bars
       final barPaint = Paint()
@@ -1009,9 +1017,9 @@ class SeriesElement implements ChartElement {
         final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
 
         final rect = Rect.fromLTRB(
-          plotPos.dx - defaultBarWidth / 2,
+          plotPos.dx + xOffset - defaultBarWidth / 2,
           plotPos.dy,
-          plotPos.dx + defaultBarWidth / 2,
+          plotPos.dx + xOffset + defaultBarWidth / 2,
           zeroY,
         );
         canvas.drawRect(rect, barPaint);
@@ -1032,9 +1040,9 @@ class SeriesElement implements ChartElement {
           ..style = PaintingStyle.fill;
 
         final rect = Rect.fromLTRB(
-          plotPos.dx - barWidth / 2,
+          plotPos.dx + xOffset - barWidth / 2,
           plotPos.dy,
-          plotPos.dx + barWidth / 2,
+          plotPos.dx + xOffset + barWidth / 2,
           zeroY,
         );
         canvas.drawRect(rect, barPaint);
