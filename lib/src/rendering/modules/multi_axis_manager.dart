@@ -543,6 +543,7 @@ class MultiAxisManager {
     final axisBounds = computeAxisBounds(
       transform: transform,
       originalTransform: originalTransform,
+      forPainting: true,
     );
     final axisWidths = computeAxisWidths(axisBounds: axisBounds);
     final effectiveBindings = getEffectiveBindings();
