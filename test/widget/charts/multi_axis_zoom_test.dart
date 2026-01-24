@@ -1,6 +1,9 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
+// @orchestra-task: 9
 // Test: US2 - Multi-Axis Y-Zoom Widget Tests
+// Test: US3 - Pan After Y-Zoom Widget Tests
 
+@Tags(['tdd-red'])
 library;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -341,6 +344,121 @@ void main() {
         // Test passes if no exception is thrown during zoom at multiple positions
         // The implementation should preserve zoom center at different vertical positions
       });
+    });
+
+    group('Pan After Y-Zoom', () {
+      testWidgets('pan after Y-zoom scrolls viewport correctly',
+          (tester) async {
+        await tester.pumpWidget(createMultiAxisChart());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BravenChartPlus), findsOneWidget);
+
+        final chartFinder = find.byType(BravenChartPlus);
+        final chartCenter = tester.getCenter(chartFinder);
+
+        // 1. Perform Y-zoom first (Ctrl+scroll up to zoom in)
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        final pointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(pointer.hover(chartCenter));
+        await tester.sendEventToBinding(
+          pointer.scroll(const Offset(0, 120)), // Scroll up to zoom in
+        );
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pumpAndSettle();
+
+        // 2. Attempt to pan vertically after zoom (scroll without Ctrl)
+        await tester.sendEventToBinding(pointer.hover(chartCenter));
+        await tester.sendEventToBinding(
+          pointer.scroll(const Offset(0, -60)), // Scroll down to pan
+        );
+        await tester.pumpAndSettle();
+
+        fail(
+            'Expected: After Y-zooming, panning should scroll through the zoomed content. '
+            'The viewport should move vertically and series should remain aligned on their respective axes. '
+            'Both left axis (Temperature 0-100) and right axis (Power 0-1000) should pan independently while maintaining perSeries normalization. '
+            'Actual: Pan after Y-zoom not yet implemented for perSeries mode.');
+      }, tags: ['tdd-red']);
+
+      testWidgets('crosshair tooltips show correct values after zoom+pan',
+          (tester) async {
+        await tester.pumpWidget(createMultiAxisChart());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BravenChartPlus), findsOneWidget);
+
+        final chartFinder = find.byType(BravenChartPlus);
+        final chartCenter = tester.getCenter(chartFinder);
+
+        // 1. Perform Y-zoom
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        final zoomPointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(zoomPointer.hover(chartCenter));
+        await tester.sendEventToBinding(
+          zoomPointer.scroll(const Offset(0, 240)), // Strong zoom in
+        );
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pumpAndSettle();
+
+        // 2. Pan vertically
+        await tester.sendEventToBinding(zoomPointer.hover(chartCenter));
+        await tester.sendEventToBinding(
+          zoomPointer.scroll(const Offset(0, -100)), // Pan down
+        );
+        await tester.pumpAndSettle();
+
+        // 3. Hover to trigger crosshair/tooltip
+        final hoverPointer = TestPointer(2, PointerDeviceKind.mouse);
+        final chartRect = tester.getRect(chartFinder);
+        final hoverPoint = Offset(
+          chartRect.center.dx,
+          chartRect.top + chartRect.height * 0.5,
+        );
+        await tester.sendEventToBinding(hoverPointer.hover(hoverPoint));
+        await tester.pumpAndSettle();
+
+        fail(
+            'Expected: After zoom+pan, hovering should show crosshair with tooltips displaying accurate data values '
+            'for the currently visible (panned) portion of the chart. Both left axis (Temperature) and right axis (Power) '
+            'values should be correct and reflect the panned viewport position. The crosshair labels should update to show '
+            'the zoomed and panned data ranges, not the original full ranges. '
+            'Actual: Crosshair tooltip accuracy after zoom+pan not yet implemented for multi-axis perSeries mode.');
+      }, tags: ['tdd-red']);
+
+      testWidgets('pan with drag gesture after Y-zoom', (tester) async {
+        await tester.pumpWidget(createMultiAxisChart());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BravenChartPlus), findsOneWidget);
+
+        final chartFinder = find.byType(BravenChartPlus);
+        final chartRect = tester.getRect(chartFinder);
+        final dragStartPoint = Offset(
+          chartRect.center.dx,
+          chartRect.center.dy,
+        );
+
+        // 1. Perform Y-zoom first
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+        final zoomPointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(zoomPointer.hover(dragStartPoint));
+        await tester.sendEventToBinding(
+          zoomPointer.scroll(const Offset(0, 180)), // Zoom in
+        );
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+        await tester.pumpAndSettle();
+
+        // 2. Pan with drag gesture (drag down = pan down, content moves up)
+        await tester.dragFrom(dragStartPoint, const Offset(0, 100));
+        await tester.pumpAndSettle();
+
+        fail(
+            'Expected: After Y-zooming, dragging vertically should pan through the zoomed content smoothly. '
+            'The viewport should follow the drag direction, allowing users to explore different portions of the '
+            'zoomed data range. Series on both axes should pan in sync while maintaining independent axis scaling. '
+            'Actual: Drag-based panning after Y-zoom not yet implemented for perSeries mode.');
+      }, tags: ['tdd-red']);
     });
   });
 }
