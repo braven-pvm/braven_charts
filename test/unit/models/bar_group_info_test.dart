@@ -73,8 +73,7 @@ void main() {
         expect(offset, equals(0.0));
       });
 
-      test('calculates correct offsets for three bar series with default gap',
-          () {
+      test('calculates correct offsets for three bar series with default gap', () {
         const info0 = BarGroupInfo(index: 0, count: 3);
         const info1 = BarGroupInfo(index: 1, count: 3);
         const info2 = BarGroupInfo(index: 2, count: 3);

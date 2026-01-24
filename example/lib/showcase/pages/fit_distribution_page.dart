@@ -105,12 +105,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
   }
 
   List<String> _listFitFiles(String dataDir) {
-    return Directory(dataDir)
-        .listSync()
-        .whereType<File>()
-        .map((file) => file.path)
-        .where((path) => path.toLowerCase().endsWith('.fit'))
-        .toList()
+    return Directory(dataDir).listSync().whereType<File>().map((file) => file.path).where((path) => path.toLowerCase().endsWith('.fit')).toList()
       ..sort();
   }
 
@@ -328,9 +323,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
       return const Center(child: Text('No distribution data available.'));
     }
 
-    final tickCount = _bandLabels.length >= 2
-        ? (_bandLabels.length < 8 ? _bandLabels.length : 8)
-        : null;
+    final tickCount = _bandLabels.length >= 2 ? (_bandLabels.length < 8 ? _bandLabels.length : 8) : null;
 
     return ListenableBuilder(
       listenable: _optionsController,
@@ -384,8 +377,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
           xAxisConfig: XAxisConfig(
             label: 'Band (W)',
             tickCount: tickCount,
@@ -428,8 +420,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
         child: Row(
           children: [
             _buildStat('Bands', _bandLabels.length.toString()),
-            _buildStat(
-                'Total Time', '${(totalSeconds / 60).toStringAsFixed(1)} min'),
+            _buildStat('Total Time', '${(totalSeconds / 60).toStringAsFixed(1)} min'),
             _buildStat(
               'Total Work',
               '${(totalWork / 1000).toStringAsFixed(1)} kJ',
@@ -455,8 +446,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
           const SizedBox(height: 4),
           Text(
             value,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ],
       ),
