@@ -12,8 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Grouped Bar Chart Rendering', () {
     group('Two Bar Series Side-by-Side Grouping', () {
-      testWidgets('renders both bars visibly at same X-position',
-          (tester) async {
+      testWidgets('renders both bars visibly at same X-position', (tester) async {
         // Arrange: Two bar series with overlapping X-values
         await tester.pumpWidget(
           MaterialApp(
@@ -68,8 +67,7 @@ void main() {
         // TODO: This test expects bars to be side-by-side (grouped)
         // Currently FAILS because bars overlap at same X-position
         // Green phase will implement bar grouping to make this pass
-        fail(
-            'Expected: Bars from series1 and series2 should render side-by-side at each X-position. '
+        fail('Expected: Bars from series1 and series2 should render side-by-side at each X-position. '
             'Actual: Bars currently overlap, making only topmost series visible. '
             'Bar grouping not yet implemented (Task 6).');
       });
@@ -196,14 +194,12 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
 
         // TODO: Three bars should be grouped side-by-side
-        fail(
-            'Expected: All three bars (actual, target, forecast) should be visible and grouped at each X-position. '
+        fail('Expected: All three bars (actual, target, forecast) should be visible and grouped at each X-position. '
             'Actual: Bars overlap, only topmost bar is visible. '
             'Multi-series bar grouping not implemented (Task 6).');
       });
 
-      testWidgets('handles five bar series with proper spacing',
-          (tester) async {
+      testWidgets('handles five bar series with proper spacing', (tester) async {
         // Arrange: Five bar series to test complex grouping
         await tester.pumpWidget(
           MaterialApp(
@@ -276,16 +272,14 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
 
         // TODO: Five bars should be grouped properly
-        fail(
-            'Expected: All five bars should be visible in a grouped layout at X=1. '
+        fail('Expected: All five bars should be visible in a grouped layout at X=1. '
             'Actual: Bars stack on top of each other. '
             'Bar grouping for 5+ series not implemented (Task 6).');
       });
     });
 
     group('Single Bar Series Centered (Unchanged Behavior)', () {
-      testWidgets('single bar series renders bars centered at X-position',
-          (tester) async {
+      testWidgets('single bar series renders bars centered at X-position', (tester) async {
         // Arrange: Single bar series (existing behavior should be unchanged)
         await tester.pumpWidget(
           MaterialApp(
@@ -325,14 +319,12 @@ void main() {
         // TODO: This test verifies single bar series behavior is unchanged
         // Currently PASSES because single bar series already works correctly
         // Adding fail() to ensure test is in red phase for consistency
-        fail(
-            'Expected: Single bar series should render bars centered at X-positions (existing behavior). '
+        fail('Expected: Single bar series should render bars centered at X-positions (existing behavior). '
             'This test validates that grouping implementation (Task 6) does NOT break single-series rendering. '
             'Currently unimplemented: BarGroupInfo with index=0, count=1 should produce offset=0.');
       });
 
-      testWidgets('single bar series with barWidthPercent works',
-          (tester) async {
+      testWidgets('single bar series with barWidthPercent works', (tester) async {
         // Arrange: Single bar series using percentage width
         await tester.pumpWidget(
           MaterialApp(
@@ -375,8 +367,7 @@ void main() {
     });
 
     group('Minimum Bar Width Enforcement', () {
-      testWidgets('enforces 4px minimum width with many bar series',
-          (tester) async {
+      testWidgets('enforces 4px minimum width with many bar series', (tester) async {
         // Arrange: Six bar series that would calculate very narrow bars
         await tester.pumpWidget(
           MaterialApp(
@@ -412,14 +403,12 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
 
         // TODO: Minimum 4px width not enforced yet
-        fail(
-            'Expected: Each bar should be at least 4px wide for readability (FR-012). '
+        fail('Expected: Each bar should be at least 4px wide for readability (FR-012). '
             'Actual: Bars render at specified 3px width without minimum enforcement. '
             'MinWidth validation logic not implemented (Task 6).');
       });
 
-      testWidgets('respects minWidth constraint in BarChartSeries',
-          (tester) async {
+      testWidgets('respects minWidth constraint in BarChartSeries', (tester) async {
         // Arrange: Bar series with explicit minWidth=8
         await tester.pumpWidget(
           MaterialApp(
@@ -455,8 +444,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
 
         // TODO: minWidth clamping not implemented
-        fail(
-            'Expected: Bar width clamped to minWidth=8px even though barWidthPixels=5px. '
+        fail('Expected: Bar width clamped to minWidth=8px even though barWidthPixels=5px. '
             'Actual: minWidth property exists in BarChartSeries but not enforced during rendering. '
             'Width clamping logic needed (Task 6).');
       });
@@ -505,8 +493,7 @@ void main() {
     });
 
     group('Mixed Series Types with Grouped Bars', () {
-      testWidgets('bar series group while line series renders normally',
-          (tester) async {
+      testWidgets('bar series group while line series renders normally', (tester) async {
         // Arrange: Two bar series + one line series
         await tester.pumpWidget(
           MaterialApp(
@@ -565,8 +552,7 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
 
         // TODO: Bar grouping should only affect bar series
-        fail(
-            'Expected: bar1 and bar2 grouped side-by-side, line1 renders independently. '
+        fail('Expected: bar1 and bar2 grouped side-by-side, line1 renders independently. '
             'Actual: Bar series overlap, line renders fine. '
             'Bar-specific grouping logic not implemented (Task 6).');
       });
