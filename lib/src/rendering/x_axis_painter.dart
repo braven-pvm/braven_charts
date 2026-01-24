@@ -87,9 +87,15 @@ class XAxisPainter {
     // Generate ticks and draw them
     final ticks = tickValues ?? generateTicks(axisBounds);
 
-    // Save canvas state before drawing ticks/labels
-    // This allows us to clip tick marks that extend beyond plot area
+    // Save canvas state and clip to prevent ticks from extending beyond plot area bounds
     canvas.save();
+    // Clip horizontally to plot area, allow vertical overflow for labels below axis
+    canvas.clipRect(Rect.fromLTRB(
+      plotArea.left,
+      plotArea.top,
+      plotArea.right,
+      chartArea.bottom,
+    ));
 
     for (final tickValue in ticks) {
       // Calculate X position for this tick
