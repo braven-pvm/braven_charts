@@ -87,6 +87,10 @@ class XAxisPainter {
     // Generate ticks and draw them
     final ticks = tickValues ?? generateTicks(axisBounds);
 
+    // Save canvas state before drawing ticks/labels
+    // This allows us to clip tick marks that extend beyond plot area
+    canvas.save();
+
     for (final tickValue in ticks) {
       // Calculate X position for this tick
       final ratio = axisBounds.span == 0
@@ -124,6 +128,9 @@ class XAxisPainter {
       );
     }
 
+    // Restore canvas state after drawing ticks/labels
+    canvas.restore();
+
     // Draw axis label if configured
     if (config.shouldShowAxisLabel && config.label != null) {
       final axisLabelText =
@@ -152,6 +159,8 @@ class XAxisPainter {
           tickLabelHeight +
           config.axisLabelPadding;
 
+      // Use canvas save/restore to ensure axis label doesn't affect other rendering
+      canvas.save();
       axisLabelPainter.paint(
         canvas,
         Offset(
@@ -159,6 +168,7 @@ class XAxisPainter {
           axisLabelY,
         ),
       );
+      canvas.restore();
     }
   }
 
