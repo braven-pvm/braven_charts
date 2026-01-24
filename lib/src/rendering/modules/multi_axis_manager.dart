@@ -299,9 +299,15 @@ class MultiAxisManager {
   /// - [originalTransform]: Original transform before zoom/pan (for comparison)
   /// - [forceFullBounds]: If true, always return full data bounds (no viewport transformation).
   ///   Use this for series painting transforms where we need the full range.
-  /// - [forPainting]: When true AND viewport is zoomed, returns bounds that match
-  ///   the visible portion of data rather than full data bounds. Used for series
-  ///   rendering transforms in perSeries normalization mode. Default is false.
+  /// - [forPainting]: Controls whether axis bounds reflect the zoomed viewport or full data range.
+  ///   **When to use true**: For series rendering transforms in perSeries normalization mode.
+  ///   The bounds will match the visible data portion when zoomed, ensuring correct rendering
+  ///   of data points within the current viewport.
+  ///   **When to use false** (default): For axis label rendering and crosshair/tooltip positioning.
+  ///   The bounds will reflect the full data range, ensuring axis labels remain consistent
+  ///   and tooltips can accurately map plot coordinates to data values.
+  ///   **Impact**: Setting this to true when zoomed changes the DataRange min/max to match
+  ///   the visible window, while false preserves the original full data range.
   Map<String, DataRange> computeAxisBounds({
     ChartTransform? transform,
     ChartTransform? originalTransform,

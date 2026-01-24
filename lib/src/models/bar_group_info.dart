@@ -92,6 +92,9 @@ class BarGroupInfo {
     return startOffset + index * effectiveWidth;
   }
 
+  /// Compares two BarGroupInfo instances for value equality.
+  ///
+  /// Two instances are equal if they have the same index, count, and gap values.
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -101,13 +104,26 @@ class BarGroupInfo {
           count == other.count &&
           gap == other.gap;
 
+  /// Returns a hash code based on index, count, and gap.
   @override
   int get hashCode => Object.hash(index, count, gap);
 
+  /// Returns a string representation of this BarGroupInfo.
+  ///
+  /// Example: `BarGroupInfo(index: 1, count: 3, gap: 2.0)`
   @override
   String toString() => 'BarGroupInfo(index: $index, count: $count, gap: $gap)';
 
   /// Creates a copy with optional field overrides.
+  ///
+  /// Any parameter that is null will use the current value.
+  ///
+  /// Example:
+  /// ```dart
+  /// final original = BarGroupInfo(index: 0, count: 3, gap: 2.0);
+  /// final modified = original.copyWith(gap: 4.0);
+  /// // modified has index=0, count=3, gap=4.0
+  /// ```
   BarGroupInfo copyWith({
     int? index,
     int? count,

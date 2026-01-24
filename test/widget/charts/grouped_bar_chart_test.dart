@@ -8,7 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Grouped Bar Chart Rendering', () {
     group('Two Bar Series Side-by-Side Grouping', () {
-      testWidgets('renders both bars visibly at same X-position', (tester) async {
+      testWidgets('renders both bars visibly at same X-position',
+          (tester) async {
         // Arrange: Two bar series with overlapping X-values
         await tester.pumpWidget(
           MaterialApp(
@@ -178,7 +179,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('handles five bar series with proper spacing', (tester) async {
+      testWidgets('handles five bar series with proper spacing',
+          (tester) async {
         // Arrange: Five bar series to test complex grouping
         await tester.pumpWidget(
           MaterialApp(
@@ -253,7 +255,8 @@ void main() {
     });
 
     group('Single Bar Series Centered (Unchanged Behavior)', () {
-      testWidgets('single bar series renders bars centered at X-position', (tester) async {
+      testWidgets('single bar series renders bars centered at X-position',
+          (tester) async {
         // Arrange: Single bar series (existing behavior should be unchanged)
         await tester.pumpWidget(
           MaterialApp(
@@ -291,7 +294,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('single bar series with barWidthPercent works', (tester) async {
+      testWidgets('single bar series with barWidthPercent works',
+          (tester) async {
         // Arrange: Single bar series using percentage width
         await tester.pumpWidget(
           MaterialApp(
@@ -329,7 +333,8 @@ void main() {
     });
 
     group('Minimum Bar Width Enforcement', () {
-      testWidgets('enforces 4px minimum width with many bar series', (tester) async {
+      testWidgets('enforces 4px minimum width with many bar series',
+          (tester) async {
         // Arrange: Six bar series that would calculate very narrow bars
         await tester.pumpWidget(
           MaterialApp(
@@ -365,7 +370,8 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('respects minWidth constraint in BarChartSeries', (tester) async {
+      testWidgets('respects minWidth constraint in BarChartSeries',
+          (tester) async {
         // Arrange: Bar series with explicit minWidth=8
         await tester.pumpWidget(
           MaterialApp(
@@ -439,7 +445,8 @@ void main() {
     });
 
     group('Mixed Series Types with Grouped Bars', () {
-      testWidgets('bar series group while line series renders normally', (tester) async {
+      testWidgets('bar series group while line series renders normally',
+          (tester) async {
         // Arrange: Two bar series + one line series
         await tester.pumpWidget(
           MaterialApp(
@@ -498,7 +505,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('two bar series with opposite Y-axis positions (left/right) and perSeries normalization', (tester) async {
+      testWidgets(
+          'two bar series with opposite Y-axis positions (left/right) and perSeries normalization',
+          (tester) async {
         // Arrange: Match fit_distribution_page.dart setup
         await tester.pumpWidget(
           MaterialApp(

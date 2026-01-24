@@ -322,7 +322,7 @@ void main() {
     group('documentation examples', () {
       test('example from class documentation works correctly', () {
         // Example from BarGroupInfo class doc
-        final groupInfo = BarGroupInfo(
+        const groupInfo = BarGroupInfo(
           index: 1,
           count: 3,
           gap: 2.0,

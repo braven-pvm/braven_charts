@@ -123,7 +123,8 @@ class DataConverter {
       for (final s in series) {
         if (s is BarChartSeries && s.points.length >= 2) {
           // Sort points by X to calculate spacing correctly
-          final sortedPoints = [...s.points]..sort((a, b) => a.x.compareTo(b.x));
+          final sortedPoints = [...s.points]
+            ..sort((a, b) => a.x.compareTo(b.x));
           for (int i = 1; i < sortedPoints.length; i++) {
             totalSpacing += sortedPoints[i].x - sortedPoints[i - 1].x;
             spacingCount++;
@@ -141,13 +142,21 @@ class DataConverter {
       }
     }
 
-    return DataBounds(xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding);
+    return DataBounds(
+        xMin: xMin - xPadding,
+        xMax: xMax + xPadding,
+        yMin: yMin - yPadding,
+        yMax: yMax + yPadding);
   }
 }
 
 /// Data bounds for chart viewport setup.
 class DataBounds {
-  const DataBounds({required this.xMin, required this.xMax, required this.yMin, required this.yMax});
+  const DataBounds(
+      {required this.xMin,
+      required this.xMax,
+      required this.yMin,
+      required this.yMax});
 
   final double xMin;
   final double xMax;
