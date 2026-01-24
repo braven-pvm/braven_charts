@@ -431,7 +431,9 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
       });
 
-      test('computeAxisBounds supports viewport transformation', () {
+      test(
+          'computeAxisBounds supports viewport transformation with forPainting=true',
+          () {
         manager.setNormalizationMode(NormalizationMode.perSeries);
         manager.setSeries([
           ChartSeries(
@@ -468,11 +470,204 @@ void main() {
         final bounds = manager.computeAxisBounds(
           transform: zoomed,
           originalTransform: original,
+          forPainting: true,
         );
 
+        // The bounds should be transformed based on the viewport when forPainting=true
+        expect(bounds['axis1']!.min, isNot(closeTo(-5.0, 0.001)));
+        expect(bounds['axis1']!.max, isNot(closeTo(105.0, 0.001)));
+      });
+
+      test('computeAxisBounds with forPainting=false uses default behavior',
+          () {
+        manager.setNormalizationMode(NormalizationMode.perSeries);
+        manager.setSeries([
+          ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: const [
+              ChartDataPoint(x: 0, y: 0),
+              ChartDataPoint(x: 1, y: 100),
+            ],
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          ),
+        ]);
+
+        final original = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: -0.05,
+          dataYMax: 1.05,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        // No zoom - both transforms are the same
+        final bounds = manager.computeAxisBounds(
+          transform: original,
+          originalTransform: original,
+          forPainting: false,
+        );
+
+        // With forPainting=false and no zoom, should get full data bounds with padding
+        // Data range: 0-100, padding 5% of 100 = 5, so -5 to 105
+        expect(bounds['axis1']!.min, closeTo(-5.0, 0.001));
+        expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
+      });
+
+      test(
+          'computeAxisBounds with forPainting=true and no zoom uses full bounds',
+          () {
+        manager.setNormalizationMode(NormalizationMode.perSeries);
+        manager.setSeries([
+          ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: const [
+              ChartDataPoint(x: 0, y: 0),
+              ChartDataPoint(x: 1, y: 100),
+            ],
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          ),
+        ]);
+
+        final original = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: -0.05,
+          dataYMax: 1.05,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        // No zoom - both transforms are the same
+        final bounds = manager.computeAxisBounds(
+          transform: original,
+          originalTransform: original,
+          forPainting: true,
+        );
+
+        // With forPainting=true but no zoom, should still get full data bounds with padding
+        expect(bounds['axis1']!.min, closeTo(-5.0, 0.001));
+        expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
+      });
+
+      test(
+          'computeAxisBounds with forPainting=true and zoom returns viewport-aware bounds',
+          () {
+        manager.setNormalizationMode(NormalizationMode.perSeries);
+        manager.setSeries([
+          ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: const [
+              ChartDataPoint(x: 0, y: 0),
+              ChartDataPoint(x: 1, y: 100),
+            ],
+            yAxisConfig:
+                YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+          ),
+        ]);
+
+        final original = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: -0.05,
+          dataYMax: 1.05,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        // Zoomed transform showing middle 50%
+        final zoomed = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: 0.2,
+          dataYMax: 0.8,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        final bounds = manager.computeAxisBounds(
+          transform: zoomed,
+          originalTransform: original,
+          forPainting: true,
+        );
+
+        // With forPainting=true and zoom, bounds should reflect the visible data range
         // The bounds should be transformed based on the viewport
         expect(bounds['axis1']!.min, isNot(closeTo(-5.0, 0.001)));
         expect(bounds['axis1']!.max, isNot(closeTo(105.0, 0.001)));
+
+        // Verify the bounds are within a reasonable range (zoomed portion)
+        // They should be greater than the full min and less than the full max
+        expect(bounds['axis1']!.min, greaterThan(-5.0));
+        expect(bounds['axis1']!.max, lessThan(105.0));
+      });
+
+      test(
+          'computeAxisBounds with explicit axis bounds and forPainting=true applies viewport transformation',
+          () {
+        manager.setSeries([
+          ChartSeries(
+            id: 's1',
+            name: 'Series 1',
+            points: const [
+              ChartDataPoint(x: 0, y: 50),
+            ],
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+              min: 0,
+              max: 100,
+            ),
+          ),
+        ]);
+
+        final original = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: -0.05,
+          dataYMax: 1.05,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        // Zoomed transform
+        final zoomed = const ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: 0.3,
+          dataYMax: 0.7,
+          plotWidth: 800,
+          plotHeight: 600,
+        );
+
+        final boundsDefault = manager.computeAxisBounds(
+          transform: zoomed,
+          originalTransform: original,
+          forPainting: false,
+        );
+
+        final boundsPainting = manager.computeAxisBounds(
+          transform: zoomed,
+          originalTransform: original,
+          forPainting: true,
+        );
+
+        // Both should apply viewport transformation when zoomed
+        // Verify the bounds are different from non-zoomed full bounds
+        expect(boundsPainting['axis1']!.min, isNot(closeTo(-5.0, 0.001)));
+        expect(boundsPainting['axis1']!.max, isNot(closeTo(105.0, 0.001)));
+
+        // forPainting=true and forPainting=false should both apply transformation
+        // when viewport is zoomed (they should be similar)
+        expect(boundsPainting['axis1']!.min,
+            closeTo(boundsDefault['axis1']!.min, 0.001));
+        expect(boundsPainting['axis1']!.max,
+            closeTo(boundsDefault['axis1']!.max, 0.001));
       });
     });
 

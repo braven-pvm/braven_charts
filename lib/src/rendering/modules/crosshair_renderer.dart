@@ -696,6 +696,11 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
   }) {
+    // Save canvas state and clip to plot area to prevent markers from
+    // rendering outside the plot boundaries
+    canvas.save();
+    canvas.clipRect(plotArea);
+
     for (final value in trackingState.seriesValues) {
       double screenY;
 
@@ -754,6 +759,9 @@ class CrosshairRenderer {
         borderPaint,
       );
     }
+
+    // Restore canvas state after drawing markers
+    canvas.restore();
   }
 
   /// Paints the tracking tooltip that follows the cursor.
