@@ -2,12 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flutter for web (hot reloadable)",
+      "name": "Flutter Example (main.dart)",
       "type": "dart",
       "request": "launch",
       "program": "example/lib/main.dart",
-      // "program": "example/lib/braven_chart_plus_feature_showcase.dart",
-      // "args": ["-d", "chrome", "--web-experimental-hot-reload"]
+      "deviceId": "chrome",
       "args": ["-d", "chrome"]
     }
   ]

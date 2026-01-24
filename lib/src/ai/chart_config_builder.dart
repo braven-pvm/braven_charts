@@ -96,16 +96,18 @@ class ChartConfigBuilder {
   ///
   /// Throws [FormatException] if the JSON is invalid.
   static ChartBuildResult fromJson(Map<String, dynamic> json) {
+    // Parse chart type first - needed for series style
+    final chartTypeStr = json['chart_type'] as String?;
+    final chartType = _parseChartType(chartTypeStr);
+    final defaultStyle = _chartTypeToSeriesStyle(chartTypeStr);
+
     // Parse series (required)
     final seriesList = json['series'] as List<dynamic>?;
     if (seriesList == null || seriesList.isEmpty) {
       throw const FormatException('At least one series is required');
     }
 
-    final series = seriesList.map((s) => _parseSeries(s as Map<String, dynamic>)).toList();
-
-    // Parse chart type
-    final chartType = _parseChartType(json['chart_type'] as String?);
+    final series = seriesList.map((s) => _parseSeries(s as Map<String, dynamic>, defaultStyle)).toList();
 
     // Parse axes
     final xAxisConfig = _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
@@ -146,12 +148,13 @@ class ChartConfigBuilder {
     );
   }
 
-  static ChartSeries _parseSeries(Map<String, dynamic> json) {
+  static ChartSeries _parseSeries(Map<String, dynamic> json, SeriesStyle? defaultStyle) {
     final id = json['id'] as String? ?? 'series_${DateTime.now().millisecondsSinceEpoch}';
     final name = json['name'] as String?;
     final colorStr = json['color'] as String?;
     final unit = json['unit'] as String?;
     final dataList = json['data'] as List<dynamic>? ?? [];
+    final color = colorStr != null ? _parseColor(colorStr) : null;
 
     final points = dataList.map((d) {
       final pointJson = d as Map<String, dynamic>;
@@ -163,9 +166,9 @@ class ChartConfigBuilder {
       );
     }).toList();
 
-    // Parse style hint from parent chart_type if series doesn't specify
+    // Parse style from series or use parent chart_type style
     final styleStr = json['style'] as String?;
-    final style = styleStr != null ? _parseSeriesStyle(styleStr) : null;
+    final style = styleStr != null ? _parseSeriesStyle(styleStr) : (defaultStyle ?? SeriesStyle.line);
 
     // Create Y-axis config if unit is specified
     YAxisConfig? yAxisConfig;
@@ -177,15 +180,48 @@ class ChartConfigBuilder {
       );
     }
 
-    return ChartSeries(
-      id: id,
-      name: name ?? id,
-      points: points,
-      color: colorStr != null ? _parseColor(colorStr) : null,
-      style: style,
-      unit: unit,
-      yAxisConfig: yAxisConfig,
-    );
+    // Create the correct series type based on style (default to line)
+    final effectiveStyle = style ?? SeriesStyle.line;
+    return switch (effectiveStyle) {
+      SeriesStyle.line => LineChartSeries(
+          id: id,
+          name: name ?? id,
+          points: points,
+          color: color,
+          unit: unit,
+          yAxisConfig: yAxisConfig,
+          interpolation: LineInterpolation.linear,
+          strokeWidth: 2.0,
+        ),
+      SeriesStyle.area => AreaChartSeries(
+          id: id,
+          name: name ?? id,
+          points: points,
+          color: color,
+          unit: unit,
+          yAxisConfig: yAxisConfig,
+          interpolation: LineInterpolation.linear,
+          fillOpacity: 0.3,
+        ),
+      SeriesStyle.bar => BarChartSeries(
+          id: id,
+          name: name ?? id,
+          points: points,
+          color: color,
+          unit: unit,
+          yAxisConfig: yAxisConfig,
+          barWidthPercent: 0.8,
+        ),
+      SeriesStyle.scatter => ScatterChartSeries(
+          id: id,
+          name: name ?? id,
+          points: points,
+          color: color,
+          unit: unit,
+          yAxisConfig: yAxisConfig,
+          markerRadius: 5.0,
+        ),
+    };
   }
 
   static ChartType? _parseChartType(String? type) {
@@ -195,6 +231,16 @@ class ChartConfigBuilder {
       'bar' => ChartType.bar,
       'scatter' => ChartType.scatter,
       _ => null,
+    };
+  }
+
+  static SeriesStyle? _chartTypeToSeriesStyle(String? type) {
+    return switch (type?.toLowerCase()) {
+      'line' => SeriesStyle.line,
+      'area' => SeriesStyle.area,
+      'bar' => SeriesStyle.bar,
+      'scatter' => SeriesStyle.scatter,
+      _ => SeriesStyle.line, // Default to line
     };
   }
 

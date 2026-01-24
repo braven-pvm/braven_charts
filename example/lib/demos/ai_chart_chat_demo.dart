@@ -159,7 +159,7 @@ Use appropriate colors and labels.''';
 
     // Create request with tools
     final request = CreateMessageRequest(
-      model: const Model.model(Models.claude35Sonnet20241022),
+      model: const Model.modelId('claude-sonnet-4-20250514'),
       maxTokens: 4096,
       system: const CreateMessageRequestSystem.text(systemPrompt),
       messages: _conversationHistory,
