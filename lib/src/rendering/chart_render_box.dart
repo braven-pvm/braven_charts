@@ -720,12 +720,18 @@ class ChartRenderBox extends RenderBox {
   /// Delegates to [MultiAxisManager.computeAxisBounds].
   ///
   /// [forceFullBounds]: If true, returns full data bounds without viewport
-  /// transformation. Use this for series painting transforms.
-  Map<String, DataRange> _computeAxisBounds({bool forceFullBounds = false}) {
+  /// transformation.
+  /// [forPainting]: When true AND viewport is zoomed, returns bounds that match
+  /// the visible portion of data. Used for series rendering transforms.
+  Map<String, DataRange> _computeAxisBounds({
+    bool forceFullBounds = false,
+    bool forPainting = false,
+  }) {
     return _multiAxisManager.computeAxisBounds(
       transform: _transform,
       originalTransform: _originalTransform,
       forceFullBounds: forceFullBounds,
+      forPainting: forPainting,
     );
   }
 
@@ -1599,7 +1605,7 @@ class ChartRenderBox extends RenderBox {
     // (viewport transformation is only for axis labels/crosshair, not series rendering)
     final Map<String, DataRange>? axisBounds =
         (_multiAxisManager.isMultiAxisNormalizationActive())
-            ? _computeAxisBounds(forceFullBounds: true)
+            ? _computeAxisBounds(forPainting: true)
             : null;
 
     // Build series-to-axis lookup for efficient transform creation (use effective bindings)
