@@ -203,7 +203,7 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
 
     for (var i = 0; i < timeSeries.length; i++) {
       final label = timeSeries.getX(i);
-      final timeSeconds = timeSeries.getY(i);
+      final timeSeconds = timeSeries.getY(i) / 60.00.toDouble();
       final workKj = workSeries.getY(i) / 1000.0;
 
       labels.add(label);
@@ -340,8 +340,8 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
               yAxisConfig: YAxisConfig(
                 position: YAxisPosition.left,
                 label: 'Time',
-                unit: 's',
-                labelFormatter: (value) => value.toStringAsFixed(0),
+                unit: 'H',
+                labelFormatter: (value) => value.toStringAsFixed(2),
               ),
             ),
             BarChartSeries(
@@ -358,26 +358,20 @@ class _FitDistributionPageState extends State<FitDistributionPage> {
                 labelFormatter: (value) => value.toStringAsFixed(1),
               ),
             ),
-            BarChartSeries(
-              id: 'work_distribution_2',
-              name: 'Work in band',
-              points: _workPoints,
-              color: Colors.red,
-              barWidthPercent: 0.7,
-              isXOrdered: true,
-              yAxisConfig: YAxisConfig(
-                position: YAxisPosition.right,
-                label: 'Work',
-                unit: 'kJ',
-                labelFormatter: (value) => value.toStringAsFixed(1),
-              ),
-            ),
           ],
           theme: _optionsController.theme,
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+            thickness: 25,
+            borderRadius: 8,
+            handleColor: Colors.blueGrey.withAlpha(30),
+            handleHoverColor: Colors.blue.withAlpha(65),
+            handleActiveColor: Colors.blue.withAlpha(120),
+            edgeZoneColor: Colors.blue.withAlpha(100),
+          ),
           xAxisConfig: XAxisConfig(
             label: 'Band (W)',
             tickCount: tickCount,
