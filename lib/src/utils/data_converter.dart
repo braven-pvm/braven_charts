@@ -84,6 +84,9 @@ class DataConverter {
   /// Finds min/max X and Y values across all series for setting up
   /// the initial ChartTransform viewport.
   ///
+  /// For bar charts, adds extra X padding to ensure edge bars aren't clipped.
+  /// The padding is based on the average spacing between data points (bar width).
+  ///
   /// **Returns**: DataBounds with xMin, xMax, yMin, yMax
   static DataBounds computeDataBounds(List<ChartSeries> series) {
     if (series.isEmpty || series.every((s) => s.isEmpty)) {
@@ -105,24 +108,46 @@ class DataConverter {
     }
 
     // Add 5% padding to data bounds for visual breathing room
-    final xPadding = (xMax - xMin) * 0.05;
+    double xPadding = (xMax - xMin) * 0.05;
     final yPadding = (yMax - yMin) * 0.05;
 
-    return DataBounds(
-        xMin: xMin - xPadding,
-        xMax: xMax + xPadding,
-        yMin: yMin - yPadding,
-        yMax: yMax + yPadding);
+    // For bar charts, ensure minimum X padding based on bar width (spacing)
+    // so edge bars aren't clipped. Bars are centered on data points, so we
+    // need at least half a bar width of padding on each side.
+    final hasBarSeries = series.any((s) => s is BarChartSeries);
+    if (hasBarSeries) {
+      // Calculate average X spacing from all bar series
+      double totalSpacing = 0;
+      int spacingCount = 0;
+
+      for (final s in series) {
+        if (s is BarChartSeries && s.points.length >= 2) {
+          // Sort points by X to calculate spacing correctly
+          final sortedPoints = [...s.points]..sort((a, b) => a.x.compareTo(b.x));
+          for (int i = 1; i < sortedPoints.length; i++) {
+            totalSpacing += sortedPoints[i].x - sortedPoints[i - 1].x;
+            spacingCount++;
+          }
+        }
+      }
+
+      if (spacingCount > 0) {
+        final avgSpacing = totalSpacing / spacingCount;
+        // Bar width is typically 80% of spacing, we need half that for edge padding
+        // Plus a small buffer (10%) for visual comfort
+        final barPadding = avgSpacing * 0.5;
+        // Use whichever is larger: percentage padding or bar-based padding
+        xPadding = xPadding > barPadding ? xPadding : barPadding;
+      }
+    }
+
+    return DataBounds(xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding);
   }
 }
 
 /// Data bounds for chart viewport setup.
 class DataBounds {
-  const DataBounds(
-      {required this.xMin,
-      required this.xMax,
-      required this.yMin,
-      required this.yMax});
+  const DataBounds({required this.xMin, required this.xMax, required this.yMin, required this.yMax});
 
   final double xMin;
   final double xMax;
