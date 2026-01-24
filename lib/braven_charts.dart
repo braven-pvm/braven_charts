@@ -23,6 +23,10 @@
 
 library;
 
+// AI Integration
+export 'src/ai/chart_agent_interface.dart';
+export 'src/ai/chart_config_builder.dart';
+export 'src/ai/chart_tool_schema.dart';
 // Axis - Auto-detection
 export 'src/axis/normalization_detector.dart';
 export 'src/axis/range_ratio_calculator.dart';
