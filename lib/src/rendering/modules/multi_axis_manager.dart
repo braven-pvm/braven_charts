@@ -343,12 +343,14 @@ class MultiAxisManager {
     // When forPainting=true AND viewport is zoomed, use viewport-aware bounds.
     // This is the ONLY case where we apply viewport transformation.
     //
-    // forPainting=false should ALWAYS return full data bounds (with 5% padding),
-    // regardless of zoom state. This is used for axis labels which need to show
-    // the full data range context.
+    // forPainting=false returns full data bounds (with 5% padding), used for:
+    // - Computing transforms in non-normalized modes
+    // - Series rendering when NOT in perSeries normalization mode
     //
-    // forPainting=true returns bounds that match the visible viewport when zoomed.
-    // This is used for series rendering transforms in perSeries normalization mode.
+    // forPainting=true returns bounds matching the visible viewport when zoomed.
+    // Used in perSeries normalization mode for BOTH:
+    // - Series rendering transforms (so series scale correctly during zoom)
+    // - Axis label rendering (so axis labels show zoomed range, e.g., 40-60 instead of 0-100)
     final usePaintingBounds = forPainting &&
         !forceFullBounds &&
         _normalizationMode == NormalizationMode.perSeries &&
@@ -503,6 +505,7 @@ class MultiAxisManager {
     final axisBounds = computeAxisBounds(
       transform: transform,
       originalTransform: originalTransform,
+      forPainting: true,
     );
 
     // Use effective bindings for color resolution
