@@ -48,7 +48,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
 
   // Anthropic API key
-  static const _apiKey = '***REDACTED_API_KEY***';
+  static const _apiKey =
+      '***REDACTED_API_KEY***';
 
   // Example prompts
   static const _examplePrompts = [
@@ -228,7 +229,8 @@ Use appropriate colors and labels.''';
           Block.toolResult(
             toolUseId: toolUse.id,
             content: ToolResultBlockContent.text(
-              json.encode({'success': true, 'message': 'Chart created successfully'}),
+              json.encode(
+                  {'success': true, 'message': 'Chart created successfully'}),
             ),
           ),
         ]),
@@ -362,7 +364,9 @@ Use appropriate colors and labels.''';
                   : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isUser ? Theme.of(context).colorScheme.primary.withAlpha(100) : Theme.of(context).colorScheme.outline.withAlpha(50),
+            color: isUser
+                ? Theme.of(context).colorScheme.primary.withAlpha(100)
+                : Theme.of(context).colorScheme.outline.withAlpha(50),
           ),
         ),
         child: Column(
@@ -371,7 +375,8 @@ Use appropriate colors and labels.''';
             Text(
               message.content,
               style: TextStyle(
-                color: isSystem ? Theme.of(context).colorScheme.secondary : null,
+                color:
+                    isSystem ? Theme.of(context).colorScheme.secondary : null,
               ),
             ),
             if (message.chartWidget != null) ...[
@@ -405,7 +410,9 @@ Use appropriate colors and labels.''';
               controller: _controller,
               enabled: !_isLoading,
               decoration: InputDecoration(
-                hintText: _isLoading ? 'Waiting for response...' : 'Describe the chart you want...',
+                hintText: _isLoading
+                    ? 'Waiting for response...'
+                    : 'Describe the chart you want...',
                 border: const OutlineInputBorder(),
               ),
               onSubmitted: _handleSubmit,
@@ -421,7 +428,8 @@ Use appropriate colors and labels.''';
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.send),
-            onPressed: _isLoading ? null : () => _handleSubmit(_controller.text),
+            onPressed:
+                _isLoading ? null : () => _handleSubmit(_controller.text),
           ),
         ],
       ),

@@ -54,7 +54,8 @@ The chart will be rendered as a Flutter widget that supports:
         'chart_type': {
           'type': 'string',
           'enum': ['line', 'area', 'bar', 'scatter'],
-          'description': 'Type of chart to render. Line is best for trends, bar for comparisons, scatter for correlations.',
+          'description':
+              'Type of chart to render. Line is best for trends, bar for comparisons, scatter for correlations.',
         },
         'series': {
           'type': 'array',
@@ -64,19 +65,23 @@ The chart will be rendered as a Flutter widget that supports:
             'properties': {
               'id': {
                 'type': 'string',
-                'description': 'Unique identifier for this series (e.g., "revenue", "temperature")',
+                'description':
+                    'Unique identifier for this series (e.g., "revenue", "temperature")',
               },
               'name': {
                 'type': 'string',
-                'description': 'Display name shown in legend (e.g., "Monthly Revenue")',
+                'description':
+                    'Display name shown in legend (e.g., "Monthly Revenue")',
               },
               'color': {
                 'type': 'string',
-                'description': 'Hex color code (e.g., "#FF5733") or named color (e.g., "blue", "red")',
+                'description':
+                    'Hex color code (e.g., "#FF5733") or named color (e.g., "blue", "red")',
               },
               'unit': {
                 'type': 'string',
-                'description': 'Unit for Y-axis values (e.g., "W", "°C", "USD", "km/h")',
+                'description':
+                    'Unit for Y-axis values (e.g., "W", "°C", "USD", "km/h")',
               },
               'data': {
                 'type': 'array',
@@ -98,7 +103,8 @@ The chart will be rendered as a Flutter widget that supports:
                     },
                     'timestamp': {
                       'type': 'string',
-                      'description': 'ISO 8601 timestamp if this is time-series data',
+                      'description':
+                          'ISO 8601 timestamp if this is time-series data',
                     },
                   },
                   'required': ['x', 'y'],
@@ -122,17 +128,20 @@ The chart will be rendered as a Flutter widget that supports:
             },
             'min': {
               'type': 'number',
-              'description': 'Explicit minimum value (auto-calculated if omitted)',
+              'description':
+                  'Explicit minimum value (auto-calculated if omitted)',
             },
             'max': {
               'type': 'number',
-              'description': 'Explicit maximum value (auto-calculated if omitted)',
+              'description':
+                  'Explicit maximum value (auto-calculated if omitted)',
             },
           },
         },
         'y_axis': {
           'type': 'object',
-          'description': 'Y-axis configuration (for single axis; use series.unit for multi-axis)',
+          'description':
+              'Y-axis configuration (for single axis; use series.unit for multi-axis)',
           'properties': {
             'label': {
               'type': 'string',
@@ -186,7 +195,8 @@ The chart will be rendered as a Flutter widget that supports:
             'line_interpolation': {
               'type': 'string',
               'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-              'description': 'How to interpolate between points for line/area charts',
+              'description':
+                  'How to interpolate between points for line/area charts',
             },
             'show_grid': {
               'type': 'boolean',

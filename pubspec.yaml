@@ -19,6 +19,12 @@ dependencies:
   fleather: ^1.26.0 # Rich text editor for TextAnnotation
   parchment: ^1.25.1 # Document model for fleather (Delta format serialization)
 
+  # Agentic Charts dependencies
+  anthropic_sdk_dart: ^0.2.3
+  http: ^1.2.0
+  uuid: ^4.0.0
+  json_annotation: ^4.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -52,8 +58,8 @@ dev_dependencies:
   fake_async: ^1.3.0
   meta: ^1.9.0
 
-  # Code generation for mocks
-  json_annotation: ^4.8.0
+  # Code generation for mocks and JSON serialization
+  json_serializable: ^6.6.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

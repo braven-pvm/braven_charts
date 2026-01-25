@@ -10,6 +10,18 @@ targets:
         options:
           # Generate mocks in the same directory as the source
           build_to: test/mocks/
+      json_serializable|jsonSerializable:
+        generate_for:
+          - lib/src/agentic/models/*.dart
+        options:
+          # JSON serialization options for agentic models
+          any_map: false
+          checked: true
+          create_factory: true
+          create_to_json: true
+          disallow_unrecognized_keys: false
+          explicit_to_json: true
+          field_rename: none
 
   test:
     dependencies:

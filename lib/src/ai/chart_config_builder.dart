@@ -107,19 +107,29 @@ class ChartConfigBuilder {
       throw const FormatException('At least one series is required');
     }
 
-    final series = seriesList.map((s) => _parseSeries(s as Map<String, dynamic>, defaultStyle)).toList();
+    final series = seriesList
+        .map((s) => _parseSeries(s as Map<String, dynamic>, defaultStyle))
+        .toList();
 
     // Parse axes
-    final xAxisConfig = _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
-    final yAxisConfig = _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
+    final xAxisConfig =
+        _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
+    final yAxisConfig =
+        _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
 
     // Check for multi-axis mode (series have different units)
-    final units = series.map((s) => s.unit).where((u) => u != null && u.isNotEmpty).toSet();
+    final units = series
+        .map((s) => s.unit)
+        .where((u) => u != null && u.isNotEmpty)
+        .toSet();
 
     List<YAxisConfig>? yAxes;
     if (units.length > 1) {
       // Multi-axis mode: create Y-axes from series configurations
-      yAxes = series.where((s) => s.yAxisConfig != null).map((s) => s.yAxisConfig!).toList();
+      yAxes = series
+          .where((s) => s.yAxisConfig != null)
+          .map((s) => s.yAxisConfig!)
+          .toList();
     }
 
     // Parse interactions
@@ -148,8 +158,10 @@ class ChartConfigBuilder {
     );
   }
 
-  static ChartSeries _parseSeries(Map<String, dynamic> json, SeriesStyle? defaultStyle) {
-    final id = json['id'] as String? ?? 'series_${DateTime.now().millisecondsSinceEpoch}';
+  static ChartSeries _parseSeries(
+      Map<String, dynamic> json, SeriesStyle? defaultStyle) {
+    final id = json['id'] as String? ??
+        'series_${DateTime.now().millisecondsSinceEpoch}';
     final name = json['name'] as String?;
     final colorStr = json['color'] as String?;
     final unit = json['unit'] as String?;
@@ -162,13 +174,17 @@ class ChartConfigBuilder {
         x: (pointJson['x'] as num).toDouble(),
         y: (pointJson['y'] as num).toDouble(),
         label: pointJson['label'] as String?,
-        timestamp: pointJson['timestamp'] != null ? DateTime.tryParse(pointJson['timestamp'] as String) : null,
+        timestamp: pointJson['timestamp'] != null
+            ? DateTime.tryParse(pointJson['timestamp'] as String)
+            : null,
       );
     }).toList();
 
     // Parse style from series or use parent chart_type style
     final styleStr = json['style'] as String?;
-    final style = styleStr != null ? _parseSeriesStyle(styleStr) : (defaultStyle ?? SeriesStyle.line);
+    final style = styleStr != null
+        ? _parseSeriesStyle(styleStr)
+        : (defaultStyle ?? SeriesStyle.line);
 
     // Create Y-axis config if unit is specified
     YAxisConfig? yAxisConfig;
@@ -283,7 +299,8 @@ class ChartConfigBuilder {
     );
   }
 
-  static InteractionConfig? _parseInteractionConfig(Map<String, dynamic>? json) {
+  static InteractionConfig? _parseInteractionConfig(
+      Map<String, dynamic>? json) {
     if (json == null) return null;
 
     final showCrosshair = json['show_crosshair'] as bool? ?? true;

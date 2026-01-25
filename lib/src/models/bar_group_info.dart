@@ -98,7 +98,11 @@ class BarGroupInfo {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is BarGroupInfo && runtimeType == other.runtimeType && index == other.index && count == other.count && gap == other.gap;
+      other is BarGroupInfo &&
+          runtimeType == other.runtimeType &&
+          index == other.index &&
+          count == other.count &&
+          gap == other.gap;
 
   /// Returns a hash code based on index, count, and gap.
   @override

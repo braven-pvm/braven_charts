@@ -69,7 +69,6 @@ class XAxisRenderingDemo extends StatelessWidget {
                       color: Colors.green,
                       unit: 'm/s²',
                       interpolation: LineInterpolation.bezier,
-                      
                     ),
                   ],
                   xAxisConfig: xAxisConfig,
