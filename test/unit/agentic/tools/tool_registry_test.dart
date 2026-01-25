@@ -1,10 +1,8 @@
-// @orchestra-task: 4
-@Tags(['tdd-red'])
 library tool_registry_test;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts_plus/src/agentic/tools/llm_tool.dart';
-import 'package:braven_charts_plus/src/agentic/tools/tool_registry.dart';
+import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
+import 'package:braven_charts/src/agentic/tools/tool_registry.dart';
 
 class _SumTool extends LLMTool {
   @override

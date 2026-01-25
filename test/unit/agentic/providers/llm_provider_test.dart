@@ -1,11 +1,9 @@
-// @orchestra-task: 4
-@Tags(['tdd-red'])
 library llm_provider_test;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts_plus/src/agentic/models/conversation.dart';
-import 'package:braven_charts_plus/src/agentic/models/message.dart';
-import 'package:braven_charts_plus/src/agentic/providers/llm_provider.dart';
+import 'package:braven_charts/src/agentic/models/conversation.dart';
+import 'package:braven_charts/src/agentic/models/message.dart';
+import 'package:braven_charts/src/agentic/providers/llm_provider.dart';
 
 class _TestProvider extends LLMProvider {
   @override
@@ -16,6 +14,11 @@ class _TestProvider extends LLMProvider {
       textContent: 'ok',
       timestamp: DateTime.utc(2026, 1, 25),
     );
+  }
+
+  @override
+  Stream<String> streamMessage(Conversation conversation) async* {
+    yield 'ok';
   }
 }
 
