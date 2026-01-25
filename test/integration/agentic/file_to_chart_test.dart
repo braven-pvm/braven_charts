@@ -38,8 +38,7 @@ void main() {
         final loadResult = await loadTool.execute(loadInput);
         expect(loadResult['data_id'], isNotNull);
         expect(loadResult['row_count'], equals(5));
-        expect(loadResult['columns'],
-            containsAll(['timestamp', 'power', 'heart_rate', 'cadence']));
+        expect(loadResult['columns'], containsAll(['timestamp', 'power', 'heart_rate', 'cadence']));
 
         // Step 2: Describe the loaded data
         final dataId = loadResult['data_id'] as String;
@@ -95,12 +94,9 @@ void main() {
 
         // Verify the processed data
         final processedDataId = processResult['data_id'] as String;
-        final describeResult =
-            await describeTool.execute({'data_id': processedDataId});
+        final describeResult = await describeTool.execute({'data_id': processedDataId});
 
-        final columns = (describeResult['columns'] as List)
-            .map((col) => (col as Map)['name'] as String)
-            .toList();
+        final columns = (describeResult['columns'] as List).map((col) => (col as Map)['name'] as String).toList();
         expect(columns, containsAll(['timestamp', 'power', 'heart_rate']));
         expect(columns, isNot(contains('cadence')));
         expect(columns, isNot(contains('speed')));
@@ -112,7 +108,7 @@ void main() {
         final loadInput = {
           'source': {
             'type': 'file',
-            'file_id': 'test-cycling-fit-file',
+            'file_id': 'test/fixtures/test_cycling.fit',
             'format': 'fit',
           }
         };
@@ -125,9 +121,7 @@ void main() {
         final describeResult = await describeTool.execute({'data_id': dataId});
 
         expect(describeResult['file_type'], equals('fit'));
-        final columnNames = (describeResult['columns'] as List)
-            .map((col) => (col as Map)['name'] as String)
-            .toList();
+        final columnNames = (describeResult['columns'] as List).map((col) => (col as Map)['name'] as String).toList();
 
         // FIT files should have standard cycling metrics
         expect(
@@ -143,7 +137,7 @@ void main() {
         final loadInput = {
           'source': {
             'type': 'file',
-            'file_id': 'test-workout-fit-file',
+            'file_id': 'test/fixtures/test_cycling.fit',
             'format': 'fit',
           }
         };
@@ -224,8 +218,7 @@ void main() {
 
         // Verify normalized data
         final processedDataId = processResult['data_id'] as String;
-        final describeResult =
-            await describeTool.execute({'data_id': processedDataId});
+        final describeResult = await describeTool.execute({'data_id': processedDataId});
 
         final powerColumn = (describeResult['columns'] as List).firstWhere(
           (col) => (col as Map)['name'] == 'power',
@@ -343,8 +336,7 @@ void main() {
     });
 
     group('real-world sport science scenarios', () {
-      test('should process power data for Normalized Power calculation',
-          () async {
+      test('should process power data for Normalized Power calculation', () async {
         // Load workout data
         final loadInput = {
           'source': {
@@ -420,8 +412,7 @@ void main() {
 
         expect(powerProcessed['data_id'], isNotNull);
         expect(hrProcessed['data_id'], isNotNull);
-        expect(
-            powerProcessed['data_id'], isNot(equals(hrProcessed['data_id'])));
+        expect(powerProcessed['data_id'], isNot(equals(hrProcessed['data_id'])));
       });
     });
   });

@@ -433,10 +433,13 @@ This returns all verification criteria amendments from previous tasks, including
     "test_file_pattern": "test/**/*.test.ts",
     "source_base_dir": "src"
   },
+  "spec_path": "specs/002-custom-agents/us3-user-controls.md",
   "phases": [...],
   "tasks": [...]
 }
 ```
+
+**Note:** `spec_path` anchors the sprint to the canonical spec for auditability and traceability.
 
 | Field               | Required | Description                    | Examples                                           |
 | ------------------- | -------- | ------------------------------ | -------------------------------------------------- |
@@ -460,6 +463,22 @@ This returns all verification criteria amendments from previous tasks, including
 | Python       | `pytest`       | `tests/**/*.py`       | `src`           |
 | Rust         | `cargo test`   | `tests/**/*.rs`       | `src`           |
 
+### ⚠️ REQUIRED: Specification Traceability
+
+**Every sprint MUST specify its specification source.** The `spec_path` field is REQUIRED in `configure_sprint`.
+
+**Validation rules (enforced at configure time):**
+
+- `spec_path` must be non-empty
+- `spec_path` must start with `spec/` or `specs/`
+- The sprint will be rejected if `spec_path` is missing or invalid
+
+**Why this is required:**
+
+- Security: prevents fake or ambiguous spec references
+- Auditability: enables the Controller to trace tasks back to the exact spec source
+- Integrity: ensures handovers and verification are grounded in the same document
+
 ### TDD Task Pattern
 
 For TDD work, declare **red-green task pairs** with `tdd_relationships` in `configure_sprint`:
@@ -472,6 +491,7 @@ For TDD work, declare **red-green task pairs** with `tdd_relationships` in `conf
     "test_file_pattern": "test/**/*.test.ts",
     "source_base_dir": "src"
   },
+  "spec_path": "specs/002-custom-agents/us3-user-controls.md",
   "tasks": [
     {
       "task_id": 1,
@@ -1322,11 +1342,12 @@ Before calling `configure_sprint`, verify:
 
 1. **Check amendment history** - Call `get_amendments` to learn from past verification failures in previous sprints
 2. **Environment is specified** - `environment` field with `test_command`, `test_file_pattern`, `source_base_dir` is REQUIRED
-3. **Commands are portable** - No `&&` for command chaining (use `;` or single commands)
-4. **Paths are globs** - Not directories (must contain `*` or have file extension)
-5. **Patterns match environment** - Use values from your `environment` config, not guesses
-6. **Test command matches project** - `npm test` for Node, `flutter test` for Flutter, etc.
-7. **Test runner flags are correct** - Vitest uses `-t`, Jest uses `--testNamePattern`, etc.
+3. **Specification is traceable** - `spec_path` points to an existing file under `spec/` or `specs/`
+4. **Commands are portable** - No `&&` for command chaining (use `;` or single commands)
+5. **Paths are globs** - Not directories (must contain `*` or have file extension)
+6. **Patterns match environment** - Use values from your `environment` config, not guesses
+7. **Test command matches project** - `npm test` for Node, `flutter test` for Flutter, etc.
+8. **Test runner flags are correct** - Vitest uses `-t`, Jest uses `--testNamePattern`, etc.
 
 The system validates these and will BLOCK you if environment is missing or return WARNINGS for other issues. Catching issues early saves escalation cycles.
 

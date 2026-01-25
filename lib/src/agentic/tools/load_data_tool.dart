@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:braven_data/braven_data.dart' as bd;
 import 'package:uuid/uuid.dart';
 
 import 'data_store.dart';
@@ -14,8 +16,7 @@ class LoadDataTool {
 
   String get name => 'load_data';
 
-  String get description =>
-      'Load data from a file attachment, URL, or inline content';
+  String get description => 'Load data from a file attachment, URL, or inline content';
 
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
@@ -90,17 +91,34 @@ class LoadDataTool {
     }
   }
 
-  Future<Map<String, dynamic>> _loadFromFile(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromFile(Map<String, dynamic> source) async {
     final fileId = source['file_id'] as String;
     final format = source['format'] as String? ?? 'auto';
 
-    // For testing, we'll create mock data based on file_id patterns
     final dataId = _uuid.v4();
 
-    if (format == 'fit' || fileId.contains('fit')) {
-      // Create mock FIT data
-      final frame = _createMockFitData(fileId);
+    if (format == 'fit' || fileId.toLowerCase().endsWith('.fit')) {
+      DataFrame frame;
+      String? timezone = 'UTC';
+
+      // Try to load actual FIT file using braven_data
+      if (File(fileId).existsSync()) {
+        try {
+          final df = await bd.FitLoader.load(
+            fileId,
+            bd.FitMessageType.records,
+          );
+          frame = _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
+          // Extract timezone from FIT file metadata (FR-026)
+          // For now, default to UTC if not available in metadata
+          timezone = 'UTC';
+        } catch (e) {
+          throw Exception('Failed to parse FIT file: $e');
+        }
+      } else {
+        throw Exception('FIT file not found: $fileId');
+      }
+
       _store.store(dataId, frame);
 
       return {
@@ -110,10 +128,23 @@ class LoadDataTool {
         'column_count': frame.columns.length,
         'columns': frame.columns.map((c) => c.name).toList(),
         'time_range': frame.timeRange?.toJson(),
+        'timezone': timezone,
       };
     } else {
-      // Create mock CSV data
-      final frame = _createMockCsvData(fileId);
+      DataFrame frame;
+
+      // Try to load actual CSV file
+      if (File(fileId).existsSync()) {
+        try {
+          final csvData = await File(fileId).readAsString();
+          frame = _parseCsvContent(csvData);
+        } catch (e) {
+          throw Exception('Failed to parse CSV file: $e');
+        }
+      } else {
+        throw Exception('CSV file not found: $fileId');
+      }
+
       _store.store(dataId, frame);
 
       return {
@@ -128,22 +159,11 @@ class LoadDataTool {
   }
 
   Future<Map<String, dynamic>> _loadFromUrl(Map<String, dynamic> source) async {
-    // For testing, create mock data
-    final dataId = _uuid.v4();
-    final frame = _createMockCsvData('url-data');
-    _store.store(dataId, frame);
-
-    return {
-      'success': true,
-      'data_id': dataId,
-      'row_count': frame.rowCount,
-      'column_count': frame.columns.length,
-      'columns': frame.columns.map((c) => c.name).toList(),
-    };
+    // URL loading not yet implemented
+    throw Exception('URL data loading not yet implemented');
   }
 
-  Future<Map<String, dynamic>> _loadFromInline(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromInline(Map<String, dynamic> source) async {
     final content = source['content'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -222,16 +242,35 @@ class LoadDataTool {
           continue;
         }
 
-        // Try datetime first
+        // Try datetime first if column name suggests it's a time/date column
         if (columnName.contains('time') || columnName.contains('date')) {
+          DateTime? dt;
+
+          // Try ISO 8601 datetime string
           try {
-            final dt = DateTime.parse(value);
+            dt = DateTime.parse(value);
+          } catch (_) {
+            // Try Unix timestamp (seconds since epoch)
+            final numValue = num.tryParse(value);
+            if (numValue != null) {
+              try {
+                dt = DateTime.fromMillisecondsSinceEpoch(
+                  (numValue * 1000).toInt(),
+                  isUtc: true,
+                );
+              } catch (_) {
+                // Not a valid timestamp
+              }
+            }
+          }
+
+          if (dt != null) {
             parsedData.add(dt);
             isDateTime = true;
             firstDate ??= dt;
             lastDate = dt;
             continue;
-          } catch (_) {}
+          }
         }
 
         // Try number
@@ -296,8 +335,7 @@ class LoadDataTool {
     TimeRange? timeRange;
 
     for (var key in keys) {
-      final values =
-          data.map((obj) => (obj as Map<String, dynamic>)[key]).toList();
+      final values = data.map((obj) => (obj as Map<String, dynamic>)[key]).toList();
 
       // Infer type
       String type = 'string';
@@ -379,106 +417,85 @@ class LoadDataTool {
     );
   }
 
-  DataFrame _createMockFitData(String fileId) {
-    // Create mock FIT file data with typical cycling metrics
-    const rowCount = 100;
+  /// Convert braven_data DataFrame to internal DataFrame format
+  DataFrame _convertBravenDataFrame(bd.DataFrame df, {String? fileName, String? fileType}) {
     final columns = <DataColumn>[];
+    TimeRange? timeRange;
+    DateTime? firstDate;
+    DateTime? lastDate;
 
-    // Time column
-    final startTime = DateTime.now();
-    final timeData = List.generate(
-      rowCount,
-      (i) => startTime.add(Duration(seconds: i)),
-    );
+    // Convert each column
+    for (final columnName in df.columnNames) {
+      final columnData = df.columns[columnName];
+      if (columnData == null || columnData.isEmpty) {
+        continue;
+      }
 
-    columns.add(DataColumn(
-      name: 'timestamp',
-      type: 'datetime',
-      nullable: false,
-      data: timeData,
-      stats: ColumnStats(nullCount: 0),
-      sampleValues: timeData.take(3).toList(),
-    ));
+      // Detect column type
+      String type = 'string';
+      final bool isNumber = columnData.first is num;
 
-    // Power column
-    final powerData = List.generate(rowCount, (i) => 150.0 + (i % 50));
-    columns.add(DataColumn(
-      name: 'power',
-      type: 'number',
-      nullable: false,
-      data: powerData,
-      stats: _calculateStats(powerData, 'number'),
-      sampleValues: powerData.take(3).toList(),
-    ));
+      if (columnData.first is DateTime) {
+        type = 'datetime';
+        firstDate = columnData.first as DateTime;
+        lastDate = columnData.last as DateTime;
+      } else if (columnData.first is String) {
+        // Check if this is a timestamp string (common in FIT files)
+        if (columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp') || columnName.toLowerCase() == 'time') {
+          try {
+            final DateTime parsedFirst = DateTime.parse(columnData.first as String);
+            final DateTime parsedLast = DateTime.parse(columnData.last as String);
+            if (firstDate == null) {
+              firstDate = parsedFirst;
+              lastDate = parsedLast;
+            }
+          } catch (_) {
+            // Not a valid ISO 8601 datetime string
+          }
+        }
+      } else if (isNumber) {
+        type = 'number';
 
-    // Heart rate column
-    final hrData = List.generate(rowCount, (i) => 120 + (i % 30));
-    columns.add(DataColumn(
-      name: 'heart_rate',
-      type: 'number',
-      nullable: false,
-      data: hrData,
-      stats: _calculateStats(hrData, 'number'),
-      sampleValues: hrData.take(3).toList(),
-    ));
+        // Check if this is a timestamp column with Unix epoch values
+        if ((columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp')) && firstDate == null) {
+          try {
+            final num firstValue = columnData.first as num;
+            final num lastValue = columnData.last as num;
+            // Try interpreting as Unix timestamp (seconds since epoch)
+            firstDate = DateTime.fromMillisecondsSinceEpoch((firstValue * 1000).toInt(), isUtc: true);
+            lastDate = DateTime.fromMillisecondsSinceEpoch((lastValue * 1000).toInt(), isUtc: true);
+          } catch (_) {
+            // Not a valid timestamp
+          }
+        }
+      }
+
+      final stats = _calculateStats(columnData.toList(), type);
+
+      columns.add(DataColumn(
+        name: columnName,
+        type: type,
+        nullable: columnData.contains(null),
+        data: columnData.toList(),
+        stats: stats,
+        sampleValues: columnData.take(3).toList(),
+      ));
+    }
+
+    if (firstDate != null && lastDate != null) {
+      timeRange = TimeRange(
+        start: firstDate,
+        end: lastDate,
+        durationSeconds: lastDate.difference(firstDate).inSeconds,
+      );
+    }
 
     return DataFrame(
-      fileName: fileId,
-      fileType: 'fit',
+      fileName: fileName ?? 'data',
+      fileType: fileType ?? 'unknown',
       columns: columns,
-      rowCount: rowCount,
-      timeRange: TimeRange(
-        start: timeData.first,
-        end: timeData.last,
-        durationSeconds: rowCount - 1,
-      ),
-      timezone: 'UTC',
-    );
-  }
-
-  DataFrame _createMockCsvData(String fileId) {
-    // Create generic mock CSV data
-    const rowCount = 50;
-    final columns = <DataColumn>[];
-
-    // X column
-    final xData = List.generate(rowCount, (i) => i.toDouble());
-    columns.add(DataColumn(
-      name: 'x',
-      type: 'number',
-      nullable: false,
-      data: xData,
-      stats: _calculateStats(xData, 'number'),
-      sampleValues: xData.take(3).toList(),
-    ));
-
-    // Y column
-    final yData = List.generate(rowCount, (i) => (i * 2).toDouble());
-    columns.add(DataColumn(
-      name: 'y',
-      type: 'number',
-      nullable: false,
-      data: yData,
-      stats: _calculateStats(yData, 'number'),
-      sampleValues: yData.take(3).toList(),
-    ));
-
-    // String column for mixed types test
-    final stringData = List.generate(rowCount, (i) => 'label_$i');
-    columns.add(DataColumn(
-      name: 'label',
-      type: 'string',
-      nullable: false,
-      data: stringData,
-      stats: ColumnStats(nullCount: 0),
-      sampleValues: stringData.take(3).toList(),
-    ));
-
-    return DataFrame(
-      fileName: fileId,
-      fileType: 'csv',
-      columns: columns,
-      rowCount: rowCount,
+      rowCount: df.columnNames.isNotEmpty ? (df.columns[df.columnNames.first]?.length ?? 0) : 0,
+      timeRange: timeRange,
     );
   }
 

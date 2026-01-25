@@ -235,6 +235,99 @@ Review implementations against these mandatory criteria:
 5. **Test meaningfulness**: Do tests validate behavior, not just pass conditions?
 6. **Test sufficiency**: Does coverage protect against regressions?
 
+## 9.1 Spec-First Code Review Protocol (MANDATORY)
+
+**You must complete these steps BEFORE reviewing implementation code.**
+
+### Step 1 — Obtain Spec Context
+
+- Call `get_task_for_review` or `get_code_review`.
+- Record `spec_path` and **every** entry in `spec_task_definitions[]`.
+- Open the spec via `read_spec_file` using the recorded `spec_path`.
+
+### Step 2 — Build Evidence Requirements (BEFORE reading code)
+
+- For each `spec_task_definitions[]` entry, translate requirements into explicit evidence needs.
+- **Document evidence requirements before reading any implementation code.**
+
+### Step 3 — Evidence Collection (per spec task)
+
+For each spec task, document **all four** evidence elements:
+
+- **File**: Path(s) that contain the proof
+- **Location**: Line range or section heading
+- **Mechanism**: How the code achieves the requirement
+- **Proof**: Test assertion, runtime path, or observable behavior
+
+### Step 4 — Gap Analysis
+
+Mark every spec task with one of these statuses:
+
+- ✅ **SATISFIED** — Evidence fully proves the requirement
+- ⚠️ **PARTIAL** — Evidence exists but is incomplete or missing edge coverage
+- ❌ **MISSING** — No evidence found
+
+Any ❌ **MISSING** or ⚠️ **PARTIAL** item must result in **CHANGES_REQUESTED** or **REJECTED** (see 9.4).
+
+## 9.2 Per-Spec-Task Evidence Table (REQUIRED)
+
+Create a traceability table for every `spec_task_definitions[]` entry.
+
+| Spec Task | Requirement      | Evidence File | Evidence Detail                        | Status       |
+| --------- | ---------------- | ------------- | -------------------------------------- | ------------ |
+| ST-1      | Requirement text | src/path.ts   | Lines 120-168, handler validates input | ✅ SATISFIED |
+| ST-2      | Requirement text | NOT FOUND     | No implementation or test evidence     | ❌ MISSING   |
+
+**Rules (Non-Negotiable):**
+
+- Every `speckit_task_ref` must have a row in this table.
+- If evidence does not exist, you **must** write **NOT FOUND** in Evidence File.
+- **Any missing evidence → CHANGES_REQUESTED.** Do not approve with gaps.
+
+## 9.3 Real-World Correctness (“Actually Works”)
+
+Code review is **NOT** about:
+
+- ❌ Tests pass
+- ❌ Code compiles
+- ❌ Follows patterns
+- ❌ Looks reasonable
+
+**You MUST verify:**
+
+- ✅ Callable from real execution paths (not dead code)
+- ✅ Behavior matches spec **exactly**
+- ✅ Edge cases are handled
+- ✅ Error conditions are handled
+- ✅ It **will** work as specified in real use (the “Actually Works” test)
+
+### Verification Techniques
+
+| Technique                | What It Proves                         | When Required                             |
+| ------------------------ | -------------------------------------- | ----------------------------------------- |
+| Trace call graph         | Feature is actually invoked at runtime | Always (to rule out dead code)            |
+| Read test assertions     | Tests validate the required behavior   | When tests are cited as proof             |
+| Check error handling     | Failure modes are covered and safe     | When spec mentions errors or IO           |
+| Verify state changes     | Side effects match spec expectations   | When spec requires persistence or updates |
+| Check integration points | Wiring is correct across components    | When spec spans modules or services       |
+
+## 9.4 Strict Rejection Policy (MANDATORY)
+
+**Default stance: Assume implementation is WRONG until PROVEN correct.**
+
+**Burden of proof: On the code, not on you.**
+
+Reject (or request changes) if **any** condition is true:
+
+1. Spec task not covered by evidence
+2. Test fraud (tests pass without validating behavior)
+3. Dead code (not invoked from real execution paths)
+4. Partial implementation (feature only partially meets spec)
+5. Untested edge cases where the spec requires them
+6. Missing error handling for specified failure modes
+7. Wrong behavior (implementation contradicts spec)
+8. Cannot verify (insufficient evidence to prove correctness)
+
 ### Decision Policy
 
 **APPROVED** (submit_code_review)

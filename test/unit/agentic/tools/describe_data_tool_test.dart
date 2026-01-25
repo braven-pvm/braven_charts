@@ -28,8 +28,7 @@ void main() {
       final temporalResult = await loadTool.execute({
         'source': {
           'type': 'inline',
-          'content':
-              'timestamp,power\n2026-01-25T10:00:00Z,150\n2026-01-25T10:01:00Z,160',
+          'content': 'timestamp,power\n2026-01-25T10:00:00Z,150\n2026-01-25T10:01:00Z,160',
           'format': 'csv',
         }
       });
@@ -67,10 +66,8 @@ void main() {
 
       test('should have output schema', () {
         expect(tool.outputSchema, isNotNull);
-        expect(
-            tool.outputSchema['properties'], containsPair('columns', anything));
-        expect(tool.outputSchema['properties'],
-            containsPair('row_count', anything));
+        expect(tool.outputSchema['properties'], containsPair('columns', anything));
+        expect(tool.outputSchema['properties'], containsPair('row_count', anything));
       });
     });
 
@@ -256,11 +253,7 @@ void main() {
     group('FIT file specific metadata', () {
       test('should recognize FIT record types', () async {
         final fitResult = await loadTool.execute({
-          'source': {
-            'type': 'file',
-            'file_id': 'test-fit-file',
-            'format': 'fit'
-          }
+          'source': {'type': 'file', 'file_id': 'test/fixtures/test_cycling.fit', 'format': 'fit'}
         });
         final input = {
           'data_id': fitResult['data_id'],
@@ -275,20 +268,14 @@ void main() {
 
       test('should extract sport-specific columns from FIT', () async {
         final fitResult = await loadTool.execute({
-          'source': {
-            'type': 'file',
-            'file_id': 'test-cycling-fit',
-            'format': 'fit'
-          }
+          'source': {'type': 'file', 'file_id': 'test/fixtures/test_cycling.fit', 'format': 'fit'}
         });
         final input = {
           'data_id': fitResult['data_id'],
         };
 
         final result = await tool.execute(input);
-        final columnNames = (result['columns'] as List)
-            .map((col) => (col as Map)['name'] as String)
-            .toList();
+        final columnNames = (result['columns'] as List).map((col) => (col as Map)['name'] as String).toList();
 
         // Common cycling metrics
         expect(
@@ -305,11 +292,7 @@ void main() {
     group('CSV file specific metadata', () {
       test('should parse CSV headers as column names', () async {
         final csvResult = await loadTool.execute({
-          'source': {
-            'type': 'inline',
-            'content': 'time,value\n1,10\n2,20',
-            'format': 'csv'
-          }
+          'source': {'type': 'inline', 'content': 'time,value\n1,10\n2,20', 'format': 'csv'}
         });
         final input = {
           'data_id': csvResult['data_id'],
@@ -323,11 +306,7 @@ void main() {
 
       test('should infer column types from CSV values', () async {
         final csvResult = await loadTool.execute({
-          'source': {
-            'type': 'inline',
-            'content': 'num,text\n123,hello\n456,world',
-            'format': 'csv'
-          }
+          'source': {'type': 'inline', 'content': 'num,text\n123,hello\n456,world', 'format': 'csv'}
         });
         final input = {
           'data_id': csvResult['data_id'],

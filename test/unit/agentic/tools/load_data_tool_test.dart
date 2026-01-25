@@ -43,7 +43,7 @@ void main() {
         final input = {
           'source': {
             'type': 'file',
-            'file_id': 'test-csv-123',
+            'file_id': 'test/fixtures/test_data.csv',
             'format': 'csv',
           }
         };
@@ -61,7 +61,7 @@ void main() {
         final input = {
           'source': {
             'type': 'file',
-            'file_id': 'test-fit-456',
+            'file_id': 'test/fixtures/test_cycling.fit',
             'format': 'fit',
           }
         };
@@ -77,7 +77,7 @@ void main() {
         final input = {
           'source': {
             'type': 'file',
-            'file_id': 'test-auto-789',
+            'file_id': 'test/fixtures/test_data.csv',
             'format': 'auto',
           }
         };
@@ -90,7 +90,7 @@ void main() {
     });
 
     group('URL source loading', () {
-      test('should load data from HTTP URL', () async {
+      test('should throw on HTTP URL (not yet implemented)', () async {
         final input = {
           'source': {
             'type': 'url',
@@ -99,13 +99,17 @@ void main() {
           }
         };
 
-        final result = await tool.execute(input);
-
-        expect(result['data_id'], isNotNull);
-        expect(result['row_count'], isA<int>());
+        expect(
+          () => tool.execute(input),
+          throwsA(isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('not yet implemented'),
+          )),
+        );
       });
 
-      test('should load data from HTTPS URL', () async {
+      test('should throw on HTTPS URL (not yet implemented)', () async {
         final input = {
           'source': {
             'type': 'url',
@@ -114,9 +118,14 @@ void main() {
           }
         };
 
-        final result = await tool.execute(input);
-
-        expect(result['data_id'], isNotNull);
+        expect(
+          () => tool.execute(input),
+          throwsA(isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('not yet implemented'),
+          )),
+        );
       });
     });
 
@@ -134,8 +143,7 @@ void main() {
 
         expect(result['data_id'], isNotNull);
         expect(result['row_count'], equals(2));
-        expect(result['columns'],
-            containsAll(['timestamp', 'power', 'heart_rate']));
+        expect(result['columns'], containsAll(['timestamp', 'power', 'heart_rate']));
       });
 
       test('should load inline JSON content', () async {
@@ -160,8 +168,7 @@ void main() {
         final input = {
           'source': {
             'type': 'inline',
-            'content':
-                'timestamp,value\n2026-01-25T10:00:00Z,100\n2026-01-25T10:01:00Z,110',
+            'content': 'timestamp,value\n2026-01-25T10:00:00Z,100\n2026-01-25T10:01:00Z,110',
             'format': 'csv',
           }
         };
