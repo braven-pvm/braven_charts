@@ -7,7 +7,6 @@ void main() {
     late ProcessDataTool tool;
     late LoadDataTool loadTool;
     late String testDataId;
-    late String temporalDataId;
     late String testData100Rows;
     late String testData3600Seconds;
 
@@ -27,19 +26,6 @@ void main() {
         }
       });
       testDataId = basicResult['data_id'] as String;
-
-      // Load temporal data for time-based operations
-      final temporalResult = await loadTool.execute({
-        'source': {
-          'type': 'inline',
-          'content': 'timestamp,power\n'
-              '2026-01-25T10:00:00Z,150\n'
-              '2026-01-25T10:00:30Z,160\n'
-              '2026-01-25T10:01:00Z,155',
-          'format': 'csv',
-        }
-      });
-      temporalDataId = temporalResult['data_id'] as String;
 
       // Create 100-row dataset
       final rows100 = StringBuffer('timestamp,value\n');
