@@ -6,6 +6,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-04
 - Dart 3.10+ (Pure Dart) + `dart:typed_data`, `dart:math` (001-data-input-api)
 - In-memory `Float64List` / `Int64List` (Columnar) (001-data-input-api)
 - Dart 3.0+, Flutter SDK 3.10.0+ + Flutter standard libraries (dart:ui, dart:math), no external packages for core rendering (002-multi-series-rendering-fix)
+- Dart 3.10+, Flutter SDK 3.38.6 + `anthropic_sdk_dart`, `braven_data`, `braven_charts`, `http`, `uuid` (003-agentic-charts)
+- Session-local only (no persistence in V1) (003-agentic-charts)
 
 - Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages (017-x-axis-unification)
 
@@ -38,10 +40,10 @@ tests/
 Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard conventions
 
 ## Recent Changes
+- 003-agentic-charts: Added Dart 3.10+, Flutter SDK 3.38.6 + `anthropic_sdk_dart`, `braven_data`, `braven_charts`, `http`, `uuid`
 - 002-multi-series-rendering-fix: Added Dart 3.0+, Flutter SDK 3.10.0+ + Flutter standard libraries (dart:ui, dart:math), no external packages for core rendering
 - 001-data-input-api: Added Dart 3.10+ (Pure Dart) + `dart:typed_data`, `dart:math`
 
-- 018-x-axis-renderer: Added Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages
 
 
 <!-- MANUAL ADDITIONS START -->
