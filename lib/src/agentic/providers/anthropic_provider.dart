@@ -1,4 +1,5 @@
-import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' hide Message, MessageRole;
+import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart'
+    hide Message, MessageRole;
 
 import '../models/conversation.dart';
 import '../models/message.dart';
@@ -72,7 +73,10 @@ class AnthropicProvider extends LLMProvider {
       return '';
     }
 
-    return conversation.messages.map((message) => message.textContent ?? '').where((text) => text.trim().isNotEmpty).join('\n');
+    return conversation.messages
+        .map((message) => message.textContent ?? '')
+        .where((text) => text.trim().isNotEmpty)
+        .join('\n');
   }
 
   String _extractText(dynamic response) {
@@ -131,7 +135,10 @@ class AnthropicProvider extends LLMProvider {
   LLMProviderException _mapError(Object error) {
     final raw = error.toString().toLowerCase();
 
-    if (raw.contains('401') || raw.contains('unauthorized') || raw.contains('invalid api key') || raw.contains('authentication')) {
+    if (raw.contains('401') ||
+        raw.contains('unauthorized') ||
+        raw.contains('invalid api key') ||
+        raw.contains('authentication')) {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
@@ -145,7 +152,10 @@ class AnthropicProvider extends LLMProvider {
       );
     }
 
-    if (raw.contains('socket') || raw.contains('network') || raw.contains('timeout') || raw.contains('connection')) {
+    if (raw.contains('socket') ||
+        raw.contains('network') ||
+        raw.contains('timeout') ||
+        raw.contains('connection')) {
       return LLMProviderException(
         'Network error. Please check your connection and retry.',
         type: LLMProviderErrorType.network,

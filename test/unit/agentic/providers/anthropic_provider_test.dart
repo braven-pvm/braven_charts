@@ -73,7 +73,10 @@ void main() {
       await expectLater(
         provider.sendMessage(conversation),
         throwsA(
-          isA<LLMProviderException>().having((e) => e.type, 'type', LLMProviderErrorType.authentication).having(
+          isA<LLMProviderException>()
+              .having(
+                  (e) => e.type, 'type', LLMProviderErrorType.authentication)
+              .having(
                 (e) => e.message,
                 'message',
                 contains('Authentication failed'),
@@ -94,7 +97,9 @@ void main() {
       await expectLater(
         provider.sendMessage(conversation),
         throwsA(
-          isA<LLMProviderException>().having((e) => e.type, 'type', LLMProviderErrorType.rateLimited).having(
+          isA<LLMProviderException>()
+              .having((e) => e.type, 'type', LLMProviderErrorType.rateLimited)
+              .having(
                 (e) => e.message,
                 'message',
                 contains('Rate limit reached'),
@@ -115,7 +120,9 @@ void main() {
       await expectLater(
         provider.sendMessage(conversation),
         throwsA(
-          isA<LLMProviderException>().having((e) => e.type, 'type', LLMProviderErrorType.network).having(
+          isA<LLMProviderException>()
+              .having((e) => e.type, 'type', LLMProviderErrorType.network)
+              .having(
                 (e) => e.message,
                 'message',
                 contains('Network error'),
@@ -136,7 +143,9 @@ void main() {
       await expectLater(
         provider.streamMessage(conversation).toList(),
         throwsA(
-          isA<LLMProviderException>().having((e) => e.type, 'type', LLMProviderErrorType.rateLimited).having(
+          isA<LLMProviderException>()
+              .having((e) => e.type, 'type', LLMProviderErrorType.rateLimited)
+              .having(
                 (e) => e.message,
                 'message',
                 contains('Rate limit reached'),
