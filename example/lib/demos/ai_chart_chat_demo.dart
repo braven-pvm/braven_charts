@@ -335,7 +335,7 @@ Use appropriate colors and labels.''';
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Claude is thinking...'),
+            const Text('Braven is thinking...'),
           ],
         ),
       ),

@@ -68,6 +68,8 @@ class XAxisRenderingDemo extends StatelessWidget {
                       points: _accelerationSeries(),
                       color: Colors.green,
                       unit: 'm/s²',
+                      interpolation: LineInterpolation.bezier,
+                      
                     ),
                   ],
                   xAxisConfig: xAxisConfig,

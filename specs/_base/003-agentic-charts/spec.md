@@ -49,24 +49,49 @@ A sport scientist needs to analyze an athlete's cycling power data from a Garmin
 
 ### User Story 3 - Full Chart Property Control (Priority: P0)
 
-A developer embedding agentic charts needs the LLM to have complete control over all chart properties, styling, axes, interactions, and annotations.
+A developer embedding agentic charts needs the LLM to have **complete control over ALL chart properties** - no exceptions. Every configurable aspect of BravenChartPlus must be accessible to the agent.
 
-**Why this priority**: Essential for production use - partial control is unusable.
+**Why this priority**: Essential for production use - partial control is unusable. "ALL means ALL."
 
 **Acceptance Scenarios**:
 
 1. **Given** a chart creation request, **When** specifying any combination of properties, **Then** ALL of the following are configurable:
-   - Chart type (line, area, bar, scatter, candlestick, heatmap)
-   - Series styling (color, stroke width, markers, fill opacity, dash patterns)
-   - Line interpolation (linear, bezier, stepped, monotone)
-   - X-axis (label, unit, range, tick format, time vs numeric)
-   - Y-axis (label, unit, range, position, multiple axes)
-   - Grid (show/hide, colors, dash patterns)
-   - Legend (show/hide, position, style)
-   - Interactions (pan, zoom, crosshair, tooltip, selection)
-   - Annotations (horizontal lines, vertical lines, regions, markers, labels)
-2. **Given** an existing chart, **When** user prompts "Change the line color to red and add a horizontal line at 200W", **Then** the chart is modified in-place without recreating.
-3. **Given** incomplete styling, **When** processed, **Then** intelligent defaults are applied that respect the current theme.
+   - **Chart Types**: line, area, bar, scatter, candlestick, heatmap
+   - **Series Styling**: color, stroke width, markers, fill opacity, dash patterns, gradients
+   - **Line Interpolation**: linear, bezier, stepped, monotone
+   - **X-Axis**: label, unit, range, tick format, time vs numeric, rotation, visibility
+   - **Y-Axis**: label, unit, range, position (left/right), multiple axes, normalization
+   - **Grid**: show/hide, colors, dash patterns, opacity
+   - **Legend**: show/hide, position, orientation, style
+   - **Interactions**: pan, zoom, crosshair, tooltip, selection, scrollbars
+   - **Annotations**: horizontal lines, vertical lines, regions, markers, labels, training zones
+   - **Theme**: light/dark/auto, color palettes, backgrounds
+   - **Normalization**: auto-range, include zero, padding percentages
+2. **Given** an existing chart, **When** user prompts "Change the line color to red and add a horizontal line at 200W", **Then** the chart is **modified in-place** (same chart ID) without recreating. The agent receives the current chart configuration for context.
+3. **Given** incomplete styling, **When** processed, **Then** intelligent defaults are applied based on:
+   - Chart type defaults (line defaults vs bar defaults)
+   - Series type defaults (power → orange, HR → red, cadence → blue)
+   - Current theme (dark mode adjustments)
+   - Athlete context if loaded (preferred colors, zones)
+
+---
+
+### User Story 3a - Post-Generation Configuration Panel (Priority: P1)
+
+After a chart is generated, users need a visual configuration panel to tweak common settings without re-prompting the agent.
+
+**Why this priority**: Reduces friction for quick adjustments; not every change needs an LLM call.
+
+**Acceptance Scenarios**:
+
+1. **Given** a generated chart, **When** displayed, **Then** an optional config panel is available with controls for:
+   - Theme toggle (light/dark)
+   - Scrollbar visibility
+   - Grid visibility
+   - Legend position
+   - Zoom reset
+2. **Given** a config panel change, **When** user modifies a setting, **Then** the chart updates immediately without LLM involvement.
+3. **Given** a config panel change, **When** user subsequently prompts the agent, **Then** the agent is aware of the current chart state including manual adjustments.
 
 ---
 
@@ -130,7 +155,88 @@ A user needs to export charts as images or save configurations for later use.
 
 ---
 
+### User Story 8 - External API Data Integration (Priority: P2 - Future Phase)
+
+A sport scientist needs to fetch athlete data directly from external platforms like intervals.icu, rather than manually downloading and uploading files.
+
+**Why this priority**: Streamlines workflow for connected platforms; requires core functionality first.
+
+**Acceptance Scenarios**:
+
+1. **Given** configured intervals.icu API credentials, **When** user prompts "Fetch Joe Soap's last 5 rides from intervals.icu", **Then** the API is called and workout data is loaded.
+2. **Given** multiple activities fetched, **When** user prompts "Show average power across all January rides", **Then** data is aggregated across workouts and charted.
+3. **Given** fetched data, **When** the same data is requested again, **Then** cached data is used (intervals.icu data is immutable).
+
+**Technical Notes**:
+
+- intervals.icu requires OAuth/API key authentication
+- Data is immutable once fetched → suitable for local caching
+- Must support date range queries and athlete selection
+- This is a **future phase** - core file-based workflow must work first
+
+---
+
+### User Story 9 - Modern Chat Interface & Chart Management (Priority: P0)
+
+Users need a clean, modern UI that fits a sport science laboratory aesthetic, with proper file handling and chart management.
+
+**Why this priority**: UX is critical for adoption; users won't tolerate clunky interfaces.
+
+**Acceptance Scenarios**:
+
+#### Chat Interface:
+
+1. **Given** the chat interface, **When** displayed, **Then** it has:
+   - Clean white/light background (with dark mode option)
+   - Modern, minimal chat input box
+   - Professional sport science aesthetic
+   - Maximum chart real estate, minimal chrome
+2. **Given** file attachments, **When** user adds files, **Then** they appear as removable chips/tags above the input.
+3. **Given** multiple files attached, **When** user wants to remove one, **Then** clicking [×] removes just that file before sending.
+
+#### Chart Management:
+
+4. **Given** a generated chart, **When** user clicks "Save" or "Favorite", **Then** the chart is added to a session-local favorites list.
+5. **Given** saved charts, **When** user opens the chart gallery, **Then** all favorited charts are displayed with thumbnails.
+6. **Given** a chart in the conversation, **When** user prompts "make the line thicker", **Then** the **existing chart is updated in-place**, not replaced with a new chart.
+
+#### Editing Flow:
+
+7. **Given** an existing chart with ID, **When** editing via prompt, **Then** the agent receives the current chart configuration as context.
+8. **Given** multiple charts in a session, **When** user says "update the power chart", **Then** the agent identifies and modifies the correct chart by context or ID.
+
+**Note**: Persistence to database/file is a future phase. V1 uses session-local storage only.
+
+---
+
 ## Functional Requirements
+
+### 0. Complete Property Control Matrix
+
+**Every property listed below MUST be controllable by the agent.** This is the definitive list - no exceptions.
+
+| Category            | Properties                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chart Types**     | line, area, bar, scatter, candlestick, heatmap                                                                                                                                               |
+| **Series Styling**  | color, stroke_width, stroke_dash, fill_opacity, gradient, marker_style, marker_size, visible, legend_visible                                                                                 |
+| **Line Options**    | interpolation (linear/bezier/stepped/monotone), show_points, point_size                                                                                                                      |
+| **Bar Options**     | bar_width_percent, bar_corner_radius, bar_spacing, stacked                                                                                                                                   |
+| **Area Options**    | fill_opacity, fill_gradient, show_line, line_width                                                                                                                                           |
+| **Scatter Options** | marker_style, marker_size, marker_color_by_value                                                                                                                                             |
+| **X-Axis**          | label, unit, type (numeric/time/category), min, max, auto_range, padding_percent, tick_count, tick_format, tick_rotation, show_ticks, show_axis_line, show_grid_lines, grid_color, grid_dash |
+| **Y-Axis**          | id, label, unit, position (left/right), min, max, auto_range, include_zero, padding_percent, tick_count, tick_format, show_ticks, show_axis_line, show_grid_lines, grid_color, color         |
+| **Multi-Axis**      | Multiple Y-axes with independent ranges, colors, and series bindings                                                                                                                         |
+| **Grid**            | show_grid, grid_color, grid_opacity, grid_dash, horizontal_only, vertical_only                                                                                                               |
+| **Legend**          | show_legend, position (top/bottom/left/right/floating), orientation (horizontal/vertical), item_spacing                                                                                      |
+| **Interactions**    | enable_pan, pan_direction, enable_zoom, zoom_direction, min_zoom, max_zoom, enable_scrollbars, scrollbar_position                                                                            |
+| **Crosshair**       | show_crosshair, crosshair_style (full/horizontal/vertical), snap_to_data, show_values                                                                                                        |
+| **Tooltip**         | show_tooltip, tooltip_format, tooltip_position, show_all_series                                                                                                                              |
+| **Selection**       | enable_selection, selection_mode (point/range/multi), selection_color                                                                                                                        |
+| **Annotations**     | horizontal_line, vertical_line, region, point_marker, text_label, training_zones                                                                                                             |
+| **Theme**           | theme (light/dark/auto), background_color, color_palette, font_family                                                                                                                        |
+| **Layout**          | width, height, aspect_ratio, padding (top/bottom/left/right)                                                                                                                                 |
+| **Animation**       | animate_on_load, animation_duration_ms, animation_easing                                                                                                                                     |
+| **Normalization**   | auto_range, include_zero, padding_percent, domain_clamp                                                                                                                                      |
 
 ### 1. LLM Tool Schema (Expanded)
 
@@ -141,6 +247,7 @@ A user needs to export charts as images or save configurations for later use.
 | `create_chart`     | Create a new chart from data           | POC Complete |
 | `modify_chart`     | Modify an existing chart               | POC Partial  |
 | `explain_data`     | Analyze and describe data              | POC Complete |
+| `describe_data`    | Discover columns/fields in loaded data | NEW          |
 | `load_data`        | Load data from file/URL/inline         | NEW          |
 | `process_data`     | Apply transformations to data          | NEW          |
 | `calculate_metric` | Compute scalar metrics (NP, TSS, etc.) | NEW          |
@@ -309,22 +416,31 @@ interface InteractionConfig {
   min_zoom?: number;
   max_zoom?: number;
 
+  // Scrollbars
+  enable_scrollbars?: boolean;
+  scrollbar_position?: "bottom" | "right" | "both";
+  scrollbar_style?: "thin" | "normal" | "thick";
+
   // Crosshair
   show_crosshair?: boolean;
   crosshair_style?: "full" | "horizontal" | "vertical";
   crosshair_snap_to_data?: boolean;
+  crosshair_show_values?: boolean;
 
   // Tooltip
   show_tooltip?: boolean;
   tooltip_format?: string;
+  tooltip_show_all_series?: boolean;
 
   // Selection
   enable_selection?: boolean;
   selection_mode?: "point" | "range" | "multi";
+  selection_color?: string;
 
   // Animation
   animate_on_load?: boolean;
   animation_duration_ms?: number;
+  animation_easing?: "linear" | "ease_in" | "ease_out" | "ease_in_out";
 }
 
 interface AnnotationConfig {
@@ -555,16 +671,92 @@ interface DashboardChartConfig extends CreateChartInput {
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### 6. UI/UX Requirements
+
+#### 6.1 Visual Design Principles
+
+| Principle         | Implementation                                                          |
+| ----------------- | ----------------------------------------------------------------------- |
+| **Clean**         | White/light backgrounds, minimal chrome, maximum data visibility        |
+| **Modern**        | Contemporary chat interface, smooth animations, professional typography |
+| **Sport Science** | Clinical, data-focused aesthetic appropriate for laboratory settings    |
+| **Responsive**    | Works across screen sizes, charts resize fluidly                        |
+
+#### 6.2 Chat Interface Layout
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  📊 Agentic Charts                              [⚙️] [🌙/☀️]     │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ [Assistant]: Here's the power analysis you requested...    │  │
+│  │                                                            │  │
+│  │  ┌────────────────────────────────────────────────────┐   │  │
+│  │  │                                                    │   │  │
+│  │  │            [Generated Chart]                       │   │  │
+│  │  │                                                    │   │  │
+│  │  └────────────────────────────────────────────────────┘   │  │
+│  │  [⭐ Save] [📋 Copy Config] [📷 Export PNG] [⚙️ Config]   │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  📎 athlete_ride.FIT [×]  📎 context.yaml [×]                    │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ Show 30s rolling power with HR overlay and training zones │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│  [+ Add File]                                      [Send ▶]      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 6.3 Chart Action Bar
+
+Every generated chart has an action bar with:
+
+- **⭐ Save/Favorite**: Add to session favorites gallery
+- **📋 Copy Config**: Copy chart JSON to clipboard
+- **📷 Export**: Download as PNG/SVG
+- **⚙️ Config Panel**: Open side panel for quick tweaks
+- **✏️ Edit**: Focus chat input with chart context for modification
+
+#### 6.4 Favorites/Gallery View
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  📊 Saved Charts (3)                                    [× Close] │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │  [Thumbnail] │  │  [Thumbnail] │  │  [Thumbnail] │           │
+│  │              │  │              │  │              │           │
+│  │ Power 30s    │  │ HR Drift     │  │ Zone Dist    │           │
+│  │ Jan 25, 2026 │  │ Jan 25, 2026 │  │ Jan 25, 2026 │           │
+│  │ [View] [×]   │  │ [View] [×]   │  │ [View] [×]   │           │
+│  └──────────────┘  └──────────────┘  └──────────────┘           │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 6.5 File Attachment Handling
+
+- Files appear as removable chips above input
+- Each chip shows: icon + filename + [×] remove button
+- Supported formats shown on hover
+- Drag-and-drop support for file addition
+- Clear visual feedback during file processing
+
 ---
 
 ## Success Criteria
 
-1. **Completeness**: All BravenChartPlus chart properties are controllable via LLM tools.
+1. **Completeness**: All BravenChartPlus chart properties are controllable via LLM tools (see Property Control Matrix).
 2. **Sport Science**: FIT file → 30s rolling power chart works end-to-end in <5 seconds.
 3. **Accuracy**: Metric calculations (NP, IF, TSS) match verified formulas to 0.1% tolerance.
 4. **Multi-LLM**: Works with Anthropic Claude, OpenAI GPT-4, and Google Gemini.
 5. **Performance**: Charts with 100k+ points render at 60 FPS with automatic downsampling.
 6. **Extensibility**: Custom metrics and chart types can be added without core changes.
+7. **In-Place Editing**: Modifying a chart updates it in place; does not create a new chart.
+8. **UI/UX**: Chat interface matches modern sport science aesthetic (clean, white, professional).
+9. **File Handling**: Files can be added/removed before prompting with clear visual feedback.
+10. **Favorites**: Charts can be saved to session gallery and viewed later (without persistence).
 
 ---
 
@@ -643,6 +835,20 @@ class DataStore {
 
 ---
 
+## Constraints
+
+| Constraint                  | Value            | Rationale                                          |
+| --------------------------- | ---------------- | -------------------------------------------------- |
+| Max file upload size        | 50 MB            | Browser memory limits; covers multi-activity files |
+| File size warning threshold | 10 MB            | Alert user to potential slowness                   |
+| Simultaneous sessions       | 1                | Simplicity for V1; multi-session in Phase 3        |
+| Favorites storage           | Session-local    | No persistence in V1; JSON export available        |
+| Config panel controls       | Appearance only  | Data changes require agent for traceability        |
+| Chart edit context          | Full JSON config | Agent sees complete current state                  |
+| Logging                     | Debug mode only  | Console in dev; silent in production               |
+
+---
+
 ## Dependencies
 
 | Dependency           | Purpose                      | Status       |
@@ -663,12 +869,744 @@ class DataStore {
 - Chart versioning/history
 - Native mobile optimizations
 - Offline LLM models (local-first)
+- **Persistent storage** (database, file system) - session-local only for V1
+- **External API integration** (intervals.icu, TrainingPeaks) - Future Phase
+- **User authentication** - assumes single-user local usage for V1
 
 ---
 
-## Clarifications Needed
+## Phasing
 
-1. **Q**: Should we support multiple simultaneous chat sessions with separate chart states?
-2. **Q**: What's the maximum file size for FIT/CSV uploads in web browsers?
-3. **Q**: Should chart templates be shareable between users?
-4. **Q**: Do we need audit logging of LLM interactions for compliance?
+### Phase 1: Core (This Spec)
+
+- Natural language chart creation
+- FIT/CSV/JSON file loading
+- Full property control
+- In-place chart editing
+- Config panel for quick tweaks
+- Session-local favorites (non-persisted)
+- Modern chat UI
+
+### Phase 2: API Integration (Future Spec)
+
+- intervals.icu API adapter
+- OAuth authentication flow
+- Data caching layer
+- Multi-workout aggregation
+- TrainingPeaks integration
+
+### Phase 3: Persistence (Future Spec)
+
+- Chart configuration persistence
+- Template library
+- User preferences
+- Session restore
+- Export to database
+
+---
+
+## Clarifications ✅ RESOLVED
+
+| #   | Question                             | Decision                                                                                          |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| 1   | Multiple simultaneous chat sessions? | **No** - Single session only for V1. Multi-session deferred to Phase 3.                           |
+| 2   | Maximum file size for uploads?       | **50 MB** hard limit. Warning shown for files >10 MB.                                             |
+| 3   | Chart template sharing?              | **Deferred** to Phase 3 with persistence. Local templates only in V1.                             |
+| 4   | Audit logging for compliance?        | **Debug logging** in development mode only. Silent in production. Full audit deferred to Phase 3. |
+| 5   | Config panel scope?                  | **Appearance only** - theme, scrollbars, grid, legend. Data changes go through agent.             |
+| 6   | Chart editing context?               | **Full configuration** sent to agent. Token cost is minimal vs. preventing mistakes.              |
+| 7   | Favorites export?                    | **Yes** - Allow JSON export for manual backup even without persistence.                           |
+| 8   | intervals.icu API access?            | **Yes** - API key access available. Phase 2 will include specific intervals.icu adapter.          |
+
+---
+
+## Known Gaps & Open Issues
+
+### Gap 1: Error Handling Strategy (High Severity)
+
+**Problem**: No defined error handling for:
+
+- LLM API failures (rate limits, timeouts, network errors)
+- Invalid/corrupt file uploads
+- Malformed data columns
+- Chart rendering failures
+- Token limit exceeded mid-conversation
+
+**Required**: Error handling taxonomy with user-facing messages and recovery actions.
+
+```typescript
+interface ErrorHandling {
+  // Error categories
+  categories:
+    | "api_error"
+    | "file_error"
+    | "data_error"
+    | "render_error"
+    | "token_error";
+
+  // User-facing error display
+  userMessage: string; // Friendly message
+  technicalDetails?: string; // Optional expandable details
+  recoveryAction?: string; // Suggested next step
+  retryable: boolean; // Show retry button?
+}
+```
+
+**✅ Decision (OQ1)**: Hybrid retry - auto-retry once silently, then show error with Retry button for subsequent attempts.
+
+---
+
+### Gap 2: Loading States & Progress Indicators (Medium Severity)
+
+**Problem**: No specification for what users see during:
+
+- File parsing (large FIT files can take 5-10 seconds)
+- LLM API calls (2-10 seconds typical)
+- Data transformation operations
+- Chart rendering
+
+**Required**: Loading state specifications.
+
+| Operation      | Duration | Indicator                           |
+| -------------- | -------- | ----------------------------------- |
+| File upload    | 0-5s     | Upload progress bar with percentage |
+| File parsing   | 1-10s    | "Parsing file..." with spinner      |
+| LLM request    | 2-10s    | "Thinking..." with animated dots    |
+| Data transform | 0-2s     | Inline spinner                      |
+| Chart render   | 0-1s     | Skeleton chart placeholder          |
+
+**✅ Decision (OQ2)**: Hybrid streaming - stream text explanations as they arrive, wait for complete tool calls before rendering charts.
+
+---
+
+### Gap 3: Undo/Redo Capability (Low Severity - Enhancement)
+
+**Problem**: No undo/redo for chart modifications. User must re-request via chat.
+
+**Recommendation**: Implement chart state history stack.
+
+```typescript
+interface ChartHistory {
+  maxSteps: 20; // Maximum history depth
+  states: ChartConfiguration[]; // Stack of configurations
+  currentIndex: number; // Current position
+
+  // Operations
+  undo(): ChartConfiguration | null;
+  redo(): ChartConfiguration | null;
+  canUndo(): boolean;
+  canRedo(): boolean;
+}
+```
+
+**✅ Decision (OQ3)**: No persistence - undo history clears on page refresh (simpler implementation).
+
+---
+
+### Gap 4: Data Column Discovery Tool (High Severity)
+
+**Problem**: The agent cannot know what columns/fields exist in uploaded data without a discovery tool.
+
+**Required**: New LLM tool `describe_data`.
+
+```typescript
+interface DescribeDataInput {
+  fileId: string; // Reference to uploaded file
+}
+
+interface DescribeDataOutput {
+  fileName: string;
+  fileType: "fit" | "csv" | "json";
+  rowCount: number;
+  columns: ColumnDescriptor[];
+  sampleRows: Record<string, any>[]; // First 5 rows
+  timeRange?: {
+    start: string; // ISO timestamp
+    end: string;
+    durationSeconds: number;
+  };
+}
+
+interface ColumnDescriptor {
+  name: string;
+  type: "number" | "string" | "datetime" | "boolean";
+  nullable: boolean;
+  stats?: {
+    min?: number;
+    max?: number;
+    mean?: number;
+    nullCount: number;
+  };
+  sampleValues: any[]; // First 5 non-null values
+}
+```
+
+**✅ Decision (OQ4)**: Auto-run `describe_data` on every file upload. Agent always has column info available.
+
+---
+
+### Gap 5: Chart Identification & Inline Editing (Medium Severity)
+
+**Problem**: When multiple charts exist, how does the user specify which chart to modify?
+
+**Solution**: Inline chat linked to specific charts.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ [Power Chart]                                    [💬] [📌]  │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │          ▄▄                                             │ │
+│ │        ▄█▀▀█▄   ▄█▄                                     │ │
+│ │      ▄█▀    ▀█▄█  ▀█▄     Power (watts)                 │ │
+│ │    ▄█▀        ▀     ▀█▄                                 │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ [💬 Clicked - Inline Chat Opens Below]                      │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ User: Change the line color to red                      │ │
+│ │ Agent: Done! Changed power series to #FF4444.           │ │
+│ │ ┌─────────────────────────────────────────────────────┐ │ │
+│ │ │ Type a message... (editing Power Chart)     [Send]  │ │ │
+│ │ └─────────────────────────────────────────────────────┘ │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Features**:
+
+- **💬 Chat Button**: Opens inline chat scoped to this specific chart
+- **📌 Add to Context**: Adds chart to main chat context for cross-chart operations
+- **Context Indicator**: Shows "(editing Power Chart)" in input field
+- **Scoped Modifications**: Agent only modifies the linked chart
+
+```typescript
+interface ChartContext {
+  chartId: string; // Unique chart identifier
+  chartName: string; // User-visible name (e.g., "Power Chart")
+  configuration: ChartConfiguration; // Full current config
+  linkedConversation?: Message[]; // Inline chat history
+}
+
+interface InlineChatRequest {
+  chartId: string; // Which chart is being edited
+  userMessage: string;
+  currentConfig: ChartConfiguration; // Full config for context
+}
+```
+
+**✅ Decision (OQ5)**: Yes - persist inline chat history when chart collapsed/expanded.
+
+---
+
+### Gap 6: Time Zone Handling (Medium Severity)
+
+**Problem**: FIT files store timestamps in UTC. User may be in different timezone. Display timezone not specified.
+
+**Required**: Timezone handling strategy.
+
+```typescript
+interface TimezoneConfig {
+  source: "utc" | "local" | "file" | "custom";
+  customTimezone?: string; // e.g., 'America/New_York'
+  displayFormat: "absolute" | "relative" | "elapsed";
+  // 'absolute': "14:32:15"
+  // 'relative': "+1:32:15" (from activity start)
+  // 'elapsed': "1h 32m 15s"
+}
+```
+
+**Default Behavior**: Display elapsed time from activity start for FIT files.
+
+**✅ Decision (OQ6)**: Global default timezone + file override. FIT files use embedded timezone when available.
+
+---
+
+### Gap 7: Keyboard Shortcuts (Low Severity - Accessibility)
+
+**Problem**: No keyboard shortcuts defined for power users and accessibility.
+
+**Recommended Shortcuts**:
+
+| Shortcut       | Action                           |
+| -------------- | -------------------------------- |
+| `Ctrl+Enter`   | Send message                     |
+| `Ctrl+U`       | Upload file                      |
+| `Ctrl+Z`       | Undo last chart change           |
+| `Ctrl+Shift+Z` | Redo                             |
+| `Ctrl+S`       | Save to favorites                |
+| `Ctrl+E`       | Export chart                     |
+| `Escape`       | Close config panel / inline chat |
+| `Tab`          | Navigate between charts          |
+
+**✅ Decision (OQ7)**: Fixed shortcuts for V1. Customization deferred to Phase 2.
+
+---
+
+### Issue 1: Chart Type Support Gap (Medium Severity)
+
+**Problem**: Spec mentions chart types that may not exist in current BravenChartPlus:
+
+- Candlestick charts
+- Histogram charts
+- Bubble charts
+- Heatmaps
+
+**Required**: Audit current BravenChartPlus capabilities.
+
+**Known Supported Types**:
+
+- ✅ LineChartSeries
+- ✅ AreaChartSeries
+- ✅ BarChartSeries
+- ✅ ScatterChartSeries
+
+**✅ Decision (OQ8)**: Keep all chart types in spec. Mark candlestick/heatmap as Phase 2 aspirational.
+
+---
+
+### Issue 2: Token Usage Visibility (Medium Severity)
+
+**Problem**: No visibility into LLM API token consumption and costs.
+
+**Recommendation**: Add optional token usage display.
+
+```typescript
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCost?: number; // Optional USD estimate
+}
+
+interface ConversationStats {
+  messageCount: number;
+  totalTokensUsed: number;
+  estimatedCost?: number;
+  tokenLimit: number; // From constraints
+  usagePercentage: number; // Visual indicator
+}
+```
+
+**Display**: Show in collapsed footer: "Session: 12.4k / 100k tokens (~$0.15)"
+
+**✅ Decision (OQ9)**: Soft limit - warn at 80%, suggest "Start new session", allow continue.
+
+---
+
+### Issue 3: Concurrent Tool Execution (Low Severity)
+
+**Problem**: Unclear if agent should execute multiple tools in parallel.
+
+**Example Scenario**: User uploads 3 FIT files simultaneously.
+
+**Options**:
+
+1. **Sequential**: Process one file at a time (safer, slower)
+2. **Parallel**: Process all files concurrently (faster, more complex)
+
+**Recommendation**: Sequential for V1, parallel for Phase 2.
+
+**✅ Decision (OQ10)**: Soft limit - accept all files, warn if >5 about processing time.
+
+---
+
+### Issue 4: File Security & Validation (High Severity)
+
+**Problem**: No specification for file security measures.
+
+**Required Security Measures**:
+
+| Check                     | Action                                  |
+| ------------------------- | --------------------------------------- |
+| File extension validation | Only allow .fit, .csv, .json, .yaml     |
+| MIME type verification    | Verify content matches extension        |
+| Size limit enforcement    | Reject files > 50 MB before upload      |
+| Malicious content scan    | Sanitize embedded scripts in CSV/JSON   |
+| Path traversal prevention | Strip directory paths from filenames    |
+| Filename sanitization     | Remove special characters, limit length |
+
+```typescript
+interface FileValidation {
+  allowedExtensions: [".fit", ".csv", ".json", ".yaml"];
+  maxSizeBytes: 52428800; // 50 MB
+  requireMimeValidation: true;
+  sanitizeFilenames: true;
+  maxFilenameLength: 255;
+}
+```
+
+**✅ Decision (OQ11)**: Sanitize JSON - strip script-like values (`<script>`, `javascript:`). FIT files are proprietary binary format, not a concern.
+
+---
+
+### Issue 5: Multi-Axis Limits (Low Severity)
+
+**Problem**: What is the maximum number of Y-axes supported?
+
+**Technical Constraint**: BravenChartPlus renderer supports maximum 4 Y-axes (2 left, 2 right).
+
+**⚠️ IMPORTANT DISTINCTION**:
+
+- **Y-Axes**: Hard limit of 4 (technical constraint, no rendering for more)
+- **Series**: Effectively unlimited (series share axes based on unit/scale compatibility)
+
+```typescript
+interface MultiAxisConstraints {
+  maxYAxes: 4; // Hard limit: Left 2, Right 2
+  maxSeriesPerAxis: 10; // Soft limit per axis
+  totalSeriesLimit: null; // No hard limit on total series
+  warnAtAxes: 3; // Show complexity warning
+}
+```
+
+**✅ Decision (OQ12)**: Hard limit 4 Y-axes (technical). Agent must consolidate series onto shared axes when >4 different scales needed.
+
+---
+
+## Proposed Enhancements
+
+### Enhancement 1: Prompt Templates (Medium Value)
+
+**Problem**: Users repeatedly type similar requests for common sport science tasks.
+
+**Proposal**: Pre-built prompt templates accessible via dropdown or slash commands.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ [/] Prompt Templates                              [▼]       │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 📊 Power Analysis                                       │ │
+│ │ 💓 Heart Rate Zones                                     │ │
+│ │ 🏃 Pace/Speed Over Time                                 │ │
+│ │ ⚡ Normalized Power vs Power                            │ │
+│ │ 📈 Training Load (TSS) Summary                          │ │
+│ │ 🔄 Cadence Analysis                                     │ │
+│ │ 🌡️ Power vs Heart Rate Decoupling                       │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Template Example**:
+
+```typescript
+interface PromptTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  prompt: string;                    // The actual prompt text
+  requiredDataColumns?: string[];    // Columns needed (power, heart_rate, etc.)
+  category: 'cycling' | 'running' | 'swimming' | 'general';
+}
+
+// Example template
+{
+  id: 'power-analysis',
+  name: 'Power Analysis',
+  icon: '📊',
+  prompt: 'Create a power chart showing 30-second rolling average with the following zones highlighted: Z1 (0-55% FTP), Z2 (55-75%), Z3 (75-90%), Z4 (90-105%), Z5 (105-120%), Z6 (120%+). Show average and normalized power as horizontal reference lines.',
+  requiredDataColumns: ['power'],
+  category: 'cycling'
+}
+```
+
+**✅ Decision (EQ1)**: Read-only templates for V1. User-editable templates in Phase 2.
+
+---
+
+### Enhancement 2: Data Preview Before Charting (High Value)
+
+**Problem**: Users upload files but don't know what's in them before asking for a chart.
+
+**Proposal**: Show interactive data preview after file upload.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 📁 workout_2026-01-25.fit                          [✕]     │
+│ ─────────────────────────────────────────────────────────── │
+│ Duration: 1:32:45  |  Records: 5,565  |  Size: 2.4 MB      │
+│                                                             │
+│ Available Columns:                                          │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ ☑ timestamp    │ datetime │ 2026-01-25 14:00:00 → ...   │ │
+│ │ ☑ power        │ number   │ 0 → 485 W (avg: 218)        │ │
+│ │ ☑ heart_rate   │ number   │ 98 → 178 bpm (avg: 142)     │ │
+│ │ ☑ cadence      │ number   │ 0 → 112 rpm (avg: 87)       │ │
+│ │ ☐ temperature  │ number   │ 18 → 22 °C                  │ │
+│ │ ☐ altitude     │ number   │ 245 → 892 m                 │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ [View Sample Data]  [Create Chart →]                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```typescript
+interface DataPreview {
+  fileName: string;
+  fileType: "fit" | "csv" | "json";
+  duration?: string; // For activity files
+  recordCount: number;
+  fileSizeBytes: number;
+  columns: ColumnPreview[];
+  sampleData?: Record<string, any>[]; // First 10 rows
+}
+
+interface ColumnPreview {
+  name: string;
+  type: "number" | "string" | "datetime" | "boolean";
+  selected: boolean; // User can toggle columns
+  range?: { min: any; max: any };
+  average?: number; // For numeric columns
+  unit?: string; // Detected unit (W, bpm, rpm, etc.)
+}
+```
+
+**✅ Decision (EQ2)**: Visual only - checkboxes are UI hints, agent sees all columns.
+
+---
+
+### Enhancement 3: Conversation Search (Low Value - Phase 2)
+
+**Problem**: Long sessions make it hard to find previous charts or discussions.
+
+**Proposal**: Search through conversation history.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🔍 Search conversation...                          [✕]     │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ power zones                                             │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Results (3):                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 📊 "Show power with zone colors" - 14:32                │ │
+│ │ 💬 "Can you add power zones as..." - 14:35              │ │
+│ │ 📊 "Update power zones to use..." - 14:41              │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**✅ Decision (EQ3)**: Defer to Phase 2 - sessions are ephemeral, low value for V1.
+
+---
+
+### Enhancement 4: Metric Display Cards (High Value)
+
+**Problem**: Calculated metrics (NP, TSS, IF, etc.) are only shown in text responses, not visually.
+
+**Proposal**: Display computed metrics as visual cards alongside charts.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Workout Metrics                                             │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│ │ Avg Power│ │    NP    │ │    IF    │ │   TSS    │        │
+│ │   218 W  │ │  245 W   │ │   0.87   │ │   78.4   │        │
+│ │ ▲ +12W   │ │ ▲ +8W    │ │ ▼ -0.02  │ │ ▲ +5.2   │        │
+│ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│ │    VI    │ │   W/kg   │ │  kJ Tot  │ │ Avg HR   │        │
+│ │   1.12   │ │  3.42    │ │  1,205   │ │  142 bpm │        │
+│ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```typescript
+interface MetricCard {
+  id: string;
+  label: string;
+  value: number | string;
+  unit?: string;
+  format?: "number" | "decimal" | "time" | "percentage";
+  precision?: number;
+  trend?: {
+    direction: "up" | "down" | "neutral";
+    delta: number | string;
+    comparison: string; // "vs last workout", "vs 30-day avg"
+  };
+  color?: string; // Card accent color
+  tooltip?: string; // Explanation of metric
+}
+
+interface MetricDashboard {
+  title?: string;
+  metrics: MetricCard[];
+  layout: "row" | "grid"; // Row = horizontal, Grid = 4-column
+  collapsible: boolean;
+}
+```
+
+**✅ Decision (EQ4)**: User-specified trend comparisons only. No automatic comparisons.
+
+---
+
+### Enhancement 5: Comparison Mode (High Value)
+
+**Problem**: Users often want to compare multiple workouts side-by-side or overlaid.
+
+**Proposal**: Built-in comparison mode for multi-workout analysis.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Comparison Mode                               [Exit Compare]│
+│ ─────────────────────────────────────────────────────────── │
+│ Selected Workouts:                                          │
+│ ┌───────────────────────┐ ┌───────────────────────┐        │
+│ │ 📁 Jan 25 - Intervals │ │ 📁 Jan 18 - Intervals │        │
+│ │ ━━━━ (blue)          │ │ ┅┅┅┅ (orange, dashed) │        │
+│ └───────────────────────┘ └───────────────────────┘        │
+│                                                             │
+│ [Overlay] [Side-by-Side] [Difference Plot]                 │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │     ▄▄                                                  │ │
+│ │   ▄█▀▀█▄   ▄█▄        ━━━ Jan 25                       │ │
+│ │ ▄█┅┅┅┅▀█▄█┅┅▀█▄       ┅┅┅ Jan 18                       │ │
+│ │█┅      ┅▀┅    ┅█                                        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Comparison Metrics:                                         │
+│ ┌────────────┬───────────┬───────────┬──────────┐          │
+│ │ Metric     │ Jan 25    │ Jan 18    │ Delta    │          │
+│ ├────────────┼───────────┼───────────┼──────────┤          │
+│ │ Avg Power  │ 218 W     │ 212 W     │ +6 W ▲   │          │
+│ │ NP         │ 245 W     │ 238 W     │ +7 W ▲   │          │
+│ │ TSS        │ 78.4      │ 72.1      │ +6.3 ▲   │          │
+│ └────────────┴───────────┴───────────┴──────────┘          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+```typescript
+interface ComparisonMode {
+  enabled: boolean;
+  workouts: WorkoutReference[]; // 2-5 workouts
+  displayMode: "overlay"; // V1: overlay only, side-by-side/difference in Phase 2
+  alignmentStrategy: "time-elapsed"; // V1: elapsed time only
+  differenceBaseline?: string; // Phase 2
+}
+
+interface WorkoutReference {
+  fileId: string;
+  fileName: string;
+  displayColor: string;
+  lineStyle: "solid" | "dashed" | "dotted";
+  visible: boolean;
+}
+```
+
+**✅ Decision (EQ5)**: 5 workouts max. V1 scope: overlay + metrics table, elapsed time alignment.
+
+---
+
+### Enhancement 6: Smart Filename Parsing (Medium Value)
+
+**Problem**: FIT filenames often contain useful metadata that's ignored.
+
+**Examples**:
+
+- `tp-2023646.2026-01-25-14-32-00.GarminPing.workout.FIT`
+- `Joe_Soap_Intervals_2026-01-25.fit`
+- `2026-01-25_Morning_Ride.fit`
+
+**Proposal**: Auto-extract metadata from filenames.
+
+```typescript
+interface FilenameParsing {
+  patterns: FilenamePattern[];
+  extractedMetadata: {
+    athleteName?: string;
+    activityDate?: Date;
+    activityType?: string; // ride, run, swim, intervals, etc.
+    source?: string; // Garmin, Wahoo, TrainingPeaks, etc.
+    customTags?: string[];
+  };
+}
+
+interface FilenamePattern {
+  regex: RegExp;
+  groups: {
+    athleteName?: number; // Capture group index
+    date?: number;
+    activityType?: number;
+    source?: number;
+  };
+}
+
+// Example patterns
+const patterns = [
+  // TrainingPeaks: tp-{id}.{date}.GarminPing.{id}.FIT
+  { regex: /tp-\d+\.(\d{4}-\d{2}-\d{2}).*\.FIT/i, groups: { date: 1 } },
+
+  // Common: {Name}_{Activity}_{Date}.fit
+  {
+    regex: /([A-Za-z_]+)_([A-Za-z]+)_(\d{4}-\d{2}-\d{2})\.fit/i,
+    groups: { athleteName: 1, activityType: 2, date: 3 },
+  },
+];
+```
+
+**✅ Decision (EQ6)**: Display only - show parsed metadata in UI, do not auto-populate agent context.
+
+---
+
+### Enhancement 7: Shareable Chart Links (Low Value - Phase 3)
+
+**Problem**: Users want to share chart configurations with colleagues without exporting files.
+
+**Proposal**: Generate shareable links encoding chart configuration.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Share Chart                                        [✕]     │
+│ ─────────────────────────────────────────────────────────── │
+│ ⚠️ Note: Link includes configuration only, not data.       │
+│ Recipient must have access to the same data file.          │
+│                                                             │
+│ Share Options:                                              │
+│ ☑ Include chart styling                                    │
+│ ☑ Include axis configuration                               │
+│ ☐ Include annotations                                       │
+│ ☐ Include metric cards                                      │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ https://app.example.com/chart?c=eyJjaGFydCI6...        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ [Copy Link]  [Copy as JSON]  [Download Config]             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**✅ Decision (EQ7)**: URL-encoded shareable links, deferred to future phase (not V1).
+
+---
+
+## Enhancement Questions ✅ ALL RESOLVED
+
+| #   | Question                                              | Enhancement   | Decision                                                           |
+| --- | ----------------------------------------------------- | ------------- | ------------------------------------------------------------------ |
+| EQ1 | Should prompt templates be editable by users?         | Enhancement 1 | **Read-only** for V1, editable in Phase 2                          |
+| EQ2 | Should column selection filter what agent sees?       | Enhancement 2 | **Visual only** - agent sees all columns                           |
+| EQ3 | Include conversation search in V1?                    | Enhancement 3 | **Defer** to Phase 2                                               |
+| EQ4 | Automatic trend comparisons or user-specified?        | Enhancement 4 | **User-specified** - no automatic comparisons                      |
+| EQ5 | Maximum workouts to compare?                          | Enhancement 5 | **5 workouts max** (overlay + metrics table, elapsed time aligned) |
+| EQ6 | Auto-populate context from filename, or display only? | Enhancement 6 | **Display only** - show parsed metadata, don't auto-populate       |
+| EQ7 | Shareable links in V1 or Phase 3?                     | Enhancement 7 | **Defer** - URL-encoded approach, future phase                     |
+
+---
+
+## Open Questions ✅ ALL RESOLVED
+
+| #    | Question                                                 | Gap/Issue | Decision                                                                               |
+| ---- | -------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
+| OQ1  | Automatic retry with exponential backoff for API errors? | Gap 1     | **Hybrid**: Auto-retry once silently, then show error with Retry button                |
+| OQ2  | Show streaming LLM responses or wait for complete?       | Gap 2     | **Hybrid**: Stream text explanations, wait for complete tool calls before chart render |
+| OQ3  | Should undo history persist across session restarts?     | Gap 3     | **No**: Undo history clears on page refresh (simpler implementation)                   |
+| OQ4  | Auto-run `describe_data` on file upload?                 | Gap 4     | **Yes**: Automatically run on every upload, agent always has column info               |
+| OQ5  | Persist inline chat history when chart collapsed?        | Gap 5     | **Yes**: Keep history, restore when chart expanded again                               |
+| OQ6  | Timezone configurable per-chart or globally?             | Gap 6     | **Global default + file override**: FIT files use embedded timezone when available     |
+| OQ7  | Customizable keyboard shortcuts?                         | Gap 7     | **Deferred**: Fixed shortcuts for V1, customization in Phase 2                         |
+| OQ8  | Which chart types are actually implemented?              | Issue 1   | **Keep aspirational**: Mark candlestick/heatmap as Phase 2                             |
+| OQ9  | Warn users when approaching token limits?                | Issue 2   | **Soft limit**: Warn at 80%, suggest new session, allow continue                       |
+| OQ10 | Limit concurrent file uploads?                           | Issue 3   | **Soft limit**: Accept all files, warn if >5 about processing time                     |
+| OQ11 | Scan for embedded JavaScript in JSON?                    | Issue 4   | **Sanitize**: Strip script-like values from JSON (FIT files not a concern)             |
+| OQ12 | Allow more than 4 Y-axes with confirmation?              | Issue 5   | **Hard limit**: 4 Y-axes max (technical), unlimited series (share axes)                |
