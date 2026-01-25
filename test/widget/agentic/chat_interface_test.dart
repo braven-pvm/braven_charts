@@ -1,37 +1,11 @@
 // @orchestra-task: 8
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/models/conversation.dart';
 import 'package:braven_charts/src/agentic/models/message.dart';
-
-class ChatInterface extends StatelessWidget {
-  const ChatInterface({
-    super.key,
-    required this.conversation,
-    this.onSend,
-  });
-
-  final Conversation conversation;
-  final ValueChanged<String>? onSend;
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-class ChartWidget extends StatelessWidget {
-  const ChartWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
+import 'package:braven_charts/src/agentic/widgets/chat_interface.dart';
+import 'package:braven_charts/src/agentic/widgets/chart_widget.dart';
 
 @Tags(['tdd-red'])
 void main() {
@@ -64,7 +38,7 @@ void main() {
 
       expect(find.text('Show me a line chart of power over time'), findsOneWidget);
       expect(find.byType(ChartWidget), findsOneWidget);
-    });
+    }, tags: ['tdd-red']);
 
     testWidgets('has text input and send button', (tester) async {
       final conversation = Conversation(
@@ -79,7 +53,7 @@ void main() {
 
       expect(find.byKey(const Key('chat_input')), findsOneWidget);
       expect(find.byKey(const Key('chat_send_button')), findsOneWidget);
-    });
+    }, tags: ['tdd-red']);
 
     testWidgets('tapping send forwards message to handler', (tester) async {
       final conversation = Conversation(
@@ -102,6 +76,6 @@ void main() {
       await tester.pump();
 
       expect(sentText, equals('Line chart'));
-    });
+    }, tags: ['tdd-red']);
   });
 }

@@ -1,47 +1,34 @@
 // @orchestra-task: 8
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/models/conversation.dart';
+import 'package:braven_charts/src/agentic/models/message.dart';
+import 'package:braven_charts/src/agentic/providers/llm_provider.dart';
+import 'package:braven_charts/src/agentic/services/agent_service.dart';
+import 'package:braven_charts/src/agentic/tools/create_chart_tool.dart';
+import 'package:braven_charts/src/agentic/tools/tool_registry.dart';
+import 'package:braven_charts/src/agentic/widgets/chat_interface.dart';
+import 'package:braven_charts/src/agentic/widgets/chart_widget.dart';
 
-class AgentService {
-  const AgentService();
-}
-
-class CreateChartTool {
-  const CreateChartTool();
-}
-
-class ChatInterface extends StatelessWidget {
-  const ChatInterface({
-    super.key,
-    required this.conversation,
-    this.agentService,
-  });
-
-  final Conversation conversation;
-  final AgentService? agentService;
-
+class FakeProvider extends LLMProvider {
   @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
+  Future<Message> sendMessage(Conversation conversation) async {
+    throw UnimplementedError('FakeProvider.sendMessage');
   }
-}
-
-class ChartWidget extends StatelessWidget {
-  const ChartWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
+  Stream<String> streamMessage(Conversation conversation) async* {
+    throw UnimplementedError('FakeProvider.streamMessage');
   }
 }
 
 class FakeAgentService extends AgentService {
-  const FakeAgentService();
+  FakeAgentService()
+      : super(
+          provider: FakeProvider(),
+          toolRegistry: ToolRegistry()..register(CreateChartTool()),
+        );
 }
 
 @Tags(['tdd-red'])
@@ -68,5 +55,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ChartWidget), findsOneWidget);
-  });
+  }, tags: ['tdd-red']);
 }

@@ -1,25 +1,9 @@
 // @orchestra-task: 8
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:braven_charts/src/agentic/tools/create_chart_tool.dart';
 import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
-
-class CreateChartTool extends LLMTool {
-  @override
-  String get name => '';
-
-  @override
-  String get description => '';
-
-  @override
-  Map<String, dynamic> get inputSchema => {};
-
-  @override
-  Future<dynamic> execute(Map<String, dynamic> args) async => null;
-}
 
 @Tags(['tdd-red'])
 void main() {
@@ -32,7 +16,7 @@ void main() {
       expect(tool.inputSchema, isNotEmpty);
       expect(tool.inputSchema['type'], equals('object'));
       expect(tool.inputSchema['properties'], isA<Map>());
-    });
+    }, tags: ['tdd-red']);
 
     test('converts natural language into a ChartConfiguration', () async {
       final CreateChartTool tool = CreateChartTool();
@@ -54,7 +38,7 @@ void main() {
       expect(config.series, isNotEmpty);
       expect(config.xAxis, isNotNull);
       expect(config.yAxes, isNotEmpty);
-    });
+    }, tags: ['tdd-red']);
 
     test('returns an error for unsupported chart types', () async {
       final CreateChartTool tool = CreateChartTool();
@@ -71,6 +55,6 @@ void main() {
         }),
         throwsA(isA<Exception>()),
       );
-    });
+    }, tags: ['tdd-red']);
   });
 }
