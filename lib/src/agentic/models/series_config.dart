@@ -64,13 +64,15 @@ class SeriesConfig {
         visible = visible ?? true,
         legendVisible = legendVisible ?? true {
     if (id.isEmpty) throw ArgumentError('Series id cannot be empty');
-    if ((strokeWidth ?? 2.0) < 0)
+    if ((strokeWidth ?? 2.0) < 0) {
       throw ArgumentError('strokeWidth cannot be negative');
+    }
     if ((fillOpacity ?? 0.0) < 0 || (fillOpacity ?? 0.0) > 1) {
       throw ArgumentError('fillOpacity must be between 0 and 1');
     }
-    if ((markerSize ?? 4.0) < 0)
+    if ((markerSize ?? 4.0) < 0) {
       throw ArgumentError('markerSize cannot be negative');
+    }
     if (!((dataColumn != null || data != null) &&
         (dataColumn == null || data == null))) {
       throw ArgumentError(
