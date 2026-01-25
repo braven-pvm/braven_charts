@@ -1,11 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 2
-
-@Tags(['tdd-red'])
-library;
-
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/models.dart';
@@ -60,8 +55,8 @@ void main() {
       test('creates instance with error status and message', () {
         final attachment = FileAttachment(
           id: 'file-789',
-          fileName: 'invalid.txt',
-          fileType: 'txt',
+          fileName: 'invalid.csv',
+          fileType: 'csv',
           fileSizeBytes: 100,
           content: Uint8List(100),
           status: FileStatus.error,

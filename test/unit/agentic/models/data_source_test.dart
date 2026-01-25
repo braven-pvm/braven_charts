@@ -1,11 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 2
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/models.dart';
 
@@ -289,7 +284,10 @@ void main() {
           fileName: 'training.csv',
           fileType: 'csv',
           rowCount: 3600,
-          columns: [],
+          columns: [
+            ColumnDescriptor(name: 'timestamp', type: ColumnType.datetime),
+            ColumnDescriptor(name: 'power', type: ColumnType.number),
+          ],
           data: [],
           timeRange: timeRange,
           loadedAt: DateTime(2026, 1, 25),
@@ -304,7 +302,9 @@ void main() {
           id: '550e8400-e29b-41d4-a716-446655440002',
           type: DataSourceType.url,
           rowCount: 500,
-          columns: [],
+          columns: [
+            ColumnDescriptor(name: 'value', type: ColumnType.number),
+          ],
           data: [],
           loadedAt: DateTime(2026, 1, 25),
         );

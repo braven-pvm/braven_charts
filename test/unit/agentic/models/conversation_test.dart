@@ -1,11 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 2
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/models.dart';
 
@@ -45,11 +40,13 @@ void main() {
           messages: [message],
           createdAt: DateTime(2026, 1, 25),
           dataStore: {
-            'data-1': LoadedData(
-                id: 'data-1',
+            '450e8400-e29b-41d4-a716-446655440000': LoadedData(
+                id: '450e8400-e29b-41d4-a716-446655440000',
                 type: DataSourceType.file,
                 rowCount: 10,
-                columns: [],
+                columns: [
+                  ColumnDescriptor(name: 'col1', type: ColumnType.number)
+                ],
                 data: [],
                 loadedAt: DateTime(2026, 1, 25))
           },

@@ -1,11 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 2
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/models.dart';
 
@@ -34,11 +29,12 @@ void main() {
       test('creates instance with minimal required parameters', () {
         final config = SeriesConfig(
           id: 'series-1',
+          dataColumn: 'value',
         );
 
         expect(config.id, equals('series-1'));
         expect(config.name, isNull);
-        expect(config.dataColumn, isNull);
+        expect(config.dataColumn, equals('value'));
         expect(config.dataId, isNull);
         expect(config.data, isNull);
       });
@@ -104,6 +100,7 @@ void main() {
         final config = SeriesConfig(
           id: 'series-3',
           name: 'Default Styling',
+          dataColumn: 'value',
         );
 
         expect(config.strokeWidth, equals(2.0));
@@ -168,6 +165,7 @@ void main() {
         final validConfig = SeriesConfig(
           id: 'series-1',
           color: '#FF5733',
+          dataColumn: 'value',
         );
         expect(validConfig.color, equals('#FF5733'));
 
@@ -176,6 +174,7 @@ void main() {
           () => SeriesConfig(
             id: 'series-1',
             color: 'not-a-color',
+            dataColumn: 'value',
           ),
           throwsA(isA<ArgumentError>()),
         );
@@ -224,12 +223,12 @@ void main() {
       });
 
       test('toJson handles null optional fields', () {
-        final config = SeriesConfig(id: 'series-1');
+        final config = SeriesConfig(id: 'series-1', dataColumn: 'value');
         final json = config.toJson();
 
         expect(json['id'], equals('series-1'));
         expect(json.containsKey('name'), isFalse);
-        expect(json.containsKey('dataColumn'), isFalse);
+        expect(json['dataColumn'], equals('value'));
         expect(json.containsKey('dataId'), isFalse);
       });
 

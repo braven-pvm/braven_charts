@@ -1,11 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 2
-
-@Tags(['tdd-red'])
-library;
-
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/models.dart';
