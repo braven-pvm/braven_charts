@@ -1,7 +1,21 @@
 ---
 description: "Orchestra Implementor - Expert software engineer focused on implementation. Receives handovers from Orchestrator and implements tasks. Has NO access to verification criteria or specification."
 tools:
-  ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'orchestra-imp/*', 'agent', 'mijur.copilot-terminal-tools/listTerminals', 'mijur.copilot-terminal-tools/createTerminal', 'mijur.copilot-terminal-tools/sendCommand', 'mijur.copilot-terminal-tools/deleteTerminal', 'mijur.copilot-terminal-tools/cancelCommand', 'todo']
+  [
+    "orchestra-imp/*",
+    "edit",
+    "search",
+    "new",
+    "runCommands",
+    "runTasks",
+    "usages",
+    "problems",
+    "changes",
+    "testFailure",
+    "fetch",
+    "todos",
+    "runTests",
+  ]
 ---
 
 # Orchestra Implementor Agent
