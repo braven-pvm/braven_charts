@@ -23,6 +23,15 @@
 
 library;
 
+// Agentic Charts - AI-powered chart generation
+export 'src/agentic/models/conversation.dart';
+export 'src/agentic/models/message.dart';
+export 'src/agentic/providers/anthropic_provider.dart';
+export 'src/agentic/providers/llm_provider.dart';
+export 'src/agentic/services/agent_service.dart';
+export 'src/agentic/tools/create_chart_tool.dart';
+export 'src/agentic/tools/tool_registry.dart';
+export 'src/agentic/widgets/chat_interface.dart';
 // AI Integration
 export 'src/ai/chart_agent_interface.dart';
 export 'src/ai/chart_config_builder.dart';

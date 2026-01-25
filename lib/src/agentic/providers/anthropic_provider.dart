@@ -1,5 +1,4 @@
-import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart'
-    hide Message, MessageRole;
+import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
 
 import '../models/conversation.dart';
 import '../models/message.dart';
@@ -10,9 +9,9 @@ class AnthropicProvider extends LLMProvider {
   AnthropicProvider({
     required this.apiKey,
     dynamic client,
-    this.model = 'claude-3-5-sonnet-20241022',
+    this.model = 'claude-sonnet-4-20250514',
     this.maxTokens = 1024,
-  }) : _client = client ?? AnthropicClient(apiKey: apiKey);
+  }) : _client = client ?? anthropic.AnthropicClient(apiKey: apiKey);
 
   final String apiKey;
   final String model;
@@ -21,9 +20,14 @@ class AnthropicProvider extends LLMProvider {
 
   @override
   Future<Message> sendMessage(Conversation conversation) async {
-    final request = _buildRequest(conversation);
+    final messages = _buildMessages(conversation);
 
     try {
+      final request = anthropic.CreateMessageRequest(
+        model: anthropic.Model.modelId(model),
+        maxTokens: maxTokens,
+        messages: messages,
+      );
       final response = await _client.createMessage(request: request);
       final text = _extractText(response);
       return Message(
@@ -39,44 +43,36 @@ class AnthropicProvider extends LLMProvider {
 
   @override
   Stream<String> streamMessage(Conversation conversation) async* {
-    final request = _buildRequest(conversation);
-
-    try {
-      final stream = _client.streamMessage(request: request) as Stream<dynamic>;
-      await for (final chunk in stream) {
-        final text = _extractText(chunk);
-        if (text.isNotEmpty) {
-          yield text;
-        }
-      }
-    } catch (error) {
-      throw _mapError(error);
-    }
+    // Streaming not yet supported by anthropic_sdk_dart
+    // Return empty stream to trigger fallback to non-streaming in agent_service
+    return;
   }
 
-  dynamic _buildRequest(Conversation conversation) {
-    final prompt = _buildPrompt(conversation);
-    return {
-      'model': model,
-      'max_tokens': maxTokens,
-      'messages': [
-        {
-          'role': 'user',
-          'content': prompt,
-        }
-      ],
-    };
-  }
-
-  String _buildPrompt(Conversation conversation) {
+  List<anthropic.Message> _buildMessages(Conversation conversation) {
     if (conversation.messages.isEmpty) {
-      return '';
+      return [];
     }
 
-    return conversation.messages
-        .map((message) => message.textContent ?? '')
-        .where((text) => text.trim().isNotEmpty)
-        .join('\n');
+    final result = <anthropic.Message>[];
+
+    for (final message in conversation.messages) {
+      if (message.textContent == null || message.textContent!.trim().isEmpty) {
+        continue;
+      }
+
+      final role = message.role == MessageRole.user
+          ? anthropic.MessageRole.user
+          : anthropic.MessageRole.assistant;
+
+      result.add(
+        anthropic.Message(
+          role: role,
+          content: anthropic.MessageContent.text(message.textContent!),
+        ),
+      );
+    }
+
+    return result;
   }
 
   String _extractText(dynamic response) {
@@ -84,6 +80,29 @@ class AnthropicProvider extends LLMProvider {
       return '';
     }
 
+    // Handle anthropic SDK response with content.blocks
+    try {
+      final content = (response as dynamic).content;
+      if (content != null) {
+        final blocks = (content as dynamic).blocks;
+        if (blocks is List) {
+          for (final block in blocks) {
+            if (block is anthropic.TextBlock) {
+              return block.text;
+            }
+            // Also try dynamic approach for flexibility
+            try {
+              final text = (block as dynamic).text;
+              if (text is String && text.isNotEmpty) {
+                return text;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Fallback for other response formats
     if (response is String) {
       return response;
     }
@@ -93,8 +112,7 @@ class AnthropicProvider extends LLMProvider {
       return _extractFromContent(content);
     }
 
-    final dynamic content = (response as dynamic).content;
-    return _extractFromContent(content);
+    return '';
   }
 
   String _extractFromContent(dynamic content) {

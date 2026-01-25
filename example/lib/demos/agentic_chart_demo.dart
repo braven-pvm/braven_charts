@@ -1,13 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:braven_charts/src/agentic/models/conversation.dart';
-import 'package:braven_charts/src/agentic/models/message.dart';
-import 'package:braven_charts/src/agentic/providers/anthropic_provider.dart';
-import 'package:braven_charts/src/agentic/services/agent_service.dart';
-import 'package:braven_charts/src/agentic/tools/create_chart_tool.dart';
-import 'package:braven_charts/src/agentic/tools/tool_registry.dart';
-import 'package:braven_charts/src/agentic/widgets/chat_interface.dart';
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -142,7 +136,7 @@ Ready? Enter your Anthropic API key below to get started!
       // Create provider
       final provider = AnthropicProvider(
         apiKey: apiKey,
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         maxTokens: 2048,
       );
 
