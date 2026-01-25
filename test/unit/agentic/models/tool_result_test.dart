@@ -3,13 +3,12 @@
 
 // @orchestra-task: 2
 
+@Tags(['tdd-red'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/agentic/models/tool_call.dart';
-import 'package:braven_charts/src/agentic/models/tool_result.dart';
+import 'package:braven_charts/src/agentic/models/models.dart';
 
-@Tags(['tdd-red'])
 void main() {
   group('ToolCall', () {
     group('constructor', () {

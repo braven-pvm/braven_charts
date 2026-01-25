@@ -3,13 +3,13 @@
 
 // @orchestra-task: 2
 
+@Tags(['tdd-red'])
 library;
 
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/agentic/models/file_attachment.dart';
+import 'package:braven_charts/src/agentic/models/models.dart';
 
-@Tags(['tdd-red'])
 void main() {
   group('FileStatus', () {
     test('has all required enum values', () {

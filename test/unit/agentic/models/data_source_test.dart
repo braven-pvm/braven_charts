@@ -3,12 +3,12 @@
 
 // @orchestra-task: 2
 
+@Tags(['tdd-red'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/agentic/models/loaded_data.dart';
+import 'package:braven_charts/src/agentic/models/models.dart';
 
-@Tags(['tdd-red'])
 void main() {
   group('DataSourceType', () {
     test('has all required enum values', () {
