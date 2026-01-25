@@ -62,8 +62,7 @@ void main() {
         ),
       );
 
-      expect(
-          find.text('Show me a line chart of power over time'), findsOneWidget);
+      expect(find.text('Show me a line chart of power over time'), findsOneWidget);
       expect(find.byType(ChartWidget), findsOneWidget);
     });
 
