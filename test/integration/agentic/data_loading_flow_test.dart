@@ -83,7 +83,6 @@ void main() {
 
     test('should handle errors gracefully in pipeline', () async {
       // ARRANGE
-      final loadTool = LoadDataTool();
       final describeTool = DescribeDataTool();
 
       // ACT: Try to describe non-existent data
