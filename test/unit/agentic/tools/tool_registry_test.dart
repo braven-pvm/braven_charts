@@ -55,5 +55,20 @@ void main() {
       final result = await registry.execute('sum', {'a': 2, 'b': 3});
       expect(result, 5);
     });
+
+    test('throws when executing unknown tool', () async {
+      final registry = ToolRegistry();
+
+      await expectLater(
+        registry.execute('unknown-tool', {}),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('unknown-tool'),
+          ),
+        ),
+      );
+    });
   });
 }
