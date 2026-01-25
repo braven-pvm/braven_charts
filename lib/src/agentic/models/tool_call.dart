@@ -55,6 +55,21 @@ class ToolCall {
     return json;
   }
 
+  /// Creates a copy with modified values
+  ToolCall copyWith({
+    String? id,
+    String? toolName,
+    Map<String, dynamic>? arguments,
+    dynamic result,
+  }) {
+    return ToolCall(
+      id: id ?? this.id,
+      toolName: toolName ?? this.toolName,
+      arguments: arguments ?? this.arguments,
+      result: result ?? this.result,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

@@ -50,6 +50,19 @@ class TimeRange {
       'durationSeconds': durationSeconds,
     };
   }
+
+  /// Creates a copy with modified values
+  TimeRange copyWith({
+    DateTime? start,
+    DateTime? end,
+    int? durationSeconds,
+  }) {
+    return TimeRange(
+      start: start ?? this.start,
+      end: end ?? this.end,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+    );
+  }
 }
 
 /// Statistical information about a data column.
@@ -95,6 +108,21 @@ class ColumnStats {
       if (nullCount != null) 'nullCount': nullCount,
     };
   }
+
+  /// Creates a copy with modified values
+  ColumnStats copyWith({
+    double? min,
+    double? max,
+    double? mean,
+    int? nullCount,
+  }) {
+    return ColumnStats(
+      min: min ?? this.min,
+      max: max ?? this.max,
+      mean: mean ?? this.mean,
+      nullCount: nullCount ?? this.nullCount,
+    );
+  }
 }
 
 /// Describes the structure and metadata of a data column.
@@ -135,9 +163,7 @@ class ColumnDescriptor {
         (e) => e.name == json['type'],
       ),
       nullable: json['nullable'] as bool? ?? false,
-      stats: json['stats'] != null
-          ? ColumnStats.fromJson(json['stats'] as Map<String, dynamic>)
-          : null,
+      stats: json['stats'] != null ? ColumnStats.fromJson(json['stats'] as Map<String, dynamic>) : null,
       sampleValues: json['sampleValues'] as List<dynamic>? ?? [],
     );
   }
@@ -153,13 +179,27 @@ class ColumnDescriptor {
     };
   }
 
+  /// Creates a copy with modified values
+  ColumnDescriptor copyWith({
+    String? name,
+    ColumnType? type,
+    bool? nullable,
+    ColumnStats? stats,
+    List<dynamic>? sampleValues,
+  }) {
+    return ColumnDescriptor(
+      name: name ?? this.name,
+      type: type ?? this.type,
+      nullable: nullable ?? this.nullable,
+      stats: stats ?? this.stats,
+      sampleValues: sampleValues ?? this.sampleValues,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ColumnDescriptor &&
-        other.name == name &&
-        other.type == type &&
-        other.nullable == nullable;
+    return other is ColumnDescriptor && other.name == name && other.type == type && other.nullable == nullable;
   }
 
   @override
@@ -258,15 +298,9 @@ class LoadedData {
       fileName: json['fileName'] as String?,
       fileType: json['fileType'] as String?,
       rowCount: json['rowCount'] as int,
-      columns: (json['columns'] as List)
-          .map((e) => ColumnDescriptor.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      data: (json['data'] as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList(),
-      timeRange: json['timeRange'] != null
-          ? TimeRange.fromJson(json['timeRange'] as Map<String, dynamic>)
-          : null,
+      columns: (json['columns'] as List).map((e) => ColumnDescriptor.fromJson(e as Map<String, dynamic>)).toList(),
+      data: (json['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
+      timeRange: json['timeRange'] != null ? TimeRange.fromJson(json['timeRange'] as Map<String, dynamic>) : null,
       loadedAt: DateTime.parse(json['loadedAt'] as String),
     );
   }
@@ -286,13 +320,35 @@ class LoadedData {
     };
   }
 
+  /// Creates a copy with modified values
+  LoadedData copyWith({
+    String? id,
+    DataSourceType? type,
+    String? fileName,
+    String? fileType,
+    int? rowCount,
+    List<ColumnDescriptor>? columns,
+    List<Map<String, dynamic>>? data,
+    TimeRange? timeRange,
+    DateTime? loadedAt,
+  }) {
+    return LoadedData(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      fileName: fileName ?? this.fileName,
+      fileType: fileType ?? this.fileType,
+      rowCount: rowCount ?? this.rowCount,
+      columns: columns ?? this.columns,
+      data: data ?? this.data,
+      timeRange: timeRange ?? this.timeRange,
+      loadedAt: loadedAt ?? this.loadedAt,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is LoadedData &&
-        other.id == id &&
-        other.type == type &&
-        other.rowCount == rowCount;
+    return other is LoadedData && other.id == id && other.type == type && other.rowCount == rowCount;
   }
 
   @override
