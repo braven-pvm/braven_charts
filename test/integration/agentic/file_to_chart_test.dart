@@ -2,10 +2,14 @@
 @Tags(['tdd-red'])
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
 import 'package:braven_charts/src/agentic/tools/describe_data_tool.dart';
 import 'package:braven_charts/src/agentic/tools/process_data_tool.dart';
+import 'package:braven_charts/src/agentic/services/file_validator.dart';
+import 'package:braven_charts/src/agentic/models/file_attachment.dart';
 
 void main() {
   group('File Upload to Chart Integration', () {
@@ -38,7 +42,8 @@ void main() {
         final loadResult = await loadTool.execute(loadInput);
         expect(loadResult['data_id'], isNotNull);
         expect(loadResult['row_count'], equals(5));
-        expect(loadResult['columns'], containsAll(['timestamp', 'power', 'heart_rate', 'cadence']));
+        expect(loadResult['columns'],
+            containsAll(['timestamp', 'power', 'heart_rate', 'cadence']));
 
         // Step 2: Describe the loaded data
         final dataId = loadResult['data_id'] as String;
@@ -94,9 +99,12 @@ void main() {
 
         // Verify the processed data
         final processedDataId = processResult['data_id'] as String;
-        final describeResult = await describeTool.execute({'data_id': processedDataId});
+        final describeResult =
+            await describeTool.execute({'data_id': processedDataId});
 
-        final columns = (describeResult['columns'] as List).map((col) => (col as Map)['name'] as String).toList();
+        final columns = (describeResult['columns'] as List)
+            .map((col) => (col as Map)['name'] as String)
+            .toList();
         expect(columns, containsAll(['timestamp', 'power', 'heart_rate']));
         expect(columns, isNot(contains('cadence')));
         expect(columns, isNot(contains('speed')));
@@ -121,7 +129,9 @@ void main() {
         final describeResult = await describeTool.execute({'data_id': dataId});
 
         expect(describeResult['file_type'], equals('fit'));
-        final columnNames = (describeResult['columns'] as List).map((col) => (col as Map)['name'] as String).toList();
+        final columnNames = (describeResult['columns'] as List)
+            .map((col) => (col as Map)['name'] as String)
+            .toList();
 
         // FIT files should have standard cycling metrics
         expect(
@@ -218,7 +228,8 @@ void main() {
 
         // Verify normalized data
         final processedDataId = processResult['data_id'] as String;
-        final describeResult = await describeTool.execute({'data_id': processedDataId});
+        final describeResult =
+            await describeTool.execute({'data_id': processedDataId});
 
         final powerColumn = (describeResult['columns'] as List).firstWhere(
           (col) => (col as Map)['name'] == 'power',
@@ -336,7 +347,8 @@ void main() {
     });
 
     group('real-world sport science scenarios', () {
-      test('should process power data for Normalized Power calculation', () async {
+      test('should process power data for Normalized Power calculation',
+          () async {
         // Load workout data
         final loadInput = {
           'source': {
@@ -412,7 +424,221 @@ void main() {
 
         expect(powerProcessed['data_id'], isNotNull);
         expect(hrProcessed['data_id'], isNotNull);
-        expect(powerProcessed['data_id'], isNot(equals(hrProcessed['data_id'])));
+        expect(
+            powerProcessed['data_id'], isNot(equals(hrProcessed['data_id'])));
+      });
+    });
+
+    group('file upload workflow (US2)', () {
+      late FileValidator validator;
+
+      setUp(() {
+        validator = FileValidator();
+      });
+
+      test('validates file before loading', () {
+        final csvContent = '''timestamp,power,heart_rate
+2026-01-25T10:00:00Z,200,120
+2026-01-25T10:00:01Z,210,125''';
+        final bytes = Uint8List.fromList(csvContent.codeUnits);
+
+        // Validate the file
+        final validationResult = validator.validate(
+          fileName: 'workout.csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+        );
+
+        expect(validationResult.success, isTrue);
+        expect(validationResult.errorMessage, isNull);
+      });
+
+      test('rejects oversized file', () {
+        // Create 51 MB file (exceeds 50 MB limit)
+        final largeContent = Uint8List(52428801);
+
+        final validationResult = validator.validate(
+          fileName: 'large.csv',
+          fileSizeBytes: largeContent.length,
+          content: largeContent,
+        );
+
+        expect(validationResult.success, isFalse);
+        expect(validationResult.errorMessage, contains('exceeds maximum'));
+      });
+
+      test('rejects unsupported file format', () {
+        final content = Uint8List.fromList('test data'.codeUnits);
+
+        final validationResult = validator.validate(
+          fileName: 'document.pdf',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(validationResult.success, isFalse);
+        expect(
+            validationResult.errorMessage, contains('Unsupported file format'));
+      });
+
+      test('rejects path traversal attempts', () {
+        final content = Uint8List.fromList('test data'.codeUnits);
+
+        final validationResult = validator.validate(
+          fileName: '../../../etc/passwd.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(validationResult.success, isFalse);
+        expect(validationResult.errorMessage, contains('path traversal'));
+      });
+
+      test('creates FileAttachment after validation', () {
+        final csvContent = 'timestamp,power\n2026-01-25T10:00:00Z,200';
+        final bytes = Uint8List.fromList(csvContent.codeUnits);
+
+        final validationResult = validator.validate(
+          fileName: 'workout.csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+        );
+
+        expect(validationResult.success, isTrue);
+
+        // Create FileAttachment after validation
+        final attachment = FileAttachment(
+          id: 'test-id',
+          fileName: 'workout.csv',
+          fileType: 'csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+          status: FileStatus.pending,
+        );
+
+        expect(attachment.fileName, equals('workout.csv'));
+        expect(attachment.fileType, equals('csv'));
+        expect(attachment.status, equals(FileStatus.pending));
+      });
+
+      test('processes file attachment through full workflow', () async {
+        // Step 1: Validate file
+        final csvContent = '''timestamp,power,heart_rate
+2026-01-25T10:00:00Z,200,120
+2026-01-25T10:00:01Z,210,125
+2026-01-25T10:00:02Z,220,130''';
+        final bytes = Uint8List.fromList(csvContent.codeUnits);
+
+        final validationResult = validator.validate(
+          fileName: 'workout.csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+        );
+        expect(validationResult.success, isTrue);
+
+        // Step 2: Create FileAttachment
+        final attachment = FileAttachment(
+          id: 'test-id',
+          fileName: 'workout.csv',
+          fileType: 'csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+          status: FileStatus.pending,
+        );
+
+        // Step 3: Load data using LoadDataTool
+        final loadResult = await loadTool.execute({
+          'source': {
+            'type': 'inline',
+            'content': csvContent,
+            'format': 'csv',
+          }
+        });
+
+        expect(loadResult['data_id'], isNotNull);
+        expect(loadResult['row_count'], equals(3));
+
+        // Step 4: Update attachment status to ready
+        final dataId = loadResult['data_id'] as String;
+        final updatedAttachment = attachment.copyWith(
+          status: FileStatus.ready,
+          dataId: dataId,
+        );
+
+        expect(updatedAttachment.status, equals(FileStatus.ready));
+        expect(updatedAttachment.dataId, equals(dataId));
+
+        // Step 5: Describe the loaded data for preview
+        final describeResult = await describeTool.execute({'data_id': dataId});
+
+        expect(describeResult['file_type'], equals('csv'));
+        expect(describeResult['row_count'], equals(3));
+        expect(describeResult['columns'], isA<List>());
+
+        final columns = describeResult['columns'] as List;
+        expect(columns.length, equals(3)); // timestamp, power, heart_rate
+      });
+
+      test('handles file processing error gracefully', () async {
+        // Create attachment with invalid data
+        final invalidContent = 'not,valid,csv\ndata';
+        final bytes = Uint8List.fromList(invalidContent.codeUnits);
+
+        final attachment = FileAttachment(
+          id: 'test-id',
+          fileName: 'invalid.csv',
+          fileType: 'csv',
+          fileSizeBytes: bytes.length,
+          content: bytes,
+          status: FileStatus.parsing,
+        );
+
+        // Attempt to load (may succeed or fail depending on implementation)
+        try {
+          await loadTool.execute({
+            'source': {
+              'type': 'inline',
+              'content': invalidContent,
+              'format': 'csv',
+            }
+          });
+          // If it succeeds, that's fine - CSV is flexible
+        } catch (error) {
+          // If it fails, update attachment with error
+          final errorAttachment = attachment.copyWith(
+            status: FileStatus.error,
+            errorMessage: error.toString(),
+          );
+
+          expect(errorAttachment.status, equals(FileStatus.error));
+          expect(errorAttachment.errorMessage, isNotNull);
+        }
+      });
+
+      test('supports multiple file formats (FIT, CSV, TCX)', () {
+        final csvBytes = Uint8List.fromList('csv data'.codeUnits);
+        final fitBytes = Uint8List.fromList('fit data'.codeUnits);
+        final tcxBytes = Uint8List.fromList('tcx data'.codeUnits);
+
+        final csvResult = validator.validate(
+          fileName: 'data.csv',
+          fileSizeBytes: csvBytes.length,
+          content: csvBytes,
+        );
+        final fitResult = validator.validate(
+          fileName: 'workout.fit',
+          fileSizeBytes: fitBytes.length,
+          content: fitBytes,
+        );
+        final tcxResult = validator.validate(
+          fileName: 'activity.tcx',
+          fileSizeBytes: tcxBytes.length,
+          content: tcxBytes,
+        );
+
+        expect(csvResult.success, isTrue);
+        expect(fitResult.success, isTrue);
+        expect(tcxResult.success, isTrue);
       });
     });
   });

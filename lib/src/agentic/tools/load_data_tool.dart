@@ -16,7 +16,8 @@ class LoadDataTool {
 
   String get name => 'load_data';
 
-  String get description => 'Load data from a file attachment, URL, or inline content';
+  String get description =>
+      'Load data from a file attachment, URL, or inline content';
 
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
@@ -91,7 +92,8 @@ class LoadDataTool {
     }
   }
 
-  Future<Map<String, dynamic>> _loadFromFile(Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromFile(
+      Map<String, dynamic> source) async {
     final fileId = source['file_id'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -108,7 +110,8 @@ class LoadDataTool {
             fileId,
             bd.FitMessageType.records,
           );
-          frame = _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
+          frame =
+              _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
           // Extract timezone from FIT file metadata (FR-026)
           // For now, default to UTC if not available in metadata
           timezone = 'UTC';
@@ -163,7 +166,8 @@ class LoadDataTool {
     throw Exception('URL data loading not yet implemented');
   }
 
-  Future<Map<String, dynamic>> _loadFromInline(Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromInline(
+      Map<String, dynamic> source) async {
     final content = source['content'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -335,7 +339,8 @@ class LoadDataTool {
     TimeRange? timeRange;
 
     for (var key in keys) {
-      final values = data.map((obj) => (obj as Map<String, dynamic>)[key]).toList();
+      final values =
+          data.map((obj) => (obj as Map<String, dynamic>)[key]).toList();
 
       // Infer type
       String type = 'string';
@@ -418,7 +423,8 @@ class LoadDataTool {
   }
 
   /// Convert braven_data DataFrame to internal DataFrame format
-  DataFrame _convertBravenDataFrame(bd.DataFrame df, {String? fileName, String? fileType}) {
+  DataFrame _convertBravenDataFrame(bd.DataFrame df,
+      {String? fileName, String? fileType}) {
     final columns = <DataColumn>[];
     TimeRange? timeRange;
     DateTime? firstDate;
@@ -441,10 +447,14 @@ class LoadDataTool {
         lastDate = columnData.last as DateTime;
       } else if (columnData.first is String) {
         // Check if this is a timestamp string (common in FIT files)
-        if (columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp') || columnName.toLowerCase() == 'time') {
+        if (columnName.toLowerCase().contains('time') ||
+            columnName.toLowerCase().contains('timestamp') ||
+            columnName.toLowerCase() == 'time') {
           try {
-            final DateTime parsedFirst = DateTime.parse(columnData.first as String);
-            final DateTime parsedLast = DateTime.parse(columnData.last as String);
+            final DateTime parsedFirst =
+                DateTime.parse(columnData.first as String);
+            final DateTime parsedLast =
+                DateTime.parse(columnData.last as String);
             if (firstDate == null) {
               firstDate = parsedFirst;
               lastDate = parsedLast;
@@ -457,13 +467,19 @@ class LoadDataTool {
         type = 'number';
 
         // Check if this is a timestamp column with Unix epoch values
-        if ((columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp')) && firstDate == null) {
+        if ((columnName.toLowerCase().contains('time') ||
+                columnName.toLowerCase().contains('timestamp')) &&
+            firstDate == null) {
           try {
             final num firstValue = columnData.first as num;
             final num lastValue = columnData.last as num;
             // Try interpreting as Unix timestamp (seconds since epoch)
-            firstDate = DateTime.fromMillisecondsSinceEpoch((firstValue * 1000).toInt(), isUtc: true);
-            lastDate = DateTime.fromMillisecondsSinceEpoch((lastValue * 1000).toInt(), isUtc: true);
+            firstDate = DateTime.fromMillisecondsSinceEpoch(
+                (firstValue * 1000).toInt(),
+                isUtc: true);
+            lastDate = DateTime.fromMillisecondsSinceEpoch(
+                (lastValue * 1000).toInt(),
+                isUtc: true);
           } catch (_) {
             // Not a valid timestamp
           }
@@ -494,7 +510,9 @@ class LoadDataTool {
       fileName: fileName ?? 'data',
       fileType: fileType ?? 'unknown',
       columns: columns,
-      rowCount: df.columnNames.isNotEmpty ? (df.columns[df.columnNames.first]?.length ?? 0) : 0,
+      rowCount: df.columnNames.isNotEmpty
+          ? (df.columns[df.columnNames.first]?.length ?? 0)
+          : 0,
       timeRange: timeRange,
     );
   }

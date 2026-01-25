@@ -1,13 +1,20 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/conversation.dart';
+import '../models/file_attachment.dart';
 import '../models/message.dart';
 import '../services/agent_service.dart';
+import '../services/file_validator.dart';
 import '../tools/create_chart_tool.dart';
+import '../tools/load_data_tool.dart';
 import 'chart_card.dart';
 import 'chart_widget.dart';
+import 'data_preview.dart';
 import 'error_message.dart';
+import 'file_attachment_chip.dart';
 import 'message_bubble.dart';
 
 /// Chat UI for interacting with the agent.
@@ -31,6 +38,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final CreateChartTool _chartTool = CreateChartTool();
+  final LoadDataTool _loadDataTool = LoadDataTool();
+  final FileValidator _fileValidator = FileValidator();
   final Uuid _uuid = const Uuid();
 
   Conversation? _conversation;
@@ -39,6 +48,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
   bool _isProcessing = false;
   String? _errorMessage;
   String? _lastUserMessage;
+  final List<FileAttachment> _attachments = [];
+  final List<String> _loadedDataIds = [];
 
   @override
   void initState() {
@@ -227,6 +238,132 @@ class _ChatInterfaceState extends State<ChatInterface> {
     );
   }
 
+  Future<void> _handleFileUpload() async {
+    // Note: This is a stub for file upload functionality
+    // In a real implementation, this would integrate with platform-specific
+    // file pickers or drag-and-drop APIs. For testing purposes, files can
+    // be provided via the FileAttachment model directly or through
+    // addFileAttachment method.
+
+    // TODO: Implement platform-specific file picker
+    // For web: Use html.FileUploadInputElement
+    // For mobile: Use image_picker or file_picker package
+    // For desktop: Use file_selector package
+
+    if (mounted) {
+      setState(() {
+        _errorMessage =
+            'File upload UI not yet implemented. Use addFileAttachment method for testing.';
+      });
+    }
+  }
+
+  /// Adds a file attachment programmatically (for testing or external integration)
+  Future<void> addFileAttachment({
+    required String fileName,
+    required Uint8List content,
+  }) async {
+    // Determine file type from extension
+    final lastDot = fileName.lastIndexOf('.');
+    final extension =
+        lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
+    final fileType =
+        ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
+
+    // Validate the file
+    final validationResult = _fileValidator.validate(
+      fileName: fileName,
+      fileSizeBytes: content.length,
+      content: content,
+    );
+
+    if (!validationResult.success) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = validationResult.errorMessage;
+        });
+      }
+      return;
+    }
+
+    // Create FileAttachment
+    final attachment = FileAttachment(
+      id: _uuid.v4(),
+      fileName: fileName,
+      fileType: fileType,
+      fileSizeBytes: content.length,
+      content: content,
+      status: FileStatus.pending,
+    );
+
+    if (mounted) {
+      setState(() {
+        _attachments.add(attachment);
+        _errorMessage = null;
+      });
+    }
+
+    // Process the file with LoadDataTool
+    await _processFileAttachment(attachment);
+  }
+
+  Future<void> _processFileAttachment(FileAttachment attachment) async {
+    // Update status to parsing
+    final index = _attachments.indexOf(attachment);
+    if (index == -1) return;
+
+    if (mounted) {
+      setState(() {
+        _attachments[index] = attachment.copyWith(status: FileStatus.parsing);
+      });
+    }
+
+    try {
+      // Save file temporarily (in production, use proper temp file handling)
+      // For now, use inline content approach
+      final content = String.fromCharCodes(attachment.content);
+
+      final loadResult = await _loadDataTool.execute({
+        'source': {
+          'type': 'inline',
+          'content': content,
+          'format': attachment.fileType,
+        }
+      });
+
+      final dataId = loadResult['data_id'] as String;
+
+      // Update status to ready
+      if (mounted) {
+        setState(() {
+          _attachments[index] = attachment.copyWith(
+            status: FileStatus.ready,
+            dataId: dataId,
+          );
+          _loadedDataIds.add(dataId);
+        });
+      }
+    } catch (error) {
+      // Update status to error
+      if (mounted) {
+        setState(() {
+          _attachments[index] = attachment.copyWith(
+            status: FileStatus.error,
+            errorMessage: error.toString(),
+          );
+        });
+      }
+    }
+  }
+
+  void _removeAttachment(FileAttachment attachment) {
+    if (mounted) {
+      setState(() {
+        _attachments.remove(attachment);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final conversation = _conversation ?? widget.conversation;
@@ -241,6 +378,11 @@ class _ChatInterfaceState extends State<ChatInterface> {
             child: ChartWidget(chart: chart),
           ),
         )
+        .toList(growable: false);
+
+    // Build data preview widgets
+    final dataPreviewWidgets = _loadedDataIds
+        .map((dataId) => DataPreview(dataId: dataId))
         .toList(growable: false);
 
     return Scaffold(
@@ -264,14 +406,44 @@ class _ChatInterfaceState extends State<ChatInterface> {
                       ),
                     ),
                   ...messageWidgets,
+                  ...dataPreviewWidgets,
                   ...chartWidgets,
                 ],
               ),
             ),
+            // File attachments display
+            if (_attachments.isNotEmpty)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  border: Border(
+                    top: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _attachments
+                      .map((attachment) => FileAttachmentChip(
+                            attachment: attachment,
+                            onRemove: () => _removeAttachment(attachment),
+                          ))
+                      .toList(),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+                  IconButton(
+                    key: const Key('chat_file_button'),
+                    icon: const Icon(Icons.attach_file),
+                    onPressed: _isProcessing ? null : _handleFileUpload,
+                    tooltip: 'Attach file (FIT, CSV, TCX)',
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       key: const Key('chat_input'),
