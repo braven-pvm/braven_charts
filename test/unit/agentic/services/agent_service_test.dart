@@ -1,7 +1,3 @@
-// @orchestra-task: 6
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,6 +6,7 @@ import '../../../../lib/src/agentic/models/message.dart';
 import '../../../../lib/src/agentic/models/tool_call.dart';
 import '../../../../lib/src/agentic/models/tool_result.dart';
 import '../../../../lib/src/agentic/providers/llm_provider.dart';
+import '../../../../lib/src/agentic/services/agent_service.dart';
 import '../../../../lib/src/agentic/tools/tool_registry.dart';
 
 void main() {
@@ -116,23 +113,5 @@ class _FakeToolRegistry extends ToolRegistry {
           toolCallId: 'tool-1',
           result: {'ok': true},
         );
-  }
-}
-
-class AgentService {
-  AgentService(
-      {required LLMProvider provider, required ToolRegistry toolRegistry})
-      : conversation = ValueNotifier<Conversation>(
-          Conversation(
-            id: '00000000-0000-4000-8000-000000000000',
-          ),
-        ) {
-    throw UnimplementedError('AgentService not implemented');
-  }
-
-  final ValueNotifier<Conversation> conversation;
-
-  Future<void> processUserMessage(String text) {
-    throw UnimplementedError('AgentService not implemented');
   }
 }

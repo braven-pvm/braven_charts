@@ -1,8 +1,6 @@
-// @orchestra-task: 6
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../../lib/src/agentic/services/data_store.dart';
 
 void main() {
   group('DataStore', () {
@@ -51,16 +49,4 @@ bool _isValidUuidV4(String id) {
     caseSensitive: false,
   );
   return uuidV4Pattern.hasMatch(id);
-}
-
-class DataStore<T> {
-  String store(T item) => throw UnimplementedError('DataStore not implemented');
-
-  T? get(String id) => throw UnimplementedError('DataStore not implemented');
-
-  bool delete(String id) =>
-      throw UnimplementedError('DataStore not implemented');
-
-  Map<String, T> list() =>
-      throw UnimplementedError('DataStore not implemented');
 }
