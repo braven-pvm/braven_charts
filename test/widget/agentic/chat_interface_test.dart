@@ -1,4 +1,3 @@
-// @orchestra-task: 8
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,7 +6,6 @@ import 'package:braven_charts/src/agentic/models/message.dart';
 import 'package:braven_charts/src/agentic/widgets/chat_interface.dart';
 import 'package:braven_charts/src/agentic/widgets/chart_widget.dart';
 
-@Tags(['tdd-red'])
 void main() {
   group('ChatInterface', () {
     testWidgets('renders messages and chart widgets', (tester) async {
@@ -36,9 +34,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Show me a line chart of power over time'), findsOneWidget);
+      expect(
+          find.text('Show me a line chart of power over time'), findsOneWidget);
       expect(find.byType(ChartWidget), findsOneWidget);
-    }, tags: ['tdd-red']);
+    });
 
     testWidgets('has text input and send button', (tester) async {
       final conversation = Conversation(
@@ -53,7 +52,7 @@ void main() {
 
       expect(find.byKey(const Key('chat_input')), findsOneWidget);
       expect(find.byKey(const Key('chat_send_button')), findsOneWidget);
-    }, tags: ['tdd-red']);
+    });
 
     testWidgets('tapping send forwards message to handler', (tester) async {
       final conversation = Conversation(
@@ -76,6 +75,6 @@ void main() {
       await tester.pump();
 
       expect(sentText, equals('Line chart'));
-    }, tags: ['tdd-red']);
+    });
   });
 }

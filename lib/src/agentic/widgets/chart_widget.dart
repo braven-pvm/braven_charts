@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Placeholder chart widget for agentic UI.
-///
-/// TODO: Implement in green phase.
+import '../services/chart_renderer.dart';
+
+/// Chart widget for agentic UI.
 class ChartWidget extends StatelessWidget {
-  const ChartWidget({super.key});
+  const ChartWidget({super.key, this.chart, ChartRenderer? renderer})
+      : _renderer = renderer ?? const ChartRenderer();
+
+  final dynamic chart;
+  final ChartRenderer _renderer;
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox.shrink();
+    return _renderer.render(chart);
   }
 }

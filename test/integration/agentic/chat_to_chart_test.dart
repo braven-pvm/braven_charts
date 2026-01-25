@@ -1,4 +1,3 @@
-// @orchestra-task: 8
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,7 +30,6 @@ class FakeAgentService extends AgentService {
         );
 }
 
-@Tags(['tdd-red'])
 void main() {
   testWidgets('chat input produces a chart widget', (tester) async {
     final conversation = Conversation(
@@ -55,5 +53,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ChartWidget), findsOneWidget);
-  }, tags: ['tdd-red']);
+  });
 }
