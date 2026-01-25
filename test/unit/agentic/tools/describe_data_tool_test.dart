@@ -1,16 +1,49 @@
-// @orchestra-task: 12
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/tools/describe_data_tool.dart';
+import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
 
 void main() {
   group('DescribeDataTool', () {
     late DescribeDataTool tool;
+    late LoadDataTool loadTool;
+    late String testDataId;
+    late String temporalDataId;
+    late String nonTemporalDataId;
 
-    setUp(() {
+    setUp(() async {
       tool = DescribeDataTool();
+      loadTool = LoadDataTool();
+
+      // Load some test data for describe tests
+      final loadResult = await loadTool.execute({
+        'source': {
+          'type': 'inline',
+          'content': 'x,y,label\n1,10,A\n2,20,B\n3,30,C',
+          'format': 'csv',
+        }
+      });
+      testDataId = loadResult['data_id'] as String;
+
+      // Load temporal data
+      final temporalResult = await loadTool.execute({
+        'source': {
+          'type': 'inline',
+          'content':
+              'timestamp,power\n2026-01-25T10:00:00Z,150\n2026-01-25T10:01:00Z,160',
+          'format': 'csv',
+        }
+      });
+      temporalDataId = temporalResult['data_id'] as String;
+
+      // Load non-temporal data
+      final nonTemporalResult = await loadTool.execute({
+        'source': {
+          'type': 'inline',
+          'content': 'category,value\nA,10\nB,20',
+          'format': 'csv',
+        }
+      });
+      nonTemporalDataId = nonTemporalResult['data_id'] as String;
     });
 
     group('constructor and metadata', () {
@@ -44,7 +77,7 @@ void main() {
     group('basic metadata retrieval', () {
       test('should return file_name and file_type', () async {
         final input = {
-          'data_id': 'test-data-uuid-123',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -55,7 +88,7 @@ void main() {
 
       test('should return row_count', () async {
         final input = {
-          'data_id': 'test-data-uuid-456',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -66,7 +99,7 @@ void main() {
 
       test('should return columns array', () async {
         final input = {
-          'data_id': 'test-data-uuid-789',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -79,7 +112,7 @@ void main() {
     group('column metadata', () {
       test('should provide column name', () async {
         final input = {
-          'data_id': 'test-data-with-columns',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -92,7 +125,7 @@ void main() {
 
       test('should provide column type', () async {
         final input = {
-          'data_id': 'test-data-with-types',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -108,7 +141,7 @@ void main() {
 
       test('should indicate if column is nullable', () async {
         final input = {
-          'data_id': 'test-data-nullable',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -120,7 +153,7 @@ void main() {
 
       test('should provide sample_values', () async {
         final input = {
-          'data_id': 'test-data-samples',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -135,7 +168,7 @@ void main() {
     group('numeric column statistics', () {
       test('should provide min/max/mean for numeric columns', () async {
         final input = {
-          'data_id': 'test-numeric-data',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -152,7 +185,7 @@ void main() {
 
       test('should provide null_count for all columns', () async {
         final input = {
-          'data_id': 'test-nulls-data',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -165,7 +198,7 @@ void main() {
 
       test('should not provide min/max/mean for non-numeric columns', () async {
         final input = {
-          'data_id': 'test-string-data',
+          'data_id': testDataId,
         };
 
         final result = await tool.execute(input);
@@ -183,7 +216,7 @@ void main() {
     group('time range extraction', () {
       test('should provide time_range for temporal data', () async {
         final input = {
-          'data_id': 'test-temporal-data',
+          'data_id': temporalDataId,
         };
 
         final result = await tool.execute(input);
@@ -196,7 +229,7 @@ void main() {
 
       test('should return null time_range for non-temporal data', () async {
         final input = {
-          'data_id': 'test-non-temporal-data',
+          'data_id': nonTemporalDataId,
         };
 
         final result = await tool.execute(input);
@@ -206,7 +239,7 @@ void main() {
 
       test('time_range start should be ISO 8601 format', () async {
         final input = {
-          'data_id': 'test-iso-dates',
+          'data_id': temporalDataId,
         };
 
         final result = await tool.execute(input);
@@ -222,8 +255,15 @@ void main() {
 
     group('FIT file specific metadata', () {
       test('should recognize FIT record types', () async {
+        final fitResult = await loadTool.execute({
+          'source': {
+            'type': 'file',
+            'file_id': 'test-fit-file',
+            'format': 'fit'
+          }
+        });
         final input = {
-          'data_id': 'test-fit-file',
+          'data_id': fitResult['data_id'],
         };
 
         final result = await tool.execute(input);
@@ -234,8 +274,15 @@ void main() {
       });
 
       test('should extract sport-specific columns from FIT', () async {
+        final fitResult = await loadTool.execute({
+          'source': {
+            'type': 'file',
+            'file_id': 'test-cycling-fit',
+            'format': 'fit'
+          }
+        });
         final input = {
-          'data_id': 'test-cycling-fit',
+          'data_id': fitResult['data_id'],
         };
 
         final result = await tool.execute(input);
@@ -257,8 +304,15 @@ void main() {
 
     group('CSV file specific metadata', () {
       test('should parse CSV headers as column names', () async {
+        final csvResult = await loadTool.execute({
+          'source': {
+            'type': 'inline',
+            'content': 'time,value\n1,10\n2,20',
+            'format': 'csv'
+          }
+        });
         final input = {
-          'data_id': 'test-csv-file',
+          'data_id': csvResult['data_id'],
         };
 
         final result = await tool.execute(input);
@@ -268,8 +322,15 @@ void main() {
       });
 
       test('should infer column types from CSV values', () async {
+        final csvResult = await loadTool.execute({
+          'source': {
+            'type': 'inline',
+            'content': 'num,text\n123,hello\n456,world',
+            'format': 'csv'
+          }
+        });
         final input = {
-          'data_id': 'test-csv-mixed-types',
+          'data_id': csvResult['data_id'],
         };
 
         final result = await tool.execute(input);
@@ -315,11 +376,12 @@ void main() {
 
     group('integration with LoadDataTool', () {
       test('should describe data loaded by LoadDataTool', () async {
-        // This test assumes LoadDataTool returns a valid data_id
-        // In red phase, we're just defining the expected behavior
-        final loadedDataId = 'uuid-from-load-tool';
+        // Load some data first
+        final loadResult = await loadTool.execute({
+          'source': {'type': 'inline', 'content': 'a,b\n1,2', 'format': 'csv'}
+        });
 
-        final result = await tool.execute({'data_id': loadedDataId});
+        final result = await tool.execute({'data_id': loadResult['data_id']});
 
         expect(result['file_name'], isNotNull);
         expect(result['columns'], isNotEmpty);

@@ -1,7 +1,3 @@
-// @orchestra-task: 12
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
 

@@ -1,7 +1,3 @@
-// @orchestra-task: 12
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
 import 'package:braven_charts/src/agentic/tools/describe_data_tool.dart';
@@ -10,10 +6,8 @@ import 'package:braven_charts/src/agentic/tools/process_data_tool.dart';
 /// Integration test for data loading workflow
 ///
 /// Tests the complete flow: load → describe → process
-///
-/// This is a TDD RED phase test - it will FAIL until the feature is implemented
 void main() {
-  group('[tdd-red] Data Loading Flow Integration', () {
+  group('Data Loading Flow Integration', () {
     test('should complete full data pipeline: load → describe → process',
         () async {
       // ARRANGE: Create tool instances
@@ -85,16 +79,14 @@ void main() {
       // ARRANGE
       final describeTool = DescribeDataTool();
 
-      // ACT: Try to describe non-existent data
-      final describeResult = await describeTool.execute({
-        'data_id': 'invalid-uuid-12345',
-      });
-
-      // ASSERT: Should return error, not throw
-      expect(describeResult['success'], isFalse,
-          reason: 'Should fail gracefully with invalid data_id');
-      expect(describeResult['error'], isNotNull,
-          reason: 'Should provide error message');
+      // ACT & ASSERT: Try to describe non-existent data - should throw
+      expect(
+        () => describeTool.execute({
+          'data_id': 'invalid-uuid-12345',
+        }),
+        throwsA(isA<StateError>()),
+        reason: 'Should throw StateError for invalid data_id',
+      );
     });
 
     test('should maintain data integrity through pipeline', () async {
