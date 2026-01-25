@@ -163,7 +163,9 @@ class ColumnDescriptor {
         (e) => e.name == json['type'],
       ),
       nullable: json['nullable'] as bool? ?? false,
-      stats: json['stats'] != null ? ColumnStats.fromJson(json['stats'] as Map<String, dynamic>) : null,
+      stats: json['stats'] != null
+          ? ColumnStats.fromJson(json['stats'] as Map<String, dynamic>)
+          : null,
       sampleValues: json['sampleValues'] as List<dynamic>? ?? [],
     );
   }
@@ -199,7 +201,10 @@ class ColumnDescriptor {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ColumnDescriptor && other.name == name && other.type == type && other.nullable == nullable;
+    return other is ColumnDescriptor &&
+        other.name == name &&
+        other.type == type &&
+        other.nullable == nullable;
   }
 
   @override
@@ -298,9 +303,15 @@ class LoadedData {
       fileName: json['fileName'] as String?,
       fileType: json['fileType'] as String?,
       rowCount: json['rowCount'] as int,
-      columns: (json['columns'] as List).map((e) => ColumnDescriptor.fromJson(e as Map<String, dynamic>)).toList(),
-      data: (json['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
-      timeRange: json['timeRange'] != null ? TimeRange.fromJson(json['timeRange'] as Map<String, dynamic>) : null,
+      columns: (json['columns'] as List)
+          .map((e) => ColumnDescriptor.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      data: (json['data'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList(),
+      timeRange: json['timeRange'] != null
+          ? TimeRange.fromJson(json['timeRange'] as Map<String, dynamic>)
+          : null,
       loadedAt: DateTime.parse(json['loadedAt'] as String),
     );
   }
@@ -348,7 +359,10 @@ class LoadedData {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is LoadedData && other.id == id && other.type == type && other.rowCount == rowCount;
+    return other is LoadedData &&
+        other.id == id &&
+        other.type == type &&
+        other.rowCount == rowCount;
   }
 
   @override
