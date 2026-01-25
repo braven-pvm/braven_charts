@@ -226,6 +226,43 @@ input_schema:
             enum: [linear, bezier, stepped, monotone]
           show_points:
             type: boolean
+          # AMENDMENT (2026-01-25): Type-discriminated properties
+          # Line/Area specific
+          tension:
+            type: number
+            minimum: 0
+            maximum: 1
+            description: Bezier curve smoothing factor (0=straight, 1=very smooth). Default 0.25
+          data_point_marker_radius:
+            type: number
+            minimum: 1
+            maximum: 20
+            description: Radius of data point markers when show_points=true. Default 3.0
+          # Bar chart specific (one of bar_width_percent or bar_width_pixels recommended for bar charts)
+          bar_width_percent:
+            type: number
+            minimum: 0.1
+            maximum: 1.0
+            description: Bar width as percentage of available space (0.1-1.0). Default 0.7 if not specified
+          bar_width_pixels:
+            type: number
+            minimum: 1
+            maximum: 200
+            description: Fixed bar width in pixels. Alternative to bar_width_percent
+          bar_min_width:
+            type: number
+            minimum: 1
+            description: Minimum bar width in pixels. Default 4.0
+          bar_max_width:
+            type: number
+            maximum: 500
+            description: Maximum bar width in pixels. Default 100.0
+          # Scatter chart specific
+          marker_radius:
+            type: number
+            minimum: 1
+            maximum: 50
+            description: Scatter plot marker radius. Default 5.0
           y_axis_id:
             type: string
             description: Which Y-axis to use (for multi-axis charts)

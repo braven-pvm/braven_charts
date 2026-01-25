@@ -60,9 +60,7 @@ class AnthropicProvider extends LLMProvider {
         continue;
       }
 
-      final role = message.role == MessageRole.user
-          ? anthropic.MessageRole.user
-          : anthropic.MessageRole.assistant;
+      final role = message.role == MessageRole.user ? anthropic.MessageRole.user : anthropic.MessageRole.assistant;
 
       result.add(
         anthropic.Message(
@@ -82,23 +80,41 @@ class AnthropicProvider extends LLMProvider {
 
     // Handle anthropic SDK response with content.blocks
     try {
-      final content = (response as dynamic).content;
+      final dynamic content = (response as dynamic).content;
       if (content != null) {
-        final blocks = (content as dynamic).blocks;
-        if (blocks is List) {
-          for (final block in blocks) {
-            if (block is anthropic.TextBlock) {
-              return block.text;
-            }
-            // Also try dynamic approach for flexibility
-            try {
-              final text = (block as dynamic).text;
-              if (text is String && text.isNotEmpty) {
-                return text;
+        // Check if content is MessageContentBlocks
+        if (content is anthropic.MessageContent) {
+          return content.map(
+            text: (textContent) => textContent.text,
+            blocks: (blocksContent) {
+              for (final block in blocksContent.value) {
+                if (block is anthropic.TextBlock) {
+                  return block.text;
+                }
+                // Try to get text from block dynamically
+                try {
+                  final text = (block as dynamic).text;
+                  if (text is String && text.isNotEmpty) {
+                    return text;
+                  }
+                } catch (_) {}
               }
-            } catch (_) {}
-          }
+              return '';
+            },
+          );
         }
+
+        // Fallback: try to access blocks directly
+        try {
+          final blocks = (content as dynamic).value;
+          if (blocks is List) {
+            for (final block in blocks) {
+              if (block is anthropic.TextBlock) {
+                return block.text;
+              }
+            }
+          }
+        } catch (_) {}
       }
     } catch (_) {}
 
@@ -153,10 +169,7 @@ class AnthropicProvider extends LLMProvider {
   LLMProviderException _mapError(Object error) {
     final raw = error.toString().toLowerCase();
 
-    if (raw.contains('401') ||
-        raw.contains('unauthorized') ||
-        raw.contains('invalid api key') ||
-        raw.contains('authentication')) {
+    if (raw.contains('401') || raw.contains('unauthorized') || raw.contains('invalid api key') || raw.contains('authentication')) {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
@@ -170,10 +183,7 @@ class AnthropicProvider extends LLMProvider {
       );
     }
 
-    if (raw.contains('socket') ||
-        raw.contains('network') ||
-        raw.contains('timeout') ||
-        raw.contains('connection')) {
+    if (raw.contains('socket') || raw.contains('network') || raw.contains('timeout') || raw.contains('connection')) {
       return LLMProviderException(
         'Network error. Please check your connection and retry.',
         type: LLMProviderErrorType.network,

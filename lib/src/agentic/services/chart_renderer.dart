@@ -44,7 +44,9 @@ class ChartRenderer {
           );
         }).toList();
 
-        return ChartSeries(
+        // Map to the appropriate concrete series type based on chart type
+        return _createSeriesForType(
+          config.type,
           id: seriesConfig.id,
           name: seriesConfig.name,
           points: points,
@@ -77,6 +79,40 @@ class ChartRenderer {
       );
     } catch (e) {
       return _errorWidget('Failed to render chart: $e');
+    }
+  }
+
+  ChartSeries _createSeriesForType(
+    agentic.ChartType type, {
+    required String id,
+    String? name,
+    required List<ChartDataPoint> points,
+  }) {
+    switch (type) {
+      case agentic.ChartType.line:
+        return LineChartSeries(
+          id: id,
+          name: name,
+          points: points,
+        );
+      case agentic.ChartType.area:
+        return AreaChartSeries(
+          id: id,
+          name: name,
+          points: points,
+        );
+      case agentic.ChartType.bar:
+        return BarChartSeries(
+          id: id,
+          name: name,
+          points: points,
+        );
+      case agentic.ChartType.scatter:
+        return ScatterChartSeries(
+          id: id,
+          name: name,
+          points: points,
+        );
     }
   }
 

@@ -195,6 +195,8 @@ enum ChartType { line, area, bar, scatter }  // V1 core types only; candlestick,
 
 Configuration for a single data series.
 
+**AMENDMENT (2026-01-25)**: Added type-discriminated properties for bar, scatter, line, and area charts. These properties are optional at the SeriesConfig level but are applied with sensible defaults when rendering to concrete ChartSeries subclasses.
+
 ```dart
 class SeriesConfig {
   final String id;
@@ -203,7 +205,7 @@ class SeriesConfig {
   final String? dataId;           // Reference to LoadedData
   final List<DataPoint>? data;    // Or explicit data points
 
-  // Styling
+  // Styling (common to all types)
   final String? color;
   final double strokeWidth;
   final List<double>? strokeDash;
@@ -211,9 +213,20 @@ class SeriesConfig {
   final MarkerStyle markerStyle;
   final double markerSize;
 
-  // Line options
+  // Line/Area options
   final Interpolation interpolation;
   final bool showPoints;
+  final double tension;                    // Bezier curve smoothing (0.0-1.0, default 0.25)
+  final double dataPointMarkerRadius;      // Marker size when showPoints=true (default 3.0)
+
+  // Bar chart options (REQUIRED for bar charts - one must be set)
+  final double? barWidthPercent;           // 0.0-1.0, percentage of available space (default 0.7)
+  final double? barWidthPixels;            // Fixed width in pixels (alternative to percent)
+  final double barMinWidth;                // Minimum bar width (default 4.0)
+  final double barMaxWidth;                // Maximum bar width (default 100.0)
+
+  // Scatter chart options
+  final double markerRadius;               // Scatter point radius (default 5.0)
 
   // Axis binding
   final String? yAxisId;
@@ -227,6 +240,15 @@ class SeriesConfig {
 enum MarkerStyle { none, circle, square, triangle, diamond }
 enum Interpolation { linear, bezier, stepped, monotone }
 ```
+
+**Type-Specific Defaults**:
+
+| Chart Type | Required Properties | Defaults Applied |
+|------------|---------------------|------------------|
+| `line` | none | `tension: 0.25`, `strokeWidth: 2.0` |
+| `area` | none | `tension: 0.25`, `fillOpacity: 0.3` |
+| `bar` | `barWidthPercent` OR `barWidthPixels` | `barWidthPercent: 0.7` if neither set |
+| `scatter` | none | `markerRadius: 5.0` |
 
 ---
 
