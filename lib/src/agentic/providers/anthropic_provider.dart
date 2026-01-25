@@ -60,7 +60,9 @@ class AnthropicProvider extends LLMProvider {
         continue;
       }
 
-      final role = message.role == MessageRole.user ? anthropic.MessageRole.user : anthropic.MessageRole.assistant;
+      final role = message.role == MessageRole.user
+          ? anthropic.MessageRole.user
+          : anthropic.MessageRole.assistant;
 
       result.add(
         anthropic.Message(
@@ -169,7 +171,10 @@ class AnthropicProvider extends LLMProvider {
   LLMProviderException _mapError(Object error) {
     final raw = error.toString().toLowerCase();
 
-    if (raw.contains('401') || raw.contains('unauthorized') || raw.contains('invalid api key') || raw.contains('authentication')) {
+    if (raw.contains('401') ||
+        raw.contains('unauthorized') ||
+        raw.contains('invalid api key') ||
+        raw.contains('authentication')) {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
@@ -183,7 +188,10 @@ class AnthropicProvider extends LLMProvider {
       );
     }
 
-    if (raw.contains('socket') || raw.contains('network') || raw.contains('timeout') || raw.contains('connection')) {
+    if (raw.contains('socket') ||
+        raw.contains('network') ||
+        raw.contains('timeout') ||
+        raw.contains('connection')) {
       return LLMProviderException(
         'Network error. Please check your connection and retry.',
         type: LLMProviderErrorType.network,

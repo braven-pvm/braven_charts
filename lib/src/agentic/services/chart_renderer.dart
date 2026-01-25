@@ -94,24 +94,28 @@ class ChartRenderer {
           id: id,
           name: name,
           points: points,
+          tension: 0.25,
         );
       case agentic.ChartType.area:
         return AreaChartSeries(
           id: id,
           name: name,
           points: points,
+          tension: 0.25,
         );
       case agentic.ChartType.bar:
         return BarChartSeries(
           id: id,
           name: name,
           points: points,
+          barWidthPercent: 0.7,
         );
       case agentic.ChartType.scatter:
         return ScatterChartSeries(
           id: id,
           name: name,
           points: points,
+          markerRadius: 5.0,
         );
     }
   }

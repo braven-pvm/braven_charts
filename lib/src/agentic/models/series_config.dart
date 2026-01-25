@@ -36,6 +36,13 @@ class SeriesConfig {
   final bool visible;
   final bool legendVisible;
 
+  // Type-discriminated fields for specific chart types
+  final double? barWidthPercent;
+  final double? barWidthPixels;
+  final double? tension;
+  final double? markerRadius;
+  final double? dataPointMarkerRadius;
+
   /// Creates a new SeriesConfig instance
   SeriesConfig({
     required this.id,
@@ -55,6 +62,11 @@ class SeriesConfig {
     this.unit,
     bool? visible,
     bool? legendVisible,
+    this.barWidthPercent,
+    this.barWidthPixels,
+    this.tension,
+    this.markerRadius,
+    this.dataPointMarkerRadius,
   })  : strokeWidth = strokeWidth ?? 2.0,
         fillOpacity = fillOpacity ?? 0.0,
         markerStyle = markerStyle ?? MarkerStyle.none,
@@ -127,6 +139,11 @@ class SeriesConfig {
       unit: json['unit'] as String?,
       visible: json['visible'] as bool? ?? true,
       legendVisible: json['legendVisible'] as bool? ?? true,
+      barWidthPercent: json['barWidthPercent'] as double?,
+      barWidthPixels: json['barWidthPixels'] as double?,
+      tension: json['tension'] as double?,
+      markerRadius: json['markerRadius'] as double?,
+      dataPointMarkerRadius: json['dataPointMarkerRadius'] as double?,
     );
   }
 
@@ -150,6 +167,12 @@ class SeriesConfig {
       if (unit != null) 'unit': unit,
       'visible': visible,
       'legendVisible': legendVisible,
+      if (barWidthPercent != null) 'barWidthPercent': barWidthPercent,
+      if (barWidthPixels != null) 'barWidthPixels': barWidthPixels,
+      if (tension != null) 'tension': tension,
+      if (markerRadius != null) 'markerRadius': markerRadius,
+      if (dataPointMarkerRadius != null)
+        'dataPointMarkerRadius': dataPointMarkerRadius,
     };
   }
 
@@ -172,6 +195,11 @@ class SeriesConfig {
     String? unit,
     bool? visible,
     bool? legendVisible,
+    double? barWidthPercent,
+    double? barWidthPixels,
+    double? tension,
+    double? markerRadius,
+    double? dataPointMarkerRadius,
   }) {
     return SeriesConfig(
       id: id ?? this.id,
@@ -191,6 +219,12 @@ class SeriesConfig {
       unit: unit ?? this.unit,
       visible: visible ?? this.visible,
       legendVisible: legendVisible ?? this.legendVisible,
+      barWidthPercent: barWidthPercent ?? this.barWidthPercent,
+      barWidthPixels: barWidthPixels ?? this.barWidthPixels,
+      tension: tension ?? this.tension,
+      markerRadius: markerRadius ?? this.markerRadius,
+      dataPointMarkerRadius:
+          dataPointMarkerRadius ?? this.dataPointMarkerRadius,
     );
   }
 }
