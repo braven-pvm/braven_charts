@@ -243,12 +243,12 @@ enum Interpolation { linear, bezier, stepped, monotone }
 
 **Type-Specific Defaults**:
 
-| Chart Type | Required Properties | Defaults Applied |
-|------------|---------------------|------------------|
-| `line` | none | `tension: 0.25`, `strokeWidth: 2.0` |
-| `area` | none | `tension: 0.25`, `fillOpacity: 0.3` |
-| `bar` | `barWidthPercent` OR `barWidthPixels` | `barWidthPercent: 0.7` if neither set |
-| `scatter` | none | `markerRadius: 5.0` |
+| Chart Type | Required Properties                   | Defaults Applied                      |
+| ---------- | ------------------------------------- | ------------------------------------- |
+| `line`     | none                                  | `tension: 0.25`, `strokeWidth: 2.0`   |
+| `area`     | none                                  | `tension: 0.25`, `fillOpacity: 0.3`   |
+| `bar`      | `barWidthPercent` OR `barWidthPixels` | `barWidthPercent: 0.7` if neither set |
+| `scatter`  | none                                  | `markerRadius: 5.0`                   |
 
 ---
 
