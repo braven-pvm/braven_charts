@@ -129,6 +129,7 @@ class Conversation {
     if (identical(this, other)) return true;
     return other is Conversation &&
         other.id == id &&
+        _messagesEqual(other.messages, messages) &&
         other.totalInputTokens == totalInputTokens &&
         other.totalOutputTokens == totalOutputTokens &&
         other.estimatedCostUsd == estimatedCostUsd;
@@ -138,9 +139,25 @@ class Conversation {
   int get hashCode {
     return Object.hash(
       id,
+      Object.hashAll(messages),
       totalInputTokens,
       totalOutputTokens,
       estimatedCostUsd,
     );
+  }
+
+  static bool _messagesEqual(List<Message> a, List<Message> b) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var i = 0; i < a.length; i += 1) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 }

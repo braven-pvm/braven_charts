@@ -7,6 +7,7 @@ import '../services/agent_service.dart';
 import '../tools/create_chart_tool.dart';
 import 'chart_card.dart';
 import 'chart_widget.dart';
+import 'error_message.dart';
 import 'message_bubble.dart';
 
 /// Chat UI for interacting with the agent.
@@ -34,6 +35,10 @@ class _ChatInterfaceState extends State<ChatInterface> {
 
   Conversation? _conversation;
   ValueNotifier<Conversation>? _agentConversation;
+  ValueNotifier<AgentState>? _agentState;
+  bool _isProcessing = false;
+  String? _errorMessage;
+  String? _lastUserMessage;
 
   @override
   void initState() {
@@ -62,16 +67,22 @@ class _ChatInterfaceState extends State<ChatInterface> {
   void _attachConversation() {
     if (widget.agentService != null) {
       _agentConversation = widget.agentService!.conversation;
+      _agentState = widget.agentService!.state;
       _conversation = _agentConversation!.value;
       _agentConversation!.addListener(_handleConversationUpdate);
+      _agentState!.addListener(_handleStateUpdate);
+      _isProcessing = _agentState!.value == AgentState.processing;
     } else {
       _conversation = widget.conversation;
+      _isProcessing = false;
     }
   }
 
   void _detachConversation() {
     _agentConversation?.removeListener(_handleConversationUpdate);
     _agentConversation = null;
+    _agentState?.removeListener(_handleStateUpdate);
+    _agentState = null;
   }
 
   void _handleConversationUpdate() {
@@ -87,26 +98,45 @@ class _ChatInterfaceState extends State<ChatInterface> {
     setState(() {
       _conversation = incoming.copyWith(charts: mergedCharts);
     });
+    _scrollToBottom();
+  }
+
+  void _handleStateUpdate() {
+    if (!mounted || _agentState == null) {
+      return;
+    }
+    setState(() {
+      _isProcessing = _agentState!.value == AgentState.processing;
+    });
   }
 
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) {
+    if (text.isEmpty || _isProcessing) {
       return;
     }
 
     _controller.clear();
     widget.onSend?.call(text);
+    _lastUserMessage = text;
+
+    if (mounted) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
 
     final current = _conversation ?? widget.conversation;
-    final updatedMessages = List<Message>.from(current.messages)
-      ..add(
-        Message(
-          id: _uuid.v4(),
-          role: MessageRole.user,
-          textContent: text,
-        ),
-      );
+    final updatedMessages = widget.agentService == null
+        ? (List<Message>.from(current.messages)
+          ..add(
+            Message(
+              id: _uuid.v4(),
+              role: MessageRole.user,
+              textContent: text,
+            ),
+          ))
+        : List<Message>.from(current.messages);
 
     final updatedCharts = Map<String, dynamic>.from(current.charts);
 
@@ -143,12 +173,47 @@ class _ChatInterfaceState extends State<ChatInterface> {
     if (widget.agentService != null) {
       try {
         await widget.agentService!.processUserMessage(text);
-      } catch (_) {
-        // Swallow errors in preview mode.
+      } catch (error) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = _describeError(error);
+          });
+        }
       }
     }
 
     _scrollToBottom();
+  }
+
+  String _describeError(Object error) {
+    final details = error.toString();
+    if (details.contains('LLMProviderException')) {
+      return details;
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
+  Future<void> _handleRetry() async {
+    final message = _lastUserMessage;
+    if (message == null || _isProcessing || widget.agentService == null) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      await widget.agentService!.processUserMessage(message);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = _describeError(error);
+        });
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -186,6 +251,18 @@ class _ChatInterfaceState extends State<ChatInterface> {
               child: ListView(
                 controller: _scrollController,
                 children: [
+                  if (_errorMessage != null)
+                    ErrorMessage(
+                      message: _errorMessage!,
+                      onRetry: _isProcessing ? null : _handleRetry,
+                    ),
+                  if (_isProcessing)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
                   ...messageWidgets,
                   ...chartWidgets,
                 ],
@@ -199,6 +276,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                     child: TextField(
                       key: const Key('chat_input'),
                       controller: _controller,
+                      enabled: !_isProcessing,
                       decoration: const InputDecoration(
                         hintText: 'Ask for a chart...',
                         border: OutlineInputBorder(),
@@ -210,7 +288,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                   IconButton(
                     key: const Key('chat_send_button'),
                     icon: const Icon(Icons.send),
-                    onPressed: _handleSend,
+                    onPressed: _isProcessing ? null : _handleSend,
                   ),
                 ],
               ),

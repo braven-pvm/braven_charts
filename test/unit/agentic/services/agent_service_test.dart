@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../lib/src/agentic/models/conversation.dart';
@@ -69,7 +70,56 @@ void main() {
       expect(toolResultMessages.first.toolResults!.first.toolCallId, 'tool-1');
       expect(conversation.messages.last.textContent, equals('done'));
     });
+
+    test('processUserMessage streams incremental assistant content', () async {
+      final provider = _StreamingLLMProvider(
+        _streamChunks(['hel', 'lo']),
+        Message(
+          id: 'assistant-final',
+          role: MessageRole.assistant,
+          textContent: 'hello world',
+        ),
+      );
+      final registry = _FakeToolRegistry();
+      final service = AgentService(provider: provider, toolRegistry: registry);
+
+      final updates = <String>[];
+      void listener() {
+        final messages = service.conversation.value.messages;
+        if (messages.isEmpty) {
+          return;
+        }
+        final last = messages.last;
+        final text = last.textContent;
+        if (last.role == MessageRole.assistant && text != null) {
+          updates.add(text);
+        }
+      }
+
+      service.conversation.addListener(listener);
+      try {
+        await service.processUserMessage('hello');
+      } finally {
+        service.conversation.removeListener(listener);
+      }
+
+      expect(
+        service.conversation.value.messages.last.textContent,
+        equals('hello world'),
+      );
+      expect(updates, contains('hel'));
+      expect(
+        updates.any(
+          (value) => value.startsWith('hello') && value.length >= 5,
+        ),
+        isTrue,
+      );
+    });
   });
+}
+
+Stream<String> _streamChunks(List<String> chunks) {
+  return Stream<String>.fromIterable(chunks);
 }
 
 class _FakeLLMProvider implements LLMProvider {
@@ -90,7 +140,23 @@ class _FakeLLMProvider implements LLMProvider {
   @override
   Stream<String> streamMessage(Conversation conversation) async* {
     _receivedConversations.add(conversation);
-    yield '';
+  }
+}
+
+class _StreamingLLMProvider implements LLMProvider {
+  _StreamingLLMProvider(this._stream, this._response);
+
+  final Stream<String> _stream;
+  final Message _response;
+
+  @override
+  Future<Message> sendMessage(Conversation conversation) async {
+    return _response;
+  }
+
+  @override
+  Stream<String> streamMessage(Conversation conversation) {
+    return _stream;
   }
 }
 
