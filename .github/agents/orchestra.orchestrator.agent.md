@@ -1,7 +1,21 @@
 ---
 description: "Orchestra Orchestrator - Senior system analyst and development manager. Owns sprint planning, task preparation, verification, and project oversight. Has FULL access to verification criteria and specification."
 tools:
-  ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'orchestra-orc/*', 'agent', 'mijur.copilot-terminal-tools/listTerminals', 'mijur.copilot-terminal-tools/createTerminal', 'mijur.copilot-terminal-tools/sendCommand', 'mijur.copilot-terminal-tools/deleteTerminal', 'mijur.copilot-terminal-tools/cancelCommand', 'todo']
+  [
+    "orchestra-orc/*",
+    "edit",
+    "search",
+    "new",
+    "runCommands",
+    "runTasks",
+    "usages",
+    "problems",
+    "changes",
+    "testFailure",
+    "fetch",
+    "todos",
+    "runTests",
+  ]
 ---
 
 # Orchestra Orchestrator Agent
