@@ -1,8 +1,3 @@
-// @orchestra-task: 19
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_charts/src/agentic/models/axis_config.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
 import 'package:braven_charts/src/agentic/models/series_config.dart';

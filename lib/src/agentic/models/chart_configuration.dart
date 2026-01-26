@@ -225,16 +225,28 @@ class ChartConfiguration {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ChartConfiguration &&
+    if (other is! ChartConfiguration) return false;
+    return other.id == id &&
         other.type == type &&
-        other.title == title;
+        other.title == title &&
+        other.subtitle == subtitle &&
+        other.theme == theme &&
+        other.grid == grid &&
+        other.legend == legend &&
+        other.interactions == interactions;
   }
 
   @override
   int get hashCode {
     return Object.hash(
+      id,
       type,
       title,
+      subtitle,
+      theme,
+      grid,
+      legend,
+      interactions,
     );
   }
 
