@@ -8,7 +8,6 @@ import '../models/file_attachment.dart';
 import '../models/message.dart';
 import '../services/agent_service.dart';
 import '../services/file_validator.dart';
-import '../tools/create_chart_tool.dart';
 import '../tools/load_data_tool.dart';
 import 'chart_card.dart';
 import 'chart_widget.dart';
@@ -37,7 +36,6 @@ class ChatInterface extends StatefulWidget {
 class ChatInterfaceState extends State<ChatInterface> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final CreateChartTool _chartTool = CreateChartTool();
   final LoadDataTool _loadDataTool = LoadDataTool();
   final FileValidator _fileValidator = FileValidator();
   final Uuid _uuid = const Uuid();
@@ -60,8 +58,7 @@ class ChatInterfaceState extends State<ChatInterface> {
   @override
   void didUpdateWidget(ChatInterface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.agentService != widget.agentService ||
-        oldWidget.conversation != widget.conversation) {
+    if (oldWidget.agentService != widget.agentService || oldWidget.conversation != widget.conversation) {
       _detachConversation();
       _attachConversation();
     }
@@ -137,50 +134,7 @@ class ChatInterfaceState extends State<ChatInterface> {
       });
     }
 
-    final current = _conversation ?? widget.conversation;
-    final updatedMessages = widget.agentService == null
-        ? (List<Message>.from(current.messages)
-          ..add(
-            Message(
-              id: _uuid.v4(),
-              role: MessageRole.user,
-              textContent: text,
-            ),
-          ))
-        : List<Message>.from(current.messages);
-
-    final updatedCharts = Map<String, dynamic>.from(current.charts);
-
-    try {
-      final config = await _chartTool.execute({
-        'prompt': text,
-        'dataset': const {
-          'columns': ['x', 'y'],
-          'rows': <Map<String, dynamic>>[],
-        },
-      });
-
-      final chartId = 'chart_${DateTime.now().millisecondsSinceEpoch}';
-      updatedCharts[chartId] = config;
-    } catch (_) {
-      // Ignore prompts that do not produce charts.
-    }
-
-    final updatedConversation = current.copyWith(
-      messages: updatedMessages,
-      charts: updatedCharts,
-    );
-
-    if (widget.agentService != null && _agentConversation != null) {
-      _agentConversation!.value = updatedConversation;
-    }
-
-    if (mounted) {
-      setState(() {
-        _conversation = updatedConversation;
-      });
-    }
-
+    // Let AgentService handle everything if available
     if (widget.agentService != null) {
       try {
         await widget.agentService!.processUserMessage(text);
@@ -191,6 +145,29 @@ class ChatInterfaceState extends State<ChatInterface> {
           });
         }
       }
+      _scrollToBottom();
+      return;
+    }
+
+    // Fallback for when no AgentService is available
+    final current = _conversation ?? widget.conversation;
+    final updatedMessages = List<Message>.from(current.messages)
+      ..add(
+        Message(
+          id: _uuid.v4(),
+          role: MessageRole.user,
+          textContent: text,
+        ),
+      );
+
+    final updatedConversation = current.copyWith(
+      messages: updatedMessages,
+    );
+
+    if (mounted) {
+      setState(() {
+        _conversation = updatedConversation;
+      });
     }
 
     _scrollToBottom();
@@ -231,11 +208,16 @@ class ChatInterfaceState extends State<ChatInterface> {
     if (!_scrollController.hasClients) {
       return;
     }
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-    );
+    // Schedule scroll after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _handleFileUpload() async {
@@ -252,8 +234,7 @@ class ChatInterfaceState extends State<ChatInterface> {
 
     if (mounted) {
       setState(() {
-        _errorMessage =
-            'File upload UI not yet implemented. Use addFileAttachment method for testing.';
+        _errorMessage = 'File upload UI not yet implemented. Use addFileAttachment method for testing.';
       });
     }
   }
@@ -265,10 +246,8 @@ class ChatInterfaceState extends State<ChatInterface> {
   }) async {
     // Determine file type from extension
     final lastDot = fileName.lastIndexOf('.');
-    final extension =
-        lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
-    final fileType =
-        ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
+    final extension = lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
+    final fileType = ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
 
     // Validate the file
     final validationResult = _fileValidator.validate(
@@ -367,36 +346,70 @@ class ChatInterfaceState extends State<ChatInterface> {
   @override
   Widget build(BuildContext context) {
     final conversation = _conversation ?? widget.conversation;
-    final messageWidgets = conversation.messages
-        .where((message) => message.textContent != null)
-        .map((message) => MessageBubble(message: message))
-        .toList(growable: false);
 
-    final chartWidgets = conversation.charts.values
-        .map(
-          (chart) => ChartCard(
-            child: ChartWidget(chart: chart),
+    // Build chronological list of all content items
+    // Charts are rendered inline after the message that created them
+    final contentItems = <Widget>[];
+    final renderedChartIds = <String>{};
+
+    // Render messages in order, with charts inline after their source message
+    for (final message in conversation.messages) {
+      // Add the message bubble if it has text content
+      if (message.textContent != null && message.textContent!.trim().isNotEmpty) {
+        contentItems.add(MessageBubble(message: message));
+      }
+
+      // Check if this message has tool results with charts
+      if (message.toolResults != null) {
+        for (final toolResult in message.toolResults!) {
+          if (toolResult.chartId != null) {
+            final chart = conversation.charts[toolResult.chartId];
+            if (chart != null && !renderedChartIds.contains(toolResult.chartId)) {
+              renderedChartIds.add(toolResult.chartId!);
+              contentItems.add(
+                ChartCard(
+                  child: ChartWidget(chart: chart),
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Add data previews at the end
+    for (final dataId in _loadedDataIds) {
+      contentItems.add(DataPreview(dataId: dataId));
+    }
+
+    // Add any charts that weren't associated with a message (shouldn't happen, but just in case)
+    for (final entry in conversation.charts.entries) {
+      if (!renderedChartIds.contains(entry.key)) {
+        contentItems.add(
+          ChartCard(
+            child: ChartWidget(chart: entry.value),
           ),
-        )
-        .toList(growable: false);
-
-    // Build data preview widgets
-    final dataPreviewWidgets = _loadedDataIds
-        .map((dataId) => DataPreview(dataId: dataId))
-        .toList(growable: false);
+        );
+      }
+    }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView(
                 controller: _scrollController,
+                padding: const EdgeInsets.all(15),
                 children: [
                   if (_errorMessage != null)
-                    ErrorMessage(
-                      message: _errorMessage!,
-                      onRetry: _isProcessing ? null : _handleRetry,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ErrorMessage(
+                        message: _errorMessage!,
+                        onRetry: _isProcessing ? null : _handleRetry,
+                      ),
                     ),
                   if (_isProcessing)
                     const Padding(
@@ -405,26 +418,23 @@ class ChatInterfaceState extends State<ChatInterface> {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-                  ...messageWidgets,
-                  ...dataPreviewWidgets,
-                  ...chartWidgets,
+                  ...contentItems,
                 ],
               ),
             ),
             // File attachments display
             if (_attachments.isNotEmpty)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: Colors.grey[50],
                   border: Border(
-                    top: BorderSide(color: Colors.grey[300]!),
+                    top: BorderSide(color: Colors.grey[200]!),
                   ),
                 ),
                 child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: _attachments
                       .map((attachment) => FileAttachmentChip(
                             attachment: attachment,
@@ -433,34 +443,55 @@ class ChatInterfaceState extends State<ChatInterface> {
                       .toList(),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  top: BorderSide(color: Colors.grey[200]!),
+                ),
+              ),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
                   IconButton(
                     key: const Key('chat_file_button'),
-                    icon: const Icon(Icons.attach_file),
+                    icon: const Icon(Icons.attach_file, size: 20),
                     onPressed: _isProcessing ? null : _handleFileUpload,
                     tooltip: 'Attach file (FIT, CSV, TCX)',
+                    visualDensity: VisualDensity.compact,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: TextField(
                       key: const Key('chat_input'),
                       controller: _controller,
                       enabled: !_isProcessing,
-                      decoration: const InputDecoration(
+                      style: const TextStyle(fontSize: 12),
+                      decoration: InputDecoration(
                         hintText: 'Ask for a chart...',
-                        border: OutlineInputBorder(),
+                        hintStyle: const TextStyle(fontSize: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: Colors.grey[200]!,
+                            width: 0.2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        isDense: true,
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
                     key: const Key('chat_send_button'),
-                    icon: const Icon(Icons.send),
+                    icon: const Icon(Icons.send, size: 20),
                     onPressed: _isProcessing ? null : _handleSend,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),

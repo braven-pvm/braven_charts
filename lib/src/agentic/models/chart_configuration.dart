@@ -146,18 +146,10 @@ class ChartConfiguration {
       type: ChartType.values.firstWhere((e) => e.name == json['type']),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List)
-          .map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      xAxis: json['xAxis'] != null
-          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
-          : null,
-      yAxes: (json['yAxes'] as List)
-          .map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      style: json['style'] != null
-          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
-          : null,
+      series: (json['series'] as List).map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
+      yAxes: (json['yAxes'] as List).map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
       interactions: json['interactions'],
       annotations: json['annotations'] as List<dynamic>?,
       layout: json['layout'],
@@ -225,9 +217,7 @@ class ChartConfiguration {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ChartConfiguration &&
-        other.type == type &&
-        other.title == title;
+    return other is ChartConfiguration && other.type == type && other.title == title;
   }
 
   @override
@@ -236,5 +226,10 @@ class ChartConfiguration {
       type,
       title,
     );
+  }
+
+  @override
+  String toString() {
+    return 'ChartConfiguration(type: ${type.name}, title: $title, series: ${series.length} series)';
   }
 }

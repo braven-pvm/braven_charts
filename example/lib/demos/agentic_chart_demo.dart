@@ -34,7 +34,14 @@ class AgenticChartDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Agentic Chart Demo',
-      theme: ThemeData.dark(useMaterial3: true),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+      ),
       home: const AgenticChartScreen(),
     );
   }
@@ -53,32 +60,19 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
-  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
-      GlobalKey<ChatInterfaceState>();
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey = GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
-🎨 **Welcome to Agentic Chart Demo**
+**Welcome to Agentic Charts**
 
-This demo showcases natural language chart creation and sport science file analysis powered by AI.
+Create charts using natural language and AI-powered analysis.
 
-**Try these examples:**
+**Quick Start:**
+• Try: "Show me a line chart of power over time"
+• Upload a FIT file and ask for rolling averages
+• Create bar charts comparing metrics
 
-📊 **Basic Charts:**
-• "Show me a line chart of power over time"
-• "Create a bar chart comparing sales across quarters"
-
-📁 **File-Based Analysis:**
-• Upload a FIT file (click the upload button above)
-• After upload, try: "Show 30-second rolling average of power"
-• Or: "Plot heart rate over time with 5-minute smoothing"
-
-**How it works:**
-1. Upload a FIT/CSV file or use the sample data
-2. Type your chart request in the input below
-3. The AI agent converts your request to a chart configuration
-4. Your chart renders automatically with proper axes and data transformations
-
-Ready? Enter your Anthropic API key below to get started!
+**Tips:** Upload files using the button above, then type your chart request below.
 ''';
 
   @override
@@ -98,7 +92,7 @@ Ready? Enter your Anthropic API key below to get started!
   }
 
   void _addWelcomeState() {
-    // Add welcome message
+    // Add welcome message only - no demo chart
     final welcomeMessage = Message(
       id: const Uuid().v4(),
       role: MessageRole.assistant,
@@ -106,39 +100,9 @@ Ready? Enter your Anthropic API key below to get started!
       timestamp: DateTime.now(),
     );
 
-    // Create sample chart data
-    final sampleChartData = {
-      'type': 'line',
-      'series': [
-        {
-          'id': 'power_series',
-          'name': 'Power Output',
-          'data': [
-            {'x': 0, 'y': 100},
-            {'x': 1, 'y': 150},
-            {'x': 2, 'y': 180},
-            {'x': 3, 'y': 220},
-            {'x': 4, 'y': 190},
-            {'x': 5, 'y': 250},
-          ],
-        }
-      ],
-      'xAxis': {
-        'label': 'Time (hours)',
-        'type': 'numeric',
-      },
-      'yAxes': [
-        {
-          'label': 'Power (watts)',
-          'position': 'left',
-        }
-      ],
-    };
-
     setState(() {
       _conversation = _conversation.copyWith(
         messages: [welcomeMessage],
-        charts: {'welcome_chart': sampleChartData},
       );
     });
   }
@@ -149,16 +113,18 @@ Ready? Enter your Anthropic API key below to get started!
     });
 
     try {
-      // Create provider
+      // Create tool registry and register tools
+      final toolRegistry = ToolRegistry();
+      final createChartTool = CreateChartTool();
+      toolRegistry.register(createChartTool);
+
+      // Create provider with tools so Claude knows to use them
       final provider = AnthropicProvider(
         apiKey: apiKey,
         model: 'claude-sonnet-4-20250514',
         maxTokens: 2048,
+        tools: [createChartTool],
       );
-
-      // Create tool registry and register CreateChartTool
-      final toolRegistry = ToolRegistry();
-      toolRegistry.register(CreateChartTool());
 
       // Create agent service
       final agentService = AgentService(
@@ -172,6 +138,17 @@ Ready? Enter your Anthropic API key below to get started!
         _isInitializing = false;
         // Transfer welcome state to agent's conversation
         agentService.conversation.value = _conversation;
+      });
+
+      // Listen to conversation updates from the agent
+      agentService.conversation.addListener(() {
+        print('[AgenticChartDemo] Conversation updated! Charts: ${agentService.conversation.value.charts.length}');
+        if (mounted) {
+          setState(() {
+            _conversation = agentService.conversation.value;
+            print('[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
+          });
+        }
       });
     } catch (error) {
       setState(() {

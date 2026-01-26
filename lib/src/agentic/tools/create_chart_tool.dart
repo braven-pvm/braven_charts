@@ -11,8 +11,11 @@ class CreateChartTool extends LLMTool {
   String get name => 'create_chart';
 
   @override
-  String get description =>
-      'Converts a natural language prompt and dataset into a chart configuration.';
+  String get description => '''
+Creates an interactive chart from provided data.
+Use this tool when the user wants to visualize data as a chart.
+Always include the data array with x,y values when calling this tool.
+''';
 
   @override
   Map<String, dynamic> get inputSchema => {
@@ -20,41 +23,45 @@ class CreateChartTool extends LLMTool {
         'properties': {
           'prompt': {
             'type': 'string',
-            'description': 'Natural language request for the chart.'
+            'description': 'Natural language description of the chart.',
           },
           'type': {
             'type': 'string',
-            'description': 'Explicit chart type override.'
+            'enum': ['line', 'area', 'bar', 'scatter'],
+            'description': 'Type of chart to render.',
           },
           'series': {
             'type': 'array',
-            'items': {'type': 'object'},
-            'description': 'Optional explicit series configurations.'
-          },
-          'xAxis': {
-            'type': 'object',
-            'description': 'Optional X-axis configuration.'
-          },
-          'yAxes': {
-            'type': 'array',
-            'items': {'type': 'object'},
-            'description': 'Optional Y-axis configurations.'
-          },
-          'dataset': {
-            'type': 'object',
-            'properties': {
-              'columns': {
-                'type': 'array',
-                'items': {'type': 'string'}
+            'description': 'Data series to plot. REQUIRED - include your data here.',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'id': {
+                  'type': 'string',
+                  'description': 'Unique series identifier (e.g., "sales", "revenue").',
+                },
+                'name': {
+                  'type': 'string',
+                  'description': 'Display name for legend (e.g., "Quarterly Sales").',
+                },
+                'data': {
+                  'type': 'array',
+                  'description': 'Array of data points with x and y values.',
+                  'items': {
+                    'type': 'object',
+                    'properties': {
+                      'x': {'type': 'number', 'description': 'X-axis value'},
+                      'y': {'type': 'number', 'description': 'Y-axis value'},
+                    },
+                    'required': ['x', 'y'],
+                  },
+                },
               },
-              'rows': {
-                'type': 'array',
-                'items': {'type': 'object'}
-              }
-            }
-          }
+              'required': ['id', 'data'],
+            },
+          },
         },
-        'required': ['prompt'],
+        'required': ['prompt', 'series'],
       };
 
   @override
@@ -81,9 +88,7 @@ class CreateChartTool extends LLMTool {
   ChartType _resolveChartType(String? explicitType, String prompt) {
     final explicit = explicitType?.toLowerCase().trim();
     if (explicit != null && explicit.isNotEmpty) {
-      final matched = ChartType.values
-          .where((type) => type.name == explicit)
-          .toList(growable: false);
+      final matched = ChartType.values.where((type) => type.name == explicit).toList(growable: false);
       if (matched.isEmpty) {
         throw Exception('Unsupported chart type: $explicitType');
       }
@@ -120,6 +125,11 @@ class CreateChartTool extends LLMTool {
     final dataset = args['dataset'];
     final columns = _extractColumns(dataset);
     final rows = _extractRows(dataset);
+
+    // If no data provided, generate sample data based on prompt
+    if (rows.isEmpty) {
+      return _generateSampleSeries(args);
+    }
 
     final xColumn = _resolveXColumn(columns);
     final yColumns = columns.where((col) => col != xColumn).toList();
@@ -188,19 +198,14 @@ class CreateChartTool extends LLMTool {
 
   List<String> _extractColumns(dynamic dataset) {
     if (dataset is Map && dataset['columns'] is List) {
-      return (dataset['columns'] as List)
-          .map((entry) => entry.toString())
-          .toList(growable: false);
+      return (dataset['columns'] as List).map((entry) => entry.toString()).toList(growable: false);
     }
     return const [];
   }
 
   List<Map<String, dynamic>> _extractRows(dynamic dataset) {
     if (dataset is Map && dataset['rows'] is List) {
-      return (dataset['rows'] as List)
-          .whereType<Map>()
-          .map((entry) => Map<String, dynamic>.from(entry))
-          .toList(growable: false);
+      return (dataset['rows'] as List).whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList(growable: false);
     }
     return const [];
   }
@@ -245,5 +250,70 @@ class CreateChartTool extends LLMTool {
       data.add({'x': xValue, 'y': yValue});
     }
     return data;
+  }
+
+  /// Generates sample data when no dataset is provided.
+  List<SeriesConfig> _generateSampleSeries(Map<String, dynamic> args) {
+    final prompt = (args['prompt'] ?? '').toString().toLowerCase();
+
+    // Generate sample data based on the prompt context
+    List<Map<String, dynamic>> sampleData;
+    String seriesName;
+
+    if (prompt.contains('sales') || prompt.contains('quarterly')) {
+      // Quarterly sales data
+      seriesName = 'Sales';
+      sampleData = [
+        {'x': 0, 'y': 85000},
+        {'x': 1, 'y': 95000},
+        {'x': 2, 'y': 105000},
+        {'x': 3, 'y': 125000},
+        {'x': 4, 'y': 90000},
+        {'x': 5, 'y': 110000},
+        {'x': 6, 'y': 130000},
+        {'x': 7, 'y': 145000},
+      ];
+    } else if (prompt.contains('power') || prompt.contains('watts')) {
+      // Power output data
+      seriesName = 'Power (W)';
+      sampleData = [
+        {'x': 0, 'y': 150},
+        {'x': 1, 'y': 180},
+        {'x': 2, 'y': 220},
+        {'x': 3, 'y': 195},
+        {'x': 4, 'y': 240},
+        {'x': 5, 'y': 210},
+      ];
+    } else if (prompt.contains('temperature') || prompt.contains('temp')) {
+      // Temperature data
+      seriesName = 'Temperature';
+      sampleData = [
+        {'x': 0, 'y': 20},
+        {'x': 1, 'y': 22},
+        {'x': 2, 'y': 25},
+        {'x': 3, 'y': 28},
+        {'x': 4, 'y': 26},
+        {'x': 5, 'y': 23},
+      ];
+    } else {
+      // Generic sample data
+      seriesName = 'Value';
+      sampleData = [
+        {'x': 0, 'y': 10},
+        {'x': 1, 'y': 25},
+        {'x': 2, 'y': 35},
+        {'x': 3, 'y': 30},
+        {'x': 4, 'y': 45},
+        {'x': 5, 'y': 50},
+      ];
+    }
+
+    return [
+      SeriesConfig(
+        id: 'sample_series',
+        name: seriesName,
+        data: sampleData,
+      ),
+    ];
   }
 }

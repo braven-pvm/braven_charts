@@ -16,17 +16,18 @@ class MessageBubble extends StatelessWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         constraints: const BoxConstraints(maxWidth: 520),
         decoration: BoxDecoration(
-          color: isUser ? Colors.blueAccent : Colors.grey.shade200,
+          color: isUser ? Colors.blue : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           text,
           style: TextStyle(
             color: isUser ? Colors.white : Colors.black87,
+            fontSize: 12,
           ),
         ),
       ),

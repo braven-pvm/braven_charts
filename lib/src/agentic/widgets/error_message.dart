@@ -14,7 +14,7 @@ class ErrorMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Card(
         color: Colors.red.shade50,
         child: Padding(
@@ -25,6 +25,7 @@ class ErrorMessage extends StatelessWidget {
               Icon(
                 Icons.error_outline,
                 color: Colors.red.shade400,
+                size: 20,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -36,6 +37,7 @@ class ErrorMessage extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.red.shade900,
                         fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
                     if (onRetry != null) ...[

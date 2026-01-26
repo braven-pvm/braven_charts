@@ -43,8 +43,10 @@ class DataPreview extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.all(12),
+      elevation: 1,
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -56,30 +58,35 @@ class DataPreview extends StatelessWidget {
                 Expanded(
                   child: Text(
                     frame.fileName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Chip(
-                  label: Text('${frame.rowCount} rows'),
+                  label: Text(
+                    '${frame.rowCount} rows',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Divider(),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
             const SizedBox(height: 8),
             // Column list
-            Text(
+            const Text(
               'Columns',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             // Scrollable column list
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 300),
@@ -101,7 +108,7 @@ class DataPreview extends StatelessWidget {
 
   Widget _buildColumnItem(BuildContext context, DataColumn column) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,36 +117,37 @@ class DataPreview extends StatelessWidget {
             children: [
               Icon(
                 _getTypeIcon(column.type),
-                size: 16,
+                size: 14,
                 color: _getTypeColor(column.type),
               ),
               const SizedBox(width: 6),
               Text(
                 column.name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
                   color: _getTypeColor(column.type).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   column.type,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _getTypeColor(column.type),
-                        fontWeight: FontWeight.w500,
-                      ),
+                  style: TextStyle(
+                    color: _getTypeColor(column.type),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                  ),
                 ),
               ),
               if (column.nullable) ...[
                 const SizedBox(width: 4),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),

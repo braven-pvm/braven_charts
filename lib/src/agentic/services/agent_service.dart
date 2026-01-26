@@ -16,8 +16,7 @@ enum AgentState {
 }
 
 class AgentService {
-  AgentService(
-      {required LLMProvider provider, required ToolRegistry toolRegistry})
+  AgentService({required LLMProvider provider, required ToolRegistry toolRegistry})
       : _provider = provider,
         _toolRegistry = toolRegistry,
         conversation = ValueNotifier<Conversation>(
@@ -65,8 +64,7 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage =
-                streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -97,8 +95,24 @@ class AgentService {
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
-          final result =
-              await _toolRegistry.execute(call.toolName, call.arguments);
+          print('[AgentService] Executing tool: ${call.toolName}');
+          final result = await _toolRegistry.execute(call.toolName, call.arguments);
+          print('[AgentService] Tool result type: ${result.runtimeType}');
+
+          String? createdChartId;
+
+          // If the tool returns a ChartConfiguration, add it to the conversation
+          if (result is ChartConfiguration) {
+            print('[AgentService] Adding ChartConfiguration to conversation');
+            createdChartId = result.id ?? _uuid.v4();
+            print('[AgentService] Chart ID: $createdChartId');
+            final current = conversation.value;
+            final updatedCharts = Map<String, dynamic>.from(current.charts);
+            updatedCharts[createdChartId] = result.toJson();
+            final newConversation = current.copyWith(charts: updatedCharts);
+            conversation.value = newConversation;
+          }
+
           if (result is ToolResult) {
             toolResults.add(result);
           } else {
@@ -106,6 +120,7 @@ class AgentService {
               ToolResult(
                 toolCallId: call.id,
                 result: result,
+                chartId: createdChartId,
               ),
             );
           }
@@ -145,10 +160,8 @@ class AgentService {
     final isUser = message.role == MessageRole.user;
     conversation.value = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens:
-          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens:
-          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
 

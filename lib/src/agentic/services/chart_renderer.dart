@@ -9,20 +9,27 @@ class ChartRenderer {
 
   /// Builds a widget for the provided chart configuration or raw chart data.
   Widget render(dynamic chart) {
+    debugPrint('ChartRenderer.render() called with: ${chart.runtimeType}');
+
     if (chart is agentic.ChartConfiguration) {
+      debugPrint('Rendering ChartConfiguration directly');
       return _renderConfiguration(chart);
     }
 
     // Handle Map format (from CreateChartTool output)
     if (chart is Map<String, dynamic>) {
+      debugPrint('Rendering from Map: ${chart.keys.toList()}');
       try {
         final config = agentic.ChartConfiguration.fromJson(chart);
+        debugPrint('Parsed config: type=${config.type}, series=${config.series.length}');
         return _renderConfiguration(config);
       } catch (e) {
+        debugPrint('Error parsing chart config: $e');
         return _errorWidget('Invalid chart configuration: $e');
       }
     }
 
+    debugPrint('Unsupported chart format: ${chart.runtimeType}');
     return _errorWidget('Unsupported chart format');
   }
 
@@ -30,11 +37,14 @@ class ChartRenderer {
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
+        debugPrint('No series data in config');
         return _errorWidget('No series data provided');
       }
 
+      debugPrint('Building ${config.series.length} series');
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data ?? [];
+        debugPrint('Series ${seriesConfig.id}: ${dataPoints.length} data points');
         final points = dataPoints.map((dataPoint) {
           final x = dataPoint['x'];
           final y = dataPoint['y'];
@@ -69,15 +79,18 @@ class ChartRenderer {
               position: YAxisPosition.left,
             );
 
+      debugPrint('Creating BravenChartPlus widget');
       return SizedBox(
-        height: 400,
+        height: 300,
         child: BravenChartPlus(
           series: series,
           xAxisConfig: xAxisConfig,
           yAxis: yAxisConfig,
         ),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Error rendering chart: $e');
+      debugPrint('Stack: $stack');
       return _errorWidget('Failed to render chart: $e');
     }
   }

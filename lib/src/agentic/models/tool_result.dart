@@ -24,6 +24,9 @@ class ToolResult {
   /// Error message if execution failed
   final String? error;
 
+  /// ID of chart created by this tool (if any)
+  final String? chartId;
+
   /// Creates a new ToolResult instance
   ToolResult({
     String? id,
@@ -33,15 +36,14 @@ class ToolResult {
     this.content,
     this.result,
     this.error,
+    this.chartId,
   })  : isError = isError ?? false,
         success = success ?? !(isError ?? false),
         id = id ?? toolCallId,
         assert((id ?? toolCallId).isNotEmpty, 'ToolResult id cannot be empty'),
         assert(toolCallId.isNotEmpty, 'toolCallId cannot be empty'),
         assert(
-          (success ?? !(isError ?? false)) == false ||
-              result != null ||
-              content != null,
+          (success ?? !(isError ?? false)) == false || result != null || content != null,
           'Successful result must have result or content',
         ),
         assert(
@@ -59,6 +61,7 @@ class ToolResult {
       content: json['content'],
       result: json['result'],
       error: json['error'] as String?,
+      chartId: json['chartId'] as String?,
     );
   }
 
@@ -72,6 +75,7 @@ class ToolResult {
       if (content != null) 'content': content,
       if (result != null) 'result': result,
       if (error != null) 'error': error,
+      if (chartId != null) 'chartId': chartId,
     };
   }
 
@@ -84,6 +88,7 @@ class ToolResult {
     dynamic content,
     dynamic result,
     String? error,
+    String? chartId,
   }) {
     return ToolResult(
       id: id ?? this.id,
@@ -93,16 +98,14 @@ class ToolResult {
       content: content ?? this.content,
       result: result ?? this.result,
       error: error ?? this.error,
+      chartId: chartId ?? this.chartId,
     );
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ToolResult &&
-        other.id == id &&
-        other.toolCallId == toolCallId &&
-        other.success == success;
+    return other is ToolResult && other.id == id && other.toolCallId == toolCallId && other.success == success;
   }
 
   @override
