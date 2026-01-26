@@ -65,15 +65,11 @@ class _MessageBubbleState extends State<MessageBubble> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         constraints: const BoxConstraints(maxWidth: 520),
         decoration: BoxDecoration(
-          color: isUser
-              ? Colors.blueGrey.withAlpha(35)
-              : Colors.grey.shade200.withAlpha(50),
+          color: isUser ? Colors.blueGrey.withAlpha(35) : Colors.grey.shade200.withAlpha(50),
           borderRadius: BorderRadius.circular(10),
           // border: Border.all(color: Colors.black38, width: 0.5),
         ),
-        child: _isCollapsible
-            ? _buildCollapsibleContent(isUser)
-            : _buildSimpleContent(isUser),
+        child: _isCollapsible ? _buildCollapsibleContent(isUser) : _buildSimpleContent(isUser),
       ),
     );
   }
@@ -93,7 +89,7 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildCollapsibleContent(bool isUser) {
-    final textColor = isUser ? Colors.white : Colors.black54;
+    final textColor = isUser ? Colors.white : Colors.black87;
     final iconColor = isUser ? Colors.white70 : Colors.black54;
 
     return InkWell(
@@ -112,13 +108,11 @@ class _MessageBubbleState extends State<MessageBubble> {
                     _isExpanded ? _text : _summaryText,
                     style: GoogleFonts.poppins(
                       color: textColor,
-                      fontWeight: FontWeight.w400,
-                      fontSize: 12,
+                      fontWeight: FontWeight.w200,
+                      fontSize: 11.5,
                     ),
                     maxLines: _isExpanded ? null : widget.maxCollapsedLines,
-                    overflow: _isExpanded
-                        ? TextOverflow.visible
-                        : TextOverflow.ellipsis,
+                    overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 4),
