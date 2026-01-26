@@ -76,15 +76,14 @@ class _ChartCardState extends State<ChartCard> {
         : widget.child;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      margin: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       elevation: 2,
       color: Colors.white,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.blue, width: 2), // Debug border
+          border: Border.all(color: Colors.blue, width: 1.2), // Debug border
         ),
-        constraints:
-            const BoxConstraints(minHeight: 200), // Ensure minimum height
+        constraints: const BoxConstraints(minHeight: 200), // Ensure minimum height
         padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
