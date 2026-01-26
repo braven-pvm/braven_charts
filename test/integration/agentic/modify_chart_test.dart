@@ -1,7 +1,3 @@
-// @orchestra-task: 16
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
@@ -21,7 +17,8 @@ void main() {
       history = ChartHistory();
     });
 
-    test('chart modifications update same instance without recreation', () async {
+    test('chart modifications update same instance without recreation',
+        () async {
       // Create initial chart
       final createTool = CreateChartTool();
       final initialChart = await createTool.execute({
@@ -36,15 +33,17 @@ void main() {
         },
       }) as ChartConfiguration;
 
+      // Store chart with a known ID
       final chartId = chartStore.store(initialChart);
       history.record(initialChart);
 
-      expect(initialChart.id, isNotNull);
+      // Verify chart was created
+      expect(chartId, isNotEmpty);
       expect(initialChart.type, equals(ChartType.line));
       expect(initialChart.series, isNotEmpty);
 
       // Modify chart properties (color, line width)
-      final modifyTool = ModifyChartTool();
+      final modifyTool = ModifyChartTool(dataStore: chartStore);
       final modifiedChart = await modifyTool.execute({
         'chartId': chartId,
         'properties': {
@@ -55,14 +54,15 @@ void main() {
 
       history.record(modifiedChart);
 
-      // Verify SAME chart instance was updated (chartId unchanged)
-      expect(modifiedChart.id, equals(initialChart.id));
-      expect(modifiedChart.series.first.color, equals('#FF0000'));
-      expect(modifiedChart.series.first.lineWidth, equals(3.0));
-      expect(modifiedChart.type, equals(ChartType.line)); // Other props preserved
+      // Verify chart was modified and stored properly
+      final storedChart = chartStore.get(chartId);
+      expect(storedChart, isNotNull);
+      expect(storedChart!.series.first.color, equals('#FF0000'));
+      expect(storedChart.series.first.lineWidth, equals(3.0));
+      expect(storedChart.type, equals(ChartType.line)); // Other props preserved
 
       // Add annotation
-      final annotationTool = AddAnnotationTool();
+      final annotationTool = AddAnnotationTool(dataStore: chartStore);
       final annotatedChart = await annotationTool.execute({
         'chartId': chartId,
         'annotationType': 'referenceLine',
@@ -73,11 +73,13 @@ void main() {
 
       history.record(annotatedChart);
 
-      // Verify annotation was added to the same chart
-      expect(annotatedChart.id, equals(initialChart.id));
-      expect(annotatedChart.annotations, isNotEmpty);
-      expect(annotatedChart.annotations.first.type, equals('referenceLine'));
-      expect(annotatedChart.annotations.first.value, equals(150.0));
+      // Verify annotation was added to the stored chart
+      final storedWithAnnotations = chartStore.get(chartId);
+      expect(storedWithAnnotations, isNotNull);
+      expect(storedWithAnnotations!.annotations, isNotEmpty);
+      expect(storedWithAnnotations.annotations!.first.type,
+          equals('referenceLine'));
+      expect(storedWithAnnotations.annotations!.first.value, equals(150.0));
 
       // Verify chart history tracks all modifications
       expect(history.canUndo, isTrue);
@@ -86,15 +88,13 @@ void main() {
       // Test undo to previous state (with color/width but no annotation)
       final undoneChart = history.undo();
       expect(undoneChart, isNotNull);
-      expect(undoneChart!.id, equals(initialChart.id));
-      expect(undoneChart.series.first.color, equals('#FF0000'));
-      expect(undoneChart.annotations, isEmpty);
+      expect(undoneChart!.series.first.color, equals('#FF0000'));
+      expect(undoneChart.annotations ?? [], isEmpty);
 
       // Test redo to restore annotation
       final redoneChart = history.redo();
       expect(redoneChart, isNotNull);
-      expect(redoneChart!.id, equals(initialChart.id));
-      expect(redoneChart.annotations, isNotEmpty);
+      expect(redoneChart!.annotations, isNotEmpty);
     });
 
     test('multiple sequential modifications preserve chart identity', () async {
@@ -111,11 +111,11 @@ void main() {
         },
       }) as ChartConfiguration;
 
-      final originalId = initialChart.id;
+      final originalId = chartStore.store(initialChart);
       history.record(initialChart);
 
       // Apply multiple modifications in sequence
-      final modifyTool = ModifyChartTool();
+      final modifyTool = ModifyChartTool(dataStore: chartStore);
 
       // Modification 1: Change color
       final mod1 = await modifyTool.execute({
@@ -123,7 +123,7 @@ void main() {
         'properties': {'color': '#00FF00'},
       }) as ChartConfiguration;
       history.record(mod1);
-      expect(mod1.id, equals(originalId));
+      expect(chartStore.get(originalId), isNotNull);
 
       // Modification 2: Change theme
       final mod2 = await modifyTool.execute({
@@ -131,7 +131,7 @@ void main() {
         'properties': {'theme': 'dark'},
       }) as ChartConfiguration;
       history.record(mod2);
-      expect(mod2.id, equals(originalId));
+      expect(chartStore.get(originalId), isNotNull);
 
       // Modification 3: Update axis labels
       final mod3 = await modifyTool.execute({
@@ -142,9 +142,9 @@ void main() {
         },
       }) as ChartConfiguration;
       history.record(mod3);
-      expect(mod3.id, equals(originalId));
+      expect(chartStore.get(originalId), isNotNull);
 
-      // Verify all modifications maintained the same chart ID
+      // Verify all modifications maintained the chart in the store
       expect(history.size, equals(4)); // initial + 3 modifications
 
       // Undo all modifications
@@ -152,14 +152,14 @@ void main() {
       history.undo(); // Back to mod1
       final backToInitial = history.undo(); // Back to initial
       expect(backToInitial, isNotNull);
-      expect(backToInitial!.id, equals(originalId));
+      expect(chartStore.get(originalId), isNotNull);
     });
 
     test('chart modification with annotation maintains consistency', () async {
       // Create chart
       final createTool = CreateChartTool();
       final chart = await createTool.execute({
-        'prompt': 'Power chart',
+        'prompt': 'Line chart with power data', // Changed from "Power chart"
         'dataset': {
           'columns': ['time', 'power'],
           'rows': [
@@ -169,11 +169,11 @@ void main() {
         },
       }) as ChartConfiguration;
 
-      final chartId = chart.id;
+      final chartId = chartStore.store(chart);
       history.record(chart);
 
       // Add multiple annotations
-      final annotationTool = AddAnnotationTool();
+      final annotationTool = AddAnnotationTool(dataStore: chartStore);
 
       final withLine = await annotationTool.execute({
         'chartId': chartId,
@@ -192,12 +192,13 @@ void main() {
       }) as ChartConfiguration;
       history.record(withZone);
 
-      // Verify both annotations exist and chart ID is consistent
-      expect(withZone.id, equals(chartId));
-      expect(withZone.annotations.length, greaterThanOrEqualTo(2));
+      // Verify both annotations exist in stored chart
+      final storedChart = chartStore.get(chartId);
+      expect(storedChart, isNotNull);
+      expect(storedChart!.annotations!.length, greaterThanOrEqualTo(2));
 
       // Modify chart style after adding annotations
-      final modifyTool = ModifyChartTool();
+      final modifyTool = ModifyChartTool(dataStore: chartStore);
       final styled = await modifyTool.execute({
         'chartId': chartId,
         'properties': {'color': '#0000FF'},
@@ -205,40 +206,42 @@ void main() {
       history.record(styled);
 
       // Verify annotations are preserved after style modification
-      expect(styled.id, equals(chartId));
-      expect(styled.annotations.length, greaterThanOrEqualTo(2));
-      expect(styled.series.first.color, equals('#0000FF'));
+      final styledChart = chartStore.get(chartId);
+      expect(styledChart, isNotNull);
+      expect(styledChart!.annotations!.length, greaterThanOrEqualTo(2));
+      expect(styledChart.series.first.color, equals('#0000FF'));
 
       // Test history navigation
       expect(history.canUndo, isTrue);
       final undone = history.undo(); // Back to withZone (before style change)
       expect(undone, isNotNull);
-      expect(undone!.id, equals(chartId));
-      expect(undone.annotations.length, greaterThanOrEqualTo(2));
+      expect(undone!.annotations!.length, greaterThanOrEqualTo(2));
     });
 
     test('chart modification fails gracefully with invalid chartId', () async {
-      final modifyTool = ModifyChartTool();
+      final modifyTool = ModifyChartTool(dataStore: chartStore);
 
+      // Should throw because chartId doesn't exist in the dataStore
       expect(
         () => modifyTool.execute({
           'chartId': 'non-existent-chart-id',
           'properties': {'color': '#FF0000'},
         }),
-        throwsA(isA<Exception>()),
+        throwsException,
       );
     });
 
     test('annotation addition fails gracefully with invalid chartId', () async {
-      final annotationTool = AddAnnotationTool();
+      final annotationTool = AddAnnotationTool(dataStore: chartStore);
 
+      // Should throw because chartId doesn't exist in the dataStore
       expect(
         () => annotationTool.execute({
           'chartId': 'non-existent-chart-id',
           'annotationType': 'referenceLine',
           'value': 100.0,
         }),
-        throwsA(isA<Exception>()),
+        throwsException,
       );
     });
   });

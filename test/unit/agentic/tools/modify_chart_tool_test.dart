@@ -1,15 +1,37 @@
-// @orchestra-task: 16
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/tools/modify_chart_tool.dart';
 import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
+import 'package:braven_charts/src/agentic/models/series_config.dart';
+import 'package:braven_charts/src/agentic/services/data_store.dart';
 
 void main() {
   group('ModifyChartTool', () {
+    late DataStore<ChartConfiguration> dataStore;
+    late String testChartId;
+
+    setUp(() {
+      dataStore = DataStore<ChartConfiguration>();
+      // Create a test chart with an ID and store it
+      testChartId = 'test-chart-id';
+      final testChart = ChartConfiguration(
+        id: testChartId,
+        type: ChartType.line,
+        series: [
+          SeriesConfig(
+            id: 'series-1',
+            name: 'Test Series',
+            data: [
+              {'x': 0, 'y': 100},
+              {'x': 1, 'y': 200},
+            ],
+          ),
+        ],
+      );
+      dataStore.store(testChart, id: testChartId);
+    });
+
     test('exposes name, description, and input schema', () {
       final LLMTool tool = ModifyChartTool();
 
@@ -22,10 +44,10 @@ void main() {
     });
 
     test('modifies visual properties of existing chart', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'properties': {
           'color': '#FF0000',
           'lineWidth': 3.0,
@@ -41,10 +63,10 @@ void main() {
     });
 
     test('updates axis properties without recreating chart', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'properties': {
           'xAxis': {
             'label': 'Time (seconds)',
@@ -61,17 +83,17 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.xAxis.label, equals('Time (seconds)'));
-      expect(config.xAxis.min, equals(0));
-      expect(config.xAxis.max, equals(3600));
+      expect(config.xAxis?.label, equals('Time (seconds)'));
+      expect(config.xAxis?.min, equals(0));
+      expect(config.xAxis?.max, equals(3600));
       expect(config.yAxes.first.label, equals('Power (W)'));
     });
 
     test('modifies legend and grid visibility', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'properties': {
           'legend': {'visible': false},
           'grid': {'visible': false},
@@ -80,15 +102,15 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.legend.visible, isFalse);
-      expect(config.grid.visible, isFalse);
+      expect((config.legend as Map)['visible'], isFalse);
+      expect((config.grid as Map)['visible'], isFalse);
     });
 
     test('applies theme changes to existing chart', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'properties': {
           'theme': 'dark',
         },
@@ -100,7 +122,7 @@ void main() {
     });
 
     test('validates required chartId parameter', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       expect(
         () => tool.execute({
@@ -111,11 +133,11 @@ void main() {
     });
 
     test('validates property names', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       expect(
         () => tool.execute({
-          'chartId': 'test-chart-123',
+          'chartId': testChartId,
           'properties': {
             'invalidProperty': 'value',
           },
@@ -125,10 +147,10 @@ void main() {
     });
 
     test('returns updated chart with same chartId', () async {
-      final ModifyChartTool tool = ModifyChartTool();
+      final ModifyChartTool tool = ModifyChartTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'properties': {
           'color': '#00FF00',
         },
@@ -136,7 +158,7 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.id, equals('test-chart-123'));
+      expect(config.id, equals(testChartId));
     });
   });
 }

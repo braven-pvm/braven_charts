@@ -4,10 +4,10 @@ class DataStore<T> {
   final Map<String, T> _data = <String, T>{};
   final Uuid _uuid = const Uuid();
 
-  String store(T item) {
-    final id = _uuid.v4();
-    _data[id] = item;
-    return id;
+  String store(T item, {String? id}) {
+    final itemId = id ?? _uuid.v4();
+    _data[itemId] = item;
+    return itemId;
   }
 
   T? get(String id) => _data[id];

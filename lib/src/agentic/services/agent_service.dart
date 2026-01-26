@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/chart_configuration.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../models/tool_call.dart';
 import '../models/tool_result.dart';
 import '../providers/llm_provider.dart';
 import '../tools/tool_registry.dart';
+import 'chart_history.dart';
 
 enum AgentState {
   idle,
@@ -21,12 +23,16 @@ class AgentService {
         conversation = ValueNotifier<Conversation>(
           Conversation(id: const Uuid().v4()),
         ),
-        state = ValueNotifier<AgentState>(AgentState.idle);
+        state = ValueNotifier<AgentState>(AgentState.idle),
+        currentChart = ValueNotifier<ChartConfiguration?>(null),
+        history = ChartHistory();
 
   final LLMProvider _provider;
   final ToolRegistry _toolRegistry;
   final ValueNotifier<Conversation> conversation;
   final ValueNotifier<AgentState> state;
+  final ValueNotifier<ChartConfiguration?> currentChart;
+  final ChartHistory history;
   final Uuid _uuid = const Uuid();
 
   Future<void> processUserMessage(String content) async {
@@ -145,4 +151,32 @@ class AgentService {
           isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
+
+  /// Records the current chart state in history
+  void recordChartState(ChartConfiguration chart) {
+    history.record(chart);
+    currentChart.value = chart;
+  }
+
+  /// Undoes the last chart modification
+  void undoChart() {
+    final previousChart = history.undo();
+    if (previousChart != null) {
+      currentChart.value = previousChart;
+    }
+  }
+
+  /// Redoes the last undone chart modification
+  void redoChart() {
+    final nextChart = history.redo();
+    if (nextChart != null) {
+      currentChart.value = nextChart;
+    }
+  }
+
+  /// Whether undo is possible
+  bool get canUndoChart => history.canUndo;
+
+  /// Whether redo is possible
+  bool get canRedoChart => history.canRedo;
 }

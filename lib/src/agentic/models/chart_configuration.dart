@@ -70,6 +70,9 @@ class ChartStyleConfig {
 ///
 /// Must have at least one series and at most 4 Y-axes.
 class ChartConfiguration {
+  /// Unique identifier for the chart
+  final String? id;
+
   /// Type of chart (line, area, bar, scatter)
   final ChartType type;
 
@@ -100,8 +103,18 @@ class ChartConfiguration {
   /// Layout configuration
   final dynamic layout;
 
+  /// Legend configuration
+  final dynamic legend;
+
+  /// Grid configuration
+  final dynamic grid;
+
+  /// Theme name
+  final String? theme;
+
   /// Creates a new ChartConfiguration instance
   ChartConfiguration({
+    this.id,
     required this.type,
     this.title,
     this.subtitle,
@@ -112,6 +125,9 @@ class ChartConfiguration {
     this.interactions,
     this.annotations,
     this.layout,
+    this.legend,
+    this.grid,
+    this.theme,
   })  : series = series ?? [],
         yAxes = yAxes ?? [],
         assert(
@@ -126,6 +142,7 @@ class ChartConfiguration {
   /// Creates a ChartConfiguration from JSON
   factory ChartConfiguration.fromJson(Map<String, dynamic> json) {
     return ChartConfiguration(
+      id: json['id'] as String?,
       type: ChartType.values.firstWhere((e) => e.name == json['type']),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
@@ -144,12 +161,16 @@ class ChartConfiguration {
       interactions: json['interactions'],
       annotations: json['annotations'] as List<dynamic>?,
       layout: json['layout'],
+      legend: json['legend'],
+      grid: json['grid'],
+      theme: json['theme'] as String?,
     );
   }
 
   /// Converts ChartConfiguration to JSON
   Map<String, dynamic> toJson() {
     return {
+      if (id != null) 'id': id,
       'type': type.name,
       if (title != null) 'title': title,
       if (subtitle != null) 'subtitle': subtitle,
@@ -160,11 +181,15 @@ class ChartConfiguration {
       if (interactions != null) 'interactions': interactions,
       if (annotations != null) 'annotations': annotations,
       if (layout != null) 'layout': layout,
+      if (legend != null) 'legend': legend,
+      if (grid != null) 'grid': grid,
+      if (theme != null) 'theme': theme,
     };
   }
 
   /// Creates a copy with modified values
   ChartConfiguration copyWith({
+    String? id,
     ChartType? type,
     String? title,
     String? subtitle,
@@ -175,8 +200,12 @@ class ChartConfiguration {
     dynamic interactions,
     List<dynamic>? annotations,
     dynamic layout,
+    dynamic legend,
+    dynamic grid,
+    String? theme,
   }) {
     return ChartConfiguration(
+      id: id ?? this.id,
       type: type ?? this.type,
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
@@ -187,6 +216,9 @@ class ChartConfiguration {
       interactions: interactions ?? this.interactions,
       annotations: annotations ?? this.annotations,
       layout: layout ?? this.layout,
+      legend: legend ?? this.legend,
+      grid: grid ?? this.grid,
+      theme: theme ?? this.theme,
     );
   }
 

@@ -43,6 +43,12 @@ class SeriesConfig {
   final double? markerRadius;
   final double? dataPointMarkerRadius;
 
+  /// Convenience getter for lineWidth (alias for strokeWidth)
+  double get lineWidth => strokeWidth;
+
+  /// Convenience getter for dashPattern (alias for strokeDash)
+  List<double>? get dashPattern => strokeDash;
+
   /// Creates a new SeriesConfig instance
   SeriesConfig({
     required this.id,

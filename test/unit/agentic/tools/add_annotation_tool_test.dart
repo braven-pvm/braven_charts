@@ -1,15 +1,37 @@
-// @orchestra-task: 16
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/tools/add_annotation_tool.dart';
 import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
+import 'package:braven_charts/src/agentic/models/series_config.dart';
+import 'package:braven_charts/src/agentic/services/data_store.dart';
 
 void main() {
   group('AddAnnotationTool', () {
+    late DataStore<ChartConfiguration> dataStore;
+    late String testChartId;
+
+    setUp(() {
+      dataStore = DataStore<ChartConfiguration>();
+      // Create a test chart with an ID and store it
+      testChartId = 'test-chart-id';
+      final testChart = ChartConfiguration(
+        id: testChartId,
+        type: ChartType.line,
+        series: [
+          SeriesConfig(
+            id: 'series-1',
+            name: 'Test Series',
+            data: [
+              {'x': 0, 'y': 100},
+              {'x': 1, 'y': 200},
+            ],
+          ),
+        ],
+      );
+      dataStore.store(testChart, id: testChartId);
+    });
+
     test('exposes name, description, and input schema', () {
       final LLMTool tool = AddAnnotationTool();
 
@@ -23,10 +45,10 @@ void main() {
     });
 
     test('adds horizontal reference line with label', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'referenceLine',
         'orientation': 'horizontal',
         'value': 250.0,
@@ -37,17 +59,17 @@ void main() {
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
       expect(config.annotations, isNotEmpty);
-      expect(config.annotations.first.type, equals('referenceLine'));
-      expect(config.annotations.first.orientation, equals('horizontal'));
-      expect(config.annotations.first.value, equals(250.0));
-      expect(config.annotations.first.label, equals('FTP Threshold'));
+      expect(config.annotations!.first.type, equals('referenceLine'));
+      expect(config.annotations!.first.orientation, equals('horizontal'));
+      expect(config.annotations!.first.value, equals(250.0));
+      expect(config.annotations!.first.label, equals('FTP Threshold'));
     });
 
     test('adds vertical reference line', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'referenceLine',
         'orientation': 'vertical',
         'value': 1800.0,
@@ -56,15 +78,15 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.annotations.first.orientation, equals('vertical'));
-      expect(config.annotations.first.value, equals(1800.0));
+      expect(config.annotations!.first.orientation, equals('vertical'));
+      expect(config.annotations!.first.value, equals(1800.0));
     });
 
     test('adds reference zone with transparency', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'zone',
         'orientation': 'horizontal',
         'minValue': 200.0,
@@ -76,17 +98,16 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.annotations.first.type, equals('zone'));
-      expect(config.annotations.first.minValue, equals(200.0));
-      expect(config.annotations.first.maxValue, equals(250.0));
-      expect(config.annotations.first.opacity, equals(0.3));
+      expect(config.annotations!.first.type, equals('zone'));
+      expect(config.annotations!.first.minValue, equals(200.0));
+      expect(config.annotations!.first.maxValue, equals(250.0));
+      expect(config.annotations!.first.opacity, equals(0.3));
     });
-
     test('adds text label at specific coordinates', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'textLabel',
         'x': 1200.0,
         'y': 280.0,
@@ -96,17 +117,17 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.annotations.first.type, equals('textLabel'));
-      expect(config.annotations.first.x, equals(1200.0));
-      expect(config.annotations.first.y, equals(280.0));
-      expect(config.annotations.first.text, equals('Peak Power'));
+      expect(config.annotations!.first.type, equals('textLabel'));
+      expect(config.annotations!.first.x, equals(1200.0));
+      expect(config.annotations!.first.y, equals(280.0));
+      expect(config.annotations!.first.text, equals('Peak Power'));
     });
 
     test('adds sport science power zone overlays', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'powerZones',
         'ftp': 250.0,
         'zones': [
@@ -120,13 +141,13 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.annotations.length, equals(5));
-      expect(config.annotations.first.type, equals('zone'));
-      expect(config.annotations.first.label, contains('Active Recovery'));
+      expect(config.annotations!.length, equals(5));
+      expect(config.annotations!.first.type, equals('zone'));
+      expect(config.annotations!.first.label, contains('Active Recovery'));
     });
 
     test('validates required chartId parameter', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       expect(
         () => tool.execute({
@@ -138,11 +159,11 @@ void main() {
     });
 
     test('validates required annotationType parameter', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       expect(
         () => tool.execute({
-          'chartId': 'test-chart-123',
+          'chartId': testChartId,
           'value': 250.0,
         }),
         throwsA(isA<ArgumentError>()),
@@ -150,11 +171,11 @@ void main() {
     });
 
     test('validates annotation type is supported', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       expect(
         () => tool.execute({
-          'chartId': 'test-chart-123',
+          'chartId': testChartId,
           'annotationType': 'unsupportedType',
         }),
         throwsA(isA<ArgumentError>()),
@@ -162,10 +183,10 @@ void main() {
     });
 
     test('returns updated chart with annotation added', () async {
-      final AddAnnotationTool tool = AddAnnotationTool();
+      final AddAnnotationTool tool = AddAnnotationTool(dataStore: dataStore);
 
       final result = await tool.execute({
-        'chartId': 'test-chart-123',
+        'chartId': testChartId,
         'annotationType': 'referenceLine',
         'orientation': 'horizontal',
         'value': 250.0,
@@ -173,7 +194,7 @@ void main() {
 
       expect(result, isA<ChartConfiguration>());
       final config = result as ChartConfiguration;
-      expect(config.id, equals('test-chart-123'));
+      expect(config.id, equals(testChartId));
       expect(config.annotations, isNotEmpty);
     });
   });
