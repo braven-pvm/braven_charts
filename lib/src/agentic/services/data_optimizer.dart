@@ -14,24 +14,33 @@ class DataOptimizer {
       return <DataPoint>[];
     }
 
-    if (data.length <= 100000 || targetCount >= data.length) {
-      return List<DataPoint>.from(data);
+    final indices = downsampleIndices(data.length, targetCount);
+    return indices.map((index) => data[index]).toList();
+  }
+
+  List<int> downsampleIndices(int length, int targetCount) {
+    if (length <= 0) {
+      return <int>[];
+    }
+
+    if (targetCount >= length) {
+      return List<int>.generate(length, (index) => index);
     }
 
     if (targetCount < 2) {
-      return <DataPoint>[data.first];
+      return <int>[0];
     }
 
-    final result = <DataPoint>[data.first];
-    final bucketSize = (data.length - 2) / (targetCount - 2);
+    final result = <int>[0];
+    final bucketSize = (length - 2) / (targetCount - 2);
 
     for (var i = 0; i < targetCount - 2; i++) {
       final index = (1 + (i * bucketSize)).round();
-      final clampedIndex = index.clamp(1, data.length - 2);
-      result.add(data[clampedIndex]);
+      final clampedIndex = index.clamp(1, length - 2);
+      result.add(clampedIndex);
     }
 
-    result.add(data.last);
+    result.add(length - 1);
     return result;
   }
 }

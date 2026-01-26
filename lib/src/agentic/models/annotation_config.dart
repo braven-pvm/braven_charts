@@ -32,11 +32,15 @@ class AnnotationConfig {
   /// Maximum value for zones
   final double? maxValue;
 
-  /// X coordinate for text labels and markers
+  /// X coordinate for text labels and markers (data coordinates)
   final double? x;
 
-  /// Y coordinate for text labels and markers
+  /// Y coordinate for text labels and markers (data coordinates)
   final double? y;
+
+  /// Semantic position for text labels (topLeft, topCenter, topRight,
+  /// centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight)
+  final String? position;
 
   /// Text content for text labels
   final String? text;
@@ -68,6 +72,7 @@ class AnnotationConfig {
     this.maxValue,
     this.x,
     this.y,
+    this.position,
     this.text,
     this.label,
     this.color,
@@ -87,15 +92,14 @@ class AnnotationConfig {
       maxValue: json['maxValue'] as double?,
       x: json['x'] as double?,
       y: json['y'] as double?,
+      position: json['position'] as String?,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
       opacity: json['opacity'] as double?,
       fontSize: json['fontSize'] as double?,
       lineWidth: json['lineWidth'] as double?,
-      dashPattern: json['dashPattern'] != null
-          ? (json['dashPattern'] as List).cast<double>()
-          : null,
+      dashPattern: json['dashPattern'] != null ? (json['dashPattern'] as List).cast<double>() : null,
     );
   }
 
@@ -109,6 +113,7 @@ class AnnotationConfig {
       if (maxValue != null) 'maxValue': maxValue,
       if (x != null) 'x': x,
       if (y != null) 'y': y,
+      if (position != null) 'position': position,
       if (text != null) 'text': text,
       if (label != null) 'label': label,
       if (color != null) 'color': color,
@@ -128,6 +133,7 @@ class AnnotationConfig {
     double? maxValue,
     double? x,
     double? y,
+    String? position,
     String? text,
     String? label,
     String? color,
@@ -144,6 +150,7 @@ class AnnotationConfig {
       maxValue: maxValue ?? this.maxValue,
       x: x ?? this.x,
       y: y ?? this.y,
+      position: position ?? this.position,
       text: text ?? this.text,
       label: label ?? this.label,
       color: color ?? this.color,
@@ -165,6 +172,7 @@ class AnnotationConfig {
         other.maxValue == maxValue &&
         other.x == x &&
         other.y == y &&
+        other.position == position &&
         other.text == text &&
         other.label == label &&
         other.color == color &&
@@ -183,6 +191,7 @@ class AnnotationConfig {
       maxValue,
       x,
       y,
+      position,
       text,
       label,
       color,

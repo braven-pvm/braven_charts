@@ -83,4 +83,5 @@ export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
 // Theming
+export 'src/theming/components/grid_style.dart';
 export 'src/theming/components/scrollbar_config.dart';

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,8 +18,7 @@ enum AgentState {
 }
 
 class AgentService {
-  AgentService(
-      {required LLMProvider provider, required ToolRegistry toolRegistry})
+  AgentService({required LLMProvider provider, required ToolRegistry toolRegistry})
       : _provider = provider,
         _toolRegistry = toolRegistry,
         conversation = ValueNotifier<Conversation>(
@@ -65,8 +66,7 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage =
-                streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -97,25 +97,30 @@ class AgentService {
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
+          debugPrint('=== AGENT TOOL EXECUTION START ===');
           debugPrint('[AgentService] Executing tool: ${call.toolName}');
-          final result =
-              await _toolRegistry.execute(call.toolName, call.arguments);
+          // DEBUG: Print the input arguments the agent provided
+          _debugPrintJson('[AgentService] Tool input arguments', call.arguments);
+
+          final result = await _toolRegistry.execute(call.toolName, call.arguments);
           debugPrint('[AgentService] Tool result type: ${result.runtimeType}');
 
           String? createdChartId;
 
           // If the tool returns a ChartConfiguration, add it to the conversation
           if (result is ChartConfiguration) {
-            debugPrint(
-                '[AgentService] Adding ChartConfiguration to conversation');
+            debugPrint('[AgentService] Adding ChartConfiguration to conversation');
             createdChartId = result.id ?? _uuid.v4();
             debugPrint('[AgentService] Chart ID: $createdChartId');
+            // DEBUG: Print the chart configuration as JSON
+            _debugPrintJson('[AgentService] ChartConfiguration created', result.toJson());
             final current = conversation.value;
             final updatedCharts = Map<String, dynamic>.from(current.charts);
             updatedCharts[createdChartId] = result.toJson();
             final newConversation = current.copyWith(charts: updatedCharts);
             conversation.value = newConversation;
           }
+          debugPrint('=== AGENT TOOL EXECUTION END ===');
 
           if (result is ToolResult) {
             toolResults.add(result);
@@ -164,10 +169,8 @@ class AgentService {
     final isUser = message.role == MessageRole.user;
     conversation.value = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens:
-          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens:
-          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
 
@@ -198,4 +201,20 @@ class AgentService {
 
   /// Whether redo is possible
   bool get canRedoChart => history.canRedo;
+
+  /// Debug helper: print any JSON object with formatting
+  void _debugPrintJson(String label, Map<String, dynamic> json) {
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(json);
+      debugPrint('$label:');
+      // Print line by line to avoid truncation
+      for (final line in prettyJson.split('\n')) {
+        debugPrint(line);
+      }
+    } catch (e) {
+      debugPrint('$label: [Failed to serialize: $e]');
+      debugPrint('Raw: $json');
+    }
+  }
 }

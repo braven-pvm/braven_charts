@@ -1,7 +1,20 @@
+import '../models/annotation_config.dart';
 import '../models/axis_config.dart';
 import '../models/chart_configuration.dart';
 import '../models/series_config.dart';
 import 'llm_tool.dart';
+
+/// Default colors for chart series when none are specified.
+const List<String> _defaultSeriesColors = [
+  '#2196F3', // Blue
+  '#F44336', // Red
+  '#4CAF50', // Green
+  '#FF9800', // Orange
+  '#9C27B0', // Purple
+  '#00BCD4', // Cyan
+  '#795548', // Brown
+  '#607D8B', // Blue Grey
+];
 
 /// Tool that converts natural language prompts into chart configurations.
 ///
@@ -32,20 +45,22 @@ Always include the data array with x,y values when calling this tool.
           },
           'series': {
             'type': 'array',
-            'description':
-                'Data series to plot. REQUIRED - include your data here.',
+            'description': 'Data series to plot. REQUIRED - include your data here.',
             'items': {
               'type': 'object',
               'properties': {
                 'id': {
                   'type': 'string',
-                  'description':
-                      'Unique series identifier (e.g., "sales", "revenue").',
+                  'description': 'Unique series identifier (e.g., "sales", "revenue").',
                 },
                 'name': {
                   'type': 'string',
+                  'description': 'Display name for legend (e.g., "Quarterly Sales").',
+                },
+                'color': {
+                  'type': 'string',
                   'description':
-                      'Display name for legend (e.g., "Quarterly Sales").',
+                      'Hex color for this series (e.g., "#FF0000" for red, "#2196F3" for blue). If not specified, a default color will be assigned.',
                 },
                 'data': {
                   'type': 'array',
@@ -61,6 +76,67 @@ Always include the data array with x,y values when calling this tool.
                 },
               },
               'required': ['id', 'data'],
+            },
+          },
+          'annotations': {
+            'type': 'array',
+            'description': 'Annotations to overlay on the chart (reference lines, zones, text labels).',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'type': {
+                  'type': 'string',
+                  'enum': ['referenceLine', 'zone', 'textLabel', 'marker'],
+                  'description': 'Type of annotation.',
+                },
+                'orientation': {
+                  'type': 'string',
+                  'enum': ['horizontal', 'vertical'],
+                  'description': 'Orientation for reference lines and zones. horizontal draws at a Y value, vertical draws at an X value.',
+                },
+                'value': {
+                  'type': 'number',
+                  'description': 'Y-axis value for horizontal lines, X-axis value for vertical lines.',
+                },
+                'minValue': {
+                  'type': 'number',
+                  'description': 'Minimum value for zones.',
+                },
+                'maxValue': {
+                  'type': 'number',
+                  'description': 'Maximum value for zones.',
+                },
+                'x': {
+                  'type': 'number',
+                  'description': 'X data coordinate for markers (not used for textLabel).',
+                },
+                'y': {
+                  'type': 'number',
+                  'description': 'Y data coordinate for markers (not used for textLabel).',
+                },
+                'position': {
+                  'type': 'string',
+                  'enum': ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
+                  'description': 'Semantic position for text labels. Defaults to topLeft if not specified.',
+                },
+                'text': {
+                  'type': 'string',
+                  'description': 'Text content for text labels.',
+                },
+                'label': {
+                  'type': 'string',
+                  'description': 'Label to display on the annotation.',
+                },
+                'color': {
+                  'type': 'string',
+                  'description': 'Hex color for the annotation (e.g., "#FF0000").',
+                },
+                'opacity': {
+                  'type': 'number',
+                  'description': 'Opacity for zones (0.0 to 1.0).',
+                },
+              },
+              'required': ['type'],
             },
           },
         },
@@ -79,21 +155,47 @@ Always include the data array with x,y values when calling this tool.
     final series = _buildSeries(args);
     final xAxis = _buildXAxis(args);
     final yAxes = _buildYAxes(args, series);
+    final annotations = _buildAnnotations(args);
 
     return ChartConfiguration(
       type: chartType,
       series: series,
       xAxis: xAxis,
       yAxes: yAxes,
+      annotations: annotations.isNotEmpty ? annotations : null,
     );
+  }
+
+  /// Builds annotations from the args
+  List<AnnotationConfig> _buildAnnotations(Map<String, dynamic> args) {
+    final annotationsArg = args['annotations'];
+    if (annotationsArg is! List || annotationsArg.isEmpty) {
+      return [];
+    }
+
+    return annotationsArg.map((entry) {
+      final map = Map<String, dynamic>.from(entry as Map);
+      return AnnotationConfig(
+        type: map['type'] as String? ?? 'referenceLine',
+        orientation: map['orientation'] as String?,
+        value: (map['value'] as num?)?.toDouble(),
+        minValue: (map['minValue'] as num?)?.toDouble(),
+        maxValue: (map['maxValue'] as num?)?.toDouble(),
+        x: (map['x'] as num?)?.toDouble(),
+        y: (map['y'] as num?)?.toDouble(),
+        position: map['position'] as String?,
+        text: map['text'] as String?,
+        label: map['label'] as String?,
+        color: map['color'] as String?,
+        opacity: (map['opacity'] as num?)?.toDouble(),
+      );
+    }).toList();
   }
 
   ChartType _resolveChartType(String? explicitType, String prompt) {
     final explicit = explicitType?.toLowerCase().trim();
     if (explicit != null && explicit.isNotEmpty) {
-      final matched = ChartType.values
-          .where((type) => type.name == explicit)
-          .toList(growable: false);
+      final matched = ChartType.values.where((type) => type.name == explicit).toList(growable: false);
       if (matched.isEmpty) {
         throw Exception('Unsupported chart type: $explicitType');
       }
@@ -120,11 +222,16 @@ Always include the data array with x,y values when calling this tool.
   List<SeriesConfig> _buildSeries(Map<String, dynamic> args) {
     final seriesArg = args['series'];
     if (seriesArg is List && seriesArg.isNotEmpty) {
-      return seriesArg
-          .map((entry) => SeriesConfig.fromJson(
-                Map<String, dynamic>.from(entry as Map),
-              ))
-          .toList(growable: false);
+      final seriesList = <SeriesConfig>[];
+      for (var i = 0; i < seriesArg.length; i++) {
+        final entry = Map<String, dynamic>.from(seriesArg[i] as Map);
+        // Assign default color if not provided
+        if (entry['color'] == null) {
+          entry['color'] = _defaultSeriesColors[i % _defaultSeriesColors.length];
+        }
+        seriesList.add(SeriesConfig.fromJson(entry));
+      }
+      return seriesList;
     }
 
     final dataset = args['dataset'];
@@ -146,6 +253,7 @@ Always include the data array with x,y values when calling this tool.
           id: 'series_1',
           name: 'Series 1',
           data: _buildSeriesData(rows, xColumn, null),
+          color: _defaultSeriesColors[0],
         ),
       );
       return series;
@@ -158,6 +266,7 @@ Always include the data array with x,y values when calling this tool.
           id: 'series_${i + 1}',
           name: yColumn,
           data: _buildSeriesData(rows, xColumn, yColumn),
+          color: _defaultSeriesColors[i % _defaultSeriesColors.length],
         ),
       );
     }
@@ -203,19 +312,14 @@ Always include the data array with x,y values when calling this tool.
 
   List<String> _extractColumns(dynamic dataset) {
     if (dataset is Map && dataset['columns'] is List) {
-      return (dataset['columns'] as List)
-          .map((entry) => entry.toString())
-          .toList(growable: false);
+      return (dataset['columns'] as List).map((entry) => entry.toString()).toList(growable: false);
     }
     return const [];
   }
 
   List<Map<String, dynamic>> _extractRows(dynamic dataset) {
     if (dataset is Map && dataset['rows'] is List) {
-      return (dataset['rows'] as List)
-          .whereType<Map>()
-          .map((entry) => Map<String, dynamic>.from(entry))
-          .toList(growable: false);
+      return (dataset['rows'] as List).whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList(growable: false);
     }
     return const [];
   }
@@ -323,6 +427,7 @@ Always include the data array with x,y values when calling this tool.
         id: 'sample_series',
         name: seriesName,
         data: sampleData,
+        color: _defaultSeriesColors[0],
       ),
     ];
   }

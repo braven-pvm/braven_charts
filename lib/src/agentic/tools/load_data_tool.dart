@@ -3,10 +3,13 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:braven_data/braven_data.dart' as bd;
 import 'package:uuid/uuid.dart';
 
+import '../services/context_loader.dart';
+import '../services/data_optimizer.dart';
 import '../services/url_fetcher.dart';
 import 'data_store.dart';
 
@@ -15,11 +18,14 @@ class LoadDataTool {
   final DataStore _store = DataStore();
   final Uuid _uuid = const Uuid();
   final UrlFetcherService _urlFetcher = UrlFetcherService();
+  final ContextLoader _contextLoader = ContextLoader();
+  final DataOptimizer _dataOptimizer = DataOptimizer();
+
+  static const int _maxRowCount = 100000;
 
   String get name => 'load_data';
 
-  String get description =>
-      'Load data from a file attachment, URL, or inline content';
+  String get description => 'Load data from a file attachment, URL, or inline content';
 
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
@@ -31,11 +37,12 @@ class LoadDataTool {
             'properties': {
               'type': {
                 'type': 'string',
-                'enum': ['file', 'url', 'inline']
+                'enum': ['file', 'url', 'inline', 'context']
               },
               'file_id': {'type': 'string'},
               'url': {'type': 'string'},
               'content': {'type': 'string'},
+              'context_file': {'type': 'string'},
               'format': {
                 'type': 'string',
                 'enum': ['csv', 'fit', 'json', 'auto']
@@ -53,6 +60,7 @@ class LoadDataTool {
           'column_count': {'type': 'integer'},
           'columns': {'type': 'array'},
           'time_range': {'type': 'object', 'nullable': true},
+          'context': {'type': 'object', 'nullable': true},
         }
       };
 
@@ -89,13 +97,18 @@ class LoadDataTool {
         }
         return await _loadFromInline(source);
 
+      case 'context':
+        if (!source.containsKey('context_file')) {
+          throw ArgumentError('Missing context_file for context source');
+        }
+        return await _loadFromContext(source);
+
       default:
         throw ArgumentError('Invalid source type: $sourceType');
     }
   }
 
-  Future<Map<String, dynamic>> _loadFromFile(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromFile(Map<String, dynamic> source) async {
     final fileId = source['file_id'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -112,8 +125,7 @@ class LoadDataTool {
             fileId,
             bd.FitMessageType.records,
           );
-          frame =
-              _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
+          frame = _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
           // Extract timezone from FIT file metadata (FR-026)
           // For now, default to UTC if not available in metadata
           timezone = 'UTC';
@@ -123,6 +135,8 @@ class LoadDataTool {
       } else {
         throw Exception('FIT file not found: $fileId');
       }
+
+      frame = _optimizeFrame(frame);
 
       _store.store(dataId, frame);
 
@@ -149,6 +163,8 @@ class LoadDataTool {
       } else {
         throw Exception('CSV file not found: $fileId');
       }
+
+      frame = _optimizeFrame(frame);
 
       _store.store(dataId, frame);
 
@@ -181,6 +197,8 @@ class LoadDataTool {
       throw UnsupportedError('Unsupported format: $resolvedFormat');
     }
 
+    frame = _optimizeFrame(frame);
+
     _store.store(dataId, frame);
 
     return {
@@ -193,8 +211,7 @@ class LoadDataTool {
     };
   }
 
-  Future<Map<String, dynamic>> _loadFromInline(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromInline(Map<String, dynamic> source) async {
     final content = source['content'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -205,7 +222,7 @@ class LoadDataTool {
     final dataId = _uuid.v4();
 
     if (format == 'json') {
-      final frame = _parseJsonContent(content);
+      final frame = _optimizeFrame(_parseJsonContent(content));
       _store.store(dataId, frame);
 
       return {
@@ -218,7 +235,7 @@ class LoadDataTool {
       };
     } else {
       // Parse CSV content
-      final frame = _parseCsvContent(content);
+      final frame = _optimizeFrame(_parseCsvContent(content));
       _store.store(dataId, frame);
 
       return {
@@ -230,6 +247,113 @@ class LoadDataTool {
         'time_range': frame.timeRange?.toJson(),
       };
     }
+  }
+
+  Future<Map<String, dynamic>> _loadFromContext(Map<String, dynamic> source) async {
+    final contextFile = source['context_file'] as String;
+    final config = await _contextLoader.loadContext(contextFile);
+
+    if (config == null) {
+      throw Exception('Context file not found: $contextFile');
+    }
+
+    return {
+      'success': true,
+      'context': _contextToJson(config),
+    };
+  }
+
+  Map<String, dynamic> _contextToJson(ContextConfig config) {
+    return {
+      'athlete_name': config.athleteName,
+      'ftp': config.ftp,
+      'lthr': config.lthr,
+      'preferred_colors': _colorMapToJson(config.preferredColors),
+    };
+  }
+
+  Map<String, int>? _colorMapToJson(Map<String, Color>? colors) {
+    if (colors == null) {
+      return null;
+    }
+
+    final result = <String, int>{};
+    colors.forEach((key, value) {
+      result[key] = value.value;
+    });
+
+    return result.isEmpty ? null : result;
+  }
+
+  DataFrame _optimizeFrame(DataFrame frame) {
+    if (frame.rowCount <= _maxRowCount) {
+      return frame;
+    }
+
+    final indices = _dataOptimizer.downsampleIndices(
+      frame.rowCount,
+      _maxRowCount,
+    );
+
+    if (indices.length == frame.rowCount) {
+      return frame;
+    }
+
+    final optimizedColumns = <DataColumn>[];
+
+    for (final column in frame.columns) {
+      final data = <dynamic>[];
+      for (final index in indices) {
+        if (index >= 0 && index < column.data.length) {
+          data.add(column.data[index]);
+        }
+      }
+
+      final stats = _calculateStats(data, column.type);
+      final samples = data.take(3).toList();
+
+      optimizedColumns.add(DataColumn(
+        name: column.name,
+        type: column.type,
+        nullable: data.contains(null),
+        data: data,
+        stats: stats,
+        sampleValues: samples,
+      ));
+    }
+
+    final timeRange = _recalculateTimeRange(optimizedColumns);
+
+    return DataFrame(
+      fileName: frame.fileName,
+      fileType: frame.fileType,
+      columns: optimizedColumns,
+      rowCount: indices.length,
+      timeRange: timeRange ?? frame.timeRange,
+    );
+  }
+
+  TimeRange? _recalculateTimeRange(List<DataColumn> columns) {
+    for (final column in columns) {
+      if (column.type != 'datetime') {
+        continue;
+      }
+
+      final dateTimes = column.data.whereType<DateTime>().toList();
+      if (dateTimes.isEmpty) {
+        continue;
+      }
+
+      final firstDate = dateTimes.first;
+      final lastDate = dateTimes.last;
+      return TimeRange(
+        start: firstDate,
+        end: lastDate,
+        durationSeconds: lastDate.difference(firstDate).inSeconds,
+      );
+    }
+
+    return null;
   }
 
   DataFrame _parseCsvContent(String content) {
@@ -561,8 +685,7 @@ class LoadDataTool {
   }
 
   /// Convert braven_data DataFrame to internal DataFrame format
-  DataFrame _convertBravenDataFrame(bd.DataFrame df,
-      {String? fileName, String? fileType}) {
+  DataFrame _convertBravenDataFrame(bd.DataFrame df, {String? fileName, String? fileType}) {
     final columns = <DataColumn>[];
     TimeRange? timeRange;
     DateTime? firstDate;
@@ -585,14 +708,10 @@ class LoadDataTool {
         lastDate = columnData.last as DateTime;
       } else if (columnData.first is String) {
         // Check if this is a timestamp string (common in FIT files)
-        if (columnName.toLowerCase().contains('time') ||
-            columnName.toLowerCase().contains('timestamp') ||
-            columnName.toLowerCase() == 'time') {
+        if (columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp') || columnName.toLowerCase() == 'time') {
           try {
-            final DateTime parsedFirst =
-                DateTime.parse(columnData.first as String);
-            final DateTime parsedLast =
-                DateTime.parse(columnData.last as String);
+            final DateTime parsedFirst = DateTime.parse(columnData.first as String);
+            final DateTime parsedLast = DateTime.parse(columnData.last as String);
             if (firstDate == null) {
               firstDate = parsedFirst;
               lastDate = parsedLast;
@@ -605,19 +724,13 @@ class LoadDataTool {
         type = 'number';
 
         // Check if this is a timestamp column with Unix epoch values
-        if ((columnName.toLowerCase().contains('time') ||
-                columnName.toLowerCase().contains('timestamp')) &&
-            firstDate == null) {
+        if ((columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp')) && firstDate == null) {
           try {
             final num firstValue = columnData.first as num;
             final num lastValue = columnData.last as num;
             // Try interpreting as Unix timestamp (seconds since epoch)
-            firstDate = DateTime.fromMillisecondsSinceEpoch(
-                (firstValue * 1000).toInt(),
-                isUtc: true);
-            lastDate = DateTime.fromMillisecondsSinceEpoch(
-                (lastValue * 1000).toInt(),
-                isUtc: true);
+            firstDate = DateTime.fromMillisecondsSinceEpoch((firstValue * 1000).toInt(), isUtc: true);
+            lastDate = DateTime.fromMillisecondsSinceEpoch((lastValue * 1000).toInt(), isUtc: true);
           } catch (_) {
             // Not a valid timestamp
           }
@@ -648,9 +761,7 @@ class LoadDataTool {
       fileName: fileName ?? 'data',
       fileType: fileType ?? 'unknown',
       columns: columns,
-      rowCount: df.columnNames.isNotEmpty
-          ? (df.columns[df.columnNames.first]?.length ?? 0)
-          : 0,
+      rowCount: df.columnNames.isNotEmpty ? (df.columns[df.columnNames.first]?.length ?? 0) : 0,
       timeRange: timeRange,
     );
   }

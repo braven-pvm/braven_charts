@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/chart_configuration.dart';
 import '../services/agent_service.dart';
+import '../services/chart_renderer.dart';
 import 'config_panel.dart';
 
 /// Card container for chart widgets with an action bar.
@@ -31,6 +32,23 @@ class ChartCard extends StatefulWidget {
 
 class _ChartCardState extends State<ChartCard> {
   bool _isPanelVisible = false;
+  late ChartConfiguration _currentConfig;
+  final ChartRenderer _chartRenderer = const ChartRenderer();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentConfig = widget.chartConfiguration;
+  }
+
+  @override
+  void didUpdateWidget(ChartCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update local config if parent provides a new one
+    if (oldWidget.chartConfiguration != widget.chartConfiguration) {
+      _currentConfig = widget.chartConfiguration;
+    }
+  }
 
   void _togglePanel() {
     setState(() {
@@ -39,12 +57,18 @@ class _ChartCardState extends State<ChartCard> {
   }
 
   void _onConfigurationChanged(ChartConfiguration newConfig) {
+    setState(() {
+      _currentConfig = newConfig;
+    });
     // Update AgentService.currentChart for AI awareness
     widget.agentService?.currentChart.value = newConfig;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild chart widget when configuration changes
+    final chartWidget = _chartRenderer.render(_currentConfig.toJson());
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       elevation: 2,
@@ -53,8 +77,7 @@ class _ChartCardState extends State<ChartCard> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.blue, width: 2), // Debug border
         ),
-        constraints:
-            const BoxConstraints(minHeight: 200), // Ensure minimum height
+        constraints: const BoxConstraints(minHeight: 200), // Ensure minimum height
         padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -75,8 +98,7 @@ class _ChartCardState extends State<ChartCard> {
                   icon: const Icon(Icons.edit),
                   onPressed: () {
                     // Update AgentService.currentChart to this chart's configuration
-                    widget.agentService?.currentChart.value =
-                        widget.chartConfiguration;
+                    widget.agentService?.currentChart.value = _currentConfig;
                     // Call custom onEdit callback if provided
                     widget.onEdit?.call();
                   },
@@ -99,11 +121,11 @@ class _ChartCardState extends State<ChartCard> {
             // Config panel (conditionally visible)
             if (_isPanelVisible)
               ConfigPanel(
-                configuration: widget.chartConfiguration,
+                configuration: _currentConfig,
                 onConfigurationChanged: _onConfigurationChanged,
               ),
-            // Chart content
-            widget.child,
+            // Chart content - use re-rendered chart when config changes
+            chartWidget,
           ],
         ),
       ),
