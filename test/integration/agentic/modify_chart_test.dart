@@ -21,8 +21,7 @@ void main() {
       history = ChartHistory();
     });
 
-    test('chart modifications update same instance without recreation',
-        () async {
+    test('chart modifications update same instance without recreation', () async {
       // Create initial chart
       final createTool = CreateChartTool();
       final initialChart = await createTool.execute({
@@ -60,8 +59,7 @@ void main() {
       expect(modifiedChart.id, equals(initialChart.id));
       expect(modifiedChart.series.first.color, equals('#FF0000'));
       expect(modifiedChart.series.first.lineWidth, equals(3.0));
-      expect(
-          modifiedChart.type, equals(ChartType.line)); // Other props preserved
+      expect(modifiedChart.type, equals(ChartType.line)); // Other props preserved
 
       // Add annotation
       final annotationTool = AddAnnotationTool();
