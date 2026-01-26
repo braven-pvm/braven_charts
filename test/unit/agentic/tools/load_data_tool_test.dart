@@ -1,4 +1,9 @@
+// @orchestra-task: 21
+@Tags(['tdd-red'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:braven_charts/src/agentic/services/url_fetcher.dart';
 import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
 
 void main() {
@@ -129,6 +134,39 @@ void main() {
       });
     });
 
+    group('url data source', () {
+      test('should load URL data using UrlFetcherService', () async {
+        final input = {
+          'source': {
+            'type': 'url',
+            'url': 'https://example.com/data.csv',
+            'format': 'csv',
+          }
+        };
+
+        final result = await tool.execute(input);
+
+        expect(result['data_id'], isNotNull);
+        expect(result['row_count'], greaterThan(0));
+        expect(result['columns'], isNotEmpty);
+      });
+
+      test('should propagate URL fetch errors with context', () async {
+        final input = {
+          'source': {
+            'type': 'url',
+            'url': 'https://example.com/unreachable.csv',
+            'format': 'csv',
+          }
+        };
+
+        expect(
+          () => tool.execute(input),
+          throwsA(isA<NetworkException>()),
+        );
+      });
+    });
+
     group('inline source loading', () {
       test('should load inline CSV content', () async {
         final input = {
@@ -161,6 +199,55 @@ void main() {
         expect(result['data_id'], isNotNull);
         expect(result['row_count'], equals(2));
         expect(result['columns'], containsAll(['time', 'watts']));
+      });
+    });
+
+    group('inline data source', () {
+      test('should parse inline JSON array of numbers', () async {
+        final input = {
+          'source': {
+            'type': 'inline',
+            'content': '[1,2,3,4,5]',
+            'format': 'json',
+          }
+        };
+
+        final result = await tool.execute(input);
+
+        expect(result['data_id'], isNotNull);
+        expect(result['row_count'], equals(5));
+        expect(result['column_count'], equals(1));
+      });
+
+      test('should parse inline CSV string data', () async {
+        final input = {
+          'source': {
+            'type': 'inline',
+            'content': 'x,y\n1,2\n3,4',
+            'format': 'csv',
+          }
+        };
+
+        final result = await tool.execute(input);
+
+        expect(result['data_id'], isNotNull);
+        expect(result['row_count'], equals(2));
+        expect(result['columns'], containsAll(['x', 'y']));
+      });
+
+      test('should throw on malformed inline data', () async {
+        final input = {
+          'source': {
+            'type': 'inline',
+            'content': '{not-json}',
+            'format': 'json',
+          }
+        };
+
+        expect(
+          () => tool.execute(input),
+          throwsA(isA<FormatException>()),
+        );
       });
     });
 
