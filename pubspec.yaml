@@ -24,6 +24,7 @@ dependencies:
   http: ^1.2.0
   uuid: ^4.0.0
   json_annotation: ^4.8.0
+  google_fonts: ^8.0.0
 
 dev_dependencies:
   flutter_test:

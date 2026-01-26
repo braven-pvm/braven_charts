@@ -80,7 +80,7 @@ class _MessageBubbleState extends State<MessageBubble> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Text(
         _text,
-        style: TextStyle(
+        style: GoogleFonts.lato((
           color: isUser ? Colors.white : Colors.black87,
           fontSize: 12,
         ),
