@@ -45,17 +45,20 @@ Always include the data array with x,y values when calling this tool.
           },
           'series': {
             'type': 'array',
-            'description': 'Data series to plot. REQUIRED - include your data here.',
+            'description':
+                'Data series to plot. REQUIRED - include your data here.',
             'items': {
               'type': 'object',
               'properties': {
                 'id': {
                   'type': 'string',
-                  'description': 'Unique series identifier (e.g., "sales", "revenue").',
+                  'description':
+                      'Unique series identifier (e.g., "sales", "revenue").',
                 },
                 'name': {
                   'type': 'string',
-                  'description': 'Display name for legend (e.g., "Quarterly Sales").',
+                  'description':
+                      'Display name for legend (e.g., "Quarterly Sales").',
                 },
                 'color': {
                   'type': 'string',
@@ -80,7 +83,8 @@ Always include the data array with x,y values when calling this tool.
           },
           'annotations': {
             'type': 'array',
-            'description': 'Annotations to overlay on the chart (reference lines, zones, text labels).',
+            'description':
+                'Annotations to overlay on the chart (reference lines, zones, text labels).',
             'items': {
               'type': 'object',
               'properties': {
@@ -92,11 +96,13 @@ Always include the data array with x,y values when calling this tool.
                 'orientation': {
                   'type': 'string',
                   'enum': ['horizontal', 'vertical'],
-                  'description': 'Orientation for reference lines and zones. horizontal draws at a Y value, vertical draws at an X value.',
+                  'description':
+                      'Orientation for reference lines and zones. horizontal draws at a Y value, vertical draws at an X value.',
                 },
                 'value': {
                   'type': 'number',
-                  'description': 'Y-axis value for horizontal lines, X-axis value for vertical lines.',
+                  'description':
+                      'Y-axis value for horizontal lines, X-axis value for vertical lines.',
                 },
                 'minValue': {
                   'type': 'number',
@@ -108,16 +114,29 @@ Always include the data array with x,y values when calling this tool.
                 },
                 'x': {
                   'type': 'number',
-                  'description': 'X data coordinate for markers (not used for textLabel).',
+                  'description':
+                      'X data coordinate for markers (not used for textLabel).',
                 },
                 'y': {
                   'type': 'number',
-                  'description': 'Y data coordinate for markers (not used for textLabel).',
+                  'description':
+                      'Y data coordinate for markers (not used for textLabel).',
                 },
                 'position': {
                   'type': 'string',
-                  'enum': ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
-                  'description': 'Semantic position for text labels. Defaults to topLeft if not specified.',
+                  'enum': [
+                    'topLeft',
+                    'topCenter',
+                    'topRight',
+                    'centerLeft',
+                    'center',
+                    'centerRight',
+                    'bottomLeft',
+                    'bottomCenter',
+                    'bottomRight'
+                  ],
+                  'description':
+                      'Semantic position for text labels. Defaults to topLeft if not specified.',
                 },
                 'text': {
                   'type': 'string',
@@ -129,7 +148,8 @@ Always include the data array with x,y values when calling this tool.
                 },
                 'color': {
                   'type': 'string',
-                  'description': 'Hex color for the annotation (e.g., "#FF0000").',
+                  'description':
+                      'Hex color for the annotation (e.g., "#FF0000").',
                 },
                 'opacity': {
                   'type': 'number',
@@ -142,7 +162,8 @@ Always include the data array with x,y values when calling this tool.
           // Config panel properties - controls chart display options
           'showGrid': {
             'type': 'boolean',
-            'description': 'Whether to show grid lines on the chart. Defaults to true.',
+            'description':
+                'Whether to show grid lines on the chart. Defaults to true.',
           },
           'showLegend': {
             'type': 'boolean',
@@ -155,11 +176,13 @@ Always include the data array with x,y values when calling this tool.
           },
           'useDarkTheme': {
             'type': 'boolean',
-            'description': 'Whether to use dark theme. Defaults to false (light theme).',
+            'description':
+                'Whether to use dark theme. Defaults to false (light theme).',
           },
           'showScrollbar': {
             'type': 'boolean',
-            'description': 'Whether to show the scrollbar for panning. Defaults to false.',
+            'description':
+                'Whether to show the scrollbar for panning. Defaults to false.',
           },
         },
         'required': ['prompt', 'series'],
@@ -229,7 +252,9 @@ Always include the data array with x,y values when calling this tool.
   ChartType _resolveChartType(String? explicitType, String prompt) {
     final explicit = explicitType?.toLowerCase().trim();
     if (explicit != null && explicit.isNotEmpty) {
-      final matched = ChartType.values.where((type) => type.name == explicit).toList(growable: false);
+      final matched = ChartType.values
+          .where((type) => type.name == explicit)
+          .toList(growable: false);
       if (matched.isEmpty) {
         throw Exception('Unsupported chart type: $explicitType');
       }
@@ -261,7 +286,8 @@ Always include the data array with x,y values when calling this tool.
         final entry = Map<String, dynamic>.from(seriesArg[i] as Map);
         // Assign default color if not provided
         if (entry['color'] == null) {
-          entry['color'] = _defaultSeriesColors[i % _defaultSeriesColors.length];
+          entry['color'] =
+              _defaultSeriesColors[i % _defaultSeriesColors.length];
         }
         seriesList.add(SeriesConfig.fromJson(entry));
       }
@@ -346,14 +372,19 @@ Always include the data array with x,y values when calling this tool.
 
   List<String> _extractColumns(dynamic dataset) {
     if (dataset is Map && dataset['columns'] is List) {
-      return (dataset['columns'] as List).map((entry) => entry.toString()).toList(growable: false);
+      return (dataset['columns'] as List)
+          .map((entry) => entry.toString())
+          .toList(growable: false);
     }
     return const [];
   }
 
   List<Map<String, dynamic>> _extractRows(dynamic dataset) {
     if (dataset is Map && dataset['rows'] is List) {
-      return (dataset['rows'] as List).whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList(growable: false);
+      return (dataset['rows'] as List)
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList(growable: false);
     }
     return const [];
   }

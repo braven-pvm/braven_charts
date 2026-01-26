@@ -18,7 +18,8 @@ enum AgentState {
 }
 
 class AgentService {
-  AgentService({required LLMProvider provider, required ToolRegistry toolRegistry})
+  AgentService(
+      {required LLMProvider provider, required ToolRegistry toolRegistry})
       : _provider = provider,
         _toolRegistry = toolRegistry,
         conversation = ValueNotifier<Conversation>(
@@ -66,7 +67,8 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage =
+                streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -100,20 +102,24 @@ class AgentService {
           debugPrint('=== AGENT TOOL EXECUTION START ===');
           debugPrint('[AgentService] Executing tool: ${call.toolName}');
           // DEBUG: Print the input arguments the agent provided
-          _debugPrintJson('[AgentService] Tool input arguments', call.arguments);
+          _debugPrintJson(
+              '[AgentService] Tool input arguments', call.arguments);
 
-          final result = await _toolRegistry.execute(call.toolName, call.arguments);
+          final result =
+              await _toolRegistry.execute(call.toolName, call.arguments);
           debugPrint('[AgentService] Tool result type: ${result.runtimeType}');
 
           String? createdChartId;
 
           // If the tool returns a ChartConfiguration, add it to the conversation
           if (result is ChartConfiguration) {
-            debugPrint('[AgentService] Adding ChartConfiguration to conversation');
+            debugPrint(
+                '[AgentService] Adding ChartConfiguration to conversation');
             createdChartId = result.id ?? _uuid.v4();
             debugPrint('[AgentService] Chart ID: $createdChartId');
             // DEBUG: Print the chart configuration as JSON
-            _debugPrintJson('[AgentService] ChartConfiguration created', result.toJson());
+            _debugPrintJson(
+                '[AgentService] ChartConfiguration created', result.toJson());
             final current = conversation.value;
             final updatedCharts = Map<String, dynamic>.from(current.charts);
             updatedCharts[createdChartId] = result.toJson();
@@ -169,8 +175,10 @@ class AgentService {
     final isUser = message.role == MessageRole.user;
     conversation.value = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens:
+          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens:
+          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
 

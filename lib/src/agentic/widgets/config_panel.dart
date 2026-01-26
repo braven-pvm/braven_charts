@@ -28,13 +28,18 @@ class _ConfigPanelState extends State<ConfigPanel> {
   bool get isDarkTheme => widget.configuration.theme == 'dark';
 
   /// Get current grid visibility (default to true if not set - matches chart default)
-  bool get isGridVisible => widget.configuration.grid == null || widget.configuration.grid['visible'] != false;
+  bool get isGridVisible =>
+      widget.configuration.grid == null ||
+      widget.configuration.grid['visible'] != false;
 
   /// Get current legend visibility (default to true if not set - matches chart default)
-  bool get isLegendVisible => widget.configuration.legend == null || widget.configuration.legend['visible'] != false;
+  bool get isLegendVisible =>
+      widget.configuration.legend == null ||
+      widget.configuration.legend['visible'] != false;
 
   /// Get current legend position (default to 'bottom' if not set)
-  String get legendPosition => widget.configuration.legend != null && widget.configuration.legend['position'] != null
+  String get legendPosition => widget.configuration.legend != null &&
+          widget.configuration.legend['position'] != null
       ? widget.configuration.legend['position'] as String
       : 'bottom';
 

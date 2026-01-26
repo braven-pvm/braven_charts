@@ -29,7 +29,8 @@ class ChartRenderer {
       _debugPrintJson('Raw chart input', chart);
       try {
         final config = agentic.ChartConfiguration.fromJson(chart);
-        debugPrint('Parsed config: type=${config.type}, series=${config.series.length}');
+        debugPrint(
+            'Parsed config: type=${config.type}, series=${config.series.length}');
         // DEBUG: Output chart.toJson()
         _debugPrintChartJson(config);
         return _renderConfiguration(config);
@@ -78,15 +79,34 @@ class ChartRenderer {
       debugPrint('Building ${config.series.length} series');
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data ?? [];
-        debugPrint('Series ${seriesConfig.id}: ${dataPoints.length} data points, color: ${seriesConfig.color}');
-        final points = dataPoints.map((dataPoint) {
-          final x = dataPoint['x'];
-          final y = dataPoint['y'];
-          return ChartDataPoint(
-            x: (x is num) ? x.toDouble() : 0.0,
-            y: (y is num) ? y.toDouble() : 0.0,
-          );
-        }).toList();
+        debugPrint(
+            'Series ${seriesConfig.id}: ${dataPoints.length} data points, color: ${seriesConfig.color}');
+        final points = <ChartDataPoint>[];
+        for (var index = 0; index < dataPoints.length; index += 1) {
+          final dataPoint = dataPoints[index];
+          double xValue;
+          double yValue;
+
+          if (dataPoint is Map<String, dynamic>) {
+            final x = dataPoint['x'];
+            final y = dataPoint['y'];
+            xValue = (x is num) ? x.toDouble() : index.toDouble();
+            yValue = (y is num) ? y.toDouble() : 0.0;
+          } else if (dataPoint is List && dataPoint.length >= 2) {
+            final x = dataPoint[0];
+            final y = dataPoint[1];
+            xValue = (x is num) ? x.toDouble() : index.toDouble();
+            yValue = (y is num) ? y.toDouble() : 0.0;
+          } else if (dataPoint is num) {
+            xValue = index.toDouble();
+            yValue = dataPoint.toDouble();
+          } else {
+            xValue = index.toDouble();
+            yValue = 0.0;
+          }
+
+          points.add(ChartDataPoint(x: xValue, y: yValue));
+        }
 
         // Parse color from SeriesConfig
         final seriesColor = _parseColor(seriesConfig.color);
@@ -147,7 +167,8 @@ class ChartRenderer {
             );
 
       debugPrint('Creating BravenChartPlus widget');
-      debugPrint('  theme=${config.theme ?? "light"}, grid=$gridVisible (raw: ${config.grid}), legend=$showLegend, scrollbar=$showXScrollbar');
+      debugPrint(
+          '  theme=${config.theme ?? "light"}, grid=$gridVisible (raw: ${config.grid}), legend=$showLegend, scrollbar=$showXScrollbar');
       debugPrint('=== ChartRenderer.render() END ===');
       return SizedBox(
         height: 300,
@@ -241,7 +262,8 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true ||
+        (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -309,7 +331,8 @@ class ChartRenderer {
         } else if (annotationData is Map<String, dynamic>) {
           annotationConfig = AnnotationConfig.fromJson(annotationData);
         } else {
-          debugPrint('Skipping unknown annotation format: ${annotationData.runtimeType}');
+          debugPrint(
+              'Skipping unknown annotation format: ${annotationData.runtimeType}');
           continue;
         }
 
@@ -335,7 +358,8 @@ class ChartRenderer {
         // Convert to ThresholdAnnotation
         final isHorizontal = config.orientation != 'vertical';
         final value = config.value ?? 0.0;
-        debugPrint('Converting referenceLine: orientation=${config.orientation}, value=$value, color=$color');
+        debugPrint(
+            'Converting referenceLine: orientation=${config.orientation}, value=$value, color=$color');
         return ThresholdAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis: isHorizontal ? AnnotationAxis.y : AnnotationAxis.x,
@@ -352,7 +376,8 @@ class ChartRenderer {
         final minValue = config.minValue ?? 0.0;
         final maxValue = config.maxValue ?? 0.0;
         final opacity = config.opacity ?? 0.3;
-        debugPrint('Converting zone: orientation=${config.orientation}, min=$minValue, max=$maxValue');
+        debugPrint(
+            'Converting zone: orientation=${config.orientation}, min=$minValue, max=$maxValue');
         return RangeAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           startY: isHorizontal ? minValue : null,
@@ -370,7 +395,8 @@ class ChartRenderer {
         final text = config.text ?? config.label ?? '';
         final position = _getTextAnnotationPosition(config.position);
         final anchor = _getTextAnnotationAnchor(config.position);
-        debugPrint('Converting textLabel: text=$text, position=$position, anchor=$anchor');
+        debugPrint(
+            'Converting textLabel: text=$text, position=$position, anchor=$anchor');
         return TextAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           position: position,

@@ -68,7 +68,9 @@ class _MessageBubbleState extends State<MessageBubble> {
           borderRadius: BorderRadius.circular(12),
           // border: Border.all(color: Colors.black38, width: 0.5),
         ),
-        child: _isCollapsible ? _buildCollapsibleContent(isUser) : _buildSimpleContent(isUser),
+        child: _isCollapsible
+            ? _buildCollapsibleContent(isUser)
+            : _buildSimpleContent(isUser),
       ),
     );
   }
@@ -109,7 +111,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                       fontSize: 12,
                     ),
                     maxLines: _isExpanded ? null : widget.maxCollapsedLines,
-                    overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                    overflow: _isExpanded
+                        ? TextOverflow.visible
+                        : TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 4),

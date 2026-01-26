@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/chart_configuration.dart';
 import '../services/agent_service.dart';
 import '../services/chart_renderer.dart';
+import 'chart_widget.dart';
 import 'config_panel.dart';
 
 /// Card container for chart widgets with an action bar.
@@ -67,7 +68,12 @@ class _ChartCardState extends State<ChartCard> {
   @override
   Widget build(BuildContext context) {
     // Rebuild chart widget when configuration changes
-    final chartWidget = _chartRenderer.render(_currentConfig.toJson());
+    final chartWidget = widget.child is ChartWidget
+        ? ChartWidget(
+            chart: _currentConfig.toJson(),
+            renderer: _chartRenderer,
+          )
+        : widget.child;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -77,7 +83,8 @@ class _ChartCardState extends State<ChartCard> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.blue, width: 2), // Debug border
         ),
-        constraints: const BoxConstraints(minHeight: 200), // Ensure minimum height
+        constraints:
+            const BoxConstraints(minHeight: 200), // Ensure minimum height
         padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
