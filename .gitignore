@@ -43,4 +43,4 @@ hash.txt
 terminal_input.txt
 
 # Orchestra workflow
-.orchestra\.signal
+.orchestra/.signal
