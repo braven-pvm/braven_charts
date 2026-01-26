@@ -377,7 +377,8 @@ void main() {
       });
 
       test('accepts valid CSV content', () {
-        final content = Uint8List.fromList('timestamp,power,hr\n1,2,3'.codeUnits);
+        final content =
+            Uint8List.fromList('timestamp,power,hr\n1,2,3'.codeUnits);
 
         final result = validator.validate(
           fileName: 'data.csv',
@@ -402,7 +403,8 @@ void main() {
 
         expect(result.success, isTrue);
         expect(result.warningMessage, isNotNull);
-        expect(result.warningMessage, contains('Large file may take longer to process'));
+        expect(result.warningMessage,
+            contains('Large file may take longer to process'));
       });
 
       test('provides warning for file at 45MB', () {
@@ -417,7 +419,8 @@ void main() {
 
         expect(result.success, isTrue);
         expect(result.warningMessage, isNotNull);
-        expect(result.warningMessage, contains('Large file may take longer to process'));
+        expect(result.warningMessage,
+            contains('Large file may take longer to process'));
       });
 
       test('no warning for file under 40MB', () {

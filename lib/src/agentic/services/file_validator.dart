@@ -144,7 +144,10 @@ class FileValidator {
 
     // Check for ELF header (Linux executables)
     if (content.length >= 4) {
-      if (content[0] == 0x7F && content[1] == 0x45 && content[2] == 0x4C && content[3] == 0x46) {
+      if (content[0] == 0x7F &&
+          content[1] == 0x45 &&
+          content[2] == 0x4C &&
+          content[3] == 0x46) {
         // ELF signature
         return true;
       }
@@ -152,7 +155,10 @@ class FileValidator {
 
     // Check for Mach-O headers (macOS executables)
     if (content.length >= 4) {
-      final magic = (content[0] << 24) | (content[1] << 16) | (content[2] << 8) | content[3];
+      final magic = (content[0] << 24) |
+          (content[1] << 16) |
+          (content[2] << 8) |
+          content[3];
       if (magic == 0xFEEDFACE || // 32-bit Mach-O
           magic == 0xFEEDFACF || // 64-bit Mach-O
           magic == 0xCEFAEDFE || // 32-bit reverse byte order

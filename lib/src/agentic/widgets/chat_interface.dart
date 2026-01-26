@@ -31,10 +31,10 @@ class ChatInterface extends StatefulWidget {
   final ValueChanged<String>? onSend;
 
   @override
-  State<ChatInterface> createState() => _ChatInterfaceState();
+  State<ChatInterface> createState() => ChatInterfaceState();
 }
 
-class _ChatInterfaceState extends State<ChatInterface> {
+class ChatInterfaceState extends State<ChatInterface> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final CreateChartTool _chartTool = CreateChartTool();

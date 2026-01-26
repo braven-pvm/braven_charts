@@ -1,6 +1,8 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'dart:io';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -11,6 +13,11 @@ import 'package:uuid/uuid.dart';
 /// - User types chart requests in natural language
 /// - Agent converts requests to chart configurations
 /// - Charts render with proper axes and labels
+///
+/// Demonstrates US2: Sport Science File Analysis
+/// - Upload FIT files from fitness devices
+/// - Preview data columns and statistics
+/// - Create charts with data transformations (rolling averages)
 ///
 /// FR-027: Welcome State
 /// - Displays welcome message on startup
@@ -46,21 +53,30 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
+      GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
 🎨 **Welcome to Agentic Chart Demo**
 
-This demo showcases natural language chart creation powered by AI.
+This demo showcases natural language chart creation and sport science file analysis powered by AI.
 
 **Try these examples:**
+
+📊 **Basic Charts:**
 • "Show me a line chart of power over time"
 • "Create a bar chart comparing sales across quarters"
-• "Make a scatter plot of temperature vs pressure"
+
+📁 **File-Based Analysis:**
+• Upload a FIT file (click the upload button above)
+• After upload, try: "Show 30-second rolling average of power"
+• Or: "Plot heart rate over time with 5-minute smoothing"
 
 **How it works:**
-1. Type your chart request in the input below
-2. The AI agent converts your request to a chart configuration
-3. Your chart renders automatically with proper axes and labels
+1. Upload a FIT/CSV file or use the sample data
+2. Type your chart request in the input below
+3. The AI agent converts your request to a chart configuration
+4. Your chart renders automatically with proper axes and data transformations
 
 Ready? Enter your Anthropic API key below to get started!
 ''';
@@ -186,6 +202,112 @@ Ready? Enter your Anthropic API key below to get started!
     _initializeAgent(apiKey);
   }
 
+  /// Handle file upload button press - show sample file selector
+  Future<void> _handleFileUpload() async {
+    // Show dialog to select from sample FIT files in data directory
+    final sampleFiles = [
+      'tp-2023646.2026-01-10-11-27-44-360Z.GarminPing.AAAAAGliN69r93wK.FIT',
+      'tp-2023646.2026-01-15-16-23-44-609Z.GarminPing.AAAAAGlpFJD7Zfeh.FIT',
+      'tp-2023646.2026-01-17-11-07-37-163Z.GarminPing.AAAAAGlrbXhXqZ3H.FIT',
+      'tp-2023646.2026-01-18-11-37-13-293Z.GarminPing.AAAAAGlsxejfj7QD.FIT',
+    ];
+
+    final selectedFile = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Sample FIT File'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: sampleFiles.length,
+            itemBuilder: (context, index) {
+              final fileName = sampleFiles[index];
+              return ListTile(
+                leading: const Icon(Icons.fitness_center, color: Colors.blue),
+                title: Text(
+                  fileName,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: const Text('Garmin FIT Activity'),
+                onTap: () => Navigator.pop(context, fileName),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedFile != null) {
+      await _loadSampleFile(selectedFile);
+    }
+  }
+
+  /// Load a sample FIT file from the data directory
+  Future<void> _loadSampleFile(String fileName) async {
+    try {
+      // Construct path to data directory (assuming example/data or ../data)
+      final dataPath = 'data/$fileName';
+      final file = File(dataPath);
+
+      // Check if file exists, try alternative path if not
+      File? actualFile;
+      if (await file.exists()) {
+        actualFile = file;
+      } else {
+        // Try parent directory path
+        final parentPath = '../data/$fileName';
+        final parentFile = File(parentPath);
+        if (await parentFile.exists()) {
+          actualFile = parentFile;
+        }
+      }
+
+      if (actualFile == null) {
+        throw Exception('Sample file not found: $fileName');
+      }
+
+      // Read file content
+      final content = await actualFile.readAsBytes();
+
+      // Get the ChatInterface and add the file attachment
+      final chatInterface = _chatInterfaceKey.currentState;
+      if (chatInterface != null) {
+        await chatInterface.addFileAttachment(
+          fileName: fileName,
+          content: content,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Loaded: $fileName'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load file: $error'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _apiKeyController.dispose();
@@ -198,7 +320,12 @@ Ready? Enter your Anthropic API key below to get started!
       appBar: AppBar(
         title: const Text('Agentic Chart Demo'),
         actions: [
-          if (_apiKey != null)
+          if (_apiKey != null) ...[
+            IconButton(
+              icon: const Icon(Icons.upload_file),
+              tooltip: 'Upload FIT File',
+              onPressed: _handleFileUpload,
+            ),
             IconButton(
               icon: const Icon(Icons.info_outline),
               tooltip: 'About',
@@ -208,8 +335,8 @@ Ready? Enter your Anthropic API key below to get started!
                   builder: (context) => AlertDialog(
                     title: const Text('Agentic Chart Demo'),
                     content: const Text(
-                      'This demo showcases natural language chart creation.\n\n'
-                      'Type chart requests in plain English and watch them come to life!',
+                      'This demo showcases natural language chart creation and sport science file analysis.\n\n'
+                      'Upload FIT files and type chart requests in plain English!',
                     ),
                     actions: [
                       TextButton(
@@ -221,6 +348,7 @@ Ready? Enter your Anthropic API key below to get started!
                 );
               },
             ),
+          ],
         ],
       ),
       body: _apiKey == null
@@ -228,6 +356,7 @@ Ready? Enter your Anthropic API key below to get started!
           : _isInitializing
               ? const Center(child: CircularProgressIndicator())
               : ChatInterface(
+                  key: _chatInterfaceKey,
                   conversation: _conversation,
                   agentService: _agentService,
                 ),
