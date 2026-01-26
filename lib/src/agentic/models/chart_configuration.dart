@@ -112,6 +112,23 @@ class ChartConfiguration {
   /// Theme name
   final String? theme;
 
+  // === Config Panel Properties ===
+
+  /// Whether to show grid lines (config panel)
+  final bool? showGrid;
+
+  /// Whether to show the legend (config panel)
+  final bool? showLegend;
+
+  /// Legend position (config panel)
+  final String? legendPosition;
+
+  /// Whether to use dark theme (config panel)
+  final bool? useDarkTheme;
+
+  /// Whether to show scrollbar (config panel)
+  final bool? showScrollbar;
+
   /// Creates a new ChartConfiguration instance
   ChartConfiguration({
     this.id,
@@ -128,6 +145,11 @@ class ChartConfiguration {
     this.legend,
     this.grid,
     this.theme,
+    this.showGrid,
+    this.showLegend,
+    this.legendPosition,
+    this.useDarkTheme,
+    this.showScrollbar,
   })  : series = series ?? [],
         yAxes = yAxes ?? [],
         assert(
@@ -146,24 +168,21 @@ class ChartConfiguration {
       type: ChartType.values.firstWhere((e) => e.name == json['type']),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List)
-          .map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      xAxis: json['xAxis'] != null
-          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
-          : null,
-      yAxes: (json['yAxes'] as List)
-          .map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      style: json['style'] != null
-          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
-          : null,
+      series: (json['series'] as List).map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
+      yAxes: (json['yAxes'] as List).map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
       interactions: json['interactions'],
       annotations: json['annotations'] as List<dynamic>?,
       layout: json['layout'],
       legend: json['legend'],
       grid: json['grid'],
       theme: json['theme'] as String?,
+      showGrid: json['showGrid'] as bool?,
+      showLegend: json['showLegend'] as bool?,
+      legendPosition: json['legendPosition'] as String?,
+      useDarkTheme: json['useDarkTheme'] as bool?,
+      showScrollbar: json['showScrollbar'] as bool?,
     );
   }
 
@@ -184,6 +203,11 @@ class ChartConfiguration {
       if (legend != null) 'legend': legend,
       if (grid != null) 'grid': grid,
       if (theme != null) 'theme': theme,
+      if (showGrid != null) 'showGrid': showGrid,
+      if (showLegend != null) 'showLegend': showLegend,
+      if (legendPosition != null) 'legendPosition': legendPosition,
+      if (useDarkTheme != null) 'useDarkTheme': useDarkTheme,
+      if (showScrollbar != null) 'showScrollbar': showScrollbar,
     };
   }
 
@@ -203,6 +227,11 @@ class ChartConfiguration {
     dynamic legend,
     dynamic grid,
     String? theme,
+    bool? showGrid,
+    bool? showLegend,
+    String? legendPosition,
+    bool? useDarkTheme,
+    bool? showScrollbar,
   }) {
     return ChartConfiguration(
       id: id ?? this.id,
@@ -219,6 +248,11 @@ class ChartConfiguration {
       legend: legend ?? this.legend,
       grid: grid ?? this.grid,
       theme: theme ?? this.theme,
+      showGrid: showGrid ?? this.showGrid,
+      showLegend: showLegend ?? this.showLegend,
+      legendPosition: legendPosition ?? this.legendPosition,
+      useDarkTheme: useDarkTheme ?? this.useDarkTheme,
+      showScrollbar: showScrollbar ?? this.showScrollbar,
     );
   }
 

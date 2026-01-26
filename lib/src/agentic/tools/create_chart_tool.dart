@@ -139,6 +139,28 @@ Always include the data array with x,y values when calling this tool.
               'required': ['type'],
             },
           },
+          // Config panel properties - controls chart display options
+          'showGrid': {
+            'type': 'boolean',
+            'description': 'Whether to show grid lines on the chart. Defaults to true.',
+          },
+          'showLegend': {
+            'type': 'boolean',
+            'description': 'Whether to show the legend. Defaults to true.',
+          },
+          'legendPosition': {
+            'type': 'string',
+            'enum': ['top', 'bottom', 'left', 'right'],
+            'description': 'Position of the legend. Defaults to bottom.',
+          },
+          'useDarkTheme': {
+            'type': 'boolean',
+            'description': 'Whether to use dark theme. Defaults to false (light theme).',
+          },
+          'showScrollbar': {
+            'type': 'boolean',
+            'description': 'Whether to show the scrollbar for panning. Defaults to false.',
+          },
         },
         'required': ['prompt', 'series'],
       };
@@ -157,12 +179,24 @@ Always include the data array with x,y values when calling this tool.
     final yAxes = _buildYAxes(args, series);
     final annotations = _buildAnnotations(args);
 
+    // Extract config panel properties
+    final showGrid = args['showGrid'] as bool?;
+    final showLegend = args['showLegend'] as bool?;
+    final legendPosition = args['legendPosition'] as String?;
+    final useDarkTheme = args['useDarkTheme'] as bool?;
+    final showScrollbar = args['showScrollbar'] as bool?;
+
     return ChartConfiguration(
       type: chartType,
       series: series,
       xAxis: xAxis,
       yAxes: yAxes,
       annotations: annotations.isNotEmpty ? annotations : null,
+      showGrid: showGrid,
+      showLegend: showLegend,
+      legendPosition: legendPosition,
+      useDarkTheme: useDarkTheme,
+      showScrollbar: showScrollbar,
     );
   }
 

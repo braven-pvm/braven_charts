@@ -199,12 +199,24 @@ class ChartRenderer {
 
   /// Build ChartTheme from configuration
   ChartTheme _buildChartTheme(agentic.ChartConfiguration config) {
+    // Check explicit useDarkTheme first, then fall back to theme string
+    if (config.useDarkTheme == true) {
+      return ChartTheme.dark;
+    } else if (config.useDarkTheme == false) {
+      return ChartTheme.light;
+    }
+    // Fall back to theme name string
     final themeName = config.theme?.toLowerCase() ?? 'light';
     return themeName == 'dark' ? ChartTheme.dark : ChartTheme.light;
   }
 
   /// Get grid visibility from configuration
   bool _getGridVisible(agentic.ChartConfiguration config) {
+    // Check explicit showGrid first
+    if (config.showGrid != null) {
+      return config.showGrid!;
+    }
+    // Fall back to grid map
     if (config.grid == null) return true; // Default to visible
     if (config.grid is Map) {
       return (config.grid as Map)['visible'] == true;
@@ -214,6 +226,11 @@ class ChartRenderer {
 
   /// Get legend visibility from configuration
   bool _getLegendVisible(agentic.ChartConfiguration config) {
+    // Check explicit showLegend first
+    if (config.showLegend != null) {
+      return config.showLegend!;
+    }
+    // Fall back to legend map
     if (config.legend == null) return true; // Default to visible
     if (config.legend is Map) {
       return (config.legend as Map)['visible'] != false;
@@ -223,15 +240,21 @@ class ChartRenderer {
 
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
-    final themeName = config.theme?.toLowerCase() ?? 'light';
-    final baseStyle = themeName == 'dark' ? LegendStyle.dark : LegendStyle.light;
+    // Theme for base style
+    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
-    if (config.legend == null || config.legend is! Map) {
-      return baseStyle;
+    // Check explicit legendPosition first
+    String? positionStr = config.legendPosition;
+
+    // Fall back to legend map position
+    if (positionStr == null && config.legend is Map) {
+      positionStr = (config.legend as Map)['position'] as String?;
     }
 
-    final legendMap = config.legend as Map;
-    final positionStr = legendMap['position'] as String? ?? 'bottom';
+    if (positionStr == null) {
+      return baseStyle;
+    }
 
     LegendPosition position;
     switch (positionStr.toLowerCase()) {
@@ -255,6 +278,11 @@ class ChartRenderer {
 
   /// Get scrollbar enabled from configuration
   bool _getScrollbarEnabled(agentic.ChartConfiguration config) {
+    // Check explicit showScrollbar first
+    if (config.showScrollbar != null) {
+      return config.showScrollbar!;
+    }
+    // Fall back to interactions map
     if (config.interactions == null) return false; // Default to disabled
     if (config.interactions is Map) {
       final scrollbar = (config.interactions as Map)['scrollbar'];
