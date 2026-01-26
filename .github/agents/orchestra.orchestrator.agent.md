@@ -1544,3 +1544,143 @@ Ask yourself:
 Then CHECK those exact things.
 
 **You are not verifying that code exists. You are verifying that code WORKS.**
+
+## 🔴 TDD RED-PHASE VERIFICATION (SPECIAL RULES)
+
+**CRITICAL**: When verifying a task with `tdd_red_phase: true`, the Stub Hunter Protocol changes significantly.
+
+### The Key Distinction
+
+For TDD red-phase, **"tests fail" is CORRECT** - but there are TWO types of failure:
+
+| Failure Type            | What It Means                                                  | Verdict                       |
+| ----------------------- | -------------------------------------------------------------- | ----------------------------- |
+| **Compilation failure** | Tests can't even run (`Cannot find module`, `Undefined class`) | ❌ FAIL - Not valid red-phase |
+| **Assertion failure**   | Tests run but assertions fail (`Expected X, got Y`)            | ✅ PASS - Correct red-phase   |
+
+**A test that can't compile is NOT a valid TDD red-phase test.**
+
+### TDD Red-Phase Stub Patterns
+
+Standard Stub Hunter detects implementation stubs. For red-phase, detect TEST stubs:
+
+| Pattern      | Description                                                 | Verdict     |
+| ------------ | ----------------------------------------------------------- | ----------- |
+| TDD-STUB-001 | Tests import from non-existent file with no companion stub  | ❌ BLOCKING |
+| TDD-STUB-002 | Tests have syntax/import/compilation errors                 | ❌ BLOCKING |
+| TDD-STUB-003 | Tests have zero `expect()` assertions                       | ❌ BLOCKING |
+| TDD-STUB-004 | Tests only have trivial assertions (`expect(true, isTrue)`) | ❌ BLOCKING |
+| TDD-STUB-005 | Core tests are skipped (`skip:`, `.skip`)                   | ❌ BLOCKING |
+| TDD-STUB-006 | Tests mock the class under test (testing mocks, not code)   | ❌ BLOCKING |
+
+### Mandatory TDD Red-Phase Checks
+
+**Before submitting PASS for any `tdd_red_phase: true` task:**
+
+#### 1. Compilation Verification (BLOCKING)
+
+```
+COMPILATION CHECK:
+1. Command: [test_command] --tags tdd-red (or equivalent)
+2. Result: [COMPILES | COMPILE_ERROR]
+3. If COMPILE_ERROR - check for:
+   - Missing imports → Companion stub file required
+   - Undefined class → Companion stub file required
+   - Syntax error → Test file needs fix
+4. VERDICT: [PASS | FAIL]
+```
+
+**If tests cannot compile, FAIL immediately.**
+
+#### 2. Companion Stub File Verification (BLOCKING)
+
+If tests import classes that don't exist yet, **companion stub files MUST exist**:
+
+```
+COMPANION STUB CHECK:
+1. Test imports: [list files imported that don't exist as full implementations]
+2. For each:
+   - Stub file path: [expected path]
+   - Stub exists: [yes/no]
+   - Stub has minimal implementation (constructor, empty methods): [yes/no]
+3. VERDICT: [PASS - all imports resolved | FAIL - missing stubs]
+```
+
+**Example companion stub (Dart):**
+
+```dart
+// lib/src/widgets/config_panel.dart (STUB)
+class ConfigPanel extends StatelessWidget {
+  final ChartConfiguration configuration;
+  final ValueChanged<ChartConfiguration> onConfigurationChanged;
+
+  const ConfigPanel({super.key, required this.configuration, required this.onConfigurationChanged});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(); // Empty - green phase implements
+}
+```
+
+#### 3. Failure Type Verification (BLOCKING)
+
+```
+FAILURE TYPE CHECK:
+1. Run: [test_command] --tags tdd-red
+2. Exit Code: [should be non-zero]
+3. Failure Type:
+   - ASSERTION_FAILURE (correct): "Expected X, got Y"
+   - COMPILE_ERROR (wrong): "Cannot find module"
+   - RUNTIME_ERROR (wrong): "Null check operator used on null"
+4. VERDICT: [PASS - fails assertions | FAIL - wrong failure type]
+```
+
+#### 4. Test Substance Verification (BLOCKING)
+
+```
+TEST SUBSTANCE CHECK:
+1. Count of expect() assertions: [N]
+2. Assertions test behavior (not just existence):
+   - [ ] Widget rendering tested
+   - [ ] Interactions/callbacks tested
+   - [ ] State changes tested
+3. No skip markers on core tests: [yes/no]
+4. VERDICT: [PASS - meaningful tests | FAIL - trivial/incomplete tests]
+```
+
+### TDD Red-Phase Report Format
+
+Include in `manual_review.observations`:
+
+```
+=== TDD RED-PHASE VERIFICATION ===
+
+## Compilation Check: [PASS/FAIL]
+- Test command: [command run]
+- Result: [compiles/errors]
+- Errors (if any): [list]
+
+## Companion Stub Check: [PASS/FAIL/N/A]
+- Imports needing stubs: [list]
+- Stub files present: [yes/no for each]
+
+## Failure Type Check: [PASS/FAIL]
+- Exit code: [N]
+- Failure type: [ASSERTION/COMPILE/RUNTIME]
+- Sample failure message: [text]
+
+## Test Substance Check: [PASS/FAIL]
+- Assertion count: [N]
+- Behavioral coverage: [list what's tested]
+- Skip markers: [none/list]
+
+## FINAL VERDICT: [PASS - Valid red-phase | FAIL - reason]
+```
+
+### ⚠️ DO NOT PASS TDD RED-PHASE IF:
+
+- Tests cannot compile (missing imports, undefined classes)
+- Tests import from non-existent files without companion stubs
+- Tests fail for reasons OTHER than assertion failures
+- Tests have no meaningful assertions
+- Tests are skipped or marked pending
+- Tests mock the class under test completely
