@@ -1,8 +1,3 @@
-// @orchestra-task: 23
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_charts/src/agentic/widgets/metric_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

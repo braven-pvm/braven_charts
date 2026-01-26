@@ -83,7 +83,8 @@ class _ChartCardState extends State<ChartCard> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.blue, width: 1.2), // Debug border
         ),
-        constraints: const BoxConstraints(minHeight: 200), // Ensure minimum height
+        constraints:
+            const BoxConstraints(minHeight: 200), // Ensure minimum height
         padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../models/message.dart';
 
@@ -64,8 +65,10 @@ class _MessageBubbleState extends State<MessageBubble> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         constraints: const BoxConstraints(maxWidth: 520),
         decoration: BoxDecoration(
-          color: isUser ? Colors.blue : Colors.grey.shade200.withAlpha(50),
-          borderRadius: BorderRadius.circular(12),
+          color: isUser
+              ? Colors.blueGrey.withAlpha(35)
+              : Colors.grey.shade200.withAlpha(50),
+          borderRadius: BorderRadius.circular(10),
           // border: Border.all(color: Colors.black38, width: 0.5),
         ),
         child: _isCollapsible
@@ -80,8 +83,9 @@ class _MessageBubbleState extends State<MessageBubble> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Text(
         _text,
-        style: GoogleFonts.lato((
-          color: isUser ? Colors.white : Colors.black87,
+        style: GoogleFonts.poppins(
+          color: isUser ? Colors.black54 : Colors.black54,
+          fontWeight: FontWeight.w400,
           fontSize: 12,
         ),
       ),
@@ -89,7 +93,7 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildCollapsibleContent(bool isUser) {
-    final textColor = isUser ? Colors.white : Colors.black87;
+    final textColor = isUser ? Colors.white : Colors.black54;
     final iconColor = isUser ? Colors.white70 : Colors.black54;
 
     return InkWell(
@@ -106,8 +110,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                 Expanded(
                   child: Text(
                     _isExpanded ? _text : _summaryText,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: textColor,
+                      fontWeight: FontWeight.w400,
                       fontSize: 12,
                     ),
                     maxLines: _isExpanded ? null : widget.maxCollapsedLines,

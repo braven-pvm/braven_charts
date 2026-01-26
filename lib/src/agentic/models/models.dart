@@ -7,6 +7,7 @@ export 'conversation.dart';
 export 'file_attachment.dart';
 export 'loaded_data.dart';
 export 'message.dart';
+export 'metric.dart';
 export 'series_config.dart';
 export 'tool_call.dart';
 export 'tool_result.dart';

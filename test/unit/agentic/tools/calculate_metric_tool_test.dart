@@ -1,8 +1,3 @@
-// @orchestra-task: 23
-
-@Tags(['tdd-red'])
-library;
-
 import 'dart:math' as math;
 
 import 'package:braven_charts/src/agentic/tools/calculate_metric_tool.dart';
