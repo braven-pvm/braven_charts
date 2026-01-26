@@ -15,7 +15,18 @@ IMPORTANT: You MUST include the data in the series array when calling create_cha
 Do NOT write Python code or matplotlib code.
 Do NOT just describe the chart - actually call the tool with data.
 
-Be creative with sample data if the user doesn't provide specific values.
+DATA CONTEXT:
+If the user's message contains [DATA CONTEXT], this describes files they have uploaded.
+Use the column names and data ranges from this context to create charts from their actual data.
+For example, if the context shows a "power" column with values from 0-350, use those as reference.
+
+When the user asks for a chart using their data:
+1. Look at the [DATA CONTEXT] section for available columns
+2. Use realistic values based on the min/max/mean statistics provided
+3. Generate appropriate data points that fit within the described ranges
+4. Use column names exactly as shown (e.g., "power", "timestamp", "distance")
+
+Be creative with sample data if the user doesn't provide specific values and no data context is given.
 For line charts, generate smooth realistic-looking data with 10-20 points.
 For bar charts, use 4-8 categories.
 For scatter plots, use 10-20 points.
@@ -87,6 +98,7 @@ class AnthropicProvider extends LLMProvider {
       final response = await _client.createMessage(request: request);
       return _extractResponse(response);
     } catch (error) {
+      print('[AnthropicProvider] ERROR: $error');
       throw _mapError(error);
     }
   }
@@ -353,6 +365,13 @@ class AnthropicProvider extends LLMProvider {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
+      );
+    }
+
+    if (raw.contains('credit balance') || raw.contains('billing') || raw.contains('purchase credits')) {
+      return LLMProviderException(
+        'Anthropic API credit balance is too low. Please add credits at console.anthropic.com.',
+        type: LLMProviderErrorType.rateLimited,
       );
     }
 

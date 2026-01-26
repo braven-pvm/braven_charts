@@ -7,7 +7,9 @@ import '../models/conversation.dart';
 import '../models/file_attachment.dart';
 import '../models/message.dart';
 import '../services/agent_service.dart';
+import '../services/file_picker.dart' as file_picker;
 import '../services/file_validator.dart';
+import '../tools/data_store.dart';
 import '../tools/load_data_tool.dart';
 import 'chart_card.dart';
 import 'chart_widget.dart';
@@ -137,7 +139,11 @@ class ChatInterfaceState extends State<ChatInterface> {
     // Let AgentService handle everything if available
     if (widget.agentService != null) {
       try {
-        await widget.agentService!.processUserMessage(text);
+        // Build data context from loaded files
+        final dataContext = _buildDataContext();
+        final messageWithContext = dataContext.isEmpty ? text : '$text\n\n[DATA CONTEXT]\n$dataContext';
+
+        await widget.agentService!.processUserMessage(messageWithContext);
       } catch (error) {
         if (mounted) {
           setState(() {
@@ -181,6 +187,39 @@ class ChatInterfaceState extends State<ChatInterface> {
     return 'Something went wrong. Please try again.';
   }
 
+  /// Build data context string from loaded files to pass to the LLM
+  String _buildDataContext() {
+    if (_loadedDataIds.isEmpty) {
+      return '';
+    }
+
+    final buffer = StringBuffer();
+    final dataStore = DataStore();
+
+    for (final dataId in _loadedDataIds) {
+      final frame = dataStore.get(dataId);
+      if (frame == null) continue;
+
+      buffer.writeln('File: ${frame.fileName} (${frame.rowCount} rows)');
+      buffer.writeln('Columns:');
+
+      for (final col in frame.columns) {
+        buffer.write('  - ${col.name} (${col.type})');
+        if (col.stats.min != null && col.stats.max != null) {
+          buffer.write(' [min: ${col.stats.min}, max: ${col.stats.max}, mean: ${col.stats.mean?.toStringAsFixed(2)}]');
+        }
+        buffer.writeln();
+      }
+
+      if (frame.timeRange != null) {
+        buffer.writeln('Time range: ${frame.timeRange!.start} to ${frame.timeRange!.end}');
+      }
+      buffer.writeln();
+    }
+
+    return buffer.toString();
+  }
+
   Future<void> _handleRetry() async {
     final message = _lastUserMessage;
     if (message == null || _isProcessing || widget.agentService == null) {
@@ -221,21 +260,38 @@ class ChatInterfaceState extends State<ChatInterface> {
   }
 
   Future<void> _handleFileUpload() async {
-    // Note: This is a stub for file upload functionality
-    // In a real implementation, this would integrate with platform-specific
-    // file pickers or drag-and-drop APIs. For testing purposes, files can
-    // be provided via the FileAttachment model directly or through
-    // addFileAttachment method.
+    // Check if file picking is supported on this platform
+    if (!file_picker.isFilePickingSupported) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'File upload is not supported on this platform. Use addFileAttachment method for testing.';
+        });
+      }
+      return;
+    }
 
-    // TODO: Implement platform-specific file picker
-    // For web: Use html.FileUploadInputElement
-    // For mobile: Use image_picker or file_picker package
-    // For desktop: Use file_selector package
+    try {
+      // Pick a file using the platform-specific file picker
+      final result = await file_picker.pickFile(
+        allowedExtensions: ['fit', 'csv', 'tcx'],
+      );
 
-    if (mounted) {
-      setState(() {
-        _errorMessage = 'File upload UI not yet implemented. Use addFileAttachment method for testing.';
-      });
+      if (result == null) {
+        // User cancelled the file picker
+        return;
+      }
+
+      // Add the file attachment
+      await addFileAttachment(
+        fileName: result.fileName,
+        content: result.content,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to pick file: $error';
+        });
+      }
     }
   }
 
