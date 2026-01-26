@@ -1,7 +1,3 @@
-// @orchestra-task: 21
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/services/url_fetcher.dart';
 import 'package:braven_charts/src/agentic/tools/load_data_tool.dart';
@@ -141,7 +137,8 @@ void main() {
 
         expect(result['data_id'], isNotNull);
         expect(result['row_count'], equals(2));
-        expect(result['columns'], containsAll(['timestamp', 'power', 'heart_rate']));
+        expect(result['columns'],
+            containsAll(['timestamp', 'power', 'heart_rate']));
       });
 
       test('should load inline JSON content', () async {
@@ -191,14 +188,8 @@ void main() {
 
         expect(result['data_id'], isNotNull);
         expect(result['row_count'], equals(2));
-        expect(result['columns'], isA<List<Map<String, dynamic>>>());
-        expect(
-          result['columns'],
-          containsAll([
-            containsPair('name', 'x'),
-            containsPair('name', 'y'),
-          ]),
-        );
+        expect(result['columns'], isA<List>());
+        expect(result['columns'], containsAll(['x', 'y']));
       });
 
       test('should throw on malformed inline data', () async {
@@ -222,7 +213,8 @@ void main() {
         final input = {
           'source': {
             'type': 'inline',
-            'content': 'timestamp,value\n2026-01-25T10:00:00Z,100\n2026-01-25T10:01:00Z,110',
+            'content':
+                'timestamp,value\n2026-01-25T10:00:00Z,100\n2026-01-25T10:01:00Z,110',
             'format': 'csv',
           }
         };

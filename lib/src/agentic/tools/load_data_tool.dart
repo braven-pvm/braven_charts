@@ -7,12 +7,14 @@ import 'dart:io';
 import 'package:braven_data/braven_data.dart' as bd;
 import 'package:uuid/uuid.dart';
 
+import '../services/url_fetcher.dart';
 import 'data_store.dart';
 
 /// Tool for loading data from various sources (file, URL, inline)
 class LoadDataTool {
   final DataStore _store = DataStore();
   final Uuid _uuid = const Uuid();
+  final UrlFetcherService _urlFetcher = UrlFetcherService();
 
   String get name => 'load_data';
 
@@ -162,8 +164,33 @@ class LoadDataTool {
   }
 
   Future<Map<String, dynamic>> _loadFromUrl(Map<String, dynamic> source) async {
-    // URL loading not yet implemented
-    throw Exception('URL data loading not yet implemented');
+    final url = source['url'] as String;
+    final format = source['format'] as String? ?? 'auto';
+
+    final dataId = _uuid.v4();
+
+    final responseBody = await _urlFetcher.fetchData(url);
+    final resolvedFormat = _resolveFormat(format, url);
+
+    DataFrame frame;
+    if (resolvedFormat == 'json') {
+      frame = _parseJsonContent(responseBody);
+    } else if (resolvedFormat == 'csv') {
+      frame = _parseCsvContent(responseBody);
+    } else {
+      throw UnsupportedError('Unsupported format: $resolvedFormat');
+    }
+
+    _store.store(dataId, frame);
+
+    return {
+      'success': true,
+      'data_id': dataId,
+      'row_count': frame.rowCount,
+      'column_count': frame.columns.length,
+      'columns': frame.columns.map((c) => c.name).toList(),
+      'time_range': frame.timeRange?.toJson(),
+    };
   }
 
   Future<Map<String, dynamic>> _loadFromInline(
@@ -217,7 +244,11 @@ class LoadDataTool {
     // Parse data rows
     final rows = <List<String>>[];
     for (var i = 1; i < lines.length; i++) {
-      rows.add(lines[i].split(',').map((v) => v.trim()).toList());
+      final row = lines[i].split(',').map((v) => v.trim()).toList();
+      if (row.length != headers.length) {
+        throw FormatException('Malformed CSV row at line ${i + 1}');
+      }
+      rows.add(row);
     }
 
     // Build columns
@@ -326,21 +357,31 @@ class LoadDataTool {
   }
 
   DataFrame _parseJsonContent(String content) {
-    final data = jsonDecode(content) as List<dynamic>;
+    final decoded = jsonDecode(content);
+    if (decoded is! List) {
+      throw const FormatException('Expected JSON array');
+    }
+
+    final data = decoded;
     if (data.isEmpty) {
       throw ArgumentError('Empty JSON array');
     }
 
-    // Get keys from first object
-    final firstObj = data[0] as Map<String, dynamic>;
-    final keys = firstObj.keys.toList();
+    if (data.first is Map<String, dynamic>) {
+      return _parseJsonObjectArray(data.cast<Map<String, dynamic>>());
+    }
+
+    return _parseJsonPrimitiveArray(data);
+  }
+
+  DataFrame _parseJsonObjectArray(List<Map<String, dynamic>> data) {
+    final keys = data.first.keys.toList();
 
     final columns = <DataColumn>[];
     TimeRange? timeRange;
 
     for (var key in keys) {
-      final values =
-          data.map((obj) => (obj as Map<String, dynamic>)[key]).toList();
+      final values = data.map((obj) => obj[key]).toList();
 
       // Infer type
       String type = 'string';
@@ -420,6 +461,103 @@ class LoadDataTool {
       rowCount: data.length,
       timeRange: timeRange,
     );
+  }
+
+  DataFrame _parseJsonPrimitiveArray(List<dynamic> data) {
+    final parsedData = <dynamic>[];
+    bool nullable = false;
+    bool isNumber = true;
+    bool isDateTime = false;
+    DateTime? firstDate;
+    DateTime? lastDate;
+
+    for (final value in data) {
+      if (value == null) {
+        nullable = true;
+        parsedData.add(null);
+        continue;
+      }
+
+      if (value is num) {
+        parsedData.add(value);
+      } else if (value is String) {
+        DateTime? parsedDate;
+        try {
+          parsedDate = DateTime.parse(value);
+        } catch (_) {}
+
+        if (parsedDate != null) {
+          parsedData.add(parsedDate);
+          isDateTime = true;
+          firstDate ??= parsedDate;
+          lastDate = parsedDate;
+        } else {
+          final numValue = num.tryParse(value);
+          if (numValue != null) {
+            parsedData.add(numValue);
+          } else {
+            isNumber = false;
+            parsedData.add(value);
+          }
+        }
+      } else {
+        isNumber = false;
+        parsedData.add(value);
+      }
+    }
+
+    String type = 'string';
+    TimeRange? timeRange;
+    if (isDateTime) {
+      type = 'datetime';
+      if (firstDate != null && lastDate != null) {
+        timeRange = TimeRange(
+          start: firstDate,
+          end: lastDate,
+          durationSeconds: lastDate.difference(firstDate).inSeconds,
+        );
+      }
+    } else if (isNumber) {
+      type = 'number';
+    }
+
+    final stats = _calculateStats(parsedData, type);
+    final samples = parsedData.take(3).toList();
+
+    final columns = <DataColumn>[
+      DataColumn(
+        name: 'value',
+        type: type,
+        nullable: nullable,
+        data: parsedData,
+        stats: stats,
+        sampleValues: samples,
+      ),
+    ];
+
+    return DataFrame(
+      fileName: 'inline.json',
+      fileType: 'json',
+      columns: columns,
+      rowCount: data.length,
+      timeRange: timeRange,
+    );
+  }
+
+  String _resolveFormat(String format, String sourcePath) {
+    if (format != 'auto') {
+      return format;
+    }
+
+    final lowerPath = sourcePath.toLowerCase();
+    if (lowerPath.endsWith('.json')) {
+      return 'json';
+    }
+    if (lowerPath.endsWith('.csv')) {
+      return 'csv';
+    }
+
+    return 'csv';
   }
 
   /// Convert braven_data DataFrame to internal DataFrame format
