@@ -27,6 +27,8 @@ void main() {
 
         expect(result.success, isTrue);
         expect(result.errorMessage, isNull);
+        expect(result.warningMessage, isNotNull);
+        expect(result.warningMessage, contains('Large file may take longer'));
       });
 
       test('rejects file exceeding 50MB limit', () {
@@ -291,6 +293,159 @@ void main() {
         );
 
         expect(result.success, isTrue);
+      });
+    });
+
+    group('executable content detection (FR-019)', () {
+      test('rejects Windows PE executable (MZ header)', () {
+        final content = Uint8List.fromList([
+          0x4D, 0x5A, // MZ signature
+          ...List.filled(1022, 0),
+        ]);
+
+        final result = validator.validate(
+          fileName: 'malicious.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage, contains('executable content'));
+      });
+
+      test('rejects ELF executable (Linux)', () {
+        final content = Uint8List.fromList([
+          0x7F, 0x45, 0x4C, 0x46, // ELF signature
+          ...List.filled(1020, 0),
+        ]);
+
+        final result = validator.validate(
+          fileName: 'malicious.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage, contains('executable content'));
+      });
+
+      test('rejects Mach-O executable (macOS)', () {
+        final content = Uint8List.fromList([
+          0xFE, 0xED, 0xFA, 0xCE, // 32-bit Mach-O
+          ...List.filled(1020, 0),
+        ]);
+
+        final result = validator.validate(
+          fileName: 'malicious.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage, contains('executable content'));
+      });
+
+      test('rejects script with shebang', () {
+        final content = Uint8List.fromList([
+          0x23, 0x21, // #!
+          ...List.filled(1022, 0x20),
+        ]);
+
+        final result = validator.validate(
+          fileName: 'malicious.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage, contains('executable content'));
+      });
+
+      test('rejects Windows batch file', () {
+        final content = Uint8List.fromList(
+          '@echo off\r\ndel /f /q *.*'.codeUnits,
+        );
+
+        final result = validator.validate(
+          fileName: 'malicious.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorMessage, contains('executable content'));
+      });
+
+      test('accepts valid CSV content', () {
+        final content = Uint8List.fromList('timestamp,power,hr\n1,2,3'.codeUnits);
+
+        final result = validator.validate(
+          fileName: 'data.csv',
+          fileSizeBytes: content.length,
+          content: content,
+        );
+
+        expect(result.success, isTrue);
+      });
+    });
+
+    group('large file warning (40-50MB)', () {
+      test('provides warning for file at 40MB threshold', () {
+        const size = 41943040; // 40 MB
+        final content = Uint8List(size);
+
+        final result = validator.validate(
+          fileName: 'large.csv',
+          fileSizeBytes: size,
+          content: content,
+        );
+
+        expect(result.success, isTrue);
+        expect(result.warningMessage, isNotNull);
+        expect(result.warningMessage, contains('Large file may take longer to process'));
+      });
+
+      test('provides warning for file at 45MB', () {
+        const size = 47185920; // 45 MB
+        final content = Uint8List(size);
+
+        final result = validator.validate(
+          fileName: 'large.fit',
+          fileSizeBytes: size,
+          content: content,
+        );
+
+        expect(result.success, isTrue);
+        expect(result.warningMessage, isNotNull);
+        expect(result.warningMessage, contains('Large file may take longer to process'));
+      });
+
+      test('no warning for file under 40MB', () {
+        const size = 41943039; // Just under 40 MB
+        final content = Uint8List(size);
+
+        final result = validator.validate(
+          fileName: 'medium.csv',
+          fileSizeBytes: size,
+          content: content,
+        );
+
+        expect(result.success, isTrue);
+        expect(result.warningMessage, isNull);
+      });
+
+      test('no warning for small file', () {
+        const size = 1024; // 1 KB
+        final content = Uint8List(size);
+
+        final result = validator.validate(
+          fileName: 'small.csv',
+          fileSizeBytes: size,
+          content: content,
+        );
+
+        expect(result.success, isTrue);
+        expect(result.warningMessage, isNull);
       });
     });
   });
