@@ -32,17 +32,20 @@ Always include the data array with x,y values when calling this tool.
           },
           'series': {
             'type': 'array',
-            'description': 'Data series to plot. REQUIRED - include your data here.',
+            'description':
+                'Data series to plot. REQUIRED - include your data here.',
             'items': {
               'type': 'object',
               'properties': {
                 'id': {
                   'type': 'string',
-                  'description': 'Unique series identifier (e.g., "sales", "revenue").',
+                  'description':
+                      'Unique series identifier (e.g., "sales", "revenue").',
                 },
                 'name': {
                   'type': 'string',
-                  'description': 'Display name for legend (e.g., "Quarterly Sales").',
+                  'description':
+                      'Display name for legend (e.g., "Quarterly Sales").',
                 },
                 'data': {
                   'type': 'array',
@@ -88,7 +91,9 @@ Always include the data array with x,y values when calling this tool.
   ChartType _resolveChartType(String? explicitType, String prompt) {
     final explicit = explicitType?.toLowerCase().trim();
     if (explicit != null && explicit.isNotEmpty) {
-      final matched = ChartType.values.where((type) => type.name == explicit).toList(growable: false);
+      final matched = ChartType.values
+          .where((type) => type.name == explicit)
+          .toList(growable: false);
       if (matched.isEmpty) {
         throw Exception('Unsupported chart type: $explicitType');
       }
@@ -198,14 +203,19 @@ Always include the data array with x,y values when calling this tool.
 
   List<String> _extractColumns(dynamic dataset) {
     if (dataset is Map && dataset['columns'] is List) {
-      return (dataset['columns'] as List).map((entry) => entry.toString()).toList(growable: false);
+      return (dataset['columns'] as List)
+          .map((entry) => entry.toString())
+          .toList(growable: false);
     }
     return const [];
   }
 
   List<Map<String, dynamic>> _extractRows(dynamic dataset) {
     if (dataset is Map && dataset['rows'] is List) {
-      return (dataset['rows'] as List).whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList(growable: false);
+      return (dataset['rows'] as List)
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList(growable: false);
     }
     return const [];
   }

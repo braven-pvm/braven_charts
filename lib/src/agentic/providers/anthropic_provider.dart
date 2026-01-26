@@ -1,4 +1,5 @@
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
+import 'package:flutter/foundation.dart';
 
 import '../models/conversation.dart';
 import '../models/message.dart';
@@ -75,9 +76,10 @@ class AnthropicProvider extends LLMProvider {
     final anthropicTools = _buildTools();
 
     // Debug logging
-    print('[AnthropicProvider] Sending ${messages.length} messages with ${anthropicTools.length} tools');
+    debugPrint(
+        '[AnthropicProvider] Sending ${messages.length} messages with ${anthropicTools.length} tools');
     for (final tool in anthropicTools) {
-      print('[AnthropicProvider]   - Tool: ${tool.name}');
+      debugPrint('[AnthropicProvider]   - Tool: ${tool.name}');
     }
 
     try {
@@ -98,7 +100,7 @@ class AnthropicProvider extends LLMProvider {
       final response = await _client.createMessage(request: request);
       return _extractResponse(response);
     } catch (error) {
-      print('[AnthropicProvider] ERROR: $error');
+      debugPrint('[AnthropicProvider] ERROR: $error');
       throw _mapError(error);
     }
   }
@@ -120,10 +122,12 @@ class AnthropicProvider extends LLMProvider {
     final toolCalls = _extractToolCalls(response);
 
     // Debug logging
-    print('[AnthropicProvider] Response text: "${text.length > 100 ? text.substring(0, 100) : text}..."');
-    print('[AnthropicProvider] Tool calls found: ${toolCalls.length}');
+    debugPrint(
+        '[AnthropicProvider] Response text: "${text.length > 100 ? text.substring(0, 100) : text}..."');
+    debugPrint('[AnthropicProvider] Tool calls found: ${toolCalls.length}');
     for (final tc in toolCalls) {
-      print('[AnthropicProvider]   - Tool: ${tc.toolName}, args: ${tc.arguments}');
+      debugPrint(
+          '[AnthropicProvider]   - Tool: ${tc.toolName}, args: ${tc.arguments}');
     }
 
     return Message(
@@ -180,7 +184,9 @@ class AnthropicProvider extends LLMProvider {
 
     for (final message in conversation.messages) {
       // Handle user messages with text
-      if (message.role == MessageRole.user && message.textContent != null && message.textContent!.trim().isNotEmpty) {
+      if (message.role == MessageRole.user &&
+          message.textContent != null &&
+          message.textContent!.trim().isNotEmpty) {
         result.add(
           anthropic.Message(
             role: anthropic.MessageRole.user,
@@ -191,11 +197,14 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle assistant messages with tool calls
-      if (message.role == MessageRole.assistant && message.toolCalls != null && message.toolCalls!.isNotEmpty) {
+      if (message.role == MessageRole.assistant &&
+          message.toolCalls != null &&
+          message.toolCalls!.isNotEmpty) {
         final blocks = <anthropic.Block>[];
 
         // Add text block if there's text content
-        if (message.textContent != null && message.textContent!.trim().isNotEmpty) {
+        if (message.textContent != null &&
+            message.textContent!.trim().isNotEmpty) {
           blocks.add(anthropic.Block.text(text: message.textContent!));
         }
 
@@ -218,7 +227,9 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle assistant messages with tool results (send as user message with tool_result blocks)
-      if (message.role == MessageRole.assistant && message.toolResults != null && message.toolResults!.isNotEmpty) {
+      if (message.role == MessageRole.assistant &&
+          message.toolResults != null &&
+          message.toolResults!.isNotEmpty) {
         final blocks = <anthropic.Block>[];
 
         for (final toolResult in message.toolResults!) {
@@ -252,7 +263,9 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle regular assistant text messages
-      if (message.role == MessageRole.assistant && message.textContent != null && message.textContent!.trim().isNotEmpty) {
+      if (message.role == MessageRole.assistant &&
+          message.textContent != null &&
+          message.textContent!.trim().isNotEmpty) {
         result.add(
           anthropic.Message(
             role: anthropic.MessageRole.assistant,
@@ -361,14 +374,19 @@ class AnthropicProvider extends LLMProvider {
   LLMProviderException _mapError(Object error) {
     final raw = error.toString().toLowerCase();
 
-    if (raw.contains('401') || raw.contains('unauthorized') || raw.contains('invalid api key') || raw.contains('authentication')) {
+    if (raw.contains('401') ||
+        raw.contains('unauthorized') ||
+        raw.contains('invalid api key') ||
+        raw.contains('authentication')) {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
       );
     }
 
-    if (raw.contains('credit balance') || raw.contains('billing') || raw.contains('purchase credits')) {
+    if (raw.contains('credit balance') ||
+        raw.contains('billing') ||
+        raw.contains('purchase credits')) {
       return LLMProviderException(
         'Anthropic API credit balance is too low. Please add credits at console.anthropic.com.',
         type: LLMProviderErrorType.rateLimited,
@@ -382,7 +400,10 @@ class AnthropicProvider extends LLMProvider {
       );
     }
 
-    if (raw.contains('socket') || raw.contains('network') || raw.contains('timeout') || raw.contains('connection')) {
+    if (raw.contains('socket') ||
+        raw.contains('network') ||
+        raw.contains('timeout') ||
+        raw.contains('connection')) {
       return LLMProviderException(
         'Network error. Please check your connection and retry.',
         type: LLMProviderErrorType.network,

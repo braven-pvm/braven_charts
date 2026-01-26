@@ -43,7 +43,9 @@ class ToolResult {
         assert((id ?? toolCallId).isNotEmpty, 'ToolResult id cannot be empty'),
         assert(toolCallId.isNotEmpty, 'toolCallId cannot be empty'),
         assert(
-          (success ?? !(isError ?? false)) == false || result != null || content != null,
+          (success ?? !(isError ?? false)) == false ||
+              result != null ||
+              content != null,
           'Successful result must have result or content',
         ),
         assert(
@@ -105,7 +107,10 @@ class ToolResult {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ToolResult && other.id == id && other.toolCallId == toolCallId && other.success == success;
+    return other is ToolResult &&
+        other.id == id &&
+        other.toolCallId == toolCallId &&
+        other.success == success;
   }
 
   @override

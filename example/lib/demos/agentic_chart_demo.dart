@@ -60,7 +60,8 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
-  final GlobalKey<ChatInterfaceState> _chatInterfaceKey = GlobalKey<ChatInterfaceState>();
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
+      GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
 **Welcome to Agentic Charts**
@@ -142,11 +143,13 @@ Create charts using natural language and AI-powered analysis.
 
       // Listen to conversation updates from the agent
       agentService.conversation.addListener(() {
-        print('[AgenticChartDemo] Conversation updated! Charts: ${agentService.conversation.value.charts.length}');
+        print(
+            '[AgenticChartDemo] Conversation updated! Charts: ${agentService.conversation.value.charts.length}');
         if (mounted) {
           setState(() {
             _conversation = agentService.conversation.value;
-            print('[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
+            print(
+                '[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
           });
         }
       });

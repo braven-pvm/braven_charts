@@ -21,7 +21,8 @@ class ChartRenderer {
       debugPrint('Rendering from Map: ${chart.keys.toList()}');
       try {
         final config = agentic.ChartConfiguration.fromJson(chart);
-        debugPrint('Parsed config: type=${config.type}, series=${config.series.length}');
+        debugPrint(
+            'Parsed config: type=${config.type}, series=${config.series.length}');
         return _renderConfiguration(config);
       } catch (e) {
         debugPrint('Error parsing chart config: $e');
@@ -44,7 +45,8 @@ class ChartRenderer {
       debugPrint('Building ${config.series.length} series');
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data ?? [];
-        debugPrint('Series ${seriesConfig.id}: ${dataPoints.length} data points');
+        debugPrint(
+            'Series ${seriesConfig.id}: ${dataPoints.length} data points');
         final points = dataPoints.map((dataPoint) {
           final x = dataPoint['x'];
           final y = dataPoint['y'];
