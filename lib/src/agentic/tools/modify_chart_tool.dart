@@ -19,15 +19,13 @@ class ModifyChartTool extends LLMTool {
   /// Creates a new ModifyChartTool
   ///
   /// If dataStore is not provided, a default instance will be created
-  ModifyChartTool({DataStore<ChartConfiguration>? dataStore})
-      : _dataStore = dataStore ?? DataStore<ChartConfiguration>();
+  ModifyChartTool({DataStore<ChartConfiguration>? dataStore}) : _dataStore = dataStore ?? DataStore<ChartConfiguration>();
 
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      '''Modifies visual properties, axes, or other settings of an existing chart without recreating it.
+  String get description => '''Modifies visual properties, axes, or other settings of an existing chart without recreating it.
 
 For multi-axis charts with different data ranges (e.g., Power in watts and Heart Rate in bpm), use normalizationMode:
 - "none": Single shared Y-axis for all series
@@ -40,10 +38,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
         'properties': {
-          'chartId': {
-            'type': 'string',
-            'description': 'Unique identifier of the chart to modify.'
-          },
+          'chartId': {'type': 'string', 'description': 'Unique identifier of the chart to modify.'},
           'properties': {
             'type': 'object',
             'description': '''Properties to modify. Supports:
@@ -53,7 +48,8 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
 - xAxis, yAxis, yAxes: Axis configurations (label, min, max, position)
 - normalizationMode: "none"|"auto"|"perSeries" for multi-axis display
 - legend, grid: Visibility and styling
-- theme: "light" or "dark"
+- theme: "light" or "dark" (string)
+- useDarkTheme: true/false (boolean, alternative to theme)
 - annotations: Reference lines, zones, labels
 - color, lineWidth, dashPattern: Quick styling for all series
 - interactions: Pan, zoom, crosshair, tooltip settings
@@ -80,8 +76,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
               'yAxes': {
                 'type': 'array',
                 'maxItems': 4,
-                'description':
-                    'Array of Y-axis configurations. Each can have: id, label, unit, position ("left"|"right"), min, max, color.'
+                'description': 'Array of Y-axis configurations. Each can have: id, label, unit, position ("left"|"right"), min, max, color.'
               },
               'interactions': {
                 'type': 'object',
@@ -115,8 +110,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
                   },
                   'yAxis': {
                     'type': 'boolean',
-                    'description':
-                        'Show or hide the Y-axis (or primary Y-axis for multi-axis charts).',
+                    'description': 'Show or hide the Y-axis (or primary Y-axis for multi-axis charts).',
                   },
                 },
               },
@@ -136,33 +130,16 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
               },
               'backgroundColor': {
                 'type': 'string',
-                'description':
-                    'Background color of the chart (e.g., "#FFFFFF").',
+                'description': 'Background color of the chart (e.g., "#FFFFFF").',
               },
               'padding': {
                 'type': 'object',
                 'description': 'Padding around the chart plot area.',
                 'properties': {
-                  'top': {
-                    'type': 'number',
-                    'minimum': 0,
-                    'description': 'Top padding in pixels.'
-                  },
-                  'bottom': {
-                    'type': 'number',
-                    'minimum': 0,
-                    'description': 'Bottom padding in pixels.'
-                  },
-                  'left': {
-                    'type': 'number',
-                    'minimum': 0,
-                    'description': 'Left padding in pixels.'
-                  },
-                  'right': {
-                    'type': 'number',
-                    'minimum': 0,
-                    'description': 'Right padding in pixels.'
-                  },
+                  'top': {'type': 'number', 'minimum': 0, 'description': 'Top padding in pixels.'},
+                  'bottom': {'type': 'number', 'minimum': 0, 'description': 'Bottom padding in pixels.'},
+                  'left': {'type': 'number', 'minimum': 0, 'description': 'Left padding in pixels.'},
+                  'right': {'type': 'number', 'minimum': 0, 'description': 'Right padding in pixels.'},
                 },
               },
               'fillOpacity': {
@@ -244,6 +221,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
       'legend',
       'grid',
       'theme',
+      'useDarkTheme',
       'title',
       'subtitle',
       'series',
@@ -300,16 +278,12 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
       // Handle individual property modifications on existing series
       modifiedSeries = chart.series.map((series) {
         List<double>? dashPattern;
-        if (properties.containsKey('dashPattern') &&
-            properties['dashPattern'] != null) {
-          dashPattern = (properties['dashPattern'] as List)
-              .map((e) => (e as num).toDouble())
-              .toList();
+        if (properties.containsKey('dashPattern') && properties['dashPattern'] != null) {
+          dashPattern = (properties['dashPattern'] as List).map((e) => (e as num).toDouble()).toList();
         }
 
         MarkerStyle? markerStyle;
-        if (properties.containsKey('markerStyle') &&
-            properties['markerStyle'] != null) {
+        if (properties.containsKey('markerStyle') && properties['markerStyle'] != null) {
           markerStyle = MarkerStyle.values.firstWhere(
             (e) => e.name == properties['markerStyle'],
             orElse: () => series.markerStyle,
@@ -317,8 +291,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
         }
 
         Interpolation? interpolation;
-        if (properties.containsKey('interpolation') &&
-            properties['interpolation'] != null) {
+        if (properties.containsKey('interpolation') && properties['interpolation'] != null) {
           interpolation = Interpolation.values.firstWhere(
             (e) => e.name == properties['interpolation'],
             orElse: () => series.interpolation,
@@ -327,22 +300,14 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
 
         return series.copyWith(
           color: properties['color'] as String?,
-          strokeWidth: properties['lineWidth'] != null
-              ? (properties['lineWidth'] as num).toDouble()
-              : null,
+          strokeWidth: properties['lineWidth'] != null ? (properties['lineWidth'] as num).toDouble() : null,
           strokeDash: dashPattern,
-          fillOpacity: properties['fillOpacity'] != null
-              ? (properties['fillOpacity'] as num).toDouble()
-              : null,
+          fillOpacity: properties['fillOpacity'] != null ? (properties['fillOpacity'] as num).toDouble() : null,
           markerStyle: markerStyle,
-          markerSize: properties['markerSize'] != null
-              ? (properties['markerSize'] as num).toDouble()
-              : null,
+          markerSize: properties['markerSize'] != null ? (properties['markerSize'] as num).toDouble() : null,
           interpolation: interpolation,
           showPoints: properties['showPoints'] as bool?,
-          tension: properties['tension'] != null
-              ? (properties['tension'] as num).toDouble()
-              : null,
+          tension: properties['tension'] != null ? (properties['tension'] as num).toDouble() : null,
         );
       }).toList();
     }
@@ -391,12 +356,9 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     if (properties.containsKey('yAxes')) {
       final yAxesList = properties['yAxes'] as List;
       if (yAxesList.length > 4) {
-        throw ArgumentError(
-            'Maximum 4 Y-axes supported. Please remove an axis before adding another.');
+        throw ArgumentError('Maximum 4 Y-axes supported. Please remove an axis before adding another.');
       }
-      modifiedYAxes = yAxesList
-          .map((axis) => YAxisConfig.fromJson(axis as Map<String, dynamic>))
-          .toList();
+      modifiedYAxes = yAxesList.map((axis) => YAxisConfig.fromJson(axis as Map<String, dynamic>)).toList();
     }
 
     // Handle legend modifications (stored in style or interactions)
@@ -413,9 +375,22 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     }
 
     // Handle theme modifications
+    // Support both 'theme' (string: "light"/"dark") and 'useDarkTheme' (boolean)
     String? modifiedTheme = chart.theme;
+    bool? modifiedUseDarkTheme = chart.useDarkTheme;
     if (properties.containsKey('theme')) {
       modifiedTheme = properties['theme'] as String?;
+      // Sync useDarkTheme with theme string
+      modifiedUseDarkTheme = modifiedTheme == 'dark';
+    }
+    if (properties.containsKey('useDarkTheme')) {
+      modifiedUseDarkTheme = properties['useDarkTheme'] as bool?;
+      // Sync theme string with useDarkTheme
+      if (modifiedUseDarkTheme == true) {
+        modifiedTheme = 'dark';
+      } else if (modifiedUseDarkTheme == false) {
+        modifiedTheme = 'light';
+      }
     }
 
     // Handle annotations modifications
@@ -425,8 +400,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     }
 
     // Handle normalizationMode modifications
-    NormalizationModeConfig? modifiedNormalizationMode =
-        chart.normalizationMode;
+    NormalizationModeConfig? modifiedNormalizationMode = chart.normalizationMode;
     if (properties.containsKey('normalizationMode')) {
       final modeStr = properties['normalizationMode'] as String?;
       if (modeStr != null) {
@@ -445,9 +419,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
 
     // Handle style modifications (backgroundColor, padding)
     ChartStyleConfig? modifiedStyle = chart.style;
-    if (properties.containsKey('backgroundColor') ||
-        properties.containsKey('padding') ||
-        properties.containsKey('style')) {
+    if (properties.containsKey('backgroundColor') || properties.containsKey('padding') || properties.containsKey('style')) {
       final existingStyle = chart.style;
       dynamic plotArea = existingStyle?.plotArea;
 
@@ -455,20 +427,15 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
       if (properties.containsKey('padding')) {
         final paddingProps = properties['padding'] as Map<String, dynamic>;
         plotArea = {
-          if (paddingProps['top'] != null)
-            'paddingTop': (paddingProps['top'] as num).toDouble(),
-          if (paddingProps['bottom'] != null)
-            'paddingBottom': (paddingProps['bottom'] as num).toDouble(),
-          if (paddingProps['left'] != null)
-            'paddingLeft': (paddingProps['left'] as num).toDouble(),
-          if (paddingProps['right'] != null)
-            'paddingRight': (paddingProps['right'] as num).toDouble(),
+          if (paddingProps['top'] != null) 'paddingTop': (paddingProps['top'] as num).toDouble(),
+          if (paddingProps['bottom'] != null) 'paddingBottom': (paddingProps['bottom'] as num).toDouble(),
+          if (paddingProps['left'] != null) 'paddingLeft': (paddingProps['left'] as num).toDouble(),
+          if (paddingProps['right'] != null) 'paddingRight': (paddingProps['right'] as num).toDouble(),
         };
       }
 
       modifiedStyle = ChartStyleConfig(
-        backgroundColor:
-            properties['backgroundColor'] ?? existingStyle?.backgroundColor,
+        backgroundColor: properties['backgroundColor'] ?? existingStyle?.backgroundColor,
         gridColor: existingStyle?.gridColor,
         axisColor: existingStyle?.axisColor,
         fontFamily: existingStyle?.fontFamily,
@@ -479,20 +446,16 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
 
     // Handle axisVisibility modifications (update xAxis and yAxis showAxisLine)
     if (properties.containsKey('axisVisibility')) {
-      final axisVisibility =
-          properties['axisVisibility'] as Map<String, dynamic>;
+      final axisVisibility = properties['axisVisibility'] as Map<String, dynamic>;
       if (axisVisibility.containsKey('xAxis')) {
         final showXAxis = axisVisibility['xAxis'] as bool;
-        modifiedXAxis =
-            (modifiedXAxis ?? chart.xAxis)?.copyWith(showAxisLine: showXAxis) ??
-                XAxisConfig(showAxisLine: showXAxis);
+        modifiedXAxis = (modifiedXAxis ?? chart.xAxis)?.copyWith(showAxisLine: showXAxis) ?? XAxisConfig(showAxisLine: showXAxis);
       }
       if (axisVisibility.containsKey('yAxis')) {
         final showYAxis = axisVisibility['yAxis'] as bool;
         if (chart.yAxes.isNotEmpty) {
           modifiedYAxes = [
-            (modifiedYAxes?.first ?? chart.yAxes.first)
-                .copyWith(showAxisLine: showYAxis),
+            (modifiedYAxes?.first ?? chart.yAxes.first).copyWith(showAxisLine: showYAxis),
             ...(modifiedYAxes?.skip(1) ?? chart.yAxes.skip(1)),
           ];
         }
@@ -501,20 +464,16 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
 
     // Handle tickFormatting modifications (update xAxis and yAxis tickFormat)
     if (properties.containsKey('tickFormatting')) {
-      final tickFormatting =
-          properties['tickFormatting'] as Map<String, dynamic>;
+      final tickFormatting = properties['tickFormatting'] as Map<String, dynamic>;
       if (tickFormatting.containsKey('xAxis')) {
         final xTickFormat = tickFormatting['xAxis'] as String;
-        modifiedXAxis =
-            (modifiedXAxis ?? chart.xAxis)?.copyWith(tickFormat: xTickFormat) ??
-                XAxisConfig(tickFormat: xTickFormat);
+        modifiedXAxis = (modifiedXAxis ?? chart.xAxis)?.copyWith(tickFormat: xTickFormat) ?? XAxisConfig(tickFormat: xTickFormat);
       }
       if (tickFormatting.containsKey('yAxis')) {
         final yTickFormat = tickFormatting['yAxis'] as String;
         if (chart.yAxes.isNotEmpty) {
           modifiedYAxes = [
-            (modifiedYAxes?.first ?? chart.yAxes.first)
-                .copyWith(tickFormat: yTickFormat),
+            (modifiedYAxes?.first ?? chart.yAxes.first).copyWith(tickFormat: yTickFormat),
             ...(modifiedYAxes?.skip(1) ?? chart.yAxes.skip(1)),
           ];
         }
@@ -525,12 +484,8 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     // CRITICAL: Preserve the original chart ID to ensure in-place updates
     final updated = chart.copyWith(
       type: modifiedType,
-      title: properties.containsKey('title')
-          ? properties['title'] as String?
-          : null,
-      subtitle: properties.containsKey('subtitle')
-          ? properties['subtitle'] as String?
-          : null,
+      title: properties.containsKey('title') ? properties['title'] as String? : null,
+      subtitle: properties.containsKey('subtitle') ? properties['subtitle'] as String? : null,
       series: modifiedSeries,
       xAxis: modifiedXAxis,
       yAxes: modifiedYAxes,
@@ -539,6 +494,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
       legend: modifiedLegend,
       grid: modifiedGrid,
       theme: modifiedTheme,
+      useDarkTheme: modifiedUseDarkTheme,
       annotations: modifiedAnnotations,
       normalizationMode: modifiedNormalizationMode,
     );
@@ -601,26 +557,17 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
       result.add(existing.copyWith(
         name: seriesJson['name'] as String? ?? existing.name,
         color: seriesJson['color'] as String? ?? existing.color,
-        strokeWidth: seriesJson['strokeWidth'] != null
-            ? (seriesJson['strokeWidth'] as num).toDouble()
-            : existing.strokeWidth,
-        strokeDash: seriesJson['strokeDash'] != null
-            ? (seriesJson['strokeDash'] as List)
-                .map((e) => (e as num).toDouble())
-                .toList()
-            : existing.strokeDash,
-        fillOpacity: seriesJson['fillOpacity'] != null
-            ? (seriesJson['fillOpacity'] as num).toDouble()
-            : existing.fillOpacity,
+        strokeWidth: seriesJson['strokeWidth'] != null ? (seriesJson['strokeWidth'] as num).toDouble() : existing.strokeWidth,
+        strokeDash:
+            seriesJson['strokeDash'] != null ? (seriesJson['strokeDash'] as List).map((e) => (e as num).toDouble()).toList() : existing.strokeDash,
+        fillOpacity: seriesJson['fillOpacity'] != null ? (seriesJson['fillOpacity'] as num).toDouble() : existing.fillOpacity,
         markerStyle: seriesJson['markerStyle'] != null
             ? MarkerStyle.values.firstWhere(
                 (e) => e.name == seriesJson['markerStyle'],
                 orElse: () => existing.markerStyle,
               )
             : existing.markerStyle,
-        markerSize: seriesJson['markerSize'] != null
-            ? (seriesJson['markerSize'] as num).toDouble()
-            : existing.markerSize,
+        markerSize: seriesJson['markerSize'] != null ? (seriesJson['markerSize'] as num).toDouble() : existing.markerSize,
         interpolation: seriesJson['interpolation'] != null
             ? Interpolation.values.firstWhere(
                 (e) => e.name == seriesJson['interpolation'],
@@ -631,14 +578,10 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
         yAxisId: seriesJson['yAxisId'] as String? ?? existing.yAxisId,
         unit: seriesJson['unit'] as String? ?? existing.unit,
         visible: seriesJson['visible'] as bool? ?? existing.visible,
-        legendVisible:
-            seriesJson['legendVisible'] as bool? ?? existing.legendVisible,
-        tension: seriesJson['tension'] != null
-            ? (seriesJson['tension'] as num).toDouble()
-            : existing.tension,
+        legendVisible: seriesJson['legendVisible'] as bool? ?? existing.legendVisible,
+        tension: seriesJson['tension'] != null ? (seriesJson['tension'] as num).toDouble() : existing.tension,
         // Per-series Y-axis configuration fields
-        yAxisPosition:
-            seriesJson['yAxisPosition'] as String? ?? existing.yAxisPosition,
+        yAxisPosition: seriesJson['yAxisPosition'] as String? ?? existing.yAxisPosition,
         yAxisLabel: seriesJson['yAxisLabel'] as String? ?? existing.yAxisLabel,
         yAxisUnit: seriesJson['yAxisUnit'] as String? ?? existing.yAxisUnit,
         yAxisColor: seriesJson['yAxisColor'] as String? ?? existing.yAxisColor,

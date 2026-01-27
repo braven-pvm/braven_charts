@@ -125,45 +125,66 @@ class AgentService {
           debugPrint('=== TOOL CALL: ${call.toolName} ===');
           _debugPrintJson('Tool input', call.arguments);
 
-          final result = await _toolRegistry.execute(call.toolName, call.arguments);
+          try {
+            final result = await _toolRegistry.execute(call.toolName, call.arguments);
 
-          String? createdChartId;
+            String? createdChartId;
 
-          // If the tool returns a ChartConfiguration, add it to the conversation
-          if (result is ChartConfiguration) {
-            createdChartId = result.id ?? _uuid.v4();
+            // If the tool returns a ChartConfiguration, add it to the conversation
+            if (result is ChartConfiguration) {
+              createdChartId = result.id ?? _uuid.v4();
 
-            // CRITICAL: Ensure the chart object has the ID set
-            // This is essential for in-place modifications to work correctly
-            final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
+              // CRITICAL: Ensure the chart object has the ID set
+              // This is essential for in-place modifications to work correctly
+              final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
 
-            // Store in chartStore so ModifyChartTool can access it
-            chartStore.store(chartWithId, id: createdChartId);
+              // Store in chartStore so ModifyChartTool can access it
+              chartStore.store(chartWithId, id: createdChartId);
 
-            // Update conversation with the new/modified chart
-            final current = conversation.value;
-            final updatedCharts = Map<String, dynamic>.from(current.charts);
-            final chartJson = chartWithId.toJson();
-            updatedCharts[createdChartId] = chartJson;
+              // Update conversation with the new/modified chart
+              final current = conversation.value;
+              final updatedCharts = Map<String, dynamic>.from(current.charts);
+              final chartJson = chartWithId.toJson();
+              updatedCharts[createdChartId] = chartJson;
 
-            final newConversation = current.copyWith(charts: updatedCharts);
-            conversation.value = newConversation;
-          }
+              final newConversation = current.copyWith(charts: updatedCharts);
+              conversation.value = newConversation;
+            }
 
-          if (result is ToolResult) {
-            toolResults.add(result);
-          } else {
-            // CRITICAL: If result is ChartConfiguration, use chartWithId (with ID set), not original result
-            final resultToStore = (result is ChartConfiguration && createdChartId != null)
-                ? chartStore.get(createdChartId) ?? result // Get the version with ID from chartStore
-                : result;
+            if (result is ToolResult) {
+              toolResults.add(result);
+            } else {
+              // CRITICAL: If result is ChartConfiguration, use chartWithId (with ID set), not original result
+              final resultToStore = (result is ChartConfiguration && createdChartId != null)
+                  ? chartStore.get(createdChartId) ?? result // Get the version with ID from chartStore
+                  : result;
+              toolResults.add(
+                ToolResult(
+                  toolCallId: call.id,
+                  result: resultToStore,
+                  chartId: createdChartId,
+                ),
+              );
+            }
+          } catch (e, stackTrace) {
+            // CRITICAL: Always add a tool_result even on error
+            // The API requires every tool_use to have a corresponding tool_result
+            // This is NOT hiding errors - it's proper LLM tool protocol:
+            // 1. Log full details for developers
+            // 2. Return error to LLM so it can respond appropriately
+            debugPrint('=== TOOL ERROR: ${call.toolName} ===');
+            debugPrint('Error: $e');
+            debugPrint('Stack trace: $stackTrace');
+            debugPrint('Tool arguments: ${call.arguments}');
             toolResults.add(
               ToolResult(
                 toolCallId: call.id,
-                result: resultToStore,
-                chartId: createdChartId,
+                result: 'Error executing tool ${call.toolName}: $e',
+                isError: true,
               ),
             );
+            // Re-throw would break the API protocol (tool_use without tool_result)
+            // The LLM will see isError:true and can explain the failure to the user
           }
         }
 
