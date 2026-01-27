@@ -85,6 +85,10 @@ class ChartRenderer {
           color: seriesColor,
           strokeWidth: seriesConfig.strokeWidth,
           yAxisConfig: yAxisConfig,
+          fillOpacity: seriesConfig.fillOpacity,
+          tension: seriesConfig.tension,
+          markerRadius: seriesConfig.markerRadius,
+          showDataPointMarkers: seriesConfig.showPoints,
         );
       }).toList();
 
@@ -134,6 +138,9 @@ class ChartRenderer {
       // Convert normalizationMode
       final normalizationMode = _getNormalizationMode(config);
 
+      // Build InteractionConfig from configuration
+      final interactionConfig = _buildInteractionConfig(config);
+
       return SizedBox(
         height: 350,
         child: BravenChartPlus(
@@ -147,6 +154,7 @@ class ChartRenderer {
           showXScrollbar: showXScrollbar,
           showYScrollbar: showYScrollbar,
           normalizationMode: normalizationMode,
+          interactionConfig: interactionConfig,
         ),
       );
     } catch (e) {
@@ -224,7 +232,8 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true ||
+        (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -291,6 +300,36 @@ class ChartRenderer {
       case agentic.NormalizationModeConfig.perSeries:
         return NormalizationMode.perSeries;
     }
+  }
+
+  /// Build InteractionConfig from configuration
+  ///
+  /// Maps ChartConfiguration.interactions to BravenChartPlus InteractionConfig.
+  /// Supports pan, zoom, crosshair, and tooltip settings.
+  InteractionConfig? _buildInteractionConfig(
+      agentic.ChartConfiguration config) {
+    if (config.interactions == null) {
+      return null; // Let BravenChartPlus use its default
+    }
+
+    if (config.interactions is! Map) {
+      return null;
+    }
+
+    final interactionsMap = config.interactions as Map<String, dynamic>;
+
+    // Extract interaction settings from the map
+    final enablePan = interactionsMap['pan'] == true;
+    final enableZoom = interactionsMap['zoom'] == true;
+    final crosshairEnabled = interactionsMap['crosshair'] == true;
+    final tooltipEnabled = interactionsMap['tooltip'] == true;
+
+    return InteractionConfig(
+      enablePan: enablePan,
+      enableZoom: enableZoom,
+      crosshair: CrosshairConfig(enabled: crosshairEnabled),
+      tooltip: TooltipConfig(enabled: tooltipEnabled),
+    );
   }
 
   /// Convert AnnotationConfig list to ChartAnnotation list
@@ -404,7 +443,10 @@ class ChartRenderer {
   /// Returns null if no Y-axis configuration is specified on the series.
   YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
     // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null && seriesConfig.yAxisLabel == null && seriesConfig.yAxisUnit == null && seriesConfig.yAxisColor == null) {
+    if (seriesConfig.yAxisPosition == null &&
+        seriesConfig.yAxisLabel == null &&
+        seriesConfig.yAxisUnit == null &&
+        seriesConfig.yAxisColor == null) {
       return null;
     }
 
@@ -439,6 +481,10 @@ class ChartRenderer {
     Color? color,
     double strokeWidth = 2.0,
     YAxisConfig? yAxisConfig,
+    double? fillOpacity,
+    double? tension,
+    double? markerRadius,
+    bool showDataPointMarkers = false,
   }) {
     switch (type) {
       case agentic.ChartType.line:
@@ -447,9 +493,10 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
-          tension: 0.25,
+          tension: tension ?? 0.25,
           strokeWidth: strokeWidth,
           yAxisConfig: yAxisConfig,
+          showDataPointMarkers: showDataPointMarkers,
         );
       case agentic.ChartType.area:
         return AreaChartSeries(
@@ -457,8 +504,10 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
-          tension: 0.25,
+          tension: tension ?? 0.25,
+          fillOpacity: fillOpacity ?? 0.3,
           yAxisConfig: yAxisConfig,
+          showDataPointMarkers: showDataPointMarkers,
         );
       case agentic.ChartType.bar:
         return BarChartSeries(
@@ -475,7 +524,7 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
-          markerRadius: 5.0,
+          markerRadius: markerRadius ?? 5.0,
           yAxisConfig: yAxisConfig,
         );
     }

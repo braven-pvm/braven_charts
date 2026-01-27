@@ -4,7 +4,8 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/services/chart_renderer.dart';
-import 'package:braven_charts/src/agentic/models/chart_configuration.dart' as agentic;
+import 'package:braven_charts/src/agentic/models/chart_configuration.dart'
+    as agentic;
 import 'package:braven_charts/src/agentic/models/series_config.dart' as agentic;
 import 'package:braven_charts/src/agentic/models/axis_config.dart' as agentic;
 
@@ -32,7 +33,8 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(
+              label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -57,7 +59,8 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(
+              label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -82,7 +85,8 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(
+              label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -107,7 +111,8 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(
+              label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -197,7 +202,8 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'Time'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y Axis', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -223,7 +229,8 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -248,7 +255,8 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -274,7 +282,8 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'Quarter'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -298,7 +307,8 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -321,8 +331,395 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
           ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+    });
+
+    group('series property mappings', () {
+      test('renders area chart with fillOpacity', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.area,
+          series: [
+            agentic.SeriesConfig(
+              id: 'area-series',
+              name: 'Area Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              fillOpacity: 0.5,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders line chart with tension', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+                {'x': 2.0, 'y': 15.0},
+              ],
+              tension: 0.5,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders area chart with tension', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.area,
+          series: [
+            agentic.SeriesConfig(
+              id: 'area-series',
+              name: 'Area Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              tension: 0.8,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders scatter chart with markerRadius', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.scatter,
+          series: [
+            agentic.SeriesConfig(
+              id: 'scatter-series',
+              name: 'Scatter Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              markerRadius: 8.0,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders line chart with showPoints (showDataPointMarkers)', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              showPoints: true,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders area chart with showPoints (showDataPointMarkers)', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.area,
+          series: [
+            agentic.SeriesConfig(
+              id: 'area-series',
+              name: 'Area Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              showPoints: true,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders line chart with all series properties', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'complete-series',
+              name: 'Complete Line',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+                {'x': 2.0, 'y': 15.0},
+              ],
+              color: '#FF5722',
+              strokeWidth: 3.0,
+              tension: 0.4,
+              showPoints: true,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders area chart with all series properties', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.area,
+          series: [
+            agentic.SeriesConfig(
+              id: 'complete-area',
+              name: 'Complete Area',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+              color: '#4CAF50',
+              fillOpacity: 0.6,
+              tension: 0.3,
+              showPoints: true,
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+    });
+
+    group('interaction configuration mapping', () {
+      test('renders chart with pan and zoom enabled', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          interactions: {'pan': true, 'zoom': true},
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders chart with crosshair enabled', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          interactions: {'crosshair': true},
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders chart with tooltip enabled', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          interactions: {'tooltip': true},
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders chart with all interaction features', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          interactions: {
+            'pan': true,
+            'zoom': true,
+            'crosshair': true,
+            'tooltip': true,
+          },
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders chart with interactions disabled', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          interactions: {
+            'pan': false,
+            'zoom': false,
+            'crosshair': false,
+            'tooltip': false,
+          },
+        );
+
+        expect(() => renderer.render(config), returnsNormally);
+        final widget = renderer.render(config);
+        expect(widget, isNotNull);
+      });
+
+      test('renders chart without interactions (null)', () {
+        final config = agentic.ChartConfiguration(
+          type: agentic.ChartType.line,
+          series: [
+            agentic.SeriesConfig(
+              id: 'line-series',
+              name: 'Line Data',
+              data: [
+                {'x': 0.0, 'y': 10.0},
+                {'x': 1.0, 'y': 20.0},
+              ],
+            ),
+          ],
+          xAxis: agentic.XAxisConfig(label: 'X'),
+          yAxes: [
+            agentic.YAxisConfig(
+                label: 'Y', position: agentic.AxisPosition.left),
+          ],
+          // No interactions specified
         );
 
         expect(() => renderer.render(config), returnsNormally);

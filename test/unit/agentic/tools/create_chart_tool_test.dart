@@ -56,10 +56,13 @@ void main() {
     });
 
     group('series styling properties', () {
-      test('inputSchema includes fillOpacity, markerStyle, markerSize, interpolation, showPoints, tension', () {
+      test(
+          'inputSchema includes fillOpacity, markerStyle, markerSize, interpolation, showPoints, tension',
+          () {
         final tool = CreateChartTool();
         final schema = tool.inputSchema;
-        final seriesItems = schema['properties']['series']['items']['properties'] as Map<String, dynamic>;
+        final seriesItems = schema['properties']['series']['items']
+            ['properties'] as Map<String, dynamic>;
 
         expect(seriesItems.containsKey('fillOpacity'), isTrue);
         expect(seriesItems['fillOpacity']['type'], equals('number'));
@@ -67,14 +70,16 @@ void main() {
         expect(seriesItems['fillOpacity']['maximum'], equals(1));
 
         expect(seriesItems.containsKey('markerStyle'), isTrue);
-        expect(seriesItems['markerStyle']['enum'], containsAll(['none', 'circle', 'square', 'triangle', 'diamond']));
+        expect(seriesItems['markerStyle']['enum'],
+            containsAll(['none', 'circle', 'square', 'triangle', 'diamond']));
 
         expect(seriesItems.containsKey('markerSize'), isTrue);
         expect(seriesItems['markerSize']['type'], equals('number'));
         expect(seriesItems['markerSize']['minimum'], equals(0));
 
         expect(seriesItems.containsKey('interpolation'), isTrue);
-        expect(seriesItems['interpolation']['enum'], containsAll(['linear', 'bezier', 'stepped', 'monotone']));
+        expect(seriesItems['interpolation']['enum'],
+            containsAll(['linear', 'bezier', 'stepped', 'monotone']));
 
         expect(seriesItems.containsKey('showPoints'), isTrue);
         expect(seriesItems['showPoints']['type'], equals('boolean'));
@@ -175,12 +180,15 @@ void main() {
     });
 
     group('style configuration', () {
-      test('inputSchema includes style with backgroundColor and padding properties', () {
+      test(
+          'inputSchema includes style with backgroundColor and padding properties',
+          () {
         final tool = CreateChartTool();
         final schema = tool.inputSchema;
 
         expect(schema['properties'].containsKey('style'), isTrue);
-        final styleProps = schema['properties']['style']['properties'] as Map<String, dynamic>;
+        final styleProps =
+            schema['properties']['style']['properties'] as Map<String, dynamic>;
 
         expect(styleProps.containsKey('backgroundColor'), isTrue);
         expect(styleProps.containsKey('paddingTop'), isTrue);
@@ -247,10 +255,13 @@ void main() {
     });
 
     group('per-series Y-axis configuration', () {
-      test('inputSchema includes yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor', () {
+      test(
+          'inputSchema includes yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor',
+          () {
         final tool = CreateChartTool();
         final schema = tool.inputSchema;
-        final seriesItems = schema['properties']['series']['items']['properties'] as Map<String, dynamic>;
+        final seriesItems = schema['properties']['series']['items']
+            ['properties'] as Map<String, dynamic>;
 
         expect(seriesItems.containsKey('yAxisPosition'), isTrue);
         expect(seriesItems['yAxisPosition']['enum'], equals(['left', 'right']));
@@ -358,7 +369,8 @@ void main() {
         expect(config.series.first.yAxisColor, equals('#0000FF'));
       });
 
-      test('creates multi-axis chart with left and right positioning', () async {
+      test('creates multi-axis chart with left and right positioning',
+          () async {
         final tool = CreateChartTool();
 
         final config = await tool.execute({
