@@ -11,6 +11,7 @@ import '../models/tool_result.dart';
 import '../providers/llm_provider.dart';
 import '../tools/tool_registry.dart';
 import 'chart_history.dart';
+import 'data_store.dart';
 
 enum AgentState {
   idle,
@@ -18,10 +19,13 @@ enum AgentState {
 }
 
 class AgentService {
-  AgentService(
-      {required LLMProvider provider, required ToolRegistry toolRegistry})
-      : _provider = provider,
+  AgentService({
+    required LLMProvider provider,
+    required ToolRegistry toolRegistry,
+    DataStore<ChartConfiguration>? chartStore,
+  })  : _provider = provider,
         _toolRegistry = toolRegistry,
+        chartStore = chartStore ?? DataStore<ChartConfiguration>(),
         conversation = ValueNotifier<Conversation>(
           Conversation(id: const Uuid().v4()),
         ),
@@ -31,6 +35,11 @@ class AgentService {
 
   final LLMProvider _provider;
   final ToolRegistry _toolRegistry;
+
+  /// Shared chart store for tools to access charts by ID.
+  /// This is synced with conversation.charts when charts are created/modified.
+  final DataStore<ChartConfiguration> chartStore;
+
   final ValueNotifier<Conversation> conversation;
   final ValueNotifier<AgentState> state;
   final ValueNotifier<ChartConfiguration?> currentChart;
@@ -67,8 +76,7 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage =
-                streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -102,39 +110,76 @@ class AgentService {
           debugPrint('=== AGENT TOOL EXECUTION START ===');
           debugPrint('[AgentService] Executing tool: ${call.toolName}');
           // DEBUG: Print the input arguments the agent provided
-          _debugPrintJson(
-              '[AgentService] Tool input arguments', call.arguments);
+          _debugPrintJson('[AgentService] Tool input arguments', call.arguments);
 
-          final result =
-              await _toolRegistry.execute(call.toolName, call.arguments);
+          final result = await _toolRegistry.execute(call.toolName, call.arguments);
           debugPrint('[AgentService] Tool result type: ${result.runtimeType}');
 
           String? createdChartId;
 
           // If the tool returns a ChartConfiguration, add it to the conversation
           if (result is ChartConfiguration) {
-            debugPrint(
-                '[AgentService] Adding ChartConfiguration to conversation');
+            debugPrint('[AgentService] Adding ChartConfiguration to conversation');
             createdChartId = result.id ?? _uuid.v4();
             debugPrint('[AgentService] Chart ID: $createdChartId');
+
+            // CRITICAL: Ensure the chart object has the ID set
+            // This is essential for in-place modifications to work correctly
+            final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
+
+            // Store in chartStore so ModifyChartTool can access it
+            chartStore.store(chartWithId, id: createdChartId);
+            debugPrint('[AgentService] Chart stored in chartStore with ID: $createdChartId');
+
             // DEBUG: Print the chart configuration as JSON
-            _debugPrintJson(
-                '[AgentService] ChartConfiguration created', result.toJson());
+            _debugPrintJson('[AgentService] ChartConfiguration created', chartWithId.toJson());
             final current = conversation.value;
             final updatedCharts = Map<String, dynamic>.from(current.charts);
-            updatedCharts[createdChartId] = result.toJson();
+            updatedCharts[createdChartId] = chartWithId.toJson();
+
+            // DEBUG: Verify the updated charts map has the correct data
+            final updatedChartJson = updatedCharts[createdChartId] as Map<String, dynamic>;
+            final updatedSeries = updatedChartJson['series'] as List?;
+            debugPrint('[AgentService] BEFORE setting conversation.value:');
+            debugPrint('[AgentService]   updatedCharts has ${updatedSeries?.length ?? 0} series');
+            for (final s in updatedSeries ?? []) {
+              final seriesMap = s as Map<String, dynamic>;
+              debugPrint('[AgentService]   - ${seriesMap['id']}');
+            }
+
             final newConversation = current.copyWith(charts: updatedCharts);
+
+            // DEBUG: Verify newConversation has correct data
+            final newChartJson = newConversation.charts[createdChartId] as Map<String, dynamic>;
+            final newSeries = newChartJson['series'] as List?;
+            debugPrint('[AgentService] newConversation.charts has ${newSeries?.length ?? 0} series');
+            debugPrint('[AgentService] newConversation identity: ${identityHashCode(newConversation)}');
+            debugPrint('[AgentService] current identity: ${identityHashCode(current)}');
+            debugPrint('[AgentService] conversation.value identity BEFORE: ${identityHashCode(conversation.value)}');
+
             conversation.value = newConversation;
+
+            // DEBUG: Verify after assignment
+            debugPrint('[AgentService] conversation.value identity AFTER: ${identityHashCode(conversation.value)}');
+            final afterConv = conversation.value;
+            debugPrint('[AgentService] afterConv same as newConversation: ${identical(afterConv, newConversation)}');
+            final afterChart = afterConv.charts[createdChartId] as Map<String, dynamic>;
+            final afterSeries = afterChart['series'] as List?;
+            debugPrint('[AgentService] AFTER setting conversation.value: ${afterSeries?.length ?? 0} series');
           }
           debugPrint('=== AGENT TOOL EXECUTION END ===');
 
           if (result is ToolResult) {
             toolResults.add(result);
           } else {
+            // CRITICAL: If result is ChartConfiguration, use chartWithId (with ID set), not original result
+            final resultToStore = (result is ChartConfiguration && createdChartId != null)
+                ? chartStore.get(createdChartId) ?? result // Get the version with ID from chartStore
+                : result;
             toolResults.add(
               ToolResult(
                 toolCallId: call.id,
-                result: result,
+                result: resultToStore,
                 chartId: createdChartId,
               ),
             );
@@ -171,15 +216,30 @@ class AgentService {
 
   void _appendMessage(Message message) {
     final current = conversation.value;
+
+    // DEBUG: Check chart state when appending messages
+    for (final entry in current.charts.entries) {
+      final chartMap = entry.value as Map<String, dynamic>;
+      final seriesList = chartMap['series'] as List?;
+      debugPrint('[AgentService._appendMessage] current chart ${entry.key} has ${seriesList?.length ?? 0} series');
+    }
+
     final updatedMessages = List<Message>.from(current.messages)..add(message);
     final isUser = message.role == MessageRole.user;
-    conversation.value = current.copyWith(
+    final newConv = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens:
-          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens:
-          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
+
+    // DEBUG: Check chart state in new conversation
+    for (final entry in newConv.charts.entries) {
+      final chartMap = entry.value as Map<String, dynamic>;
+      final seriesList = chartMap['series'] as List?;
+      debugPrint('[AgentService._appendMessage] newConv chart ${entry.key} has ${seriesList?.length ?? 0} series');
+    }
+
+    conversation.value = newConv;
   }
 
   /// Records the current chart state in history

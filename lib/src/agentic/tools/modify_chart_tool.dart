@@ -19,28 +19,22 @@ class ModifyChartTool extends LLMTool {
   /// Creates a new ModifyChartTool
   ///
   /// If dataStore is not provided, a default instance will be created
-  ModifyChartTool({DataStore<ChartConfiguration>? dataStore})
-      : _dataStore = dataStore ?? DataStore<ChartConfiguration>();
+  ModifyChartTool({DataStore<ChartConfiguration>? dataStore}) : _dataStore = dataStore ?? DataStore<ChartConfiguration>();
 
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      'Modifies visual properties, axes, or other settings of an existing chart without recreating it.';
+  String get description => 'Modifies visual properties, axes, or other settings of an existing chart without recreating it.';
 
   @override
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
         'properties': {
-          'chartId': {
-            'type': 'string',
-            'description': 'Unique identifier of the chart to modify.'
-          },
+          'chartId': {'type': 'string', 'description': 'Unique identifier of the chart to modify.'},
           'properties': {
             'type': 'object',
-            'description':
-                'Properties to modify. Can include color, lineWidth, dashPattern, xAxis, yAxis, legend, grid, theme, etc.'
+            'description': 'Properties to modify. Can include color, lineWidth, dashPattern, xAxis, yAxis, legend, grid, theme, etc.'
           },
         },
         'required': ['chartId'],
@@ -109,23 +103,22 @@ class ModifyChartTool extends LLMTool {
   ) {
     // Handle series-level properties (color, lineWidth, dashPattern)
     List<SeriesConfig>? modifiedSeries;
-    if (properties.containsKey('color') ||
-        properties.containsKey('lineWidth') ||
-        properties.containsKey('dashPattern')) {
+
+    // Handle complete series replacement (when LLM provides a full series array)
+    if (properties.containsKey('series')) {
+      final seriesList = properties['series'] as List;
+      modifiedSeries = seriesList.map((s) => SeriesConfig.fromJson(s as Map<String, dynamic>)).toList();
+    } else if (properties.containsKey('color') || properties.containsKey('lineWidth') || properties.containsKey('dashPattern')) {
+      // Handle individual property modifications on existing series
       modifiedSeries = chart.series.map((series) {
         List<double>? dashPattern;
-        if (properties.containsKey('dashPattern') &&
-            properties['dashPattern'] != null) {
-          dashPattern = (properties['dashPattern'] as List)
-              .map((e) => (e as num).toDouble())
-              .toList();
+        if (properties.containsKey('dashPattern') && properties['dashPattern'] != null) {
+          dashPattern = (properties['dashPattern'] as List).map((e) => (e as num).toDouble()).toList();
         }
 
         return series.copyWith(
           color: properties['color'] as String?,
-          strokeWidth: properties['lineWidth'] != null
-              ? (properties['lineWidth'] as num).toDouble()
-              : null,
+          strokeWidth: properties['lineWidth'] != null ? (properties['lineWidth'] as num).toDouble() : null,
           strokeDash: dashPattern,
         );
       }).toList();
@@ -175,12 +168,9 @@ class ModifyChartTool extends LLMTool {
     if (properties.containsKey('yAxes')) {
       final yAxesList = properties['yAxes'] as List;
       if (yAxesList.length > 4) {
-        throw ArgumentError(
-            'Maximum 4 Y-axes supported. Please remove an axis before adding another.');
+        throw ArgumentError('Maximum 4 Y-axes supported. Please remove an axis before adding another.');
       }
-      modifiedYAxes = yAxesList
-          .map((axis) => YAxisConfig.fromJson(axis as Map<String, dynamic>))
-          .toList();
+      modifiedYAxes = yAxesList.map((axis) => YAxisConfig.fromJson(axis as Map<String, dynamic>)).toList();
     }
 
     // Handle legend modifications (stored in style or interactions)
@@ -203,13 +193,10 @@ class ModifyChartTool extends LLMTool {
     }
 
     // Create updated configuration using copyWith
-    return chart.copyWith(
-      title: properties.containsKey('title')
-          ? properties['title'] as String?
-          : null,
-      subtitle: properties.containsKey('subtitle')
-          ? properties['subtitle'] as String?
-          : null,
+    // CRITICAL: Preserve the original chart ID to ensure in-place updates
+    final updated = chart.copyWith(
+      title: properties.containsKey('title') ? properties['title'] as String? : null,
+      subtitle: properties.containsKey('subtitle') ? properties['subtitle'] as String? : null,
       series: modifiedSeries,
       xAxis: modifiedXAxis,
       yAxes: modifiedYAxes,
@@ -217,5 +204,9 @@ class ModifyChartTool extends LLMTool {
       grid: modifiedGrid,
       theme: modifiedTheme,
     );
+
+    // Ensure the ID is explicitly preserved (copyWith should handle this,
+    // but we guarantee it here for in-place modification)
+    return updated.copyWith(id: chart.id);
   }
 }

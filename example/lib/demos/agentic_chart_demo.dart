@@ -60,8 +60,7 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
-  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
-      GlobalKey<ChatInterfaceState>();
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey = GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
 **Welcome to Agentic Charts**
@@ -114,23 +113,29 @@ Create charts using natural language and AI-powered analysis.
     });
 
     try {
+      // Create shared chart store for tools to access charts by ID
+      final chartStore = DataStore<ChartConfiguration>();
+
       // Create tool registry and register tools
       final toolRegistry = ToolRegistry();
       final createChartTool = CreateChartTool();
+      final modifyChartTool = ModifyChartTool(dataStore: chartStore);
       toolRegistry.register(createChartTool);
+      toolRegistry.register(modifyChartTool);
 
       // Create provider with tools so Claude knows to use them
       final provider = AnthropicProvider(
         apiKey: apiKey,
         model: 'claude-sonnet-4-20250514',
         maxTokens: 2048,
-        tools: [createChartTool],
+        tools: [createChartTool, modifyChartTool],
       );
 
-      // Create agent service
+      // Create agent service with shared chart store
       final agentService = AgentService(
         provider: provider,
         toolRegistry: toolRegistry,
+        chartStore: chartStore,
       );
 
       setState(() {
@@ -143,15 +148,30 @@ Create charts using natural language and AI-powered analysis.
 
       // Listen to conversation updates from the agent
       agentService.conversation.addListener(() {
-        print(
-            '[AgenticChartDemo] Conversation updated! Charts: ${agentService.conversation.value.charts.length}');
+        final convBefore = agentService.conversation.value;
+        print('[AgenticChartDemo] Listener START - identity: ${identityHashCode(convBefore)}');
+        print('[AgenticChartDemo] Conversation updated! Charts: ${convBefore.charts.length}');
+        // Debug: show series counts for each chart
+        for (final entry in convBefore.charts.entries) {
+          final chartMap = entry.value as Map<String, dynamic>;
+          final seriesList = chartMap['series'] as List?;
+          print('[AgenticChartDemo] Chart ${entry.key} has ${seriesList?.length ?? 0} series');
+          if (seriesList != null) {
+            for (final series in seriesList) {
+              final seriesMap = series as Map<String, dynamic>;
+              print('[AgenticChartDemo]   - Series: ${seriesMap['id']} (${seriesMap['name']})');
+            }
+          }
+        }
         if (mounted) {
           setState(() {
             _conversation = agentService.conversation.value;
-            print(
-                '[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
+            print('[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
           });
         }
+        final convAfter = agentService.conversation.value;
+        print('[AgenticChartDemo] Listener END - identity: ${identityHashCode(convAfter)}');
+        print('[AgenticChartDemo] Same identity? ${identical(convBefore, convAfter)}');
       });
     } catch (error) {
       setState(() {

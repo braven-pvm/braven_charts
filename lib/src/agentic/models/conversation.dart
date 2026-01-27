@@ -72,13 +72,10 @@ class Conversation {
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
       id: json['id'] as String,
-      messages: (json['messages'] as List)
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      messages: (json['messages'] as List).map((e) => Message.fromJson(e as Map<String, dynamic>)).toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       dataStore: (json['dataStore'] as Map).map(
-        (key, value) => MapEntry(
-            key as String, LoadedData.fromJson(value as Map<String, dynamic>)),
+        (key, value) => MapEntry(key as String, LoadedData.fromJson(value as Map<String, dynamic>)),
       ),
       charts: Map<String, dynamic>.from(json['charts'] as Map? ?? {}),
       totalInputTokens: json['totalInputTokens'] as int,
@@ -130,7 +127,7 @@ class Conversation {
     return other is Conversation &&
         other.id == id &&
         _messagesEqual(other.messages, messages) &&
-        other.charts.length == charts.length &&
+        _chartsEqual(other.charts, charts) &&
         other.totalInputTokens == totalInputTokens &&
         other.totalOutputTokens == totalOutputTokens &&
         other.estimatedCostUsd == estimatedCostUsd;
@@ -141,7 +138,7 @@ class Conversation {
     return Object.hash(
       id,
       Object.hashAll(messages),
-      charts.length,
+      Object.hashAll(charts.keys),
       totalInputTokens,
       totalOutputTokens,
       estimatedCostUsd,
@@ -157,6 +154,35 @@ class Conversation {
     }
     for (var i = 0; i < a.length; i += 1) {
       if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Deep comparison of charts maps - compares both keys and JSON content
+  static bool _chartsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+
+    for (final key in a.keys) {
+      if (!b.containsKey(key)) return false;
+
+      final aChart = a[key];
+      final bChart = b[key];
+
+      // Compare the JSON representations
+      if (aChart is Map<String, dynamic> && bChart is Map<String, dynamic>) {
+        // Check series specifically since that's what changes most often
+        final aSeries = aChart['series'] as List?;
+        final bSeries = bChart['series'] as List?;
+
+        if (aSeries?.length != bSeries?.length) return false;
+
+        // Also check chart type and title for basic changes
+        if (aChart['type'] != bChart['type']) return false;
+        if (aChart['title'] != bChart['title']) return false;
+      } else if (aChart != bChart) {
         return false;
       }
     }

@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
 import 'package:flutter/foundation.dart';
 
+import '../models/chart_configuration.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../models/tool_call.dart';
@@ -11,10 +14,16 @@ import 'llm_provider.dart';
 const String _chartSystemPrompt = '''
 You are a helpful chart creation assistant. 
 When users ask for charts or data visualizations, use the create_chart tool to generate them.
+When users ask to modify an existing chart, use the modify_chart tool.
 
 IMPORTANT: You MUST include the data in the series array when calling create_chart.
 Do NOT write Python code or matplotlib code.
 Do NOT just describe the chart - actually call the tool with data.
+
+MODIFYING CHARTS:
+When a chart is created, it returns a JSON object with an "id" field (a UUID like "a59daa76-a95f-4586-b939-317622c75bc8").
+To modify a chart, use the modify_chart tool with the chart's UUID as the chartId parameter.
+IMPORTANT: The chartId is the chart's top-level "id" field (UUID), NOT a series id.
 
 DATA CONTEXT:
 If the user's message contains [DATA CONTEXT], this describes files they have uploaded.
@@ -236,7 +245,14 @@ class AnthropicProvider extends LLMProvider {
           // Convert result to string for the API
           String resultContent;
           if (toolResult.result != null) {
-            resultContent = toolResult.result.toString();
+            // If result is a ChartConfiguration, serialize as JSON so LLM can see the chart ID
+            if (toolResult.result is ChartConfiguration) {
+              final chart = toolResult.result as ChartConfiguration;
+              // Prefix with explicit chart ID to make it clear for modify_chart calls
+              resultContent = 'Chart created successfully. CHART_ID: "${chart.id}" (use this ID for modify_chart). Full configuration: ${jsonEncode(chart.toJson())}';
+            } else {
+              resultContent = toolResult.result.toString();
+            }
           } else if (toolResult.content != null) {
             resultContent = toolResult.content.toString();
           } else if (toolResult.error != null) {
