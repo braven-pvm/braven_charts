@@ -61,8 +61,7 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
-  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
-      GlobalKey<ChatInterfaceState>();
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey = GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
 **Welcome to Agentic Charts**
@@ -122,15 +121,17 @@ Create charts using natural language and AI-powered analysis.
       final toolRegistry = ToolRegistry();
       final createChartTool = CreateChartTool();
       final modifyChartTool = ModifyChartTool(dataStore: chartStore);
+      final calculateMetricTool = CalculateMetricTool();
       toolRegistry.register(createChartTool);
       toolRegistry.register(modifyChartTool);
+      toolRegistry.register(calculateMetricTool);
 
       // Create provider with tools so Claude knows to use them
       final provider = AnthropicProvider(
         apiKey: apiKey,
         model: 'claude-sonnet-4-20250514',
         maxTokens: 2048,
-        tools: [createChartTool, modifyChartTool],
+        tools: [createChartTool, modifyChartTool, calculateMetricTool],
       );
 
       // Create agent service with shared chart store

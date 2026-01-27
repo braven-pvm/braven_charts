@@ -32,6 +32,7 @@ export 'src/agentic/providers/anthropic_provider.dart';
 export 'src/agentic/providers/llm_provider.dart';
 export 'src/agentic/services/agent_service.dart';
 export 'src/agentic/services/data_store.dart';
+export 'src/agentic/tools/calculate_metric_tool.dart';
 export 'src/agentic/tools/create_chart_tool.dart';
 export 'src/agentic/tools/modify_chart_tool.dart';
 export 'src/agentic/tools/tool_registry.dart';
