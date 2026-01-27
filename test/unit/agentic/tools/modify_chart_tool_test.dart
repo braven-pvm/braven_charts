@@ -446,5 +446,118 @@ void main() {
         expect(config, isA<ChartConfiguration>());
       });
     });
+
+    group('per-series Y-axis configuration', () {
+      test('applies yAxisPosition via series modifications', () async {
+        final tool = ModifyChartTool(dataStore: dataStore);
+
+        final config = await tool.execute({
+          'chartId': testChartId,
+          'properties': {
+            'series': [
+              {
+                'id': 'series-1',
+                'yAxisPosition': 'right',
+              },
+            ],
+          },
+        });
+
+        expect(config, isA<ChartConfiguration>());
+        expect(config.series.first.yAxisPosition, equals('right'));
+      });
+
+      test('applies yAxisLabel and yAxisUnit via series modifications',
+          () async {
+        final tool = ModifyChartTool(dataStore: dataStore);
+
+        final config = await tool.execute({
+          'chartId': testChartId,
+          'properties': {
+            'series': [
+              {
+                'id': 'series-1',
+                'yAxisLabel': 'Power Output',
+                'yAxisUnit': 'W',
+              },
+            ],
+          },
+        });
+
+        expect(config, isA<ChartConfiguration>());
+        expect(config.series.first.yAxisLabel, equals('Power Output'));
+        expect(config.series.first.yAxisUnit, equals('W'));
+      });
+
+      test('applies yAxisColor via series modifications', () async {
+        final tool = ModifyChartTool(dataStore: dataStore);
+
+        final config = await tool.execute({
+          'chartId': testChartId,
+          'properties': {
+            'series': [
+              {
+                'id': 'series-1',
+                'yAxisColor': '#FF5500',
+              },
+            ],
+          },
+        });
+
+        expect(config, isA<ChartConfiguration>());
+        expect(config.series.first.yAxisColor, equals('#FF5500'));
+      });
+
+      test('applies all per-series Y-axis config fields together', () async {
+        final tool = ModifyChartTool(dataStore: dataStore);
+
+        final config = await tool.execute({
+          'chartId': testChartId,
+          'properties': {
+            'series': [
+              {
+                'id': 'series-1',
+                'yAxisPosition': 'left',
+                'yAxisLabel': 'Heart Rate',
+                'yAxisUnit': 'bpm',
+                'yAxisColor': '#FF0000',
+              },
+            ],
+          },
+        });
+
+        expect(config, isA<ChartConfiguration>());
+        final series = config.series.first;
+        expect(series.yAxisPosition, equals('left'));
+        expect(series.yAxisLabel, equals('Heart Rate'));
+        expect(series.yAxisUnit, equals('bpm'));
+        expect(series.yAxisColor, equals('#FF0000'));
+      });
+
+      test('preserves existing data when modifying yAxisConfig', () async {
+        final tool = ModifyChartTool(dataStore: dataStore);
+
+        final config = await tool.execute({
+          'chartId': testChartId,
+          'properties': {
+            'series': [
+              {
+                'id': 'series-1',
+                'yAxisPosition': 'right',
+                'yAxisLabel': 'Modified Label',
+              },
+            ],
+          },
+        });
+
+        expect(config, isA<ChartConfiguration>());
+        // Data should be preserved
+        expect(config.series.first.data, isNotEmpty);
+        expect(config.series.first.data!.length, equals(2));
+        // Y-axis config should be modified
+        expect(config.series.first.yAxisPosition, equals('right'));
+        expect(config.series.first.yAxisLabel, equals('Modified Label'));
+      });
+    });
   });
 }

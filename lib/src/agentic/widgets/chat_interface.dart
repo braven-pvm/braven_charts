@@ -62,7 +62,8 @@ class ChatInterfaceState extends State<ChatInterface> {
   @override
   void didUpdateWidget(ChatInterface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.agentService != widget.agentService || oldWidget.conversation != widget.conversation) {
+    if (oldWidget.agentService != widget.agentService ||
+        oldWidget.conversation != widget.conversation) {
       _detachConversation();
       _attachConversation();
     }
@@ -146,7 +147,9 @@ class ChatInterfaceState extends State<ChatInterface> {
       try {
         // Build data context from loaded files
         final dataContext = _buildDataContext();
-        final messageWithContext = dataContext.isEmpty ? text : '$text\n\n[DATA CONTEXT]\n$dataContext';
+        final messageWithContext = dataContext.isEmpty
+            ? text
+            : '$text\n\n[DATA CONTEXT]\n$dataContext';
 
         await widget.agentService!.processUserMessage(messageWithContext);
       } catch (error) {
@@ -211,13 +214,15 @@ class ChatInterfaceState extends State<ChatInterface> {
       for (final col in frame.columns) {
         buffer.write('  - ${col.name} (${col.type})');
         if (col.stats.min != null && col.stats.max != null) {
-          buffer.write(' [min: ${col.stats.min}, max: ${col.stats.max}, mean: ${col.stats.mean?.toStringAsFixed(2)}]');
+          buffer.write(
+              ' [min: ${col.stats.min}, max: ${col.stats.max}, mean: ${col.stats.mean?.toStringAsFixed(2)}]');
         }
         buffer.writeln();
       }
 
       if (frame.timeRange != null) {
-        buffer.writeln('Time range: ${frame.timeRange!.start} to ${frame.timeRange!.end}');
+        buffer.writeln(
+            'Time range: ${frame.timeRange!.start} to ${frame.timeRange!.end}');
       }
       buffer.writeln();
     }
@@ -269,7 +274,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     if (!file_picker.isFilePickingSupported) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'File upload is not supported on this platform. Use addFileAttachment method for testing.';
+          _errorMessage =
+              'File upload is not supported on this platform. Use addFileAttachment method for testing.';
         });
       }
       return;
@@ -307,8 +313,10 @@ class ChatInterfaceState extends State<ChatInterface> {
   }) async {
     // Determine file type from extension
     final lastDot = fileName.lastIndexOf('.');
-    final extension = lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
-    final fileType = ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
+    final extension =
+        lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
+    final fileType =
+        ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
 
     // Validate the file
     final validationResult = _fileValidator.validate(
@@ -428,7 +436,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     // Render messages in order, with charts inline after their source message
     for (final message in conversation.messages) {
       // Add the message bubble if it has text content
-      if (message.textContent != null && message.textContent!.trim().isNotEmpty) {
+      if (message.textContent != null &&
+          message.textContent!.trim().isNotEmpty) {
         contentItems.add(MessageBubble(message: message));
       }
 
@@ -438,12 +447,15 @@ class ChatInterfaceState extends State<ChatInterface> {
           if (toolResult.chartId != null) {
             // Always get LATEST chart data from conversation.charts
             final chart = conversation.charts[toolResult.chartId];
-            if (chart != null && !renderedChartIds.contains(toolResult.chartId)) {
+            if (chart != null &&
+                !renderedChartIds.contains(toolResult.chartId)) {
               renderedChartIds.add(toolResult.chartId!);
               try {
-                final chartConfig = ChartConfiguration.fromJson(chart as Map<String, dynamic>);
+                final chartConfig =
+                    ChartConfiguration.fromJson(chart as Map<String, dynamic>);
                 // Use a key that includes chart content hash so widget rebuilds when chart data changes
-                final chartKey = ValueKey('${toolResult.chartId}_${chartConfig.series.length}_${chartConfig.hashCode}');
+                final chartKey = ValueKey(
+                    '${toolResult.chartId}_${chartConfig.series.length}_${chartConfig.hashCode}');
                 contentItems.add(
                   ChartCard(
                     key: chartKey,
@@ -473,7 +485,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     for (final entry in conversation.charts.entries) {
       if (!renderedChartIds.contains(entry.key)) {
         try {
-          final chartConfig = ChartConfiguration.fromJson(entry.value as Map<String, dynamic>);
+          final chartConfig =
+              ChartConfiguration.fromJson(entry.value as Map<String, dynamic>);
           contentItems.add(
             Row(
               children: [
@@ -525,7 +538,8 @@ class ChatInterfaceState extends State<ChatInterface> {
             // File attachments display
             if (_attachments.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
                   border: Border(
@@ -546,11 +560,11 @@ class ChatInterfaceState extends State<ChatInterface> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(width: 0.5, color: Colors.grey),
-                borderRadius: BorderRadius.circular(12),
+                border: Border.all(width: 0.5, color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(18),
               ),
-              padding: const EdgeInsets.all(5),
-              margin: const EdgeInsets.symmetric(horizontal: 25),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -579,7 +593,6 @@ class ChatInterfaceState extends State<ChatInterface> {
                           onSubmitted: (_) => _handleSend(),
                         ),
                       ),
-                      const SizedBox(height: 15),
                       IconButton(
                         key: const Key('chat_send_button'),
                         icon: const Icon(Icons.send, size: 15),
@@ -588,20 +601,39 @@ class ChatInterfaceState extends State<ChatInterface> {
                       ),
                     ],
                   ),
-                  TextButton(
-                    key: const Key('chat_file_button'),
-                    onPressed: _isProcessing ? null : _handleFileUpload,
-                    // tooltip: 'Attach file (FIT, CSV, TCX)',
-                    // visualDensity: VisualDensity.compact,
-                    child: const Row(children: [Icon(Icons.attach_file, size: 15), Text('Attach')]),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      OutlinedButton(
+                        key: const Key('chat_file_button'),
+                        onPressed: _isProcessing ? null : _handleFileUpload,
+
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                8.0), // Adjust value for more/less roundness
+                          ),
+                          backgroundColor: Colors.grey.shade300.withAlpha(60),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          side: BorderSide(
+                              width: 0.5,
+                              color: Colors.grey
+                                  .shade300), // Optional: define border width/color
+                        ),
+                        // tooltip: 'Attach file (FIT, CSV, TCX)',
+                        // visualDensity: VisualDensity.compact,
+
+                        child: Row(spacing: 4, children: [
+                          const Icon(Icons.attach_file, size: 15),
+                          Text(
+                            'Attach',
+                            style: GoogleFonts.notoSansJp(fontSize: 11),
+                          )
+                        ]),
+                      ),
+                    ],
                   ),
-                  // IconButton(
-                  //   key: const Key('chat_file_button'),
-                  //   icon: const Icon(Icons.attach_file, size: 20),
-                  //   onPressed: _isProcessing ? null : _handleFileUpload,
-                  //   tooltip: 'Attach file (FIT, CSV, TCX)',
-                  //   visualDensity: VisualDensity.compact,
-                  // ),
                 ],
               ),
             ),

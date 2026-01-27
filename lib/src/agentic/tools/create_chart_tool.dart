@@ -146,6 +146,27 @@ Always include the data array with x,y values when calling this tool.
                   'description':
                       'Whether to show this series in the legend. Defaults to true.',
                 },
+                'yAxisPosition': {
+                  'type': 'string',
+                  'enum': ['left', 'right'],
+                  'description':
+                      'Position of the Y-axis for this series. Use "left" or "right" for multi-axis charts.',
+                },
+                'yAxisLabel': {
+                  'type': 'string',
+                  'description':
+                      'Label for the Y-axis associated with this series (e.g., "Power", "Heart Rate").',
+                },
+                'yAxisUnit': {
+                  'type': 'string',
+                  'description':
+                      'Unit for the Y-axis associated with this series (e.g., "W", "bpm").',
+                },
+                'yAxisColor': {
+                  'type': 'string',
+                  'description':
+                      'Color for the Y-axis associated with this series in hex format (e.g., "#FF0000").',
+                },
               },
               'required': ['id', 'data'],
             },

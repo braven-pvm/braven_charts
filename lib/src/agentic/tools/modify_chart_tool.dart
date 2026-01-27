@@ -75,7 +75,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
               'series': {
                 'type': 'array',
                 'description':
-                    'Array of series to update. Each series can have: id (required), color, strokeWidth, strokeDash, yAxisId (for multi-axis), unit, fillOpacity, markerStyle, markerSize, interpolation, showPoints, tension.'
+                    'Array of series to update. Each series can have: id (required), color, strokeWidth, strokeDash, yAxisId (for multi-axis), unit, fillOpacity, markerStyle, markerSize, interpolation, showPoints, tension, yAxisPosition ("left"|"right"), yAxisLabel, yAxisUnit, yAxisColor.'
               },
               'yAxes': {
                 'type': 'array',
@@ -636,6 +636,12 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
         tension: seriesJson['tension'] != null
             ? (seriesJson['tension'] as num).toDouble()
             : existing.tension,
+        // Per-series Y-axis configuration fields
+        yAxisPosition:
+            seriesJson['yAxisPosition'] as String? ?? existing.yAxisPosition,
+        yAxisLabel: seriesJson['yAxisLabel'] as String? ?? existing.yAxisLabel,
+        yAxisUnit: seriesJson['yAxisUnit'] as String? ?? existing.yAxisUnit,
+        yAxisColor: seriesJson['yAxisColor'] as String? ?? existing.yAxisColor,
         // NOTE: data and dataColumn are NEVER modified - always preserved from existing
       ));
     }

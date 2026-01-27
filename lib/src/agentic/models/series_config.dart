@@ -43,6 +43,19 @@ class SeriesConfig {
   final double? markerRadius;
   final double? dataPointMarkerRadius;
 
+  // Per-series Y-axis configuration fields
+  /// Position of the Y-axis for this series ("left" or "right").
+  final String? yAxisPosition;
+
+  /// Label for the Y-axis associated with this series.
+  final String? yAxisLabel;
+
+  /// Unit for the Y-axis associated with this series (e.g., "W", "bpm").
+  final String? yAxisUnit;
+
+  /// Color for the Y-axis associated with this series (hex format).
+  final String? yAxisColor;
+
   /// Convenience getter for lineWidth (alias for strokeWidth)
   double get lineWidth => strokeWidth;
 
@@ -73,6 +86,10 @@ class SeriesConfig {
     this.tension,
     this.markerRadius,
     this.dataPointMarkerRadius,
+    this.yAxisPosition,
+    this.yAxisLabel,
+    this.yAxisUnit,
+    this.yAxisColor,
   })  : strokeWidth = strokeWidth ?? 2.0,
         fillOpacity = fillOpacity ?? 0.0,
         markerStyle = markerStyle ?? MarkerStyle.none,
@@ -109,6 +126,18 @@ class SeriesConfig {
     final localColor = color;
     if (localColor != null && !_isValidColor(localColor)) {
       throw ArgumentError('color must be in #RGB or #RRGGBB format');
+    }
+    // Validate yAxisPosition
+    final localYAxisPosition = yAxisPosition;
+    if (localYAxisPosition != null &&
+        localYAxisPosition != 'left' &&
+        localYAxisPosition != 'right') {
+      throw ArgumentError('yAxisPosition must be "left" or "right"');
+    }
+    // Validate yAxisColor
+    final localYAxisColor = yAxisColor;
+    if (localYAxisColor != null && !_isValidColor(localYAxisColor)) {
+      throw ArgumentError('yAxisColor must be in #RGB or #RRGGBB format');
     }
   }
 
@@ -150,6 +179,10 @@ class SeriesConfig {
       tension: json['tension'] as double?,
       markerRadius: json['markerRadius'] as double?,
       dataPointMarkerRadius: json['dataPointMarkerRadius'] as double?,
+      yAxisPosition: json['yAxisPosition'] as String?,
+      yAxisLabel: json['yAxisLabel'] as String?,
+      yAxisUnit: json['yAxisUnit'] as String?,
+      yAxisColor: json['yAxisColor'] as String?,
     );
   }
 
@@ -179,6 +212,10 @@ class SeriesConfig {
       if (markerRadius != null) 'markerRadius': markerRadius,
       if (dataPointMarkerRadius != null)
         'dataPointMarkerRadius': dataPointMarkerRadius,
+      if (yAxisPosition != null) 'yAxisPosition': yAxisPosition,
+      if (yAxisLabel != null) 'yAxisLabel': yAxisLabel,
+      if (yAxisUnit != null) 'yAxisUnit': yAxisUnit,
+      if (yAxisColor != null) 'yAxisColor': yAxisColor,
     };
   }
 
@@ -206,6 +243,10 @@ class SeriesConfig {
     double? tension,
     double? markerRadius,
     double? dataPointMarkerRadius,
+    String? yAxisPosition,
+    String? yAxisLabel,
+    String? yAxisUnit,
+    String? yAxisColor,
   }) {
     return SeriesConfig(
       id: id ?? this.id,
@@ -231,6 +272,10 @@ class SeriesConfig {
       markerRadius: markerRadius ?? this.markerRadius,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      yAxisPosition: yAxisPosition ?? this.yAxisPosition,
+      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
+      yAxisUnit: yAxisUnit ?? this.yAxisUnit,
+      yAxisColor: yAxisColor ?? this.yAxisColor,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/annotation_config.dart';
 import '../models/chart_configuration.dart' as agentic;
+import '../models/series_config.dart' as agentic;
 
 /// Renders chart configurations into Flutter widgets.
 class ChartRenderer {
@@ -72,6 +73,9 @@ class ChartRenderer {
         // Parse color from SeriesConfig
         final seriesColor = _parseColor(seriesConfig.color);
 
+        // Build YAxisConfig from per-series Y-axis configuration fields
+        final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
+
         // Map to the appropriate concrete series type based on chart type
         return _createSeriesForType(
           config.type,
@@ -80,6 +84,7 @@ class ChartRenderer {
           points: points,
           color: seriesColor,
           strokeWidth: seriesConfig.strokeWidth,
+          yAxisConfig: yAxisConfig,
         );
       }).toList();
 
@@ -395,6 +400,41 @@ class ChartRenderer {
     }
   }
 
+  /// Builds a YAxisConfig from per-series Y-axis configuration fields.
+  ///
+  /// Returns null if no Y-axis configuration is specified on the series.
+  YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
+    // If no per-series Y-axis fields are set, return null
+    if (seriesConfig.yAxisPosition == null &&
+        seriesConfig.yAxisLabel == null &&
+        seriesConfig.yAxisUnit == null &&
+        seriesConfig.yAxisColor == null) {
+      return null;
+    }
+
+    // Map position string to YAxisPosition enum
+    YAxisPosition position;
+    switch (seriesConfig.yAxisPosition?.toLowerCase()) {
+      case 'right':
+        position = YAxisPosition.right;
+        break;
+      case 'left':
+      default:
+        position = YAxisPosition.left;
+        break;
+    }
+
+    // Parse axis color
+    final axisColor = _parseColor(seriesConfig.yAxisColor);
+
+    return YAxisConfig(
+      position: position,
+      label: seriesConfig.yAxisLabel,
+      unit: seriesConfig.yAxisUnit,
+      color: axisColor,
+    );
+  }
+
   ChartSeries _createSeriesForType(
     agentic.ChartType type, {
     required String id,
@@ -402,6 +442,7 @@ class ChartRenderer {
     required List<ChartDataPoint> points,
     Color? color,
     double strokeWidth = 2.0,
+    YAxisConfig? yAxisConfig,
   }) {
     switch (type) {
       case agentic.ChartType.line:
@@ -412,6 +453,7 @@ class ChartRenderer {
           color: color,
           tension: 0.25,
           strokeWidth: strokeWidth,
+          yAxisConfig: yAxisConfig,
         );
       case agentic.ChartType.area:
         return AreaChartSeries(
@@ -420,6 +462,7 @@ class ChartRenderer {
           points: points,
           color: color,
           tension: 0.25,
+          yAxisConfig: yAxisConfig,
         );
       case agentic.ChartType.bar:
         return BarChartSeries(
@@ -428,6 +471,7 @@ class ChartRenderer {
           points: points,
           color: color,
           barWidthPercent: 0.7,
+          yAxisConfig: yAxisConfig,
         );
       case agentic.ChartType.scatter:
         return ScatterChartSeries(
@@ -436,6 +480,7 @@ class ChartRenderer {
           points: points,
           color: color,
           markerRadius: 5.0,
+          yAxisConfig: yAxisConfig,
         );
     }
   }
