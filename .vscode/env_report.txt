@@ -1,5 +1,0 @@
-
-Name  : CHROME_CRASHPAD_PIPE_NAME
-Value : \\.\pipe\crashpad_8916_FLPUGOKUPQYDEDOJ
-
-

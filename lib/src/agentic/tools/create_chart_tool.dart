@@ -88,7 +88,8 @@ Always include the data array with x,y values when calling this tool.
                 'markerSize': {
                   'type': 'number',
                   'minimum': 0,
-                  'description': 'Size of data point markers in pixels. Defaults to 4.0.',
+                  'description':
+                      'Size/radius of markers in pixels. Used for data points on line/area charts (when showPoints=true) and scatter plot markers. Defaults to 4.0.',
                 },
                 'interpolation': {
                   'type': 'string',
@@ -99,16 +100,9 @@ Always include the data array with x,y values when calling this tool.
                   'type': 'boolean',
                   'description': 'Whether to show data points. Defaults to false.',
                 },
-                'dataPointMarkerRadius': {
-                  'type': 'number',
-                  'minimum': 0,
-                  'description': 'Radius of data point markers in pixels. Defaults to 3.0.',
-                },
-                'markerRadius': {
-                  'type': 'number',
-                  'minimum': 0,
-                  'description': 'Radius of scatter plot markers in pixels. Defaults to 5.0.',
-                },
+                // NOTE: markerSize (above) is the canonical property for marker size.
+                // It applies to all chart types: line/area (data point markers) and scatter (plot markers).
+                // Removed duplicate dataPointMarkerRadius and markerRadius to avoid LLM confusion.
                 'barWidthPercent': {
                   'type': 'number',
                   'minimum': 0,

@@ -77,6 +77,14 @@ class ChartRenderer {
         final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
 
         // Map to the appropriate concrete series type based on chart type
+        // For dataPointMarkerRadius, fall back to markerSize if not explicitly set
+        // This allows the LLM to use "markerSize" as a generic property
+        final effectiveMarkerRadius = seriesConfig.dataPointMarkerRadius ?? (seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null);
+
+        // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
+        // This improves UX: LLM setting markerSize expects markers to appear
+        final effectiveShowPoints = seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+
         return _createSeriesForType(
           config.type,
           id: seriesConfig.id,
@@ -87,9 +95,9 @@ class ChartRenderer {
           yAxisConfig: yAxisConfig,
           fillOpacity: seriesConfig.fillOpacity,
           tension: seriesConfig.tension,
-          markerRadius: seriesConfig.markerRadius,
-          dataPointMarkerRadius: seriesConfig.dataPointMarkerRadius,
-          showDataPointMarkers: seriesConfig.showPoints,
+          markerRadius: seriesConfig.markerRadius ?? seriesConfig.markerSize,
+          dataPointMarkerRadius: effectiveMarkerRadius,
+          showDataPointMarkers: effectiveShowPoints,
           interpolation: seriesConfig.interpolation,
           unit: seriesConfig.unit,
           barWidthPercent: seriesConfig.barWidthPercent,
@@ -327,6 +335,7 @@ class ChartRenderer {
   ///
   /// Maps ChartConfiguration.interactions to BravenChartPlus InteractionConfig.
   /// Supports pan, zoom, crosshair, and tooltip settings.
+  /// Properties not explicitly set default to true (matching BravenChartPlus defaults).
   InteractionConfig? _buildInteractionConfig(agentic.ChartConfiguration config) {
     if (config.interactions == null) {
       return null; // Let BravenChartPlus use its default
@@ -339,10 +348,11 @@ class ChartRenderer {
     final interactionsMap = config.interactions as Map<String, dynamic>;
 
     // Extract interaction settings from the map
-    final enablePan = interactionsMap['pan'] == true;
-    final enableZoom = interactionsMap['zoom'] == true;
-    final crosshairEnabled = interactionsMap['crosshair'] == true;
-    final tooltipEnabled = interactionsMap['tooltip'] == true;
+    // Default to true if not specified (matching BravenChartPlus defaults)
+    final enablePan = interactionsMap['pan'] ?? true;
+    final enableZoom = interactionsMap['zoom'] ?? true;
+    final crosshairEnabled = interactionsMap['crosshair'] ?? true;
+    final tooltipEnabled = interactionsMap['tooltip'] ?? true;
 
     return InteractionConfig(
       enablePan: enablePan,

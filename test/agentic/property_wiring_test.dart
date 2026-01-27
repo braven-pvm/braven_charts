@@ -26,7 +26,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart' as agentic;
 import 'package:braven_charts/src/agentic/models/series_config.dart' as agentic;
 import 'package:braven_charts/src/agentic/models/axis_config.dart' as agentic;
-import 'package:braven_charts/src/agentic/tools/create_chart_tool.dart';
 import 'package:braven_charts/src/agentic/services/chart_renderer.dart';
 
 void main() {
@@ -88,18 +87,13 @@ void main() {
       expect(seriesProperties.containsKey('showPoints'), isTrue);
     });
 
-    test('schema: series.dataPointMarkerRadius', () {
-      expect(seriesProperties.containsKey('dataPointMarkerRadius'), isTrue, reason: 'MISSING: dataPointMarkerRadius not in schema');
-    });
+    // NOTE: dataPointMarkerRadius and markerRadius were REMOVED from schema
+    // to avoid LLM confusion. markerSize is the single canonical property
+    // that works for all chart types (line, area, scatter).
 
     // === AreaChartSeries specific (1 additional) ===
     test('schema: series.fillOpacity', () {
       expect(seriesProperties.containsKey('fillOpacity'), isTrue);
-    });
-
-    // === ScatterChartSeries specific (1) ===
-    test('schema: series.markerRadius', () {
-      expect(seriesProperties.containsKey('markerRadius'), isTrue, reason: 'MISSING: markerRadius not in schema');
     });
 
     // === BarChartSeries specific (4) ===
@@ -535,6 +529,58 @@ void main() {
       expect(series!.dataPointMarkerRadius, equals(6.0), reason: 'MISSING: dataPointMarkerRadius not wired');
     });
 
+    // CRITICAL: This tests the actual LLM use case - markerSize is what Claude sends
+    test('wiring: markerSize → LineChartSeries.dataPointMarkerRadius (LLM fallback)', () {
+      // This is the REAL user flow: LLM sends markerSize, not dataPointMarkerRadius
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(
+            id: 'test',
+            data: [
+              {'x': 0, 'y': 1}
+            ],
+            markerSize: 8.0, // What the LLM actually sends
+            showPoints: true,
+          ),
+        ],
+      );
+
+      final widget = renderer.render(config);
+      final series = extractLineSeriesFromWidget(widget);
+
+      expect(series, isNotNull);
+      expect(series!.dataPointMarkerRadius, equals(8.0),
+          reason: 'CRITICAL: markerSize must fall back to dataPointMarkerRadius for line charts. '
+              'The LLM sends markerSize, not dataPointMarkerRadius!');
+    });
+
+    // CRITICAL: markerSize should implicitly enable showDataPointMarkers
+    test('wiring: markerSize implicitly enables showDataPointMarkers', () {
+      // LLM sets markerSize but NOT showPoints - markers should still appear
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(
+            id: 'test',
+            data: [
+              {'x': 0, 'y': 1}
+            ],
+            markerSize: 8.0, // Non-default size should implicitly enable markers
+            // showPoints NOT set - but markers should still show
+          ),
+        ],
+      );
+
+      final widget = renderer.render(config);
+      final series = extractLineSeriesFromWidget(widget);
+
+      expect(series, isNotNull);
+      expect(series!.showDataPointMarkers, isTrue,
+          reason: 'CRITICAL: Setting markerSize to non-default should implicitly enable showDataPointMarkers. '
+              'This ensures LLM setting markerSize sees markers without needing showPoints: true.');
+    });
+
     test('wiring: unit → LineChartSeries.unit', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
@@ -891,7 +937,8 @@ void main() {
       return null;
     }
 
-    test('wiring: markerRadius → ScatterChartSeries.markerRadius', () {
+    test('wiring: markerSize → ScatterChartSeries.markerRadius', () {
+      // LLM sends markerSize, which is the canonical property
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.scatter,
         series: [
@@ -900,7 +947,7 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            markerRadius: 10.0,
+            markerSize: 10.0, // What the LLM actually sends
           ),
         ],
       );
@@ -1274,6 +1321,85 @@ void main() {
       expect(chart!.xAxisConfig?.min, equals(0.0), reason: 'MISSING: xAxis.min not wired');
       expect(chart.xAxisConfig?.max, equals(100.0), reason: 'MISSING: xAxis.max not wired');
     });
+
+    // CRITICAL: Interaction config wiring tests
+    test('wiring: interactions.tooltip → InteractionConfig.tooltip.enabled', () {
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        interactions: {'tooltip': true},
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      expect(chart!.interactionConfig?.tooltip.enabled, isTrue,
+          reason: 'MISSING: interactions.tooltip not wired to InteractionConfig.tooltip.enabled');
+    });
+
+    test('wiring: interactions.crosshair → InteractionConfig.crosshair.enabled', () {
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        interactions: {'crosshair': true},
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      expect(chart!.interactionConfig?.crosshair.enabled, isTrue,
+          reason: 'MISSING: interactions.crosshair not wired to InteractionConfig.crosshair.enabled');
+    });
+
+    // CRITICAL: Default behavior when interactions is partial
+    test('wiring: partial interactions defaults unspecified to true', () {
+      // If LLM sends only crosshair, tooltip should default to true (not false)
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        interactions: {'crosshair': true}, // No tooltip specified
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      // Tooltip should be enabled by default even though not specified
+      expect(chart!.interactionConfig?.tooltip.enabled, isTrue,
+          reason: 'CRITICAL: Unspecified interaction settings should default to true, not false');
+    });
+
+    test('wiring: interactions can explicitly disable tooltip', () {
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        interactions: {'tooltip': false},
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      expect(chart!.interactionConfig?.tooltip.enabled, isFalse, reason: 'MISSING: interactions.tooltip=false should disable tooltip');
+    });
   });
 
   // ============================================================================
@@ -1287,14 +1413,14 @@ void main() {
   //   - Enum values: 16 (interpolation + yAxisPosition + legendPosition + normalizationMode)
   //   - Interaction properties: 5
   //
-  // Renderer Wiring Tests: ~40 tests
-  //   - LineChartSeries: 16
+  // Renderer Wiring Tests: ~45 tests
+  //   - LineChartSeries: 17
   //   - AreaChartSeries: 6
   //   - ScatterChartSeries: 1
   //   - BarChartSeries: 4
   //   - BravenChartPlus widget: 14
+  //   - Interaction config: 4
   //
-  // TOTAL: ~92 tests
-  // Expected failures (based on audit): ~45-50 tests
+  // TOTAL: ~109 tests
   // ============================================================================
 }
