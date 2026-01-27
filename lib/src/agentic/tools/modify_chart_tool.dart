@@ -138,10 +138,10 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     // Handle series-level properties (color, lineWidth, dashPattern)
     List<SeriesConfig>? modifiedSeries;
 
-    // Handle complete series replacement (when LLM provides a full series array)
+    // Handle series modifications (merge with existing series, preserving data source)
     if (properties.containsKey('series')) {
       final seriesList = properties['series'] as List;
-      modifiedSeries = seriesList.map((s) => SeriesConfig.fromJson(s as Map<String, dynamic>)).toList();
+      modifiedSeries = _mergeSeriesModifications(chart.series, seriesList);
     } else if (properties.containsKey('color') || properties.containsKey('lineWidth') || properties.containsKey('dashPattern')) {
       // Handle individual property modifications on existing series
       modifiedSeries = chart.series.map((series) {
@@ -262,5 +262,79 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     // Ensure the ID is explicitly preserved (copyWith should handle this,
     // but we guarantee it here for in-place modification)
     return updated.copyWith(id: chart.id);
+  }
+
+  /// Merges agent-provided series modifications with existing series.
+  ///
+  /// For each series the agent modifies, we:
+  /// 1. Find the matching existing series by ID
+  /// 2. Preserve the existing data source (data or dataColumn)
+  /// 3. Apply only the visual/config property changes from the agent
+  ///
+  /// If the agent provides a series ID that doesn't exist, it's skipped.
+  /// If the agent provides data/dataColumn, it's ignored (we preserve existing).
+  List<SeriesConfig> _mergeSeriesModifications(
+    List<SeriesConfig> existingSeries,
+    List<dynamic> agentSeriesList,
+  ) {
+    // Create a map of existing series by ID for quick lookup
+    final existingById = {for (final s in existingSeries) s.id: s};
+
+    // Track which existing series have been modified
+    final modifiedIds = <String>{};
+    final result = <SeriesConfig>[];
+
+    for (final agentSeries in agentSeriesList) {
+      final seriesJson = agentSeries as Map<String, dynamic>;
+      final id = seriesJson['id'] as String?;
+
+      if (id == null || !existingById.containsKey(id)) {
+        // Skip series without ID or unknown IDs
+        continue;
+      }
+
+      modifiedIds.add(id);
+      final existing = existingById[id]!;
+
+      // Merge: use agent's values if provided, otherwise keep existing
+      // CRITICAL: Always preserve data source from existing series
+      result.add(existing.copyWith(
+        name: seriesJson['name'] as String? ?? existing.name,
+        color: seriesJson['color'] as String? ?? existing.color,
+        strokeWidth: seriesJson['strokeWidth'] != null ? (seriesJson['strokeWidth'] as num).toDouble() : existing.strokeWidth,
+        strokeDash:
+            seriesJson['strokeDash'] != null ? (seriesJson['strokeDash'] as List).map((e) => (e as num).toDouble()).toList() : existing.strokeDash,
+        fillOpacity: seriesJson['fillOpacity'] != null ? (seriesJson['fillOpacity'] as num).toDouble() : existing.fillOpacity,
+        markerStyle: seriesJson['markerStyle'] != null
+            ? MarkerStyle.values.firstWhere(
+                (e) => e.name == seriesJson['markerStyle'],
+                orElse: () => existing.markerStyle,
+              )
+            : existing.markerStyle,
+        markerSize: seriesJson['markerSize'] != null ? (seriesJson['markerSize'] as num).toDouble() : existing.markerSize,
+        interpolation: seriesJson['interpolation'] != null
+            ? Interpolation.values.firstWhere(
+                (e) => e.name == seriesJson['interpolation'],
+                orElse: () => existing.interpolation,
+              )
+            : existing.interpolation,
+        showPoints: seriesJson['showPoints'] as bool? ?? existing.showPoints,
+        yAxisId: seriesJson['yAxisId'] as String? ?? existing.yAxisId,
+        unit: seriesJson['unit'] as String? ?? existing.unit,
+        visible: seriesJson['visible'] as bool? ?? existing.visible,
+        legendVisible: seriesJson['legendVisible'] as bool? ?? existing.legendVisible,
+        tension: seriesJson['tension'] != null ? (seriesJson['tension'] as num).toDouble() : existing.tension,
+        // NOTE: data and dataColumn are NEVER modified - always preserved from existing
+      ));
+    }
+
+    // Add any existing series that weren't modified (preserve order)
+    for (final existing in existingSeries) {
+      if (!modifiedIds.contains(existing.id)) {
+        result.add(existing);
+      }
+    }
+
+    return result;
   }
 }

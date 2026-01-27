@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -28,6 +30,10 @@ class ChartRenderer {
   }
 
   Widget _renderConfiguration(agentic.ChartConfiguration config) {
+    // DEBUG: Log chart configuration being rendered
+    debugPrint('=== RENDERING CHART ===');
+    _debugPrintChartJson(config);
+
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
@@ -543,5 +549,19 @@ class ChartRenderer {
         style: TextStyle(fontSize: 14, color: Colors.red.shade900),
       ),
     );
+  }
+
+  /// Debug helper: print chart configuration as JSON
+  void _debugPrintChartJson(agentic.ChartConfiguration config) {
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(config.toJson());
+      debugPrint('Chart JSON:');
+      for (final line in prettyJson.split('\n')) {
+        debugPrint(line);
+      }
+    } catch (e) {
+      debugPrint('Chart JSON: [Failed to serialize: $e]');
+    }
   }
 }

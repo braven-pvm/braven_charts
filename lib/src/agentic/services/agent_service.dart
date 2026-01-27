@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -105,6 +107,10 @@ class AgentService {
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
+          // DEBUG: Log tool call input from agent
+          debugPrint('=== TOOL CALL: ${call.toolName} ===');
+          _debugPrintJson('Tool input', call.arguments);
+
           final result = await _toolRegistry.execute(call.toolName, call.arguments);
 
           String? createdChartId;
@@ -213,4 +219,18 @@ class AgentService {
 
   /// Whether redo is possible
   bool get canRedoChart => history.canRedo;
+
+  /// Debug helper: print JSON with formatting
+  void _debugPrintJson(String label, Map<String, dynamic> json) {
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(json);
+      debugPrint('$label:');
+      for (final line in prettyJson.split('\n')) {
+        debugPrint(line);
+      }
+    } catch (e) {
+      debugPrint('$label: [Failed to serialize: $e]');
+    }
+  }
 }
