@@ -63,6 +63,13 @@ class AnnotationConfig {
   /// Dash pattern for lines
   final List<double>? dashPattern;
 
+  /// Series ID for threshold annotations in perSeries normalization mode.
+  ///
+  /// When normalizationMode is perSeries, each series has its own Y-axis range.
+  /// This field specifies which series's Y-range the threshold value should use.
+  /// Required for horizontal threshold lines in perSeries mode.
+  final String? seriesId;
+
   /// Creates a new AnnotationConfig instance
   AnnotationConfig({
     required this.type,
@@ -80,6 +87,7 @@ class AnnotationConfig {
     this.fontSize,
     this.lineWidth,
     this.dashPattern,
+    this.seriesId,
   });
 
   /// Creates an AnnotationConfig from JSON
@@ -99,9 +107,8 @@ class AnnotationConfig {
       opacity: json['opacity'] as double?,
       fontSize: json['fontSize'] as double?,
       lineWidth: json['lineWidth'] as double?,
-      dashPattern: json['dashPattern'] != null
-          ? (json['dashPattern'] as List).cast<double>()
-          : null,
+      dashPattern: json['dashPattern'] != null ? (json['dashPattern'] as List).cast<double>() : null,
+      seriesId: json['seriesId'] as String?,
     );
   }
 
@@ -123,6 +130,7 @@ class AnnotationConfig {
       if (fontSize != null) 'fontSize': fontSize,
       if (lineWidth != null) 'lineWidth': lineWidth,
       if (dashPattern != null) 'dashPattern': dashPattern,
+      if (seriesId != null) 'seriesId': seriesId,
     };
   }
 
@@ -143,6 +151,7 @@ class AnnotationConfig {
     double? fontSize,
     double? lineWidth,
     List<double>? dashPattern,
+    String? seriesId,
   }) {
     return AnnotationConfig(
       type: type ?? this.type,
@@ -160,6 +169,7 @@ class AnnotationConfig {
       fontSize: fontSize ?? this.fontSize,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
+      seriesId: seriesId ?? this.seriesId,
     );
   }
 

@@ -288,6 +288,11 @@ Always include the data array with x,y values when calling this tool.
                   'type': 'number',
                   'description': 'Opacity for zones (0.0 to 1.0).',
                 },
+                'seriesId': {
+                  'type': 'string',
+                  'description':
+                      'Series ID for threshold annotations in perSeries normalization mode. When normalizationMode is "perSeries", each series has its own Y-axis range. This field specifies which series the threshold value belongs to. REQUIRED for horizontal threshold lines when using perSeries normalization.',
+                },
               },
               'required': ['type'],
             },

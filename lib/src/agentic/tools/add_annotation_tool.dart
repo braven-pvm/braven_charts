@@ -67,6 +67,10 @@ class AddAnnotationTool extends LLMTool {
             'type': 'number',
             'description': 'Font size for text labels'
           },
+          'seriesId': {
+            'type': 'string',
+            'description': 'Series ID for threshold annotations in perSeries normalization mode. REQUIRED for horizontal threshold lines when using perSeries normalization.'
+          },
           'ftp': {'type': 'number', 'description': 'FTP value for power zones'},
           'zones': {
             'type': 'array',
@@ -142,6 +146,7 @@ class AddAnnotationTool extends LLMTool {
             dashPattern: args['dashPattern'] != null
                 ? (args['dashPattern'] as List).cast<double>()
                 : null,
+            seriesId: args['seriesId'] as String?,
           ),
         ];
 

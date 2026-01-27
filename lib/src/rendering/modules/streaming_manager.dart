@@ -729,9 +729,11 @@ class StreamingManager {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Find visible range
-    final xMin = transform.dataXMin - 1;
-    final xMax = transform.dataXMax + 1;
+    // Find visible range with percentage-based margin for proper edge rendering
+    final xSpan = transform.dataXMax - transform.dataXMin;
+    final margin = xSpan * 0.1; // 10% margin ensures lines connect at edges
+    final xMin = transform.dataXMin - margin;
+    final xMax = transform.dataXMax + margin;
 
     // Binary search to find first visible point
     int startIdx = 0;

@@ -336,6 +336,9 @@ class ChartRenderer {
   /// Maps ChartConfiguration.interactions to BravenChartPlus InteractionConfig.
   /// Supports pan, zoom, crosshair, and tooltip settings.
   /// Properties not explicitly set default to true (matching BravenChartPlus defaults).
+  ///
+  /// When tooltip or crosshair is enabled, uses CrosshairDisplayMode.tracking
+  /// which is required for perSeries normalization mode to work correctly.
   InteractionConfig? _buildInteractionConfig(agentic.ChartConfiguration config) {
     if (config.interactions == null) {
       return null; // Let BravenChartPlus use its default
@@ -354,10 +357,17 @@ class ChartRenderer {
     final crosshairEnabled = interactionsMap['crosshair'] ?? true;
     final tooltipEnabled = interactionsMap['tooltip'] ?? true;
 
+    // Use tracking mode when tooltip or crosshair is enabled
+    // This is required for perSeries normalization to work correctly
+    final useTrackingMode = tooltipEnabled == true || crosshairEnabled == true;
+
     return InteractionConfig(
       enablePan: enablePan,
       enableZoom: enableZoom,
-      crosshair: CrosshairConfig(enabled: crosshairEnabled),
+      crosshair: CrosshairConfig(
+        enabled: crosshairEnabled,
+        displayMode: useTrackingMode ? CrosshairDisplayMode.tracking : CrosshairDisplayMode.standard,
+      ),
       tooltip: TooltipConfig(enabled: tooltipEnabled),
     );
   }
@@ -408,6 +418,7 @@ class ChartRenderer {
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis: isHorizontal ? AnnotationAxis.y : AnnotationAxis.x,
           value: value,
+          seriesId: config.seriesId, // Required for perSeries normalization mode
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,

@@ -5,7 +5,9 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/chart_annotation.dart';
+import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
+import '../../models/normalization_mode.dart';
 
 /// Dialog for creating or editing a ThresholdAnnotation.
 ///
@@ -22,6 +24,8 @@ class ThresholdAnnotationDialog extends StatefulWidget {
     this.initialXValue,
     this.initialYValue,
     this.chartTheme,
+    this.availableSeries,
+    this.normalizationMode,
   });
 
   /// Existing annotation to edit, or null to create new.
@@ -35,9 +39,20 @@ class ThresholdAnnotationDialog extends StatefulWidget {
 
   /// Initial Y-axis value from click position.
   final double? initialYValue;
+
+  /// Available series for series selection (perSeries mode).
+  ///
+  /// When [normalizationMode] is [NormalizationMode.perSeries] and the user
+  /// selects Y-axis, a dropdown allows selecting which series the threshold
+  /// should be associated with for correct Y-value normalization.
+  final List<ChartSeries>? availableSeries;
+
+  /// Current normalization mode.
+  ///
+  /// When [NormalizationMode.perSeries], shows series selector for Y-axis thresholds.
+  final NormalizationMode? normalizationMode;
   @override
-  State<ThresholdAnnotationDialog> createState() =>
-      _ThresholdAnnotationDialogState();
+  State<ThresholdAnnotationDialog> createState() => _ThresholdAnnotationDialogState();
 }
 
 class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
@@ -52,6 +67,9 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
   late AnnotationLabelPosition _labelPosition;
   late double _labelMargin;
 
+  /// Selected series ID for perSeries normalization mode.
+  String? _selectedSeriesId;
+
   // Predefined dash patterns
   final Map<String, List<double>?> _dashPatterns = {
     'Solid': null,
@@ -60,14 +78,29 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     'Dash-Dot': [8, 4, 2, 4],
   };
 
+  /// Whether to show the series selector dropdown.
+  /// Only shown when Y-axis is selected and normalization mode is perSeries.
+  bool get _showSeriesSelector =>
+      _selectedAxis == AnnotationAxis.y &&
+      widget.normalizationMode == NormalizationMode.perSeries &&
+      widget.availableSeries != null &&
+      widget.availableSeries!.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
 
     final annotation = widget.annotation;
-    final thresholdDefaults =
-        widget.chartTheme?.annotationTheme.thresholdDefaults;
+    final thresholdDefaults = widget.chartTheme?.annotationTheme.thresholdDefaults;
     _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
+
+    // Initialize series selection for perSeries mode
+    if (annotation != null) {
+      _selectedSeriesId = annotation.seriesId;
+    } else if (widget.availableSeries != null && widget.availableSeries!.isNotEmpty) {
+      // Default to first series for new annotations
+      _selectedSeriesId = widget.availableSeries!.first.id;
+    }
 
     // Set initial value based on selected axis
     String initialValue = '';
@@ -96,9 +129,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       _lineColor = thresholdDefaults.lineColor;
       _lineWidth = thresholdDefaults.lineWidth;
       _elevation = 0.0;
-      _dashPattern = thresholdDefaults.dashPattern.isNotEmpty
-          ? thresholdDefaults.dashPattern
-          : null;
+      _dashPattern = thresholdDefaults.dashPattern.isNotEmpty ? thresholdDefaults.dashPattern : null;
       _labelPosition = AnnotationLabelPosition.topLeft;
       _labelMargin = 8.0;
     } else {
@@ -159,6 +190,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       labelPosition: _labelPosition,
       labelMargin: _labelMargin,
       allowDragging: true, // Enable dragging by default
+      // Only include seriesId for Y-axis thresholds in perSeries mode
+      seriesId: _showSeriesSelector ? _selectedSeriesId : null,
     );
 
     Navigator.of(context).pop(annotation);
@@ -181,8 +214,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,8 +229,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                   Text(
                     'Horizontal or vertical reference line',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color:
-                          theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                      color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -234,19 +265,48 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                           _selectedAxis = selection.first;
                           // Update value field when switching axes (only for new annotations)
                           if (widget.annotation == null) {
-                            if (_selectedAxis == AnnotationAxis.x &&
-                                widget.initialXValue != null) {
-                              _valueController.text =
-                                  widget.initialXValue!.toStringAsFixed(2);
-                            } else if (_selectedAxis == AnnotationAxis.y &&
-                                widget.initialYValue != null) {
-                              _valueController.text =
-                                  widget.initialYValue!.toStringAsFixed(2);
+                            if (_selectedAxis == AnnotationAxis.x && widget.initialXValue != null) {
+                              _valueController.text = widget.initialXValue!.toStringAsFixed(2);
+                            } else if (_selectedAxis == AnnotationAxis.y && widget.initialYValue != null) {
+                              _valueController.text = widget.initialYValue!.toStringAsFixed(2);
                             }
                           }
                         });
                       },
                     ),
+
+                    // Series Selection (only for Y-axis in perSeries normalization mode)
+                    if (_showSeriesSelector) ...[
+                      const SizedBox(height: 16),
+                      Text('Target Series', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Select the series whose data range will be used to position this threshold.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedSeriesId,
+                        decoration: const InputDecoration(
+                          labelText: 'Series',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.show_chart),
+                        ),
+                        items: widget.availableSeries!.map((series) {
+                          return DropdownMenuItem(
+                            value: series.id,
+                            child: Text(series.name ?? series.id),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSeriesId = value;
+                          });
+                        },
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
 
@@ -259,8 +319,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.straighten),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                     ),
 
                     const SizedBox(height: 24),
@@ -301,8 +360,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             decoration: BoxDecoration(
                               color: _lineColor,
                               borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: theme.colorScheme.outline),
+                              border: Border.all(color: theme.colorScheme.outline),
                             ),
                           ),
                         ),
@@ -325,8 +383,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             max: 10.0,
                             divisions: 19,
                             label: '${_lineWidth.toStringAsFixed(1)}px',
-                            onChanged: (value) =>
-                                setState(() => _lineWidth = value),
+                            onChanged: (value) => setState(() => _lineWidth = value),
                           ),
                         ),
                         SizedBox(
@@ -354,19 +411,14 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             min: 0.0,
                             max: 12.0,
                             divisions: 24,
-                            label: _elevation == 0
-                                ? 'Off'
-                                : _elevation.toStringAsFixed(1),
-                            onChanged: (value) =>
-                                setState(() => _elevation = value),
+                            label: _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
+                            onChanged: (value) => setState(() => _elevation = value),
                           ),
                         ),
                         SizedBox(
                           width: 50,
                           child: Text(
-                            _elevation == 0
-                                ? 'Off'
-                                : _elevation.toStringAsFixed(1),
+                            _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
                             textAlign: TextAlign.right,
                           ),
                         ),
@@ -385,13 +437,11 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                         DropdownButton<String>(
                           value: _getDashPatternName(),
                           items: _dashPatterns.keys.map((name) {
-                            return DropdownMenuItem(
-                                value: name, child: Text(name));
+                            return DropdownMenuItem(value: name, child: Text(name));
                           }).toList(),
                           onChanged: (name) {
                             if (name != null) {
-                              setState(
-                                  () => _dashPattern = _dashPatterns[name]);
+                              setState(() => _dashPattern = _dashPatterns[name]);
                             }
                           },
                         ),
@@ -404,14 +454,12 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                       const SizedBox(height: 16),
 
                       // Label Position
-                      Text('Label Position',
-                          style: theme.textTheme.titleMedium),
+                      Text('Label Position', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children:
-                            AnnotationLabelPosition.values.map((position) {
+                        children: AnnotationLabelPosition.values.map((position) {
                           return ChoiceChip(
                             label: Text(_labelPositionName(position)),
                             selected: _labelPosition == position,
@@ -440,8 +488,7 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                               max: 32,
                               divisions: 16,
                               label: '${_labelMargin.toInt()}px',
-                              onChanged: (value) =>
-                                  setState(() => _labelMargin = value),
+                              onChanged: (value) => setState(() => _labelMargin = value),
                             ),
                           ),
                           SizedBox(
