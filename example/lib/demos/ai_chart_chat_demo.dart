@@ -6,7 +6,7 @@
 import 'dart:convert';
 
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart';
-import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/braven_charts.dart' hide Message, MessageRole;
 import 'package:flutter/material.dart';
 
 /// Example demonstrating AI-powered chart generation using Claude.

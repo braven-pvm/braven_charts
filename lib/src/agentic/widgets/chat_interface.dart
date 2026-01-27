@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/chart_configuration.dart';
@@ -61,7 +62,8 @@ class ChatInterfaceState extends State<ChatInterface> {
   @override
   void didUpdateWidget(ChatInterface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.agentService != widget.agentService || oldWidget.conversation != widget.conversation) {
+    if (oldWidget.agentService != widget.agentService ||
+        oldWidget.conversation != widget.conversation) {
       _detachConversation();
       _attachConversation();
     }
@@ -145,7 +147,9 @@ class ChatInterfaceState extends State<ChatInterface> {
       try {
         // Build data context from loaded files
         final dataContext = _buildDataContext();
-        final messageWithContext = dataContext.isEmpty ? text : '$text\n\n[DATA CONTEXT]\n$dataContext';
+        final messageWithContext = dataContext.isEmpty
+            ? text
+            : '$text\n\n[DATA CONTEXT]\n$dataContext';
 
         await widget.agentService!.processUserMessage(messageWithContext);
       } catch (error) {
@@ -210,13 +214,15 @@ class ChatInterfaceState extends State<ChatInterface> {
       for (final col in frame.columns) {
         buffer.write('  - ${col.name} (${col.type})');
         if (col.stats.min != null && col.stats.max != null) {
-          buffer.write(' [min: ${col.stats.min}, max: ${col.stats.max}, mean: ${col.stats.mean?.toStringAsFixed(2)}]');
+          buffer.write(
+              ' [min: ${col.stats.min}, max: ${col.stats.max}, mean: ${col.stats.mean?.toStringAsFixed(2)}]');
         }
         buffer.writeln();
       }
 
       if (frame.timeRange != null) {
-        buffer.writeln('Time range: ${frame.timeRange!.start} to ${frame.timeRange!.end}');
+        buffer.writeln(
+            'Time range: ${frame.timeRange!.start} to ${frame.timeRange!.end}');
       }
       buffer.writeln();
     }
@@ -268,7 +274,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     if (!file_picker.isFilePickingSupported) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'File upload is not supported on this platform. Use addFileAttachment method for testing.';
+          _errorMessage =
+              'File upload is not supported on this platform. Use addFileAttachment method for testing.';
         });
       }
       return;
@@ -306,8 +313,10 @@ class ChatInterfaceState extends State<ChatInterface> {
   }) async {
     // Determine file type from extension
     final lastDot = fileName.lastIndexOf('.');
-    final extension = lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
-    final fileType = ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
+    final extension =
+        lastDot >= 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
+    final fileType =
+        ['fit', 'csv', 'tcx'].contains(extension) ? extension : 'csv';
 
     // Validate the file
     final validationResult = _fileValidator.validate(
@@ -427,7 +436,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     // Render messages in order, with charts inline after their source message
     for (final message in conversation.messages) {
       // Add the message bubble if it has text content
-      if (message.textContent != null && message.textContent!.trim().isNotEmpty) {
+      if (message.textContent != null &&
+          message.textContent!.trim().isNotEmpty) {
         contentItems.add(MessageBubble(message: message));
       }
 
@@ -437,12 +447,15 @@ class ChatInterfaceState extends State<ChatInterface> {
           if (toolResult.chartId != null) {
             // Always get LATEST chart data from conversation.charts
             final chart = conversation.charts[toolResult.chartId];
-            if (chart != null && !renderedChartIds.contains(toolResult.chartId)) {
+            if (chart != null &&
+                !renderedChartIds.contains(toolResult.chartId)) {
               renderedChartIds.add(toolResult.chartId!);
               try {
-                final chartConfig = ChartConfiguration.fromJson(chart as Map<String, dynamic>);
+                final chartConfig =
+                    ChartConfiguration.fromJson(chart as Map<String, dynamic>);
                 // Use a key that includes chart content hash so widget rebuilds when chart data changes
-                final chartKey = ValueKey('${toolResult.chartId}_${chartConfig.series.length}_${chartConfig.hashCode}');
+                final chartKey = ValueKey(
+                    '${toolResult.chartId}_${chartConfig.series.length}_${chartConfig.hashCode}');
                 contentItems.add(
                   ChartCard(
                     key: chartKey,
@@ -472,7 +485,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     for (final entry in conversation.charts.entries) {
       if (!renderedChartIds.contains(entry.key)) {
         try {
-          final chartConfig = ChartConfiguration.fromJson(entry.value as Map<String, dynamic>);
+          final chartConfig =
+              ChartConfiguration.fromJson(entry.value as Map<String, dynamic>);
           contentItems.add(
             Row(
               children: [
@@ -524,7 +538,8 @@ class ChatInterfaceState extends State<ChatInterface> {
             // File attachments display
             if (_attachments.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
                   border: Border(
@@ -568,10 +583,10 @@ class ChatInterfaceState extends State<ChatInterface> {
                       minLines: 3,
                       controller: _controller,
                       enabled: !_isProcessing,
-                      style: const TextStyle(fontSize: 12),
+                      style: GoogleFonts.notossa(fontSize: 12),
                       decoration: InputDecoration(
                         hintText: 'Ask for a chart...',
-                        hintStyle: const TextStyle(fontSize: 12),
+                        hintStyle: GoogleFonts.poppins(fontSize: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
                           borderSide: BorderSide(

@@ -72,10 +72,13 @@ class Conversation {
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
       id: json['id'] as String,
-      messages: (json['messages'] as List).map((e) => Message.fromJson(e as Map<String, dynamic>)).toList(),
+      messages: (json['messages'] as List)
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       dataStore: (json['dataStore'] as Map).map(
-        (key, value) => MapEntry(key as String, LoadedData.fromJson(value as Map<String, dynamic>)),
+        (key, value) => MapEntry(
+            key as String, LoadedData.fromJson(value as Map<String, dynamic>)),
       ),
       charts: Map<String, dynamic>.from(json['charts'] as Map? ?? {}),
       totalInputTokens: json['totalInputTokens'] as int,

@@ -219,7 +219,8 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true ||
+        (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first

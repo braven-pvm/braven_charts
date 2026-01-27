@@ -45,17 +45,20 @@ Always include the data array with x,y values when calling this tool.
           },
           'series': {
             'type': 'array',
-            'description': 'Data series to plot. REQUIRED - include your data here.',
+            'description':
+                'Data series to plot. REQUIRED - include your data here.',
             'items': {
               'type': 'object',
               'properties': {
                 'id': {
                   'type': 'string',
-                  'description': 'Unique series identifier (e.g., "sales", "revenue").',
+                  'description':
+                      'Unique series identifier (e.g., "sales", "revenue").',
                 },
                 'name': {
                   'type': 'string',
-                  'description': 'Display name for legend (e.g., "Quarterly Sales").',
+                  'description':
+                      'Display name for legend (e.g., "Quarterly Sales").',
                 },
                 'color': {
                   'type': 'string',
@@ -74,13 +77,130 @@ Always include the data array with x,y values when calling this tool.
                     'required': ['x', 'y'],
                   },
                 },
+                'fillOpacity': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description':
+                      'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.0.',
+                },
+                'markerStyle': {
+                  'type': 'string',
+                  'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
+                  'description':
+                      'Style of data point markers. Defaults to "none".',
+                },
+                'markerSize': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Size of data point markers in pixels. Defaults to 4.0.',
+                },
+                'interpolation': {
+                  'type': 'string',
+                  'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                  'description':
+                      'Line interpolation type. Defaults to "linear".',
+                },
+                'showPoints': {
+                  'type': 'boolean',
+                  'description':
+                      'Whether to show data points. Defaults to false.',
+                },
+                'tension': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description':
+                      'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
+                },
+                'strokeWidth': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Width of the line stroke in pixels. Defaults to 2.0.',
+                },
+                'strokeDash': {
+                  'type': 'array',
+                  'items': {'type': 'number'},
+                  'description':
+                      'Dash pattern for the line (e.g., [5, 3] for dashed line).',
+                },
+                'yAxisId': {
+                  'type': 'string',
+                  'description':
+                      'ID of the Y-axis this series should use (for multi-axis charts).',
+                },
+                'unit': {
+                  'type': 'string',
+                  'description':
+                      'Unit of measurement for this series (e.g., "W", "bpm").',
+                },
+                'visible': {
+                  'type': 'boolean',
+                  'description':
+                      'Whether the series is visible. Defaults to true.',
+                },
+                'legendVisible': {
+                  'type': 'boolean',
+                  'description':
+                      'Whether to show this series in the legend. Defaults to true.',
+                },
               },
               'required': ['id', 'data'],
             },
           },
+          'style': {
+            'type': 'object',
+            'description': 'Visual styling configuration for the chart.',
+            'properties': {
+              'backgroundColor': {
+                'type': 'string',
+                'description':
+                    'Background color of the chart (e.g., "#FFFFFF" for white).',
+              },
+              'gridColor': {
+                'type': 'string',
+                'description': 'Color for grid lines.',
+              },
+              'axisColor': {
+                'type': 'string',
+                'description': 'Color for axes.',
+              },
+              'fontFamily': {
+                'type': 'string',
+                'description': 'Font family for text.',
+              },
+              'fontSize': {
+                'type': 'number',
+                'description': 'Font size for text.',
+              },
+              'paddingTop': {
+                'type': 'number',
+                'minimum': 0,
+                'description': 'Top padding in pixels.',
+              },
+              'paddingBottom': {
+                'type': 'number',
+                'minimum': 0,
+                'description': 'Bottom padding in pixels.',
+              },
+              'paddingLeft': {
+                'type': 'number',
+                'minimum': 0,
+                'description': 'Left padding in pixels.',
+              },
+              'paddingRight': {
+                'type': 'number',
+                'minimum': 0,
+                'description': 'Right padding in pixels.',
+              },
+            },
+          },
           'annotations': {
             'type': 'array',
-            'description': 'Annotations to overlay on the chart (reference lines, zones, text labels).',
+            'description':
+                'Annotations to overlay on the chart (reference lines, zones, text labels).',
             'items': {
               'type': 'object',
               'properties': {
@@ -92,11 +212,13 @@ Always include the data array with x,y values when calling this tool.
                 'orientation': {
                   'type': 'string',
                   'enum': ['horizontal', 'vertical'],
-                  'description': 'Orientation for reference lines and zones. horizontal draws at a Y value, vertical draws at an X value.',
+                  'description':
+                      'Orientation for reference lines and zones. horizontal draws at a Y value, vertical draws at an X value.',
                 },
                 'value': {
                   'type': 'number',
-                  'description': 'Y-axis value for horizontal lines, X-axis value for vertical lines.',
+                  'description':
+                      'Y-axis value for horizontal lines, X-axis value for vertical lines.',
                 },
                 'minValue': {
                   'type': 'number',
@@ -108,16 +230,29 @@ Always include the data array with x,y values when calling this tool.
                 },
                 'x': {
                   'type': 'number',
-                  'description': 'X data coordinate for markers (not used for textLabel).',
+                  'description':
+                      'X data coordinate for markers (not used for textLabel).',
                 },
                 'y': {
                   'type': 'number',
-                  'description': 'Y data coordinate for markers (not used for textLabel).',
+                  'description':
+                      'Y data coordinate for markers (not used for textLabel).',
                 },
                 'position': {
                   'type': 'string',
-                  'enum': ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
-                  'description': 'Semantic position for text labels. Defaults to topLeft if not specified.',
+                  'enum': [
+                    'topLeft',
+                    'topCenter',
+                    'topRight',
+                    'centerLeft',
+                    'center',
+                    'centerRight',
+                    'bottomLeft',
+                    'bottomCenter',
+                    'bottomRight'
+                  ],
+                  'description':
+                      'Semantic position for text labels. Defaults to topLeft if not specified.',
                 },
                 'text': {
                   'type': 'string',
@@ -129,7 +264,8 @@ Always include the data array with x,y values when calling this tool.
                 },
                 'color': {
                   'type': 'string',
-                  'description': 'Hex color for the annotation (e.g., "#FF0000").',
+                  'description':
+                      'Hex color for the annotation (e.g., "#FF0000").',
                 },
                 'opacity': {
                   'type': 'number',
@@ -142,7 +278,8 @@ Always include the data array with x,y values when calling this tool.
           // Config panel properties - controls chart display options
           'showGrid': {
             'type': 'boolean',
-            'description': 'Whether to show grid lines on the chart. Defaults to true.',
+            'description':
+                'Whether to show grid lines on the chart. Defaults to true.',
           },
           'showLegend': {
             'type': 'boolean',
@@ -155,16 +292,19 @@ Always include the data array with x,y values when calling this tool.
           },
           'useDarkTheme': {
             'type': 'boolean',
-            'description': 'Whether to use dark theme. Defaults to false (light theme).',
+            'description':
+                'Whether to use dark theme. Defaults to false (light theme).',
           },
           'showScrollbar': {
             'type': 'boolean',
-            'description': 'Whether to show the scrollbar for panning. Defaults to false.',
+            'description':
+                'Whether to show the scrollbar for panning. Defaults to false.',
           },
           'normalizationMode': {
             'type': 'string',
             'enum': ['none', 'auto', 'perSeries'],
-            'description': '''Controls Y-axis normalization for multi-series charts.
+            'description':
+                '''Controls Y-axis normalization for multi-series charts.
 - "none": All series share a single Y-axis with combined min/max.
 - "auto": Automatically detect when ranges differ significantly (>10x) and normalize.
 - "perSeries": Each series gets its own Y-axis using the full chart height.
@@ -194,7 +334,9 @@ Use "perSeries" when overlaying metrics with different units (e.g., Power in wat
     final legendPosition = args['legendPosition'] as String?;
     final useDarkTheme = args['useDarkTheme'] as bool?;
     final showScrollbar = args['showScrollbar'] as bool?;
-    final normalizationMode = _parseNormalizationMode(args['normalizationMode'] as String?);
+    final normalizationMode =
+        _parseNormalizationMode(args['normalizationMode'] as String?);
+    final chartStyle = _buildStyle(args);
 
     return ChartConfiguration(
       type: chartType,
@@ -202,12 +344,50 @@ Use "perSeries" when overlaying metrics with different units (e.g., Power in wat
       xAxis: xAxis,
       yAxes: yAxes,
       annotations: annotations.isNotEmpty ? annotations : null,
+      style: chartStyle,
       showGrid: showGrid,
       showLegend: showLegend,
       legendPosition: legendPosition,
       useDarkTheme: useDarkTheme,
       showScrollbar: showScrollbar,
       normalizationMode: normalizationMode,
+    );
+  }
+
+  /// Builds the chart style configuration from args
+  ChartStyleConfig? _buildStyle(Map<String, dynamic> args) {
+    final styleArg = args['style'];
+    if (styleArg is! Map) {
+      return null;
+    }
+
+    final styleMap = Map<String, dynamic>.from(styleArg);
+
+    // Build plotArea with padding if any padding values are specified
+    Map<String, dynamic>? plotArea;
+    if (styleMap.containsKey('paddingTop') ||
+        styleMap.containsKey('paddingBottom') ||
+        styleMap.containsKey('paddingLeft') ||
+        styleMap.containsKey('paddingRight')) {
+      plotArea = {
+        if (styleMap['paddingTop'] != null)
+          'paddingTop': (styleMap['paddingTop'] as num).toDouble(),
+        if (styleMap['paddingBottom'] != null)
+          'paddingBottom': (styleMap['paddingBottom'] as num).toDouble(),
+        if (styleMap['paddingLeft'] != null)
+          'paddingLeft': (styleMap['paddingLeft'] as num).toDouble(),
+        if (styleMap['paddingRight'] != null)
+          'paddingRight': (styleMap['paddingRight'] as num).toDouble(),
+      };
+    }
+
+    return ChartStyleConfig(
+      backgroundColor: styleMap['backgroundColor'],
+      gridColor: styleMap['gridColor'],
+      axisColor: styleMap['axisColor'],
+      fontFamily: styleMap['fontFamily'] as String?,
+      fontSize: (styleMap['fontSize'] as num?)?.toDouble(),
+      plotArea: plotArea,
     );
   }
 
@@ -249,7 +429,9 @@ Use "perSeries" when overlaying metrics with different units (e.g., Power in wat
   ChartType _resolveChartType(String? explicitType, String prompt) {
     final explicit = explicitType?.toLowerCase().trim();
     if (explicit != null && explicit.isNotEmpty) {
-      final matched = ChartType.values.where((type) => type.name == explicit).toList(growable: false);
+      final matched = ChartType.values
+          .where((type) => type.name == explicit)
+          .toList(growable: false);
       if (matched.isEmpty) {
         throw Exception('Unsupported chart type: $explicitType');
       }
@@ -281,7 +463,8 @@ Use "perSeries" when overlaying metrics with different units (e.g., Power in wat
         final entry = Map<String, dynamic>.from(seriesArg[i] as Map);
         // Assign default color if not provided
         if (entry['color'] == null) {
-          entry['color'] = _defaultSeriesColors[i % _defaultSeriesColors.length];
+          entry['color'] =
+              _defaultSeriesColors[i % _defaultSeriesColors.length];
         }
         seriesList.add(SeriesConfig.fromJson(entry));
       }
@@ -366,14 +549,19 @@ Use "perSeries" when overlaying metrics with different units (e.g., Power in wat
 
   List<String> _extractColumns(dynamic dataset) {
     if (dataset is Map && dataset['columns'] is List) {
-      return (dataset['columns'] as List).map((entry) => entry.toString()).toList(growable: false);
+      return (dataset['columns'] as List)
+          .map((entry) => entry.toString())
+          .toList(growable: false);
     }
     return const [];
   }
 
   List<Map<String, dynamic>> _extractRows(dynamic dataset) {
     if (dataset is Map && dataset['rows'] is List) {
-      return (dataset['rows'] as List).whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList(growable: false);
+      return (dataset['rows'] as List)
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList(growable: false);
     }
     return const [];
   }
