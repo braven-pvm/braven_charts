@@ -160,12 +160,10 @@ void main() {
       test('inputSchema includes type property with all chart type enums', () {
         final tool = ModifyChartTool();
         final schema = tool.inputSchema;
-        final propsSchema = schema['properties']['properties']['properties']
-            as Map<String, dynamic>;
+        final propsSchema = schema['properties']['properties']['properties'] as Map<String, dynamic>;
 
         expect(propsSchema.containsKey('type'), isTrue);
-        expect(propsSchema['type']['enum'],
-            containsAll(['line', 'area', 'bar', 'scatter']));
+        expect(propsSchema['type']['enum'], containsAll(['line', 'area', 'bar', 'scatter']));
       });
 
       test('can change chart type from line to area', () async {
@@ -212,17 +210,13 @@ void main() {
     });
 
     group('interactions property', () {
-      test(
-          'inputSchema includes interactions with pan, zoom, crosshair, tooltip',
-          () {
+      test('inputSchema includes interactions with pan, zoom, crosshair, tooltip', () {
         final tool = ModifyChartTool();
         final schema = tool.inputSchema;
-        final propsSchema = schema['properties']['properties']['properties']
-            as Map<String, dynamic>;
+        final propsSchema = schema['properties']['properties']['properties'] as Map<String, dynamic>;
 
         expect(propsSchema.containsKey('interactions'), isTrue);
-        final interactionsProps =
-            propsSchema['interactions']['properties'] as Map<String, dynamic>;
+        final interactionsProps = propsSchema['interactions']['properties'] as Map<String, dynamic>;
         expect(interactionsProps.containsKey('pan'), isTrue);
         expect(interactionsProps.containsKey('zoom'), isTrue);
         expect(interactionsProps.containsKey('crosshair'), isTrue);
@@ -320,8 +314,7 @@ void main() {
       test('inputSchema includes axisVisibility', () {
         final tool = ModifyChartTool();
         final schema = tool.inputSchema;
-        final propsSchema = schema['properties']['properties']['properties']
-            as Map<String, dynamic>;
+        final propsSchema = schema['properties']['properties']['properties'] as Map<String, dynamic>;
 
         expect(propsSchema.containsKey('axisVisibility'), isTrue);
       });
@@ -347,8 +340,7 @@ void main() {
       test('inputSchema includes tickFormatting', () {
         final tool = ModifyChartTool();
         final schema = tool.inputSchema;
-        final propsSchema = schema['properties']['properties']['properties']
-            as Map<String, dynamic>;
+        final propsSchema = schema['properties']['properties']['properties'] as Map<String, dynamic>;
 
         expect(propsSchema.containsKey('tickFormatting'), isTrue);
       });
@@ -374,8 +366,7 @@ void main() {
       test('inputSchema includes backgroundColor and padding', () {
         final tool = ModifyChartTool();
         final schema = tool.inputSchema;
-        final propsSchema = schema['properties']['properties']['properties']
-            as Map<String, dynamic>;
+        final propsSchema = schema['properties']['properties']['properties'] as Map<String, dynamic>;
 
         expect(propsSchema.containsKey('backgroundColor'), isTrue);
         expect(propsSchema.containsKey('padding'), isTrue);
@@ -467,8 +458,7 @@ void main() {
         expect(config.series.first.yAxisPosition, equals('right'));
       });
 
-      test('applies yAxisLabel and yAxisUnit via series modifications',
-          () async {
+      test('applies yAxisLabel and yAxisUnit via series modifications', () async {
         final tool = ModifyChartTool(dataStore: dataStore);
 
         final config = await tool.execute({

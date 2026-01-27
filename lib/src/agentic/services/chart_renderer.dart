@@ -224,8 +224,7 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true ||
-        (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -405,10 +404,7 @@ class ChartRenderer {
   /// Returns null if no Y-axis configuration is specified on the series.
   YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
     // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null &&
-        seriesConfig.yAxisLabel == null &&
-        seriesConfig.yAxisUnit == null &&
-        seriesConfig.yAxisColor == null) {
+    if (seriesConfig.yAxisPosition == null && seriesConfig.yAxisLabel == null && seriesConfig.yAxisUnit == null && seriesConfig.yAxisColor == null) {
       return null;
     }
 
