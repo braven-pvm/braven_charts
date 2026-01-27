@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -107,29 +105,17 @@ class AgentService {
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
-          debugPrint('=== AGENT TOOL EXECUTION START ===');
-          debugPrint('[AgentService] Executing tool: ${call.toolName}');
-          // DEBUG: Print the input arguments the agent provided
-          _debugPrintJson('[AgentService] Tool input arguments', call.arguments);
-
           final result = await _toolRegistry.execute(call.toolName, call.arguments);
-          debugPrint('[AgentService] Tool result type: ${result.runtimeType}');
 
           String? createdChartId;
 
           // If the tool returns a ChartConfiguration, add it to the conversation
           if (result is ChartConfiguration) {
             createdChartId = result.id ?? _uuid.v4();
-            debugPrint('[AgentService] ChartConfiguration ID: $createdChartId');
 
             // CRITICAL: Ensure the chart object has the ID set
             // This is essential for in-place modifications to work correctly
             final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
-
-            // Log chart summary for debugging
-            debugPrint('[AgentService] Chart summary: ${chartWithId.series.length} series, '
-                '${chartWithId.annotations?.length ?? 0} annotations, '
-                'type=${chartWithId.type.name}');
 
             // Store in chartStore so ModifyChartTool can access it
             chartStore.store(chartWithId, id: createdChartId);
@@ -140,29 +126,8 @@ class AgentService {
             final chartJson = chartWithId.toJson();
             updatedCharts[createdChartId] = chartJson;
 
-            // DEBUG: Log the chart JSON being stored
-            debugPrint('[AgentService] Storing chart JSON with ${(chartJson['annotations'] as List?)?.length ?? 0} annotations');
-
             final newConversation = current.copyWith(charts: updatedCharts);
-
-            // DEBUG: Check if conversation.charts has the annotations BEFORE assignment
-            final storedChart = newConversation.charts[createdChartId] as Map<String, dynamic>?;
-            debugPrint('[AgentService] newConversation.charts has ${(storedChart?['annotations'] as List?)?.length ?? 0} annotations');
-
-            // DEBUG: Check equality BEFORE assignment
-            final areEqual = current == newConversation;
-            debugPrint('[AgentService] current == newConversation: $areEqual');
-
             conversation.value = newConversation;
-
-            // Verify the assignment worked (equality check might skip it)
-            if (!identical(conversation.value, newConversation)) {
-              debugPrint('[AgentService] WARNING: conversation.value assignment may have been skipped!');
-              debugPrint(
-                  '[AgentService] conversation.value.charts has ${(conversation.value.charts[createdChartId] as Map<String, dynamic>?)?['annotations']} annotations');
-            } else {
-              debugPrint('[AgentService] Assignment successful!');
-            }
           }
 
           if (result is ToolResult) {
@@ -248,20 +213,4 @@ class AgentService {
 
   /// Whether redo is possible
   bool get canRedoChart => history.canRedo;
-
-  /// Debug helper: print any JSON object with formatting
-  void _debugPrintJson(String label, Map<String, dynamic> json) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(json);
-      debugPrint('$label:');
-      // Print line by line to avoid truncation
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('$label: [Failed to serialize: $e]');
-      debugPrint('Raw: $json');
-    }
-  }
 }

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import 'loaded_data.dart';
 import 'message.dart';
 
@@ -165,13 +163,37 @@ class Conversation {
   /// Deep comparison of charts maps using JSON string comparison.
   /// This ensures ANY change to chart content triggers a notification.
   static bool _chartsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
-    // TEMPORARY FIX: Always return false to force updates
-    // This bypasses any equality comparison issues
-    debugPrint('[Conversation._chartsEqual] a.length=${a.length}, b.length=${b.length}, returning FALSE (forced)');
-    return false; // FORCE inequality to trigger updates
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key)) return false;
+      if (!_deepEquals(a[key], b[key])) return false;
+    }
+    return true;
   }
 
-  // TODO: Restore _deepEquals once the root cause is identified
-  // /// Deep equality check for dynamic values (maps, lists, primitives)
-  // static bool _deepEquals(dynamic a, dynamic b) { ... }
+  /// Deep equality check for dynamic values (maps, lists, primitives)
+  static bool _deepEquals(dynamic a, dynamic b) {
+    if (identical(a, b)) return true;
+    if (a.runtimeType != b.runtimeType) return false;
+
+    if (a is Map<String, dynamic> && b is Map<String, dynamic>) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key)) return false;
+        if (!_deepEquals(a[key], b[key])) return false;
+      }
+      return true;
+    }
+
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_deepEquals(a[i], b[i])) return false;
+      }
+      return true;
+    }
+
+    return a == b;
+  }
 }

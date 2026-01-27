@@ -25,7 +25,14 @@ class ModifyChartTool extends LLMTool {
   String get name => 'modify_chart';
 
   @override
-  String get description => 'Modifies visual properties, axes, or other settings of an existing chart without recreating it.';
+  String get description => '''Modifies visual properties, axes, or other settings of an existing chart without recreating it.
+
+For multi-axis charts with different data ranges (e.g., Power in watts and Heart Rate in bpm), use normalizationMode:
+- "none": Single shared Y-axis for all series
+- "auto": Automatically detect when series need separate axes (default)
+- "perSeries": Each series gets its own Y-axis scale
+
+When using perSeries normalization, set each series' yAxisId to specify which Y-axis it uses, and configure each Y-axis with position "left" or "right" in the yAxes array.''';
 
   @override
   Map<String, dynamic> get inputSchema => {
@@ -34,7 +41,33 @@ class ModifyChartTool extends LLMTool {
           'chartId': {'type': 'string', 'description': 'Unique identifier of the chart to modify.'},
           'properties': {
             'type': 'object',
-            'description': 'Properties to modify. Can include color, lineWidth, dashPattern, xAxis, yAxis, legend, grid, theme, etc.'
+            'description': '''Properties to modify. Supports:
+- title, subtitle: Chart titles
+- series: Array of series configs (each with id, color, strokeWidth, strokeDash, yAxisId, etc.)
+- xAxis, yAxis, yAxes: Axis configurations (label, min, max, position)
+- normalizationMode: "none"|"auto"|"perSeries" for multi-axis display
+- legend, grid: Visibility and styling
+- theme: "light" or "dark"
+- annotations: Reference lines, zones, labels
+- color, lineWidth, dashPattern: Quick styling for all series''',
+            'properties': {
+              'normalizationMode': {
+                'type': 'string',
+                'enum': ['none', 'auto', 'perSeries'],
+                'description':
+                    'Controls Y-axis normalization for multi-series charts. Use "perSeries" when overlaying metrics with different units (e.g., Power + Heart Rate). Each series should specify yAxisId and the corresponding Y-axis should have position "left" or "right".'
+              },
+              'series': {
+                'type': 'array',
+                'description':
+                    'Array of series to update. Each series can have: id (required), color, strokeWidth, strokeDash, yAxisId (for multi-axis), unit.'
+              },
+              'yAxes': {
+                'type': 'array',
+                'maxItems': 4,
+                'description': 'Array of Y-axis configurations. Each can have: id, label, unit, position ("left"|"right"), min, max, color.'
+              }
+            }
           },
         },
         'required': ['chartId'],
@@ -87,6 +120,7 @@ class ModifyChartTool extends LLMTool {
       'series',
       'style',
       'annotations',
+      'normalizationMode',
     };
 
     for (final key in properties.keys) {
@@ -198,6 +232,18 @@ class ModifyChartTool extends LLMTool {
       modifiedAnnotations = properties['annotations'] as List<dynamic>?;
     }
 
+    // Handle normalizationMode modifications
+    NormalizationModeConfig? modifiedNormalizationMode = chart.normalizationMode;
+    if (properties.containsKey('normalizationMode')) {
+      final modeStr = properties['normalizationMode'] as String?;
+      if (modeStr != null) {
+        modifiedNormalizationMode = NormalizationModeConfig.values.firstWhere(
+          (e) => e.name == modeStr,
+          orElse: () => NormalizationModeConfig.auto,
+        );
+      }
+    }
+
     // Create updated configuration using copyWith
     // CRITICAL: Preserve the original chart ID to ensure in-place updates
     final updated = chart.copyWith(
@@ -210,6 +256,7 @@ class ModifyChartTool extends LLMTool {
       grid: modifiedGrid,
       theme: modifiedTheme,
       annotations: modifiedAnnotations,
+      normalizationMode: modifiedNormalizationMode,
     );
 
     // Ensure the ID is explicitly preserved (copyWith should handle this,

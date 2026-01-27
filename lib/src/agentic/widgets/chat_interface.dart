@@ -102,26 +102,12 @@ class ChatInterfaceState extends State<ChatInterface> {
     }
     final incoming = _agentConversation!.value;
 
-    // DEBUG: Check incoming chart annotations
-    for (final entry in incoming.charts.entries) {
-      final chart = entry.value as Map<String, dynamic>?;
-      final annotations = chart?['annotations'] as List?;
-      debugPrint('[ChatInterface._handleConversationUpdate] incoming chart ${entry.key} has ${annotations?.length ?? 0} annotations');
-    }
-
     // Merge charts: keep existing charts and add/update from incoming
     final existingCharts = _conversation?.charts ?? const <String, dynamic>{};
     final mergedCharts = {
       ...existingCharts,
       ...incoming.charts,
     };
-
-    // DEBUG: Check merged chart annotations
-    for (final entry in mergedCharts.entries) {
-      final chart = entry.value as Map<String, dynamic>?;
-      final annotations = chart?['annotations'] as List?;
-      debugPrint('[ChatInterface._handleConversationUpdate] merged chart ${entry.key} has ${annotations?.length ?? 0} annotations');
-    }
 
     setState(() {
       _conversation = incoming.copyWith(charts: mergedCharts);
@@ -438,18 +424,6 @@ class ChatInterfaceState extends State<ChatInterface> {
     final contentItems = <Widget>[];
     final renderedChartIds = <String>{};
 
-    debugPrint('=== CHAT INTERFACE BUILD START ===');
-    debugPrint('[ChatInterface] Total messages: ${conversation.messages.length}');
-    debugPrint('[ChatInterface] Total charts in conversation.charts: ${conversation.charts.length}');
-    debugPrint('[ChatInterface] Chart IDs in map: ${conversation.charts.keys.toList()}');
-
-    // DEBUG: Log annotation count for each chart in conversation.charts
-    for (final entry in conversation.charts.entries) {
-      final chartData = entry.value as Map<String, dynamic>?;
-      final annotations = chartData?['annotations'] as List?;
-      debugPrint('[ChatInterface.build] chart ${entry.key} has ${annotations?.length ?? 0} annotations');
-    }
-
     // Render messages in order, with charts inline after their source message
     for (final message in conversation.messages) {
       // Add the message bubble if it has text content
@@ -459,20 +433,14 @@ class ChatInterfaceState extends State<ChatInterface> {
 
       // Check if this message has tool results with charts
       if (message.toolResults != null) {
-        debugPrint('[ChatInterface] Message has ${message.toolResults!.length} tool results');
         for (final toolResult in message.toolResults!) {
-          debugPrint('[ChatInterface] ToolResult chartId: ${toolResult.chartId}');
           if (toolResult.chartId != null) {
             // Always get LATEST chart data from conversation.charts
             final chart = conversation.charts[toolResult.chartId];
-            debugPrint('[ChatInterface] Chart found in map: ${chart != null}');
-            debugPrint('[ChatInterface] Already rendered: ${renderedChartIds.contains(toolResult.chartId)}');
             if (chart != null && !renderedChartIds.contains(toolResult.chartId)) {
-              debugPrint('[ChatInterface] RENDERING chart ${toolResult.chartId}');
               renderedChartIds.add(toolResult.chartId!);
               try {
                 final chartConfig = ChartConfiguration.fromJson(chart as Map<String, dynamic>);
-                debugPrint('[ChatInterface] Chart series count: ${chartConfig.series.length}');
                 // Use a key that includes chart content hash so widget rebuilds when chart data changes
                 final chartKey = ValueKey('${toolResult.chartId}_${chartConfig.series.length}_${chartConfig.hashCode}');
                 contentItems.add(
@@ -501,11 +469,8 @@ class ChatInterfaceState extends State<ChatInterface> {
     }
 
     // Add any charts that weren't associated with a message (shouldn't happen, but just in case)
-    debugPrint('[ChatInterface] Checking orphan charts. renderedChartIds: $renderedChartIds');
     for (final entry in conversation.charts.entries) {
-      debugPrint('[ChatInterface] Orphan check: ${entry.key} rendered=${renderedChartIds.contains(entry.key)}');
       if (!renderedChartIds.contains(entry.key)) {
-        debugPrint('[ChatInterface] RENDERING ORPHAN chart ${entry.key}');
         try {
           final chartConfig = ChartConfiguration.fromJson(entry.value as Map<String, dynamic>);
           contentItems.add(

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -12,75 +10,32 @@ class ChartRenderer {
 
   /// Builds a widget for the provided chart configuration or raw chart data.
   Widget render(dynamic chart) {
-    debugPrint('=== ChartRenderer.render() START ===');
-    debugPrint('Input type: ${chart.runtimeType}');
-
     if (chart is agentic.ChartConfiguration) {
-      debugPrint('Rendering ChartConfiguration directly');
-      // DEBUG: Output chart.toJson()
-      _debugPrintChartJson(chart);
       return _renderConfiguration(chart);
     }
 
     // Handle Map format (from CreateChartTool output)
     if (chart is Map<String, dynamic>) {
-      debugPrint('Rendering from Map');
-      // DEBUG: Output the raw input
-      _debugPrintJson('Raw chart input', chart);
       try {
         final config = agentic.ChartConfiguration.fromJson(chart);
-        debugPrint(
-            'Parsed config: type=${config.type}, series=${config.series.length}');
-        // DEBUG: Output chart.toJson()
-        _debugPrintChartJson(config);
         return _renderConfiguration(config);
       } catch (e) {
-        debugPrint('Error parsing chart config: $e');
         return _errorWidget('Invalid chart configuration: $e');
       }
     }
 
-    debugPrint('Unsupported chart format: ${chart.runtimeType}');
-    debugPrint('=== ChartRenderer.render() END ===');
     return _errorWidget('Unsupported chart format');
-  }
-
-  /// Debug helper: print chart configuration as JSON
-  void _debugPrintChartJson(agentic.ChartConfiguration config) {
-    debugPrint('--- CHART CONFIGURATION JSON ---');
-    _debugPrintJson('chart.toJson()', config.toJson());
-    debugPrint('--- END CHART CONFIGURATION ---');
-  }
-
-  /// Debug helper: print any JSON object with formatting
-  void _debugPrintJson(String label, Map<String, dynamic> json) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(json);
-      debugPrint('$label:');
-      // Print line by line to avoid truncation
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('$label: [Failed to serialize: $e]');
-      debugPrint('Raw: $json');
-    }
   }
 
   Widget _renderConfiguration(agentic.ChartConfiguration config) {
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
-        debugPrint('No series data in config');
         return _errorWidget('No series data provided');
       }
 
-      debugPrint('Building ${config.series.length} series');
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data ?? [];
-        debugPrint(
-            'Series ${seriesConfig.id}: ${dataPoints.length} data points, color: ${seriesConfig.color}');
         final points = <ChartDataPoint>[];
         for (var index = 0; index < dataPoints.length; index += 1) {
           final dataPoint = dataPoints[index];
@@ -124,7 +79,6 @@ class ChartRenderer {
 
       // Convert AnnotationConfig to ChartAnnotation
       final annotations = _convertAnnotations(config.annotations);
-      debugPrint('Converted ${annotations.length} annotations');
 
       // Build X-axis config
       final xAxisConfig = XAxisConfig(
@@ -166,10 +120,9 @@ class ChartRenderer {
               ),
             );
 
-      debugPrint('Creating BravenChartPlus widget');
-      debugPrint(
-          '  theme=${config.theme ?? "light"}, grid=$gridVisible (raw: ${config.grid}), legend=$showLegend, scrollbar=$showXScrollbar');
-      debugPrint('=== ChartRenderer.render() END ===');
+      // Convert normalizationMode
+      final normalizationMode = _getNormalizationMode(config);
+
       return SizedBox(
         height: 350,
         child: BravenChartPlus(
@@ -182,11 +135,10 @@ class ChartRenderer {
           legendStyle: legendStyle,
           showXScrollbar: showXScrollbar,
           showYScrollbar: showYScrollbar,
+          normalizationMode: normalizationMode,
         ),
       );
-    } catch (e, stack) {
-      debugPrint('Error rendering chart: $e');
-      debugPrint('Stack: $stack');
+    } catch (e) {
       return _errorWidget('Failed to render chart: $e');
     }
   }
@@ -214,7 +166,6 @@ class ChartRenderer {
       }
     }
 
-    debugPrint('Unable to parse color: $colorString');
     return null;
   }
 
@@ -262,8 +213,7 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true ||
-        (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -315,6 +265,23 @@ class ChartRenderer {
     return false;
   }
 
+  /// Get normalization mode from configuration
+  ///
+  /// Converts agentic.NormalizationModeConfig to braven_charts.NormalizationMode
+  NormalizationMode? _getNormalizationMode(agentic.ChartConfiguration config) {
+    if (config.normalizationMode == null) {
+      return null; // Let BravenChartPlus use its default
+    }
+    switch (config.normalizationMode!) {
+      case agentic.NormalizationModeConfig.none:
+        return NormalizationMode.none;
+      case agentic.NormalizationModeConfig.auto:
+        return NormalizationMode.auto;
+      case agentic.NormalizationModeConfig.perSeries:
+        return NormalizationMode.perSeries;
+    }
+  }
+
   /// Convert AnnotationConfig list to ChartAnnotation list
   List<ChartAnnotation> _convertAnnotations(List<dynamic>? annotations) {
     if (annotations == null || annotations.isEmpty) {
@@ -331,8 +298,7 @@ class ChartRenderer {
         } else if (annotationData is Map<String, dynamic>) {
           annotationConfig = AnnotationConfig.fromJson(annotationData);
         } else {
-          debugPrint(
-              'Skipping unknown annotation format: ${annotationData.runtimeType}');
+          // Skip unknown annotation formats silently
           continue;
         }
 
@@ -340,8 +306,8 @@ class ChartRenderer {
         if (annotation != null) {
           result.add(annotation);
         }
-      } catch (e) {
-        debugPrint('Error converting annotation: $e');
+      } catch (_) {
+        // Skip failed annotation conversions silently
       }
     }
 
@@ -358,8 +324,6 @@ class ChartRenderer {
         // Convert to ThresholdAnnotation
         final isHorizontal = config.orientation != 'vertical';
         final value = config.value ?? 0.0;
-        debugPrint(
-            'Converting referenceLine: orientation=${config.orientation}, value=$value, color=$color');
         return ThresholdAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis: isHorizontal ? AnnotationAxis.y : AnnotationAxis.x,
@@ -376,8 +340,6 @@ class ChartRenderer {
         final minValue = config.minValue ?? 0.0;
         final maxValue = config.maxValue ?? 0.0;
         final opacity = config.opacity ?? 0.3;
-        debugPrint(
-            'Converting zone: orientation=${config.orientation}, min=$minValue, max=$maxValue');
         return RangeAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           startY: isHorizontal ? minValue : null,
@@ -395,8 +357,6 @@ class ChartRenderer {
         final text = config.text ?? config.label ?? '';
         final position = _getTextAnnotationPosition(config.position);
         final anchor = _getTextAnnotationAnchor(config.position);
-        debugPrint(
-            'Converting textLabel: text=$text, position=$position, anchor=$anchor');
         return TextAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           position: position,
@@ -415,7 +375,6 @@ class ChartRenderer {
         // Convert to PinAnnotation
         final x = config.x ?? 0.0;
         final y = config.y ?? 0.0;
-        debugPrint('Converting marker: x=$x, y=$y');
         return PinAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           x: x,
@@ -425,7 +384,6 @@ class ChartRenderer {
         );
 
       default:
-        debugPrint('Unknown annotation type: ${config.type}');
         return null;
     }
   }

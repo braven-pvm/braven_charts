@@ -33,6 +33,7 @@ class AgenticChartDemo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Agentic Chart Demo',
       theme: ThemeData(
         useMaterial3: true,

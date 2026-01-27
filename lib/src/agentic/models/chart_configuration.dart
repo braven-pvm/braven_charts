@@ -3,6 +3,27 @@ import 'dart:convert';
 import 'axis_config.dart';
 import 'series_config.dart';
 
+/// Normalization mode for multi-axis charts.
+///
+/// Controls how multiple data series with different value ranges are displayed.
+/// This is essential for sport science data where metrics like Power (0-400W)
+/// and Heart Rate (60-200bpm) need to be overlaid on the same chart.
+enum NormalizationModeConfig {
+  /// No normalization - all series share a single Y-axis scale.
+  /// Use when all series have similar value ranges.
+  none,
+
+  /// Automatic detection based on data ranges.
+  /// Enables per-series normalization when ranges differ by >10x.
+  /// Recommended default for most use cases.
+  auto,
+
+  /// Always normalize each series independently.
+  /// Each series uses the full chart height with its own Y-axis.
+  /// Use for overlaying conceptually different metrics (e.g., Power + Heart Rate).
+  perSeries,
+}
+
 /// Chart type enumeration
 enum ChartType {
   line,
@@ -131,6 +152,20 @@ class ChartConfiguration {
   /// Whether to show scrollbar (config panel)
   final bool? showScrollbar;
 
+  /// Normalization mode for multi-axis display.
+  ///
+  /// When displaying multiple series with different value ranges (e.g., Power
+  /// in watts and Heart Rate in bpm), normalization allows each series to use
+  /// the full vertical chart space while showing original values on its Y-axis.
+  ///
+  /// - [NormalizationModeConfig.none]: Single shared Y-axis for all series
+  /// - [NormalizationModeConfig.auto]: Automatically detect when to normalize (default)
+  /// - [NormalizationModeConfig.perSeries]: Each series gets its own Y-axis
+  ///
+  /// When using [perSeries], each series should specify its Y-axis position
+  /// (left or right) via the series' `yAxisId` or the Y-axis configuration.
+  final NormalizationModeConfig? normalizationMode;
+
   /// Creates a new ChartConfiguration instance
   ChartConfiguration({
     this.id,
@@ -152,6 +187,7 @@ class ChartConfiguration {
     this.legendPosition,
     this.useDarkTheme,
     this.showScrollbar,
+    this.normalizationMode,
   })  : series = series ?? [],
         yAxes = yAxes ?? [],
         assert(
@@ -185,6 +221,12 @@ class ChartConfiguration {
       legendPosition: json['legendPosition'] as String?,
       useDarkTheme: json['useDarkTheme'] as bool?,
       showScrollbar: json['showScrollbar'] as bool?,
+      normalizationMode: json['normalizationMode'] != null
+          ? NormalizationModeConfig.values.firstWhere(
+              (e) => e.name == json['normalizationMode'],
+              orElse: () => NormalizationModeConfig.auto,
+            )
+          : null,
     );
   }
 
@@ -210,6 +252,7 @@ class ChartConfiguration {
       if (legendPosition != null) 'legendPosition': legendPosition,
       if (useDarkTheme != null) 'useDarkTheme': useDarkTheme,
       if (showScrollbar != null) 'showScrollbar': showScrollbar,
+      if (normalizationMode != null) 'normalizationMode': normalizationMode!.name,
     };
   }
 
@@ -234,6 +277,7 @@ class ChartConfiguration {
     String? legendPosition,
     bool? useDarkTheme,
     bool? showScrollbar,
+    NormalizationModeConfig? normalizationMode,
   }) {
     return ChartConfiguration(
       id: id ?? this.id,
@@ -255,6 +299,7 @@ class ChartConfiguration {
       legendPosition: legendPosition ?? this.legendPosition,
       useDarkTheme: useDarkTheme ?? this.useDarkTheme,
       showScrollbar: showScrollbar ?? this.showScrollbar,
+      normalizationMode: normalizationMode ?? this.normalizationMode,
     );
   }
 

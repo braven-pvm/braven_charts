@@ -25,7 +25,9 @@ Future<FilePickerResult?> pickFile({List<String>? allowedExtensions}) async {
   input.onChange.listen((event) async {
     final files = input.files;
     if (files == null || files.isEmpty) {
-      completer.complete(null);
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
       return;
     }
 
@@ -33,6 +35,7 @@ Future<FilePickerResult?> pickFile({List<String>? allowedExtensions}) async {
     final reader = html.FileReader();
 
     reader.onLoadEnd.listen((event) {
+      if (completer.isCompleted) return;
       final result = reader.result;
       if (result is Uint8List) {
         completer.complete(FilePickerResult(
@@ -50,7 +53,9 @@ Future<FilePickerResult?> pickFile({List<String>? allowedExtensions}) async {
     });
 
     reader.onError.listen((event) {
-      completer.complete(null);
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
     });
 
     reader.readAsArrayBuffer(file);

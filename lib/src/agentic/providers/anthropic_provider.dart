@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:anthropic_sdk_dart/anthropic_sdk_dart.dart' as anthropic;
-import 'package:flutter/foundation.dart';
 
 import '../models/chart_configuration.dart';
 import '../models/conversation.dart';
@@ -84,13 +83,6 @@ class AnthropicProvider extends LLMProvider {
     final messages = _buildMessages(conversation);
     final anthropicTools = _buildTools();
 
-    // Debug logging
-    debugPrint(
-        '[AnthropicProvider] Sending ${messages.length} messages with ${anthropicTools.length} tools');
-    for (final tool in anthropicTools) {
-      debugPrint('[AnthropicProvider]   - Tool: ${tool.name}');
-    }
-
     try {
       final request = anthropic.CreateMessageRequest(
         model: anthropic.Model.modelId(model),
@@ -109,7 +101,6 @@ class AnthropicProvider extends LLMProvider {
       final response = await _client.createMessage(request: request);
       return _extractResponse(response);
     } catch (error) {
-      debugPrint('[AnthropicProvider] ERROR: $error');
       throw _mapError(error);
     }
   }
@@ -129,15 +120,6 @@ class AnthropicProvider extends LLMProvider {
   Message _extractResponse(dynamic response) {
     final text = _extractText(response);
     final toolCalls = _extractToolCalls(response);
-
-    // Debug logging
-    debugPrint(
-        '[AnthropicProvider] Response text: "${text.length > 100 ? text.substring(0, 100) : text}..."');
-    debugPrint('[AnthropicProvider] Tool calls found: ${toolCalls.length}');
-    for (final tc in toolCalls) {
-      debugPrint(
-          '[AnthropicProvider]   - Tool: ${tc.toolName}, args: ${tc.arguments}');
-    }
 
     return Message(
       id: _generateMessageId(),
@@ -193,9 +175,7 @@ class AnthropicProvider extends LLMProvider {
 
     for (final message in conversation.messages) {
       // Handle user messages with text
-      if (message.role == MessageRole.user &&
-          message.textContent != null &&
-          message.textContent!.trim().isNotEmpty) {
+      if (message.role == MessageRole.user && message.textContent != null && message.textContent!.trim().isNotEmpty) {
         result.add(
           anthropic.Message(
             role: anthropic.MessageRole.user,
@@ -206,14 +186,11 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle assistant messages with tool calls
-      if (message.role == MessageRole.assistant &&
-          message.toolCalls != null &&
-          message.toolCalls!.isNotEmpty) {
+      if (message.role == MessageRole.assistant && message.toolCalls != null && message.toolCalls!.isNotEmpty) {
         final blocks = <anthropic.Block>[];
 
         // Add text block if there's text content
-        if (message.textContent != null &&
-            message.textContent!.trim().isNotEmpty) {
+        if (message.textContent != null && message.textContent!.trim().isNotEmpty) {
           blocks.add(anthropic.Block.text(text: message.textContent!));
         }
 
@@ -236,9 +213,7 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle assistant messages with tool results (send as user message with tool_result blocks)
-      if (message.role == MessageRole.assistant &&
-          message.toolResults != null &&
-          message.toolResults!.isNotEmpty) {
+      if (message.role == MessageRole.assistant && message.toolResults != null && message.toolResults!.isNotEmpty) {
         final blocks = <anthropic.Block>[];
 
         for (final toolResult in message.toolResults!) {
@@ -249,7 +224,8 @@ class AnthropicProvider extends LLMProvider {
             if (toolResult.result is ChartConfiguration) {
               final chart = toolResult.result as ChartConfiguration;
               // Prefix with explicit chart ID to make it clear for modify_chart calls
-              resultContent = 'Chart created successfully. CHART_ID: "${chart.id}" (use this ID for modify_chart). Full configuration: ${jsonEncode(chart.toJson())}';
+              resultContent =
+                  'Chart created successfully. CHART_ID: "${chart.id}" (use this ID for modify_chart). Full configuration: ${jsonEncode(chart.toJson())}';
             } else {
               resultContent = toolResult.result.toString();
             }
@@ -279,9 +255,7 @@ class AnthropicProvider extends LLMProvider {
       }
 
       // Handle regular assistant text messages
-      if (message.role == MessageRole.assistant &&
-          message.textContent != null &&
-          message.textContent!.trim().isNotEmpty) {
+      if (message.role == MessageRole.assistant && message.textContent != null && message.textContent!.trim().isNotEmpty) {
         result.add(
           anthropic.Message(
             role: anthropic.MessageRole.assistant,
@@ -390,19 +364,14 @@ class AnthropicProvider extends LLMProvider {
   LLMProviderException _mapError(Object error) {
     final raw = error.toString().toLowerCase();
 
-    if (raw.contains('401') ||
-        raw.contains('unauthorized') ||
-        raw.contains('invalid api key') ||
-        raw.contains('authentication')) {
+    if (raw.contains('401') || raw.contains('unauthorized') || raw.contains('invalid api key') || raw.contains('authentication')) {
       return LLMProviderException(
         'Authentication failed. Please check your API key.',
         type: LLMProviderErrorType.authentication,
       );
     }
 
-    if (raw.contains('credit balance') ||
-        raw.contains('billing') ||
-        raw.contains('purchase credits')) {
+    if (raw.contains('credit balance') || raw.contains('billing') || raw.contains('purchase credits')) {
       return LLMProviderException(
         'Anthropic API credit balance is too low. Please add credits at console.anthropic.com.',
         type: LLMProviderErrorType.rateLimited,
@@ -416,10 +385,7 @@ class AnthropicProvider extends LLMProvider {
       );
     }
 
-    if (raw.contains('socket') ||
-        raw.contains('network') ||
-        raw.contains('timeout') ||
-        raw.contains('connection')) {
+    if (raw.contains('socket') || raw.contains('network') || raw.contains('timeout') || raw.contains('connection')) {
       return LLMProviderException(
         'Network error. Please check your connection and retry.',
         type: LLMProviderErrorType.network,
