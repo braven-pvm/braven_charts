@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../models/message.dart';
 
@@ -77,20 +78,35 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget _buildSimpleContent(bool isUser) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Text(
-        _text,
-        style: GoogleFonts.poppins(
-          color: isUser ? Colors.black54 : Colors.black54,
-          fontWeight: FontWeight.w400,
-          fontSize: 12,
-        ),
+      child: isUser
+          ? Text(
+              _text,
+              style: GoogleFonts.poppins(
+                color: Colors.black54,
+                fontWeight: FontWeight.w400,
+                fontSize: 12,
+              ),
+            )
+          : _buildMarkdownContent(_text),
+    );
+  }
+
+  /// Renders markdown content for assistant messages
+  Widget _buildMarkdownContent(String content) {
+    return GptMarkdown(
+      content,
+      style: GoogleFonts.poppins(
+        color: Colors.black87,
+        fontWeight: FontWeight.w400,
+        fontSize: 12,
+        height: 1.5,
       ),
     );
   }
 
   Widget _buildCollapsibleContent(bool isUser) {
-    final textColor = isUser ? Colors.white : Colors.black87;
-    final iconColor = isUser ? Colors.white70 : Colors.black54;
+    final textColor = isUser ? Colors.black54 : Colors.black87;
+    final iconColor = isUser ? Colors.red : Colors.red;
 
     return InkWell(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -102,18 +118,30 @@ class _MessageBubbleState extends State<MessageBubble> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    _isExpanded ? _text : _summaryText,
-                    style: GoogleFonts.poppins(
-                      color: textColor,
-                      fontWeight: FontWeight.w200,
-                      fontSize: 11.5,
-                    ),
-                    maxLines: _isExpanded ? null : widget.maxCollapsedLines,
-                    overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                  ),
+                  child: _isExpanded
+                      ? (isUser
+                          ? Text(
+                              _text,
+                              style: GoogleFonts.poppins(
+                                color: textColor,
+                                fontWeight: FontWeight.w300,
+                                fontSize: 11.5,
+                              ),
+                            )
+                          : _buildMarkdownContent(_text))
+                      : Text(
+                          _summaryText,
+                          style: GoogleFonts.poppins(
+                            color: textColor,
+                            fontWeight: FontWeight.w300,
+                            fontSize: 11.5,
+                          ),
+                          maxLines: widget.maxCollapsedLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
                 const SizedBox(width: 4),
                 Icon(

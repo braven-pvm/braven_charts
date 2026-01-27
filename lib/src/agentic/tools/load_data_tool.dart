@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:braven_data/braven_data.dart' as bd;
@@ -13,7 +14,7 @@ import '../services/data_optimizer.dart';
 import '../services/url_fetcher.dart';
 import 'data_store.dart';
 
-/// Tool for loading data from various sources (file, URL, inline)
+/// Tool for loading data from various sources (file, URL, inline, bytes)
 class LoadDataTool {
   final DataStore _store = DataStore();
   final Uuid _uuid = const Uuid();
@@ -25,8 +26,7 @@ class LoadDataTool {
 
   String get name => 'load_data';
 
-  String get description =>
-      'Load data from a file attachment, URL, or inline content';
+  String get description => 'Load data from a file attachment, URL, or inline content';
 
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
@@ -38,11 +38,12 @@ class LoadDataTool {
             'properties': {
               'type': {
                 'type': 'string',
-                'enum': ['file', 'url', 'inline', 'context']
+                'enum': ['file', 'url', 'inline', 'context', 'bytes']
               },
               'file_id': {'type': 'string'},
               'url': {'type': 'string'},
               'content': {'type': 'string'},
+              'bytes': {'type': 'object', 'description': 'Uint8List binary data'},
               'context_file': {'type': 'string'},
               'format': {
                 'type': 'string',
@@ -104,13 +105,18 @@ class LoadDataTool {
         }
         return await _loadFromContext(source);
 
+      case 'bytes':
+        if (!source.containsKey('bytes')) {
+          throw ArgumentError('Missing bytes for bytes source');
+        }
+        return await _loadFromBytes(source);
+
       default:
         throw ArgumentError('Invalid source type: $sourceType');
     }
   }
 
-  Future<Map<String, dynamic>> _loadFromFile(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromFile(Map<String, dynamic> source) async {
     final fileId = source['file_id'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -127,8 +133,7 @@ class LoadDataTool {
             fileId,
             bd.FitMessageType.records,
           );
-          frame =
-              _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
+          frame = _convertBravenDataFrame(df, fileName: fileId, fileType: 'fit');
           // Extract timezone from FIT file metadata (FR-026)
           // For now, default to UTC if not available in metadata
           timezone = 'UTC';
@@ -214,8 +219,7 @@ class LoadDataTool {
     };
   }
 
-  Future<Map<String, dynamic>> _loadFromInline(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromInline(Map<String, dynamic> source) async {
     final content = source['content'] as String;
     final format = source['format'] as String? ?? 'auto';
 
@@ -253,8 +257,7 @@ class LoadDataTool {
     }
   }
 
-  Future<Map<String, dynamic>> _loadFromContext(
-      Map<String, dynamic> source) async {
+  Future<Map<String, dynamic>> _loadFromContext(Map<String, dynamic> source) async {
     final contextFile = source['context_file'] as String;
     final config = await _contextLoader.loadContext(contextFile);
 
@@ -266,6 +269,69 @@ class LoadDataTool {
       'success': true,
       'context': _contextToJson(config),
     };
+  }
+
+  /// Loads data from raw bytes (for binary files like FIT)
+  Future<Map<String, dynamic>> _loadFromBytes(Map<String, dynamic> source) async {
+    final bytes = source['bytes'] as Uint8List;
+    final format = source['format'] as String? ?? 'auto';
+    final fileName = source['file_name'] as String? ?? 'uploaded_file';
+
+    final dataId = _uuid.v4();
+
+    if (format == 'fit' || fileName.toLowerCase().endsWith('.fit')) {
+      // Parse FIT file from bytes using braven_data
+      try {
+        final df = bd.FitLoader.loadBytes(
+          bytes,
+          bd.FitMessageType.records,
+        );
+        final frame = _optimizeFrame(_convertBravenDataFrame(df, fileName: fileName, fileType: 'fit'));
+        _store.store(dataId, frame);
+
+        return {
+          'success': true,
+          'data_id': dataId,
+          'row_count': frame.rowCount,
+          'column_count': frame.columns.length,
+          'columns': frame.columns.map((c) => c.name).toList(),
+          'time_range': frame.timeRange?.toJson(),
+          'timezone': 'UTC',
+        };
+      } catch (e) {
+        throw Exception('Failed to parse FIT file: $e');
+      }
+    } else if (format == 'csv' || fileName.toLowerCase().endsWith('.csv')) {
+      // Parse CSV from bytes as text
+      final content = utf8.decode(bytes, allowMalformed: true);
+      final frame = _optimizeFrame(_parseCsvContent(content));
+      _store.store(dataId, frame);
+
+      return {
+        'success': true,
+        'data_id': dataId,
+        'row_count': frame.rowCount,
+        'column_count': frame.columns.length,
+        'columns': frame.columns.map((c) => c.name).toList(),
+        'time_range': frame.timeRange?.toJson(),
+      };
+    } else if (format == 'json' || fileName.toLowerCase().endsWith('.json')) {
+      // Parse JSON from bytes as text
+      final content = utf8.decode(bytes, allowMalformed: true);
+      final frame = _optimizeFrame(_parseJsonContent(content));
+      _store.store(dataId, frame);
+
+      return {
+        'success': true,
+        'data_id': dataId,
+        'row_count': frame.rowCount,
+        'column_count': frame.columns.length,
+        'columns': frame.columns.map((c) => c.name).toList(),
+        'time_range': frame.timeRange?.toJson(),
+      };
+    } else {
+      throw Exception('Unsupported file format: $format');
+    }
   }
 
   Map<String, dynamic> _contextToJson(ContextConfig config) {
@@ -690,8 +756,7 @@ class LoadDataTool {
   }
 
   /// Convert braven_data DataFrame to internal DataFrame format
-  DataFrame _convertBravenDataFrame(bd.DataFrame df,
-      {String? fileName, String? fileType}) {
+  DataFrame _convertBravenDataFrame(bd.DataFrame df, {String? fileName, String? fileType}) {
     final columns = <DataColumn>[];
     TimeRange? timeRange;
     DateTime? firstDate;
@@ -714,14 +779,10 @@ class LoadDataTool {
         lastDate = columnData.last as DateTime;
       } else if (columnData.first is String) {
         // Check if this is a timestamp string (common in FIT files)
-        if (columnName.toLowerCase().contains('time') ||
-            columnName.toLowerCase().contains('timestamp') ||
-            columnName.toLowerCase() == 'time') {
+        if (columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp') || columnName.toLowerCase() == 'time') {
           try {
-            final DateTime parsedFirst =
-                DateTime.parse(columnData.first as String);
-            final DateTime parsedLast =
-                DateTime.parse(columnData.last as String);
+            final DateTime parsedFirst = DateTime.parse(columnData.first as String);
+            final DateTime parsedLast = DateTime.parse(columnData.last as String);
             if (firstDate == null) {
               firstDate = parsedFirst;
               lastDate = parsedLast;
@@ -734,19 +795,13 @@ class LoadDataTool {
         type = 'number';
 
         // Check if this is a timestamp column with Unix epoch values
-        if ((columnName.toLowerCase().contains('time') ||
-                columnName.toLowerCase().contains('timestamp')) &&
-            firstDate == null) {
+        if ((columnName.toLowerCase().contains('time') || columnName.toLowerCase().contains('timestamp')) && firstDate == null) {
           try {
             final num firstValue = columnData.first as num;
             final num lastValue = columnData.last as num;
             // Try interpreting as Unix timestamp (seconds since epoch)
-            firstDate = DateTime.fromMillisecondsSinceEpoch(
-                (firstValue * 1000).toInt(),
-                isUtc: true);
-            lastDate = DateTime.fromMillisecondsSinceEpoch(
-                (lastValue * 1000).toInt(),
-                isUtc: true);
+            firstDate = DateTime.fromMillisecondsSinceEpoch((firstValue * 1000).toInt(), isUtc: true);
+            lastDate = DateTime.fromMillisecondsSinceEpoch((lastValue * 1000).toInt(), isUtc: true);
           } catch (_) {
             // Not a valid timestamp
           }
@@ -777,9 +832,7 @@ class LoadDataTool {
       fileName: fileName ?? 'data',
       fileType: fileType ?? 'unknown',
       columns: columns,
-      rowCount: df.columnNames.isNotEmpty
-          ? (df.columns[df.columnNames.first]?.length ?? 0)
-          : 0,
+      rowCount: df.columnNames.isNotEmpty ? (df.columns[df.columnNames.first]?.length ?? 0) : 0,
       timeRange: timeRange,
     );
   }

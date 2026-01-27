@@ -40,15 +40,15 @@ double _referenceNormalizedPower(
 
 void main() {
   group('CalculateMetricTool', () {
-    test('calculates NP within 1% tolerance', () {
-      const tool = CalculateMetricTool();
+    test('calculates NP within 1% tolerance', () async {
+      final tool = CalculateMetricTool();
       final samples = List<double>.generate(
         60,
         (index) => [200.0, 250.0, 300.0, 150.0, 180.0][index % 5],
       );
       final expected = _referenceNormalizedPower(samples);
 
-      final result = tool.execute({
+      final result = await tool.execute({
         'metric': 'np',
         'power': samples,
         'sampleRateHz': 1,
@@ -69,8 +69,8 @@ void main() {
       );
     });
 
-    test('calculates TSS using Coggan formula', () {
-      const tool = CalculateMetricTool();
+    test('calculates TSS using Coggan formula', () async {
+      final tool = CalculateMetricTool();
       const durationSeconds = 3600.0;
       const np = 250.0;
       const ftp = 300.0;
@@ -78,7 +78,7 @@ void main() {
       final expected =
           (durationSeconds * np * ifValue) / (ftp * 3600.0) * 100.0;
 
-      final result = tool.execute({
+      final result = await tool.execute({
         'metric': 'tss',
         'durationSeconds': durationSeconds,
         'np': np,
@@ -94,13 +94,13 @@ void main() {
       expect(value.toDouble(), closeTo(expected, 0.01));
     });
 
-    test('calculates IF as NP divided by FTP', () {
-      const tool = CalculateMetricTool();
+    test('calculates IF as NP divided by FTP', () async {
+      final tool = CalculateMetricTool();
       const np = 250.0;
       const ftp = 300.0;
       const expected = np / ftp;
 
-      final result = tool.execute({
+      final result = await tool.execute({
         'metric': 'if',
         'np': np,
         'ftp': ftp,
@@ -112,6 +112,80 @@ void main() {
         return;
       }
       expect(value.toDouble(), closeTo(expected, 0.0001));
+    });
+
+    test('calculates mean correctly', () async {
+      final tool = CalculateMetricTool();
+      final values = [100.0, 200.0, 300.0];
+
+      final result = await tool.execute({
+        'metric': 'mean',
+        'values': values,
+      });
+
+      final value = result['value'];
+      expect(value, isA<num>(), reason: 'Mean result must be numeric');
+      if (value is! num) {
+        return;
+      }
+      expect(value.toDouble(), closeTo(200.0, 0.0001));
+    });
+
+    test('calculates max correctly', () async {
+      final tool = CalculateMetricTool();
+      final values = [120.0, 200.0, 150.0];
+
+      final result = await tool.execute({
+        'metric': 'max',
+        'values': values,
+      });
+
+      final value = result['value'];
+      expect(value, isA<num>(), reason: 'Max result must be numeric');
+      if (value is! num) {
+        return;
+      }
+      expect(value.toDouble(), closeTo(200.0, 0.0001));
+    });
+
+    test('calculates min correctly', () async {
+      final tool = CalculateMetricTool();
+      final values = [120.0, 200.0, 150.0];
+
+      final result = await tool.execute({
+        'metric': 'min',
+        'values': values,
+      });
+
+      final value = result['value'];
+      expect(value, isA<num>(), reason: 'Min result must be numeric');
+      if (value is! num) {
+        return;
+      }
+      expect(value.toDouble(), closeTo(120.0, 0.0001));
+    });
+
+    test('calculates time in zones correctly', () async {
+      final tool = CalculateMetricTool();
+      final values = [100.0, 120.0, 160.0, 210.0, 260.0];
+      final boundaries = [0.0, 150.0, 200.0, 250.0];
+
+      final result = await tool.execute({
+        'metric': 'timeInZones',
+        'values': values,
+        'zoneBoundaries': boundaries,
+        'sampleRateHz': 1,
+      });
+
+      final value = result['value'];
+      expect(value, isA<Map>(), reason: 'timeInZones must return a map');
+      if (value is! Map) {
+        return;
+      }
+
+      expect(value['Zone 1'], closeTo(2.0, 0.0001));
+      expect(value['Zone 2'], closeTo(1.0, 0.0001));
+      expect(value['Zone 3'], closeTo(2.0, 0.0001));
     });
   });
 }

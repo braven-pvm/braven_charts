@@ -363,17 +363,29 @@ class ChatInterfaceState extends State<ChatInterface> {
     }
 
     try {
-      // Save file temporarily (in production, use proper temp file handling)
-      // For now, use inline content approach
-      final content = String.fromCharCodes(attachment.content);
+      Map<String, dynamic> loadResult;
 
-      final loadResult = await _loadDataTool.execute({
-        'source': {
-          'type': 'inline',
-          'content': content,
-          'format': attachment.fileType,
-        }
-      });
+      // Use 'bytes' source type for binary FIT files to avoid corrupting binary data
+      if (attachment.fileType == 'fit') {
+        loadResult = await _loadDataTool.execute({
+          'source': {
+            'type': 'bytes',
+            'bytes': attachment.content,
+            'format': 'fit',
+            'file_name': attachment.fileName,
+          }
+        });
+      } else {
+        // For text formats (CSV, JSON), use inline content
+        final content = String.fromCharCodes(attachment.content);
+        loadResult = await _loadDataTool.execute({
+          'source': {
+            'type': 'inline',
+            'content': content,
+            'format': attachment.fileType,
+          }
+        });
+      }
 
       final dataId = loadResult['data_id'] as String;
 

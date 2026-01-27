@@ -1,9 +1,69 @@
 import 'dart:math' as math;
 
-class CalculateMetricTool {
-  const CalculateMetricTool();
+import 'llm_tool.dart';
 
-  Map<String, dynamic> execute(Map<String, dynamic> params) {
+class CalculateMetricTool extends LLMTool {
+  @override
+  String get name => 'calculate_metric';
+
+  @override
+  String get description =>
+      'Calculates sport science metrics (NP, TSS, IF, mean, max, min, timeInZones).';
+
+  @override
+  Map<String, dynamic> get inputSchema => {
+        'type': 'object',
+        'properties': {
+          'metric': {
+            'type': 'string',
+            'enum': ['np', 'tss', 'if', 'mean', 'max', 'min', 'timeInZones'],
+            'description': 'Metric to calculate.'
+          },
+          'power': {
+            'type': 'array',
+            'items': {'type': 'number'},
+            'description': 'Time-series samples for power (alias of values).'
+          },
+          'values': {
+            'type': 'array',
+            'items': {'type': 'number'},
+            'description': 'Time-series samples.'
+          },
+          'sampleRateHz': {
+            'type': 'number',
+            'description': 'Samples per second (for NP/timeInZones).'
+          },
+          'windowSeconds': {
+            'type': 'number',
+            'description': 'Rolling window size in seconds for NP.'
+          },
+          'durationSeconds': {
+            'type': 'number',
+            'description': 'Workout duration in seconds for TSS.'
+          },
+          'np': {
+            'type': 'number',
+            'description': 'Normalized power value.'
+          },
+          'ftp': {
+            'type': 'number',
+            'description': 'Functional threshold power.'
+          },
+          'if': {
+            'type': 'number',
+            'description': 'Intensity factor.'
+          },
+          'zoneBoundaries': {
+            'type': 'array',
+            'items': {'type': 'number'},
+            'description': 'Zone threshold boundaries for timeInZones.'
+          }
+        },
+        'required': ['metric'],
+      };
+
+  @override
+  Future<Map<String, dynamic>> execute(Map<String, dynamic> params) async {
     final metric = (params['metric'] ?? '').toString().toLowerCase();
     switch (metric) {
       case 'np':
