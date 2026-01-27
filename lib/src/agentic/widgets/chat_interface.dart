@@ -546,60 +546,62 @@ class ChatInterfaceState extends State<ChatInterface> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(color: Colors.grey[200]!),
-                ),
+                border: Border.all(width: 0.5, color: Colors.grey),
+                borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(5),
+              margin: const EdgeInsets.symmetric(horizontal: 25),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const SizedBox(width: 4),
                       Expanded(
                         child: TextField(
                           key: const Key('chat_input'),
-                          maxLines: 15,
+                          maxLines: 8,
                           // expands: true,
-                          minLines: 3,
+                          minLines: 1,
                           controller: _controller,
                           enabled: !_isProcessing,
                           style: GoogleFonts.notoSansJp(fontSize: 12),
                           decoration: InputDecoration(
                             hintText: 'Ask for a chart...',
                             hintStyle: GoogleFonts.notoSansJp(fontSize: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide(
-                                color: Colors.grey[200]!,
-                                width: 0.2,
-                              ),
-                            ),
+                            border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                              horizontal: 10,
+                              vertical: 8,
                             ),
                             isDense: true,
+                            focusedBorder: null,
                           ),
                           onSubmitted: (_) => _handleSend(),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(height: 15),
                       IconButton(
                         key: const Key('chat_send_button'),
-                        icon: const Icon(Icons.send, size: 20),
+                        icon: const Icon(Icons.send, size: 15),
                         onPressed: _isProcessing ? null : _handleSend,
                         visualDensity: VisualDensity.compact,
                       ),
                     ],
                   ),
-                  IconButton(
+                  TextButton(
                     key: const Key('chat_file_button'),
-                    icon: const Icon(Icons.attach_file, size: 20),
                     onPressed: _isProcessing ? null : _handleFileUpload,
-                    tooltip: 'Attach file (FIT, CSV, TCX)',
-                    visualDensity: VisualDensity.compact,
+                    // tooltip: 'Attach file (FIT, CSV, TCX)',
+                    // visualDensity: VisualDensity.compact,
+                    child: const Row(children: [Icon(Icons.attach_file, size: 15), Text('Attach')]),
                   ),
+                  // IconButton(
+                  //   key: const Key('chat_file_button'),
+                  //   icon: const Icon(Icons.attach_file, size: 20),
+                  //   onPressed: _isProcessing ? null : _handleFileUpload,
+                  //   tooltip: 'Attach file (FIT, CSV, TCX)',
+                  //   visualDensity: VisualDensity.compact,
+                  // ),
                 ],
               ),
             ),
