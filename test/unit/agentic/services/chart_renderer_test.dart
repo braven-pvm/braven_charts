@@ -4,8 +4,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/agentic/services/chart_renderer.dart';
-import 'package:braven_charts/src/agentic/models/chart_configuration.dart'
-    as agentic;
+import 'package:braven_charts/src/agentic/models/chart_configuration.dart' as agentic;
 import 'package:braven_charts/src/agentic/models/series_config.dart' as agentic;
 import 'package:braven_charts/src/agentic/models/axis_config.dart' as agentic;
 
@@ -33,8 +32,7 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(
-              label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -59,8 +57,7 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(
-              label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -85,8 +82,7 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(
-              label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -111,8 +107,7 @@ void main() {
         ],
         xAxis: agentic.XAxisConfig(label: 'X Axis'),
         yAxes: [
-          agentic.YAxisConfig(
-              label: 'Y Axis', position: agentic.AxisPosition.left),
+          agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
         ],
       );
 
@@ -202,8 +197,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'Time'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y Axis', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y Axis', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -229,8 +223,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -255,8 +248,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -282,8 +274,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'Quarter'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -307,8 +298,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -331,8 +321,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -359,8 +348,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -386,8 +374,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -412,8 +399,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -438,8 +424,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -464,8 +449,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -490,8 +474,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -520,8 +503,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -549,8 +531,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
         );
 
@@ -576,8 +557,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           interactions: {'pan': true, 'zoom': true},
         );
@@ -602,8 +582,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           interactions: {'crosshair': true},
         );
@@ -628,8 +607,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           interactions: {'tooltip': true},
         );
@@ -654,8 +632,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           interactions: {
             'pan': true,
@@ -685,8 +662,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           interactions: {
             'pan': false,
@@ -716,8 +692,7 @@ void main() {
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
           yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
+            agentic.YAxisConfig(label: 'Y', position: agentic.AxisPosition.left),
           ],
           // No interactions specified
         );

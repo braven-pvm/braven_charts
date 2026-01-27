@@ -89,6 +89,7 @@ class ChartRenderer {
           tension: seriesConfig.tension,
           markerRadius: seriesConfig.markerRadius,
           showDataPointMarkers: seriesConfig.showPoints,
+          interpolation: seriesConfig.interpolation,
         );
       }).toList();
 
@@ -144,18 +145,17 @@ class ChartRenderer {
       return SizedBox(
         height: 350,
         child: BravenChartPlus(
-          series: series,
-          xAxisConfig: xAxisConfig,
-          yAxis: yAxisConfig,
-          annotations: annotations,
-          theme: chartTheme,
-          showLegend: showLegend,
-          legendStyle: legendStyle,
-          showXScrollbar: showXScrollbar,
-          showYScrollbar: showYScrollbar,
-          normalizationMode: normalizationMode,
-          interactionConfig: interactionConfig,
-        ),
+            series: series,
+            xAxisConfig: xAxisConfig,
+            yAxis: yAxisConfig,
+            annotations: annotations,
+            theme: chartTheme,
+            showLegend: showLegend,
+            legendStyle: legendStyle,
+            showXScrollbar: showXScrollbar,
+            showYScrollbar: showYScrollbar,
+            normalizationMode: normalizationMode,
+            interactionConfig: interactionConfig),
       );
     } catch (e) {
       return _errorWidget('Failed to render chart: $e');
@@ -232,8 +232,7 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true ||
-        (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -306,8 +305,7 @@ class ChartRenderer {
   ///
   /// Maps ChartConfiguration.interactions to BravenChartPlus InteractionConfig.
   /// Supports pan, zoom, crosshair, and tooltip settings.
-  InteractionConfig? _buildInteractionConfig(
-      agentic.ChartConfiguration config) {
+  InteractionConfig? _buildInteractionConfig(agentic.ChartConfiguration config) {
     if (config.interactions == null) {
       return null; // Let BravenChartPlus use its default
     }
@@ -443,10 +441,7 @@ class ChartRenderer {
   /// Returns null if no Y-axis configuration is specified on the series.
   YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
     // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null &&
-        seriesConfig.yAxisLabel == null &&
-        seriesConfig.yAxisUnit == null &&
-        seriesConfig.yAxisColor == null) {
+    if (seriesConfig.yAxisPosition == null && seriesConfig.yAxisLabel == null && seriesConfig.yAxisUnit == null && seriesConfig.yAxisColor == null) {
       return null;
     }
 
@@ -473,6 +468,20 @@ class ChartRenderer {
     );
   }
 
+  /// Maps agentic Interpolation enum to BravenChartPlus LineInterpolation enum.
+  LineInterpolation _mapInterpolation(agentic.Interpolation interpolation) {
+    switch (interpolation) {
+      case agentic.Interpolation.linear:
+        return LineInterpolation.linear;
+      case agentic.Interpolation.bezier:
+        return LineInterpolation.bezier;
+      case agentic.Interpolation.stepped:
+        return LineInterpolation.stepped;
+      case agentic.Interpolation.monotone:
+        return LineInterpolation.monotone;
+    }
+  }
+
   ChartSeries _createSeriesForType(
     agentic.ChartType type, {
     required String id,
@@ -485,6 +494,7 @@ class ChartRenderer {
     double? tension,
     double? markerRadius,
     bool showDataPointMarkers = false,
+    agentic.Interpolation interpolation = agentic.Interpolation.linear,
   }) {
     switch (type) {
       case agentic.ChartType.line:
@@ -493,6 +503,7 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
+          interpolation: _mapInterpolation(interpolation),
           tension: tension ?? 0.25,
           strokeWidth: strokeWidth,
           yAxisConfig: yAxisConfig,
@@ -504,6 +515,7 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
+          interpolation: _mapInterpolation(interpolation),
           tension: tension ?? 0.25,
           fillOpacity: fillOpacity ?? 0.3,
           yAxisConfig: yAxisConfig,

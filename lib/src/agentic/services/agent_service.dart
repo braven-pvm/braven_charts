@@ -76,8 +76,7 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage =
-                streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -98,13 +97,19 @@ class AgentService {
         }
         response = updatedResponse;
       } else {
-        _appendMessage(response);
+        // Don't append initial response yet - let the loop handle it
+        // This prevents duplicate messages when response has tool calls
       }
       while (true) {
         final toolCalls = response.toolCalls;
         if (toolCalls == null || toolCalls.isEmpty) {
+          // No more tool calls - append the final response and exit loop
+          _appendMessage(response);
           break;
         }
+
+        // Response has tool calls - append it before executing them
+        _appendMessage(response);
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
@@ -112,8 +117,7 @@ class AgentService {
           debugPrint('=== TOOL CALL: ${call.toolName} ===');
           _debugPrintJson('Tool input', call.arguments);
 
-          final result =
-              await _toolRegistry.execute(call.toolName, call.arguments);
+          final result = await _toolRegistry.execute(call.toolName, call.arguments);
 
           String? createdChartId;
 
@@ -123,9 +127,7 @@ class AgentService {
 
             // CRITICAL: Ensure the chart object has the ID set
             // This is essential for in-place modifications to work correctly
-            final chartWithId = result.id == null
-                ? result.copyWith(id: createdChartId)
-                : result;
+            final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
 
             // Store in chartStore so ModifyChartTool can access it
             chartStore.store(chartWithId, id: createdChartId);
@@ -144,11 +146,9 @@ class AgentService {
             toolResults.add(result);
           } else {
             // CRITICAL: If result is ChartConfiguration, use chartWithId (with ID set), not original result
-            final resultToStore =
-                (result is ChartConfiguration && createdChartId != null)
-                    ? chartStore.get(createdChartId) ??
-                        result // Get the version with ID from chartStore
-                    : result;
+            final resultToStore = (result is ChartConfiguration && createdChartId != null)
+                ? chartStore.get(createdChartId) ?? result // Get the version with ID from chartStore
+                : result;
             toolResults.add(
               ToolResult(
                 toolCallId: call.id,
@@ -161,13 +161,13 @@ class AgentService {
 
         final toolResultMessage = Message(
           id: _uuid.v4(),
-          role: MessageRole.assistant,
+          role: MessageRole.user,
           toolResults: toolResults,
         );
         _appendMessage(toolResultMessage);
 
         response = await _provider.sendMessage(conversation.value);
-        _appendMessage(response);
+        // Don't append yet - check for tool calls first in next loop iteration
       }
     } finally {
       state.value = AgentState.idle;
@@ -193,10 +193,8 @@ class AgentService {
     final isUser = message.role == MessageRole.user;
     conversation.value = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens:
-          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens:
-          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
 
