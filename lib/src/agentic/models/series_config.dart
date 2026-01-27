@@ -143,8 +143,12 @@ class SeriesConfig {
     }
     // Validate yAxisPosition
     final localYAxisPosition = yAxisPosition;
-    if (localYAxisPosition != null && localYAxisPosition != 'left' && localYAxisPosition != 'right') {
-      throw ArgumentError('yAxisPosition must be "left" or "right"');
+    if (localYAxisPosition != null &&
+        localYAxisPosition != 'left' &&
+        localYAxisPosition != 'right' &&
+        localYAxisPosition != 'leftOuter' &&
+        localYAxisPosition != 'rightOuter') {
+      throw ArgumentError('yAxisPosition must be "left", "right", "leftOuter", or "rightOuter"');
     }
     // Validate yAxisColor
     final localYAxisColor = yAxisColor;

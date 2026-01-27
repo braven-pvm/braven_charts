@@ -88,17 +88,26 @@ class ChartRenderer {
           fillOpacity: seriesConfig.fillOpacity,
           tension: seriesConfig.tension,
           markerRadius: seriesConfig.markerRadius,
+          dataPointMarkerRadius: seriesConfig.dataPointMarkerRadius,
           showDataPointMarkers: seriesConfig.showPoints,
           interpolation: seriesConfig.interpolation,
+          unit: seriesConfig.unit,
+          barWidthPercent: seriesConfig.barWidthPercent,
+          barWidthPixels: seriesConfig.barWidthPixels,
+          barMinWidth: seriesConfig.barMinWidth,
+          barMaxWidth: seriesConfig.barMaxWidth,
         );
       }).toList();
 
       // Convert AnnotationConfig to ChartAnnotation
       final annotations = _convertAnnotations(config.annotations);
 
-      // Build X-axis config
+      // Build X-axis config - wire all properties from agentic config
       final xAxisConfig = XAxisConfig(
         label: config.xAxis?.label ?? 'X',
+        unit: config.xAxis?.unit,
+        min: config.xAxis?.min,
+        max: config.xAxis?.max,
       );
 
       // Build Y-axis config from first yAxis
@@ -124,7 +133,7 @@ class ChartRenderer {
       final showYScrollbar = _getScrollbarEnabled(config);
 
       // Get grid settings - if grid is disabled, modify the theme's gridStyle
-      // Note: BravenChartPlus.grid (GridConfig) is not implemented yet, so we use theme.gridStyle
+      // Use GridConfig if BravenChartPlus supports it, otherwise use theme.gridStyle
       final gridVisible = _getGridVisible(config);
       final chartTheme = gridVisible
           ? baseTheme
@@ -136,26 +145,39 @@ class ChartRenderer {
               ),
             );
 
+      // Build GridConfig for explicit grid control
+      final gridConfig = gridVisible
+          ? null // Use default
+          : const GridConfig(horizontal: false, vertical: false);
+
       // Convert normalizationMode
       final normalizationMode = _getNormalizationMode(config);
 
       // Build InteractionConfig from configuration
       final interactionConfig = _buildInteractionConfig(config);
 
+      // Determine chart dimensions
+      final chartWidth = config.width;
+      final chartHeight = config.height ?? 350.0;
+
       return SizedBox(
-        height: 350,
+        width: chartWidth,
+        height: chartHeight,
         child: BravenChartPlus(
             series: series,
             xAxisConfig: xAxisConfig,
             yAxis: yAxisConfig,
             annotations: annotations,
             theme: chartTheme,
+            grid: gridConfig,
             showLegend: showLegend,
             legendStyle: legendStyle,
             showXScrollbar: showXScrollbar,
             showYScrollbar: showYScrollbar,
             normalizationMode: normalizationMode,
-            interactionConfig: interactionConfig),
+            interactionConfig: interactionConfig,
+            title: config.title,
+            subtitle: config.subtitle),
       );
     } catch (e) {
       return _errorWidget('Failed to render chart: $e');
@@ -441,7 +463,12 @@ class ChartRenderer {
   /// Returns null if no Y-axis configuration is specified on the series.
   YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
     // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null && seriesConfig.yAxisLabel == null && seriesConfig.yAxisUnit == null && seriesConfig.yAxisColor == null) {
+    if (seriesConfig.yAxisPosition == null &&
+        seriesConfig.yAxisLabel == null &&
+        seriesConfig.yAxisUnit == null &&
+        seriesConfig.yAxisColor == null &&
+        seriesConfig.yAxisMin == null &&
+        seriesConfig.yAxisMax == null) {
       return null;
     }
 
@@ -450,6 +477,12 @@ class ChartRenderer {
     switch (seriesConfig.yAxisPosition?.toLowerCase()) {
       case 'right':
         position = YAxisPosition.right;
+        break;
+      case 'rightouter':
+        position = YAxisPosition.rightOuter;
+        break;
+      case 'leftouter':
+        position = YAxisPosition.leftOuter;
         break;
       case 'left':
       default:
@@ -465,6 +498,8 @@ class ChartRenderer {
       label: seriesConfig.yAxisLabel,
       unit: seriesConfig.yAxisUnit,
       color: axisColor,
+      min: seriesConfig.yAxisMin,
+      max: seriesConfig.yAxisMax,
     );
   }
 
@@ -493,8 +528,14 @@ class ChartRenderer {
     double? fillOpacity,
     double? tension,
     double? markerRadius,
+    double? dataPointMarkerRadius,
     bool showDataPointMarkers = false,
     agentic.Interpolation interpolation = agentic.Interpolation.linear,
+    String? unit,
+    double? barWidthPercent,
+    double? barWidthPixels,
+    double? barMinWidth,
+    double? barMaxWidth,
   }) {
     switch (type) {
       case agentic.ChartType.line:
@@ -508,6 +549,8 @@ class ChartRenderer {
           strokeWidth: strokeWidth,
           yAxisConfig: yAxisConfig,
           showDataPointMarkers: showDataPointMarkers,
+          dataPointMarkerRadius: dataPointMarkerRadius ?? 3.0,
+          unit: unit,
         );
       case agentic.ChartType.area:
         return AreaChartSeries(
@@ -517,9 +560,12 @@ class ChartRenderer {
           color: color,
           interpolation: _mapInterpolation(interpolation),
           tension: tension ?? 0.25,
+          strokeWidth: strokeWidth,
           fillOpacity: fillOpacity ?? 0.3,
           yAxisConfig: yAxisConfig,
           showDataPointMarkers: showDataPointMarkers,
+          dataPointMarkerRadius: dataPointMarkerRadius ?? 3.0,
+          unit: unit,
         );
       case agentic.ChartType.bar:
         return BarChartSeries(
@@ -527,8 +573,12 @@ class ChartRenderer {
           name: name,
           points: points,
           color: color,
-          barWidthPercent: 0.7,
+          barWidthPercent: barWidthPercent ?? 0.7,
+          barWidthPixels: barWidthPixels,
+          minWidth: barMinWidth ?? 4.0,
+          maxWidth: barMaxWidth ?? 100.0,
           yAxisConfig: yAxisConfig,
+          unit: unit,
         );
       case agentic.ChartType.scatter:
         return ScatterChartSeries(
@@ -538,6 +588,7 @@ class ChartRenderer {
           color: color,
           markerRadius: markerRadius ?? 5.0,
           yAxisConfig: yAxisConfig,
+          unit: unit,
         );
     }
   }

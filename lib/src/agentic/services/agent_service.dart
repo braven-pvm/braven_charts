@@ -85,6 +85,10 @@ class AgentService {
       }
 
       Message response = await _provider.sendMessage(conversation.value);
+
+      // Track whether the response was already added to conversation
+      bool responseAlreadyAdded = false;
+
       if (streamed || streamingMessage != null) {
         final updatedResponse = response.copyWith(
           id: streamingMessage?.id ?? response.id,
@@ -96,20 +100,24 @@ class AgentService {
           _appendMessage(updatedResponse);
         }
         response = updatedResponse;
-      } else {
-        // Don't append initial response yet - let the loop handle it
-        // This prevents duplicate messages when response has tool calls
+        responseAlreadyAdded = true; // Mark as already in conversation
       }
+
       while (true) {
         final toolCalls = response.toolCalls;
         if (toolCalls == null || toolCalls.isEmpty) {
-          // No more tool calls - append the final response and exit loop
-          _appendMessage(response);
+          // No more tool calls - append the final response (if not already added) and exit loop
+          if (!responseAlreadyAdded) {
+            _appendMessage(response);
+          }
           break;
         }
 
-        // Response has tool calls - append it before executing them
-        _appendMessage(response);
+        // Response has tool calls - append it before executing them (if not already added)
+        if (!responseAlreadyAdded) {
+          _appendMessage(response);
+        }
+        responseAlreadyAdded = false; // Reset for next iteration - subsequent responses need to be added
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {

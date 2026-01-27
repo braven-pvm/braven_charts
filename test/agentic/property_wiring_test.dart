@@ -348,9 +348,9 @@ void main() {
       expect(enumValues.contains('perSeries'), isTrue);
     });
 
-    test('schema: normalizationMode.sharedAxis', () {
+    test('schema: normalizationMode.auto', () {
       final enumValues = properties['normalizationMode']['enum'] as List;
-      expect(enumValues.contains('sharedAxis'), isTrue);
+      expect(enumValues.contains('auto'), isTrue);
     });
   });
 
@@ -1074,17 +1074,41 @@ void main() {
       expect(chart!.subtitle, equals('Subtitle here'), reason: 'MISSING: subtitle not wired');
     });
 
-    // These tests require model properties that don't exist yet.
-    // They are marked skip to allow compilation. The schema tests cover the requirement.
     test('wiring: width → SizedBox.width', () {
-      // BLOCKED: ChartConfiguration doesn't have width property
-      fail('MODEL MISSING: ChartConfiguration.width does not exist - add it first');
-    }, skip: 'ChartConfiguration.width property does not exist yet');
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        width: 800.0,
+      );
+
+      final widget = renderer.render(config);
+      final sizedBox = extractSizedBox(widget);
+
+      expect(sizedBox, isNotNull);
+      expect(sizedBox!.width, equals(800.0), reason: 'MISSING: width not wired');
+    });
 
     test('wiring: height → SizedBox.height', () {
-      // BLOCKED: ChartConfiguration doesn't have height property
-      fail('MODEL MISSING: ChartConfiguration.height does not exist - add it first');
-    }, skip: 'ChartConfiguration.height property does not exist yet');
+      final config = agentic.ChartConfiguration(
+        type: agentic.ChartType.line,
+        series: [
+          agentic.SeriesConfig(id: 'test', data: [
+            {'x': 0, 'y': 1}
+          ])
+        ],
+        height: 500.0,
+      );
+
+      final widget = renderer.render(config);
+      final sizedBox = extractSizedBox(widget);
+
+      expect(sizedBox, isNotNull);
+      expect(sizedBox!.height, equals(500.0), reason: 'MISSING: height not wired');
+    });
 
     test('wiring: showLegend → BravenChartPlus.showLegend', () {
       final config = agentic.ChartConfiguration(
