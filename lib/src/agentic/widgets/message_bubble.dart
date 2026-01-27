@@ -66,11 +66,15 @@ class _MessageBubbleState extends State<MessageBubble> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         constraints: const BoxConstraints(maxWidth: 520),
         decoration: BoxDecoration(
-          color: isUser ? Colors.blueGrey.withAlpha(35) : Colors.grey.shade200.withAlpha(50),
+          color: isUser
+              ? Colors.blueGrey.withAlpha(35)
+              : Colors.grey.shade200.withAlpha(50),
           borderRadius: BorderRadius.circular(10),
           // border: Border.all(color: Colors.black38, width: 0.5),
         ),
-        child: _isCollapsible ? _buildCollapsibleContent(isUser) : _buildSimpleContent(isUser),
+        child: _isCollapsible
+            ? _buildCollapsibleContent(isUser)
+            : _buildSimpleContent(isUser),
       ),
     );
   }

@@ -41,18 +41,12 @@ class CalculateMetricTool extends LLMTool {
             'type': 'number',
             'description': 'Workout duration in seconds for TSS.'
           },
-          'np': {
-            'type': 'number',
-            'description': 'Normalized power value.'
-          },
+          'np': {'type': 'number', 'description': 'Normalized power value.'},
           'ftp': {
             'type': 'number',
             'description': 'Functional threshold power.'
           },
-          'if': {
-            'type': 'number',
-            'description': 'Intensity factor.'
-          },
+          'if': {'type': 'number', 'description': 'Intensity factor.'},
           'zoneBoundaries': {
             'type': 'array',
             'items': {'type': 'number'},
