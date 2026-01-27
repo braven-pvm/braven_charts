@@ -1,7 +1,3 @@
-// @orchestra-task: 25
-@Tags(['tdd-red'])
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

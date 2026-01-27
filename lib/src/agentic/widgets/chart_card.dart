@@ -5,6 +5,10 @@ import '../services/agent_service.dart';
 import '../services/chart_renderer.dart';
 import 'chart_widget.dart';
 import 'config_panel.dart';
+import 'inline_chat.dart';
+
+/// Callback for adding a chart to the main chat context.
+typedef AddToContextCallback = void Function(ChartConfiguration chart);
 
 /// Card container for chart widgets with an action bar.
 class ChartCard extends StatefulWidget {
@@ -17,6 +21,7 @@ class ChartCard extends StatefulWidget {
     this.onRefresh,
     this.onShare,
     this.onEdit,
+    this.onAddToContext,
   });
 
   final String chartId;
@@ -27,12 +32,17 @@ class ChartCard extends StatefulWidget {
   final VoidCallback? onShare;
   final VoidCallback? onEdit;
 
+  /// Callback when 'Add to Context' is pressed.
+  /// Makes the chart available for cross-chart operations in main ChatInterface.
+  final AddToContextCallback? onAddToContext;
+
   @override
   State<ChartCard> createState() => _ChartCardState();
 }
 
 class _ChartCardState extends State<ChartCard> {
   bool _isPanelVisible = false;
+  bool _isChatVisible = false;
   late ChartConfiguration _currentConfig;
   final ChartRenderer _chartRenderer = const ChartRenderer();
 
@@ -55,6 +65,18 @@ class _ChartCardState extends State<ChartCard> {
     setState(() {
       _isPanelVisible = !_isPanelVisible;
     });
+  }
+
+  void _toggleChat() {
+    setState(() {
+      _isChatVisible = !_isChatVisible;
+    });
+  }
+
+  void _addToContext() {
+    widget.onAddToContext?.call(_currentConfig);
+    // Also set currentChart in AgentService if available
+    widget.agentService?.currentChart.value = _currentConfig;
   }
 
   void _onConfigurationChanged(ChartConfiguration newConfig) {
@@ -94,6 +116,22 @@ class _ChartCardState extends State<ChartCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                // Inline chat toggle
+                if (widget.agentService != null)
+                  IconButton(
+                    icon: Icon(
+                      _isChatVisible ? Icons.chat : Icons.chat_outlined,
+                    ),
+                    onPressed: _toggleChat,
+                    tooltip: 'Inline Chat',
+                  ),
+                // Add to Context button
+                if (widget.agentService != null)
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: _addToContext,
+                    tooltip: 'Add to Context',
+                  ),
                 IconButton(
                   icon: Icon(
                     _isPanelVisible ? Icons.settings : Icons.settings_outlined,
@@ -125,6 +163,17 @@ class _ChartCardState extends State<ChartCard> {
                   ),
               ],
             ),
+            // Inline chat (conditionally visible)
+            if (_isChatVisible && widget.agentService != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: InlineChat(
+                  chartId: widget.chartId,
+                  chartConfiguration: _currentConfig,
+                  agentService: widget.agentService!,
+                  onClose: _toggleChat,
+                ),
+              ),
             // Config panel (conditionally visible)
             if (_isPanelVisible)
               ConfigPanel(

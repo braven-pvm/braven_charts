@@ -237,7 +237,10 @@ void main() {
 
       // Find all IconButtons in the action bar
       final iconButtons = find.byType(IconButton);
-      expect(iconButtons, findsNWidgets(4)); // Settings, Edit, Refresh, Share
+      expect(
+          iconButtons,
+          findsNWidgets(
+              6)); // InlineChat, AddToContext, Settings, Edit, Refresh, Share
 
       // Verify all buttons are in the same row (action bar)
       final row = find.ancestor(
