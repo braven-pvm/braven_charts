@@ -119,55 +119,51 @@ class AgentService {
 
           // If the tool returns a ChartConfiguration, add it to the conversation
           if (result is ChartConfiguration) {
-            debugPrint('[AgentService] Adding ChartConfiguration to conversation');
             createdChartId = result.id ?? _uuid.v4();
-            debugPrint('[AgentService] Chart ID: $createdChartId');
+            debugPrint('[AgentService] ChartConfiguration ID: $createdChartId');
 
             // CRITICAL: Ensure the chart object has the ID set
             // This is essential for in-place modifications to work correctly
             final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
 
+            // Log chart summary for debugging
+            debugPrint('[AgentService] Chart summary: ${chartWithId.series.length} series, '
+                '${chartWithId.annotations?.length ?? 0} annotations, '
+                'type=${chartWithId.type.name}');
+
             // Store in chartStore so ModifyChartTool can access it
             chartStore.store(chartWithId, id: createdChartId);
-            debugPrint('[AgentService] Chart stored in chartStore with ID: $createdChartId');
 
-            // DEBUG: Print the chart configuration as JSON
-            _debugPrintJson('[AgentService] ChartConfiguration created', chartWithId.toJson());
+            // Update conversation with the new/modified chart
             final current = conversation.value;
             final updatedCharts = Map<String, dynamic>.from(current.charts);
-            updatedCharts[createdChartId] = chartWithId.toJson();
+            final chartJson = chartWithId.toJson();
+            updatedCharts[createdChartId] = chartJson;
 
-            // DEBUG: Verify the updated charts map has the correct data
-            final updatedChartJson = updatedCharts[createdChartId] as Map<String, dynamic>;
-            final updatedSeries = updatedChartJson['series'] as List?;
-            debugPrint('[AgentService] BEFORE setting conversation.value:');
-            debugPrint('[AgentService]   updatedCharts has ${updatedSeries?.length ?? 0} series');
-            for (final s in updatedSeries ?? []) {
-              final seriesMap = s as Map<String, dynamic>;
-              debugPrint('[AgentService]   - ${seriesMap['id']}');
-            }
+            // DEBUG: Log the chart JSON being stored
+            debugPrint('[AgentService] Storing chart JSON with ${(chartJson['annotations'] as List?)?.length ?? 0} annotations');
 
             final newConversation = current.copyWith(charts: updatedCharts);
 
-            // DEBUG: Verify newConversation has correct data
-            final newChartJson = newConversation.charts[createdChartId] as Map<String, dynamic>;
-            final newSeries = newChartJson['series'] as List?;
-            debugPrint('[AgentService] newConversation.charts has ${newSeries?.length ?? 0} series');
-            debugPrint('[AgentService] newConversation identity: ${identityHashCode(newConversation)}');
-            debugPrint('[AgentService] current identity: ${identityHashCode(current)}');
-            debugPrint('[AgentService] conversation.value identity BEFORE: ${identityHashCode(conversation.value)}');
+            // DEBUG: Check if conversation.charts has the annotations BEFORE assignment
+            final storedChart = newConversation.charts[createdChartId] as Map<String, dynamic>?;
+            debugPrint('[AgentService] newConversation.charts has ${(storedChart?['annotations'] as List?)?.length ?? 0} annotations');
+
+            // DEBUG: Check equality BEFORE assignment
+            final areEqual = current == newConversation;
+            debugPrint('[AgentService] current == newConversation: $areEqual');
 
             conversation.value = newConversation;
 
-            // DEBUG: Verify after assignment
-            debugPrint('[AgentService] conversation.value identity AFTER: ${identityHashCode(conversation.value)}');
-            final afterConv = conversation.value;
-            debugPrint('[AgentService] afterConv same as newConversation: ${identical(afterConv, newConversation)}');
-            final afterChart = afterConv.charts[createdChartId] as Map<String, dynamic>;
-            final afterSeries = afterChart['series'] as List?;
-            debugPrint('[AgentService] AFTER setting conversation.value: ${afterSeries?.length ?? 0} series');
+            // Verify the assignment worked (equality check might skip it)
+            if (!identical(conversation.value, newConversation)) {
+              debugPrint('[AgentService] WARNING: conversation.value assignment may have been skipped!');
+              debugPrint(
+                  '[AgentService] conversation.value.charts has ${(conversation.value.charts[createdChartId] as Map<String, dynamic>?)?['annotations']} annotations');
+            } else {
+              debugPrint('[AgentService] Assignment successful!');
+            }
           }
-          debugPrint('=== AGENT TOOL EXECUTION END ===');
 
           if (result is ToolResult) {
             toolResults.add(result);
@@ -216,30 +212,13 @@ class AgentService {
 
   void _appendMessage(Message message) {
     final current = conversation.value;
-
-    // DEBUG: Check chart state when appending messages
-    for (final entry in current.charts.entries) {
-      final chartMap = entry.value as Map<String, dynamic>;
-      final seriesList = chartMap['series'] as List?;
-      debugPrint('[AgentService._appendMessage] current chart ${entry.key} has ${seriesList?.length ?? 0} series');
-    }
-
     final updatedMessages = List<Message>.from(current.messages)..add(message);
     final isUser = message.role == MessageRole.user;
-    final newConv = current.copyWith(
+    conversation.value = current.copyWith(
       messages: updatedMessages,
       totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
       totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
-
-    // DEBUG: Check chart state in new conversation
-    for (final entry in newConv.charts.entries) {
-      final chartMap = entry.value as Map<String, dynamic>;
-      final seriesList = chartMap['series'] as List?;
-      debugPrint('[AgentService._appendMessage] newConv chart ${entry.key} has ${seriesList?.length ?? 0} series');
-    }
-
-    conversation.value = newConv;
   }
 
   /// Records the current chart state in history

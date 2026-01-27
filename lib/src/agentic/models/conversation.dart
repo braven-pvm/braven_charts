@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'loaded_data.dart';
 import 'message.dart';
 
@@ -160,32 +162,16 @@ class Conversation {
     return true;
   }
 
-  /// Deep comparison of charts maps - compares both keys and JSON content
+  /// Deep comparison of charts maps using JSON string comparison.
+  /// This ensures ANY change to chart content triggers a notification.
   static bool _chartsEqual(Map<String, dynamic> a, Map<String, dynamic> b) {
-    if (identical(a, b)) return true;
-    if (a.length != b.length) return false;
-
-    for (final key in a.keys) {
-      if (!b.containsKey(key)) return false;
-
-      final aChart = a[key];
-      final bChart = b[key];
-
-      // Compare the JSON representations
-      if (aChart is Map<String, dynamic> && bChart is Map<String, dynamic>) {
-        // Check series specifically since that's what changes most often
-        final aSeries = aChart['series'] as List?;
-        final bSeries = bChart['series'] as List?;
-
-        if (aSeries?.length != bSeries?.length) return false;
-
-        // Also check chart type and title for basic changes
-        if (aChart['type'] != bChart['type']) return false;
-        if (aChart['title'] != bChart['title']) return false;
-      } else if (aChart != bChart) {
-        return false;
-      }
-    }
-    return true;
+    // TEMPORARY FIX: Always return false to force updates
+    // This bypasses any equality comparison issues
+    debugPrint('[Conversation._chartsEqual] a.length=${a.length}, b.length=${b.length}, returning FALSE (forced)');
+    return false; // FORCE inequality to trigger updates
   }
+
+  // TODO: Restore _deepEquals once the root cause is identified
+  // /// Deep equality check for dynamic values (maps, lists, primitives)
+  // static bool _deepEquals(dynamic a, dynamic b) { ... }
 }

@@ -101,31 +101,26 @@ class ChatInterfaceState extends State<ChatInterface> {
       return;
     }
     final incoming = _agentConversation!.value;
-    debugPrint('[ChatInterface] _handleConversationUpdate called');
-    debugPrint('[ChatInterface] incoming.charts keys: ${incoming.charts.keys.toList()}');
+
+    // DEBUG: Check incoming chart annotations
     for (final entry in incoming.charts.entries) {
-      final chartMap = entry.value as Map<String, dynamic>;
-      final seriesList = chartMap['series'] as List?;
-      debugPrint('[ChatInterface] incoming chart ${entry.key} has ${seriesList?.length ?? 0} series');
+      final chart = entry.value as Map<String, dynamic>?;
+      final annotations = chart?['annotations'] as List?;
+      debugPrint('[ChatInterface._handleConversationUpdate] incoming chart ${entry.key} has ${annotations?.length ?? 0} annotations');
     }
 
+    // Merge charts: keep existing charts and add/update from incoming
     final existingCharts = _conversation?.charts ?? const <String, dynamic>{};
-    debugPrint('[ChatInterface] existingCharts keys: ${existingCharts.keys.toList()}');
-    for (final entry in existingCharts.entries) {
-      final chartMap = entry.value as Map<String, dynamic>;
-      final seriesList = chartMap['series'] as List?;
-      debugPrint('[ChatInterface] existing chart ${entry.key} has ${seriesList?.length ?? 0} series');
-    }
-
     final mergedCharts = {
       ...existingCharts,
       ...incoming.charts,
     };
-    debugPrint('[ChatInterface] mergedCharts keys: ${mergedCharts.keys.toList()}');
+
+    // DEBUG: Check merged chart annotations
     for (final entry in mergedCharts.entries) {
-      final chartMap = entry.value as Map<String, dynamic>;
-      final seriesList = chartMap['series'] as List?;
-      debugPrint('[ChatInterface] merged chart ${entry.key} has ${seriesList?.length ?? 0} series');
+      final chart = entry.value as Map<String, dynamic>?;
+      final annotations = chart?['annotations'] as List?;
+      debugPrint('[ChatInterface._handleConversationUpdate] merged chart ${entry.key} has ${annotations?.length ?? 0} annotations');
     }
 
     setState(() {
@@ -447,6 +442,13 @@ class ChatInterfaceState extends State<ChatInterface> {
     debugPrint('[ChatInterface] Total messages: ${conversation.messages.length}');
     debugPrint('[ChatInterface] Total charts in conversation.charts: ${conversation.charts.length}');
     debugPrint('[ChatInterface] Chart IDs in map: ${conversation.charts.keys.toList()}');
+
+    // DEBUG: Log annotation count for each chart in conversation.charts
+    for (final entry in conversation.charts.entries) {
+      final chartData = entry.value as Map<String, dynamic>?;
+      final annotations = chartData?['annotations'] as List?;
+      debugPrint('[ChatInterface.build] chart ${entry.key} has ${annotations?.length ?? 0} annotations');
+    }
 
     // Render messages in order, with charts inline after their source message
     for (final message in conversation.messages) {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'axis_config.dart';
 import 'series_config.dart';
 
@@ -168,18 +170,10 @@ class ChartConfiguration {
       type: ChartType.values.firstWhere((e) => e.name == json['type']),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List)
-          .map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      xAxis: json['xAxis'] != null
-          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
-          : null,
-      yAxes: (json['yAxes'] as List)
-          .map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      style: json['style'] != null
-          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
-          : null,
+      series: (json['series'] as List).map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
+      yAxes: (json['yAxes'] as List).map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList(),
+      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
       interactions: json['interactions'],
       annotations: json['annotations'] as List<dynamic>?,
       layout: json['layout'],
@@ -268,28 +262,40 @@ class ChartConfiguration {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! ChartConfiguration) return false;
-    return other.id == id &&
-        other.type == type &&
-        other.title == title &&
-        other.subtitle == subtitle &&
-        other.theme == theme &&
-        other.grid == grid &&
-        other.legend == legend &&
-        other.interactions == interactions;
+    // Deep comparison using JSON serialization
+    // This catches ALL property changes without needing to enumerate each one
+    return _jsonEquals(toJson(), other.toJson());
+  }
+
+  /// Deep equality check for JSON objects
+  static bool _jsonEquals(dynamic a, dynamic b) {
+    if (identical(a, b)) return true;
+    if (a.runtimeType != b.runtimeType) return false;
+
+    if (a is Map<String, dynamic> && b is Map<String, dynamic>) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key)) return false;
+        if (!_jsonEquals(a[key], b[key])) return false;
+      }
+      return true;
+    }
+
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_jsonEquals(a[i], b[i])) return false;
+      }
+      return true;
+    }
+
+    return a == b;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      type,
-      title,
-      subtitle,
-      theme,
-      grid,
-      legend,
-      interactions,
-    );
+    // Use JSON string hash for complete content-based hashing
+    return jsonEncode(toJson()).hashCode;
   }
 
   @override

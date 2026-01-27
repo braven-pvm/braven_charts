@@ -148,30 +148,11 @@ Create charts using natural language and AI-powered analysis.
 
       // Listen to conversation updates from the agent
       agentService.conversation.addListener(() {
-        final convBefore = agentService.conversation.value;
-        print('[AgenticChartDemo] Listener START - identity: ${identityHashCode(convBefore)}');
-        print('[AgenticChartDemo] Conversation updated! Charts: ${convBefore.charts.length}');
-        // Debug: show series counts for each chart
-        for (final entry in convBefore.charts.entries) {
-          final chartMap = entry.value as Map<String, dynamic>;
-          final seriesList = chartMap['series'] as List?;
-          print('[AgenticChartDemo] Chart ${entry.key} has ${seriesList?.length ?? 0} series');
-          if (seriesList != null) {
-            for (final series in seriesList) {
-              final seriesMap = series as Map<String, dynamic>;
-              print('[AgenticChartDemo]   - Series: ${seriesMap['id']} (${seriesMap['name']})');
-            }
-          }
-        }
         if (mounted) {
           setState(() {
             _conversation = agentService.conversation.value;
-            print('[AgenticChartDemo] setState called, _conversation now has ${_conversation.charts.length} charts');
           });
         }
-        final convAfter = agentService.conversation.value;
-        print('[AgenticChartDemo] Listener END - identity: ${identityHashCode(convAfter)}');
-        print('[AgenticChartDemo] Same identity? ${identical(convBefore, convAfter)}');
       });
     } catch (error) {
       setState(() {

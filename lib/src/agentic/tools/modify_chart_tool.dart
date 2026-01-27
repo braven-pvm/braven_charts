@@ -192,6 +192,12 @@ class ModifyChartTool extends LLMTool {
       modifiedTheme = properties['theme'] as String?;
     }
 
+    // Handle annotations modifications
+    List<dynamic>? modifiedAnnotations = chart.annotations;
+    if (properties.containsKey('annotations')) {
+      modifiedAnnotations = properties['annotations'] as List<dynamic>?;
+    }
+
     // Create updated configuration using copyWith
     // CRITICAL: Preserve the original chart ID to ensure in-place updates
     final updated = chart.copyWith(
@@ -203,6 +209,7 @@ class ModifyChartTool extends LLMTool {
       legend: modifiedLegend,
       grid: modifiedGrid,
       theme: modifiedTheme,
+      annotations: modifiedAnnotations,
     );
 
     // Ensure the ID is explicitly preserved (copyWith should handle this,
