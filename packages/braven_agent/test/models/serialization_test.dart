@@ -1,7 +1,3 @@
-// @orchestra-task: 5
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1322,7 +1318,8 @@ void main() {
       // Verify nested series
       expect(restored.series.length, equals(original.series.length));
       expect(restored.series[0].id, equals(original.series[0].id));
-      expect(restored.series[0].data.length, equals(original.series[0].data.length));
+      expect(restored.series[0].data.length,
+          equals(original.series[0].data.length));
 
       // Verify nested xAxis
       expect(restored.xAxis, equals(original.xAxis));
