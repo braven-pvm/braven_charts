@@ -168,8 +168,7 @@ class Axis {
     // Check if interval changed significantly (>25% to prevent oscillation)
     // The nice number sequence is 1→2→5→10 (100%, 150%, 100% jumps)
     // Using 25% threshold prevents flickering between adjacent nice numbers
-    final intervalChanged = _lastTickInterval == null ||
-        (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
+    final intervalChanged = _lastTickInterval == null || (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
 
     // Check if we need new ticks because data extends beyond current tick range
     // This works for both expand mode and scroll mode:
@@ -177,16 +176,13 @@ class Axis {
     // - Scroll: triggers when viewport slides past tick coverage
     // Use 1.0× interval threshold to regenerate only when we've scrolled a full tick
     bool needsNewTicks = false;
-    if (!intervalChanged &&
-        _lastTickInterval != null &&
-        _lastRightmostTick != null) {
+    if (!intervalChanged && _lastTickInterval != null && _lastRightmostTick != null) {
       // Need new tick on the right if data extends past last tick by a full interval
       if (newDataMax > _lastRightmostTick! + _lastTickInterval!) {
         needsNewTicks = true;
       }
       // Need new tick on the left if data extends past first tick by a full interval
-      if (_lastLeftmostTick != null &&
-          newDataMin < _lastLeftmostTick! - _lastTickInterval!) {
+      if (_lastLeftmostTick != null && newDataMin < _lastLeftmostTick! - _lastTickInterval!) {
         needsNewTicks = true;
       }
     }
