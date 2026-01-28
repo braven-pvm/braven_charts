@@ -3,66 +3,123 @@
 **Status:** Canonical
 **Context:** The "Blueprints" for Implementation.
 **Date:** 2026-01-28
+**Version:** 2.0 (Layer Boundaries Clarified)
+
+---
+
+## IMPORTANT: Spec-to-Layer Mapping
+
+This document covers the FULL system across three specs. Each section is tagged with its owning spec.
+
+| Spec  | Layer               | Package/App         | Status          |
+| ----- | ------------------- | ------------------- | --------------- |
+| 004.1 | Layer 2: The Brain  | `braven_agent`      | **Active**      |
+| 004.2 | Layer 1: The App    | BravenLab Studio    | Future          |
+| 004.3 | Layer 1: The Memory | Athlete Datastore   | Future          |
+| N/A   | Layer 3: The Body   | `braven_chart_plus` | Exists (stable) |
+
+**When implementing 004.1, IGNORE sections tagged with 004.2 or 004.3.**
+
+---
 
 ## 1. System Composition (The Wiring)
 
 The solution is composed of three distinct layers.
 
-### Layer 1: The App (`BravenLab Studio`)
+### Layer 1: The App (`BravenLab Studio`) — **Spec 004.2**
 
-**Responsibility:** UI, File I/O, Database, Credential Storage.
+**Responsibility:** UI, File I/O, Database, Credential Storage, Athlete Identity.
 **Artifacts:** `main.dart`, `ChatScreen`, `ProjectDatabase`.
+**NOT in 004.1 scope.**
 
-### Layer 2: The Brain (`braven_agent`)
+### Layer 2: The Brain (`braven_agent`) — **Spec 004.1** ✅
 
-**Responsibility:** Orchestration, Prompting, Tools, LLM Communication.
-**Artifacts:** `AgentSession`, `AgentController`, `CreateChartTool`.
+**Responsibility:** Orchestration, Prompting, Tools (create/modify chart), LLM Communication.
+**Artifacts:** `AgentSession`, `CreateChartTool`, `ModifyChartTool`, `ChartRenderer`.
+**This is what 004.1 implements.**
 
-### Layer 3: The Body (`braven_chart_plus`)
+### Layer 3: The Body (`braven_chart_plus`) — **Existing**
 
-**Responsibility:** Pure Rendering, Serialization (JSON <-> Chart).
-**Artifacts:** `BravenChart`, `ChartConfiguration`, `ChartTheme`.
+**Responsibility:** Pure Rendering, Widget Library.
+**Artifacts:** `BravenChartPlus`, `ChartTheme`, series types.
+**Already exists - no changes needed for 004.1.**
 
 ---
 
 ## 2. Initialization & Dependency Injection
 
-How the system boots up.
+How the system boots up. **Components are tagged by spec.**
+
+### 2.1 V1 Initialization (004.1 Only)
 
 ```dart
-// 1. Configure the LLM Provider (Strategy Pattern)
+// ========================================
+// 004.1 SCOPE - Minimal Agent Setup
+// ========================================
+
+// 1. Configure the LLM Provider
 final llmConfig = LLMConfig(
   apiKey: env['ANTHROPIC_KEY'],
-  providerIdx: 'anthropic-sonnet-3.5',
+  model: 'claude-sonnet-4-20250514',
+  temperature: 0.7,
+  maxTokens: 4096,
 );
-final llmProvider = LLMRegistry.create(llmConfig);
 
-// 2. Configure Data Context (Bridge to App Data)
-// Implements the abstract DataContext interface defined in braven_agent
+// 2. Register providers (app startup)
+LLMRegistry.register('anthropic', (config) => AnthropicAdapter(config));
+
+// 3. Create provider
+final llmProvider = LLMRegistry.create('anthropic', llmConfig);
+
+// 4. Create session with V1 tools (chart only)
+final session = AgentSessionImpl(
+  llmProvider: llmProvider,
+  tools: [
+    CreateChartTool(),
+    ModifyChartTool(getActiveChart: () => session.state.value.activeChart),
+  ],
+  systemPrompt: defaultSystemPrompt,  // From braven_agent
+);
+
+// 5. Use it
+await session.transform('Create a line chart with sample data');
+final chart = session.state.value.activeChart;
+final widget = const ChartRenderer().render(chart!);
+```
+
+### 2.2 Future Initialization (004.2/004.3 - NOT V1)
+
+```dart
+// ========================================
+// FUTURE SCOPE (004.2/004.3) - Full System
+// DO NOT IMPLEMENT IN 004.1
+// ========================================
+
+// Data Context (004.3 - Athlete Datastore)
 final dataContext = AppDataContext(
   database: mySqliteDb,
   fileLoader: myFitFileLoader,
 );
 
-// 3. Register Tools
+// Extended Tools (004.2/004.3)
 final tools = [
-  CreateChartTool(), // Native chart generation
-  QueryMetricsTool(dataContext), // Data analysis (uses DataContext)
-  GetReducedSeriesTool(dataContext), // Fetches render-ready data points
-  ProjectSearchTool(dataContext), // Search existing files
+  CreateChartTool(),                        // 004.1 ✅
+  ModifyChartTool(...),                     // 004.1 ✅
+  QueryMetricsTool(dataContext),            // 004.3 ❌ NOT V1
+  GetReducedSeriesTool(dataContext),        // 004.3 ❌ NOT V1
+  ProjectSearchTool(dataContext),           // 004.2 ❌ NOT V1
 ];
 
-// 4. Create the Session Factory
+// Session with context injection (004.2)
 final sessionFactory = AgentSessionFactory(
   llmProvider: llmProvider,
   tools: tools,
-  systemPromptBuilder: (context) => "You are a sports scientist helping ${context.athleteName}...",
+  systemPromptBuilder: (context) => "You are helping ${context.athleteName}...",
 );
 
-// 5. Start a Session (e.g., when opening a tab)
 final session = sessionFactory.create(
   sessionId: 'session_123',
-  context: SessionContext(athleteId: 'athlete_456'),
+  context: SessionContext(athleteId: 'athlete_456'),  // 004.2 ❌ NOT V1
 );
 ```
 
@@ -70,180 +127,161 @@ final session = sessionFactory.create(
 
 ## 3. The Interaction Loop (End-to-End Flow)
 
-### Scenario A: Synthetic Generation (Smoke Test)
+### Scenario A: Synthetic Generation — **004.1 Scope** ✅
 
-**User Prompts:** "We are testing our now agent chart tool. Please use it to create a complex chart..."
+This is the V1 smoke test. No data analysis, no file loading.
 
-1.  **Context:** No attachments, no `DataContext` interaction required.
-2.  **LLM Decision:** "I possess the `create_chart` tool. I will generate synthetic data."
+**User Prompts:** "Create a complex chart with 4 series and variability in the data"
+
+1.  **Context:** No attachments, no `DataContext` needed.
+2.  **LLM Decision:** "I will use `create_chart` with synthetic data."
 3.  **Agent Execution:**
     - Calls `CreateChartTool` with inline data: `series: [{ data: [{x:1, y:10}...] }]`.
-    - No `QueryMetrics` or `GetReducedSeries` calls.
-4.  **Result:** `ChartCreatedEvent` fires. Chart appears with >4 series.
+    - **No** `QueryMetrics` or `GetReducedSeries` calls.
+4.  **Result:** `ChartCreatedEvent` fires. Chart renders with 4+ series.
 
-### Scenario B: Data Analysis (Production Flow)
+**This is what 004.1 implements and tests.**
 
-### Step 1: User Input
+---
 
-**User:** Typs "Show me my max power from last week" + Attaches `workout.fit`.
+### Scenario B: Data Analysis — **004.2/004.3 Scope** ❌ NOT V1
 
-**App Code:**
+**DO NOT IMPLEMENT THIS IN 004.1.** This requires the Athlete Datastore (004.3).
+
+**User:** "Show me my max power from last week" + Attaches `workout.fit`.
+
+#### Step 1: User Input (004.2)
 
 ```dart
 session.transform(
   "Show me my max power from last week",
-  attachments: [FileAttachment.fromPath('path/to/workout.fit')]
+  attachments: [FileAttachment.fromPath('path/to/workout.fit')]  // 004.3
 );
 ```
 
-### Step 2: Agent Processing (`braven_agent`)
+#### Step 2: Agent Processing (004.2/004.3)
 
 1.  **State Update:** `session.state.status` -> `thinking`.
 2.  **Context Assembly:**
     - `AgentSession` converts `Attachment` -> `BinaryContent`.
-    - `AgentSession` appends to `history`.
-    - `AgentSession` executes the `SystemPromptBuilder` (invoking the callback provided by the App to get domain context).
-3.  **LLM Request:**
-    - `llmProvider.generateResponse(history, tools)` is called.
+    - `AgentSession` executes the `SystemPromptBuilder` with athlete context. ❌ NOT V1
+3.  **LLM Request:** `llmProvider.generateResponse(history, tools)`.
 
-### Step 3: LLM & Tool Execution
+#### Step 3: LLM & Tool Execution (004.3)
 
-1.  **LLM Decision:** Returns `ToolUseContent(name: 'query_metrics', input: {'metric': 'power', 'agg': 'max'})`.
+1.  **LLM Decision:** Returns `ToolUseContent(name: 'query_metrics', ...)`. ❌ NOT V1
 2.  **Agent Execution:**
-    - `AgentSession` sees `ToolUseContent`.
-    - Updates `state.activeTool` (UI shows "Analyzing Power...").
-    - Calls `tools['query_metrics'].execute(input)`.
-    - `QueryMetricsTool` calls `dataContext.queryMetric()`.
-3.  **Tool Result:** Returns "Max Power: 1205 Watts (Sprint Segment)".
-4.  **Re-Prompt:** Agent sends Tool Result back to LLM.
-5.  **Series Fetching:**
-    - LLM decides to retrieve actual data points for the visualization.
-    - LLM Calls `GetReducedSeriesTool`.
-    - Tool returns JSON array of points `[{t: 0, v: 100}, {t: 1, v: 120}...]`.
+    - Calls `QueryMetricsTool` which uses `dataContext.queryMetric()`. ❌ NOT V1
+3.  **Tool Result:** Returns "Max Power: 1205 Watts".
+4.  **Series Fetching:** LLM calls `GetReducedSeriesTool`. ❌ NOT V1
 
-### Step 4: Chart Generation
+#### Step 4: Chart Generation (004.1 portion)
 
-1.  **LLM Decision:** "I should visualize this."
-    - Returns `ToolUseContent(name: 'create_chart', input: { ...json_with_data_points... })`.
-2.  **Agent Execution:**
-    - `CreateChartTool` validates JSON against `ChartConfiguration.fromJson`.
-    - Returns a valid `ChartConfiguration` object.
-    - **CRITICAL:** `AgentSession` detects a `ChartConfiguration` result.
-    - Updates `state.activeChart = newChart`.
-    - Fires `events.add(ChartCreatedEvent(newChart))`.
-3.  **Final Response:**
-    - LLM returns `TextContent("Here is your power chart...")`.
-    - `state.pendingResponse` streams this text.
+1.  **LLM Decision:** Returns `ToolUseContent(name: 'create_chart', ...)`.
+2.  **Agent Execution:** `CreateChartTool` creates config. ✅ V1
+3.  **Result:** `ChartCreatedEvent` fires. ✅ V1
 
-### Step 5: UI Rendering (`BravenLab Studio`)
+#### Step 5: UI Rendering (004.2)
 
-1.  **Chart:**
-    - `ValueListenableBuilder(value: session.state)` fires.
-    - `BravenChart(config: state.activeChart)` rebuilds.
-2.  **Chat:**
-    - message list updates with the new text.
-3.  **Persistence:**
-    - App listens to `session.events`.
-    - Receives `ChartCreatedEvent`.
-    - Saves chart to SQLite.
+1.  **Chart:** `BravenChart(config: state.activeChart)` rebuilds. ✅ Partial V1
+2.  **Persistence:** App saves chart to SQLite. ❌ NOT V1
 
 ---
 
-## 4. Interfaces Checklist
+## 4. Interfaces Checklist (By Spec)
 
-### 4.1 `LLMProvider` (Input)
+### 4.1 `LLMProvider` — **004.1** ✅
 
-- `generateResponse(history, tools)`
-- `streamResponse` (Optional for V1)
-- Supports `BinaryContent` (pass-through or rejection)
+- `generateResponse(systemPrompt, history, tools)`
+- `streamResponse(...)` — Optional for V1
+- Supports `BinaryContent` pass-through
 
-### 4.2 `DataContext` (Bridge)
+### 4.2 `DataContext` — **004.3** ❌ NOT V1
+
+**DO NOT IMPLEMENT IN 004.1.** This is the bridge to athlete data.
 
 - `getAthleteMetadata(id)` -> YAML/JSON string
 - `queryMetrics(fileId, query)` -> Numeric result
 - `getReducedSeries(fileId, metric)` -> List<DataPoint> (LTTB reduced)
 - `getFileSummary(fileId)` -> Token-optimized header
 
-### 4.3 `AgentSession` (Output)
+### 4.3 `AgentSession` — **004.1** ✅
 
 - `transform(text, attachments)`
+- `updateChart(newConfig)` — User edit flow
 - `cancel()`
+- `dispose()`
 - `state` (ValueListenable<SessionState>)
 - `events` (Stream<AgentEvent>)
 
-### 4.4 `ChartConfiguration` (Schema)
+### 4.4 `ChartConfiguration` — **004.1** ✅
 
-- Must support `fromJson` perfectly.
-- Must support `NormalizationMode` (for Power vs HR).
+- Full schema defined in 004.1 spec Section 4
+- `fromJson` / `toJson` support
+- `NormalizationMode` support
 
 ---
 
 ## 5. Error Handling Strategy
 
-1.  **LLM Distortion:** If LLM returns bad JSON for chart, `CreateChartTool` catches exception and returns `ToolResult(isError: true, message: "Invalid JSON config: missing 'series' field")`. LLM sees this and auto-corrects.
-2.  **Data Access Error:** If `DataContext` fails (file not found), Tool returns error. Agent explains to user.
-3.  **Network Error:** `LLMProvider` throws. `AgentSession` catches, sets `state.status = error`, emits `ErrorEvent`.
-    final AthleteMetrics metrics; // FTP, Zones, etc.
-    }
+### 5.1 Errors Handled in 004.1 ✅
 
-````
+1.  **LLM Distortion:** If LLM returns bad JSON for chart, `CreateChartTool` catches and returns `ToolResult(isError: true, message: "...")`. LLM auto-corrects.
+2.  **Network Error:** `LLMProvider` throws. `AgentSession` catches, sets `state.status = error`, emits `ErrorEvent`.
+3.  **Unknown Tool:** `ToolNotFoundException` thrown, `ErrorEvent` emitted.
 
-### 2.2 Integration
+### 5.2 Errors Handled in 004.3 ❌ NOT V1
 
-The `AgentService` will now require a `BravenStore` and a current `athleteId` context to function effectively.
+1.  **Data Access Error:** If `DataContext` fails (file not found), Tool returns error.
+2.  **File Parse Error:** FIT/CSV parsing fails, Tool returns error with guidance.
 
-## 3. UI/UX Component Library
+---
 
-The standard chat widgets will be refactored into a composable library:
+## 6. Component Ownership Summary
 
-- `BravenChatPanel`: The main container.
-- `BravenMessageBubble`: Standardized bubble with support for "Rich Content" slots.
-- `BravenInlineChat`: A floating/dockable version of the panel.
+| Component              | Spec  | Package/Layer       | Notes                          |
+| ---------------------- | ----- | ------------------- | ------------------------------ |
+| `AgentSession`         | 004.1 | `braven_agent`      | Core orchestration             |
+| `CreateChartTool`      | 004.1 | `braven_agent`      | Synthetic data, no DataContext |
+| `ModifyChartTool`      | 004.1 | `braven_agent`      | Modify active chart            |
+| `ChartRenderer`        | 004.1 | `braven_agent`      | Config → Widget                |
+| `ChartConfiguration`   | 004.1 | `braven_agent`      | Agentic model                  |
+| `LLMProvider`          | 004.1 | `braven_agent`      | Abstract interface             |
+| `AnthropicAdapter`     | 004.1 | `braven_agent`      | Anthropic implementation       |
+| `LLMRegistry`          | 004.1 | `braven_agent`      | Provider factory               |
+| `QueryMetricsTool`     | 004.3 | BravenLab Studio    | Requires DataContext           |
+| `GetReducedSeriesTool` | 004.3 | BravenLab Studio    | Requires DataContext           |
+| `ProjectSearchTool`    | 004.2 | BravenLab Studio    | Requires database              |
+| `DataContext`          | 004.3 | BravenLab Studio    | Athlete data bridge            |
+| `SessionContext`       | 004.2 | BravenLab Studio    | Athlete identity injection     |
+| `AgentSessionFactory`  | 004.2 | BravenLab Studio    | Context-aware session creation |
+| `SystemPromptBuilder`  | 004.2 | BravenLab Studio    | Dynamic prompt with athlete    |
+| `BravenChartPlus`      | N/A   | `braven_chart_plus` | Already exists                 |
 
-## 4. Architecture Refactor & Boundary Definition (CRITICAL)
+---
 
-Strict separation of concerns is required to keep `braven_chart_plus` a reusable package while enabling `BravenLab Studio` functionality.
+## 7. Implementation Sequence
 
-### 4.1 BravenChartPlus Package (The "Engine")
+### Phase 1: 004.1 (braven_agent) — **CURRENT**
 
-**Responsibility:** "How to process data and render charts."
+1. Create `packages/braven_agent/` scaffold
+2. Implement domain models (`ChartConfiguration`, etc.)
+3. Implement `LLMProvider` + `AnthropicAdapter`
+4. Implement `CreateChartTool` and `ModifyChartTool`
+5. Implement `AgentSession` with state management
+6. Translate `ChartRenderer` from `/agentic`
+7. Verify with synthetic chart generation test
 
-- **Components:**
-  - `AgentService`: The core logic for talking to the LLM.
-  - `SmartDataSource`: The logic for ingesting and reducing FIT/CSV files.
-  - `BravenStore` (Abstract): Interface definitions for data access.
-  - `ChartRenderer`: The Flutter widgets for drawing the charts.
-  - `ChatWidgets`: Reusable UI components (bubbles, panels) but _styled_ generically.
-- **Dependencies:** `dart:ui`, `flutter`, `llm_provider`, `fast_equatable`.
-- **Forbidden:** Database implementations (Isar/Hive), User Auth logic, Specific file system paths.
+### Phase 2: 004.3 (Athlete Datastore) — FUTURE
 
-### 4.2 BravenLab Studio (The "Application")
+1. Define `DataContext` interface
+2. Implement FIT/CSV ingestion pipeline
+3. Implement `QueryMetricsTool`, `GetReducedSeriesTool`
+4. Add data-aware tools to agent
 
-**Responsibility:** "Who analyzes what data."
+### Phase 3: 004.2 (BravenLab Studio) — FUTURE
 
-- **Components:**
-  - **Identity Management:** Selecting "Hansie Joubert", Auth.
-  - **Concrete Store:** Implementation of `BravenStore` using Isar/SQLite.
-  - **File Management:** Reading files from disk, passing file streams to `SmartDataSource`.
-  - **App Shell:** Navigation, Settings, Theme configuration.
-- **Dependencies:** `braven_chart_plus`, `isar`, `path_provider`, etc.
-
-### 4.3 Integration Point
-
-The Application initializes the Package by injecting dependencies:
-
-```dart
-// In BravenLab Studio (main.dart)
-final store = IsarBravenStore(); // Implements abstract BravenStore
-final agentService = AgentService(
-  store: store,
-  llmProvider: AnthropicProvider(apiKey: ...),
-);
-````
-
-## 5. Migration Path
-
-1. **Phase 1 (Data):** Implement `SmartDataSource` and LTTB reduction in `braven_chart_plus`.
-2. **Phase 2 (Store):** Define `BravenStore` interfaces and mock implementation.
-3. **Phase 3 (UI):** Refactor widgets to use the new unified design system.
-4. **Phase 4 (Integration):** Wire it all up in the Example app (proto-Studio).
+1. Implement `SessionContext` and `AgentSessionFactory`
+2. Implement `SystemPromptBuilder` with athlete context
+3. Build UI shell and chat interface
+4. Wire persistence layer
