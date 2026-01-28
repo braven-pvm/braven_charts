@@ -1,5 +1,4 @@
 // @orchestra-task: 12
-@Tags(['tdd-red'])
 library;
 
 import 'dart:typed_data';
