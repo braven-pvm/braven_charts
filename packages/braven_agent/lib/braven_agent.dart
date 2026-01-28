@@ -107,6 +107,9 @@
 /// ```
 library braven_agent;
 
+export 'src/llm/llm_config.dart';
+export 'src/llm/llm_response.dart';
+export 'src/llm/models/agent_message.dart';
 // Models - to be exported when implemented
 // export 'src/models/chart_configuration.dart';
 // export 'src/models/series_config.dart';
@@ -122,11 +125,12 @@ library braven_agent;
 // export 'src/session/session_state.dart';
 // export 'src/session/agent_events.dart';
 
+// LLM Layer - Message Models and Config
+export 'src/llm/models/message_content.dart';
+
 // LLM Layer - to be exported when implemented
 // export 'src/llm/llm_provider.dart';
-// export 'src/llm/llm_config.dart';
 // export 'src/llm/llm_registry.dart';
-// export 'src/llm/models/agent_message.dart';
 
 // Tools - to be exported when implemented
 // export 'src/tools/agent_tool.dart';
