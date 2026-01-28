@@ -89,6 +89,40 @@ class SeriesConfig with EquatableMixin {
   /// Maximum value for the Y-axis range.
   final double? yAxisMax;
 
+  /// Bar width as a percentage of available space (0.0 to 1.0).
+  ///
+  /// Only applies to bar charts.
+  final double? barWidthPercent;
+
+  /// Fixed bar width in pixels.
+  ///
+  /// Only applies to bar charts. Overrides [barWidthPercent] if set.
+  final double? barWidthPixels;
+
+  /// Minimum bar width in pixels.
+  ///
+  /// Only applies to bar charts.
+  final double? barMinWidth;
+
+  /// Maximum bar width in pixels.
+  ///
+  /// Only applies to bar charts.
+  final double? barMaxWidth;
+
+  /// ID of the Y-axis this series is bound to.
+  ///
+  /// Links to [YAxisConfig.id] for multi-axis charts.
+  final String? yAxisId;
+
+  /// Whether this series is visible on the chart.
+  final bool visible;
+
+  /// Whether this series is shown in the legend.
+  final bool legendVisible;
+
+  /// Unit string for the series data (e.g., 'W', 'bpm').
+  final String? unit;
+
   /// Creates a [SeriesConfig] with the given parameters.
   ///
   /// [id] and [data] are required. All other parameters have defaults.
@@ -111,6 +145,14 @@ class SeriesConfig with EquatableMixin {
     this.yAxisColor,
     this.yAxisMin,
     this.yAxisMax,
+    this.barWidthPercent,
+    this.barWidthPixels,
+    this.barMinWidth,
+    this.barMaxWidth,
+    this.yAxisId,
+    this.visible = true,
+    this.legendVisible = true,
+    this.unit,
   });
 
   /// Creates a [SeriesConfig] from a JSON map.
@@ -136,6 +178,14 @@ class SeriesConfig with EquatableMixin {
       yAxisColor: json['yAxisColor'] as String?,
       yAxisMin: (json['yAxisMin'] as num?)?.toDouble(),
       yAxisMax: (json['yAxisMax'] as num?)?.toDouble(),
+      barWidthPercent: (json['barWidthPercent'] as num?)?.toDouble(),
+      barWidthPixels: (json['barWidthPixels'] as num?)?.toDouble(),
+      barMinWidth: (json['barMinWidth'] as num?)?.toDouble(),
+      barMaxWidth: (json['barMaxWidth'] as num?)?.toDouble(),
+      yAxisId: json['yAxisId'] as String?,
+      visible: json['visible'] as bool? ?? true,
+      legendVisible: json['legendVisible'] as bool? ?? true,
+      unit: json['unit'] as String?,
     );
   }
 
@@ -162,6 +212,14 @@ class SeriesConfig with EquatableMixin {
       if (yAxisColor != null) 'yAxisColor': yAxisColor,
       if (yAxisMin != null) 'yAxisMin': yAxisMin,
       if (yAxisMax != null) 'yAxisMax': yAxisMax,
+      if (barWidthPercent != null) 'barWidthPercent': barWidthPercent,
+      if (barWidthPixels != null) 'barWidthPixels': barWidthPixels,
+      if (barMinWidth != null) 'barMinWidth': barMinWidth,
+      if (barMaxWidth != null) 'barMaxWidth': barMaxWidth,
+      if (yAxisId != null) 'yAxisId': yAxisId,
+      'visible': visible,
+      'legendVisible': legendVisible,
+      if (unit != null) 'unit': unit,
     };
   }
 
@@ -187,6 +245,14 @@ class SeriesConfig with EquatableMixin {
     String? yAxisColor,
     double? yAxisMin,
     double? yAxisMax,
+    double? barWidthPercent,
+    double? barWidthPixels,
+    double? barMinWidth,
+    double? barMaxWidth,
+    String? yAxisId,
+    bool? visible,
+    bool? legendVisible,
+    String? unit,
   }) {
     return SeriesConfig(
       id: id ?? this.id,
@@ -207,6 +273,14 @@ class SeriesConfig with EquatableMixin {
       yAxisColor: yAxisColor ?? this.yAxisColor,
       yAxisMin: yAxisMin ?? this.yAxisMin,
       yAxisMax: yAxisMax ?? this.yAxisMax,
+      barWidthPercent: barWidthPercent ?? this.barWidthPercent,
+      barWidthPixels: barWidthPixels ?? this.barWidthPixels,
+      barMinWidth: barMinWidth ?? this.barMinWidth,
+      barMaxWidth: barMaxWidth ?? this.barMaxWidth,
+      yAxisId: yAxisId ?? this.yAxisId,
+      visible: visible ?? this.visible,
+      legendVisible: legendVisible ?? this.legendVisible,
+      unit: unit ?? this.unit,
     );
   }
 
@@ -230,6 +304,14 @@ class SeriesConfig with EquatableMixin {
         yAxisColor,
         yAxisMin,
         yAxisMax,
+        barWidthPercent,
+        barWidthPixels,
+        barMinWidth,
+        barMaxWidth,
+        yAxisId,
+        visible,
+        legendVisible,
+        unit,
       ];
 
   @override
