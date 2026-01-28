@@ -6,8 +6,7 @@ class MockTool extends AgentTool {
   final String _name;
   final String _description;
   final Map<String, dynamic> _inputSchema;
-  final Future<ToolResult> Function(Map<String, dynamic> input)?
-      _executeHandler;
+  final Future<ToolResult> Function(Map<String, dynamic> input)? _executeHandler;
 
   MockTool({
     required String name,
