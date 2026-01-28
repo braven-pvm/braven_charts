@@ -1,0 +1,1287 @@
+{
+  "sprint": {
+    "id": "004-braven-agent-package",
+    "name": "Braven Agent Package - Headless AI Orchestration Engine"
+  },
+  "spec_path": "specs/004-braven-agent-package/004.1-braven-agent-extraction.md",
+  "environment": {
+    "source_base_dir": "packages/braven_agent/lib/src",
+    "test_command": "flutter test",
+    "test_file_pattern": "packages/braven_agent/test/**/*_test.dart"
+  },
+  "phases": [
+    {
+      "phase_id": "phase-1",
+      "phase_name": "Setup & Project Scaffold",
+      "speckit_tasks": ["T001", "T002", "T003", "T004"]
+    },
+    {
+      "phase_id": "phase-2",
+      "phase_name": "Domain Models & Foundation",
+      "speckit_tasks": [
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014"
+      ]
+    },
+    {
+      "phase_id": "phase-3",
+      "phase_name": "LLM Layer & Tool Foundation",
+      "speckit_tasks": [
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023"
+      ]
+    },
+    {
+      "phase_id": "phase-4",
+      "phase_name": "US1: Natural Language Chart Creation (P1)",
+      "speckit_tasks": [
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035"
+      ]
+    },
+    {
+      "phase_id": "phase-5",
+      "phase_name": "US2: Modify Charts via Conversation (P1)",
+      "speckit_tasks": ["T036", "T037", "T038", "T039", "T040"]
+    },
+    {
+      "phase_id": "phase-6",
+      "phase_name": "US3: Demo App Integration (P1 - MVP Validation)",
+      "speckit_tasks": [
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050"
+      ]
+    },
+    {
+      "phase_id": "phase-7",
+      "phase_name": "P2 Enhancements (State & Events)",
+      "speckit_tasks": [
+        "T051",
+        "T052",
+        "T053",
+        "T054",
+        "T055",
+        "T056",
+        "T057",
+        "T058",
+        "T059",
+        "T060"
+      ]
+    },
+    {
+      "phase_id": "phase-8",
+      "phase_name": "P3 Polish & Final Validation",
+      "speckit_tasks": [
+        "T061",
+        "T062",
+        "T063",
+        "T064",
+        "T065",
+        "T066",
+        "T067",
+        "T068",
+        "T069",
+        "T070",
+        "T071",
+        "T072"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": 1,
+      "phase_id": "phase-1",
+      "title": "Create Package Scaffold",
+      "description": "Create the braven_agent package directory structure at packages/braven_agent/. Create pubspec.yaml with dependencies (braven_chart_plus path, anthropic_sdk_dart ^0.2.0, uuid ^4.0.0, equatable ^2.0.5, meta ^1.11.0, async ^2.11.0, collection ^1.18.0). Create analysis_options.yaml with linting rules. Create the barrel file lib/braven_agent.dart with comprehensive doc comments (Quick Start, Reactive UI, Event Subscriptions, User Edits, Cleanup sections). Verify with 'flutter pub get' success.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "pubspec.yaml exists with required dependencies",
+            "path": "packages/braven_agent/pubspec.yaml",
+            "pattern": "anthropic_sdk_dart|uuid|equatable|braven_chart_plus",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Barrel file exists with library declaration",
+            "path": "packages/braven_agent/lib/braven_agent.dart",
+            "pattern": "library braven_agent",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "flutter pub get succeeds in new package",
+            "command": "cd packages/braven_agent; flutter pub get",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 2,
+      "phase_id": "phase-2",
+      "title": "Domain Models - Enums and DataPoint",
+      "description": "Create all enum types (ChartType, MarkerStyle, Interpolation, AxisType, AxisPosition, NormalizationModeConfig) in packages/braven_agent/lib/src/models/enums.dart. Create DataPoint model in packages/braven_agent/lib/src/models/data_point.dart with x, y properties and fromJson/toJson/copyWith. These are foundational types required by all other models.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [1],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Enums file exists with all enum types",
+            "path": "packages/braven_agent/lib/src/models/enums.dart",
+            "pattern": "enum ChartType|enum MarkerStyle|enum Interpolation|enum AxisType|enum AxisPosition|enum NormalizationModeConfig",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "DataPoint model with serialization",
+            "path": "packages/braven_agent/lib/src/models/data_point.dart",
+            "pattern": "class DataPoint|fromJson|toJson|copyWith",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors in models",
+            "command": "flutter analyze packages/braven_agent/lib/src/models/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 3,
+      "phase_id": "phase-2",
+      "title": "Domain Models - SeriesConfig, AxisConfig, AnnotationConfig",
+      "description": "Create SeriesConfig in packages/braven_agent/lib/src/models/series_config.dart with all properties per spec (id, data, name, color, strokeWidth, strokeDash, fillOpacity, markerStyle, markerSize, showPoints, interpolation, tension, barWidthPercent, barWidthPixels, barMinWidth, barMaxWidth, yAxisId, yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor, yAxisMin, yAxisMax, visible, legendVisible, unit). Create XAxisConfig in packages/braven_agent/lib/src/models/x_axis_config.dart. Create YAxisConfig in packages/braven_agent/lib/src/models/y_axis_config.dart. Create AnnotationConfig in packages/braven_agent/lib/src/models/annotation_config.dart. All must have fromJson/toJson/copyWith.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [2],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "SeriesConfig with full implementation",
+            "path": "packages/braven_agent/lib/src/models/series_config.dart",
+            "pattern": "fromJson|toJson|copyWith",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "XAxisConfig with full implementation",
+            "path": "packages/braven_agent/lib/src/models/x_axis_config.dart",
+            "pattern": "fromJson|toJson|copyWith",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "YAxisConfig with full implementation",
+            "path": "packages/braven_agent/lib/src/models/y_axis_config.dart",
+            "pattern": "fromJson|toJson|copyWith",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "AnnotationConfig with full implementation",
+            "path": "packages/braven_agent/lib/src/models/annotation_config.dart",
+            "pattern": "fromJson|toJson|copyWith",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/models/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 4,
+      "phase_id": "phase-2",
+      "title": "Domain Models - ChartStyleConfig and ChartConfiguration",
+      "description": "Create ChartStyleConfig in packages/braven_agent/lib/src/models/chart_style_config.dart with backgroundColor, gridColor, axisColor, fontFamily, fontSize, plotArea properties. Create ChartConfiguration in packages/braven_agent/lib/src/models/chart_configuration.dart - the canonical schema per Section 4.1 (id, type, title, subtitle, series List<SeriesConfig>, xAxis XAxisConfig?, yAxes List<YAxisConfig>, style ChartStyleConfig?, annotations List<AnnotationConfig>?, normalizationMode, showGrid, showLegend, legendPosition, useDarkTheme, showScrollbar, width, height). All must have fromJson/toJson/copyWith. Create models barrel file packages/braven_agent/lib/src/models/models.dart.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [3],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ChartStyleConfig with full implementation",
+            "path": "packages/braven_agent/lib/src/models/chart_style_config.dart",
+            "pattern": "fromJson|toJson|copyWith",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "ChartConfiguration with full implementation",
+            "path": "packages/braven_agent/lib/src/models/chart_configuration.dart",
+            "pattern": "fromJson|toJson|copyWith|List<SeriesConfig>",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Models barrel file exports all models",
+            "path": "packages/braven_agent/lib/src/models/models.dart",
+            "pattern": "export",
+            "min_matches": 6,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/models/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 5,
+      "phase_id": "phase-2",
+      "title": "Red: Model Serialization Tests",
+      "description": "Write failing tests for all domain models in packages/braven_agent/test/models/serialization_test.dart. Test fromJson/toJson round-trip for: DataPoint, SeriesConfig, XAxisConfig, YAxisConfig, AnnotationConfig, ChartStyleConfig, ChartConfiguration. Tests must verify all fields serialize correctly. Include @Tags(['tdd-red']) and // @orchestra-task: 5 annotation.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [4],
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Serialization test file exists",
+            "path": "packages/braven_agent/test/models/serialization_test.dart",
+            "pattern": "test|group",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "TDD markers present",
+            "path": "packages/braven_agent/test/models/serialization_test.dart",
+            "pattern": "@Tags.*tdd-red",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Task ID annotation",
+            "path": "packages/braven_agent/test/models/serialization_test.dart",
+            "pattern": "@orchestra-task.*5",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "TDD tests fail (red phase)",
+            "command": "flutter test packages/braven_agent/test/models/ --tags tdd-red",
+            "expect_exit_code": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 6,
+      "phase_id": "phase-2",
+      "title": "Green: Model Serialization Implementation",
+      "description": "Make all serialization tests pass. Ensure fromJson/toJson/copyWith implementations are complete and correct for all domain models. Verify round-trip serialization preserves all fields. Remove TDD markers from tests.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [5],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "All models have complete serialization",
+            "path": "packages/braven_agent/lib/src/models/*.dart",
+            "pattern": "fromJson|toJson",
+            "min_matches": 12,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "All model tests pass",
+            "command": "flutter test packages/braven_agent/test/models/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 7,
+      "phase_id": "phase-3",
+      "title": "LLM Layer - Message Models and Config",
+      "description": "Create MessageContent sealed hierarchy (TextContent, ImageContent, BinaryContent, ToolUseContent, ToolResultContent) in packages/braven_agent/lib/src/llm/models/message_content.dart. Create AgentMessage model with id, role, content, timestamp, metadata in packages/braven_agent/lib/src/llm/models/agent_message.dart. Create LLMConfig model with apiKey, baseUrl, model, temperature, maxTokens, providerOptions in packages/braven_agent/lib/src/llm/llm_config.dart. Create LLMResponse and LLMChunk models in packages/braven_agent/lib/src/llm/llm_response.dart.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [4],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "MessageContent sealed hierarchy",
+            "path": "packages/braven_agent/lib/src/llm/models/message_content.dart",
+            "pattern": "sealed class MessageContent|TextContent|ImageContent|ToolUseContent|ToolResultContent",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "AgentMessage model",
+            "path": "packages/braven_agent/lib/src/llm/models/agent_message.dart",
+            "pattern": "class AgentMessage",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "LLMConfig model",
+            "path": "packages/braven_agent/lib/src/llm/llm_config.dart",
+            "pattern": "class LLMConfig",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "LLMResponse and LLMChunk",
+            "path": "packages/braven_agent/lib/src/llm/llm_response.dart",
+            "pattern": "class LLMResponse|class LLMChunk",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/llm/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 8,
+      "phase_id": "phase-3",
+      "title": "Session Foundation - State and Events",
+      "description": "Create SessionState model with history, pendingResponse, activeTool, status (ActivityStatus enum), activeChart, errorMessage in packages/braven_agent/lib/src/session/session_state.dart. Create AgentEvent sealed hierarchy (ChartCreatedEvent, ChartUpdatedEvent, ToolStartEvent, ToolEndEvent, ErrorEvent, CancelledEvent, ThinkingEvent) in packages/braven_agent/lib/src/session/agent_events.dart. All must use Equatable for value comparison.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [4],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "SessionState with all fields",
+            "path": "packages/braven_agent/lib/src/session/session_state.dart",
+            "pattern": "class SessionState|ActivityStatus|activeChart|history",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "AgentEvent hierarchy",
+            "path": "packages/braven_agent/lib/src/session/agent_events.dart",
+            "pattern": "sealed class AgentEvent|ChartCreatedEvent|ChartUpdatedEvent|ToolStartEvent|ToolEndEvent|ErrorEvent|ThinkingEvent",
+            "min_matches": 6,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/session/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 9,
+      "phase_id": "phase-3",
+      "title": "Tool Foundation - AgentTool and ToolResult",
+      "description": "Create ToolResult model with output, isError, data properties in packages/braven_agent/lib/src/tools/tool_result.dart. Create abstract AgentTool interface with name, description, inputSchema (JSON Schema), execute method in packages/braven_agent/lib/src/tools/agent_tool.dart. Create tools barrel file.",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [7],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ToolResult model",
+            "path": "packages/braven_agent/lib/src/tools/tool_result.dart",
+            "pattern": "class ToolResult|output|isError|data",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "AgentTool interface",
+            "path": "packages/braven_agent/lib/src/tools/agent_tool.dart",
+            "pattern": "abstract class AgentTool|inputSchema|execute",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 10,
+      "phase_id": "phase-4",
+      "title": "LLM Provider Interface and Registry",
+      "description": "Create LLMProvider abstract interface with id, generateResponse, streamResponse methods in packages/braven_agent/lib/src/llm/llm_provider.dart per spec Section 5.2. Create LLMRegistry factory class with register, create, isRegistered, registeredProviders in packages/braven_agent/lib/src/llm/llm_registry.dart per spec Section 5.4.",
+      "category": "INTEGRATION",
+      "dependencies": [7, 9],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "LLMProvider interface",
+            "path": "packages/braven_agent/lib/src/llm/llm_provider.dart",
+            "pattern": "abstract class LLMProvider|generateResponse|streamResponse",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "LLMRegistry factory",
+            "path": "packages/braven_agent/lib/src/llm/llm_registry.dart",
+            "pattern": "class LLMRegistry|register|create",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/llm/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 11,
+      "phase_id": "phase-4",
+      "title": "AnthropicAdapter Implementation",
+      "description": "Create AnthropicAdapter implementing LLMProvider in packages/braven_agent/lib/src/llm/providers/anthropic_adapter.dart. Implement tool conversion (_convertTools), message conversion (_convertMessage, _convertContent), and response parsing per spec Section 5.3. Register as 'anthropic' provider in LLMRegistry. Create LLM layer barrel file packages/braven_agent/lib/src/llm/llm.dart.",
+      "category": "INTEGRATION",
+      "dependencies": [10],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "AnthropicAdapter exists",
+            "path": "packages/braven_agent/lib/src/llm/providers/anthropic_adapter.dart",
+            "pattern": "class AnthropicAdapter|implements LLMProvider|_convertTools|_convertMessage",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "LLM barrel file",
+            "path": "packages/braven_agent/lib/src/llm/llm.dart",
+            "pattern": "export",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/llm/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 12,
+      "phase_id": "phase-4",
+      "title": "Red: CreateChartTool Tests",
+      "description": "Write failing tests for CreateChartTool in packages/braven_agent/test/tools/create_chart_tool_test.dart. Test: schema has required properties (prompt, series), execute with valid input creates ChartConfiguration, execute with missing prompt returns error, series get auto-assigned colors, chart gets UUID. Include @Tags(['tdd-red']) and // @orchestra-task: 12.",
+      "category": "INTEGRATION",
+      "dependencies": [9],
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "CreateChartTool test file",
+            "path": "packages/braven_agent/test/tools/create_chart_tool_test.dart",
+            "pattern": "test|group",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "TDD markers",
+            "path": "packages/braven_agent/test/tools/create_chart_tool_test.dart",
+            "pattern": "@Tags.*tdd-red",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Task ID",
+            "path": "packages/braven_agent/test/tools/create_chart_tool_test.dart",
+            "pattern": "@orchestra-task.*12",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "TDD tests fail",
+            "command": "flutter test packages/braven_agent/test/tools/create_chart_tool_test.dart --tags tdd-red",
+            "expect_exit_code": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 13,
+      "phase_id": "phase-4",
+      "title": "Green: CreateChartTool Implementation",
+      "description": "Implement CreateChartTool in packages/braven_agent/lib/src/tools/create_chart_tool.dart per spec Section 7.1-7.3. Implement inputSchema with full JSON Schema. Implement execute with validation, chart type resolution, series building with default colors, axes building, annotations building, ChartConfiguration creation with UUID. Make all tests pass.",
+      "category": "INTEGRATION",
+      "dependencies": [12],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "CreateChartTool exists with schema",
+            "path": "packages/braven_agent/lib/src/tools/create_chart_tool.dart",
+            "pattern": "class CreateChartTool|inputSchema|execute|_defaultColors",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "CreateChartTool tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/create_chart_tool_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/create_chart_tool.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 14,
+      "phase_id": "phase-4",
+      "title": "Default System Prompt and Session Interface",
+      "description": "Create default system prompt in packages/braven_agent/lib/src/session/default_system_prompt.dart per spec Section 9.1 (describing create_chart and modify_chart tools, guidelines). Create AgentSession abstract interface in packages/braven_agent/lib/src/session/agent_session.dart with state ValueListenable, events Stream, transform, updateChart, cancel, dispose methods per spec Section 9.4.",
+      "category": "INTEGRATION",
+      "dependencies": [8],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Default system prompt",
+            "path": "packages/braven_agent/lib/src/session/default_system_prompt.dart",
+            "pattern": "defaultSystemPrompt|create_chart|modify_chart",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "AgentSession interface",
+            "path": "packages/braven_agent/lib/src/session/agent_session.dart",
+            "pattern": "abstract class AgentSession|ValueListenable|transform|updateChart|cancel|dispose",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/session/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 15,
+      "phase_id": "phase-4",
+      "title": "Red: AgentSession Tests",
+      "description": "Write failing tests for AgentSessionImpl in packages/braven_agent/test/session/agent_session_test.dart. Test: initial state is idle with empty history, transform updates status to thinking, successful tool execution updates activeChart and emits ChartCreatedEvent, updateChart updates activeChart and emits ChartUpdatedEvent, cancel resets to idle and emits CancelledEvent. Include @Tags(['tdd-red']) and // @orchestra-task: 15.",
+      "category": "INTEGRATION",
+      "dependencies": [14],
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "AgentSession test file",
+            "path": "packages/braven_agent/test/session/agent_session_test.dart",
+            "pattern": "test|group",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "TDD markers",
+            "path": "packages/braven_agent/test/session/agent_session_test.dart",
+            "pattern": "@Tags.*tdd-red",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Task ID",
+            "path": "packages/braven_agent/test/session/agent_session_test.dart",
+            "pattern": "@orchestra-task.*15",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "TDD tests fail",
+            "command": "flutter test packages/braven_agent/test/session/agent_session_test.dart --tags tdd-red",
+            "expect_exit_code": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 16,
+      "phase_id": "phase-4",
+      "title": "Green: AgentSessionImpl Implementation",
+      "description": "Implement AgentSessionImpl in packages/braven_agent/lib/src/session/agent_session_impl.dart per spec Section 9.4. Implement transform with state updates, LLM calls, tool execution loop, ChartConfiguration capture from ToolResult.data. Implement updateChart, cancel with CancelableOperation, dispose. Create session barrel file. Make all tests pass.",
+      "category": "INTEGRATION",
+      "dependencies": [15, 11, 13],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "AgentSessionImpl exists",
+            "path": "packages/braven_agent/lib/src/session/agent_session_impl.dart",
+            "pattern": "class AgentSessionImpl|implements AgentSession|transform|_executeTool|updateChart|cancel|dispose",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Session barrel file",
+            "path": "packages/braven_agent/lib/src/session/session.dart",
+            "pattern": "export",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "AgentSession tests pass",
+            "command": "flutter test packages/braven_agent/test/session/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/session/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 17,
+      "phase_id": "phase-4",
+      "title": "Update Barrel File - US1 Complete",
+      "description": "Update packages/braven_agent/lib/braven_agent.dart barrel file to export all components: models, LLM layer, session layer, tools, default system prompt. Verify package can be imported and used.",
+      "category": "INTEGRATION",
+      "dependencies": [16],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Barrel exports all layers",
+            "path": "packages/braven_agent/lib/braven_agent.dart",
+            "pattern": "export.*models|export.*llm|export.*session|export.*tools",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Package analyzes clean",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 18,
+      "phase_id": "phase-5",
+      "title": "Red: ModifyChartTool Tests",
+      "description": "Write failing tests for ModifyChartTool in packages/braven_agent/test/tools/modify_chart_tool_test.dart. Test: requires active chart (error if none), preserves chart ID on modification, merges only changed fields (title, color, series), can add/remove series, nested merge works correctly. Include @Tags(['tdd-red']) and // @orchestra-task: 18.",
+      "category": "INTEGRATION",
+      "dependencies": [13],
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ModifyChartTool test file",
+            "path": "packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "pattern": "test|group",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "TDD markers",
+            "path": "packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "pattern": "@Tags.*tdd-red",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Task ID",
+            "path": "packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "pattern": "@orchestra-task.*18",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "TDD tests fail",
+            "command": "flutter test packages/braven_agent/test/tools/modify_chart_tool_test.dart --tags tdd-red",
+            "expect_exit_code": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 19,
+      "phase_id": "phase-5",
+      "title": "Green: ModifyChartTool Implementation",
+      "description": "Implement ModifyChartTool in packages/braven_agent/lib/src/tools/modify_chart_tool.dart per spec Section 7.4-7.5. Take getActiveChart callback in constructor. Implement _applyModifications for deep merge of all fields (title, type, series, xAxis, yAxes, style, etc). Make all tests pass. Update tools barrel file.",
+      "category": "INTEGRATION",
+      "dependencies": [18],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ModifyChartTool exists",
+            "path": "packages/braven_agent/lib/src/tools/modify_chart_tool.dart",
+            "pattern": "class ModifyChartTool|_getActiveChart|_applyModifications",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Tools barrel updated",
+            "path": "packages/braven_agent/lib/src/tools/tools.dart",
+            "pattern": "export.*create_chart|export.*modify_chart",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "ModifyChartTool tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 20,
+      "phase_id": "phase-5",
+      "title": "Red: Chart Modification Integration Tests",
+      "description": "Write failing integration tests in packages/braven_agent/test/integration/chart_modification_test.dart. Test: create chart then modify color (verify ID preserved, color changed), create then change type (line to bar), create then add series. Include @Tags(['tdd-red']) and // @orchestra-task: 20.",
+      "category": "INTEGRATION",
+      "dependencies": [19],
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Integration test file",
+            "path": "packages/braven_agent/test/integration/chart_modification_test.dart",
+            "pattern": "test|group",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "TDD markers",
+            "path": "packages/braven_agent/test/integration/chart_modification_test.dart",
+            "pattern": "@Tags.*tdd-red",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Task ID",
+            "path": "packages/braven_agent/test/integration/chart_modification_test.dart",
+            "pattern": "@orchestra-task.*20",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "TDD tests fail",
+            "command": "flutter test packages/braven_agent/test/integration/chart_modification_test.dart --tags tdd-red",
+            "expect_exit_code": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 21,
+      "phase_id": "phase-5",
+      "title": "Green: Chart Modification Integration",
+      "description": "Make all chart modification integration tests pass. Ensure ModifyChartTool is properly wired into AgentSession, ChartUpdatedEvent is emitted (not ChartCreatedEvent), activeChart is updated correctly. Update barrel file with all US1+US2 exports.",
+      "category": "INTEGRATION",
+      "dependencies": [20],
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Integration tests pass",
+            "command": "flutter test packages/braven_agent/test/integration/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "All package tests pass",
+            "command": "flutter test packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 22,
+      "phase_id": "phase-6",
+      "title": "ChartRenderer Translation",
+      "description": "Translate ChartRenderer from lib/src/agentic/services/chart_renderer.dart to packages/braven_agent/lib/src/renderer/chart_renderer.dart. Adapt imports to use braven_agent models. Implement render(dynamic chart) accepting ChartConfiguration or Map<String, dynamic>. Implement all property mappings per spec Section 8.6 (series type mapping, Y-axis position, interpolation, annotations). Create renderer barrel file.",
+      "category": "INTEGRATION",
+      "dependencies": [6],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ChartRenderer exists",
+            "path": "packages/braven_agent/lib/src/renderer/chart_renderer.dart",
+            "pattern": "class ChartRenderer|render|BravenChartPlus|_buildSeries|_buildYAxisConfig",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Renderer barrel file",
+            "path": "packages/braven_agent/lib/src/renderer/renderer.dart",
+            "pattern": "export.*chart_renderer",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "No analyzer errors",
+            "command": "flutter analyze packages/braven_agent/lib/src/renderer/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 23,
+      "phase_id": "phase-6",
+      "title": "Property Wiring Test Translation",
+      "description": "Translate property wiring test from test/agentic/property_wiring_test.dart to packages/braven_agent/test/renderer/property_wiring_test.dart. Adapt to use braven_agent models and ChartRenderer. Test that ALL chart properties flow correctly to BravenChartPlus widget (per spec Section 8.6 mapping table).",
+      "category": "INTEGRATION",
+      "dependencies": [22],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Property wiring test exists",
+            "path": "packages/braven_agent/test/renderer/property_wiring_test.dart",
+            "pattern": "test|group|ChartRenderer|fillOpacity|strokeWidth|markerSize",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Property wiring tests pass",
+            "command": "flutter test packages/braven_agent/test/renderer/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 24,
+      "phase_id": "phase-6",
+      "title": "Demo App - Entry Point and API Key Screen",
+      "description": "Create demo app entry point at example/lib/demos/braven_agent_demo.dart. Implement API key input screen (TextField, Save to SharedPreferences, validation). Navigate to chat screen on valid key. Add to example/run.md documentation.",
+      "category": "VISUAL",
+      "dependencies": [17],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Demo entry point exists",
+            "path": "example/lib/demos/braven_agent_demo.dart",
+            "pattern": "class.*Demo|MaterialApp|TextField",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Demo analyzes clean",
+            "command": "flutter analyze example/lib/demos/braven_agent_demo.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 25,
+      "phase_id": "phase-6",
+      "title": "Demo App - Chat Screen with Message History",
+      "description": "Create chat screen in the demo app. Display message history with user/assistant message bubbles. Add TextField for user input with send button. Wire to AgentSession.transform(). Display processing states (thinking indicator, tool execution indicator).",
+      "category": "VISUAL",
+      "dependencies": [24],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Chat UI components",
+            "path": "example/lib/demos/braven_agent_demo.dart",
+            "pattern": "ListView|TextField|CircularProgressIndicator|thinking|processing",
+            "min_matches": 4,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Demo analyzes clean",
+            "command": "flutter analyze example/lib/demos/braven_agent_demo.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 26,
+      "phase_id": "phase-6",
+      "title": "Demo App - Chart Display and Integration",
+      "description": "Integrate ChartRenderer into demo app. Display chart when session.state.activeChart is not null. Use ValueListenableBuilder for reactive updates. Handle chart creation and modification events. Complete the demo with full chat-to-chart flow.",
+      "category": "VISUAL",
+      "dependencies": [25, 23],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "ChartRenderer integration",
+            "path": "example/lib/demos/braven_agent_demo.dart",
+            "pattern": "ChartRenderer|ValueListenableBuilder|activeChart",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Demo analyzes clean",
+            "command": "flutter analyze example/lib/demos/braven_agent_demo.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 27,
+      "phase_id": "phase-6",
+      "title": "Final Barrel File and Package Validation (MVP Complete)",
+      "description": "Update packages/braven_agent/lib/braven_agent.dart with ALL exports including renderer. Ensure example can import package:braven_agent/braven_agent.dart and use all components. Run full test suite. Update example/README.md with braven_agent demo documentation. MVP is complete at this point.",
+      "category": "INTEGRATION",
+      "dependencies": [26, 21],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Barrel exports renderer",
+            "path": "packages/braven_agent/lib/braven_agent.dart",
+            "pattern": "export.*renderer",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Full package tests pass",
+            "command": "flutter test packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Package analyzes clean",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Example analyzes clean",
+            "command": "flutter analyze example/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 28,
+      "phase_id": "phase-7",
+      "title": "Enhanced Session State",
+      "description": "Add detailed status enum to SessionState (idle, thinking, callingTool instead of calling_tool for Dart naming). Add activeTool property with tool name and progress info. Create state transition tests in packages/braven_agent/test/session/state_transitions_test.dart verifying correct state flow during chart creation and modification.",
+      "category": "REFACTOR",
+      "dependencies": [27],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Enhanced ActivityStatus",
+            "path": "packages/braven_agent/lib/src/session/session_state.dart",
+            "pattern": "idle|thinking|callingTool",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "State transition tests pass",
+            "command": "flutter test packages/braven_agent/test/session/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 29,
+      "phase_id": "phase-7",
+      "title": "Event Stream Enhancements",
+      "description": "Ensure AgentSessionImpl emits all event types correctly: ThinkingEvent with description, ToolStartEvent with tool name, ToolEndEvent with success status. Create comprehensive event stream tests in packages/braven_agent/test/session/event_stream_test.dart.",
+      "category": "REFACTOR",
+      "dependencies": [28],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Event emission in session",
+            "path": "packages/braven_agent/lib/src/session/agent_session_impl.dart",
+            "pattern": "ThinkingEvent|ToolStartEvent|ToolEndEvent",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Event stream tests pass",
+            "command": "flutter test packages/braven_agent/test/session/event_stream_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 30,
+      "phase_id": "phase-7",
+      "title": "Provider Configuration Enhancements",
+      "description": "Add model selection and temperature validation to LLMConfig. Add provider options passthrough in AnthropicAdapter. Handle invalid API key error surfacing through ErrorEvent. Create provider configuration tests in packages/braven_agent/test/llm/provider_config_test.dart.",
+      "category": "REFACTOR",
+      "dependencies": [27],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "LLMConfig validation",
+            "path": "packages/braven_agent/lib/src/llm/llm_config.dart",
+            "pattern": "temperature|model",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Provider config tests pass",
+            "command": "flutter test packages/braven_agent/test/llm/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 31,
+      "phase_id": "phase-8",
+      "title": "UpdateChart Implementation",
+      "description": "Ensure updateChart() in AgentSessionImpl is fully implemented: updates state.activeChart, emits ChartUpdatedEvent, next transform() includes updated chart context. Create tests in packages/braven_agent/test/session/update_chart_test.dart verifying the user-edit-to-agent-awareness flow.",
+      "category": "INTEGRATION",
+      "dependencies": [29],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "updateChart implementation",
+            "path": "packages/braven_agent/lib/src/session/agent_session_impl.dart",
+            "pattern": "updateChart|ChartUpdatedEvent",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "UpdateChart tests pass",
+            "command": "flutter test packages/braven_agent/test/session/update_chart_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 32,
+      "phase_id": "phase-8",
+      "title": "Demo App Polish",
+      "description": "Enhance demo chat screen with styled message bubbles (user vs assistant). Add chart creation indicators in message stream. Add scroll-to-bottom on new messages. Improve error state display.",
+      "category": "VISUAL",
+      "dependencies": [27],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Styled message bubbles",
+            "path": "example/lib/demos/braven_agent_demo.dart",
+            "pattern": "user|assistant|bubble|Container|BorderRadius",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Example analyzes clean",
+            "command": "flutter analyze example/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 33,
+      "phase_id": "phase-8",
+      "title": "Documentation and Dartdoc",
+      "description": "Add comprehensive dartdoc comments to all public APIs in braven_agent package. Create packages/braven_agent/README.md with Quick Start, API Overview, Examples sections. Verify all examples in documentation work.",
+      "category": "REFACTOR",
+      "dependencies": [31],
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "README exists",
+            "path": "packages/braven_agent/README.md",
+            "pattern": "Quick Start|Example|API",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ],
+        "behavioral_checks": [
+          {
+            "description": "Package analyzes clean",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 34,
+      "phase_id": "phase-8",
+      "title": "Final Validation and Test Coverage",
+      "description": "Run flutter analyze on entire package (must have zero issues). Run all tests (must have 100% pass rate). Validate the verification test scenario from spec Section 11 works as expected.",
+      "category": "INTEGRATION",
+      "dependencies": [33, 32, 30],
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Package analyzes with zero issues",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "All tests pass",
+            "command": "flutter test packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Example analyzes clean",
+            "command": "flutter analyze example/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    }
+  ],
+  "tdd_relationships": [
+    { "red_task_id": 5, "green_task_id": 6 },
+    { "red_task_id": 12, "green_task_id": 13 },
+    { "red_task_id": 15, "green_task_id": 16 },
+    { "red_task_id": 18, "green_task_id": 19 },
+    { "red_task_id": 20, "green_task_id": 21 }
+  ]
+}
