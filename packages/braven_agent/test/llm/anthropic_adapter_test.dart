@@ -102,8 +102,7 @@ void main() {
         expect(message.role, equals(MessageRole.user));
         expect(message.content, hasLength(1));
         expect(message.content.first, isA<TextContent>());
-        expect((message.content.first as TextContent).text,
-            equals('Hello, Claude!'));
+        expect((message.content.first as TextContent).text, equals('Hello, Claude!'));
       });
 
       test('converts assistant message with text content', () {
@@ -193,8 +192,7 @@ void main() {
 
       test('tool schema properties are well-formed', () {
         final tool = MockTool();
-        final properties =
-            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
 
         expect(properties['param1'], containsPair('type', 'string'));
         expect(properties['param2'], containsPair('type', 'integer'));
@@ -360,8 +358,7 @@ void main() {
         expect(restored.id, equals(original.id));
         expect(restored.role, equals(original.role));
         expect(restored.content, hasLength(1));
-        expect((restored.content.first as TextContent).text,
-            equals('Test message'));
+        expect((restored.content.first as TextContent).text, equals('Test message'));
       });
 
       test('LLMResponse round-trips through JSON', () {

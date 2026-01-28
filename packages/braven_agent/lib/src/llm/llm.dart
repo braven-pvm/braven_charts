@@ -19,15 +19,12 @@ library llm;
 
 // Configuration
 export 'llm_config.dart';
-
 // Core interfaces
 export 'llm_provider.dart';
 export 'llm_registry.dart';
 export 'llm_response.dart';
-
 // Models
 export 'models/agent_message.dart';
 export 'models/message_content.dart';
-
 // Providers
 export 'providers/anthropic_adapter.dart';

@@ -72,9 +72,7 @@ class AnthropicAdapter implements LLMProvider {
       system: anthropic.CreateMessageRequestSystem.text(systemPrompt),
       messages: _convertMessages(history),
       tools: tools != null && tools.isNotEmpty ? _convertTools(tools) : null,
-      toolChoice: tools != null && tools.isNotEmpty
-          ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto)
-          : null,
+      toolChoice: tools != null && tools.isNotEmpty ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto) : null,
     );
 
     final response = await _client.createMessage(request: request);
@@ -97,9 +95,7 @@ class AnthropicAdapter implements LLMProvider {
       system: anthropic.CreateMessageRequestSystem.text(systemPrompt),
       messages: _convertMessages(history),
       tools: tools != null && tools.isNotEmpty ? _convertTools(tools) : null,
-      toolChoice: tools != null && tools.isNotEmpty
-          ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto)
-          : null,
+      toolChoice: tools != null && tools.isNotEmpty ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto) : null,
     );
 
     final stream = _client.createMessageStream(request: request);
@@ -199,8 +195,7 @@ class AnthropicAdapter implements LLMProvider {
     return switch (role) {
       MessageRole.user => anthropic.MessageRole.user,
       MessageRole.assistant => anthropic.MessageRole.assistant,
-      MessageRole.tool =>
-        anthropic.MessageRole.user, // Tool results come from user role
+      MessageRole.tool => anthropic.MessageRole.user, // Tool results come from user role
       MessageRole.system => anthropic.MessageRole.user, // Should not happen
     };
   }
