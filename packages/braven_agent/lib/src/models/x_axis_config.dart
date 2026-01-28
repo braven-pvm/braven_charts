@@ -100,7 +100,9 @@ class XAxisConfig with EquatableMixin {
     return XAxisConfig(
       label: json['label'] as String?,
       unit: json['unit'] as String?,
-      type: json['type'] != null ? AxisType.values.byName(json['type'] as String) : AxisType.numeric,
+      type: json['type'] != null
+          ? AxisType.values.byName(json['type'] as String)
+          : AxisType.numeric,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
       autoRange: json['autoRange'] as bool? ?? true,
@@ -112,7 +114,9 @@ class XAxisConfig with EquatableMixin {
       showAxisLine: json['showAxisLine'] as bool? ?? true,
       showGridLines: json['showGridLines'] as bool? ?? true,
       gridColor: json['gridColor'] as String?,
-      gridDash: (json['gridDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
+      gridDash: (json['gridDash'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
     );
   }
 
