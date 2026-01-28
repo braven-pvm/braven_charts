@@ -107,9 +107,7 @@ class YAxisConfig with EquatableMixin {
       id: json['id'] as String?,
       label: json['label'] as String?,
       unit: json['unit'] as String?,
-      position: json['position'] != null
-          ? AxisPosition.values.byName(json['position'] as String)
-          : AxisPosition.left,
+      position: json['position'] != null ? AxisPosition.values.byName(json['position'] as String) : AxisPosition.left,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
       autoRange: json['autoRange'] as bool? ?? true,
@@ -211,6 +209,5 @@ class YAxisConfig with EquatableMixin {
       ];
 
   @override
-  String toString() =>
-      'YAxisConfig(id: $id, label: $label, position: $position)';
+  String toString() => 'YAxisConfig(id: $id, label: $label, position: $position)';
 }
