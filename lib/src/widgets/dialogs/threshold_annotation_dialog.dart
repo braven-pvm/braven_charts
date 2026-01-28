@@ -52,7 +52,8 @@ class ThresholdAnnotationDialog extends StatefulWidget {
   /// When [NormalizationMode.perSeries], shows series selector for Y-axis thresholds.
   final NormalizationMode? normalizationMode;
   @override
-  State<ThresholdAnnotationDialog> createState() => _ThresholdAnnotationDialogState();
+  State<ThresholdAnnotationDialog> createState() =>
+      _ThresholdAnnotationDialogState();
 }
 
 class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
@@ -91,13 +92,15 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
-    final thresholdDefaults = widget.chartTheme?.annotationTheme.thresholdDefaults;
+    final thresholdDefaults =
+        widget.chartTheme?.annotationTheme.thresholdDefaults;
     _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
 
     // Initialize series selection for perSeries mode
     if (annotation != null) {
       _selectedSeriesId = annotation.seriesId;
-    } else if (widget.availableSeries != null && widget.availableSeries!.isNotEmpty) {
+    } else if (widget.availableSeries != null &&
+        widget.availableSeries!.isNotEmpty) {
       // Default to first series for new annotations
       _selectedSeriesId = widget.availableSeries!.first.id;
     }
@@ -129,7 +132,9 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
       _lineColor = thresholdDefaults.lineColor;
       _lineWidth = thresholdDefaults.lineWidth;
       _elevation = 0.0;
-      _dashPattern = thresholdDefaults.dashPattern.isNotEmpty ? thresholdDefaults.dashPattern : null;
+      _dashPattern = thresholdDefaults.dashPattern.isNotEmpty
+          ? thresholdDefaults.dashPattern
+          : null;
       _labelPosition = AnnotationLabelPosition.topLeft;
       _labelMargin = 8.0;
     } else {
@@ -214,7 +219,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +235,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                   Text(
                     'Horizontal or vertical reference line',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                      color:
+                          theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -265,10 +272,14 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                           _selectedAxis = selection.first;
                           // Update value field when switching axes (only for new annotations)
                           if (widget.annotation == null) {
-                            if (_selectedAxis == AnnotationAxis.x && widget.initialXValue != null) {
-                              _valueController.text = widget.initialXValue!.toStringAsFixed(2);
-                            } else if (_selectedAxis == AnnotationAxis.y && widget.initialYValue != null) {
-                              _valueController.text = widget.initialYValue!.toStringAsFixed(2);
+                            if (_selectedAxis == AnnotationAxis.x &&
+                                widget.initialXValue != null) {
+                              _valueController.text =
+                                  widget.initialXValue!.toStringAsFixed(2);
+                            } else if (_selectedAxis == AnnotationAxis.y &&
+                                widget.initialYValue != null) {
+                              _valueController.text =
+                                  widget.initialYValue!.toStringAsFixed(2);
                             }
                           }
                         });
@@ -319,7 +330,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.straighten),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
                     ),
 
                     const SizedBox(height: 24),
@@ -360,7 +372,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             decoration: BoxDecoration(
                               color: _lineColor,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: theme.colorScheme.outline),
+                              border:
+                                  Border.all(color: theme.colorScheme.outline),
                             ),
                           ),
                         ),
@@ -383,7 +396,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             max: 10.0,
                             divisions: 19,
                             label: '${_lineWidth.toStringAsFixed(1)}px',
-                            onChanged: (value) => setState(() => _lineWidth = value),
+                            onChanged: (value) =>
+                                setState(() => _lineWidth = value),
                           ),
                         ),
                         SizedBox(
@@ -411,14 +425,19 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                             min: 0.0,
                             max: 12.0,
                             divisions: 24,
-                            label: _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
-                            onChanged: (value) => setState(() => _elevation = value),
+                            label: _elevation == 0
+                                ? 'Off'
+                                : _elevation.toStringAsFixed(1),
+                            onChanged: (value) =>
+                                setState(() => _elevation = value),
                           ),
                         ),
                         SizedBox(
                           width: 50,
                           child: Text(
-                            _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
+                            _elevation == 0
+                                ? 'Off'
+                                : _elevation.toStringAsFixed(1),
                             textAlign: TextAlign.right,
                           ),
                         ),
@@ -437,11 +456,13 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                         DropdownButton<String>(
                           value: _getDashPatternName(),
                           items: _dashPatterns.keys.map((name) {
-                            return DropdownMenuItem(value: name, child: Text(name));
+                            return DropdownMenuItem(
+                                value: name, child: Text(name));
                           }).toList(),
                           onChanged: (name) {
                             if (name != null) {
-                              setState(() => _dashPattern = _dashPatterns[name]);
+                              setState(
+                                  () => _dashPattern = _dashPatterns[name]);
                             }
                           },
                         ),
@@ -454,12 +475,14 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                       const SizedBox(height: 16),
 
                       // Label Position
-                      Text('Label Position', style: theme.textTheme.titleMedium),
+                      Text('Label Position',
+                          style: theme.textTheme.titleMedium),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: AnnotationLabelPosition.values.map((position) {
+                        children:
+                            AnnotationLabelPosition.values.map((position) {
                           return ChoiceChip(
                             label: Text(_labelPositionName(position)),
                             selected: _labelPosition == position,
@@ -488,7 +511,8 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                               max: 32,
                               divisions: 16,
                               label: '${_labelMargin.toInt()}px',
-                              onChanged: (value) => setState(() => _labelMargin = value),
+                              onChanged: (value) =>
+                                  setState(() => _labelMargin = value),
                             ),
                           ),
                           SizedBox(

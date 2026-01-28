@@ -61,7 +61,8 @@ class _AgenticChartScreenState extends State<AgenticChartScreen> {
   AgentService? _agentService;
   String? _apiKey;
   bool _isInitializing = false;
-  final GlobalKey<ChatInterfaceState> _chatInterfaceKey = GlobalKey<ChatInterfaceState>();
+  final GlobalKey<ChatInterfaceState> _chatInterfaceKey =
+      GlobalKey<ChatInterfaceState>();
 
   static const String _welcomeMessage = '''
 **Welcome to Agentic Charts**

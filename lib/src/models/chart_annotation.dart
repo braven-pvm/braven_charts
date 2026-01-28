@@ -254,7 +254,8 @@ class RangeAnnotation extends ChartAnnotation {
           startY == null || endY == null || startY < endY,
           'startY must be less than endY',
         ),
-        assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
+        assert(snapTolerance >= 0 && snapTolerance <= 1,
+            'snapTolerance must be between 0 and 1'),
         assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
@@ -385,8 +386,12 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: json['richTextDelta'] as List<dynamic>?,
       position: position,
       anchor: anchor,
-      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
-      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
+      backgroundColor: json['backgroundColor'] != null
+          ? Color(json['backgroundColor'] as int)
+          : null,
+      borderColor: json['borderColor'] != null
+          ? Color(json['borderColor'] as int)
+          : null,
       allowDragging: json['allowDragging'] as bool? ?? false,
       allowEditing: json['allowEditing'] as bool? ?? false,
       zIndex: json['zIndex'] as int? ?? 0,
@@ -646,7 +651,9 @@ class TextAnnotation extends ChartAnnotation {
     if (attrs['u'] == true || attrs['underline'] == true) {
       result = result.copyWith(decoration: TextDecoration.underline);
     }
-    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
+    if (attrs['s'] == true ||
+        attrs['strikethrough'] == true ||
+        attrs['strike'] == true) {
       result = result.copyWith(decoration: TextDecoration.lineThrough);
     }
 
@@ -805,7 +812,8 @@ class TextAnnotation extends ChartAnnotation {
       if (richTextDelta != null) 'richTextDelta': richTextDelta,
       'position': {'dx': position.dx, 'dy': position.dy},
       'anchor': anchor.name,
-      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
+      if (backgroundColor != null)
+        'backgroundColor': backgroundColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
@@ -1122,7 +1130,8 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelMargin = 4.0,
   })  : assert(
-          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+          trendType != TrendType.movingAverage ||
+              (windowSize != null && windowSize > 0),
           'windowSize must be positive when trendType is movingAverage',
         ),
         assert(
@@ -1281,7 +1290,8 @@ class LegendAnnotation extends ChartAnnotation {
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
-      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
+      customPosition:
+          clearCustomPosition ? null : (customPosition ?? _customPosition),
     );
   }
 }

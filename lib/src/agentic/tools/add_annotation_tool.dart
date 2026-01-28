@@ -69,7 +69,8 @@ class AddAnnotationTool extends LLMTool {
           },
           'seriesId': {
             'type': 'string',
-            'description': 'Series ID for threshold annotations in perSeries normalization mode. REQUIRED for horizontal threshold lines when using perSeries normalization.'
+            'description':
+                'Series ID for threshold annotations in perSeries normalization mode. REQUIRED for horizontal threshold lines when using perSeries normalization.'
           },
           'ftp': {'type': 'number', 'description': 'FTP value for power zones'},
           'zones': {

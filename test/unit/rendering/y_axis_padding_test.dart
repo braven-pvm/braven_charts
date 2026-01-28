@@ -48,8 +48,10 @@ void main() {
       final powerBounds = axisBounds['power_axis']!;
 
       // Data range is 0-200, 5% padding = 10 on each side
-      expect(powerBounds.min, closeTo(-10.0, 0.1), reason: 'Min should be -10 (5% below 0)');
-      expect(powerBounds.max, closeTo(210.0, 0.1), reason: 'Max should be 210 (5% above 200)');
+      expect(powerBounds.min, closeTo(-10.0, 0.1),
+          reason: 'Min should be -10 (5% below 0)');
+      expect(powerBounds.max, closeTo(210.0, 0.1),
+          reason: 'Max should be 210 (5% above 200)');
 
       // Create transform with these padded bounds
       const plotHeight = 400.0;
@@ -65,28 +67,35 @@ void main() {
 
       // Test Y=0 (data minimum) position
       final minPos = transform.dataToPlot(0, 0);
-      expect(minPos.dy, greaterThan(plotHeight * 0.9), reason: 'Y=0 should be near bottom, but not AT bottom');
-      expect(minPos.dy, lessThan(plotHeight), reason: 'Y=0 should not be below plot area');
+      expect(minPos.dy, greaterThan(plotHeight * 0.9),
+          reason: 'Y=0 should be near bottom, but not AT bottom');
+      expect(minPos.dy, lessThan(plotHeight),
+          reason: 'Y=0 should not be below plot area');
 
       // Test Y=200 (data maximum) position
       final maxPos = transform.dataToPlot(0, 200);
-      expect(maxPos.dy, greaterThan(0), reason: 'Y=200 should not be above plot area');
-      expect(maxPos.dy, lessThan(plotHeight * 0.1), reason: 'Y=200 should be near top, but not AT top');
+      expect(maxPos.dy, greaterThan(0),
+          reason: 'Y=200 should not be above plot area');
+      expect(maxPos.dy, lessThan(plotHeight * 0.1),
+          reason: 'Y=200 should be near top, but not AT top');
 
       // Calculate exact expected positions
       // Y=0 → relativeY = (0 - (-10)) / 220 = 10/220 ≈ 0.0455
       // With invertY: plotY = (1 - 0.0455) * 400 ≈ 381.8
       final expectedMinY = (1 - (10.0 / 220.0)) * plotHeight;
-      expect(minPos.dy, closeTo(expectedMinY, 1.0), reason: 'Y=0 should map to $expectedMinY (4.5% from bottom)');
+      expect(minPos.dy, closeTo(expectedMinY, 1.0),
+          reason: 'Y=0 should map to $expectedMinY (4.5% from bottom)');
 
       // Y=200 → relativeY = (200 - (-10)) / 220 = 210/220 ≈ 0.9545
       // With invertY: plotY = (1 - 0.9545) * 400 ≈ 18.2
       final expectedMaxY = (1 - (210.0 / 220.0)) * plotHeight;
-      expect(maxPos.dy, closeTo(expectedMaxY, 1.0), reason: 'Y=200 should map to $expectedMaxY (4.5% from top)');
+      expect(maxPos.dy, closeTo(expectedMaxY, 1.0),
+          reason: 'Y=200 should map to $expectedMaxY (4.5% from top)');
 
       // Verify padding percentage
       final paddingPercent = 10.0 / 220.0 * 100;
-      expect(paddingPercent, closeTo(4.55, 0.1), reason: 'Padding should be ~4.5% of plot height');
+      expect(paddingPercent, closeTo(4.55, 0.1),
+          reason: 'Padding should be ~4.5% of plot height');
 
       // Log for clarity
       // ignore: avoid_print
@@ -98,7 +107,8 @@ void main() {
       // ignore: avoid_print
       print('Y=200 plot position: ${maxPos.dy} (expected: $expectedMaxY)');
       // ignore: avoid_print
-      print('Padding from edges: ${plotHeight - minPos.dy}px at bottom, ${maxPos.dy}px at top');
+      print(
+          'Padding from edges: ${plotHeight - minPos.dy}px at bottom, ${maxPos.dy}px at top');
     });
 
     test('Contrast: non-normalized mode also has 5% padding', () {

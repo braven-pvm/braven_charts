@@ -214,10 +214,18 @@ class ChartConfiguration {
       type: ChartType.values.firstWhere((e) => e.name == json['type']),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List).map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList(),
-      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
-      yAxes: (json['yAxes'] as List).map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList(),
-      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
+      series: (json['series'] as List)
+          .map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      xAxis: json['xAxis'] != null
+          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
+          : null,
+      yAxes: (json['yAxes'] as List)
+          .map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      style: json['style'] != null
+          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
+          : null,
       interactions: json['interactions'],
       annotations: json['annotations'] as List<dynamic>?,
       layout: json['layout'],
@@ -260,7 +268,8 @@ class ChartConfiguration {
       if (legendPosition != null) 'legendPosition': legendPosition,
       if (useDarkTheme != null) 'useDarkTheme': useDarkTheme,
       if (showScrollbar != null) 'showScrollbar': showScrollbar,
-      if (normalizationMode != null) 'normalizationMode': normalizationMode!.name,
+      if (normalizationMode != null)
+        'normalizationMode': normalizationMode!.name,
     };
   }
 

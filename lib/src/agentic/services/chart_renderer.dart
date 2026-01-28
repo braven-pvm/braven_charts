@@ -79,11 +79,13 @@ class ChartRenderer {
         // Map to the appropriate concrete series type based on chart type
         // For dataPointMarkerRadius, fall back to markerSize if not explicitly set
         // This allows the LLM to use "markerSize" as a generic property
-        final effectiveMarkerRadius = seriesConfig.dataPointMarkerRadius ?? (seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null);
+        final effectiveMarkerRadius = seriesConfig.dataPointMarkerRadius ??
+            (seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null);
 
         // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
         // This improves UX: LLM setting markerSize expects markers to appear
-        final effectiveShowPoints = seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+        final effectiveShowPoints =
+            seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
 
         return _createSeriesForType(
           config.type,
@@ -111,22 +113,11 @@ class ChartRenderer {
       final annotations = _convertAnnotations(config.annotations);
 
       // Build X-axis config - wire all properties from agentic config
-      // Apply paddingPercent when explicit min/max are provided, or let chart auto-calculate
-      // NOTE: AI often sends paddingPercent: 0 explicitly, so treat 0 or null as "use default 2%"
-      // Using 2% (not 5%) to match visual balance with Y-axis padding
+      // Explicit min/max values are passed through verbatim (no padding applied)
+      // Padding is only for auto-calculated bounds (handled by the chart widget itself)
       final agenticXAxis = config.xAxis;
-      final rawPadding = agenticXAxis?.paddingPercent;
-      final xPadding = (rawPadding == null || rawPadding == 0) ? 0.02 : rawPadding;
-      double? xMin = agenticXAxis?.min;
-      double? xMax = agenticXAxis?.max;
-
-      // Apply padding if both min and max are specified
-      if (xMin != null && xMax != null && xPadding > 0) {
-        final range = xMax - xMin;
-        final paddingAmount = range * xPadding;
-        xMin = xMin - paddingAmount;
-        xMax = xMax + paddingAmount;
-      }
+      final double? xMin = agenticXAxis?.min;
+      final double? xMax = agenticXAxis?.max;
 
       final xAxisConfig = XAxisConfig(
         label: agenticXAxis?.label ?? 'X',
@@ -279,7 +270,8 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true ||
+        (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -356,7 +348,8 @@ class ChartRenderer {
   ///
   /// When tooltip or crosshair is enabled, uses CrosshairDisplayMode.tracking
   /// which is required for perSeries normalization mode to work correctly.
-  InteractionConfig? _buildInteractionConfig(agentic.ChartConfiguration config) {
+  InteractionConfig? _buildInteractionConfig(
+      agentic.ChartConfiguration config) {
     if (config.interactions == null) {
       return null; // Let BravenChartPlus use its default
     }
@@ -383,7 +376,9 @@ class ChartRenderer {
       enableZoom: enableZoom,
       crosshair: CrosshairConfig(
         enabled: crosshairEnabled,
-        displayMode: useTrackingMode ? CrosshairDisplayMode.tracking : CrosshairDisplayMode.standard,
+        displayMode: useTrackingMode
+            ? CrosshairDisplayMode.tracking
+            : CrosshairDisplayMode.standard,
       ),
       tooltip: TooltipConfig(enabled: tooltipEnabled),
     );
@@ -435,7 +430,8 @@ class ChartRenderer {
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis: isHorizontal ? AnnotationAxis.y : AnnotationAxis.x,
           value: value,
-          seriesId: config.seriesId, // Required for perSeries normalization mode
+          seriesId:
+              config.seriesId, // Required for perSeries normalization mode
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,

@@ -107,7 +107,9 @@ class AnnotationConfig {
       opacity: json['opacity'] as double?,
       fontSize: json['fontSize'] as double?,
       lineWidth: json['lineWidth'] as double?,
-      dashPattern: json['dashPattern'] != null ? (json['dashPattern'] as List).cast<double>() : null,
+      dashPattern: json['dashPattern'] != null
+          ? (json['dashPattern'] as List).cast<double>()
+          : null,
       seriesId: json['seriesId'] as String?,
     );
   }

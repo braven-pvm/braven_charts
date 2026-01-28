@@ -124,8 +124,10 @@ class SeriesConfig {
     if ((markerSize ?? 4.0) < 0) {
       throw ArgumentError('markerSize cannot be negative');
     }
-    if (!((dataColumn != null || data != null) && (dataColumn == null || data == null))) {
-      throw ArgumentError('Series must have either dataColumn or data, but not both');
+    if (!((dataColumn != null || data != null) &&
+        (dataColumn == null || data == null))) {
+      throw ArgumentError(
+          'Series must have either dataColumn or data, but not both');
     }
     if (dataColumn == null && data == null) {
       throw ArgumentError('Series must have either dataColumn or data');
@@ -148,7 +150,8 @@ class SeriesConfig {
         localYAxisPosition != 'right' &&
         localYAxisPosition != 'leftOuter' &&
         localYAxisPosition != 'rightOuter') {
-      throw ArgumentError('yAxisPosition must be "left", "right", "leftOuter", or "rightOuter"');
+      throw ArgumentError(
+          'yAxisPosition must be "left", "right", "leftOuter", or "rightOuter"');
     }
     // Validate yAxisColor
     final localYAxisColor = yAxisColor;
@@ -173,11 +176,18 @@ class SeriesConfig {
       data: json['data'] as List<dynamic>?,
       color: json['color'] as String?,
       strokeWidth: json['strokeWidth'] as double? ?? 2.0,
-      strokeDash: json['strokeDash'] != null ? (json['strokeDash'] as List).cast<double>() : null,
+      strokeDash: json['strokeDash'] != null
+          ? (json['strokeDash'] as List).cast<double>()
+          : null,
       fillOpacity: json['fillOpacity'] as double? ?? 0.0,
-      markerStyle: json['markerStyle'] != null ? MarkerStyle.values.firstWhere((e) => e.name == json['markerStyle']) : MarkerStyle.none,
+      markerStyle: json['markerStyle'] != null
+          ? MarkerStyle.values.firstWhere((e) => e.name == json['markerStyle'])
+          : MarkerStyle.none,
       markerSize: json['markerSize'] as double? ?? 4.0,
-      interpolation: json['interpolation'] != null ? Interpolation.values.firstWhere((e) => e.name == json['interpolation']) : Interpolation.linear,
+      interpolation: json['interpolation'] != null
+          ? Interpolation.values
+              .firstWhere((e) => e.name == json['interpolation'])
+          : Interpolation.linear,
       showPoints: json['showPoints'] as bool? ?? false,
       yAxisId: json['yAxisId'] as String?,
       unit: json['unit'] as String?,
@@ -219,7 +229,8 @@ class SeriesConfig {
       if (barWidthPixels != null) 'barWidthPixels': barWidthPixels,
       if (tension != null) 'tension': tension,
       if (markerRadius != null) 'markerRadius': markerRadius,
-      if (dataPointMarkerRadius != null) 'dataPointMarkerRadius': dataPointMarkerRadius,
+      if (dataPointMarkerRadius != null)
+        'dataPointMarkerRadius': dataPointMarkerRadius,
       if (yAxisPosition != null) 'yAxisPosition': yAxisPosition,
       if (yAxisLabel != null) 'yAxisLabel': yAxisLabel,
       if (yAxisUnit != null) 'yAxisUnit': yAxisUnit,
@@ -278,7 +289,8 @@ class SeriesConfig {
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       tension: tension ?? this.tension,
       markerRadius: markerRadius ?? this.markerRadius,
-      dataPointMarkerRadius: dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointMarkerRadius:
+          dataPointMarkerRadius ?? this.dataPointMarkerRadius,
       yAxisPosition: yAxisPosition ?? this.yAxisPosition,
       yAxisLabel: yAxisLabel ?? this.yAxisLabel,
       yAxisUnit: yAxisUnit ?? this.yAxisUnit,

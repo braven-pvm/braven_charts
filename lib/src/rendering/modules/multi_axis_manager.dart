@@ -133,7 +133,8 @@ class MultiAxisManager {
 
   /// Checks if perSeries normalization is active with multiple axes.
   bool isMultiAxisNormalizationActive() {
-    return hasMultipleYAxes() && _normalizationMode == NormalizationMode.perSeries;
+    return hasMultipleYAxes() &&
+        _normalizationMode == NormalizationMode.perSeries;
   }
 
   // ============================================================================
@@ -172,13 +173,17 @@ class MultiAxisManager {
     for (final series in _series) {
       if (series.yAxisConfig != null) {
         // Generate axis ID: use config's ID if set, otherwise derive from series ID
-        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
+        final axisId = series.yAxisConfig!.id.isNotEmpty
+            ? series.yAxisConfig!.id
+            : '${series.id}_axis';
 
         // Skip if this axis ID already exists
         if (axisIds.contains(axisId)) continue;
 
         // Add the inline config with the resolved ID
-        final resolvedConfig = series.yAxisConfig!.id.isEmpty ? series.yAxisConfig!.copyWith(id: axisId) : series.yAxisConfig!;
+        final resolvedConfig = series.yAxisConfig!.id.isEmpty
+            ? series.yAxisConfig!.copyWith(id: axisId)
+            : series.yAxisConfig!;
 
         effectiveAxes.add(resolvedConfig);
         axisIds.add(axisId);
@@ -190,9 +195,13 @@ class MultiAxisManager {
     // to prevent duplicate/overlapping axes
     if (effectiveAxes.isEmpty && effectivePrimaryYAxis != null) {
       // Auto-generate ID if empty
-      final primaryId = effectivePrimaryYAxis.id.isNotEmpty ? effectivePrimaryYAxis.id : 'primary_axis';
+      final primaryId = effectivePrimaryYAxis.id.isNotEmpty
+          ? effectivePrimaryYAxis.id
+          : 'primary_axis';
 
-      final resolvedPrimary = effectivePrimaryYAxis.id.isEmpty ? effectivePrimaryYAxis.copyWith(id: primaryId) : effectivePrimaryYAxis;
+      final resolvedPrimary = effectivePrimaryYAxis.id.isEmpty
+          ? effectivePrimaryYAxis.copyWith(id: primaryId)
+          : effectivePrimaryYAxis;
 
       effectiveAxes.add(resolvedPrimary);
       axisIds.add(primaryId);
@@ -233,7 +242,9 @@ class MultiAxisManager {
       // Priority 1: Inline yAxisConfig
       if (series.yAxisConfig != null) {
         // Generate axis ID: use config's ID if set, otherwise derive from series ID
-        final axisId = series.yAxisConfig!.id.isNotEmpty ? series.yAxisConfig!.id : '${series.id}_axis';
+        final axisId = series.yAxisConfig!.id.isNotEmpty
+            ? series.yAxisConfig!.id
+            : '${series.id}_axis';
 
         effectiveBindings.add(SeriesAxisBinding(
           seriesId: series.id,
@@ -256,7 +267,8 @@ class MultiAxisManager {
       // to ensure axis bounds are computed from series data
       effectiveBindings.add(SeriesAxisBinding(
         seriesId: series.id,
-        yAxisId: 'primary_axis', // Matches the ID generated for widget-level yAxis
+        yAxisId:
+            'primary_axis', // Matches the ID generated for widget-level yAxis
       ));
     }
 
@@ -316,16 +328,23 @@ class MultiAxisManager {
 
     // Check if series have multi-axis config (inline yAxisConfig or yAxisId)
     // This determines whether the transform is in normalized (0-1) or actual data space
-    final hasMultiAxisConfig = _series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+    final hasMultiAxisConfig = _series.any((s) =>
+        s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
 
     // For non-normalized modes (none/auto), the transform's Y range IS the actual
     // data viewport. When zoomed, we can use it directly as axis bounds.
     // ALSO: For perSeries WITHOUT multi-axis config, the transform contains actual
     // data values (not normalized 0-1), so use transform bounds directly.
-    final isNonNormalizedMode = _normalizationMode != NormalizationMode.perSeries;
-    final transformHasRealDataValues = isNonNormalizedMode || (_normalizationMode == NormalizationMode.perSeries && !hasMultiAxisConfig);
-    final useTransformYBounds =
-        !forceFullBounds && transformHasRealDataValues && t != null && ot != null && (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
+    final isNonNormalizedMode =
+        _normalizationMode != NormalizationMode.perSeries;
+    final transformHasRealDataValues = isNonNormalizedMode ||
+        (_normalizationMode == NormalizationMode.perSeries &&
+            !hasMultiAxisConfig);
+    final useTransformYBounds = !forceFullBounds &&
+        transformHasRealDataValues &&
+        t != null &&
+        ot != null &&
+        (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
 
     // When forPainting=true AND viewport is zoomed, use viewport-aware bounds.
     // This is the ONLY case where we apply viewport transformation.
@@ -381,7 +400,8 @@ class MultiAxisManager {
             max: explicitPaddedMin + (viewportRatioMax * paddedRange),
           );
         } else {
-          bounds[axis.id] = DataRange(min: explicitPaddedMin, max: explicitPaddedMax);
+          bounds[axis.id] =
+              DataRange(min: explicitPaddedMin, max: explicitPaddedMax);
         }
         continue;
       }
@@ -462,7 +482,8 @@ class MultiAxisManager {
     final ot = originalTransform;
 
     // Check if multi-axis config is active (perSeries normalization in effect)
-    final hasMultiAxisConfig = _series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+    final hasMultiAxisConfig = _series.any((s) =>
+        s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
 
     // Determine if we should apply viewport transformation
     final usePaintingBounds = forPainting &&
@@ -524,7 +545,8 @@ class MultiAxisManager {
   /// - [labelStyle]: Text style for tick labels (defaults to 11px gray)
   Map<String, double> computeAxisWidths({
     required Map<String, DataRange> axisBounds,
-    TextStyle labelStyle = const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+    TextStyle labelStyle =
+        const TextStyle(fontSize: 11, color: Color(0xFF666666)),
   }) {
     final effectiveAxes = getEffectiveYAxes();
     if (effectiveAxes.isEmpty) return {};
@@ -654,8 +676,10 @@ class MultiAxisManager {
   /// - [seriesMax]: The maximum Y value in this series
   ///
   /// **Returns**: Original data value in series range
-  double denormalizeYValue(double normalizedValue, double seriesMin, double seriesMax) {
-    return MultiAxisNormalizer.denormalize(normalizedValue, seriesMin, seriesMax);
+  double denormalizeYValue(
+      double normalizedValue, double seriesMin, double seriesMax) {
+    return MultiAxisNormalizer.denormalize(
+        normalizedValue, seriesMin, seriesMax);
   }
 
   /// Normalizes a value from data space to normalized [0, 1] space.
