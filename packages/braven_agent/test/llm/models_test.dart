@@ -1949,7 +1949,8 @@ void main() {
 
       expect(restored, equals(content));
       expect(
-        (((restored.input['level1'] as Map)['level2'] as Map)['level3'] as Map)['array'],
+        (((restored.input['level1'] as Map)['level2'] as Map)['level3']
+            as Map)['array'],
         equals([
           1,
           2,
@@ -2033,7 +2034,8 @@ void main() {
         if (content is ToolUseContent) matchCount++;
         if (content is ToolResultContent) matchCount++;
 
-        expect(matchCount, equals(1), reason: '$content should match exactly one type');
+        expect(matchCount, equals(1),
+            reason: '$content should match exactly one type');
       }
     });
   });
