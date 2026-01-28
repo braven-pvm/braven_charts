@@ -1183,9 +1183,21 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             final minY = windowPoints.map((p) => p.y).reduce((a, b) => a < b ? a : b);
             final maxY = windowPoints.map((p) => p.y).reduce((a, b) => a > b ? a : b);
 
+            // Add 5% padding to window bounds for visual breathing room
+            // (same as computeDataBounds does for non-streaming data)
+            final xRange = maxX - minX;
+            final yRange = maxY - minY;
+            final xPadding = xRange * 0.05;
+            final yPadding = yRange * 0.05;
+
             // Removed excessive print (window bounds)
 
-            dataBounds = DataBounds(xMin: minX, xMax: maxX, yMin: minY, yMax: maxY);
+            dataBounds = DataBounds(
+              xMin: minX - xPadding,
+              xMax: maxX + xPadding,
+              yMin: minY - yPadding,
+              yMax: maxY + yPadding,
+            );
           } else {
             // Removed excessive print (no points in window)
             dataBounds = DataConverter.computeDataBounds(effectiveSeries);
@@ -1196,7 +1208,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         }
       } else {
         // Non-streaming, no auto-scroll, or explore mode: use all data
-        // Removed excessive print (full data bounds)
         dataBounds = DataConverter.computeDataBounds(effectiveSeries);
       }
     }

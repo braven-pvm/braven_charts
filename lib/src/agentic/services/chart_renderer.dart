@@ -111,11 +111,28 @@ class ChartRenderer {
       final annotations = _convertAnnotations(config.annotations);
 
       // Build X-axis config - wire all properties from agentic config
+      // Apply paddingPercent when explicit min/max are provided, or let chart auto-calculate
+      // NOTE: AI often sends paddingPercent: 0 explicitly, so treat 0 or null as "use default 2%"
+      // Using 2% (not 5%) to match visual balance with Y-axis padding
+      final agenticXAxis = config.xAxis;
+      final rawPadding = agenticXAxis?.paddingPercent;
+      final xPadding = (rawPadding == null || rawPadding == 0) ? 0.02 : rawPadding;
+      double? xMin = agenticXAxis?.min;
+      double? xMax = agenticXAxis?.max;
+
+      // Apply padding if both min and max are specified
+      if (xMin != null && xMax != null && xPadding > 0) {
+        final range = xMax - xMin;
+        final paddingAmount = range * xPadding;
+        xMin = xMin - paddingAmount;
+        xMax = xMax + paddingAmount;
+      }
+
       final xAxisConfig = XAxisConfig(
-        label: config.xAxis?.label ?? 'X',
-        unit: config.xAxis?.unit,
-        min: config.xAxis?.min,
-        max: config.xAxis?.max,
+        label: agenticXAxis?.label ?? 'X',
+        unit: agenticXAxis?.unit,
+        min: xMin,
+        max: xMax,
       );
 
       // Build Y-axis config from first yAxis

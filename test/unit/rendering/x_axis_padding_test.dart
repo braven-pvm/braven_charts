@@ -31,14 +31,6 @@ void main() {
       // Data range is 0-60
       // 5% padding = 3 on each side
       // Expected: xMin = -3, xMax = 63
-      final xRange = 60.0 - 0.0;
-      final expectedPadding = xRange * 0.05;
-
-      print('Data X range: 0-60');
-      print('Expected X padding: $expectedPadding');
-      print('Computed bounds: xMin=${bounds.xMin}, xMax=${bounds.xMax}');
-      print('Expected: xMin=${0 - expectedPadding}, xMax=${60 + expectedPadding}');
-
       expect(bounds.xMin, closeTo(-3.0, 0.1), reason: 'xMin should be -3 (5% below 0)');
       expect(bounds.xMax, closeTo(63.0, 0.1), reason: 'xMax should be 63 (5% above 60)');
     });
@@ -57,13 +49,6 @@ void main() {
 
       // Data Y range is 0-120
       // 5% padding = 6 on each side
-      final yRange = 120.0 - 0.0;
-      final expectedPadding = yRange * 0.05;
-
-      print('Data Y range: 0-120');
-      print('Expected Y padding: $expectedPadding');
-      print('Computed bounds: yMin=${bounds.yMin}, yMax=${bounds.yMax}');
-
       expect(bounds.yMin, closeTo(-6.0, 0.1), reason: 'yMin should be -6 (5% below 0)');
       expect(bounds.yMax, closeTo(126.0, 0.1), reason: 'yMax should be 126 (5% above 120)');
     });
@@ -94,10 +79,6 @@ void main() {
       // 5% padding = 9.95 on each side
       final xRange = 199.0 - 0.0;
       final expectedXPadding = xRange * 0.05;
-
-      print('Multi-series data X range: 0-199');
-      print('Expected X padding: $expectedXPadding');
-      print('Computed bounds: xMin=${bounds.xMin}, xMax=${bounds.xMax}');
 
       expect(bounds.xMin, lessThan(0), reason: 'xMin should be negative (padded below 0)');
       expect(bounds.xMax, greaterThan(199), reason: 'xMax should be greater than 199 (padded above)');
@@ -134,10 +115,6 @@ void main() {
       // Step 1: Compute data bounds (as in _buildChartState)
       var dataBounds = DataConverter.computeDataBounds(series);
 
-      print('Initial dataBounds from computeDataBounds:');
-      print('  xMin=${dataBounds.xMin}, xMax=${dataBounds.xMax}');
-      print('  yMin=${dataBounds.yMin}, yMax=${dataBounds.yMax}');
-
       // Verify initial X bounds have 5% padding
       // Data X range: 0-59, 5% = 2.95
       expect(dataBounds.xMin, lessThan(0), reason: 'Initial xMin should have negative padding');
@@ -145,8 +122,7 @@ void main() {
 
       // Step 2: Apply perSeries normalization modification (as in _buildChartState)
       // Check if multi-axis config is active
-      final hasMultiAxisConfig = series.any(
-          (s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+      final hasMultiAxisConfig = series.any((s) => s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
       expect(hasMultiAxisConfig, isTrue, reason: 'Series should have multi-axis config');
 
       // Simulate the dataBounds override for perSeries mode
@@ -160,10 +136,6 @@ void main() {
         );
       }
 
-      print('After perSeries normalization modification:');
-      print('  xMin=${dataBounds.xMin}, xMax=${dataBounds.xMax}');
-      print('  yMin=${dataBounds.yMin}, yMax=${dataBounds.yMax}');
-
       // X bounds should STILL have padding after the modification
       expect(dataBounds.xMin, lessThan(0), reason: 'xMin should preserve negative padding');
       expect(dataBounds.xMax, greaterThan(59), reason: 'xMax should preserve padding above data max');
@@ -175,9 +147,6 @@ void main() {
         dataMin: xAxisConfig.min ?? dataBounds.xMin,
         dataMax: xAxisConfig.max ?? dataBounds.xMax,
       );
-
-      print('Created X-axis:');
-      print('  dataMin=${xAxis.dataMin}, dataMax=${xAxis.dataMax}');
 
       expect(xAxis.dataMin, lessThan(0), reason: 'X-axis dataMin should have padding');
       expect(xAxis.dataMax, greaterThan(59), reason: 'X-axis dataMax should have padding');
@@ -193,9 +162,6 @@ void main() {
         invertY: true,
       );
 
-      print('Created transform:');
-      print('  dataXMin=${transform.dataXMin}, dataXMax=${transform.dataXMax}');
-
       expect(transform.dataXMin, lessThan(0), reason: 'Transform dataXMin should have padding');
       expect(transform.dataXMax, greaterThan(59), reason: 'Transform dataXMax should have padding');
 
@@ -204,23 +170,15 @@ void main() {
       final firstPointPos = transform.dataToPlot(0, 0.5);
       final lastPointPos = transform.dataToPlot(59, 0.5);
 
-      print('Data point positions:');
-      print('  x=0 maps to plotX=${firstPointPos.dx}');
-      print('  x=59 maps to plotX=${lastPointPos.dx}');
-      print('  plotWidth=${transform.plotWidth}');
-
       expect(firstPointPos.dx, greaterThan(0), reason: 'x=0 should NOT be at left edge');
-      expect(lastPointPos.dx, lessThan(transform.plotWidth),
-          reason: 'x=59 should NOT be at right edge');
+      expect(lastPointPos.dx, lessThan(transform.plotWidth), reason: 'x=59 should NOT be at right edge');
 
       // Calculate expected padding in pixels
       final xRange = transform.dataXMax - transform.dataXMin;
       final paddingRatio = (-transform.dataXMin) / xRange; // How much of range is left padding
       final expectedLeftPadding = paddingRatio * transform.plotWidth;
 
-      print('Expected left padding in pixels: $expectedLeftPadding');
-      expect(firstPointPos.dx, closeTo(expectedLeftPadding, 1.0),
-          reason: 'First point should be at ~5% from left edge');
+      expect(firstPointPos.dx, closeTo(expectedLeftPadding, 1.0), reason: 'First point should be at ~5% from left edge');
     });
   });
 }
