@@ -1,10 +1,5 @@
-// @orchestra-task: 12
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/enums.dart';
-import 'package:braven_agent/src/tools/create_chart_tool.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
