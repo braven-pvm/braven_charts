@@ -80,10 +80,12 @@ class ChartRenderer {
 
         // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
         // This improves UX: LLM setting markerSize expects markers to appear
-        final effectiveShowPoints = seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+        final effectiveShowPoints =
+            seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
 
         // Use markerSize for dataPointMarkerRadius if showPoints is enabled
-        final effectiveMarkerRadius = seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null;
+        final effectiveMarkerRadius =
+            seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null;
 
         return _createSeriesForType(
           config.type,
@@ -182,11 +184,14 @@ class ChartRenderer {
       // Determine chart dimensions
       final chartWidth = config.width;
       final chartHeight = config.height ?? 350.0;
-      final backgroundColor = _parseColor(config.backgroundColor) ?? Colors.white;
+      final backgroundColor =
+          _parseColor(config.backgroundColor) ?? Colors.white;
 
       // Create annotation controller if we have annotations
       // Using annotationController (recommended) instead of deprecated annotations list
-      final annotationController = annotations.isNotEmpty ? charts.AnnotationController(initialAnnotations: annotations) : null;
+      final annotationController = annotations.isNotEmpty
+          ? charts.AnnotationController(initialAnnotations: annotations)
+          : null;
 
       return SizedBox(
         width: chartWidth,
@@ -251,7 +256,9 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   charts.LegendStyle _buildLegendStyle(models.ChartConfiguration config) {
     // Theme for base style
-    final baseStyle = config.useDarkTheme ? charts.LegendStyle.dark : charts.LegendStyle.light;
+    final baseStyle = config.useDarkTheme
+        ? charts.LegendStyle.dark
+        : charts.LegendStyle.light;
 
     // Map LegendPosition enum to braven_charts LegendPosition
     charts.LegendPosition position;
@@ -280,7 +287,8 @@ class ChartRenderer {
   /// Get normalization mode from configuration
   ///
   /// Converts NormalizationModeConfig to braven_charts.NormalizationMode
-  charts.NormalizationMode _getNormalizationMode(models.ChartConfiguration config) {
+  charts.NormalizationMode _getNormalizationMode(
+      models.ChartConfiguration config) {
     switch (config.normalizationMode) {
       case models.NormalizationModeConfig.none:
         return charts.NormalizationMode.none;
@@ -298,7 +306,8 @@ class ChartRenderer {
   ///
   /// When tooltip or crosshair is enabled, uses CrosshairDisplayMode.tracking
   /// which is required for perSeries normalization mode to work correctly.
-  charts.InteractionConfig _buildInteractionConfig(models.ChartConfiguration config) {
+  charts.InteractionConfig _buildInteractionConfig(
+      models.ChartConfiguration config) {
     if (config.interactions == null) {
       return const charts.InteractionConfig(
         enablePan: true,
@@ -323,14 +332,17 @@ class ChartRenderer {
       enableZoom: enableZoom,
       crosshair: charts.CrosshairConfig(
         enabled: crosshairEnabled,
-        displayMode: useTrackingMode ? charts.CrosshairDisplayMode.tracking : charts.CrosshairDisplayMode.standard,
+        displayMode: useTrackingMode
+            ? charts.CrosshairDisplayMode.tracking
+            : charts.CrosshairDisplayMode.standard,
       ),
       tooltip: charts.TooltipConfig(enabled: tooltipEnabled),
     );
   }
 
   /// Convert AnnotationConfig list to ChartAnnotation list
-  List<charts.ChartAnnotation> _convertAnnotations(List<models.AnnotationConfig>? annotations) {
+  List<charts.ChartAnnotation> _convertAnnotations(
+      List<models.AnnotationConfig>? annotations) {
     if (annotations == null || annotations.isEmpty) {
       return [];
     }
@@ -352,7 +364,8 @@ class ChartRenderer {
   }
 
   /// Convert a single AnnotationConfig to a ChartAnnotation
-  charts.ChartAnnotation? _convertAnnotationConfig(models.AnnotationConfig config) {
+  charts.ChartAnnotation? _convertAnnotationConfig(
+      models.AnnotationConfig config) {
     final color = _parseColor(config.color) ?? Colors.red;
 
     switch (config.type) {
@@ -363,9 +376,11 @@ class ChartRenderer {
         final lineWidth = config.lineWidth ?? 2.0;
         return charts.ThresholdAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
-          axis: isHorizontal ? charts.AnnotationAxis.y : charts.AnnotationAxis.x,
+          axis:
+              isHorizontal ? charts.AnnotationAxis.y : charts.AnnotationAxis.x,
           value: value,
-          seriesId: config.seriesId, // Required for perSeries normalization mode
+          seriesId:
+              config.seriesId, // Required for perSeries normalization mode
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,
@@ -427,7 +442,8 @@ class ChartRenderer {
   /// Builds a YAxisConfig from per-series Y-axis configuration fields.
   ///
   /// Returns null if no Y-axis configuration is specified on the series.
-  charts.YAxisConfig? _buildYAxisConfigFromSeries(models.SeriesConfig seriesConfig) {
+  charts.YAxisConfig? _buildYAxisConfigFromSeries(
+      models.SeriesConfig seriesConfig) {
     // If no per-series Y-axis fields are set, return null
     if (seriesConfig.yAxisPosition == null &&
         seriesConfig.yAxisLabel == null &&
@@ -466,7 +482,8 @@ class ChartRenderer {
   }
 
   /// Maps Interpolation enum to BravenChartPlus LineInterpolation enum.
-  charts.LineInterpolation _mapInterpolation(models.Interpolation interpolation) {
+  charts.LineInterpolation _mapInterpolation(
+      models.Interpolation interpolation) {
     switch (interpolation) {
       case models.Interpolation.linear:
         return charts.LineInterpolation.linear;
@@ -600,7 +617,8 @@ class ChartRenderer {
 
   /// Gets the appropriate anchor for the semantic position.
   /// The anchor determines which corner of the text box is at the position.
-  charts.AnnotationAnchor _getTextAnnotationAnchor(models.AnnotationPosition? position) {
+  charts.AnnotationAnchor _getTextAnnotationAnchor(
+      models.AnnotationPosition? position) {
     switch (position) {
       case models.AnnotationPosition.topCenter:
         return charts.AnnotationAnchor.topCenter;
