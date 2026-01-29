@@ -242,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(SessionState state) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || state.status == ActivityStatus.thinking) {
+    if (text.isEmpty || state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool) {
       return;
     }
 
@@ -255,9 +255,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return ValueListenableBuilder<SessionState>(
       valueListenable: widget.session.state,
       builder: (context, state, _) {
-        final showThinking = state.status == ActivityStatus.thinking;
+        final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
         final messages = state.history;
-        final itemCount = messages.length + (showThinking ? 1 : 0);
+        final itemCount = messages.length + (isProcessing ? 1 : 0);
         _maybeScroll(itemCount);
 
         return Scaffold(
@@ -267,9 +267,7 @@ class _ChatScreenState extends State<ChatScreen> {
           body: SafeArea(
             child: Column(
               children: [
-                if (state.status == ActivityStatus.error &&
-                    state.errorMessage != null)
-                  _ErrorBanner(message: state.errorMessage!),
+                if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
@@ -277,6 +275,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
                       if (index >= messages.length) {
+                        if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
+                          return _ToolExecutionBubble(
+                            toolName: state.activeTool!.name,
+                          );
+                        }
                         return const _ThinkingBubble();
                       }
                       final message = messages[index];
@@ -286,7 +289,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 _ChatInputBar(
                   controller: _messageController,
-                  enabled: _hasInput && !showThinking,
+                  enabled: _hasInput && !isProcessing,
                   onSend: () => _sendMessage(state),
                 ),
               ],
@@ -423,6 +426,48 @@ class _ThinkingBubble extends StatelessWidget {
             ),
             SizedBox(width: 8),
             Text('Thinking...'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolExecutionBubble extends StatelessWidget {
+  const _ToolExecutionBubble({required this.toolName});
+
+  final String toolName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.shade200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.build, size: 16, color: Colors.blue),
+            const SizedBox(width: 4),
+            Text(
+              'Calling: $toolName...',
+              style: TextStyle(color: Colors.blue.shade700),
+            ),
           ],
         ),
       ),
