@@ -45,4 +45,5 @@ library;
 
 export 'agent_tool.dart';
 export 'create_chart_tool.dart';
+export 'modify_chart_tool.dart';
 export 'tool_result.dart';

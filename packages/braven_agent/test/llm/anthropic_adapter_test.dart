@@ -23,7 +23,10 @@ class MockTool implements AgentTool {
               'type': 'object',
               'properties': {
                 'param1': {'type': 'string', 'description': 'First parameter'},
-                'param2': {'type': 'integer', 'description': 'Second parameter'},
+                'param2': {
+                  'type': 'integer',
+                  'description': 'Second parameter'
+                },
               },
               'required': ['param1'],
             };
@@ -205,7 +208,8 @@ void main() {
         expect(message.role, equals(MessageRole.user));
         expect(message.content, hasLength(1));
         expect(message.content.first, isA<TextContent>());
-        expect((message.content.first as TextContent).text, equals('Hello, Claude!'));
+        expect((message.content.first as TextContent).text,
+            equals('Hello, Claude!'));
       });
 
       test('converts assistant message with text content', () {
@@ -295,7 +299,8 @@ void main() {
 
       test('tool schema properties are well-formed', () {
         final tool = MockTool();
-        final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
 
         expect(properties['param1'], containsPair('type', 'string'));
         expect(properties['param2'], containsPair('type', 'integer'));
@@ -461,7 +466,8 @@ void main() {
         expect(restored.id, equals(original.id));
         expect(restored.role, equals(original.role));
         expect(restored.content, hasLength(1));
-        expect((restored.content.first as TextContent).text, equals('Test message'));
+        expect((restored.content.first as TextContent).text,
+            equals('Test message'));
       });
 
       test('LLMResponse round-trips through JSON', () {
@@ -814,7 +820,8 @@ void main() {
         mockClient.streamEvents = [
           const anthropic.MessageStreamEvent.messageDelta(
             type: anthropic.MessageStreamEventType.messageDelta,
-            delta: anthropic.MessageDelta(stopReason: anthropic.StopReason.endTurn),
+            delta: anthropic.MessageDelta(
+                stopReason: anthropic.StopReason.endTurn),
             usage: anthropic.MessageDeltaUsage(outputTokens: 10),
           ),
         ];
@@ -956,7 +963,8 @@ void main() {
             role: MessageRole.user,
             content: [
               const ImageContent(
-                data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                data:
+                    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
                 mediaType: 'image/png',
               ),
             ],
@@ -1694,7 +1702,8 @@ void main() {
         final blocks = request.messages.first.content.mapOrNull(
           blocks: (b) => b.value,
         );
-        expect((blocks!.first as anthropic.TextBlock).text, equals('Real message'));
+        expect((blocks!.first as anthropic.TextBlock).text,
+            equals('Real message'));
       });
     });
   });
