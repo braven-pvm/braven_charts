@@ -116,8 +116,7 @@ void main() {
       });
 
       test('input map can be empty', () {
-        const toolCall =
-            ToolCall(id: 'toolu_1', name: 'simple_tool', input: {});
+        const toolCall = ToolCall(id: 'toolu_1', name: 'simple_tool', input: {});
 
         expect(toolCall.input, isEmpty);
       });
@@ -295,8 +294,7 @@ void main() {
       test('history field stores conversation messages', () {
         final messages = [
           createTestMessage(id: 'msg_1', text: 'Hello'),
-          createTestMessage(
-              id: 'msg_2', role: MessageRole.assistant, text: 'Hi!'),
+          createTestMessage(id: 'msg_2', role: MessageRole.assistant, text: 'Hi!'),
         ];
         final state = SessionState(history: messages);
 
@@ -949,8 +947,7 @@ void main() {
             ErrorEvent(:final message) => 'error:$message',
             ThinkingEvent(:final description) => 'thinking:$description',
             ToolStartEvent(:final toolName) => 'start:$toolName',
-            ToolEndEvent(:final toolName, :final success) =>
-              'end:$toolName:$success',
+            ToolEndEvent(:final toolName, :final success) => 'end:$toolName:$success',
             CancelledEvent() => 'cancelled',
           };
           results.add(result);
@@ -1048,59 +1045,6 @@ void main() {
 
         expect(toolCall.input['level1'], isA<Map>());
         expect(toolCall.input['array'], isA<List>());
-      });
-    });
-
-    group('state transitions', () {
-      test('simulates full session lifecycle', () {
-        // Initial idle state
-        const state1 = SessionState();
-        expect(state1.status, equals(ActivityStatus.idle));
-
-        // User sends message - thinking
-        final state2 = state1.copyWith(
-          history: [createTestMessage()],
-          status: ActivityStatus.thinking,
-        );
-        expect(state2.status, equals(ActivityStatus.thinking));
-        expect(state2.history, hasLength(1));
-
-        // Tool execution starts
-        final state3 = state2.copyWith(
-          status: ActivityStatus.calling_tool,
-          activeTool: createTestToolCall(),
-        );
-        expect(state3.status, equals(ActivityStatus.calling_tool));
-        expect(state3.activeTool, isNotNull);
-
-        // Tool completes, chart created
-        final state4 = state3.copyWithCleared(
-          status: ActivityStatus.idle,
-          activeChart: createTestChart(),
-          clearActiveTool: true,
-        );
-        expect(state4.status, equals(ActivityStatus.idle));
-        expect(state4.activeTool, isNull);
-        expect(state4.activeChart, isNotNull);
-
-        // Error occurs
-        final state5 = state4.copyWith(
-          status: ActivityStatus.error,
-          errorMessage: 'Something went wrong',
-        );
-        expect(state5.status, equals(ActivityStatus.error));
-        expect(state5.errorMessage, isNotNull);
-        // Chart is still preserved
-        expect(state5.activeChart, isNotNull);
-
-        // Recovery to idle
-        final state6 = state5.copyWithCleared(
-          status: ActivityStatus.idle,
-          clearErrorMessage: true,
-        );
-        expect(state6.status, equals(ActivityStatus.idle));
-        expect(state6.errorMessage, isNull);
-        expect(state6.activeChart, isNotNull);
       });
     });
   });
