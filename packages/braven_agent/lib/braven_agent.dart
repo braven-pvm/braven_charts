@@ -121,3 +121,6 @@ export 'src/session/session.dart';
 
 // Tools Layer - AgentTool, ToolResult, CreateChartTool
 export 'src/tools/tools.dart';
+
+// Renderer Layer - ChartRenderer for converting ChartConfiguration to widgets
+export 'src/renderer/renderer.dart';
