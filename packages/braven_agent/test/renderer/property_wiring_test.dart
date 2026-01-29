@@ -1452,19 +1452,9 @@ void main() {
           reason: 'MISSING: xAxis.max not wired');
     });
 
-    // NOTE: Interaction config tests are SKIPPED because braven_agent's ChartConfiguration
-    // does not have an 'interactions' property. The ChartRenderer builds default
-    // InteractionConfig internally. These tests would require the model to be extended
-    // to support interaction configuration.
-    //
-    // Original tests from test/agentic/property_wiring_test.dart:
-    // - wiring: interactions.tooltip → InteractionConfig.tooltip.enabled
-    // - wiring: interactions.crosshair → InteractionConfig.crosshair.enabled
-    // - wiring: partial interactions defaults unspecified to true
-    // - wiring: interactions can explicitly disable tooltip
-
-    test('wiring: default InteractionConfig has tooltip enabled', () {
-      // ChartRenderer builds default interaction config with tooltip enabled
+    // CRITICAL: Interaction config wiring tests
+    test('wiring: interactions.tooltip → InteractionConfig.tooltip.enabled',
+        () {
       const config = models.ChartConfiguration(
         type: models.ChartType.line,
         series: [
@@ -1472,6 +1462,7 @@ void main() {
             models.DataPoint(x: 0, y: 1),
           ])
         ],
+        interactions: {'tooltip': true},
       );
 
       final widget = renderer.render(config);
@@ -1479,11 +1470,12 @@ void main() {
 
       expect(chart, isNotNull);
       expect(chart!.interactionConfig?.tooltip.enabled, isTrue,
-          reason: 'Default InteractionConfig should have tooltip enabled');
+          reason:
+              'MISSING: interactions.tooltip not wired to InteractionConfig.tooltip.enabled');
     });
 
-    test('wiring: default InteractionConfig has crosshair enabled', () {
-      // ChartRenderer builds default interaction config with crosshair enabled
+    test('wiring: interactions.crosshair → InteractionConfig.crosshair.enabled',
+        () {
       const config = models.ChartConfiguration(
         type: models.ChartType.line,
         series: [
@@ -1491,6 +1483,7 @@ void main() {
             models.DataPoint(x: 0, y: 1),
           ])
         ],
+        interactions: {'crosshair': true},
       );
 
       final widget = renderer.render(config);
@@ -1498,7 +1491,50 @@ void main() {
 
       expect(chart, isNotNull);
       expect(chart!.interactionConfig?.crosshair.enabled, isTrue,
-          reason: 'Default InteractionConfig should have crosshair enabled');
+          reason:
+              'MISSING: interactions.crosshair not wired to InteractionConfig.crosshair.enabled');
+    });
+
+    // CRITICAL: Default behavior when interactions is partial
+    test('wiring: partial interactions defaults unspecified to true', () {
+      // If LLM sends only crosshair, tooltip should default to true (not false)
+      const config = models.ChartConfiguration(
+        type: models.ChartType.line,
+        series: [
+          models.SeriesConfig(id: 'test', data: [
+            models.DataPoint(x: 0, y: 1),
+          ])
+        ],
+        interactions: {'crosshair': true}, // No tooltip specified
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      // Tooltip should be enabled by default even though not specified
+      expect(chart!.interactionConfig?.tooltip.enabled, isTrue,
+          reason:
+              'CRITICAL: Unspecified interaction settings should default to true, not false');
+    });
+
+    test('wiring: interactions can explicitly disable tooltip', () {
+      const config = models.ChartConfiguration(
+        type: models.ChartType.line,
+        series: [
+          models.SeriesConfig(id: 'test', data: [
+            models.DataPoint(x: 0, y: 1),
+          ])
+        ],
+        interactions: {'tooltip': false},
+      );
+
+      final widget = renderer.render(config);
+      final chart = extractBravenChartPlus(widget);
+
+      expect(chart, isNotNull);
+      expect(chart!.interactionConfig?.tooltip.enabled, isFalse,
+          reason: 'MISSING: interactions.tooltip=false should disable tooltip');
     });
   });
 
@@ -1519,7 +1555,7 @@ void main() {
   //   - ScatterChartSeries: 1
   //   - BarChartSeries: 4
   //   - BravenChartPlus widget: 14
-  //   - Interaction config: 4 (NOTE: 2 tests for default config, 4 original tests skipped due to missing 'interactions' field in model)
+  //   - Interaction config: 4
   //
   // TOTAL: ~109 tests
   // ============================================================================
