@@ -1,6 +1,21 @@
 ---
 description: "Orchestra Controller - Independent specification auditor. Reviews sprint configurations and handovers against the spec. Has read-only access to specs and handovers, NO access to verification criteria modifications."
-tools: ["read/readFile", "search", "web/fetch", "orchestra-ctrl/*"]
+tools:
+  [
+    "execute/runTask",
+    "execute/createAndRunTask",
+    "execute/runInTerminal",
+    "execute/runTests",
+    "read/readFile",
+    "search",
+    "web/fetch",
+    "orchestra-ctrl/*",
+    "mijur.copilot-terminal-tools/listTerminals",
+    "mijur.copilot-terminal-tools/createTerminal",
+    "mijur.copilot-terminal-tools/sendCommand",
+    "mijur.copilot-terminal-tools/deleteTerminal",
+    "mijur.copilot-terminal-tools/cancelCommand",
+  ]
 ---
 
 # Orchestra Controller Agent
