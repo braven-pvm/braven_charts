@@ -69,25 +69,29 @@ void main() {
 
       group('properties content', () {
         test('has prompt property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('prompt'));
           expect(properties['prompt']['type'], equals('string'));
         });
 
         test('prompt has description', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['prompt']['description'], isNotEmpty);
         });
 
         test('has type property with enum', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('type'));
           expect(properties['type']['type'], equals('string'));
           expect(properties['type']['enum'], isA<List>());
         });
 
         test('type enum includes all chart types', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final enumValues = properties['type']['enum'] as List;
           expect(enumValues, contains('line'));
           expect(enumValues, contains('area'));
@@ -96,32 +100,37 @@ void main() {
         });
 
         test('has title property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('title'));
           expect(properties['title']['type'], equals('string'));
         });
 
         test('has subtitle property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('subtitle'));
           expect(properties['subtitle']['type'], equals('string'));
         });
 
         test('has series property as array', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('series'));
           expect(properties['series']['type'], equals('array'));
         });
 
         test('series items have required structure', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final seriesItems = properties['series']['items'] as Map;
           expect(seriesItems['type'], equals('object'));
           expect(seriesItems['properties'], isA<Map>());
         });
 
         test('series item has id property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final seriesItems = properties['series']['items'] as Map;
           final seriesProps = seriesItems['properties'] as Map;
           expect(seriesProps, contains('id'));
@@ -129,7 +138,8 @@ void main() {
         });
 
         test('series item has data property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final seriesItems = properties['series']['items'] as Map;
           final seriesProps = seriesItems['properties'] as Map;
           expect(seriesProps, contains('data'));
@@ -137,7 +147,8 @@ void main() {
         });
 
         test('series item data has x,y point structure', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final seriesItems = properties['series']['items'] as Map;
           final seriesProps = seriesItems['properties'] as Map;
           final dataItems = seriesProps['data']['items'] as Map;
@@ -150,7 +161,8 @@ void main() {
         });
 
         test('series item requires id and data', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final seriesItems = properties['series']['items'] as Map;
           final required = seriesItems['required'] as List;
           expect(required, contains('id'));
@@ -158,44 +170,51 @@ void main() {
         });
 
         test('has xAxis property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('xAxis'));
           expect(properties['xAxis']['type'], equals('object'));
         });
 
         test('has annotations property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('annotations'));
           expect(properties['annotations']['type'], equals('array'));
         });
 
         test('has style property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('style'));
           expect(properties['style']['type'], equals('object'));
         });
 
         test('has showGrid property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('showGrid'));
           expect(properties['showGrid']['type'], equals('boolean'));
         });
 
         test('has showLegend property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('showLegend'));
           expect(properties['showLegend']['type'], equals('boolean'));
         });
 
         test('has legendPosition property with enum', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('legendPosition'));
           expect(properties['legendPosition']['type'], equals('string'));
           expect(properties['legendPosition']['enum'], isA<List>());
         });
 
         test('legendPosition enum includes valid positions', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final enumValues = properties['legendPosition']['enum'] as List;
           expect(enumValues, contains('top'));
           expect(enumValues, contains('bottom'));
@@ -204,20 +223,23 @@ void main() {
         });
 
         test('has useDarkTheme property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('useDarkTheme'));
           expect(properties['useDarkTheme']['type'], equals('boolean'));
         });
 
         test('has normalizationMode property with enum', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('normalizationMode'));
           expect(properties['normalizationMode']['type'], equals('string'));
           expect(properties['normalizationMode']['enum'], isA<List>());
         });
 
         test('normalizationMode enum includes valid modes', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           final enumValues = properties['normalizationMode']['enum'] as List;
           expect(enumValues, contains('none'));
           expect(enumValues, contains('auto'));
@@ -689,7 +711,10 @@ void main() {
           // Error should mention valid types
           final output = result.output.toLowerCase();
           expect(
-            output.contains('line') || output.contains('bar') || output.contains('area') || output.contains('scatter'),
+            output.contains('line') ||
+                output.contains('bar') ||
+                output.contains('area') ||
+                output.contains('scatter'),
             isTrue,
             reason: 'Error should suggest valid chart types',
           );
