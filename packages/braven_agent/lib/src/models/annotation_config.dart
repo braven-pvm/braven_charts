@@ -78,6 +78,17 @@ class AnnotationConfig with EquatableMixin {
   /// Opacity of the annotation (0.0 to 1.0).
   final double? opacity;
 
+  /// Font size for text label annotations.
+  final double? fontSize;
+
+  /// Line width for reference line annotations.
+  final double? lineWidth;
+
+  /// Dash pattern for reference line annotations.
+  ///
+  /// Example: [5, 3] creates a dashed line with 5px dashes and 3px gaps.
+  final List<double>? dashPattern;
+
   /// ID of the series this annotation is associated with.
   final String? seriesId;
 
@@ -98,6 +109,9 @@ class AnnotationConfig with EquatableMixin {
     this.label,
     this.color,
     this.opacity,
+    this.fontSize,
+    this.lineWidth,
+    this.dashPattern,
     this.seriesId,
   });
 
@@ -107,21 +121,20 @@ class AnnotationConfig with EquatableMixin {
   factory AnnotationConfig.fromJson(Map<String, dynamic> json) {
     return AnnotationConfig(
       type: AnnotationType.values.byName(json['type'] as String),
-      orientation: json['orientation'] != null
-          ? Orientation.values.byName(json['orientation'] as String)
-          : null,
+      orientation: json['orientation'] != null ? Orientation.values.byName(json['orientation'] as String) : null,
       value: (json['value'] as num?)?.toDouble(),
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
-      position: json['position'] != null
-          ? AnnotationPosition.values.byName(json['position'] as String)
-          : null,
+      position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
       opacity: (json['opacity'] as num?)?.toDouble(),
+      fontSize: (json['fontSize'] as num?)?.toDouble(),
+      lineWidth: (json['lineWidth'] as num?)?.toDouble(),
+      dashPattern: (json['dashPattern'] as List<dynamic>?)?.cast<double>(),
       seriesId: json['seriesId'] as String?,
     );
   }
@@ -143,6 +156,9 @@ class AnnotationConfig with EquatableMixin {
       if (label != null) 'label': label,
       if (color != null) 'color': color,
       if (opacity != null) 'opacity': opacity,
+      if (fontSize != null) 'fontSize': fontSize,
+      if (lineWidth != null) 'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
       if (seriesId != null) 'seriesId': seriesId,
     };
   }
@@ -163,6 +179,9 @@ class AnnotationConfig with EquatableMixin {
     String? label,
     String? color,
     double? opacity,
+    double? fontSize,
+    double? lineWidth,
+    List<double>? dashPattern,
     String? seriesId,
   }) {
     return AnnotationConfig(
@@ -178,6 +197,9 @@ class AnnotationConfig with EquatableMixin {
       label: label ?? this.label,
       color: color ?? this.color,
       opacity: opacity ?? this.opacity,
+      fontSize: fontSize ?? this.fontSize,
+      lineWidth: lineWidth ?? this.lineWidth,
+      dashPattern: dashPattern ?? this.dashPattern,
       seriesId: seriesId ?? this.seriesId,
     );
   }
@@ -196,6 +218,9 @@ class AnnotationConfig with EquatableMixin {
         label,
         color,
         opacity,
+        fontSize,
+        lineWidth,
+        dashPattern,
         seriesId,
       ];
 

@@ -81,6 +81,16 @@ class ChartConfiguration with EquatableMixin {
   /// Visual styling configuration.
   final ChartStyleConfig? style;
 
+  /// Interaction configuration for pan, zoom, crosshair, and tooltip.
+  ///
+  /// When provided as a Map, supports:
+  /// - `pan`: bool - Enable panning (default: true)
+  /// - `zoom`: bool - Enable zooming (default: true)
+  /// - `crosshair`: bool - Show crosshair on hover (default: true)
+  /// - `tooltip`: bool - Show tooltip on hover (default: true)
+  /// - `scrollbar`: Map with `enabled` key for scrollbar
+  final Map<String, dynamic>? interactions;
+
   /// Whether to show grid lines on the chart.
   final bool showGrid;
 
@@ -119,6 +129,7 @@ class ChartConfiguration with EquatableMixin {
     this.yAxes = const [],
     this.annotations = const [],
     this.style,
+    this.interactions,
     this.showGrid = true,
     this.showLegend = true,
     this.legendPosition = LegendPosition.bottom,
@@ -139,32 +150,18 @@ class ChartConfiguration with EquatableMixin {
       type: ChartType.values.byName(json['type'] as String? ?? 'line'),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List<dynamic>?)
-              ?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      xAxis: json['xAxis'] != null
-          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
-          : null,
-      yAxes: (json['yAxes'] as List<dynamic>?)
-              ?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      annotations: (json['annotations'] as List<dynamic>?)
-              ?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      style: json['style'] != null
-          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
-          : null,
+      series: (json['series'] as List<dynamic>?)?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
+      yAxes: (json['yAxes'] as List<dynamic>?)?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      annotations: (json['annotations'] as List<dynamic>?)?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
+      interactions: json['interactions'] as Map<String, dynamic>?,
       showGrid: json['showGrid'] as bool? ?? true,
       showLegend: json['showLegend'] as bool? ?? true,
-      legendPosition: LegendPosition.values
-          .byName(json['legendPosition'] as String? ?? 'bottom'),
+      legendPosition: LegendPosition.values.byName(json['legendPosition'] as String? ?? 'bottom'),
       useDarkTheme: json['useDarkTheme'] as bool? ?? false,
       showScrollbar: json['showScrollbar'] as bool? ?? false,
-      normalizationMode: NormalizationModeConfig.values
-          .byName(json['normalizationMode'] as String? ?? 'none'),
+      normalizationMode: NormalizationModeConfig.values.byName(json['normalizationMode'] as String? ?? 'none'),
       width: (json['width'] as num?)?.toDouble(),
       height: (json['height'] as num?)?.toDouble(),
     );
@@ -185,6 +182,7 @@ class ChartConfiguration with EquatableMixin {
       'yAxes': yAxes.map((e) => e.toJson()).toList(),
       'annotations': annotations.map((e) => e.toJson()).toList(),
       if (style != null) 'style': style!.toJson(),
+      if (interactions != null) 'interactions': interactions,
       'showGrid': showGrid,
       'showLegend': showLegend,
       'legendPosition': legendPosition.name,
@@ -209,6 +207,7 @@ class ChartConfiguration with EquatableMixin {
     List<YAxisConfig>? yAxes,
     List<AnnotationConfig>? annotations,
     ChartStyleConfig? style,
+    Map<String, dynamic>? interactions,
     bool? showGrid,
     bool? showLegend,
     LegendPosition? legendPosition,
@@ -228,6 +227,7 @@ class ChartConfiguration with EquatableMixin {
       yAxes: yAxes ?? this.yAxes,
       annotations: annotations ?? this.annotations,
       style: style ?? this.style,
+      interactions: interactions ?? this.interactions,
       showGrid: showGrid ?? this.showGrid,
       showLegend: showLegend ?? this.showLegend,
       legendPosition: legendPosition ?? this.legendPosition,
@@ -250,6 +250,7 @@ class ChartConfiguration with EquatableMixin {
         yAxes,
         annotations,
         style,
+        interactions,
         showGrid,
         showLegend,
         legendPosition,
@@ -261,6 +262,5 @@ class ChartConfiguration with EquatableMixin {
       ];
 
   @override
-  String toString() =>
-      'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
+  String toString() => 'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
 }
