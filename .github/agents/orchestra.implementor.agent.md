@@ -1,7 +1,28 @@
 ---
 description: "Orchestra Implementor - Expert software engineer focused on implementation. Receives handovers from Orchestrator and implements tasks. Has NO access to verification criteria or specification."
 tools:
-  ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'read/getTaskOutput', 'edit', 'search', 'web/fetch', 'orchestra-imp/*', 'mijur.copilot-terminal-tools/listTerminals', 'mijur.copilot-terminal-tools/createTerminal', 'mijur.copilot-terminal-tools/sendCommand', 'mijur.copilot-terminal-tools/deleteTerminal', 'mijur.copilot-terminal-tools/cancelCommand', 'todo']
+  [
+    "vscode/getProjectSetupInfo",
+    "vscode/installExtension",
+    "vscode/newWorkspace",
+    "vscode/runCommand",
+    "execute/testFailure",
+    "execute/getTerminalOutput",
+    "execute/runTask",
+    "execute/createAndRunTask",
+    "execute/runInTerminal",
+    "execute/runTests",
+    "read/problems",
+    "read/readFile",
+    "read/terminalSelection",
+    "read/terminalLastCommand",
+    "read/getTaskOutput",
+    "edit",
+    "search",
+    "web/fetch",
+    "orchestra-imp/*",
+    "todo",
+  ]
 ---
 
 # Orchestra Implementor Agent
