@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import '../models/annotation_config.dart';
 import '../models/chart_configuration.dart';
+import '../models/chart_style_config.dart';
 import '../models/data_point.dart';
 import '../models/enums.dart';
 import '../models/series_config.dart';
@@ -473,6 +475,38 @@ class ModifyChartTool extends AgentTool {
       yAxes = _parseYAxes(yAxesInput);
     }
 
+    // Parse annotations if provided
+    List<AnnotationConfig>? annotations;
+    final annotationsInput = modifications['annotations'] as List?;
+    if (annotationsInput != null) {
+      annotations = <AnnotationConfig>[];
+      for (final annotationMap in annotationsInput) {
+        final map = Map<String, dynamic>.from(annotationMap as Map);
+        annotations.add(AnnotationConfig.fromJson(map));
+      }
+    }
+
+    // Parse style if provided
+    ChartStyleConfig? style;
+    final styleInput = modifications['style'] as Map<String, dynamic>?;
+    if (styleInput != null) {
+      style = ChartStyleConfig.fromJson(styleInput);
+    }
+
+    // Parse interactions if provided
+    Map<String, dynamic>? interactions;
+    final interactionsInput = modifications['interactions'] as Map<String, dynamic>?;
+    if (interactionsInput != null) {
+      interactions = interactionsInput;
+    }
+
+    // Log raw input for debugging
+    print('=== MODIFY CHART TOOL ===');
+    print('Raw input: ${const JsonEncoder.withIndent('  ').convert(input)}');
+    if (annotations != null) {
+      print('Parsed ${annotations.length} annotations');
+    }
+
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
       type: chartType ?? activeChart.type,
@@ -481,11 +515,18 @@ class ModifyChartTool extends AgentTool {
       series: updatedSeries,
       xAxis: xAxis ?? activeChart.xAxis,
       yAxes: yAxes ?? activeChart.yAxes,
+      annotations: annotations ?? activeChart.annotations,
+      style: style ?? activeChart.style,
+      interactions: interactions ?? activeChart.interactions,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
       showLegend: modifications['showLegend'] as bool? ?? activeChart.showLegend,
       legendPosition: legendPosition ?? activeChart.legendPosition,
       useDarkTheme: modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
+      showScrollbar: modifications['showScrollbar'] as bool? ?? activeChart.showScrollbar,
       normalizationMode: normalizationMode ?? activeChart.normalizationMode,
+      width: modifications.containsKey('width') ? (modifications['width'] as num?)?.toDouble() : activeChart.width,
+      height: modifications.containsKey('height') ? (modifications['height'] as num?)?.toDouble() : activeChart.height,
+      backgroundColor: modifications.containsKey('backgroundColor') ? modifications['backgroundColor'] as String? : activeChart.backgroundColor,
     );
 
     // Return success result with JSON output and ChartConfiguration data

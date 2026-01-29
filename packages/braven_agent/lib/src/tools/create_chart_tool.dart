@@ -2,9 +2,13 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
+import '../models/annotation_config.dart';
 import '../models/chart_configuration.dart';
+import '../models/chart_style_config.dart';
 import '../models/enums.dart';
 import '../models/series_config.dart';
+import '../models/x_axis_config.dart';
+import '../models/y_axis_config.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
@@ -484,21 +488,72 @@ class CreateChartTool extends AgentTool {
       series.add(SeriesConfig.fromJson(seriesMap));
     }
 
+    // Parse annotations if provided
+    final annotations = <AnnotationConfig>[];
+    final annotationsInput = input['annotations'] as List?;
+    if (annotationsInput != null) {
+      for (final annotationMap in annotationsInput) {
+        final map = Map<String, dynamic>.from(annotationMap as Map);
+        annotations.add(AnnotationConfig.fromJson(map));
+      }
+    }
+
+    // Parse xAxis if provided
+    XAxisConfig? xAxis;
+    final xAxisInput = input['xAxis'] as Map<String, dynamic>?;
+    if (xAxisInput != null) {
+      xAxis = XAxisConfig.fromJson(xAxisInput);
+    }
+
+    // Parse yAxes if provided
+    final yAxes = <YAxisConfig>[];
+    final yAxesInput = input['yAxes'] as List?;
+    if (yAxesInput != null) {
+      for (final yAxisMap in yAxesInput) {
+        final map = Map<String, dynamic>.from(yAxisMap as Map);
+        yAxes.add(YAxisConfig.fromJson(map));
+      }
+    }
+
+    // Parse style if provided
+    ChartStyleConfig? style;
+    final styleInput = input['style'] as Map<String, dynamic>?;
+    if (styleInput != null) {
+      style = ChartStyleConfig.fromJson(styleInput);
+    }
+
+    // Parse interactions if provided
+    final interactions = input['interactions'] as Map<String, dynamic>?;
+
     // Generate unique chart ID
     final chartId = _uuid.v4();
 
-    // Build chart configuration
+    // Log raw input for debugging
+    print('=== CREATE CHART TOOL ===');
+    print('Raw input: ${const JsonEncoder.withIndent('  ').convert(input)}');
+    print('Parsed ${annotations.length} annotations');
+
+    // Build chart configuration with ALL properties
     final chart = ChartConfiguration(
       id: chartId,
       type: chartType,
       title: input['title'] as String?,
       subtitle: input['subtitle'] as String?,
       series: series,
+      xAxis: xAxis,
+      yAxes: yAxes,
+      annotations: annotations,
+      style: style,
+      interactions: interactions,
       showGrid: input['showGrid'] as bool? ?? true,
       showLegend: input['showLegend'] as bool? ?? true,
       legendPosition: legendPosition,
       useDarkTheme: input['useDarkTheme'] as bool? ?? false,
+      showScrollbar: input['showScrollbar'] as bool? ?? false,
       normalizationMode: normalizationMode,
+      width: (input['width'] as num?)?.toDouble(),
+      height: (input['height'] as num?)?.toDouble(),
+      backgroundColor: input['backgroundColor'] as String?,
     );
 
     // Return success result with JSON output and ChartConfiguration data
