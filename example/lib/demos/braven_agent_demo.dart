@@ -242,7 +242,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(SessionState state) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool) {
+    if (text.isEmpty ||
+        state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool) {
       return;
     }
 
@@ -250,53 +252,142 @@ class _ChatScreenState extends State<ChatScreen> {
     await widget.session.transform(text);
   }
 
+  Widget _buildChartPanel(SessionState state) {
+    final activeChart = state.activeChart;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Chart Preview',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: activeChart == null
+                  ? _ChartPlaceholder()
+                  : const ChartRenderer().render(activeChart),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatPanel(SessionState state) {
+    final isProcessing = state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool;
+    final messages = state.history;
+    final itemCount = messages.length + (isProcessing ? 1 : 0);
+    _maybeScroll(itemCount);
+
+    return Column(
+      children: [
+        if (state.status == ActivityStatus.error && state.errorMessage != null)
+          _ErrorBanner(message: state.errorMessage!),
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              if (index >= messages.length) {
+                if (state.status == ActivityStatus.calling_tool &&
+                    state.activeTool != null) {
+                  return _ToolExecutionBubble(
+                    toolName: state.activeTool!.name,
+                  );
+                }
+                return const _ThinkingBubble();
+              }
+              final message = messages[index];
+              return _MessageBubble(message: message);
+            },
+          ),
+        ),
+        _ChatInputBar(
+          controller: _messageController,
+          enabled: _hasInput && !isProcessing,
+          onSend: () => _sendMessage(state),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<SessionState>(
       valueListenable: widget.session.state,
       builder: (context, state, _) {
-        final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
-        final messages = state.history;
-        final itemCount = messages.length + (isProcessing ? 1 : 0);
-        _maybeScroll(itemCount);
-
         return Scaffold(
           appBar: AppBar(
             title: const Text('Braven Agent Demo'),
           ),
           body: SafeArea(
-            child: Column(
-              children: [
-                if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: itemCount,
-                    itemBuilder: (context, index) {
-                      if (index >= messages.length) {
-                        if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
-                          return _ToolExecutionBubble(
-                            toolName: state.activeTool!.name,
-                          );
-                        }
-                        return const _ThinkingBubble();
-                      }
-                      final message = messages[index];
-                      return _MessageBubble(message: message);
-                    },
-                  ),
-                ),
-                _ChatInputBar(
-                  controller: _messageController,
-                  enabled: _hasInput && !isProcessing,
-                  onSend: () => _sendMessage(state),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final useRowLayout = constraints.maxWidth >= 900;
+
+                if (useRowLayout) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _buildChatPanel(state),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: _buildChartPanel(state),
+                      ),
+                    ],
+                  );
+                }
+
+                return Column(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildChatPanel(state),
+                    ),
+                    SizedBox(
+                      height: 360,
+                      child: _buildChartPanel(state),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _ChartPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.insert_chart_outlined,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Create a chart to see it here',
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+        ],
+      ),
     );
   }
 }
