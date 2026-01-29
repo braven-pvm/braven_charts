@@ -1,7 +1,3 @@
-// @orchestra-task: 15
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/llm/llm_config.dart';
 import 'package:braven_agent/src/llm/llm_provider.dart';
 import 'package:braven_agent/src/llm/llm_response.dart';
@@ -25,9 +21,18 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Allows tests to specify exact responses, simulate errors, and
 /// track method calls.
+///
+/// Supports a queue of responses via [responseQueue] for multi-turn
+/// conversations. If [responseQueue] is not empty, responses are
+/// dequeued in order. Otherwise, [nextResponse] or [defaultResponse]
+/// is returned.
 class MockLLMProvider implements LLMProvider {
   /// The next response to return from [generateResponse].
   LLMResponse? nextResponse;
+
+  /// Queue of responses for multi-turn conversations.
+  /// Responses are dequeued in order (first in, first out).
+  final List<LLMResponse> responseQueue = [];
 
   /// Whether [generateResponse] should throw an error.
   bool shouldThrow = false;
@@ -72,6 +77,11 @@ class MockLLMProvider implements LLMProvider {
       throw nextError ?? Exception('Mock LLM error');
     }
 
+    // Use queue if available, otherwise fall back to nextResponse/default
+    if (responseQueue.isNotEmpty) {
+      return responseQueue.removeAt(0);
+    }
+
     return nextResponse ?? defaultResponse;
   }
 
@@ -88,6 +98,7 @@ class MockLLMProvider implements LLMProvider {
   /// Resets the mock to its initial state.
   void reset() {
     nextResponse = null;
+    responseQueue.clear();
     shouldThrow = false;
     nextError = null;
     calls.clear();
@@ -721,10 +732,16 @@ void main() {
           );
 
           final events = <AgentEvent>[];
-          session.events.listen(events.add);
+          final subscription = session.events.listen(events.add);
 
           // Act
           await session.transform('Create a chart');
+
+          // Give time for events to propagate
+          await Future<void>.delayed(Duration.zero);
+
+          // Clean up
+          await subscription.cancel();
 
           // Assert
           final errorEvents = events.whereType<ErrorEvent>().toList();
@@ -777,10 +794,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created successfully'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -804,10 +824,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created successfully'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -834,10 +857,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created successfully'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -861,10 +887,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created successfully'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -890,10 +919,13 @@ void main() {
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
         mockTool.shouldThrow = true;
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Error handled'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -918,10 +950,13 @@ void main() {
         final mockProvider = MockLLMProvider();
         final createTool = MockAgentTool(name: 'create_chart');
         final modifyTool = MockAgentTool(name: 'modify_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'modify_chart',
-          input: {'chartId': 'chart_1'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'modify_chart',
+            input: {'chartId': 'chart_1'},
+          ),
+          createTextResponse('Chart modified successfully'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -941,10 +976,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'bar', 'title': 'Sales'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'bar', 'title': 'Sales'},
+          ),
+          createTextResponse('Bar chart created'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -965,10 +1003,13 @@ void main() {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool(name: 'create_chart');
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -999,10 +1040,13 @@ void main() {
           isError: false,
           data: chart,
         );
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -1028,10 +1072,13 @@ void main() {
           isError: false,
           data: chart,
         );
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -1072,11 +1119,19 @@ void main() {
           data: updatedChart,
         );
 
-        // First call returns create, second returns modify
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'line'},
-        );
+        // First call returns create, then text response, then modify, then text response
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'line'},
+          ),
+          createTextResponse('Chart created'),
+          createToolUseResponse(
+            toolName: 'modify_chart',
+            input: {'chartId': 'existing_chart', 'title': 'Updated Title'},
+          ),
+          createTextResponse('Chart modified'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -1086,12 +1141,6 @@ void main() {
 
         // Create initial chart
         await session.transform('Create a chart');
-
-        // Set up for modify call
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'modify_chart',
-          input: {'chartId': 'existing_chart', 'title': 'Updated Title'},
-        );
 
         final events = <AgentEvent>[];
         session.events.listen(events.add);
@@ -1112,10 +1161,13 @@ void main() {
           output: 'Error: Invalid chart type',
           isError: true,
         );
-        mockProvider.nextResponse = createToolUseResponse(
-          toolName: 'create_chart',
-          input: {'type': 'invalid'},
-        );
+        mockProvider.responseQueue.addAll([
+          createToolUseResponse(
+            toolName: 'create_chart',
+            input: {'type': 'invalid'},
+          ),
+          createTextResponse('Error handled'),
+        ]);
 
         final session = AgentSessionImpl(
           llmProvider: mockProvider,
@@ -1155,7 +1207,7 @@ void main() {
         expect(session.state.value.activeChart!.title, equals('Updated'));
       });
 
-      test('emits ChartUpdatedEvent with newConfig', () {
+      test('emits ChartUpdatedEvent with newConfig', () async {
         // Arrange
         final mockProvider = MockLLMProvider();
         final session = AgentSessionImpl(
@@ -1167,10 +1219,16 @@ void main() {
         final newChart = createTestChart(id: 'updated_chart');
 
         final events = <AgentEvent>[];
-        session.events.listen(events.add);
+        final subscription = session.events.listen(events.add);
 
         // Act
         session.updateChart(newChart);
+
+        // Give time for events to propagate
+        await Future<void>.delayed(Duration.zero);
+
+        // Clean up
+        await subscription.cancel();
 
         // Assert
         final updateEvents = events.whereType<ChartUpdatedEvent>().toList();

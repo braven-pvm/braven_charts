@@ -40,6 +40,8 @@ library session;
 export 'agent_events.dart';
 // Agent session interface
 export 'agent_session.dart';
+// Agent session implementation
+export 'agent_session_impl.dart';
 // Default system prompt
 export 'default_system_prompt.dart';
 // State
