@@ -111,6 +111,14 @@ class ChartRenderer {
       // Convert AnnotationConfig to ChartAnnotation
       final annotations = _convertAnnotations(config.annotations);
 
+      // DEBUG: Log annotation conversion
+      debugPrint('=== ANNOTATION CONVERSION ===');
+      debugPrint('Input annotations: ${config.annotations.length}');
+      debugPrint('Converted annotations: ${annotations.length}');
+      for (final a in annotations) {
+        debugPrint('  - ${a.runtimeType}: ${a.id}');
+      }
+
       // Build X-axis config - wire all properties from config
       // Explicit min/max values are passed through verbatim (no padding applied)
       // Padding is only for auto-calculated bounds (handled by the chart widget itself)
@@ -176,6 +184,10 @@ class ChartRenderer {
       final chartHeight = config.height ?? 350.0;
       final backgroundColor = _parseColor(config.backgroundColor) ?? Colors.white;
 
+      // Create annotation controller if we have annotations
+      // Using annotationController (recommended) instead of deprecated annotations list
+      final annotationController = annotations.isNotEmpty ? charts.AnnotationController(initialAnnotations: annotations) : null;
+
       return SizedBox(
         width: chartWidth,
         height: chartHeight,
@@ -183,7 +195,7 @@ class ChartRenderer {
             series: series,
             xAxisConfig: xAxisConfig,
             yAxis: yAxisConfig,
-            annotations: annotations,
+            annotationController: annotationController,
             theme: chartTheme,
             grid: gridConfig,
             showLegend: showLegend,

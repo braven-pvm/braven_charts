@@ -1879,9 +1879,15 @@ void main() {
     }
 
     // Helper to extract annotations from rendered widget
+    // Supports both annotationController (preferred) and deprecated annotations list
     List<ChartAnnotation>? extractAnnotations(Widget widget) {
       final chart = extractBravenChartPlusFromAnnotation(widget);
-      return chart?.annotations;
+      if (chart == null) return null;
+      // Prefer annotationController (new approach) over deprecated annotations list
+      if (chart.annotationController != null) {
+        return chart.annotationController!.annotations;
+      }
+      return chart.annotations;
     }
 
     test('wiring: referenceLine annotation → ThresholdAnnotation', () {
