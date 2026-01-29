@@ -9,17 +9,19 @@ import 'tool_result.dart';
 
 /// Tool for modifying existing chart configurations.
 ///
-/// This tool allows the LLM to make incremental changes to existing charts
-/// by providing a chart ID and a partial modification specification.
+/// This tool applies incremental changes to an existing chart configuration
+/// obtained through a callback function. Unlike [CreateChartTool] which builds
+/// new charts from scratch, ModifyChartTool updates specific properties while
+/// preserving unchanged ones.
 ///
-/// Unlike [CreateChartTool] which builds new charts from scratch,
-/// ModifyChartTool applies partial updates to existing chart configurations.
+/// The tool uses a callback architecture where it queries the active chart
+/// from the session at execution time, ensuring it always works with the
+/// current chart state.
 ///
 /// ## Example Usage (LLM perspective)
 ///
 /// ```json
 /// {
-///   "chart_id": "abc-123",
 ///   "modifications": {
 ///     "type": "bar",
 ///     "title": "Updated Title",
@@ -31,100 +33,47 @@ import 'tool_result.dart';
 /// }
 /// ```
 ///
-/// ## Required Fields
+/// ## Architecture
 ///
-/// - `chart_id`: ID of the existing chart to modify
-/// - `modifications`: Object with partial chart configuration to apply
-///
-/// ## Supported Modifications
-///
-/// - Change chart type (line, area, bar, scatter)
-/// - Update title and subtitle
-/// - Replace entire series array
-/// - Add new series with `addSeries`
-/// - Remove series by ID with `removeSeries`
-/// - Update specific series data
-/// - Toggle showGrid, showLegend
-/// - Change legendPosition, useDarkTheme, normalizationMode
-///
-/// ## Chart Registry
-///
-/// Charts must be registered with [registerChart] before they can be modified.
-/// Use [getChart] to retrieve a chart by ID, and [unregisterChart] to remove it.
-/// Call [clear] to remove all charts (useful for test isolation).
+/// Instead of a static registry, ModifyChartTool uses dependency injection:
+/// the session provides a callback function that returns the current active
+/// chart at execution time. This allows:
+/// - Direct integration with AgentSession without manual registration
+/// - Always working with the session's current chart state
+/// - Clean separation of concerns
+/// - Testability through callback injection
 ///
 /// ## Output
 ///
 /// Returns a [ToolResult] with:
-/// - `output`: JSON string of the modified chart configuration
+/// - `output`: String describing the modification result
 /// - `data`: [ChartConfiguration] object with applied modifications
-/// - `isError`: true if chart_id doesn't exist or input validation fails
+/// - `isError`: true if no active chart exists or input validation fails
 class ModifyChartTool extends AgentTool {
-  /// Static registry of charts by ID.
+  /// Callback function that returns the currently active chart.
   ///
-  /// Charts must be registered before they can be modified.
-  static final Map<String, ChartConfiguration> _registry = {};
+  /// The session provides this function at construction time. The tool
+  /// calls it during execute() to get the current chart to modify.
+  /// Returns null if no active chart exists.
+  final ChartConfiguration? Function() _getActiveChart;
 
-  /// Registers a chart in the static registry.
+  /// Creates a [ModifyChartTool] that modifies the active chart.
   ///
-  /// The chart must have a non-null [ChartConfiguration.id].
-  /// If a chart with the same ID exists, it will be replaced.
-  static void registerChart(ChartConfiguration chart) {
-    if (chart.id == null) {
-      throw ArgumentError('Chart must have a non-null id to be registered');
-    }
-    _registry[chart.id!] = chart;
-  }
-
-  /// Retrieves a chart from the registry by ID.
-  ///
-  /// Returns `null` if no chart with the given ID is registered.
-  static ChartConfiguration? getChart(String chartId) {
-    return _registry[chartId];
-  }
-
-  /// Removes a chart from the registry.
-  ///
-  /// No-op if the chart doesn't exist.
-  static void unregisterChart(String chartId) {
-    _registry.remove(chartId);
-  }
-
-  /// Clears all charts from the registry.
-  ///
-  /// Useful for test isolation between test cases.
-  static void clear() {
-    _registry.clear();
-  }
-
-  /// Default color palette for series that don't specify their own color.
-  static const List<String> _defaultColors = [
-    '#2196F3', // Blue
-    '#4CAF50', // Green
-    '#FF9800', // Orange
-    '#E91E63', // Pink
-    '#9C27B0', // Purple
-    '#00BCD4', // Cyan
-    '#FF5722', // Deep Orange
-    '#607D8B', // Blue Grey
-  ];
+  /// [getActiveChart] is a required callback that the tool uses to retrieve
+  /// the current active chart at execution time.
+  ModifyChartTool({required ChartConfiguration? Function() getActiveChart}) : _getActiveChart = getActiveChart;
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      'Modifies an existing chart configuration by applying partial updates. '
+  String get description => 'Modifies the currently active chart by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove series, '
-      'or adjust styling options on a previously created chart.';
+      'or adjust styling options. Requires an active chart created previously.';
 
   @override
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
         'properties': {
-          'chart_id': {
-            'type': 'string',
-            'description': 'ID of the chart to modify',
-          },
           'modifications': {
             'type': 'object',
             'description': 'Partial chart configuration to merge',
@@ -195,8 +144,7 @@ class ModifyChartTool extends AgentTool {
               },
               'updateSeries': {
                 'type': 'object',
-                'description':
-                    'Map of series ID to partial update (e.g., new data points)',
+                'description': 'Map of series ID to partial update (e.g., new data points)',
               },
               'showGrid': {
                 'type': 'boolean',
@@ -218,8 +166,7 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description':
-                    'Position of the legend relative to the chart area',
+                'description': 'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
@@ -233,36 +180,27 @@ class ModifyChartTool extends AgentTool {
             },
           },
         },
-        'required': ['chart_id', 'modifications'],
+        'required': ['modifications'],
       };
 
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
-    // Validate required fields
-    final chartId = input['chart_id'] as String?;
-    if (chartId == null || chartId.isEmpty) {
+    // Get the active chart from the callback
+    final activeChart = _getActiveChart();
+    if (activeChart == null) {
       return const ToolResult(
-        output: 'Error: chart_id is required. Please provide the ID of the '
-            'chart you want to modify.',
+        output: 'Error: No active chart to modify. '
+            'Please use create_chart first to create a chart.',
         isError: true,
       );
     }
 
+    // Validate modifications object
     final modifications = input['modifications'] as Map<String, dynamic>?;
     if (modifications == null) {
       return const ToolResult(
         output: 'Error: modifications is required. Please provide an object '
             'with the chart properties you want to change.',
-        isError: true,
-      );
-    }
-
-    // Look up chart in registry
-    final existingChart = getChart(chartId);
-    if (existingChart == null) {
-      return ToolResult(
-        output: 'Error: Chart with ID "$chartId" not found. '
-            'The chart may not exist or has not been registered.',
         isError: true,
       );
     }
@@ -299,16 +237,13 @@ class ModifyChartTool extends AgentTool {
 
     // Parse and validate normalization mode if provided
     NormalizationModeConfig? normalizationMode;
-    final normalizationModeInput =
-        modifications['normalizationMode'] as String?;
+    final normalizationModeInput = modifications['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode =
-            NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
         return ToolResult(
-          output:
-              'Error: Invalid normalization mode "$normalizationModeInput". '
+          output: 'Error: Invalid normalization mode "$normalizationModeInput". '
               'Valid modes are: none, auto, perSeries.',
           isError: true,
         );
@@ -316,7 +251,7 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Start with the existing series
-    var updatedSeries = List<SeriesConfig>.from(existingChart.series);
+    var updatedSeries = List<SeriesConfig>.from(activeChart.series);
 
     // Handle series replacement (replaces all series)
     final seriesInput = modifications['series'] as List?;
@@ -328,8 +263,7 @@ class ModifyChartTool extends AgentTool {
     final removeSeries = modifications['removeSeries'] as List?;
     if (removeSeries != null) {
       final idsToRemove = removeSeries.cast<String>().toSet();
-      updatedSeries =
-          updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
+      updatedSeries = updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
     }
 
     // Handle addSeries (add new series)
@@ -352,30 +286,22 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Build modified chart configuration using copyWith
-    final modifiedChart = existingChart.copyWith(
-      type: chartType ?? existingChart.type,
-      title: modifications.containsKey('title')
-          ? modifications['title'] as String?
-          : existingChart.title,
-      subtitle: modifications.containsKey('subtitle')
-          ? modifications['subtitle'] as String?
-          : existingChart.subtitle,
+    final modifiedChart = activeChart.copyWith(
+      type: chartType ?? activeChart.type,
+      title: modifications.containsKey('title') ? modifications['title'] as String? : activeChart.title,
+      subtitle: modifications.containsKey('subtitle') ? modifications['subtitle'] as String? : activeChart.subtitle,
       series: updatedSeries,
-      showGrid: modifications['showGrid'] as bool? ?? existingChart.showGrid,
-      showLegend:
-          modifications['showLegend'] as bool? ?? existingChart.showLegend,
-      legendPosition: legendPosition ?? existingChart.legendPosition,
-      useDarkTheme:
-          modifications['useDarkTheme'] as bool? ?? existingChart.useDarkTheme,
-      normalizationMode: normalizationMode ?? existingChart.normalizationMode,
+      showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
+      showLegend: modifications['showLegend'] as bool? ?? activeChart.showLegend,
+      legendPosition: legendPosition ?? activeChart.legendPosition,
+      useDarkTheme: modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
+      normalizationMode: normalizationMode ?? activeChart.normalizationMode,
     );
 
-    // Update the registry with the modified chart
-    registerChart(modifiedChart);
-
-    // Return success result with JSON output and ChartConfiguration data
+    // Return success result with ChartConfiguration data
     return ToolResult(
-      output: jsonEncode(modifiedChart.toJson()),
+      output: 'Chart modified successfully.',
+      isError: false,
       data: modifiedChart,
     );
   }
@@ -383,8 +309,7 @@ class ModifyChartTool extends AgentTool {
   /// Parses a list of series input into [SeriesConfig] objects.
   ///
   /// [startColorIndex] is used to assign default colors starting from that index.
-  List<SeriesConfig> _parseSeries(
-      List<dynamic> seriesInput, int startColorIndex) {
+  List<SeriesConfig> _parseSeries(List<dynamic> seriesInput, int startColorIndex) {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
       final seriesMap = seriesInput[i] as Map<String, dynamic>;
@@ -398,8 +323,7 @@ class ModifyChartTool extends AgentTool {
       }).toList();
 
       // Assign default color if not provided
-      final color = seriesMap['color'] as String? ??
-          _defaultColors[(startColorIndex + i) % _defaultColors.length];
+      final color = seriesMap['color'] as String? ?? _defaultColors[(startColorIndex + i) % _defaultColors.length];
 
       series.add(SeriesConfig(
         id: seriesMap['id'] as String,

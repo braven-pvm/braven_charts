@@ -5,25 +5,28 @@ import 'package:braven_agent/src/models/series_config.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Helper to create test charts on demand
+final Map<String, ChartConfiguration> _chartRegistry = {};
+
 void main() {
   // ============================================================
   // ModifyChartTool Tests
   // ============================================================
   group('ModifyChartTool', () {
     late ModifyChartTool tool;
+    late ChartConfiguration currentChart;
 
     setUp(() {
       // Clear registry before each test for isolation
-      ModifyChartTool.clear();
-      tool = ModifyChartTool();
+      _chartRegistry.clear();
 
-      // Register standard test charts
-      _registerTestCharts();
-    });
+      // Set default current chart
+      currentChart = _createDefaultChart();
 
-    tearDown(() {
-      // Clean up registry after each test
-      ModifyChartTool.clear();
+      // Create tool with callback that returns current chart
+      tool = ModifyChartTool(
+        getActiveChart: () => currentChart,
+      );
     });
 
     // ==========================================================
@@ -64,48 +67,26 @@ void main() {
         expect(tool.inputSchema['required'], isA<List>());
       });
 
-      test('required includes "chart_id"', () {
-        final required = tool.inputSchema['required'] as List;
-        expect(required, contains('chart_id'));
-      });
-
       test('required includes "modifications"', () {
         final required = tool.inputSchema['required'] as List;
         expect(required, contains('modifications'));
       });
 
       group('properties content', () {
-        test('has chart_id property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          expect(properties, contains('chart_id'));
-          expect(properties['chart_id']['type'], equals('string'));
-        });
-
-        test('chart_id has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          expect(properties['chart_id']['description'], isNotEmpty);
-        });
-
         test('has modifications property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications =
-              properties['modifications'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications = properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -113,10 +94,8 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties =
-                tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications =
-                properties['modifications'] as Map<String, dynamic>;
+            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications = properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
@@ -252,68 +231,38 @@ void main() {
     // Execute Method Tests
     // ==========================================================
     group('execute', () {
-      group('with missing chart_id', () {
-        test('returns error result', () async {
-          final result = await tool.execute({
-            'modifications': {
-              'title': 'New Title',
-            },
-          });
-
-          expect(result.isError, isTrue);
-        });
-
-        test('error output mentions chart_id', () async {
-          final result = await tool.execute({
-            'modifications': {
-              'title': 'New Title',
-            },
-          });
-
-          expect(result.output.toLowerCase(), contains('chart_id'));
-        });
-
-        test('data is null on error', () async {
-          final result = await tool.execute({
-            'modifications': {
-              'title': 'New Title',
-            },
-          });
-
-          expect(result.data, isNull);
-        });
-      });
-
       group('with missing modifications', () {
         test('returns error result', () async {
-          final result = await tool.execute({
-            'chart_id': 'existing-chart-id',
-          });
+          final result = await tool.execute({});
 
           expect(result.isError, isTrue);
         });
 
         test('error output mentions modifications', () async {
-          final result = await tool.execute({
-            'chart_id': 'existing-chart-id',
-          });
+          final result = await tool.execute({});
 
           expect(result.output.toLowerCase(), contains('modifications'));
         });
 
         test('data is null on error', () async {
-          final result = await tool.execute({
-            'chart_id': 'existing-chart-id',
-          });
+          final result = await tool.execute({});
 
           expect(result.data, isNull);
         });
       });
 
-      group('with non-existent chart', () {
-        test('returns error result for unknown chart_id', () async {
-          final result = await tool.execute({
-            'chart_id': 'non-existent-chart-id',
+      group('with no active chart (callback returns null)', () {
+        late ModifyChartTool toolWithoutChart;
+
+        setUp(() {
+          // Create tool with callback that returns null
+          toolWithoutChart = ModifyChartTool(
+            getActiveChart: () => null,
+          );
+        });
+
+        test('returns error result', () async {
+          final result = await toolWithoutChart.execute({
             'modifications': {
               'title': 'New Title',
             },
@@ -322,26 +271,22 @@ void main() {
           expect(result.isError, isTrue);
         });
 
-        test('error output indicates chart not found', () async {
-          final result = await tool.execute({
-            'chart_id': 'non-existent-chart-id',
+        test('error output indicates no active chart', () async {
+          final result = await toolWithoutChart.execute({
             'modifications': {
               'title': 'New Title',
             },
           });
 
           expect(
-            result.output.toLowerCase().contains('not found') ||
-                result.output.toLowerCase().contains('does not exist') ||
-                result.output.toLowerCase().contains('unknown'),
+            result.output.toLowerCase().contains('no active chart') || result.output.toLowerCase().contains('create_chart'),
             isTrue,
-            reason: 'Error message should indicate chart was not found',
+            reason: 'Error message should indicate no active chart and suggest create_chart',
           );
         });
 
-        test('data is null when chart not found', () async {
-          final result = await tool.execute({
-            'chart_id': 'non-existent-chart-id',
+        test('data is null when no active chart', () async {
+          final result = await toolWithoutChart.execute({
             'modifications': {
               'title': 'New Title',
             },
@@ -352,15 +297,11 @@ void main() {
       });
 
       group('with valid input', () {
-        // NOTE: These tests require a chart registry to be set up.
-        // For the stub, we assume there's a way to register charts
-        // before testing modifications. The green-phase implementation
-        // will inject or configure the registry.
+        // NOTE: These tests use the callback pattern.
+        // The tool queries currentChart during execute().
 
         test('returns ToolResult', () async {
-          // This test will fail with UnimplementedError in red phase
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'Updated Title',
             },
@@ -371,7 +312,6 @@ void main() {
 
         test('returns successful result with isError=false', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'Updated Title',
             },
@@ -382,7 +322,6 @@ void main() {
 
         test('returns ChartConfiguration in data field', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'Updated Title',
             },
@@ -393,7 +332,6 @@ void main() {
 
         test('returns non-empty output string', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'Updated Title',
             },
@@ -402,22 +340,20 @@ void main() {
           expect(result.output, isNotEmpty);
         });
 
-        test('output contains JSON representation', () async {
+        test('output contains success message', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'bar',
             },
           });
 
-          expect(result.output, contains('bar'));
+          expect(result.output.toLowerCase(), contains('successfully'));
         });
       });
 
       group('modifying chart type', () {
         test('can change chart type from line to bar', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'bar',
             },
@@ -429,7 +365,6 @@ void main() {
 
         test('can change chart type from line to area', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'area',
             },
@@ -441,7 +376,6 @@ void main() {
 
         test('can change chart type from line to scatter', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'scatter',
             },
@@ -453,7 +387,6 @@ void main() {
 
         test('returns error for invalid type value', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'pie',
             },
@@ -467,7 +400,6 @@ void main() {
       group('modifying title and subtitle', () {
         test('can update title', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'New Chart Title',
             },
@@ -479,7 +411,6 @@ void main() {
 
         test('can update subtitle', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'subtitle': 'New Chart Subtitle',
             },
@@ -491,7 +422,6 @@ void main() {
 
         test('can update both title and subtitle', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': 'Updated Title',
               'subtitle': 'Updated Subtitle',
@@ -505,7 +435,6 @@ void main() {
 
         test('can set title to empty string', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'title': '',
             },
@@ -519,7 +448,6 @@ void main() {
       group('adding series', () {
         test('can add a single series to existing chart', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -545,7 +473,6 @@ void main() {
 
         test('can add multiple series at once', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -577,7 +504,6 @@ void main() {
 
         test('added series has correct data points', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -593,8 +519,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -604,7 +529,6 @@ void main() {
 
         test('added series preserves name when provided', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -619,14 +543,12 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
         test('added series preserves color when provided', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -641,8 +563,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -650,7 +571,6 @@ void main() {
       group('removing series', () {
         test('can remove a series by id', () async {
           final result = await tool.execute({
-            'chart_id': 'chart-with-two-series',
             'modifications': {
               'removeSeries': ['series_to_remove'],
             },
@@ -666,7 +586,6 @@ void main() {
 
         test('can remove multiple series at once', () async {
           final result = await tool.execute({
-            'chart_id': 'chart-with-multiple-series',
             'modifications': {
               'removeSeries': ['series_a', 'series_b'],
             },
@@ -686,7 +605,6 @@ void main() {
         test('removing non-existent series does not error', () async {
           // Tool should gracefully handle removing a series that doesn't exist
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'removeSeries': ['non_existent_series'],
             },
@@ -698,7 +616,6 @@ void main() {
 
         test('can add and remove series in same modification', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'addSeries': [
                 {
@@ -727,7 +644,6 @@ void main() {
       group('updating series data', () {
         test('can update data points for existing series', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'updateSeries': {
                 'existing_series': {
@@ -741,15 +657,13 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
 
         test('can update series name', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'updateSeries': {
                 'existing_series': {
@@ -760,14 +674,12 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
         test('can update series color', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'updateSeries': {
                 'existing_series': {
@@ -778,8 +690,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });
@@ -787,7 +698,6 @@ void main() {
       group('preserving unmodified properties', () {
         test('modifying title preserves series', () async {
           final result = await tool.execute({
-            'chart_id': 'chart-with-series',
             'modifications': {
               'title': 'New Title Only',
             },
@@ -800,7 +710,6 @@ void main() {
 
         test('modifying title preserves chart type', () async {
           final result = await tool.execute({
-            'chart_id': 'line-chart',
             'modifications': {
               'title': 'New Title Only',
             },
@@ -813,7 +722,6 @@ void main() {
 
         test('modifying type preserves title', () async {
           final result = await tool.execute({
-            'chart_id': 'chart-with-title',
             'modifications': {
               'type': 'bar',
             },
@@ -826,7 +734,6 @@ void main() {
 
         test('modifying showGrid preserves other options', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'showGrid': false,
             },
@@ -840,7 +747,6 @@ void main() {
 
         test('adding series preserves existing series', () async {
           final result = await tool.execute({
-            'chart_id': 'chart-with-one-series',
             'modifications': {
               'addSeries': [
                 {
@@ -862,7 +768,6 @@ void main() {
       group('modifying display options', () {
         test('can toggle showGrid to false', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'showGrid': false,
             },
@@ -874,7 +779,6 @@ void main() {
 
         test('can toggle showLegend to false', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'showLegend': false,
             },
@@ -886,7 +790,6 @@ void main() {
 
         test('can change legendPosition', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'legendPosition': 'right',
             },
@@ -898,7 +801,6 @@ void main() {
 
         test('can toggle useDarkTheme', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'useDarkTheme': true,
             },
@@ -910,7 +812,6 @@ void main() {
 
         test('can change normalizationMode', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'normalizationMode': 'perSeries',
             },
@@ -925,7 +826,6 @@ void main() {
 
         test('returns error for invalid legendPosition', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'legendPosition': 'invalid_position',
             },
@@ -936,7 +836,6 @@ void main() {
 
         test('returns error for invalid normalizationMode', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'normalizationMode': 'invalid_mode',
             },
@@ -949,7 +848,6 @@ void main() {
       group('multiple modifications at once', () {
         test('can modify type, title, and add series together', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'type': 'area',
               'title': 'Multi-Modification Chart',
@@ -972,7 +870,6 @@ void main() {
 
         test('can modify all display options at once', () async {
           final result = await tool.execute({
-            'chart_id': 'test-chart-123',
             'modifications': {
               'showGrid': false,
               'showLegend': false,
@@ -1001,7 +898,6 @@ void main() {
     group('ChartConfiguration output', () {
       test('output is properly formatted JSON', () async {
         final result = await tool.execute({
-          'chart_id': 'test-chart-123',
           'modifications': {
             'title': 'Test Chart',
           },
@@ -1014,7 +910,6 @@ void main() {
 
       test('output contains modified chart type', () async {
         final result = await tool.execute({
-          'chart_id': 'test-chart-123',
           'modifications': {
             'type': 'area',
           },
@@ -1025,7 +920,6 @@ void main() {
 
       test('output contains chart id', () async {
         final result = await tool.execute({
-          'chart_id': 'test-chart-123',
           'modifications': {
             'title': 'Test',
           },
@@ -1038,7 +932,6 @@ void main() {
 
       test('modified ChartConfiguration has all required fields', () async {
         final result = await tool.execute({
-          'chart_id': 'test-chart-123',
           'modifications': {
             'title': 'Complete Chart',
             'type': 'bar',
@@ -1054,140 +947,73 @@ void main() {
   });
 }
 
-/// Registers standard test charts used by the test suite.
-///
-/// These charts provide consistent starting configurations for
-/// testing various modification scenarios.
-void _registerTestCharts() {
-  // Standard test chart with one series
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'test-chart-123',
-      type: ChartType.line,
-      title: 'Original Title',
-      subtitle: 'Original Subtitle',
-      series: [
-        SeriesConfig(
-          id: 'existing_series',
-          name: 'Existing Series',
-          data: [
-            DataPoint(x: 0, y: 10),
-            DataPoint(x: 1, y: 20),
-          ],
-          color: '#2196F3',
-        ),
-        SeriesConfig(
-          id: 'old_series',
-          name: 'Old Series',
-          data: [
-            DataPoint(x: 0, y: 5),
-          ],
-          color: '#4CAF50',
-        ),
-      ],
-      showGrid: true,
-      showLegend: true,
-      legendPosition: LegendPosition.bottom,
-      useDarkTheme: false,
-      normalizationMode: NormalizationModeConfig.none,
-    ),
-  );
-
-  // Chart with two series for removal tests
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'chart-with-two-series',
-      type: ChartType.line,
-      series: [
-        SeriesConfig(
-          id: 'series_to_keep',
-          data: [DataPoint(x: 0, y: 10)],
-        ),
-        SeriesConfig(
-          id: 'series_to_remove',
-          data: [DataPoint(x: 0, y: 20)],
-        ),
-      ],
-    ),
-  );
-
-  // Chart with multiple series
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'chart-with-multiple-series',
-      type: ChartType.line,
-      series: [
-        SeriesConfig(
-          id: 'series_a',
-          data: [DataPoint(x: 0, y: 10)],
-        ),
-        SeriesConfig(
-          id: 'series_b',
-          data: [DataPoint(x: 0, y: 20)],
-        ),
-        SeriesConfig(
-          id: 'series_c',
-          data: [DataPoint(x: 0, y: 30)],
-        ),
-      ],
-    ),
-  );
-
-  // Chart with series for preserving tests
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'chart-with-series',
-      type: ChartType.line,
-      series: [
-        SeriesConfig(
-          id: 'preserved_series',
-          data: [DataPoint(x: 0, y: 100)],
-        ),
-      ],
-    ),
-  );
-
-  // Line chart for type preservation tests
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'line-chart',
-      type: ChartType.line,
-      title: 'Line Chart Title',
-      series: [
-        SeriesConfig(
-          id: 'line_series',
-          data: [DataPoint(x: 0, y: 10)],
-        ),
-      ],
-    ),
-  );
-
-  // Chart with title for title preservation tests
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'chart-with-title',
-      type: ChartType.line,
-      title: 'Original Chart Title',
-      series: [
-        SeriesConfig(
-          id: 'titled_series',
-          data: [DataPoint(x: 0, y: 10)],
-        ),
-      ],
-    ),
-  );
-
-  // Chart with one series for adding tests
-  ModifyChartTool.registerChart(
-    const ChartConfiguration(
-      id: 'chart-with-one-series',
-      type: ChartType.line,
-      series: [
-        SeriesConfig(
-          id: 'original_series',
-          data: [DataPoint(x: 0, y: 50)],
-        ),
-      ],
-    ),
+/// Creates a default chart configuration for testing.
+ChartConfiguration _createDefaultChart() {
+  return const ChartConfiguration(
+    id: 'test-chart-123',
+    type: ChartType.line,
+    title: 'Original Title',
+    subtitle: 'Original Subtitle',
+    series: [
+      SeriesConfig(
+        id: 'existing_series',
+        name: 'Existing Series',
+        data: [
+          DataPoint(x: 0, y: 10),
+          DataPoint(x: 1, y: 20),
+        ],
+        color: '#2196F3',
+      ),
+      SeriesConfig(
+        id: 'old_series',
+        name: 'Old Series',
+        data: [
+          DataPoint(x: 0, y: 5),
+        ],
+        color: '#4CAF50',
+      ),
+      // Additional series for removal/update tests
+      SeriesConfig(
+        id: 'series_to_remove',
+        data: [DataPoint(x: 0, y: 20)],
+      ),
+      SeriesConfig(
+        id: 'series_to_keep',
+        data: [DataPoint(x: 0, y: 10)],
+      ),
+      SeriesConfig(
+        id: 'series_a',
+        data: [DataPoint(x: 0, y: 10)],
+      ),
+      SeriesConfig(
+        id: 'series_b',
+        data: [DataPoint(x: 0, y: 20)],
+      ),
+      SeriesConfig(
+        id: 'series_c',
+        data: [DataPoint(x: 0, y: 30)],
+      ),
+      SeriesConfig(
+        id: 'preserved_series',
+        data: [DataPoint(x: 0, y: 100)],
+      ),
+      SeriesConfig(
+        id: 'line_series',
+        data: [DataPoint(x: 0, y: 10)],
+      ),
+      SeriesConfig(
+        id: 'titled_series',
+        data: [DataPoint(x: 0, y: 10)],
+      ),
+      SeriesConfig(
+        id: 'original_series',
+        data: [DataPoint(x: 0, y: 50)],
+      ),
+    ],
+    showGrid: true,
+    showLegend: true,
+    legendPosition: LegendPosition.bottom,
+    useDarkTheme: false,
+    normalizationMode: NormalizationModeConfig.none,
   );
 }
