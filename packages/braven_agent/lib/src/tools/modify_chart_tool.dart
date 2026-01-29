@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import '../models/chart_configuration.dart';
 import '../models/data_point.dart';
 import '../models/enums.dart';
@@ -50,6 +48,18 @@ import 'tool_result.dart';
 /// - `data`: [ChartConfiguration] object with applied modifications
 /// - `isError`: true if no active chart exists or input validation fails
 class ModifyChartTool extends AgentTool {
+  /// Default color palette for series that don't specify their own color.
+  static const List<String> _defaultColors = [
+    '#2196F3', // Blue
+    '#4CAF50', // Green
+    '#FF9800', // Orange
+    '#E91E63', // Pink
+    '#9C27B0', // Purple
+    '#00BCD4', // Cyan
+    '#FF5722', // Deep Orange
+    '#607D8B', // Blue Grey
+  ];
+
   /// Callback function that returns the currently active chart.
   ///
   /// The session provides this function at construction time. The tool
@@ -61,12 +71,14 @@ class ModifyChartTool extends AgentTool {
   ///
   /// [getActiveChart] is a required callback that the tool uses to retrieve
   /// the current active chart at execution time.
-  ModifyChartTool({required ChartConfiguration? Function() getActiveChart}) : _getActiveChart = getActiveChart;
+  ModifyChartTool({required ChartConfiguration? Function() getActiveChart})
+      : _getActiveChart = getActiveChart;
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description => 'Modifies the currently active chart by applying partial updates. '
+  String get description =>
+      'Modifies the currently active chart by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove series, '
       'or adjust styling options. Requires an active chart created previously.';
 
@@ -144,7 +156,8 @@ class ModifyChartTool extends AgentTool {
               },
               'updateSeries': {
                 'type': 'object',
-                'description': 'Map of series ID to partial update (e.g., new data points)',
+                'description':
+                    'Map of series ID to partial update (e.g., new data points)',
               },
               'showGrid': {
                 'type': 'boolean',
@@ -166,7 +179,8 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description': 'Position of the legend relative to the chart area',
+                'description':
+                    'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
@@ -237,13 +251,16 @@ class ModifyChartTool extends AgentTool {
 
     // Parse and validate normalization mode if provided
     NormalizationModeConfig? normalizationMode;
-    final normalizationModeInput = modifications['normalizationMode'] as String?;
+    final normalizationModeInput =
+        modifications['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode =
+            NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
         return ToolResult(
-          output: 'Error: Invalid normalization mode "$normalizationModeInput". '
+          output:
+              'Error: Invalid normalization mode "$normalizationModeInput". '
               'Valid modes are: none, auto, perSeries.',
           isError: true,
         );
@@ -263,7 +280,8 @@ class ModifyChartTool extends AgentTool {
     final removeSeries = modifications['removeSeries'] as List?;
     if (removeSeries != null) {
       final idsToRemove = removeSeries.cast<String>().toSet();
-      updatedSeries = updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
+      updatedSeries =
+          updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
     }
 
     // Handle addSeries (add new series)
@@ -288,13 +306,19 @@ class ModifyChartTool extends AgentTool {
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
       type: chartType ?? activeChart.type,
-      title: modifications.containsKey('title') ? modifications['title'] as String? : activeChart.title,
-      subtitle: modifications.containsKey('subtitle') ? modifications['subtitle'] as String? : activeChart.subtitle,
+      title: modifications.containsKey('title')
+          ? modifications['title'] as String?
+          : activeChart.title,
+      subtitle: modifications.containsKey('subtitle')
+          ? modifications['subtitle'] as String?
+          : activeChart.subtitle,
       series: updatedSeries,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
-      showLegend: modifications['showLegend'] as bool? ?? activeChart.showLegend,
+      showLegend:
+          modifications['showLegend'] as bool? ?? activeChart.showLegend,
       legendPosition: legendPosition ?? activeChart.legendPosition,
-      useDarkTheme: modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
+      useDarkTheme:
+          modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
       normalizationMode: normalizationMode ?? activeChart.normalizationMode,
     );
 
@@ -309,7 +333,8 @@ class ModifyChartTool extends AgentTool {
   /// Parses a list of series input into [SeriesConfig] objects.
   ///
   /// [startColorIndex] is used to assign default colors starting from that index.
-  List<SeriesConfig> _parseSeries(List<dynamic> seriesInput, int startColorIndex) {
+  List<SeriesConfig> _parseSeries(
+      List<dynamic> seriesInput, int startColorIndex) {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
       final seriesMap = seriesInput[i] as Map<String, dynamic>;
@@ -323,7 +348,8 @@ class ModifyChartTool extends AgentTool {
       }).toList();
 
       // Assign default color if not provided
-      final color = seriesMap['color'] as String? ?? _defaultColors[(startColorIndex + i) % _defaultColors.length];
+      final color = seriesMap['color'] as String? ??
+          _defaultColors[(startColorIndex + i) % _defaultColors.length];
 
       series.add(SeriesConfig(
         id: seriesMap['id'] as String,
