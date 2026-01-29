@@ -57,9 +57,14 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       model: 'claude-sonnet-4-20250514',
     );
     final llmProvider = AnthropicAdapter(config);
-    final session = AgentSessionImpl(
+    // Create session first, then pass getActiveChart callback to ModifyChartTool
+    late final AgentSessionImpl session;
+    session = AgentSessionImpl(
       llmProvider: llmProvider,
-      tools: [CreateChartTool(), ModifyChartTool()],
+      tools: [
+        CreateChartTool(),
+        ModifyChartTool(getActiveChart: () => session.state.value.activeChart),
+      ],
       systemPrompt: defaultSystemPrompt,
     );
     setState(() {
@@ -408,9 +413,9 @@ class _ThinkingBubble extends StatelessWidget {
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             SizedBox(
               width: 16,
               height: 16,
