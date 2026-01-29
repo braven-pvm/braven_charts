@@ -317,13 +317,45 @@ PENDING → PREPARE → IMPLEMENT → VERIFY → COMPLETE
 
 When preparing a handover with `prepare_task`:
 
-1. **Check amendment history** - Call `get_amendments` to learn from past verification failures
-2. **Analyze the task** - Call `get_task` first to understand requirements
-3. **Define acceptance criteria** - Clear, measurable outcomes
-4. **Specify file operations** - What files to CREATE, UPDATE, DELETE
-5. **List deliverables** - Explicit list of what must be produced
-6. **Provide context** - Background and architectural decisions
-7. **Set priority** - P0 (Critical) through P3 (Low)
+1. **READ THE SPECIFICATION** - Call `read_file` to read the actual spec for this task
+2. **Check amendment history** - Call `get_amendments` to learn from past verification failures
+3. **Analyze the task** - Call `get_task` to see the task summary and spec_task_refs
+4. **Define acceptance criteria** - Clear, measurable outcomes **derived from the spec**
+5. **Specify file operations** - What files to CREATE, UPDATE, DELETE
+6. **List deliverables** - Explicit list of what must be produced
+7. **Provide context** - Background and architectural decisions
+8. **Provide spec_consultation_notes** - **REQUIRED**: Document which spec sections you read
+9. **Set priority** - P0 (Critical) through P3 (Low)
+
+### ⚠️ CRITICAL: Spec-First Handover Enforcement (TD-032)
+
+**YOU MUST READ THE SPECIFICATION BEFORE PREPARING ANY HANDOVER.**
+
+The task `summary` field is **reference-only** (max 150 characters). It exists to help you find the right specification sections, NOT to provide requirements.
+
+**Anti-Patterns (DO NOT DO):**
+
+- ❌ Using task summary as the source for acceptance criteria
+- ❌ Preparing handover without reading spec files
+- ❌ Copying requirements from task summary into handover
+- ❌ Providing empty or vague spec_consultation_notes
+
+**Required Workflow:**
+
+1. **Get task details** → See `spec_task_refs` array (e.g., `["specs/001/tasks.md#T001"]`)
+2. **Read the spec** → Call `read_file` on the spec path with the referenced task IDs
+3. **Extract requirements** → Document what the spec requires
+4. **Write handover** → Derive acceptance criteria FROM THE SPEC
+5. **Document evidence** → `spec_consultation_notes` must show:
+   - Which spec sections you consulted
+   - Specific requirements you extracted
+   - How acceptance criteria trace to spec
+
+**Example spec_consultation_notes (min 200 chars):**
+
+```
+Consulted specs/004-controller-agent/tasks.md section T035. The spec requires: (1) Controller can retrieve task details without verification criteria, (2) Must return phase info, dependencies, and spec_task_refs, (3) Must NOT expose hidden verification. Acceptance criteria AC-1 through AC-3 directly implement these three requirements.
+```
 
 ### ⚠️ MANDATORY: Check Amendment History Before Preparing Tasks
 
