@@ -15,6 +15,10 @@ dependencies:
   braven_charts:
     path: ../
 
+  # Braven agent package for demo integration
+  braven_agent:
+    path: ../packages/braven_agent
+
   # braven_data for FIT ingestion and analysis
   braven_data:
     git:
