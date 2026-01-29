@@ -107,34 +107,17 @@
 /// ```
 library braven_agent;
 
-export 'src/llm/llm_config.dart';
-export 'src/llm/llm_response.dart';
-export 'src/llm/models/agent_message.dart';
-// LLM Layer - Message Models and Config
-export 'src/llm/models/message_content.dart';
-export 'src/session/agent_events.dart';
-// Models - to be exported when implemented
-// export 'src/models/chart_configuration.dart';
-// export 'src/models/series_config.dart';
-// export 'src/models/axis_config.dart';
-// export 'src/models/annotation_config.dart';
-// export 'src/models/chart_style_config.dart';
+// Models Layer - ChartConfiguration, SeriesConfig, DataPoint, AxisConfig,
+// AnnotationConfig, ChartStyleConfig, and enums
+export 'src/models/models.dart';
 
-// Renderer - to be exported when implemented
-// export 'src/renderer/chart_renderer.dart';
+// LLM Layer - LLMProvider, LLMRegistry, LLMConfig, LLMResponse,
+// MessageContent, AgentMessage, AnthropicAdapter
+export 'src/llm/llm.dart';
 
-// Session - to be exported when implemented
-// export 'src/session/agent_session.dart';
-export 'src/session/session_state.dart';
+// Session Layer - AgentSession, AgentSessionImpl, SessionState,
+// AgentEvent hierarchy, defaultSystemPrompt
+export 'src/session/session.dart';
 
-// LLM Layer - to be exported when implemented
-// export 'src/llm/llm_provider.dart';
-// export 'src/llm/llm_registry.dart';
-
-// Tools - to be exported when implemented
-// export 'src/tools/agent_tool.dart';
-// export 'src/tools/create_chart_tool.dart';
-// export 'src/tools/modify_chart_tool.dart';
-
-// Constants - to be exported when implemented
-// export 'src/session/default_system_prompt.dart';
+// Tools Layer - AgentTool, ToolResult, CreateChartTool
+export 'src/tools/tools.dart';
