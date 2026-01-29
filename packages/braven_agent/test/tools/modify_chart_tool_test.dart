@@ -68,36 +68,30 @@ void main() {
 
       group('properties content', () {
         test('has chart_id property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('chart_id'));
           expect(properties['chart_id']['type'], equals('string'));
         });
 
         test('chart_id has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['chart_id']['description'], isNotEmpty);
         });
 
         test('has modifications property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications =
-              properties['modifications'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications = properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -105,10 +99,8 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties =
-                tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications =
-                properties['modifications'] as Map<String, dynamic>;
+            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications = properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
@@ -585,8 +577,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -611,8 +602,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
@@ -633,8 +623,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -733,8 +722,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
@@ -752,8 +740,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
@@ -770,8 +757,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });

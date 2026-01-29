@@ -52,8 +52,7 @@ class ModifyChartTool extends AgentTool {
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      'Modifies an existing chart configuration by applying partial updates. '
+  String get description => 'Modifies an existing chart configuration by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove series, '
       'or adjust styling options on a previously created chart.';
 
@@ -135,8 +134,7 @@ class ModifyChartTool extends AgentTool {
               },
               'updateSeries': {
                 'type': 'object',
-                'description':
-                    'Map of series ID to partial update (e.g., new data points)',
+                'description': 'Map of series ID to partial update (e.g., new data points)',
               },
               'showGrid': {
                 'type': 'boolean',
@@ -158,8 +156,7 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description':
-                    'Position of the legend relative to the chart area',
+                'description': 'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
