@@ -1,3 +1,9 @@
+import 'dart:convert';
+
+import '../models/chart_configuration.dart';
+import '../models/data_point.dart';
+import '../models/enums.dart';
+import '../models/series_config.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
@@ -41,6 +47,12 @@ import 'tool_result.dart';
 /// - Toggle showGrid, showLegend
 /// - Change legendPosition, useDarkTheme, normalizationMode
 ///
+/// ## Chart Registry
+///
+/// Charts must be registered with [registerChart] before they can be modified.
+/// Use [getChart] to retrieve a chart by ID, and [unregisterChart] to remove it.
+/// Call [clear] to remove all charts (useful for test isolation).
+///
 /// ## Output
 ///
 /// Returns a [ToolResult] with:
@@ -48,11 +60,60 @@ import 'tool_result.dart';
 /// - `data`: [ChartConfiguration] object with applied modifications
 /// - `isError`: true if chart_id doesn't exist or input validation fails
 class ModifyChartTool extends AgentTool {
+  /// Static registry of charts by ID.
+  ///
+  /// Charts must be registered before they can be modified.
+  static final Map<String, ChartConfiguration> _registry = {};
+
+  /// Registers a chart in the static registry.
+  ///
+  /// The chart must have a non-null [ChartConfiguration.id].
+  /// If a chart with the same ID exists, it will be replaced.
+  static void registerChart(ChartConfiguration chart) {
+    if (chart.id == null) {
+      throw ArgumentError('Chart must have a non-null id to be registered');
+    }
+    _registry[chart.id!] = chart;
+  }
+
+  /// Retrieves a chart from the registry by ID.
+  ///
+  /// Returns `null` if no chart with the given ID is registered.
+  static ChartConfiguration? getChart(String chartId) {
+    return _registry[chartId];
+  }
+
+  /// Removes a chart from the registry.
+  ///
+  /// No-op if the chart doesn't exist.
+  static void unregisterChart(String chartId) {
+    _registry.remove(chartId);
+  }
+
+  /// Clears all charts from the registry.
+  ///
+  /// Useful for test isolation between test cases.
+  static void clear() {
+    _registry.clear();
+  }
+
+  /// Default color palette for series that don't specify their own color.
+  static const List<String> _defaultColors = [
+    '#2196F3', // Blue
+    '#4CAF50', // Green
+    '#FF9800', // Orange
+    '#E91E63', // Pink
+    '#9C27B0', // Purple
+    '#00BCD4', // Cyan
+    '#FF5722', // Deep Orange
+    '#607D8B', // Blue Grey
+  ];
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description => 'Modifies an existing chart configuration by applying partial updates. '
+  String get description =>
+      'Modifies an existing chart configuration by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove series, '
       'or adjust styling options on a previously created chart.';
 
@@ -134,7 +195,8 @@ class ModifyChartTool extends AgentTool {
               },
               'updateSeries': {
                 'type': 'object',
-                'description': 'Map of series ID to partial update (e.g., new data points)',
+                'description':
+                    'Map of series ID to partial update (e.g., new data points)',
               },
               'showGrid': {
                 'type': 'boolean',
@@ -156,7 +218,8 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description': 'Position of the legend relative to the chart area',
+                'description':
+                    'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
@@ -175,14 +238,201 @@ class ModifyChartTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
-    // STUB: This is a companion stub for TDD red-phase tests.
-    // The green-phase implementation will:
-    // 1. Validate chart_id exists in chart registry
-    // 2. Apply modifications to existing chart configuration
-    // 3. Return updated ChartConfiguration
-    throw UnimplementedError(
-      'ModifyChartTool.execute() is not yet implemented. '
-      'This is a TDD red-phase stub.',
+    // Validate required fields
+    final chartId = input['chart_id'] as String?;
+    if (chartId == null || chartId.isEmpty) {
+      return const ToolResult(
+        output: 'Error: chart_id is required. Please provide the ID of the '
+            'chart you want to modify.',
+        isError: true,
+      );
+    }
+
+    final modifications = input['modifications'] as Map<String, dynamic>?;
+    if (modifications == null) {
+      return const ToolResult(
+        output: 'Error: modifications is required. Please provide an object '
+            'with the chart properties you want to change.',
+        isError: true,
+      );
+    }
+
+    // Look up chart in registry
+    final existingChart = getChart(chartId);
+    if (existingChart == null) {
+      return ToolResult(
+        output: 'Error: Chart with ID "$chartId" not found. '
+            'The chart may not exist or has not been registered.',
+        isError: true,
+      );
+    }
+
+    // Parse and validate chart type if provided
+    ChartType? chartType;
+    final typeInput = modifications['type'] as String?;
+    if (typeInput != null) {
+      try {
+        chartType = ChartType.values.byName(typeInput);
+      } catch (_) {
+        return ToolResult(
+          output: 'Error: Invalid chart type "$typeInput". '
+              'Valid types are: line, area, bar, scatter.',
+          isError: true,
+        );
+      }
+    }
+
+    // Parse and validate legend position if provided
+    LegendPosition? legendPosition;
+    final legendPositionInput = modifications['legendPosition'] as String?;
+    if (legendPositionInput != null) {
+      try {
+        legendPosition = LegendPosition.values.byName(legendPositionInput);
+      } catch (_) {
+        return ToolResult(
+          output: 'Error: Invalid legend position "$legendPositionInput". '
+              'Valid positions are: top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight.',
+          isError: true,
+        );
+      }
+    }
+
+    // Parse and validate normalization mode if provided
+    NormalizationModeConfig? normalizationMode;
+    final normalizationModeInput =
+        modifications['normalizationMode'] as String?;
+    if (normalizationModeInput != null) {
+      try {
+        normalizationMode =
+            NormalizationModeConfig.values.byName(normalizationModeInput);
+      } catch (_) {
+        return ToolResult(
+          output:
+              'Error: Invalid normalization mode "$normalizationModeInput". '
+              'Valid modes are: none, auto, perSeries.',
+          isError: true,
+        );
+      }
+    }
+
+    // Start with the existing series
+    var updatedSeries = List<SeriesConfig>.from(existingChart.series);
+
+    // Handle series replacement (replaces all series)
+    final seriesInput = modifications['series'] as List?;
+    if (seriesInput != null) {
+      updatedSeries = _parseSeries(seriesInput, 0);
+    }
+
+    // Handle removeSeries (remove series by ID)
+    final removeSeries = modifications['removeSeries'] as List?;
+    if (removeSeries != null) {
+      final idsToRemove = removeSeries.cast<String>().toSet();
+      updatedSeries =
+          updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
+    }
+
+    // Handle addSeries (add new series)
+    final addSeries = modifications['addSeries'] as List?;
+    if (addSeries != null) {
+      final newSeries = _parseSeries(addSeries, updatedSeries.length);
+      updatedSeries.addAll(newSeries);
+    }
+
+    // Handle updateSeries (update existing series)
+    final updateSeries = modifications['updateSeries'] as Map<String, dynamic>?;
+    if (updateSeries != null) {
+      updatedSeries = updatedSeries.map((series) {
+        final update = updateSeries[series.id] as Map<String, dynamic>?;
+        if (update != null) {
+          return _applySeriesUpdate(series, update);
+        }
+        return series;
+      }).toList();
+    }
+
+    // Build modified chart configuration using copyWith
+    final modifiedChart = existingChart.copyWith(
+      type: chartType ?? existingChart.type,
+      title: modifications.containsKey('title')
+          ? modifications['title'] as String?
+          : existingChart.title,
+      subtitle: modifications.containsKey('subtitle')
+          ? modifications['subtitle'] as String?
+          : existingChart.subtitle,
+      series: updatedSeries,
+      showGrid: modifications['showGrid'] as bool? ?? existingChart.showGrid,
+      showLegend:
+          modifications['showLegend'] as bool? ?? existingChart.showLegend,
+      legendPosition: legendPosition ?? existingChart.legendPosition,
+      useDarkTheme:
+          modifications['useDarkTheme'] as bool? ?? existingChart.useDarkTheme,
+      normalizationMode: normalizationMode ?? existingChart.normalizationMode,
+    );
+
+    // Update the registry with the modified chart
+    registerChart(modifiedChart);
+
+    // Return success result with JSON output and ChartConfiguration data
+    return ToolResult(
+      output: jsonEncode(modifiedChart.toJson()),
+      data: modifiedChart,
+    );
+  }
+
+  /// Parses a list of series input into [SeriesConfig] objects.
+  ///
+  /// [startColorIndex] is used to assign default colors starting from that index.
+  List<SeriesConfig> _parseSeries(
+      List<dynamic> seriesInput, int startColorIndex) {
+    final series = <SeriesConfig>[];
+    for (int i = 0; i < seriesInput.length; i++) {
+      final seriesMap = seriesInput[i] as Map<String, dynamic>;
+      final dataInput = seriesMap['data'] as List;
+      final dataPoints = dataInput.map((point) {
+        final pointMap = point as Map<String, dynamic>;
+        return DataPoint(
+          x: (pointMap['x'] as num).toDouble(),
+          y: (pointMap['y'] as num).toDouble(),
+        );
+      }).toList();
+
+      // Assign default color if not provided
+      final color = seriesMap['color'] as String? ??
+          _defaultColors[(startColorIndex + i) % _defaultColors.length];
+
+      series.add(SeriesConfig(
+        id: seriesMap['id'] as String,
+        name: seriesMap['name'] as String?,
+        data: dataPoints,
+        color: color,
+      ));
+    }
+    return series;
+  }
+
+  /// Applies a partial update to a series, returning a new [SeriesConfig].
+  SeriesConfig _applySeriesUpdate(
+    SeriesConfig series,
+    Map<String, dynamic> update,
+  ) {
+    // Parse updated data points if provided
+    List<DataPoint>? updatedData;
+    final dataInput = update['data'] as List?;
+    if (dataInput != null) {
+      updatedData = dataInput.map((point) {
+        final pointMap = point as Map<String, dynamic>;
+        return DataPoint(
+          x: (pointMap['x'] as num).toDouble(),
+          y: (pointMap['y'] as num).toDouble(),
+        );
+      }).toList();
+    }
+
+    return series.copyWith(
+      name: update['name'] as String? ?? series.name,
+      data: updatedData ?? series.data,
+      color: update['color'] as String? ?? series.color,
     );
   }
 }

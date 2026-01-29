@@ -1,9 +1,7 @@
-// @orchestra-task: 18
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/chart_configuration.dart';
+import 'package:braven_agent/src/models/data_point.dart';
 import 'package:braven_agent/src/models/enums.dart';
+import 'package:braven_agent/src/models/series_config.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,7 +13,17 @@ void main() {
     late ModifyChartTool tool;
 
     setUp(() {
+      // Clear registry before each test for isolation
+      ModifyChartTool.clear();
       tool = ModifyChartTool();
+
+      // Register standard test charts
+      _registerTestCharts();
+    });
+
+    tearDown(() {
+      // Clean up registry after each test
+      ModifyChartTool.clear();
     });
 
     // ==========================================================
@@ -68,30 +76,36 @@ void main() {
 
       group('properties content', () {
         test('has chart_id property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('chart_id'));
           expect(properties['chart_id']['type'], equals('string'));
         });
 
         test('chart_id has description', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['chart_id']['description'], isNotEmpty);
         });
 
         test('has modifications property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications = properties['modifications'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications =
+              properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -99,8 +113,10 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications = properties['modifications'] as Map<String, dynamic>;
+            final properties =
+                tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications =
+                properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
@@ -577,7 +593,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -602,7 +619,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
@@ -623,7 +641,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -722,7 +741,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
@@ -740,7 +760,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
@@ -757,7 +778,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });
@@ -1030,4 +1052,142 @@ void main() {
       });
     });
   });
+}
+
+/// Registers standard test charts used by the test suite.
+///
+/// These charts provide consistent starting configurations for
+/// testing various modification scenarios.
+void _registerTestCharts() {
+  // Standard test chart with one series
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'test-chart-123',
+      type: ChartType.line,
+      title: 'Original Title',
+      subtitle: 'Original Subtitle',
+      series: [
+        SeriesConfig(
+          id: 'existing_series',
+          name: 'Existing Series',
+          data: [
+            DataPoint(x: 0, y: 10),
+            DataPoint(x: 1, y: 20),
+          ],
+          color: '#2196F3',
+        ),
+        SeriesConfig(
+          id: 'old_series',
+          name: 'Old Series',
+          data: [
+            DataPoint(x: 0, y: 5),
+          ],
+          color: '#4CAF50',
+        ),
+      ],
+      showGrid: true,
+      showLegend: true,
+      legendPosition: LegendPosition.bottom,
+      useDarkTheme: false,
+      normalizationMode: NormalizationModeConfig.none,
+    ),
+  );
+
+  // Chart with two series for removal tests
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'chart-with-two-series',
+      type: ChartType.line,
+      series: [
+        SeriesConfig(
+          id: 'series_to_keep',
+          data: [DataPoint(x: 0, y: 10)],
+        ),
+        SeriesConfig(
+          id: 'series_to_remove',
+          data: [DataPoint(x: 0, y: 20)],
+        ),
+      ],
+    ),
+  );
+
+  // Chart with multiple series
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'chart-with-multiple-series',
+      type: ChartType.line,
+      series: [
+        SeriesConfig(
+          id: 'series_a',
+          data: [DataPoint(x: 0, y: 10)],
+        ),
+        SeriesConfig(
+          id: 'series_b',
+          data: [DataPoint(x: 0, y: 20)],
+        ),
+        SeriesConfig(
+          id: 'series_c',
+          data: [DataPoint(x: 0, y: 30)],
+        ),
+      ],
+    ),
+  );
+
+  // Chart with series for preserving tests
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'chart-with-series',
+      type: ChartType.line,
+      series: [
+        SeriesConfig(
+          id: 'preserved_series',
+          data: [DataPoint(x: 0, y: 100)],
+        ),
+      ],
+    ),
+  );
+
+  // Line chart for type preservation tests
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'line-chart',
+      type: ChartType.line,
+      title: 'Line Chart Title',
+      series: [
+        SeriesConfig(
+          id: 'line_series',
+          data: [DataPoint(x: 0, y: 10)],
+        ),
+      ],
+    ),
+  );
+
+  // Chart with title for title preservation tests
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'chart-with-title',
+      type: ChartType.line,
+      title: 'Original Chart Title',
+      series: [
+        SeriesConfig(
+          id: 'titled_series',
+          data: [DataPoint(x: 0, y: 10)],
+        ),
+      ],
+    ),
+  );
+
+  // Chart with one series for adding tests
+  ModifyChartTool.registerChart(
+    const ChartConfiguration(
+      id: 'chart-with-one-series',
+      type: ChartType.line,
+      series: [
+        SeriesConfig(
+          id: 'original_series',
+          data: [DataPoint(x: 0, y: 50)],
+        ),
+      ],
+    ),
+  );
 }
