@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 import '../models/chart_configuration.dart';
-import '../models/data_point.dart';
 import '../models/enums.dart';
 import '../models/series_config.dart';
 import 'agent_tool.dart';
@@ -59,8 +58,7 @@ class CreateChartTool extends AgentTool {
   String get name => 'create_chart';
 
   @override
-  String get description =>
-      'Creates a new chart configuration with the specified type, data series, and styling options. '
+  String get description => 'Creates a new chart configuration with the specified type, data series, and styling options. '
       'Use this tool to generate interactive charts from structured data.';
 
   @override
@@ -69,8 +67,7 @@ class CreateChartTool extends AgentTool {
         'properties': {
           'prompt': {
             'type': 'string',
-            'description':
-                'Natural language description of the chart to create',
+            'description': 'Natural language description of the chart to create',
           },
           'type': {
             'type': 'string',
@@ -123,100 +120,83 @@ class CreateChartTool extends AgentTool {
                 },
                 'yAxisId': {
                   'type': 'string',
-                  'description':
-                      'ID of the Y-axis this series should use (for multi-axis charts).',
+                  'description': 'ID of the Y-axis this series should use (for multi-axis charts).',
                 },
                 'unit': {
                   'type': 'string',
-                  'description':
-                      'Unit of measurement for this series (e.g., "W", "bpm").',
+                  'description': 'Unit of measurement for this series (e.g., "W", "bpm").',
                 },
                 'interpolation': {
                   'type': 'string',
                   'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-                  'description':
-                      'Line interpolation type. Defaults to "linear".',
+                  'description': 'Line interpolation type. Defaults to "linear".',
                 },
                 'strokeWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Width of the line stroke in pixels. Defaults to 2.0.',
+                  'description': 'Width of the line stroke in pixels. Defaults to 2.0.',
                 },
                 'tension': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
+                  'description': 'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
                 },
                 'showPoints': {
                   'type': 'boolean',
-                  'description':
-                      'Whether to show data point markers. Defaults to false.',
+                  'description': 'Whether to show data point markers. Defaults to false.',
                 },
                 'fillOpacity': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                  'description': 'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
                 },
                 'barWidthPercent': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Bar width as a percentage of available space (0.0 to 1.0). Defaults to 0.7.',
+                  'description': 'Bar width as a percentage of available space (0.0 to 1.0). Defaults to 0.7.',
                 },
                 'barWidthPixels': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Fixed bar width in pixels. Overrides barWidthPercent if specified.',
+                  'description': 'Fixed bar width in pixels. Overrides barWidthPercent if specified.',
                 },
                 'barMinWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Minimum bar width in pixels. Defaults to 4.0.',
+                  'description': 'Minimum bar width in pixels. Defaults to 4.0.',
                 },
                 'barMaxWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Maximum bar width in pixels. Defaults to 100.0.',
+                  'description': 'Maximum bar width in pixels. Defaults to 100.0.',
                 },
                 'yAxisPosition': {
                   'type': 'string',
                   'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                  'description':
-                      'Position of the Y-axis for this series in multi-axis charts.',
+                  'description': 'Position of the Y-axis for this series in multi-axis charts.',
                 },
                 'yAxisLabel': {
                   'type': 'string',
-                  'description':
-                      'Label for the Y-axis associated with this series.',
+                  'description': 'Label for the Y-axis associated with this series.',
                 },
                 'yAxisUnit': {
                   'type': 'string',
-                  'description':
-                      'Unit for the Y-axis associated with this series.',
+                  'description': 'Unit for the Y-axis associated with this series.',
                 },
                 'yAxisColor': {
                   'type': 'string',
-                  'description':
-                      'Color for the Y-axis associated with this series in hex format.',
+                  'description': 'Color for the Y-axis associated with this series in hex format.',
                 },
                 'yAxisMin': {
                   'type': 'number',
-                  'description':
-                      'Minimum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                  'description': 'Minimum value for the Y-axis scale. If not specified, auto-calculated from data.',
                 },
                 'yAxisMax': {
                   'type': 'number',
-                  'description':
-                      'Maximum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                  'description': 'Maximum value for the Y-axis scale. If not specified, auto-calculated from data.',
                 },
               },
               'required': ['id', 'data'],
@@ -236,13 +216,11 @@ class CreateChartTool extends AgentTool {
               },
               'min': {
                 'type': 'number',
-                'description':
-                    'Minimum value for the X-axis scale. If not specified, auto-calculated from data.',
+                'description': 'Minimum value for the X-axis scale. If not specified, auto-calculated from data.',
               },
               'max': {
                 'type': 'number',
-                'description':
-                    'Maximum value for the X-axis scale. If not specified, auto-calculated from data.',
+                'description': 'Maximum value for the X-axis scale. If not specified, auto-calculated from data.',
               },
               'visible': {
                 'type': 'boolean',
@@ -265,7 +243,84 @@ class CreateChartTool extends AgentTool {
           },
           'annotations': {
             'type': 'array',
-            'description': 'Annotations to display on the chart',
+            'description': 'Annotations to display on the chart (reference lines, zones, markers, text labels)',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'type': {
+                  'type': 'string',
+                  'enum': ['referenceLine', 'zone', 'textLabel', 'marker'],
+                  'description':
+                      'Type of annotation: referenceLine (horizontal/vertical line at value), zone (shaded region), textLabel (text at position), marker (point marker)',
+                },
+                'value': {
+                  'type': 'number',
+                  'description': 'Value for referenceLine (Y value for horizontal, X for vertical)',
+                },
+                'minValue': {
+                  'type': 'number',
+                  'description': 'Minimum value for zone annotation',
+                },
+                'maxValue': {
+                  'type': 'number',
+                  'description': 'Maximum value for zone annotation',
+                },
+                'x': {
+                  'type': 'number',
+                  'description': 'X coordinate for marker annotation',
+                },
+                'y': {
+                  'type': 'number',
+                  'description': 'Y coordinate for marker annotation',
+                },
+                'text': {
+                  'type': 'string',
+                  'description': 'Text content for textLabel annotation',
+                },
+                'label': {
+                  'type': 'string',
+                  'description': 'Label text displayed with the annotation (for all types)',
+                },
+                'color': {
+                  'type': 'string',
+                  'description': 'Color of the annotation (hex format, e.g., "#FF0000")',
+                },
+                'lineWidth': {
+                  'type': 'number',
+                  'description': 'Line width for referenceLine annotations',
+                },
+                'dashPattern': {
+                  'type': 'array',
+                  'items': {'type': 'number'},
+                  'description': 'Dash pattern for referenceLine (e.g., [5, 3] for dashed)',
+                },
+                'opacity': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description': 'Opacity for zone fill (0.0 to 1.0)',
+                },
+                'orientation': {
+                  'type': 'string',
+                  'enum': ['horizontal', 'vertical'],
+                  'description': 'Orientation for referenceLine/zone (horizontal = Y axis, vertical = X axis)',
+                },
+                'position': {
+                  'type': 'string',
+                  'enum': ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
+                  'description': 'Position for textLabel annotation',
+                },
+                'fontSize': {
+                  'type': 'number',
+                  'description': 'Font size for textLabel annotation',
+                },
+                'seriesId': {
+                  'type': 'string',
+                  'description': 'Series ID to bind annotation to (required for perSeries normalization mode)',
+                },
+              },
+              'required': ['type'],
+            },
           },
           'style': {
             'type': 'object',
@@ -363,8 +418,7 @@ class CreateChartTool extends AgentTool {
     final seriesInput = input['series'] as List?;
     if (seriesInput == null || seriesInput.isEmpty) {
       return const ToolResult(
-        output:
-            'Error: series is required and must contain at least one data series. '
+        output: 'Error: series is required and must contain at least one data series. '
             'Each series should have an id and data array.',
         isError: true,
       );
@@ -401,46 +455,33 @@ class CreateChartTool extends AgentTool {
     }
 
     // Validate and parse normalization mode
-    NormalizationModeConfig normalizationMode =
-        NormalizationModeConfig.none; // default
+    NormalizationModeConfig normalizationMode = NormalizationModeConfig.none; // default
     final normalizationModeInput = input['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode =
-            NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
         return ToolResult(
-          output:
-              'Error: Invalid normalization mode "$normalizationModeInput". '
+          output: 'Error: Invalid normalization mode "$normalizationModeInput". '
               'Valid modes are: none, auto, perSeries.',
           isError: true,
         );
       }
     }
 
-    // Parse series data
+    // Parse series data using SeriesConfig.fromJson for full property support
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
-      final seriesMap = seriesInput[i] as Map<String, dynamic>;
-      final dataInput = seriesMap['data'] as List;
-      final dataPoints = dataInput.map((point) {
-        final pointMap = point as Map<String, dynamic>;
-        return DataPoint(
-          x: (pointMap['x'] as num).toDouble(),
-          y: (pointMap['y'] as num).toDouble(),
-        );
-      }).toList();
+      final seriesMap = Map<String, dynamic>.from(seriesInput[i] as Map);
 
       // Assign default color if not provided
-      final color = seriesMap['color'] as String? ??
-          _defaultColors[i % _defaultColors.length];
+      if (seriesMap['color'] == null) {
+        seriesMap['color'] = _defaultColors[i % _defaultColors.length];
+      }
 
-      series.add(SeriesConfig(
-        id: seriesMap['id'] as String,
-        name: seriesMap['name'] as String?,
-        data: dataPoints,
-        color: color,
-      ));
+      // Use fromJson to parse ALL properties (25+ including strokeWidth,
+      // fillOpacity, tension, showPoints, markerSize, bar properties, etc.)
+      series.add(SeriesConfig.fromJson(seriesMap));
     }
 
     // Generate unique chart ID

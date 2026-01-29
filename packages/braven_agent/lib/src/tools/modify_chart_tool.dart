@@ -75,14 +75,12 @@ class ModifyChartTool extends AgentTool {
   ///
   /// [getActiveChart] is a required callback that the tool uses to retrieve
   /// the current active chart at execution time.
-  ModifyChartTool({required ChartConfiguration? Function() getActiveChart})
-      : _getActiveChart = getActiveChart;
+  ModifyChartTool({required ChartConfiguration? Function() getActiveChart}) : _getActiveChart = getActiveChart;
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      'Modifies the currently active chart by applying partial updates. '
+  String get description => 'Modifies the currently active chart by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove series, '
       'or adjust styling options. Requires an active chart created previously.';
 
@@ -147,6 +145,104 @@ class ModifyChartTool extends AgentTool {
                         'required': ['x', 'y'],
                       },
                     },
+                    'yAxisId': {
+                      'type': 'string',
+                      'description': 'ID of the Y-axis this series should use (for multi-axis charts).',
+                    },
+                    'unit': {
+                      'type': 'string',
+                      'description': 'Unit of measurement for this series (e.g., "W", "bpm").',
+                    },
+                    'interpolation': {
+                      'type': 'string',
+                      'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                      'description': 'Line interpolation type. Defaults to "linear".',
+                    },
+                    'strokeWidth': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description': 'Width of the line stroke in pixels. Defaults to 2.0.',
+                    },
+                    'tension': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'maximum': 1,
+                      'description': 'Curve tension for bezier interpolation (0.0 to 1.0).',
+                    },
+                    'showPoints': {
+                      'type': 'boolean',
+                      'description': 'Whether to show data point markers. Defaults to false.',
+                    },
+                    'fillOpacity': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'maximum': 1,
+                      'description': 'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                    },
+                    'markerStyle': {
+                      'type': 'string',
+                      'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
+                      'description': 'Style of markers at data points.',
+                    },
+                    'markerSize': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description': 'Size of markers in pixels. Defaults to 4.0.',
+                    },
+                    'barWidthPercent': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'maximum': 1,
+                      'description': 'Bar width as a percentage of available space (0.0 to 1.0).',
+                    },
+                    'barWidthPixels': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description': 'Fixed bar width in pixels. Overrides barWidthPercent.',
+                    },
+                    'barMinWidth': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description': 'Minimum bar width in pixels.',
+                    },
+                    'barMaxWidth': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description': 'Maximum bar width in pixels.',
+                    },
+                    'yAxisPosition': {
+                      'type': 'string',
+                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                      'description': 'Position of the Y-axis for this series in multi-axis charts.',
+                    },
+                    'yAxisLabel': {
+                      'type': 'string',
+                      'description': 'Label for the Y-axis associated with this series.',
+                    },
+                    'yAxisUnit': {
+                      'type': 'string',
+                      'description': 'Unit for the Y-axis associated with this series.',
+                    },
+                    'yAxisColor': {
+                      'type': 'string',
+                      'description': 'Color for the Y-axis associated with this series.',
+                    },
+                    'yAxisMin': {
+                      'type': 'number',
+                      'description': 'Minimum value for the Y-axis scale.',
+                    },
+                    'yAxisMax': {
+                      'type': 'number',
+                      'description': 'Maximum value for the Y-axis scale.',
+                    },
+                    'visible': {
+                      'type': 'boolean',
+                      'description': 'Whether this series is visible.',
+                    },
+                    'legendVisible': {
+                      'type': 'boolean',
+                      'description': 'Whether to show this series in the legend.',
+                    },
                   },
                   'required': ['id', 'data'],
                 },
@@ -160,8 +256,49 @@ class ModifyChartTool extends AgentTool {
               },
               'updateSeries': {
                 'type': 'object',
-                'description':
-                    'Map of series ID to partial update (e.g., new data points)',
+                'description': 'Map of series ID to partial update. Each value can contain: '
+                    'name, color, data, strokeWidth, strokeDash, fillOpacity, '
+                    'markerStyle, markerSize, interpolation, tension, showPoints, '
+                    'yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor, yAxisMin, '
+                    'yAxisMax, barWidthPercent, barWidthPixels, barMinWidth, '
+                    'barMaxWidth, yAxisId, visible, legendVisible, unit.',
+                'additionalProperties': {
+                  'type': 'object',
+                  'description': 'Partial series properties to update',
+                  'properties': {
+                    'name': {'type': 'string', 'description': 'Display name'},
+                    'color': {'type': 'string', 'description': 'Color (hex)'},
+                    'data': {
+                      'type': 'array',
+                      'description': 'New data points',
+                      'items': {
+                        'type': 'object',
+                        'properties': {
+                          'x': {'type': 'number'},
+                          'y': {'type': 'number'},
+                        },
+                        'required': ['x', 'y'],
+                      },
+                    },
+                    'strokeWidth': {'type': 'number', 'minimum': 0},
+                    'fillOpacity': {'type': 'number', 'minimum': 0, 'maximum': 1},
+                    'tension': {'type': 'number', 'minimum': 0, 'maximum': 1},
+                    'showPoints': {'type': 'boolean'},
+                    'interpolation': {
+                      'type': 'string',
+                      'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                    },
+                    'markerStyle': {
+                      'type': 'string',
+                      'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
+                    },
+                    'markerSize': {'type': 'number', 'minimum': 0},
+                    'yAxisId': {'type': 'string'},
+                    'unit': {'type': 'string'},
+                    'visible': {'type': 'boolean'},
+                    'legendVisible': {'type': 'boolean'},
+                  },
+                },
               },
               'showGrid': {
                 'type': 'boolean',
@@ -183,8 +320,7 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description':
-                    'Position of the legend relative to the chart area',
+                'description': 'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
@@ -275,16 +411,13 @@ class ModifyChartTool extends AgentTool {
 
     // Parse and validate normalization mode if provided
     NormalizationModeConfig? normalizationMode;
-    final normalizationModeInput =
-        modifications['normalizationMode'] as String?;
+    final normalizationModeInput = modifications['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode =
-            NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
         return ToolResult(
-          output:
-              'Error: Invalid normalization mode "$normalizationModeInput". '
+          output: 'Error: Invalid normalization mode "$normalizationModeInput". '
               'Valid modes are: none, auto, perSeries.',
           isError: true,
         );
@@ -304,8 +437,7 @@ class ModifyChartTool extends AgentTool {
     final removeSeries = modifications['removeSeries'] as List?;
     if (removeSeries != null) {
       final idsToRemove = removeSeries.cast<String>().toSet();
-      updatedSeries =
-          updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
+      updatedSeries = updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
     }
 
     // Handle addSeries (add new series)
@@ -344,21 +476,15 @@ class ModifyChartTool extends AgentTool {
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
       type: chartType ?? activeChart.type,
-      title: modifications.containsKey('title')
-          ? modifications['title'] as String?
-          : activeChart.title,
-      subtitle: modifications.containsKey('subtitle')
-          ? modifications['subtitle'] as String?
-          : activeChart.subtitle,
+      title: modifications.containsKey('title') ? modifications['title'] as String? : activeChart.title,
+      subtitle: modifications.containsKey('subtitle') ? modifications['subtitle'] as String? : activeChart.subtitle,
       series: updatedSeries,
       xAxis: xAxis ?? activeChart.xAxis,
       yAxes: yAxes ?? activeChart.yAxes,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
-      showLegend:
-          modifications['showLegend'] as bool? ?? activeChart.showLegend,
+      showLegend: modifications['showLegend'] as bool? ?? activeChart.showLegend,
       legendPosition: legendPosition ?? activeChart.legendPosition,
-      useDarkTheme:
-          modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
+      useDarkTheme: modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
       normalizationMode: normalizationMode ?? activeChart.normalizationMode,
     );
 
@@ -372,36 +498,30 @@ class ModifyChartTool extends AgentTool {
 
   /// Parses a list of series input into [SeriesConfig] objects.
   ///
+  /// Uses [SeriesConfig.fromJson] to parse ALL 25+ properties including
+  /// strokeWidth, fillOpacity, tension, showPoints, markerSize, bar properties, etc.
+  ///
   /// [startColorIndex] is used to assign default colors starting from that index.
-  List<SeriesConfig> _parseSeries(
-      List<dynamic> seriesInput, int startColorIndex) {
+  List<SeriesConfig> _parseSeries(List<dynamic> seriesInput, int startColorIndex) {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
-      final seriesMap = seriesInput[i] as Map<String, dynamic>;
-      final dataInput = seriesMap['data'] as List;
-      final dataPoints = dataInput.map((point) {
-        final pointMap = point as Map<String, dynamic>;
-        return DataPoint(
-          x: (pointMap['x'] as num).toDouble(),
-          y: (pointMap['y'] as num).toDouble(),
-        );
-      }).toList();
+      final seriesMap = Map<String, dynamic>.from(seriesInput[i] as Map);
 
       // Assign default color if not provided
-      final color = seriesMap['color'] as String? ??
-          _defaultColors[(startColorIndex + i) % _defaultColors.length];
+      if (seriesMap['color'] == null) {
+        seriesMap['color'] = _defaultColors[(startColorIndex + i) % _defaultColors.length];
+      }
 
-      series.add(SeriesConfig(
-        id: seriesMap['id'] as String,
-        name: seriesMap['name'] as String?,
-        data: dataPoints,
-        color: color,
-      ));
+      // Use fromJson to parse ALL properties
+      series.add(SeriesConfig.fromJson(seriesMap));
     }
     return series;
   }
 
   /// Applies a partial update to a series, returning a new [SeriesConfig].
+  ///
+  /// Supports ALL 25+ series properties including strokeWidth, fillOpacity,
+  /// tension, showPoints, markerSize, interpolation, bar properties, etc.
   SeriesConfig _applySeriesUpdate(
     SeriesConfig series,
     Map<String, dynamic> update,
@@ -419,10 +539,44 @@ class ModifyChartTool extends AgentTool {
       }).toList();
     }
 
+    // Parse enum values if provided
+    Interpolation? interpolation;
+    if (update['interpolation'] != null) {
+      interpolation = Interpolation.values.byName(update['interpolation'] as String);
+    }
+
+    MarkerStyle? markerStyle;
+    if (update['markerStyle'] != null) {
+      markerStyle = MarkerStyle.values.byName(update['markerStyle'] as String);
+    }
+
+    // Apply ALL properties via copyWith
     return series.copyWith(
-      name: update['name'] as String? ?? series.name,
-      data: updatedData ?? series.data,
-      color: update['color'] as String? ?? series.color,
+      name: update['name'] as String?,
+      data: updatedData,
+      color: update['color'] as String?,
+      strokeWidth: (update['strokeWidth'] as num?)?.toDouble(),
+      strokeDash: (update['strokeDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
+      fillOpacity: (update['fillOpacity'] as num?)?.toDouble(),
+      markerStyle: markerStyle,
+      markerSize: (update['markerSize'] as num?)?.toDouble(),
+      interpolation: interpolation,
+      tension: (update['tension'] as num?)?.toDouble(),
+      showPoints: update['showPoints'] as bool?,
+      yAxisPosition: update['yAxisPosition'] as String?,
+      yAxisLabel: update['yAxisLabel'] as String?,
+      yAxisUnit: update['yAxisUnit'] as String?,
+      yAxisColor: update['yAxisColor'] as String?,
+      yAxisMin: (update['yAxisMin'] as num?)?.toDouble(),
+      yAxisMax: (update['yAxisMax'] as num?)?.toDouble(),
+      barWidthPercent: (update['barWidthPercent'] as num?)?.toDouble(),
+      barWidthPixels: (update['barWidthPixels'] as num?)?.toDouble(),
+      barMinWidth: (update['barMinWidth'] as num?)?.toDouble(),
+      barMaxWidth: (update['barMaxWidth'] as num?)?.toDouble(),
+      yAxisId: update['yAxisId'] as String?,
+      visible: update['visible'] as bool?,
+      legendVisible: update['legendVisible'] as bool?,
+      unit: update['unit'] as String?,
     );
   }
 
@@ -431,9 +585,7 @@ class ModifyChartTool extends AgentTool {
     return XAxisConfig(
       label: json['label'] as String?,
       unit: json['unit'] as String?,
-      type: json['type'] != null
-          ? AxisType.values.byName(json['type'] as String)
-          : AxisType.numeric,
+      type: json['type'] != null ? AxisType.values.byName(json['type'] as String) : AxisType.numeric,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
       autoRange: json['autoRange'] as bool? ?? true,
@@ -445,9 +597,7 @@ class ModifyChartTool extends AgentTool {
       showAxisLine: json['showAxisLine'] as bool? ?? true,
       showGridLines: json['showGridLines'] as bool? ?? true,
       gridColor: json['gridColor'] as String?,
-      gridDash: (json['gridDash'] as List<dynamic>?)
-          ?.map((e) => (e as num).toDouble())
-          .toList(),
+      gridDash: (json['gridDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
     );
   }
 
@@ -459,9 +609,7 @@ class ModifyChartTool extends AgentTool {
         id: map['id'] as String?,
         label: map['label'] as String?,
         unit: map['unit'] as String?,
-        position: map['position'] != null
-            ? AxisPosition.values.byName(map['position'] as String)
-            : AxisPosition.left,
+        position: map['position'] != null ? AxisPosition.values.byName(map['position'] as String) : AxisPosition.left,
         min: (map['min'] as num?)?.toDouble(),
         max: (map['max'] as num?)?.toDouble(),
         autoRange: map['autoRange'] as bool? ?? true,

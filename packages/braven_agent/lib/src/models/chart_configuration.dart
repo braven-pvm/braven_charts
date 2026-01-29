@@ -115,6 +115,9 @@ class ChartConfiguration with EquatableMixin {
   /// Height of the chart in pixels.
   final double? height;
 
+  /// Background color of the chart (hex string like '#FFFFFF').
+  final String? backgroundColor;
+
   /// Creates a [ChartConfiguration] with the given parameters.
   ///
   /// [type] and [series] are required. [id] is optional and typically
@@ -138,6 +141,7 @@ class ChartConfiguration with EquatableMixin {
     this.normalizationMode = NormalizationModeConfig.none,
     this.width,
     this.height,
+    this.backgroundColor,
   });
 
   /// Creates a [ChartConfiguration] from a JSON map.
@@ -150,35 +154,21 @@ class ChartConfiguration with EquatableMixin {
       type: ChartType.values.byName(json['type'] as String? ?? 'line'),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List<dynamic>?)
-              ?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      xAxis: json['xAxis'] != null
-          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
-          : null,
-      yAxes: (json['yAxes'] as List<dynamic>?)
-              ?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      annotations: (json['annotations'] as List<dynamic>?)
-              ?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      style: json['style'] != null
-          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
-          : null,
+      series: (json['series'] as List<dynamic>?)?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
+      yAxes: (json['yAxes'] as List<dynamic>?)?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      annotations: (json['annotations'] as List<dynamic>?)?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
       interactions: json['interactions'] as Map<String, dynamic>?,
       showGrid: json['showGrid'] as bool? ?? true,
       showLegend: json['showLegend'] as bool? ?? true,
-      legendPosition: LegendPosition.values
-          .byName(json['legendPosition'] as String? ?? 'bottom'),
+      legendPosition: LegendPosition.values.byName(json['legendPosition'] as String? ?? 'bottom'),
       useDarkTheme: json['useDarkTheme'] as bool? ?? false,
       showScrollbar: json['showScrollbar'] as bool? ?? false,
-      normalizationMode: NormalizationModeConfig.values
-          .byName(json['normalizationMode'] as String? ?? 'none'),
+      normalizationMode: NormalizationModeConfig.values.byName(json['normalizationMode'] as String? ?? 'none'),
       width: (json['width'] as num?)?.toDouble(),
       height: (json['height'] as num?)?.toDouble(),
+      backgroundColor: json['backgroundColor'] as String?,
     );
   }
 
@@ -206,6 +196,7 @@ class ChartConfiguration with EquatableMixin {
       'normalizationMode': normalizationMode.name,
       if (width != null) 'width': width,
       if (height != null) 'height': height,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor,
     };
   }
 
@@ -231,6 +222,7 @@ class ChartConfiguration with EquatableMixin {
     NormalizationModeConfig? normalizationMode,
     double? width,
     double? height,
+    String? backgroundColor,
   }) {
     return ChartConfiguration(
       id: id ?? this.id,
@@ -251,6 +243,7 @@ class ChartConfiguration with EquatableMixin {
       normalizationMode: normalizationMode ?? this.normalizationMode,
       width: width ?? this.width,
       height: height ?? this.height,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
     );
   }
 
@@ -274,9 +267,9 @@ class ChartConfiguration with EquatableMixin {
         normalizationMode,
         width,
         height,
+        backgroundColor,
       ];
 
   @override
-  String toString() =>
-      'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
+  String toString() => 'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
 }
