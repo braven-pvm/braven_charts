@@ -30,6 +30,8 @@ enum ActivityStatus {
 /// Tracks the current tool being called by the LLM, including
 /// the tool call ID (for correlation), name, and input parameters.
 ///
+/// The input map should remain JSON-serializable for logging or replay.
+///
 /// ## Example
 ///
 /// ```dart
