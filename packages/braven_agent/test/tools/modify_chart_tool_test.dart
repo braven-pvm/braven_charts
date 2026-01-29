@@ -348,14 +348,15 @@ void main() {
           expect(result.output, isNotEmpty);
         });
 
-        test('output contains success message', () async {
+        test('output contains chart JSON', () async {
           final result = await tool.execute({
             'modifications': {
               'type': 'bar',
             },
           });
 
-          expect(result.output.toLowerCase(), contains('successfully'));
+          // Output should be JSON containing the chart type
+          expect(result.output, contains('bar'));
         });
       });
 

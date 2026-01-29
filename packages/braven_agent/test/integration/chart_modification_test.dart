@@ -1,8 +1,3 @@
-// @orchestra-task: 20
-
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/tools/create_chart_tool.dart';
@@ -161,7 +156,8 @@ void main() {
           }
         }
       });
-      expect(modifyResult.isError, isFalse, reason: 'Update series data failed');
+      expect(modifyResult.isError, isFalse,
+          reason: 'Update series data failed');
 
       activeChart = getChartFromOutput(modifyResult.data);
       final series = activeChart.series.firstWhere((s) => s.id == 's1');
@@ -200,16 +196,19 @@ void main() {
           ]
         }
       });
-      expect(modifyResult.isError, isFalse, reason: 'Modify axes failed (execution error)');
+      expect(modifyResult.isError, isFalse,
+          reason: 'Modify axes failed (execution error)');
 
       activeChart = getChartFromOutput(modifyResult.data);
 
       // These assertions should fail if ModifyChartTool ignores axes
-      expect(activeChart.xAxis, isNotNull, reason: 'XAxis should not be null after update');
+      expect(activeChart.xAxis, isNotNull,
+          reason: 'XAxis should not be null after update');
       expect(activeChart.xAxis?.label, equals('New X Label'));
       expect(activeChart.xAxis?.unit, equals('seconds'));
 
-      expect(activeChart.yAxes, isNotEmpty, reason: 'YAxes should not be empty after update');
+      expect(activeChart.yAxes, isNotEmpty,
+          reason: 'YAxes should not be empty after update');
       expect(activeChart.yAxes.first.label, equals('Sales'));
       expect(activeChart.yAxes.first.unit, equals('USD'));
     });

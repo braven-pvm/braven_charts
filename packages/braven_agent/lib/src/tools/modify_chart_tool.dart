@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import '../models/chart_configuration.dart';
 import '../models/data_point.dart';
 import '../models/enums.dart';
 import '../models/series_config.dart';
+import '../models/x_axis_config.dart';
+import '../models/y_axis_config.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
@@ -191,6 +195,26 @@ class ModifyChartTool extends AgentTool {
                 'enum': ['none', 'auto', 'perSeries'],
                 'description': 'Normalization mode for multi-series charts',
               },
+              'xAxis': {
+                'type': 'object',
+                'description': 'X-axis configuration',
+                'properties': {
+                  'label': {'type': 'string', 'description': 'Axis label'},
+                  'unit': {'type': 'string', 'description': 'Unit string'},
+                },
+              },
+              'yAxes': {
+                'type': 'array',
+                'description': 'Y-axes configurations',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'id': {'type': 'string', 'description': 'Axis identifier'},
+                    'label': {'type': 'string', 'description': 'Axis label'},
+                    'unit': {'type': 'string', 'description': 'Unit string'},
+                  },
+                },
+              },
             },
           },
         },
@@ -303,6 +327,20 @@ class ModifyChartTool extends AgentTool {
       }).toList();
     }
 
+    // Parse xAxis if provided
+    XAxisConfig? xAxis;
+    final xAxisInput = modifications['xAxis'] as Map<String, dynamic>?;
+    if (xAxisInput != null) {
+      xAxis = _parseXAxis(xAxisInput);
+    }
+
+    // Parse yAxes if provided
+    List<YAxisConfig>? yAxes;
+    final yAxesInput = modifications['yAxes'] as List?;
+    if (yAxesInput != null) {
+      yAxes = _parseYAxes(yAxesInput);
+    }
+
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
       type: chartType ?? activeChart.type,
@@ -313,6 +351,8 @@ class ModifyChartTool extends AgentTool {
           ? modifications['subtitle'] as String?
           : activeChart.subtitle,
       series: updatedSeries,
+      xAxis: xAxis ?? activeChart.xAxis,
+      yAxes: yAxes ?? activeChart.yAxes,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
       showLegend:
           modifications['showLegend'] as bool? ?? activeChart.showLegend,
@@ -322,9 +362,9 @@ class ModifyChartTool extends AgentTool {
       normalizationMode: normalizationMode ?? activeChart.normalizationMode,
     );
 
-    // Return success result with ChartConfiguration data
+    // Return success result with JSON output and ChartConfiguration data
     return ToolResult(
-      output: 'Chart modified successfully.',
+      output: jsonEncode(modifiedChart.toJson()),
       isError: false,
       data: modifiedChart,
     );
@@ -384,5 +424,57 @@ class ModifyChartTool extends AgentTool {
       data: updatedData ?? series.data,
       color: update['color'] as String? ?? series.color,
     );
+  }
+
+  /// Parses an X-axis configuration from a JSON map.
+  XAxisConfig _parseXAxis(Map<String, dynamic> json) {
+    return XAxisConfig(
+      label: json['label'] as String?,
+      unit: json['unit'] as String?,
+      type: json['type'] != null
+          ? AxisType.values.byName(json['type'] as String)
+          : AxisType.numeric,
+      min: (json['min'] as num?)?.toDouble(),
+      max: (json['max'] as num?)?.toDouble(),
+      autoRange: json['autoRange'] as bool? ?? true,
+      paddingPercent: (json['paddingPercent'] as num?)?.toDouble() ?? 0.0,
+      tickCount: json['tickCount'] as int?,
+      tickFormat: json['tickFormat'] as String?,
+      tickRotation: (json['tickRotation'] as num?)?.toDouble() ?? 0.0,
+      showTicks: json['showTicks'] as bool? ?? true,
+      showAxisLine: json['showAxisLine'] as bool? ?? true,
+      showGridLines: json['showGridLines'] as bool? ?? true,
+      gridColor: json['gridColor'] as String?,
+      gridDash: (json['gridDash'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
+    );
+  }
+
+  /// Parses a list of Y-axis configurations from a JSON list.
+  List<YAxisConfig> _parseYAxes(List<dynamic> yAxesInput) {
+    return yAxesInput.map((json) {
+      final map = json as Map<String, dynamic>;
+      return YAxisConfig(
+        id: map['id'] as String?,
+        label: map['label'] as String?,
+        unit: map['unit'] as String?,
+        position: map['position'] != null
+            ? AxisPosition.values.byName(map['position'] as String)
+            : AxisPosition.left,
+        min: (map['min'] as num?)?.toDouble(),
+        max: (map['max'] as num?)?.toDouble(),
+        autoRange: map['autoRange'] as bool? ?? true,
+        includeZero: map['includeZero'] as bool? ?? false,
+        paddingPercent: (map['paddingPercent'] as num?)?.toDouble() ?? 0.0,
+        tickCount: map['tickCount'] as int?,
+        tickFormat: map['tickFormat'] as String?,
+        showTicks: map['showTicks'] as bool? ?? true,
+        showAxisLine: map['showAxisLine'] as bool? ?? true,
+        showGridLines: map['showGridLines'] as bool? ?? true,
+        gridColor: map['gridColor'] as String?,
+        color: map['color'] as String?,
+      );
+    }).toList();
   }
 }
