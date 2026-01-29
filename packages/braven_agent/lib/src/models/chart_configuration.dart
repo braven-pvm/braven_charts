@@ -150,18 +150,33 @@ class ChartConfiguration with EquatableMixin {
       type: ChartType.values.byName(json['type'] as String? ?? 'line'),
       title: json['title'] as String?,
       subtitle: json['subtitle'] as String?,
-      series: (json['series'] as List<dynamic>?)?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      xAxis: json['xAxis'] != null ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>) : null,
-      yAxes: (json['yAxes'] as List<dynamic>?)?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      annotations: (json['annotations'] as List<dynamic>?)?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      style: json['style'] != null ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>) : null,
+      series: (json['series'] as List<dynamic>?)
+              ?.map((e) => SeriesConfig.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      xAxis: json['xAxis'] != null
+          ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
+          : null,
+      yAxes: (json['yAxes'] as List<dynamic>?)
+              ?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      annotations: (json['annotations'] as List<dynamic>?)
+              ?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      style: json['style'] != null
+          ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
+          : null,
       interactions: json['interactions'] as Map<String, dynamic>?,
       showGrid: json['showGrid'] as bool? ?? true,
       showLegend: json['showLegend'] as bool? ?? true,
-      legendPosition: LegendPosition.values.byName(json['legendPosition'] as String? ?? 'bottom'),
+      legendPosition: LegendPosition.values
+          .byName(json['legendPosition'] as String? ?? 'bottom'),
       useDarkTheme: json['useDarkTheme'] as bool? ?? false,
       showScrollbar: json['showScrollbar'] as bool? ?? false,
-      normalizationMode: NormalizationModeConfig.values.byName(json['normalizationMode'] as String? ?? 'none'),
+      normalizationMode: NormalizationModeConfig.values
+          .byName(json['normalizationMode'] as String? ?? 'none'),
       width: (json['width'] as num?)?.toDouble(),
       height: (json['height'] as num?)?.toDouble(),
     );
@@ -262,5 +277,6 @@ class ChartConfiguration with EquatableMixin {
       ];
 
   @override
-  String toString() => 'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
+  String toString() =>
+      'ChartConfiguration(id: $id, type: $type, title: $title, series: ${series.length} series)';
 }

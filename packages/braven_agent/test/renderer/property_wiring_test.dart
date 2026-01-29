@@ -43,7 +43,8 @@ void main() {
     setUp(() {
       tool = CreateChartTool();
       final schema = tool.inputSchema;
-      final seriesItems = (schema['properties']['series']['items']) as Map<String, dynamic>;
+      final seriesItems =
+          (schema['properties']['series']['items']) as Map<String, dynamic>;
       seriesProperties = seriesItems['properties'] as Map<String, dynamic>;
     });
 
@@ -65,28 +66,34 @@ void main() {
     });
 
     test('schema: series.yAxisId', () {
-      expect(seriesProperties.containsKey('yAxisId'), isTrue, reason: 'MISSING: yAxisId not in schema');
+      expect(seriesProperties.containsKey('yAxisId'), isTrue,
+          reason: 'MISSING: yAxisId not in schema');
     });
 
     test('schema: series.unit', () {
-      expect(seriesProperties.containsKey('unit'), isTrue, reason: 'MISSING: unit not in schema');
+      expect(seriesProperties.containsKey('unit'), isTrue,
+          reason: 'MISSING: unit not in schema');
     });
 
     // === LineChartSeries specific (5) ===
     test('schema: series.interpolation', () {
-      expect(seriesProperties.containsKey('interpolation'), isTrue, reason: 'MISSING: interpolation not in schema');
+      expect(seriesProperties.containsKey('interpolation'), isTrue,
+          reason: 'MISSING: interpolation not in schema');
     });
 
     test('schema: series.strokeWidth', () {
-      expect(seriesProperties.containsKey('strokeWidth'), isTrue, reason: 'MISSING: strokeWidth not in schema');
+      expect(seriesProperties.containsKey('strokeWidth'), isTrue,
+          reason: 'MISSING: strokeWidth not in schema');
     });
 
     test('schema: series.tension', () {
-      expect(seriesProperties.containsKey('tension'), isTrue, reason: 'MISSING: tension not in schema');
+      expect(seriesProperties.containsKey('tension'), isTrue,
+          reason: 'MISSING: tension not in schema');
     });
 
     test('schema: series.showDataPointMarkers (showPoints)', () {
-      expect(seriesProperties.containsKey('showPoints'), isTrue, reason: 'MISSING: showPoints not in schema');
+      expect(seriesProperties.containsKey('showPoints'), isTrue,
+          reason: 'MISSING: showPoints not in schema');
     });
 
     // NOTE: dataPointMarkerRadius and markerRadius were REMOVED from schema
@@ -95,49 +102,60 @@ void main() {
 
     // === AreaChartSeries specific (1 additional) ===
     test('schema: series.fillOpacity', () {
-      expect(seriesProperties.containsKey('fillOpacity'), isTrue, reason: 'MISSING: fillOpacity not in schema');
+      expect(seriesProperties.containsKey('fillOpacity'), isTrue,
+          reason: 'MISSING: fillOpacity not in schema');
     });
 
     // === BarChartSeries specific (4) ===
     test('schema: series.barWidthPercent', () {
-      expect(seriesProperties.containsKey('barWidthPercent'), isTrue, reason: 'MISSING: barWidthPercent not in schema');
+      expect(seriesProperties.containsKey('barWidthPercent'), isTrue,
+          reason: 'MISSING: barWidthPercent not in schema');
     });
 
     test('schema: series.barWidthPixels', () {
-      expect(seriesProperties.containsKey('barWidthPixels'), isTrue, reason: 'MISSING: barWidthPixels not in schema');
+      expect(seriesProperties.containsKey('barWidthPixels'), isTrue,
+          reason: 'MISSING: barWidthPixels not in schema');
     });
 
     test('schema: series.barMinWidth', () {
-      expect(seriesProperties.containsKey('barMinWidth'), isTrue, reason: 'MISSING: barMinWidth not in schema');
+      expect(seriesProperties.containsKey('barMinWidth'), isTrue,
+          reason: 'MISSING: barMinWidth not in schema');
     });
 
     test('schema: series.barMaxWidth', () {
-      expect(seriesProperties.containsKey('barMaxWidth'), isTrue, reason: 'MISSING: barMaxWidth not in schema');
+      expect(seriesProperties.containsKey('barMaxWidth'), isTrue,
+          reason: 'MISSING: barMaxWidth not in schema');
     });
 
     // === Per-series Y-axis config (6) ===
     test('schema: series.yAxisPosition', () {
-      expect(seriesProperties.containsKey('yAxisPosition'), isTrue, reason: 'MISSING: yAxisPosition not in schema');
+      expect(seriesProperties.containsKey('yAxisPosition'), isTrue,
+          reason: 'MISSING: yAxisPosition not in schema');
     });
 
     test('schema: series.yAxisLabel', () {
-      expect(seriesProperties.containsKey('yAxisLabel'), isTrue, reason: 'MISSING: yAxisLabel not in schema');
+      expect(seriesProperties.containsKey('yAxisLabel'), isTrue,
+          reason: 'MISSING: yAxisLabel not in schema');
     });
 
     test('schema: series.yAxisUnit', () {
-      expect(seriesProperties.containsKey('yAxisUnit'), isTrue, reason: 'MISSING: yAxisUnit not in schema');
+      expect(seriesProperties.containsKey('yAxisUnit'), isTrue,
+          reason: 'MISSING: yAxisUnit not in schema');
     });
 
     test('schema: series.yAxisColor', () {
-      expect(seriesProperties.containsKey('yAxisColor'), isTrue, reason: 'MISSING: yAxisColor not in schema');
+      expect(seriesProperties.containsKey('yAxisColor'), isTrue,
+          reason: 'MISSING: yAxisColor not in schema');
     });
 
     test('schema: series.yAxisMin', () {
-      expect(seriesProperties.containsKey('yAxisMin'), isTrue, reason: 'MISSING: yAxisMin not in schema');
+      expect(seriesProperties.containsKey('yAxisMin'), isTrue,
+          reason: 'MISSING: yAxisMin not in schema');
     });
 
     test('schema: series.yAxisMax', () {
-      expect(seriesProperties.containsKey('yAxisMax'), isTrue, reason: 'MISSING: yAxisMax not in schema');
+      expect(seriesProperties.containsKey('yAxisMax'), isTrue,
+          reason: 'MISSING: yAxisMax not in schema');
     });
   });
 
@@ -151,23 +169,28 @@ void main() {
 
     // === BravenChartPlus widget properties ===
     test('schema: title', () {
-      expect(properties.containsKey('title'), isTrue, reason: 'MISSING: title not in schema');
+      expect(properties.containsKey('title'), isTrue,
+          reason: 'MISSING: title not in schema');
     });
 
     test('schema: subtitle', () {
-      expect(properties.containsKey('subtitle'), isTrue, reason: 'MISSING: subtitle not in schema');
+      expect(properties.containsKey('subtitle'), isTrue,
+          reason: 'MISSING: subtitle not in schema');
     });
 
     test('schema: width', () {
-      expect(properties.containsKey('width'), isTrue, reason: 'MISSING: width not in schema');
+      expect(properties.containsKey('width'), isTrue,
+          reason: 'MISSING: width not in schema');
     });
 
     test('schema: height', () {
-      expect(properties.containsKey('height'), isTrue, reason: 'MISSING: height not in schema');
+      expect(properties.containsKey('height'), isTrue,
+          reason: 'MISSING: height not in schema');
     });
 
     test('schema: backgroundColor', () {
-      expect(properties.containsKey('backgroundColor'), isTrue, reason: 'MISSING: backgroundColor not in schema');
+      expect(properties.containsKey('backgroundColor'), isTrue,
+          reason: 'MISSING: backgroundColor not in schema');
     });
 
     test('schema: showGrid', () {
@@ -191,11 +214,13 @@ void main() {
     });
 
     test('schema: showScrollbar (showXScrollbar)', () {
-      expect(properties.containsKey('showScrollbar'), isTrue, reason: 'MISSING: showScrollbar not in schema');
+      expect(properties.containsKey('showScrollbar'), isTrue,
+          reason: 'MISSING: showScrollbar not in schema');
     });
 
     test('schema: showYScrollbar', () {
-      expect(properties.containsKey('showYScrollbar'), isTrue, reason: 'MISSING: showYScrollbar not in schema');
+      expect(properties.containsKey('showYScrollbar'), isTrue,
+          reason: 'MISSING: showYScrollbar not in schema');
     });
   });
 
@@ -216,39 +241,48 @@ void main() {
     });
 
     test('schema: xAxis object exists', () {
-      expect(properties.containsKey('xAxis'), isTrue, reason: 'MISSING: xAxis object not in schema');
+      expect(properties.containsKey('xAxis'), isTrue,
+          reason: 'MISSING: xAxis object not in schema');
     });
 
     test('schema: xAxis.label', () {
-      expect(xAxisProps?.containsKey('label') ?? false, isTrue, reason: 'MISSING: xAxis.label not in schema');
+      expect(xAxisProps?.containsKey('label') ?? false, isTrue,
+          reason: 'MISSING: xAxis.label not in schema');
     });
 
     test('schema: xAxis.unit', () {
-      expect(xAxisProps?.containsKey('unit') ?? false, isTrue, reason: 'MISSING: xAxis.unit not in schema');
+      expect(xAxisProps?.containsKey('unit') ?? false, isTrue,
+          reason: 'MISSING: xAxis.unit not in schema');
     });
 
     test('schema: xAxis.min', () {
-      expect(xAxisProps?.containsKey('min') ?? false, isTrue, reason: 'MISSING: xAxis.min not in schema');
+      expect(xAxisProps?.containsKey('min') ?? false, isTrue,
+          reason: 'MISSING: xAxis.min not in schema');
     });
 
     test('schema: xAxis.max', () {
-      expect(xAxisProps?.containsKey('max') ?? false, isTrue, reason: 'MISSING: xAxis.max not in schema');
+      expect(xAxisProps?.containsKey('max') ?? false, isTrue,
+          reason: 'MISSING: xAxis.max not in schema');
     });
 
     test('schema: xAxis.visible', () {
-      expect(xAxisProps?.containsKey('visible') ?? false, isTrue, reason: 'MISSING: xAxis.visible not in schema');
+      expect(xAxisProps?.containsKey('visible') ?? false, isTrue,
+          reason: 'MISSING: xAxis.visible not in schema');
     });
 
     test('schema: xAxis.showAxisLine', () {
-      expect(xAxisProps?.containsKey('showAxisLine') ?? false, isTrue, reason: 'MISSING: xAxis.showAxisLine not in schema');
+      expect(xAxisProps?.containsKey('showAxisLine') ?? false, isTrue,
+          reason: 'MISSING: xAxis.showAxisLine not in schema');
     });
 
     test('schema: xAxis.showTicks', () {
-      expect(xAxisProps?.containsKey('showTicks') ?? false, isTrue, reason: 'MISSING: xAxis.showTicks not in schema');
+      expect(xAxisProps?.containsKey('showTicks') ?? false, isTrue,
+          reason: 'MISSING: xAxis.showTicks not in schema');
     });
 
     test('schema: xAxis.tickCount', () {
-      expect(xAxisProps?.containsKey('tickCount') ?? false, isTrue, reason: 'MISSING: xAxis.tickCount not in schema');
+      expect(xAxisProps?.containsKey('tickCount') ?? false, isTrue,
+          reason: 'MISSING: xAxis.tickCount not in schema');
     });
   });
 
@@ -260,14 +294,16 @@ void main() {
       final tool = CreateChartTool();
       final schema = tool.inputSchema;
       properties = schema['properties'] as Map<String, dynamic>;
-      final seriesItems = (schema['properties']['series']['items']) as Map<String, dynamic>;
+      final seriesItems =
+          (schema['properties']['series']['items']) as Map<String, dynamic>;
       seriesProperties = seriesItems['properties'] as Map<String, dynamic>;
     });
 
     // === LineInterpolation enum (4 values) ===
     test('schema: interpolation.linear', () {
       final interpolationProp = seriesProperties['interpolation'];
-      expect(interpolationProp, isNotNull, reason: 'MISSING: interpolation property not in schema');
+      expect(interpolationProp, isNotNull,
+          reason: 'MISSING: interpolation property not in schema');
       if (interpolationProp == null) return;
       final enumValues = interpolationProp['enum'] as List?;
       expect(enumValues?.contains('linear') ?? false, isTrue);
@@ -275,7 +311,8 @@ void main() {
 
     test('schema: interpolation.bezier', () {
       final interpolationProp = seriesProperties['interpolation'];
-      expect(interpolationProp, isNotNull, reason: 'MISSING: interpolation property not in schema');
+      expect(interpolationProp, isNotNull,
+          reason: 'MISSING: interpolation property not in schema');
       if (interpolationProp == null) return;
       final enumValues = interpolationProp['enum'] as List?;
       expect(enumValues?.contains('bezier') ?? false, isTrue);
@@ -283,7 +320,8 @@ void main() {
 
     test('schema: interpolation.stepped', () {
       final interpolationProp = seriesProperties['interpolation'];
-      expect(interpolationProp, isNotNull, reason: 'MISSING: interpolation property not in schema');
+      expect(interpolationProp, isNotNull,
+          reason: 'MISSING: interpolation property not in schema');
       if (interpolationProp == null) return;
       final enumValues = interpolationProp['enum'] as List?;
       expect(enumValues?.contains('stepped') ?? false, isTrue);
@@ -291,16 +329,19 @@ void main() {
 
     test('schema: interpolation.monotone', () {
       final interpolationProp = seriesProperties['interpolation'];
-      expect(interpolationProp, isNotNull, reason: 'MISSING: interpolation property not in schema');
+      expect(interpolationProp, isNotNull,
+          reason: 'MISSING: interpolation property not in schema');
       if (interpolationProp == null) return;
       final enumValues = interpolationProp['enum'] as List?;
-      expect(enumValues?.contains('monotone') ?? false, isTrue, reason: 'MISSING: monotone not in interpolation enum');
+      expect(enumValues?.contains('monotone') ?? false, isTrue,
+          reason: 'MISSING: monotone not in interpolation enum');
     });
 
     // === YAxisPosition enum (4 values) ===
     test('schema: yAxisPosition.left', () {
       final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull, reason: 'MISSING: yAxisPosition property not in schema');
+      expect(yAxisPositionProp, isNotNull,
+          reason: 'MISSING: yAxisPosition property not in schema');
       if (yAxisPositionProp == null) return;
       final enumValues = yAxisPositionProp['enum'] as List?;
       expect(enumValues?.contains('left') ?? false, isTrue);
@@ -308,7 +349,8 @@ void main() {
 
     test('schema: yAxisPosition.right', () {
       final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull, reason: 'MISSING: yAxisPosition property not in schema');
+      expect(yAxisPositionProp, isNotNull,
+          reason: 'MISSING: yAxisPosition property not in schema');
       if (yAxisPositionProp == null) return;
       final enumValues = yAxisPositionProp['enum'] as List?;
       expect(enumValues?.contains('right') ?? false, isTrue);
@@ -316,49 +358,60 @@ void main() {
 
     test('schema: yAxisPosition.leftOuter', () {
       final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull, reason: 'MISSING: yAxisPosition property not in schema');
+      expect(yAxisPositionProp, isNotNull,
+          reason: 'MISSING: yAxisPosition property not in schema');
       if (yAxisPositionProp == null) return;
       final enumValues = yAxisPositionProp['enum'] as List?;
-      expect(enumValues?.contains('leftOuter') ?? false, isTrue, reason: 'MISSING: leftOuter not in yAxisPosition enum');
+      expect(enumValues?.contains('leftOuter') ?? false, isTrue,
+          reason: 'MISSING: leftOuter not in yAxisPosition enum');
     });
 
     test('schema: yAxisPosition.rightOuter', () {
       final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull, reason: 'MISSING: yAxisPosition property not in schema');
+      expect(yAxisPositionProp, isNotNull,
+          reason: 'MISSING: yAxisPosition property not in schema');
       if (yAxisPositionProp == null) return;
       final enumValues = yAxisPositionProp['enum'] as List?;
-      expect(enumValues?.contains('rightOuter') ?? false, isTrue, reason: 'MISSING: rightOuter not in yAxisPosition enum');
+      expect(enumValues?.contains('rightOuter') ?? false, isTrue,
+          reason: 'MISSING: rightOuter not in yAxisPosition enum');
     });
 
     // === LegendPosition enum (9 values in BravenChartPlus) ===
     test('schema: legendPosition.top', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('top') || enumValues.contains('topCenter'), isTrue);
+      expect(enumValues.contains('top') || enumValues.contains('topCenter'),
+          isTrue);
     });
 
     test('schema: legendPosition.topLeft', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('topLeft'), isTrue, reason: 'MISSING: topLeft not in legendPosition enum');
+      expect(enumValues.contains('topLeft'), isTrue,
+          reason: 'MISSING: topLeft not in legendPosition enum');
     });
 
     test('schema: legendPosition.topRight', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('topRight'), isTrue, reason: 'MISSING: topRight not in legendPosition enum');
+      expect(enumValues.contains('topRight'), isTrue,
+          reason: 'MISSING: topRight not in legendPosition enum');
     });
 
     test('schema: legendPosition.bottom', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('bottom') || enumValues.contains('bottomCenter'), isTrue);
+      expect(
+          enumValues.contains('bottom') || enumValues.contains('bottomCenter'),
+          isTrue);
     });
 
     test('schema: legendPosition.bottomLeft', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('bottomLeft'), isTrue, reason: 'MISSING: bottomLeft not in legendPosition enum');
+      expect(enumValues.contains('bottomLeft'), isTrue,
+          reason: 'MISSING: bottomLeft not in legendPosition enum');
     });
 
     test('schema: legendPosition.bottomRight', () {
       final enumValues = properties['legendPosition']['enum'] as List;
-      expect(enumValues.contains('bottomRight'), isTrue, reason: 'MISSING: bottomRight not in legendPosition enum');
+      expect(enumValues.contains('bottomRight'), isTrue,
+          reason: 'MISSING: bottomRight not in legendPosition enum');
     });
 
     // === NormalizationMode enum (3 values) ===
@@ -386,7 +439,8 @@ void main() {
       final tool = CreateChartTool();
       properties = tool.inputSchema['properties'] as Map<String, dynamic>;
       if (properties.containsKey('interactions')) {
-        final interactionsSchema = properties['interactions'] as Map<dynamic, dynamic>?;
+        final interactionsSchema =
+            properties['interactions'] as Map<dynamic, dynamic>?;
         final nestedProps = interactionsSchema?['properties'];
         if (nestedProps != null) {
           interactionsProps = Map<String, dynamic>.from(nestedProps as Map);
@@ -395,23 +449,28 @@ void main() {
     });
 
     test('schema: interactions object exists', () {
-      expect(properties.containsKey('interactions'), isTrue, reason: 'MISSING: interactions object not in schema');
+      expect(properties.containsKey('interactions'), isTrue,
+          reason: 'MISSING: interactions object not in schema');
     });
 
     test('schema: interactions.crosshairMode', () {
-      expect(interactionsProps?.containsKey('crosshairMode') ?? false, isTrue, reason: 'MISSING: crosshairMode not in interactions schema');
+      expect(interactionsProps?.containsKey('crosshairMode') ?? false, isTrue,
+          reason: 'MISSING: crosshairMode not in interactions schema');
     });
 
     test('schema: interactions.tooltipPosition', () {
-      expect(interactionsProps?.containsKey('tooltipPosition') ?? false, isTrue, reason: 'MISSING: tooltipPosition not in interactions schema');
+      expect(interactionsProps?.containsKey('tooltipPosition') ?? false, isTrue,
+          reason: 'MISSING: tooltipPosition not in interactions schema');
     });
 
     test('schema: interactions.enableZoom', () {
-      expect(interactionsProps?.containsKey('enableZoom') ?? false, isTrue, reason: 'MISSING: enableZoom not in interactions schema');
+      expect(interactionsProps?.containsKey('enableZoom') ?? false, isTrue,
+          reason: 'MISSING: enableZoom not in interactions schema');
     });
 
     test('schema: interactions.enablePan', () {
-      expect(interactionsProps?.containsKey('enablePan') ?? false, isTrue, reason: 'MISSING: enablePan not in interactions schema');
+      expect(interactionsProps?.containsKey('enablePan') ?? false, isTrue,
+          reason: 'MISSING: enablePan not in interactions schema');
     });
   });
 
@@ -542,7 +601,9 @@ void main() {
       expect(series!.showDataPointMarkers, isTrue);
     });
 
-    test('wiring: dataPointMarkerRadius → LineChartSeries.dataPointMarkerRadius', () {
+    test(
+        'wiring: dataPointMarkerRadius → LineChartSeries.dataPointMarkerRadius',
+        () {
       const config = models.ChartConfiguration(
         type: models.ChartType.line,
         series: [
@@ -551,7 +612,8 @@ void main() {
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
-            markerSize: 6.0, // Using markerSize which maps to dataPointMarkerRadius
+            markerSize:
+                6.0, // Using markerSize which maps to dataPointMarkerRadius
           ),
         ],
       );
@@ -560,11 +622,14 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.dataPointMarkerRadius, equals(6.0), reason: 'MISSING: dataPointMarkerRadius not wired');
+      expect(series!.dataPointMarkerRadius, equals(6.0),
+          reason: 'MISSING: dataPointMarkerRadius not wired');
     });
 
     // CRITICAL: This tests the actual LLM use case - markerSize is what Claude sends
-    test('wiring: markerSize → LineChartSeries.dataPointMarkerRadius (LLM fallback)', () {
+    test(
+        'wiring: markerSize → LineChartSeries.dataPointMarkerRadius (LLM fallback)',
+        () {
       // This is the REAL user flow: LLM sends markerSize, not dataPointMarkerRadius
       const config = models.ChartConfiguration(
         type: models.ChartType.line,
@@ -585,7 +650,8 @@ void main() {
 
       expect(series, isNotNull);
       expect(series!.dataPointMarkerRadius, equals(8.0),
-          reason: 'CRITICAL: markerSize must fall back to dataPointMarkerRadius for line charts. '
+          reason:
+              'CRITICAL: markerSize must fall back to dataPointMarkerRadius for line charts. '
               'The LLM sends markerSize, not dataPointMarkerRadius!');
     });
 
@@ -600,7 +666,8 @@ void main() {
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
-            markerSize: 8.0, // Non-default size should implicitly enable markers
+            markerSize:
+                8.0, // Non-default size should implicitly enable markers
             // showPoints NOT set - but markers should still show
           ),
         ],
@@ -611,7 +678,8 @@ void main() {
 
       expect(series, isNotNull);
       expect(series!.showDataPointMarkers, isTrue,
-          reason: 'CRITICAL: Setting markerSize to non-default should implicitly enable showDataPointMarkers. '
+          reason:
+              'CRITICAL: Setting markerSize to non-default should implicitly enable showDataPointMarkers. '
               'This ensures LLM setting markerSize sees markers without needing showPoints: true.');
     });
 
@@ -675,7 +743,8 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.position, equals(YAxisPosition.leftOuter), reason: 'MISSING: leftOuter not supported in yAxisPosition mapping');
+      expect(series!.yAxisConfig?.position, equals(YAxisPosition.leftOuter),
+          reason: 'MISSING: leftOuter not supported in yAxisPosition mapping');
     });
 
     test('wiring: yAxisPosition=rightOuter → YAxisPosition.rightOuter', () {
@@ -696,7 +765,8 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.position, equals(YAxisPosition.rightOuter), reason: 'MISSING: rightOuter not supported in yAxisPosition mapping');
+      expect(series!.yAxisConfig?.position, equals(YAxisPosition.rightOuter),
+          reason: 'MISSING: rightOuter not supported in yAxisPosition mapping');
     });
 
     test('wiring: yAxisLabel → LineChartSeries.yAxisConfig.label', () {
@@ -762,7 +832,8 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.color, equals(const Color(0xFF00FF00)), reason: 'MISSING: yAxisColor not wired');
+      expect(series!.yAxisConfig?.color, equals(const Color(0xFF00FF00)),
+          reason: 'MISSING: yAxisColor not wired');
     });
 
     test('wiring: yAxisMin → LineChartSeries.yAxisConfig.min', () {
@@ -784,7 +855,8 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.min, equals(0.0), reason: 'MISSING: yAxisMin not wired');
+      expect(series!.yAxisConfig?.min, equals(0.0),
+          reason: 'MISSING: yAxisMin not wired');
     });
 
     test('wiring: yAxisMax → LineChartSeries.yAxisConfig.max', () {
@@ -806,7 +878,8 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.max, equals(100.0), reason: 'MISSING: yAxisMax not wired');
+      expect(series!.yAxisConfig?.max, equals(100.0),
+          reason: 'MISSING: yAxisMax not wired');
     });
   });
 
@@ -866,7 +939,8 @@ void main() {
       final series = extractAreaSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.strokeWidth, equals(3.0), reason: 'MISSING: strokeWidth not wired to AreaChartSeries');
+      expect(series!.strokeWidth, equals(3.0),
+          reason: 'MISSING: strokeWidth not wired to AreaChartSeries');
     });
 
     test('wiring: interpolation → AreaChartSeries.interpolation', () {
@@ -908,7 +982,8 @@ void main() {
       final series = extractAreaSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.tension, equals(0.6), reason: 'MISSING: tension not wired to AreaChartSeries');
+      expect(series!.tension, equals(0.6),
+          reason: 'MISSING: tension not wired to AreaChartSeries');
     });
 
     test('wiring: showPoints → AreaChartSeries.showDataPointMarkers', () {
@@ -929,10 +1004,13 @@ void main() {
       final series = extractAreaSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.showDataPointMarkers, isTrue, reason: 'MISSING: showDataPointMarkers not wired to AreaChartSeries');
+      expect(series!.showDataPointMarkers, isTrue,
+          reason: 'MISSING: showDataPointMarkers not wired to AreaChartSeries');
     });
 
-    test('wiring: dataPointMarkerRadius → AreaChartSeries.dataPointMarkerRadius', () {
+    test(
+        'wiring: dataPointMarkerRadius → AreaChartSeries.dataPointMarkerRadius',
+        () {
       const config = models.ChartConfiguration(
         type: models.ChartType.area,
         series: [
@@ -941,7 +1019,8 @@ void main() {
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
-            markerSize: 5.0, // Using markerSize which maps to dataPointMarkerRadius
+            markerSize:
+                5.0, // Using markerSize which maps to dataPointMarkerRadius
           ),
         ],
       );
@@ -950,7 +1029,9 @@ void main() {
       final series = extractAreaSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.dataPointMarkerRadius, equals(5.0), reason: 'MISSING: dataPointMarkerRadius not wired to AreaChartSeries');
+      expect(series!.dataPointMarkerRadius, equals(5.0),
+          reason:
+              'MISSING: dataPointMarkerRadius not wired to AreaChartSeries');
     });
   });
 
@@ -964,7 +1045,8 @@ void main() {
     ScatterChartSeries? extractScatterSeriesFromWidget(Widget widget) {
       if (widget is SizedBox && widget.child is BravenChartPlus) {
         final chart = widget.child as BravenChartPlus;
-        if (chart.series.isNotEmpty && chart.series.first is ScatterChartSeries) {
+        if (chart.series.isNotEmpty &&
+            chart.series.first is ScatterChartSeries) {
           return chart.series.first as ScatterChartSeries;
         }
       }
@@ -1029,7 +1111,8 @@ void main() {
       final series = extractBarSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.barWidthPercent, equals(0.5), reason: 'MISSING: barWidthPercent not wired (hardcoded to 0.7)');
+      expect(series!.barWidthPercent, equals(0.5),
+          reason: 'MISSING: barWidthPercent not wired (hardcoded to 0.7)');
     });
 
     test('wiring: barWidthPixels → BarChartSeries.barWidthPixels', () {
@@ -1050,7 +1133,8 @@ void main() {
       final series = extractBarSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.barWidthPixels, equals(30.0), reason: 'MISSING: barWidthPixels not wired');
+      expect(series!.barWidthPixels, equals(30.0),
+          reason: 'MISSING: barWidthPixels not wired');
     });
 
     test('wiring: barMinWidth → BarChartSeries.minWidth', () {
@@ -1072,7 +1156,8 @@ void main() {
       final series = extractBarSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.minWidth, equals(10.0), reason: 'MISSING: barMinWidth not wired');
+      expect(series!.minWidth, equals(10.0),
+          reason: 'MISSING: barMinWidth not wired');
     });
 
     test('wiring: barMaxWidth → BarChartSeries.maxWidth', () {
@@ -1094,7 +1179,8 @@ void main() {
       final series = extractBarSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.maxWidth, equals(50.0), reason: 'MISSING: barMaxWidth not wired');
+      expect(series!.maxWidth, equals(50.0),
+          reason: 'MISSING: barMaxWidth not wired');
     });
   });
 
@@ -1134,7 +1220,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.title, equals('Test Chart'), reason: 'MISSING: title not wired');
+      expect(chart!.title, equals('Test Chart'),
+          reason: 'MISSING: title not wired');
     });
 
     test('wiring: subtitle → BravenChartPlus.subtitle', () {
@@ -1152,7 +1239,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.subtitle, equals('Subtitle here'), reason: 'MISSING: subtitle not wired');
+      expect(chart!.subtitle, equals('Subtitle here'),
+          reason: 'MISSING: subtitle not wired');
     });
 
     test('wiring: width → SizedBox.width', () {
@@ -1170,7 +1258,8 @@ void main() {
       final sizedBox = extractSizedBox(widget);
 
       expect(sizedBox, isNotNull);
-      expect(sizedBox!.width, equals(800.0), reason: 'MISSING: width not wired');
+      expect(sizedBox!.width, equals(800.0),
+          reason: 'MISSING: width not wired');
     });
 
     test('wiring: height → SizedBox.height', () {
@@ -1188,7 +1277,8 @@ void main() {
       final sizedBox = extractSizedBox(widget);
 
       expect(sizedBox, isNotNull);
-      expect(sizedBox!.height, equals(500.0), reason: 'MISSING: height not wired');
+      expect(sizedBox!.height, equals(500.0),
+          reason: 'MISSING: height not wired');
     });
 
     test('wiring: showLegend → BravenChartPlus.showLegend', () {
@@ -1280,7 +1370,8 @@ void main() {
       expect(chart, isNotNull);
       expect(chart!.theme, isNotNull);
       // Dark theme has dark background
-      expect(chart.theme!.backgroundColor.computeLuminance() < 0.5, isTrue, reason: 'Dark theme should have dark background');
+      expect(chart.theme!.backgroundColor.computeLuminance() < 0.5, isTrue,
+          reason: 'Dark theme should have dark background');
     });
 
     test('wiring: showGrid → BravenChartPlus.grid', () {
@@ -1298,7 +1389,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.grid?.horizontal ?? true, isFalse, reason: 'MISSING: showGrid=false should disable grid');
+      expect(chart!.grid?.horizontal ?? true, isFalse,
+          reason: 'MISSING: showGrid=false should disable grid');
     });
 
     test('wiring: xAxis.label → BravenChartPlus.xAxisConfig.label', () {
@@ -1316,7 +1408,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.xAxisConfig?.label, equals('Time'), reason: 'MISSING: xAxis.label not wired (hardcoded to "X")');
+      expect(chart!.xAxisConfig?.label, equals('Time'),
+          reason: 'MISSING: xAxis.label not wired (hardcoded to "X")');
     });
 
     test('wiring: xAxis.unit → BravenChartPlus.xAxisConfig.unit', () {
@@ -1334,7 +1427,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.xAxisConfig?.unit, equals('seconds'), reason: 'MISSING: xAxis.unit not wired');
+      expect(chart!.xAxisConfig?.unit, equals('seconds'),
+          reason: 'MISSING: xAxis.unit not wired');
     });
 
     test('wiring: xAxis.min/max → BravenChartPlus.xAxisConfig.min/max', () {
@@ -1352,8 +1446,10 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.xAxisConfig?.min, equals(0.0), reason: 'MISSING: xAxis.min not wired');
-      expect(chart.xAxisConfig?.max, equals(100.0), reason: 'MISSING: xAxis.max not wired');
+      expect(chart!.xAxisConfig?.min, equals(0.0),
+          reason: 'MISSING: xAxis.min not wired');
+      expect(chart.xAxisConfig?.max, equals(100.0),
+          reason: 'MISSING: xAxis.max not wired');
     });
 
     // NOTE: Interaction config tests are SKIPPED because braven_agent's ChartConfiguration
@@ -1382,7 +1478,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.interactionConfig?.tooltip.enabled, isTrue, reason: 'Default InteractionConfig should have tooltip enabled');
+      expect(chart!.interactionConfig?.tooltip.enabled, isTrue,
+          reason: 'Default InteractionConfig should have tooltip enabled');
     });
 
     test('wiring: default InteractionConfig has crosshair enabled', () {
@@ -1400,7 +1497,8 @@ void main() {
       final chart = extractBravenChartPlus(widget);
 
       expect(chart, isNotNull);
-      expect(chart!.interactionConfig?.crosshair.enabled, isTrue, reason: 'Default InteractionConfig should have crosshair enabled');
+      expect(chart!.interactionConfig?.crosshair.enabled, isTrue,
+          reason: 'Default InteractionConfig should have crosshair enabled');
     });
   });
 

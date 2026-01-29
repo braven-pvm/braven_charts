@@ -121,6 +121,103 @@ class CreateChartTool extends AgentTool {
                     'required': ['x', 'y'],
                   },
                 },
+                'yAxisId': {
+                  'type': 'string',
+                  'description':
+                      'ID of the Y-axis this series should use (for multi-axis charts).',
+                },
+                'unit': {
+                  'type': 'string',
+                  'description':
+                      'Unit of measurement for this series (e.g., "W", "bpm").',
+                },
+                'interpolation': {
+                  'type': 'string',
+                  'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                  'description':
+                      'Line interpolation type. Defaults to "linear".',
+                },
+                'strokeWidth': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Width of the line stroke in pixels. Defaults to 2.0.',
+                },
+                'tension': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description':
+                      'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
+                },
+                'showPoints': {
+                  'type': 'boolean',
+                  'description':
+                      'Whether to show data point markers. Defaults to false.',
+                },
+                'fillOpacity': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description':
+                      'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                },
+                'barWidthPercent': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'maximum': 1,
+                  'description':
+                      'Bar width as a percentage of available space (0.0 to 1.0). Defaults to 0.7.',
+                },
+                'barWidthPixels': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Fixed bar width in pixels. Overrides barWidthPercent if specified.',
+                },
+                'barMinWidth': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Minimum bar width in pixels. Defaults to 4.0.',
+                },
+                'barMaxWidth': {
+                  'type': 'number',
+                  'minimum': 0,
+                  'description':
+                      'Maximum bar width in pixels. Defaults to 100.0.',
+                },
+                'yAxisPosition': {
+                  'type': 'string',
+                  'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                  'description':
+                      'Position of the Y-axis for this series in multi-axis charts.',
+                },
+                'yAxisLabel': {
+                  'type': 'string',
+                  'description':
+                      'Label for the Y-axis associated with this series.',
+                },
+                'yAxisUnit': {
+                  'type': 'string',
+                  'description':
+                      'Unit for the Y-axis associated with this series.',
+                },
+                'yAxisColor': {
+                  'type': 'string',
+                  'description':
+                      'Color for the Y-axis associated with this series in hex format.',
+                },
+                'yAxisMin': {
+                  'type': 'number',
+                  'description':
+                      'Minimum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                },
+                'yAxisMax': {
+                  'type': 'number',
+                  'description':
+                      'Maximum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                },
               },
               'required': ['id', 'data'],
             },
@@ -128,6 +225,43 @@ class CreateChartTool extends AgentTool {
           'xAxis': {
             'type': 'object',
             'description': 'X-axis configuration',
+            'properties': {
+              'label': {
+                'type': 'string',
+                'description': 'Label for the X-axis (e.g., "Time").',
+              },
+              'unit': {
+                'type': 'string',
+                'description': 'Unit for the X-axis (e.g., "seconds").',
+              },
+              'min': {
+                'type': 'number',
+                'description':
+                    'Minimum value for the X-axis scale. If not specified, auto-calculated from data.',
+              },
+              'max': {
+                'type': 'number',
+                'description':
+                    'Maximum value for the X-axis scale. If not specified, auto-calculated from data.',
+              },
+              'visible': {
+                'type': 'boolean',
+                'description': 'Whether the X-axis is visible.',
+              },
+              'showAxisLine': {
+                'type': 'boolean',
+                'description': 'Whether to show the X-axis line.',
+              },
+              'showTicks': {
+                'type': 'boolean',
+                'description': 'Whether to show tick marks on the X-axis.',
+              },
+              'tickCount': {
+                'type': 'integer',
+                'minimum': 0,
+                'description': 'Number of ticks to display on the X-axis.',
+              },
+            },
           },
           'annotations': {
             'type': 'array',
@@ -136,6 +270,18 @@ class CreateChartTool extends AgentTool {
           'style': {
             'type': 'object',
             'description': 'Visual styling configuration',
+          },
+          'width': {
+            'type': 'number',
+            'description': 'Width of the chart in pixels.',
+          },
+          'height': {
+            'type': 'number',
+            'description': 'Height of the chart in pixels.',
+          },
+          'backgroundColor': {
+            'type': 'string',
+            'description': 'Background color of the chart (e.g., "#FFFFFF").',
           },
           'showGrid': {
             'type': 'boolean',
@@ -163,10 +309,40 @@ class CreateChartTool extends AgentTool {
             'type': 'boolean',
             'description': 'Whether to use dark theme colors',
           },
+          'showScrollbar': {
+            'type': 'boolean',
+            'description': 'Whether to show scrollbars for panning.',
+          },
+          'showYScrollbar': {
+            'type': 'boolean',
+            'description': 'Whether to show the Y-axis scrollbar.',
+          },
           'normalizationMode': {
             'type': 'string',
             'enum': ['none', 'auto', 'perSeries'],
             'description': 'Normalization mode for multi-series charts',
+          },
+          'interactions': {
+            'type': 'object',
+            'description': 'Interaction configuration for pan/zoom/tooltip.',
+            'properties': {
+              'crosshairMode': {
+                'type': 'string',
+                'description': 'Crosshair display mode.',
+              },
+              'tooltipPosition': {
+                'type': 'string',
+                'description': 'Preferred tooltip position.',
+              },
+              'enableZoom': {
+                'type': 'boolean',
+                'description': 'Whether zooming is enabled.',
+              },
+              'enablePan': {
+                'type': 'boolean',
+                'description': 'Whether panning is enabled.',
+              },
+            },
           },
         },
         'required': ['prompt', 'series'],

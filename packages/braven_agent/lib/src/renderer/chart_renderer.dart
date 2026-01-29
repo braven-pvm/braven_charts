@@ -290,16 +290,35 @@ class ChartRenderer {
   /// which is required for perSeries normalization mode to work correctly.
   charts.InteractionConfig _buildInteractionConfig(
       models.ChartConfiguration config) {
-    // Default interaction settings - always enable pan, zoom, crosshair, tooltip
-    // Using tracking mode for crosshair (required for perSeries normalization)
-    return const charts.InteractionConfig(
-      enablePan: true,
-      enableZoom: true,
+    if (config.interactions == null) {
+      return const charts.InteractionConfig(
+        enablePan: true,
+        enableZoom: true,
+        crosshair: charts.CrosshairConfig(
+          enabled: true,
+          displayMode: charts.CrosshairDisplayMode.tracking,
+        ),
+        tooltip: charts.TooltipConfig(enabled: true),
+      );
+    }
+
+    final interactionsMap = config.interactions!;
+    final enablePan = interactionsMap['pan'] as bool? ?? true;
+    final enableZoom = interactionsMap['zoom'] as bool? ?? true;
+    final crosshairEnabled = interactionsMap['crosshair'] as bool? ?? true;
+    final tooltipEnabled = interactionsMap['tooltip'] as bool? ?? true;
+    final useTrackingMode = tooltipEnabled || crosshairEnabled;
+
+    return charts.InteractionConfig(
+      enablePan: enablePan,
+      enableZoom: enableZoom,
       crosshair: charts.CrosshairConfig(
-        enabled: true,
-        displayMode: charts.CrosshairDisplayMode.tracking,
+        enabled: crosshairEnabled,
+        displayMode: useTrackingMode
+            ? charts.CrosshairDisplayMode.tracking
+            : charts.CrosshairDisplayMode.standard,
       ),
-      tooltip: charts.TooltipConfig(enabled: true),
+      tooltip: charts.TooltipConfig(enabled: tooltipEnabled),
     );
   }
 
@@ -330,13 +349,13 @@ class ChartRenderer {
   charts.ChartAnnotation? _convertAnnotationConfig(
       models.AnnotationConfig config) {
     final color = _parseColor(config.color) ?? Colors.red;
-    const double lineWidth = 2.0;
 
     switch (config.type) {
       case models.AnnotationType.referenceLine:
         // Convert to ThresholdAnnotation
         final isHorizontal = config.orientation != models.Orientation.vertical;
         final value = config.value ?? 0.0;
+        final lineWidth = config.lineWidth ?? 2.0;
         return charts.ThresholdAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis:
@@ -347,6 +366,7 @@ class ChartRenderer {
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,
+          dashPattern: config.dashPattern,
         );
 
       case models.AnnotationType.zone:
@@ -370,6 +390,7 @@ class ChartRenderer {
         // TextAnnotation uses screen coordinates (pixels), not data coordinates
         // Support semantic positions: topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight
         final text = config.text ?? config.label ?? '';
+        final fontSize = config.fontSize ?? 12.0;
         final positionOffset = _getTextAnnotationPosition(config.position);
         final anchor = _getTextAnnotationAnchor(config.position);
         return charts.TextAnnotation(
@@ -379,7 +400,7 @@ class ChartRenderer {
           anchor: anchor,
           style: charts.AnnotationStyle(
             textStyle: TextStyle(
-              fontSize: 12.0,
+              fontSize: fontSize,
               color: color,
               fontWeight: FontWeight.w500,
             ),

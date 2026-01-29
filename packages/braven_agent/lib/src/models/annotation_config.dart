@@ -121,13 +121,17 @@ class AnnotationConfig with EquatableMixin {
   factory AnnotationConfig.fromJson(Map<String, dynamic> json) {
     return AnnotationConfig(
       type: AnnotationType.values.byName(json['type'] as String),
-      orientation: json['orientation'] != null ? Orientation.values.byName(json['orientation'] as String) : null,
+      orientation: json['orientation'] != null
+          ? Orientation.values.byName(json['orientation'] as String)
+          : null,
       value: (json['value'] as num?)?.toDouble(),
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
-      position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
+      position: json['position'] != null
+          ? AnnotationPosition.values.byName(json['position'] as String)
+          : null,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
